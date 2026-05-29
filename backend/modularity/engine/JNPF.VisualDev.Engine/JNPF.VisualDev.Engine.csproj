@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	
+  <ItemGroup>
+    <ProjectReference Include="..\..\common\JNPF.Common.Core\JNPF.Common.Core.csproj" />
+    <ProjectReference Include="..\..\system\JNPF.Systems.Interfaces\JNPF.Systems.Interfaces.csproj" />
+    <ProjectReference Include="..\..\visualdev\JNPF.VisualDev.Interfaces\JNPF.VisualDev.Interfaces.csproj" />
+    <ProjectReference Include="..\..\workflow\JNPF.WorkFlow.Entitys\JNPF.WorkFlow.Entitys.csproj" />
+    <ProjectReference Include="..\JNPF.Engine.Entity\JNPF.Engine.Entity.csproj" />
+  </ItemGroup>
+
+</Project>

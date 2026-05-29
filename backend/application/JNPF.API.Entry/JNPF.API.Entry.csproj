@@ -1,0 +1,338 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<ItemGroup>
+		<None Remove="lib\regworkerid_lib_v1.3.1\yitidgengo.dll" />
+		<None Remove="lib\regworkerid_lib_v1.3.1\yitidgengo.so" />
+		<None Remove="sensitive-words.txt" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="lib\regworkerid_lib_v1.3.1\yitidgengo.dll" />
+		<EmbeddedResource Include="lib\regworkerid_lib_v1.3.1\yitidgengo.so" />
+		<EmbeddedResource Include="sensitive-words.txt" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="IGeekFan.AspNetCore.Knife4jUI" Version="0.0.13" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Update="wwwroot\Template\appDetail.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\appForm.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\appIndex.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\appWorkflowForm.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\appWorkflowIndex.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\3-Auxiliary\CrInput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\3-Auxiliary\Mapper.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\CrInput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\Detail.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\editorWorkflowIndex.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\editorIndex.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\Entity.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\columnList.js.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\ExportJson.json.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\extraForm.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\Form.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\index.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\InfoOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\IService.cs.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\ListOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\ListQueryInput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\4-MainBeltVice\CrInput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\4-MainBeltVice\DetailOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\4-MainBeltVice\Entity.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\4-MainBeltVice\InfoOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\4-MainBeltVice\InlineEditor\InlineEditorOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\4-MainBeltVice\InlineEditor\ListOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\4-MainBeltVice\InlineEditor\Service.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\4-MainBeltVice\ListOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\4-MainBeltVice\ListQueryInput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\4-MainBeltVice\Mapper.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\4-MainBeltVice\Service.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\2-MainBelt\CrInput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\2-MainBelt\DetailOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\2-MainBelt\Entity.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\2-MainBelt\InfoOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\2-MainBelt\InlineEditor\InlineEditorOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\2-MainBelt\InlineEditor\ListOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\2-MainBelt\InlineEditor\Service.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\2-MainBelt\ListOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\2-MainBelt\ListQueryInput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\2-MainBelt\Mapper.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\2-MainBelt\Service.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\5-PrimarySecondary\CrInput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\5-PrimarySecondary\DetailOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\5-PrimarySecondary\Entity.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\5-PrimarySecondary\InfoOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\5-PrimarySecondary\InlineEditor\InlineEditorOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\5-PrimarySecondary\InlineEditor\ListOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\5-PrimarySecondary\InlineEditor\Service.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\5-PrimarySecondary\ListOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\5-PrimarySecondary\ListQueryInput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\5-PrimarySecondary\Mapper.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\5-PrimarySecondary\Service.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\5-PrimarySecondary\Workflow\Service.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\1-SingleTable\CrInput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\1-SingleTable\DetailOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\1-SingleTable\InfoOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\1-SingleTable\InlineEditor\InlineEditorOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\1-SingleTable\InlineEditor\ListOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\1-SingleTable\InlineEditor\Service.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\1-SingleTable\ListOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\1-SingleTable\Mapper.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\1-SingleTable\Service.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\1-SingleTable\Entity.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\1-SingleTable\ListQueryInput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\PureForm\appWorkflowIndex.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\PureForm\index.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\SubTable\CrInput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\SubTable\DetailOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\SubTable\Entity.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\SubTable\InfoOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\SubTable\ListOutput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\SubTable\Mapper.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\superQueryJson.js.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\UpInput.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\appDetail.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\appForm.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\appIndex.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\appWorkflowForm.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\appWorkflowIndex.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\Detail.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\InlineEditing\Form.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\InlineEditing\index.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\PureForm\Form.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\Form.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\WorkFlow\ExportJson.json.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\WorkFlow\Form.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\WorkFlow\PureForm\index.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\PureForm\index.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\superQueryJson.ts.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\searchList.ts.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\columnList.ts.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\api.ts.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\vue3\index.vue.vm">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\WorkflowForm.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\WorkflowIndex.vue.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\Workflow\MainBeltVice\Service.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\Workflow\MainBelt\Service.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="wwwroot\Template\Workflow\SingleTable\Service.cs.vm">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\modularity\app\JNPF.Apps\JNPF.Apps.csproj" />
+		<ProjectReference Include="..\..\modularity\codegen\JNPF.CodeGen\JNPF.CodeGen.csproj" />
+		<ProjectReference Include="..\..\modularity\extend\JNPF.Extend\JNPF.Extend.csproj" />
+		<ProjectReference Include="..\..\modularity\inteAssistant\JNPF.InteAssistant\JNPF.InteAssistant.csproj" />
+		<ProjectReference Include="..\..\modularity\message\JNPF.Message\JNPF.Message.csproj" />
+		<ProjectReference Include="..\..\modularity\oauth\JNPF.OAuth\JNPF.OAuth.csproj" />
+		<ProjectReference Include="..\..\modularity\system\JNPF.Systems\JNPF.Systems.csproj" />
+		<ProjectReference Include="..\..\modularity\taskscheduler\JNPF.TaskScheduler\JNPF.TaskScheduler.csproj" />
+		<ProjectReference Include="..\..\modularity\visualdata\JNPF.VisualData\JNPF.VisualData.csproj" />
+		<ProjectReference Include="..\..\modularity\visualdev\JNPF.VisualDev\JNPF.VisualDev.csproj" />
+		<ProjectReference Include="..\..\modularity\workflow\JNPF.WorkFlow\JNPF.WorkFlow.csproj" />
+		<ProjectReference Include="..\..\modularity\zxdev\JNPF.ZxDev\JNPF.ZxDev.csproj" />
+	</ItemGroup>
+
+	<ProjectExtensions><VisualStudio><UserProperties properties_4launchsettings_1json__JsonSchema="" /></VisualStudio></ProjectExtensions>
+</Project>

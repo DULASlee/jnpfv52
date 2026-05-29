@@ -1,0 +1,26 @@
+{
+  "SpecificationDocumentSettings": {
+    "DocumentTitle": "JNPF.NET",
+    "DocExpansionState": "None",// List、Full、None
+    "GroupOpenApiInfos": [
+      {
+        "Group": "Default",
+        "Title": "智轩开发基础平台",
+        "Description": "",
+        "Version": "5.4.7"
+      },
+      {
+        "Group": "ZX_Water",
+        "Title": "水务营收系统",
+        "Description": "",
+        "Version": "2.0",
+        
+      }
+    ],
+    "LoginInfo": {
+      "Enabled": false, // 是否开启Swagger登录
+      // "CheckUrl": "https://localhost:5000/Home/CheckUrl",
+      // "SubmitUrl": "https://localhost:5000/Home/SubmitUrl"
+    }
+  }
+}

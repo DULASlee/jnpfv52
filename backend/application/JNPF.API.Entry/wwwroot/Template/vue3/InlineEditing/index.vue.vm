@@ -1,0 +1,1161 @@
+<template>
+  <div class="jnpf-content-wrapper">
+    <div class="jnpf-content-wrapper-center">
+@if(Model.HasSearch) {
+      @:<div class="jnpf-content-wrapper-search-box">
+        @:<BasicForm @@register="registerSearchForm" :schemas="searchSchemas" @@advanced-change="redoHeight" @@submit="handleSearchSubmit" @@reset="handleSearchReset" class="search-form" />
+      @:</div>
+}
+      <div class="jnpf-content-wrapper-content">
+        <BasicTable @@register="registerTable" v-bind="getTableBindValue" ref="tableRef" @@columns-change="handleColumnChange">
+          <template #tableTitle>
+@foreach (var item in Model.TopButtonDesign){
+            @:<a-button type="@(item.Type)" preIcon="@(item.Icon)" @@click="@(item.Method)"@(Model.UseBtnPermission ? " v-auth=\"'btn_" + @item.Value + "'\"" : "")>@item.Label</a-button>
+}
+          </template>
+@if(Model.TableConfig.HasSuperQuery){
+          <template #toolbar>
+            <a-tooltip placement="top">
+              <template #title>
+                <span>{{ t('common.superQuery') }}</span>
+              </template>
+              <filter-outlined @@click="openSuperQuery(true, { columnOptions: superQueryJson })" />
+            </a-tooltip>
+          </template>
+}
+          <template #bodyCell="{ column, record, index }">
+            <template v-if="column.flag === 'INDEX'">
+              <div class="edit-row-action">
+                <span@(Model.HasFlow ? "" : " class=\"edit-row-index\"")>{{ index + 1 }}</span>
+@if(!Model.HasFlow){
+                <i class="ym-custom ym-custom-arrow-expand" @@click="handleRowForm(record)"></i>
+}
+              </div>
+            </template>
+            <template v-if="record.rowEdit">
+              <template v-if="column.jnpfKey === 'inputNumber'">
+				<jnpf-input-number v-model:value="record[column.prop]" :placeholder="column.placeholder" :min="column.min" :max="column.max" :step="column.step" :controls="column.controls" :addonBefore="column.addonBefore" :addonAfter="column.addonAfter" :precision="column.precision" :thousands="column.thousands" :disabled="column.disabled" />
+              </template>
+              <template v-else-if="column.jnpfKey === 'sign'">
+				<jnpf-sign v-model:value="record[column.prop]" :disabled="column.disabled" />
+              </template>
+			  <template v-else-if="column.jnpfKey === 'signature'">
+				 <jnpf-signature v-model:value="record[column.prop]" :disabled="column.disabled" :ableIds="column.ableIds" />
+			  </template>
+              <template v-else-if="column.jnpfKey === 'location'">
+				<jnpf-location v-model:value="record[column.prop]" :enableLocationScope='column.enableLocationScope' :autoLocation='column.autoLocation' :adjustmentScope='column.adjustmentScope' :enableDesktopLocation='column.enableDesktopLocation' :locationScope='column.locationScope' :disabled="column.disabled" />
+              </template>
+				<template v-else-if="column.jnpfKey === 'rate'">
+                  <jnpf-rate v-model:value="record[column.prop]" :count="column.count" :allowHalf="column.allowHalf" :disabled="column.disabled" />
+                </template>
+                <template v-else-if="column.jnpfKey === 'slider'">
+                  <jnpf-slider v-model:value="record[column.prop]" :min="column.min" :max="column.max" :step="column.step" :disabled="column.disabled" />
+                </template>
+                <template v-else-if="column.jnpfKey === 'uploadImg'">
+                  <jnpf-upload-img
+                    v-model:value="record[column.prop]"
+                    :fileSize="column.fileSize"
+                    :sizeUnit="column.sizeUnit"
+                    :limit="column.limit"
+                    :pathType="column.pathType"
+                    :isAccount="column.isAccount"
+                    :folder="column.folder"
+                    :tipText="column.tipText"
+                    :disabled="column.disabled" />
+                </template>
+                <template v-else-if="column.jnpfKey === 'uploadFile'">
+                  <jnpf-upload-file
+                    v-model:value="record[column.prop]"
+                    :accept="column.accept"
+                    :fileSize="column.fileSize"
+                    :sizeUnit="column.sizeUnit"
+                    :buttonText="column.buttonText"
+                    :limit="column.limit"
+                    :pathType="column.pathType"
+                    :isAccount="column.isAccount"
+                    :folder="column.folder"
+                    :tipText="column.tipText"
+                    :disabled="column.disabled" />
+                </template>
+              <template v-else-if="column.jnpfKey === 'calculate'">
+                <jnpf-calculate v-model:value="record[column.prop]" :isStorage="column.isStorage" :precision="column.precision" :thousands="column.thousands" detailed />
+              </template>
+              <template v-else-if="['rate', 'slider'].includes(column.jnpfKey)">
+				<jnpf-input-number v-model:value="record[column.prop]" placeholder="请输入" :disabled="column.disabled" />
+              </template>
+              <template v-else-if="column.jnpfKey === 'switch'">
+                <jnpf-switch v-model:value="record[column.prop]" :disabled="column.disabled" />
+              </template>
+              <template v-else-if="column.jnpfKey === 'timePicker'">
+				<jnpf-time-picker v-model:value="record[column.prop]" :format="column.format" :placeholder="column.placeholder" :allowClear="column.clearable" :startTime="column.startTime" :endTime="column.endTime" :disabled="column.disabled" />
+              </template>
+              <template v-else-if="column.jnpfKey === 'datePicker'">
+                <jnpf-date-picker v-model:value="record[column.prop]" :type="column.type" :allowClear="column.clearable" :placeholder="column.placeholder" :startTime="column.startTime" :endTime="column.endTime" :format="column.format" :disabled="column.disabled" />
+			  </template>
+              <template v-else-if="column.jnpfKey === 'organizeSelect'">
+                <jnpf-organize-select v-model:value="record[column.prop]" :placeholder="column.placeholder" :multiple="column.multiple" :allowClear="column.clearable" :disabled="column.disabled" :selectType="column.selectType" :ableIds="column.ableIds" />
+			  </template>
+              <template v-else-if="column.jnpfKey === 'depSelect'">
+                <jnpf-dep-select v-model:value="record[column.prop]" :placeholder="column.placeholder" :multiple="column.multiple" :allowClear="column.clearable" :disabled="column.disabled" :selectType="column.selectType" :ableIds="column.ableIds" />
+			  </template>
+              <template v-else-if="column.jnpfKey === 'roleSelect'">
+                <jnpf-role-select v-model:value="record[column.prop]" :placeholder="column.placeholder" :multiple="column.multiple" :allowClear="column.clearable" :disabled="column.disabled" :selectType="column.selectType" :ableIds="column.ableIds" />
+			  </template>
+              <template v-else-if="column.jnpfKey === 'groupSelect'">
+                <jnpf-group-select v-model:value="record[column.prop]" :placeholder="column.placeholder" :multiple="column.multiple" :allowClear="column.clearable" :disabled="column.disabled" :selectType="column.selectType" :ableIds="column.ableIds" />
+			  </template>
+              <template v-else-if="column.jnpfKey === 'posSelect'">
+                <jnpf-pos-select v-model:value="record[column.prop]" :placeholder="column.placeholder" :multiple="column.multiple" :allowClear="column.clearable" :disabled="column.disabled" :selectType="column.selectType" :ableIds="column.ableIds" />
+			  </template>
+              <template v-else-if="column.jnpfKey === 'userSelect'">
+                <jnpf-user-select v-model:value="record[column.prop]" :placeholder="column.placeholder" :multiple="column.multiple" :allowClear="column.clearable" :disabled="column.disabled" :selectType="['all', 'custom'].includes(column.selectType) ? column.selectType : 'all'" :ableIds="column.ableIds" />
+			  </template>
+              <template v-else-if="column.jnpfKey === 'usersSelect'">
+                <jnpf-users-select v-model:value="record[column.prop]" :placeholder="column.placeholder" :multiple="column.multiple" :allowClear="column.clearable" :disabled="column.disabled" :selectType="column.selectType" :ableIds="column.ableIds" />
+			  </template>
+              <template v-else-if="column.jnpfKey === 'areaSelect'">
+                <jnpf-area-select v-model:value="record[column.prop]" :level="column.level" :placeholder="column.placeholder" :multiple="column.multiple" :allowClear="column.clearable" :disabled="column.disabled" />
+			  </template>
+              <template v-else-if="['select', 'radio', 'checkbox'].includes(column.jnpfKey)">
+                <jnpf-select v-model:value="record[column.prop]" :placeholder="column.placeholder" :multiple="column.multiple || column.jnpfKey === 'checkbox'" :allowClear="column.clearable || ['radio', 'checkbox'].includes(column.jnpfKey)" :showSearch="column.filterable" :disabled="column.disabled" :options="column.options" :fieldNames="column.props" />
+			  </template>
+              <template v-else-if="column.jnpfKey === 'cascader'">
+                <jnpf-cascader v-model:value="record[column.prop]" :placeholder="column.placeholder" :multiple="column.multiple" :allowClear="column.clearable" :showSearch="column.filterable" :disabled="column.disabled" :options="column.options" :fieldNames="column.props" :showAllLevels="column.showAllLevels" />
+			  </template>
+              <template v-else-if="column.jnpfKey === 'treeSelect'">
+                <jnpf-tree-select v-model:value="record[column.prop]" :placeholder="column.placeholder" :multiple="column.multiple" :allowClear="column.clearable" :showSearch="column.filterable" :disabled="column.disabled" :options="column.options" :fieldNames="column.props" />
+			  </template>
+              <template v-else-if="column.jnpfKey === 'relationForm'">
+                <jnpf-relation-form v-model:value="record[column.prop]" :placeholder="column.placeholder" :allowClear="column.clearable" :disabled="column.disabled" :modelId="column.modelId" :columnOptions="column.columnOptions" :relationField="column.relationField" :hasPage="column.hasPage" :pageSize="column.pageSize" :popupType="column.popupType" :popupTitle="column.popupTitle" :popupWidth="column.popupWidth" />
+			  </template>
+              <template v-else-if="column.jnpfKey === 'popupSelect' || column.jnpfKey === 'popupTableSelect'">
+				<jnpf-popup-select v-model:value="record[column.prop]" :placeholder="column.placeholder" :multiple="column.multiple" :allowClear="column.clearable" :disabled="column.disabled" :interfaceId="column.interfaceId" :columnOptions="column.columnOptions" :propsValue="column.propsValue" :relationField="column.relationField" :hasPage="column.hasPage" :pageSize="column.pageSize" :popupType="column.popupType" :popupTitle="column.popupTitle" :templateJson="column.templateJson" :popupWidth="column.popupWidth" />
+              </template>
+              <template v-else-if="['input', 'textarea'].includes(column.jnpfKey)">
+                <jnpf-input v-model:value="record[column.prop]" :placeholder="column.placeholder" :allowClear="column.clearable" :disabled="column.disabled" :readonly="column.readonly" :prefixIcon="column.prefixIcon" :suffixIcon="column.suffixIcon" :addonBefore="column.addonBefore" :addonAfter="column.addonAfter" :maxlength="column.maxlength" :showPassword="column.showPassword" />
+              </template>
+              <template v-else-if="column.jnpfKey === 'autoComplete'">
+				<jnpf-auto-complete v-model:value="record[column.prop]" :placeholder="column.placeholder" :allowClear="column.clearable" :disabled="column.disabled" :interfaceId="column.interfaceId" :relationField="column.relationField" :templateJson="column.templateJson" :total="column.total" />
+              </template>
+              <template v-else-if="systemComponentsList.includes(column.jnpfKey)">
+                {{ record[column.prop + '_name'] || record[column.prop] }}
+              </template>
+              <template v-else>
+                {{ record[column.prop] }}
+              </template>
+            </template>
+            <template v-else>
+              <template v-if="column.jnpfKey === 'inputNumber'">
+                <jnpf-input-number v-model:value="record[column.prop]" :precision="column.precision" :thousands="column.thousands" disabled detailed />
+              </template>
+              <template v-else-if="column.jnpfKey === 'sign'">
+                <jnpf-sign v-model:value="record[column.prop]" detailed />
+              </template>
+				<template v-else-if="column.jnpfKey === 'signature'">
+					<jnpf-signature v-model:value="record[column.prop]" detailed />
+				</template>
+				<template v-else-if="column.jnpfKey === 'rate'">
+                  <jnpf-rate v-model:value="record[column.prop]" :count="column.count" :allowHalf="column.allowHalf" disabled />
+                </template>
+                <template v-else-if="column.jnpfKey === 'slider'">
+                  <jnpf-slider v-model:value="record[column.prop]" :min="column.min" :max="column.max" :step="column.step" disabled />
+                </template>
+                <template v-else-if="column.jnpfKey === 'uploadImg'">
+                  <jnpf-upload-img v-model:value="record[column.prop]" disabled detailed simple v-if="record[column.prop]?.length" />
+                </template>
+                <template v-else-if="column.jnpfKey === 'uploadFile'">
+                  <jnpf-upload-file v-model:value="record[column.prop]" disabled detailed simple v-if="record[column.prop]?.length" />
+                </template>
+                <template v-else-if="column.jnpfKey === 'input'">
+                  <jnpf-input
+                    v-model:value="record[column.prop]"
+                    :useMask="column.useMask"
+                    :maskConfig="column.maskConfig"
+                    :showOverflow="@(Model.TableConfig.ShowOverflow.ToString().ToLower())"
+                    detailed />
+                </template>
+              <template v-else-if="column.jnpfKey === 'calculate'">
+                <jnpf-calculate v-model:value="record[column.prop]" :isStorage="column.isStorage" :precision="column.precision" :thousands="column.thousands" detailed />
+              </template>
+              <template v-else-if="column.jnpfKey === 'relationForm'">
+                <p class="link-text" @@click="toDetail(column.modelId, record[`${column.prop}_id`])">{{ record[column.prop + '_name'] || record[column.prop] }}</p>
+              </template>
+              <template v-else>
+                {{ record[column.prop + '_name'] || record[column.prop] }}
+              </template>
+            </template>
+@if(Model.HasFlow){
+            <!-- 有工作流：开始 -->
+            <template v-if="column.key === 'flowState' && !record.top">
+              <a-tag color="processing" v-if="record.flowState == 1">等待审核</a-tag>
+              <a-tag color="success" v-else-if="record.flowState == 2">审核通过</a-tag>
+              <a-tag color="error" v-else-if="record.flowState == 3">审核退回</a-tag>
+              <a-tag v-else-if="record.flowState == 4 || record.flowState == 7">流程撤回</a-tag>
+              <a-tag v-else-if="record.flowState == 5">审核终止</a-tag>
+              <a-tag color="error" v-else-if="record.flowState == 6">已被挂起</a-tag>
+              <a-tag color="warning" v-else>等待提交</a-tag>
+            </template>
+            <!-- 有工作流：结束 -->
+}
+            <template v-if="column.key === 'action' && !record.top">
+              <TableAction :actions="getTableActions(record, index)" />
+            </template>
+          </template>
+@if(Model.TableConfig.ShowSummary){
+          <!-- 有合计：开始 -->
+          <template #summary v-if="state.cacheList.length">
+            <a-table-summary fixed>
+              <a-table-summary-row>
+                <a-table-summary-cell :index="0">合计</a-table-summary-cell>
+                <a-table-summary-cell v-for="(item, index) in getColumnSum" :key="index" :index="index + 1" :align="getSummaryCellAlign(index)">{{ item }}</a-table-summary-cell>
+                <a-table-summary-cell :index="getColumnSum.length + 1"></a-table-summary-cell>
+              </a-table-summary-row>
+            </a-table-summary>
+          </template>
+          <!-- 有合计：结束 -->
+}
+        </BasicTable>
+      </div>
+    </div>
+@if(!Model.HasFlow) {
+    @:<Form ref="formRef" @@reload="reload" />
+}
+@if(Model.HasDetail && !Model.HasFlow){
+    @:<Detail ref="detailRef" />
+}
+@if(Model.HasRelationDetail){
+    @:<RelationDetail ref="relationDetailRef" />
+}
+@if(Model.HasDownload){
+    @:<ExportModal @@register="registerExportModal" @@download="handleDownload" />
+}
+@if(Model.HasUpload){
+    @:<ImportModal @@register="registerImportModal" @@reload="reload" />
+}
+@if(Model.HasBatchPrint){
+    @:<PrintSelect @@register="registerPrintSelect" @@change="handleShowBrowse" />
+    @:<PrintBrowse @@register="registerPrintBrowse" />
+}
+@if(Model.TableConfig.HasSuperQuery){
+    @:<SuperQueryModal @@register="registerSuperQueryModal" @@superQuery="handleSuperQuery" />
+}
+@if(Model.HasFlow){
+    <CandidateModal @@register="registerCandidate" @@confirm="submitCandidate" />
+    <FlowParser @@register="registerFlowParser" @@reload="reload" />
+    <SelectFlowModal @@register="registerSelectFlowModal" @@change="selectFlow" />
+}
+  </div>
+</template>
+
+<script lang="ts" setup>
+  import { getList, del, exportData, batchDelete@(!Model.HasFlow ? ", create, update" : "") } from './helper/api';
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail){
+  @:import { getConfigData } from '/@@/api/onlineDev/visualDev';
+}
+@if(Model.HasFlow) {
+  // 工作流
+  @:import { create, update } from '/@@/api/workFlow/workFlowForm';
+  @:import { getCandidates } from '/@@/api/workFlow/flowBefore';
+  @:import { getFlowByFormId } from '/@@/api/workFlow/formDesign';
+  @:import { getFlowList } from '/@@/api/workFlow/flowEngine';
+  @:import FlowParser from '/@@/views/workFlow/components/FlowParser.vue';
+  @:import { SelectFlowModal } from '/@@/components/CommonModal';
+  @:import CandidateModal from '/@@/views/workFlow/components/modal/CandidateModal.vue';
+  // 工作流
+}
+  import { getDictionaryDataSelector } from '/@@/api/systemData/dictionary';
+  import { getDataInterfaceRes } from '/@@/api/systemData/dataInterface';
+  import { ref, reactive, onMounted, toRefs, computed, unref, nextTick, toRaw } from 'vue';
+  import { useMessage } from '/@@/hooks/web/useMessage';
+  import { useI18n } from '/@@/hooks/web/useI18n';
+  import { useOrganizeStore } from '/@@/store/modules/organize';
+  import { useUserStore } from '/@@/store/modules/user';
+  import { useBaseStore } from '/@@/store/modules/base';
+  import { @(Model.HasFlow ? "BasicModal, " : "")useModal } from '/@@/components/Modal';
+@if(Model.HasFlow){
+  @:import { usePopup } from '/@@/components/Popup';
+  @:import { ScrollContainer } from '/@@/components/Container';
+} else {
+  @:import Form from './extraForm.vue';
+}
+  import { BasicForm, useForm } from '/@@/components/Form';
+  import { BasicTable, useTable, TableAction, ActionItem, TableActionType, SorterResult } from '/@@/components/Table';
+@if(Model.HasDetail && !Model.HasFlow) {
+  @:import Detail from './Detail.vue';
+}
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail){
+  @:import RelationDetail from '/@@/views/common/dynamicModel/list/detail/index.vue';
+}
+  import { ExportModal, ImportModal, SuperQueryModal } from '/@@/components/CommonModal';
+  import { downloadByUrl } from '/@@/utils/file/download';
+  import { useRoute } from 'vue-router';
+  import { FilterOutlined } from '@@ant-design/icons-vue';
+  import { getSearchFormSchemas } from '/@@/components/FormGenerator/src/helper/transform';
+  import { cloneDeep } from 'lodash-es';
+  import columnList from './helper/columnList';
+  import searchList from './helper/searchList';
+@if(Model.TableConfig.HasSuperQuery){
+  @:import superQueryJson from './helper/superQueryJson';
+}
+  import { dyOptionsList, systemComponentsList } from '/@@/components/FormGenerator/src/helper/config';
+  import { thousandsFormat, getTimeUnit, getDateTimeUnit,getParamList } from '/@@/utils/jnpf';
+  import { JnpfRelationForm } from '/@@/components/Jnpf';
+  import dayjs from 'dayjs';
+  import { usePermission } from '/@@/hooks/web/usePermission';
+  import { noGroupList } from '/@@/components/FormGenerator/src/helper/config';
+@if(Model.HasBatchPrint){
+  @:import PrintSelect from '/@@/components/PrintDesign/printSelect/index.vue';
+  @:import PrintBrowse from '/@@/components/PrintDesign/printBrowse/index.vue';
+}
+
+  interface State {
+@if(Model.HasFlow){
+    @:formFlowId: string;
+    @:flowList: any[];
+}
+    config: any;
+    columnList: any[];
+    printListOptions: any[];
+    columnBtnsList: any[];
+    customBtnsList: any[];
+    columns: any[];
+    complexColumns: any[];
+    childColumnList: any[];
+    exportList: any[];
+    cacheList: any[];
+    currFlow: any;
+    isCustomCopy: boolean;
+    candidateType: number;
+    currRow: any;
+    workFlowFormData: any;
+    expandObj: any;
+    columnSettingList: any[];
+    searchSchemas: any[];
+    treeRelationObj: any;
+  }
+
+  const route = useRoute();
+  const { hasBtnP } = usePermission();
+  const { createMessage, createConfirm } = useMessage();
+  const { t } = useI18n();
+  const organizeStore = useOrganizeStore();
+  const userStore = useUserStore();
+  const userInfo = userStore.getUserInfo;
+  const baseStore = useBaseStore(); 
+
+  const [registerExportModal, { openModal: openExportModal, closeModal: closeExportModal, setModalProps: setExportModalProps }] = useModal();
+  const [registerImportModal, { openModal: openImportModal }] = useModal();
+  const [registerSuperQueryModal, { openModal: openSuperQuery }] = useModal();
+@if(Model.HasBatchPrint){
+  @:const [registerPrintSelect, { openModal: openPrintSelect }] = useModal();
+  @:const [registerPrintBrowse, { openModal: openPrintBrowse }] = useModal(); 
+}
+@if(Model.HasFlow){
+  @:const [registerFlowParser, { openPopup: openFlowParser }] = usePopup();
+  @:const [registerSelectFlowModal, { openModal: openSelectFlowModal, closeModal: closeSelectFlowModal  }] = useModal();
+  @:const [registerCandidate, { openModal: openCandidateModal, closeModal: closeCandidateModal }] = useModal();
+}
+  const formRef = ref<any>(null);
+  const tableRef = ref<Nullable<TableActionType>>(null);
+  const detailRef = ref<any>(null);
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail){
+  @:const relationDetailRef = ref<any>(null);
+}
+  const defaultSearchInfo = {
+    menuId: route.meta.modelId as string,
+    moduleId:'@(Model.BasicInfo.Id)',
+    superQueryJson: '',
+  };
+  const searchInfo:any = reactive({
+    ...cloneDeep(defaultSearchInfo),
+  });
+  const state = reactive<State>({
+@if(Model.HasFlow){
+    @:formFlowId: '',
+    @:flowList: [],
+}
+    config: {},
+    columnList: [],
+    printListOptions: [],
+    columnBtnsList: [],
+    customBtnsList: [],
+    columns: [],
+    complexColumns: [], // 复杂表头
+    childColumnList: [],
+    exportList: [],
+    cacheList: [],
+    currFlow: {},
+    isCustomCopy: false,
+    candidateType: 1,
+    currRow: {},
+    workFlowFormData: {},
+    expandObj: {},
+    columnSettingList: [],
+    searchSchemas: [],
+    treeRelationObj: null,
+  });
+  const { childColumnList, searchSchemas } = toRefs(state);
+  const [registerSearchForm, { updateSchema, @(Model.Type == 2 && Model.LeftTree.HasSearch ? "resetFields, " : "")submit: searchFormSubmit }] = useForm({
+    baseColProps: { span: 6 },
+    showActionButtonGroup: true,
+    showAdvancedButton: true,
+    compact: true,
+  });
+  const [ registerTable, { reload, setLoading, getFetchParams, getSelectRowKeys, redoHeight, insertTableDataRecord, updateTableDataRecord, deleteTableDataRecord, clearSelectedRowKeys }] = useTable({
+    api: getList,
+    immediate: false,
+    clickToRowSelect: false,
+    afterFetch: data => {
+      const list = data.map(o => ({ 
+        ...o, 
+        rowEdit: false,
+@foreach (var item in Model.FormScript.SubTableDesign){
+        @:@(item.Name): o.@(item.Name).map(t => {
+@foreach (var column in item.Controls){
+@switch(column.jnpfKey)
+{
+case "cascader":
+case "areaSelect":
+case "organizeSelect":
+case "checkbox":
+case "uploadImg":
+case "uploadFile":
+          @:t.@(column.Name) = t.@(column.Name) ? JSON.parse(t.@(column.Name)) : [];
+break;
+case "select":
+case "userSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+case "usersSelect":
+@if(column.Multiple)
+{
+          @:t.@(column.Name) = t.@(column.Name) ? JSON.parse(t.@(column.Name)) : [];
+}
+break;
+case "switch":
+          @:t.@(column.Name) = Number(t.@(column.Name));
+break;
+}
+}
+          @:return t;
+        @:}),
+}
+      }));
+      state.cacheList = cloneDeep(list);
+      return list;
+    },
+  });
+
+  const getHasBatchBtn = computed(() => {
+    let btnsList =[]
+@if(Model.HasBatchRemove){
+    @:btnsList.push('batchRemove')
+}
+@if(Model.HasBatchPrint){
+    @:btnsList.push('batchPrint')
+}
+@if(Model.HasDownload){
+    @:btnsList.push('download')
+}
+@if(Model.UseBtnPermission){
+    @:btnsList=btnsList.filter(o => hasBtnP('btn_"+ o))
+}
+    return !!btnsList.length    
+  });
+  const getTableBindValue = computed(() => {
+    let columns = state.columns;
+@if(Model.HasFlow){
+    @:columns.push({ title: '状态', dataIndex: 'flowState', width: 100 });
+}
+    const defaultSortConfig = @Model.TableConfig.DefaultSortConfig; 
+    const sortField = defaultSortConfig.map(o => (o.sort === 'desc' ? '-' : '') + o.field); 
+    const data: any = {
+@if(Model.TableConfig.HasPage){
+      @:pagination: { pageSize: @Model.TableConfig.PageSize }, //有分页
+}else{
+      @:pagination: false, //没有分页，树形，分组
+}
+      searchInfo: unref(searchInfo),
+	  ellipsis: @Model.TableConfig.ShowOverflow.ToString().ToLower(),
+      defSort: { sidx: sortField.join(',') },
+      sortFn: (sortInfo: SorterResult | SorterResult[]) => {
+        if (Array.isArray(sortInfo)) {
+          const sortList = sortInfo.map(o => (o.order === 'descend' ? '-' : '') + o.field);
+          return { sidx: sortList.join(',') };
+        } else {
+          const { field, order } = sortInfo;
+          if (field && order) {
+            // 排序字段
+            return { sidx: (order === 'descend' ? '-' : '') + field };
+          } else {
+            return {};
+          }
+        }
+      },
+      columns,
+@if(Model.ComplexColumns!=null){
+      // 复杂表头展示
+      @:bordered: true,
+}
+      actionColumn: {
+        width: 150,
+        title: '操作',
+        dataIndex: 'action',
+      },
+    };
+    if (unref(getHasBatchBtn)) {
+      const rowSelection: any = { type: 'checkbox' };
+      data.rowSelection = rowSelection;
+    }
+    return data;
+  });
+@if(Model.TableConfig.ShowSummary){
+  @:const getSummaryColumn = computed(() => {
+    @:let defaultColumns = state.columns;
+    @:// 处理列固定
+    @:if (state.columnSettingList?.length) {
+      @:for (let i = 0; i < defaultColumns.length; i++) {
+        @:inner: for (let j = 0; j < state.columnSettingList.length; j++) {
+          @:if (defaultColumns[i].dataIndex === state.columnSettingList[j].dataIndex) {
+            @:defaultColumns[i].fixed = state.columnSettingList[j].fixed;
+            @:defaultColumns[i].visible = state.columnSettingList[j].visible;
+            @:break inner;
+          @:}
+        @:}
+      @:}
+      @:defaultColumns = defaultColumns.filter((o) => o.visible);
+    @:}
+    @:let columns: any[] = [];
+    @:for (let i = 0; i < defaultColumns.length; i++) {
+      @:const e = defaultColumns[i];
+      @:if (e.jnpfKey === 'table' || e.jnpfKey === 'complexHeader') {
+        @:if (e.children?.length) columns.push(...e.children);
+      @:} else {
+        @:columns.push(e);
+      @:}
+      @:if (e.fixed && e.children?.length) {
+        @:for (let j = 0; j < e.children.length; j++) {
+          @:e.children[j].fixed = e.fixed;
+        @:}
+      @:}
+    @:}
+    @:const leftFixedList = columns.filter((o) => o.fixed === 'left');
+    @:const rightFixedList = columns.filter((o) => o.fixed === 'right');
+    @:const noFixedList = columns.filter((o) => o.fixed !== 'left' && o.fixed !== 'right');
+    @:return [...leftFixedList, ...noFixedList, ...rightFixedList, ];
+  @:});
+  @:// 列表合计
+  @:const getColumnSum = computed(() => {
+    @:const sums: any[] = [];
+    @:const summaryField: any = @Model.TableConfig.SummaryField;
+    @:const isSummary = (key) => summaryField.includes(key);
+    @:const useThousands = key => unref(getSummaryColumn).some(o => o.__vModel__ === key && o.thousands);
+    @:unref(getSummaryColumn).forEach((column, index) => {
+      @:let sumVal = state.cacheList.reduce((sum, d) => sum + getCmpValOfRow(d, column.prop), 0);
+      @:if (!isSummary(column.prop)) sumVal = '';
+      @:sumVal = Number.isNaN(sumVal) ? '' : sumVal;
+      @:const realVal = sumVal && !Number.isInteger(sumVal) ? Number(sumVal).toFixed(2) : sumVal;
+      @:sums[index] = useThousands(column.prop) ? thousandsFormat(realVal) : realVal;
+    @:});
+    @:if (unref(getHasBatchBtn)) {
+      @:sums.unshift('');
+    @:}
+    @:return sums;
+  @:});
+  @:function getCmpValOfRow(row, key) {
+    @:const summaryField: any = @Model.TableConfig.SummaryField;
+    @:const isSummary = (key) => summaryField.includes(key);
+    @:if (!summaryField.length || !isSummary(key)) return 0;
+    @:const target = row[key];
+    @:if (!target) return 0;
+    @:const data = isNaN(target) ? 0 : Number(target);
+    @:return data;
+  @:}
+}
+  function getTableActions(record, index): ActionItem[] {
+    const list: any[] = [
+@foreach (var item in Model.ColumnButtonDesign){
+      @:{
+        @:label: '@item.Label',
+@switch(item.Value)
+{
+case "edit":
+@if(Model.HasFlow){
+        @:disabled: [1, 2, 4, 5].includes(record.flowState),
+}
+        @:onClick: updateHandle.bind(null, record),
+break;
+case "remove":
+        @:color: 'error',
+@if(Model.HasFlow){
+        @:disabled: [1, 2, 3, 5].includes(record.flowState),
+}
+        @:modelConfirm: {
+          @:onOk: handleDelete.bind(null, record.@(Model.PrimaryKeyField)),
+        @:},
+break;
+case "detail":
+@if(Model.HasFlow){
+        @:disabled: !record.flowState, 
+}
+        @:onClick: goDetail.bind(null, record),
+break;
+}
+@if(Model.UseBtnPermission){
+        @:auth: 'btn_@item.Value', 
+}
+      @:},
+}
+    ];
+    if (record.rowEdit) {
+      let editBtnList: ActionItem[] = [
+        { label: '保存', onClick: saveForRowEdit.bind(null, record, 1) },
+        { label: '取消', color: 'error', onClick: cancelRowEdit.bind(null, record, index) },
+      ];
+@if(Model.HasFlow){
+      @:// 有工作流
+      @:editBtnList.push({ label: '提交', onClick: submitForRowEdit.bind(null, record) });
+      @:// 有工作流
+}
+      return editBtnList;
+    }
+    return list;
+  }
+@if(Model.HasFlow){
+  @:function getFlowId() {
+    @:getFlowByFormId('@Model.BasicInfo.Id').then(res => {
+      @:const flowId = res.data && res.data.id;
+      @:state.formFlowId = flowId;
+      @:getFlowOptions();
+    @:});
+  @:}
+  @:// 获取子流程list
+  @:function getFlowOptions() {
+    @:getFlowList(state.formFlowId, '1').then(res => {
+      @:state.flowList = res.data;
+    @:});
+  @:}
+  @:function selectFlow(item) {
+    @:closeSelectFlowModal();
+    @:state.currFlow = item;
+    @:const flowTemplateJson = item.flowTemplateJson ? JSON.parse(item.flowTemplateJson) : {};
+    @:state.isCustomCopy = (flowTemplateJson.properties && flowTemplateJson.properties.isCustomCopy) || false;
+    @:let record = { 
+      @:rowEdit: true, 
+      @:@(Model.PrimaryKeyField): 'jnpfAdd',
+@foreach (var item in Model.FormScript.InlineEditorDataForm) {
+      @:@(item.Name): @(item.Value),
+}
+    @:};
+    @:insertTableDataRecord(record, 0);
+  @:}
+}
+  function cancelRowEdit(record, index) {
+    const id = !record.@(Model.PrimaryKeyField) || record.@(Model.PrimaryKeyField) === 'jnpfAdd' ? '' : record.@(Model.PrimaryKeyField);
+    if (!id) return deleteTableDataRecord('jnpfAdd');
+    record.rowEdit = false;
+    const item = cloneDeep(state.cacheList[index]);
+    updateTableDataRecord(item.id, item);
+  }
+  // 行内编辑保存
+  function saveForRowEdit(record, status = '1', candidateData: any = null) {
+    const id = !record.@(Model.PrimaryKeyField) || record.@(Model.PrimaryKeyField) === 'jnpfAdd' ? '' : record.@(Model.PrimaryKeyField);
+@if(Model.HasFlow){
+    @:// 工作流
+    @:let query = {
+      @:id,
+      @:status: status || '1',
+      @:candidateType: state.candidateType,
+      @:formData: record,
+      @:flowId: state.currFlow.id,
+      @:flowUrgent: 1,
+    @:};
+    @:if (candidateData) query = { ...query, ...candidateData };
+    @:const formMethod = query.id ? update : create;
+    @:formMethod(query).then(res => {
+      @:createMessage.success(res.msg);
+      @:closeCandidateModal();
+      @:reload({ page: 1 });
+    @:});
+    @:// 工作流
+} else {
+    @:const query = { ...record, id };
+    @:const formMethod = query.id ? update : create;
+    @:formMethod(query).then(res => {
+      @:createMessage.success(res.msg);
+      @:reload({ page: 1 });
+    @:});
+}
+  }
+@if(Model.HasFlow){
+  @:// 行内编辑提交审核
+  @:function submitForRowEdit(record) {
+    @:record.@(Model.PrimaryKeyField) = !record.@(Model.PrimaryKeyField) || record.@(Model.PrimaryKeyField) === 'jnpfAdd' ? '' : record.@(Model.PrimaryKeyField);
+    @:state.currRow = record;
+    @:state.workFlowFormData = {
+      @:id: record.@(Model.PrimaryKeyField),
+      @:formData: record,
+      @:flowId: state.currFlow.id,
+    @:};
+    @:getCandidates(0, state.workFlowFormData).then(res => {
+      @:const data = res.data;
+      @:state.candidateType = data.type;
+      @:if (data.type == 3 && !state.isCustomCopy) {
+        @:createConfirm({
+          @:iconType: 'warning',
+          @:title: '提示',
+          @:content: '您确定要提交当前流程吗, 是否继续?',
+          @:onOk: () => {
+            @:saveForRowEdit(record, '0');
+          @:},
+        @:});
+        @:return;
+      @:}
+      @:let branchList = [];
+      @:let candidateList = [];
+      @:if (data.type == 1) {
+        @:branchList = res.data.list.filter(o => o.isBranchFlow);
+        @:candidateList = res.data.list.filter(o => !o.isBranchFlow && o.isCandidates);
+      @:}
+      @:if (data.type == 2) {
+        @:candidateList = res.data.list.filter(o => o.isCandidates);
+      @:}
+      @:openCandidateModal(true, {
+        @:branchList,
+        @:candidateList,
+        @:isCustomCopy: state.isCustomCopy,
+        @:taskId: state.config.taskId,
+        @:formData: state.workFlowFormData,
+      @:});
+    @:});
+  @:}
+  @:// 选择候选人
+  @:function submitCandidate(data) {
+    @:saveForRowEdit(state.currRow, '0', data);
+  @:}
+}
+@if(Model.HasAdd) {
+  @:// 新增
+  @:function addHandle() {
+    @:buildRowRelation();
+@if(Model.HasFlow){
+    @:// 带流程新增
+    @:if (!state.flowList.length) return createMessage.error('流程不存在');
+    @:if (state.flowList.length === 1) return selectFlow(state.flowList[0]);
+    @:openSelectFlowModal(true, { flowList:state.flowList });
+}else {
+    @:// 不带流程新增
+    @:let record = { 
+      @:rowEdit: true, 
+      @:@(Model.PrimaryKeyField): 'jnpfAdd',
+@foreach (var item in Model.FormScript.InlineEditorDataForm) {
+      @:@(item.Name): @(item.Value),
+}
+    @:};
+    @:insertTableDataRecord(record, 0);
+}
+  @:}
+}
+@if(Model.HasDownload){
+  @:// 导出
+  @:function handleDownload(data) {
+    @:data.selectKey = data.selectKey.join(',');
+    @:data.selectIds = data.selectIds.join(',');
+    @:let query = { ...getFetchParams(), ...data };
+    @:exportData(query)
+      @:.then(res => {
+        @:setExportModalProps({ confirmLoading: false });
+        @:if (!res.data.url) return;
+        @:downloadByUrl({ url: res.data.url });
+        @:closeExportModal();
+      @:})
+      @:.catch(() => {
+        @:setExportModalProps({ confirmLoading: false });
+      @:});
+  @:}
+}
+@if(Model.HasBatchRemove){
+  @:// 批量删除
+  @:function handelBatchRemove() {
+    @:const ids = getSelectRowKeys();
+    @:if (!ids.length) return createMessage.error('请选择一条数据');
+    @:createConfirm({
+      @:iconType: 'warning',
+      @:title: t('common.tipTitle'),
+      @:content: '您确定要删除这些数据吗, 是否继续?',
+      @:onOk: () => {
+        @:batchDelete(ids).then(res => {
+          @:createMessage.success(res.msg);
+          @:reload();
+        @:});
+      @:},
+    @:});
+  @:}
+}
+@if(Model.HasEdit){
+  @:// 编辑
+  @:function updateHandle(record) {
+    @:buildRowRelation();
+    @:record.rowEdit = true;
+@if(Model.HasFlow){
+    @://  带工作流
+    @:const flowId = record.flowId || state.flowList[0];
+    @:if (!flowId) return;
+    @:const list = state.flowList.filter(o => o.id === flowId);
+    @:if (!list.length) return;
+    @:state.currFlow = list[0];
+}
+    @:const flowTemplateJson = state.currFlow.flowTemplateJson ? JSON.parse(state.currFlow.flowTemplateJson) : {};
+    @:state.isCustomCopy = (flowTemplateJson.properties && flowTemplateJson.properties.isCustomCopy) || false;
+  @:}
+}
+@if(Model.HasDetail){
+  @:// 查看详情
+  @:function goDetail(record) {
+@if(Model.HasFlow) {
+    @:// 带流程
+    @:const data = {
+      @:id: record.@(Model.PrimaryKeyField),
+      @:flowId: record.flowId || state.flowList[0],
+      @:opType: 0,
+      @:status: record.flowState,
+    @:};
+    @:openFlowParser(true, data);
+} else {
+    @:// 不带流程
+    @:const data = {
+      @:id: record.@(Model.PrimaryKeyField),
+    @:};
+    @:detailRef.value?.init(data);
+}
+  @:}
+}
+@if(Model.HasRemove){
+  @:function handleDelete(id) {
+    @:createConfirm({
+      @:iconType: 'warning',
+      @:title: t('common.tipTitle'),
+      @:content: t('common.delTip'),
+      @:onOk: () => {
+        @:del(id).then(res => {
+          @:createMessage.success(res.msg);
+          @:reload();
+        @:});
+      @:},
+    @:});
+  @:}
+}
+  function init() {
+    state.config = {};
+@if(Model.HasFlow) {
+    // 带流程
+    @:getFlowId();
+    // 带流程
+}
+    searchInfo.menuId = route.meta.modelId as string;
+    state.columnList = columnList;
+    setLoading(true);
+    getSearchSchemas();
+    getColumnList();
+    buildOptions();
+    nextTick(() => {
+@if(Model.HasSearch){
+      @:// 有搜索列表
+      @:searchFormSubmit();
+}else{
+      @://  无搜索列表
+      @:reload({ page: 1 });
+}
+    });
+  }
+  function getSearchSchemas() {
+    const schemas = getSearchFormSchemas(searchList);
+    state.searchSchemas = schemas;
+    schemas.forEach(cur => {
+      const config = cur.__config__;
+      if (dyOptionsList.includes(config.jnpfKey)) {
+        if (config.dataType === 'dictionary') {
+          if (!config.dictionaryType) return;
+          getDictionaryDataSelector(config.dictionaryType).then(res => {
+            updateSchema([{ field: cur.field, componentProps: { options: res.data.list } }]);
+          });
+        }
+        if (config.dataType === 'dynamic') {
+          if (!config.propsUrl) return;
+          const query = { paramList: getParamList(config.templateJson) || [] };
+          getDataInterfaceRes(config.propsUrl, query).then(res => {
+            const data = Array.isArray(res.data) ? res.data : [];
+            updateSchema([{ field: cur.field, componentProps: { options: data } }]);
+          });
+        }
+      }
+      cur.defaultValue = cur.value;
+    });
+  }
+  function getColumnList() {
+@if(!Model.UseColumnPermission){
+    @:// 没有权限
+    @:let  columnList = state.columnList;
+}else{
+    @:// 过滤权限
+    @:let  columnList = [];
+    @:const permissionList = userStore.getPermissionList;
+    @:const list = permissionList.filter((o) => o.modelId === searchInfo.menuId);
+    @:const perColumnList = list[0] && list[0].column ? list[0].column : [];
+    @:for (let i = 0; i < state.columnList.length; i++) {
+      @:inner: for (let j = 0; j < perColumnList.length; j++) {
+        @:if (state.columnList[i].prop === perColumnList[j].enCode) {
+          @:columnList.push(state.columnList[i]);
+          @:break inner;
+        @:}
+      @:}
+    @:}
+}
+	state.exportList = columnList.filter(o => !noGroupList.includes(o.__config__.jnpfKey)&&!o.__config__.isSubTable);
+    let columns = columnList.map(o => ({
+      ...o,
+      title: o.label,
+      dataIndex: o.prop,
+      align: o.align,
+      fixed: o.fixed == 'none' ? false : o.fixed,
+      sorter: o.sortable ? { multiple: 1 } : o.sortable,
+      width: o.width || 100,
+    }));
+@if(Model.Type==1 ||Model.Type==2 ||Model.Type==4)
+{
+    @:columns = getComplexColumns(columns);
+}
+    state.columns = columns.filter(o => o.prop.indexOf('-') < 0);
+  }
+
+@if(Model.Type==1 || Model.Type==2 || Model.Type==4)
+{
+  @:function getComplexColumns(columns) {
+    @:let complexHeaderList: any[] = @Model.ComplexColumns;
+    @:if (!complexHeaderList.length) return columns;
+    @:let childColumns: any[] = [];
+    @:let firstChildColumns: string[] = [];
+    @:for (let i = 0; i < complexHeaderList.length; i++) {
+      @:const e = complexHeaderList[i];
+      @:e.title = e.fullName;
+      @:e.align = e.align;
+      @:e.dataIndex = e.id;
+      @:e.prop = e.id;
+      @:e.children = [];
+      @:e.jnpfKey = 'complexHeader';
+      @:if (e.childColumns?.length) {
+        @:childColumns.push(...e.childColumns);
+        @:for (let k = 0; k < e.childColumns.length; k++) {
+          @:const item = e.childColumns[k];
+          @:for (let j = 0; j < columns.length; j++) {
+            @:const o = columns[j];
+            @:if (o.prop == item && o.fixed !== 'left' && o.fixed !== 'right') e.children.push({ ...o });
+          @:}
+        @:}
+      @:}
+      @:if (e.children.length) firstChildColumns.push(e.children[0].prop);
+    @:}
+    @:complexHeaderList = complexHeaderList.filter(o => o.children.length);
+    @:let list: any[] = [];
+    @:for (let i = 0; i < columns.length; i++) {
+       @:const e = columns[i];
+       @:if (!childColumns.includes(e.prop)) {
+         @:list.push(e);
+       @:} else {
+         @:if (firstChildColumns.includes(e.prop)) {
+           @:const item = complexHeaderList.find(o => o.childColumns.includes(e.prop));
+           @:list.push(item);
+         @:}
+       @:}
+    @:}
+    @:return list;
+  @:}
+}
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail){
+  @:// 关联表单查看详情
+  @:function toDetail(modelId, id) {
+    @:if (!id) return;
+    @:getConfigData(modelId).then((res) => {
+      @:if (!res.data || !res.data.formData) return;
+      @:const formConf = JSON.parse(res.data.formData);
+      @:formConf.popupType = 'general';
+      @:const data = { id, formConf, modelId };
+      @:relationDetailRef.value?.init(data);
+    @:});
+  @:}
+}
+  function handleColumnChange(data) {
+    state.columnSettingList = data;
+  }
+@if(Model.TableConfig.HasSuperQuery){
+  @:// 高级查询
+  @:function handleSuperQuery(superQueryJson) {
+    @:if (!superQueryJson) {
+      @:searchInfo.superQueryJson = '';
+      @:reload({ page: 1 });
+      @:return;
+    @:}
+    @:let queryJsonObj = JSON.parse(superQueryJson);
+    @:searchInfo.superQueryJson = JSON.stringify(queryJsonObj);
+    @:reload({ page: 1 });
+  @:}
+}
+@if(Model.HasSearch){
+  @:function handleSearchReset() {
+    @:searchFormSubmit();
+  @:}
+}
+  function handleSearchSubmit(data) {
+    clearSelectedRowKeys();
+    let obj = {
+      ...defaultSearchInfo,
+      superQueryJson: searchInfo.superQueryJson,
+      ...data,
+    };
+    Object.keys(searchInfo).map(key => {
+      delete searchInfo[key];
+    });
+    for (let [key, value] of Object.entries(obj)) {
+@if(Model.LeftTree.HasSearch && Model.LeftTree.IsMultiple)
+{
+      @:if(key=='@(Model.LeftTree.TreeRelation)') searchInfo[key.replaceAll('-', '_')] = [value];
+      @:else searchInfo[key.replaceAll('-', '_')] = value;
+}
+else
+{
+      @:searchInfo[key.replaceAll('-', '_')] = value;
+}
+    }
+@foreach (var item in Model.QueryCriteriaQueryVarianceList){
+    @:searchInfo.@(item.Replace("-", "_")) = searchInfo.@(item.Replace("-", "_")) ? [searchInfo.@(item.Replace("-", "_"))] : null;
+}
+    reload({ page: 1 });
+  }
+  // 行内编辑获取选项
+  function buildOptions() {
+    const loop = list => {
+      for (let i = 0; i < list.length; i++) {
+        const cur = list[i];
+        if (cur.children?.length) loop(cur.children);
+        const config = cur.__config__;
+        if (!config) continue;
+        if (dyOptionsList.includes(config.jnpfKey)) {
+          if (config.dataType === 'dictionary') {
+            if (!config.dictionaryType) return;
+            baseStore.getDicDataSelector(config.dictionaryType).then(res => {
+              cur.options = res;
+            });
+          }
+          if (config.dataType === 'dynamic') {
+            if (!config.propsUrl) return;
+            const query = { paramList: getParamList(config.templateJson) || [] };
+            getDataInterfaceRes(config.propsUrl, query).then(res => {
+              cur.options = Array.isArray(res.data) ? res.data : [];
+            });
+          }
+        }
+      }
+    };
+    loop(state.columns);
+  }
+@if(!Model.HasFlow){
+  @:function handleRowForm(record) {
+    @:const data = {
+      @:id: record.@(Model.PrimaryKeyField),
+      @:menuId: searchInfo.menuId,
+      @:formData: record,
+    @:};
+    @:formRef.value?.init(data);
+  @:}
+}
+@if(Model.HasBatchPrint){
+  @:// 批量打印
+  @:function handelBatchPrint() {
+    @:const printIds = @(Model.BatchPrints);
+    @:if (!printIds?.length) return createMessage.error('未配置打印模板');
+    @:const ids = getSelectRowKeys();
+    @:if (!ids.length) return createMessage.error('请选择一条数据');
+    @:if(printIds.length === 1)return handleShowBrowse(printIds[0]);
+    @:openPrintSelect(true, printIds);
+  @:}
+  @:function handleShowBrowse(id) {
+    @:openPrintBrowse(true, { id, batchIds: getSelectRowKeys().join() });
+  @:}
+}
+function buildRowRelation() {
+    const loop = list => {
+      for (let i = 0; i < list.length; i++) {
+        let cur = list[i];
+        if (cur.children?.length) loop(cur.children);
+        const config = cur?.__config__;
+        if (!config) continue;
+        if (config.jnpfKey === 'datePicker') {
+          if (config.startTimeRule) {
+            if (config.startTimeType == 1) cur.startTime = config.startTimeValue;
+            if (config.startTimeType == 3) cur.startTime = new Date().getTime();
+            if (config.startTimeType == 4 || config.startTimeType == 5) {
+              const type = getTimeUnit(config.startTimeTarget);
+              const method = config.startTimeType == 4 ? 'subtract' : 'add';
+              const startTime = dayjs()[method](config.startTimeValue, type);
+              let realStartTime = startTime.startOf('day').valueOf();
+              if (config.startTimeTarget == 4) realStartTime = startTime.startOf('minute').valueOf();
+              if (config.startTimeTarget == 5) realStartTime = startTime.startOf('second').valueOf();
+              if (config.startTimeTarget == 6) realStartTime = startTime.valueOf();
+              cur.startTime = realStartTime;
+            }
+          }
+          if (config.endTimeRule) {
+            if (config.endTimeType == 1) cur.endTime = config.endTimeValue;
+            if (config.endTimeType == 3) cur.endTime = new Date().getTime();
+            if (config.endTimeType == 4 || config.endTimeType == 5) {
+              const type = getTimeUnit(config.endTimeTarget);
+              const method = config.endTimeType == 4 ? 'subtract' : 'add';
+              const endTime = dayjs()[method](config.endTimeValue, type);
+              let realEndTime = endTime.endOf('day').valueOf();
+              if (config.endTimeTarget == 4) realEndTime = endTime.endOf('minute').valueOf();
+              if (config.endTimeTarget == 5) realEndTime = endTime.endOf('second').valueOf();
+              if (config.endTimeTarget == 6) realEndTime = endTime.valueOf();
+              cur.endTime = realEndTime;
+            }
+          }
+        }
+        if (config.jnpfKey === 'timePicker') {
+          if (config.startTimeRule) {
+            if (config.startTimeType == 1) cur.startTime = config.startTimeValue || null;
+            if (config.startTimeType == 3) cur.startTime = dayjs().format(cur.format);
+            if (config.startTimeType == 4 || config.startTimeType == 5) {
+              const type = getTimeUnit(config.startTimeTarget + 3);
+              const method = config.startTimeType == 4 ? 'subtract' : 'add';
+              const startTime = dayjs()[method](config.startTimeValue, type).format(cur.format);
+              cur.startTime = startTime;
+            }
+          }
+          if (config.endTimeRule) {
+            if (config.endTimeType == 1) cur.endTime = config.endTimeValue || null;
+            if (config.endTimeType == 3) cur.endTime = dayjs().format(cur.format);
+            if (config.endTimeType == 4 || config.endTimeType == 5) {
+              const type = getTimeUnit(config.endTimeTarget + 3);
+              const method = config.endTimeType == 4 ? 'subtract' : 'add';
+              const endTime = dayjs()[method](config.endTimeValue, type).format(cur.format);
+              cur.endTime = endTime;
+            }
+          }
+        }
+      }
+    };
+    loop(state.columns);
+  }
+@if(Model.TableConfig.ShowSummary){
+  @:function getSummaryCellAlign(index) {
+    @:if (!unref(getSummaryColumn).length) return;
+    @:return unref(getSummaryColumn)[index]?.align || 'left';
+  @:}
+}
+  onMounted(() => {
+    init();
+  });
+</script>

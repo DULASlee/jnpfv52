@@ -1,0 +1,616 @@
+<template>
+  <BasicModal v-bind="$attrs" @@register="registerModal" :title="title" width="600px" okText="确定" cancelText="取消" :minHeight="100" @@ok="handleSubmit(0)" @@continue="handleSubmit(1)" :closeFunc="onClose">
+    <a-row class="dynamic-form">
+      <a-form :colon="false" size="large" layout="vertical" labelAlign="left" :model="dataForm" :rules="dataRule" ref="formRef">
+        <a-row :gutter="15">
+@foreach(var item in Model.FormScript.FormControlDesign)
+{
+GenerateFormLayoutControls(item, 0);
+}
+        </a-row>
+      </a-form>
+    </a-row>
+  </BasicModal>
+</template>
+<script lang="ts" setup>
+  import { create, update, getInfo } from './helper/api';
+  import { reactive, toRefs, nextTick, ref, unref, computed } from 'vue';
+  import { BasicModal, useModal } from '/@@/components/Modal';
+  import { JnpfRelationForm } from '/@@/components/Jnpf';
+  import { useMessage } from '/@@/hooks/web/useMessage';
+  import { useUserStore } from '/@@/store/modules/user';
+  import type { FormInstance } from 'ant-design-vue';
+  import { thousandsFormat, getTimeUnit, getDateTimeUnit } from '/@@/utils/jnpf';
+  import { getDictionaryDataSelector } from '/@@/api/systemData/dictionary';
+  import { getDataInterfaceRes } from '/@@/api/systemData/dataInterface';
+  import dayjs from 'dayjs';
+@if(Model.UseFormPermission) {
+  @:import { usePermission } from '/@@/hooks/web/usePermission';
+}
+
+  interface State {
+    dataForm: any;
+    dataRule: any;
+@if(Model.FormScript.HasOptions) {
+    @:optionsObj: any;
+}
+    isEdit: any;
+    isContinue: boolean;
+    title: string;
+    allList: any[];
+  }
+
+  const emit = defineEmits(['reload']);
+  const userStore = useUserStore();
+  const userInfo = userStore.getUserInfo;
+  const { createMessage } = useMessage();
+@if(Model.UseFormPermission) {
+  @:const { hasFormP } = usePermission();
+}
+  const [registerModal, { openModal, setModalProps }] = useModal();
+  const formRef = ref<FormInstance>();
+  const state = reactive<State>({
+    dataForm: {
+      @(Model.PrimaryKeyField): '',
+@foreach (var item in Model.FormScript.DataForm) {
+      @:@(item.Name): @(item.Value),
+}
+    },
+    dataRule: {
+@foreach (var item in Model.FormScript.DataRules) {
+      @:@(item.Name): [
+@foreach (var required in item.Required){
+        @:{
+          @:required: @required.required.ToString().ToLower(),
+          @:message: '@(required.message)',
+          @:trigger: @(required.trigger.ToString().StartsWith("[") ? required.trigger : "'" + required.trigger + "'"),
+        @:},
+}
+@foreach (var rule in item.Rule) {
+        @:{
+          @:pattern: @rule.pattern,
+          @:message: '@(rule.message)',
+          @:trigger: @(rule.trigger.ToString().StartsWith("[") ? rule.trigger : "'" + rule.trigger + "'"),
+          @:},
+}
+      @:],
+}
+    },
+@if(Model.FormScript.HasOptions){
+    @:optionsObj:{
+@foreach (var item in Model.FormScript.Options) {
+      @:@(item.Name): @(item.Value),
+}
+    @:},
+}
+    title: '',
+    isContinue: false,
+    isEdit: false,
+    allList: [],
+  });
+  const { title, dataForm, dataRule@(Model.FormScript.HasOptions ? ", optionsObj" : "") } = toRefs(state);
+
+  defineExpose({ init });
+
+  function init(data) {
+    state.isContinue = false;
+    state.title = !data.id || data.id === 'jnpfAdd' ? '新增' : '编辑';
+    setFormProps({ continueLoading: false });
+    openModal();
+@foreach (var item in Model.FormScript.DataOptions) {
+if(item.IsColumnOption) {
+    @:get@(item.Name)Options();
+}
+}
+    nextTick(() => {
+      getForm().resetFields();
+      state.dataForm = JSON.parse(JSON.stringify(data.formData));
+      state.dataForm.@(Model.PrimaryKeyField) = !data.id || data.id === 'jnpfAdd' ? '' : data.id;
+    });
+  }
+  function getForm() {
+    const form = unref(formRef);
+    if (!form) {
+      throw new Error('form is null!');
+    }
+    return form;
+  }
+  async function handleSubmit(type) {
+    try {
+      const values = await getForm()?.validate();
+      if (!values) return;
+      setFormProps({ continueLoading: true });
+      const formMethod = state.dataForm.@(Model.PrimaryKeyField) ? update : create;
+      formMethod(state.dataForm)
+        .then(res => {
+          createMessage.success(res.msg);
+          state.isContinue = true;
+          setFormProps({ continueLoading: false });
+          setFormProps({ visible: false });
+          emit('reload');
+        })
+        .catch(() => {
+          setFormProps({ continueLoading: false });
+        });
+    } catch (_) {}
+  }
+  function setFormProps(data) {
+    setModalProps(data);
+  }
+  function changeLoading(loading) {
+    setModalProps({ loading });
+  }
+  async function onClose() {
+    if (state.isContinue) emit('reload');
+    return true;
+  }
+@*数据选项*@
+@foreach (var item in Model.FormScript.DataOptions) {
+if(item.IsColumnOption) {
+  @:function get@(item.Name)Options(@(item.IsSubTable && item.IsLinkage ? "i?" : "")) {
+@switch(item.DataType)
+{
+case CodeGenFrontEndDataType.dictionary:
+    @:getDictionaryDataSelector('@(item.Value)').then(res => {
+      @:state.optionsObj.@(item.Name)Options = res.data.list
+break;
+case CodeGenFrontEndDataType.dynamic:
+    @:let templateJson = @(item.TemplateJson)
+    @:let query = {
+      @:paramList: getParamList(templateJson, state.dataForm@(item.IsSubTable && item.IsLinkage ? ", i" : ""))
+    @:}
+    @:getDataInterfaceRes('@(item.Value)', query).then(res => {
+      @:let data = res.data;
+      @:@(item.IsSubTable && item.IsLinkage && item.IsSubTableLinkage ? "state.dataForm." + item.SubTableName + "[i]" : "state.optionsObj").@(item.Name)Options = Array.isArray(data) ? data : [];
+break;
+}
+    @:});
+  @:}
+}
+}
+  function getParamList(templateJson, formData, index?) {
+    for (let i = 0; i < templateJson.length; i++) {
+      if (templateJson[i].relationField && templateJson[i].sourceType == 1) {
+        //区分是否子表
+        if (templateJson[i].relationField.includes('-')) {
+          let tableVModel = templateJson[i].relationField.split('-')[0]
+          let childVModel = templateJson[i].relationField.split('-')[1]
+          templateJson[i].defaultValue = formData[tableVModel] && formData[tableVModel][index] && formData[tableVModel][index][childVModel] || ''
+        } else {
+          templateJson[i].defaultValue = formData[templateJson[i].relationField] || ''
+        }
+      }
+    }
+    return templateJson
+  }
+@*是否开启特殊日期*@
+@if(Model.FormScript.HasSpecialDate) {
+  @:function getRelationDate(timeRule, timeType, timeTarget, timeValueData, dataValue) {
+    @:let timeDataValue: any = null;
+    @:let timeValue = Number(timeValueData);
+    @:if (timeRule) {
+      @:if (timeType == 1) {
+        @:timeDataValue = timeValue;
+      @:} else if (timeType == 2) {
+        @:timeDataValue = dataValue;
+      @:} else if (timeType == 3) {
+        @:timeDataValue = new Date().getTime();
+      @:} else if (timeType == 4 || timeType == 5) {
+        @:const type = getTimeUnit(timeTarget);
+        @:const method = timeType == 4 ? 'subtract' : 'add';
+        @:timeDataValue = dayjs()[method](timeValue, type).valueOf();
+      @:}
+    @:}
+    @:return timeDataValue;
+  @:}
+}
+@*是否开启特殊时间*@
+@if(Model.FormScript.HasSpecialTime) {
+  @:function getRelationTime(timeRule, timeType, timeTarget, timeValue, formatType, dataValue) {
+    @:let format = formatType == 'HH:mm' ? 'HH:mm:00' : formatType;
+    @:let timeDataValue: any = null;
+    @:if (timeRule) {
+      @:if (timeType == 1) {
+        @:timeDataValue = timeValue || '00:00:00';
+        @:if (timeDataValue.split(':').length == 3) {
+          @:timeDataValue = timeDataValue;
+        @:} else {
+          @:timeDataValue = timeDataValue + ':00';
+        @:}
+      @:} else if (timeType == 2) {
+        @:timeDataValue = dataValue;
+      @:} else if (timeType == 3) {
+        @:timeDataValue = dayjs().format(format);
+      @:} else if (timeType == 4 || timeType == 5) {
+        @:const type = getTimeUnit(timeTarget + 3);
+        @:const method = timeType == 4 ? 'subtract' : 'add';
+        @:timeDataValue = dayjs()[method](timeValue, type).format(format);
+      @:}
+    @:}
+    @:return timeDataValue;
+  @:}
+}
+</script>
+@{
+    @*
+	*表单布局控件
+    *model 表单控件设计模型
+    *num 格式化补全次数
+    *@
+    void GenerateFormLayoutControls(FormControlDesignModel model, int num)
+    {
+	    var space = "          ";
+for (int i = 0; i < num; i++)
+{
+    space += "  ";
+}
+@switch(model.jnpfKey)
+{
+@*分组标题*@
+case "groupTitle":
+break;
+@*分割线*@
+case "divider":
+break;
+@*栅格布局*@
+case "row":
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num);}
+}
+break;
+@*表格容器*@
+case "tableGrid":
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num);}
+}
+break;
+@*表格容器Tr*@
+case "tableGridTr":
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num);}
+}
+break;
+@*表格容器Td*@
+case "tableGridTd":
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num);}
+}
+break;
+@*子表*@
+case "table":
+break;
+@*卡片*@
+case "card":
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num);}
+}
+break;
+@*折叠面板*@
+case "collapse":
+@foreach(var collapse in model.Children)
+{
+@foreach(var collapses in collapse.Children)
+{
+@{GenerateFormLayoutControls(collapses, num);}
+}
+}
+break;
+@*标签面板*@
+case "tab":
+@foreach(var tab in model.Children)
+{
+@foreach(var tabs in tab.Children)
+{
+GenerateFormLayoutControls(tabs, num);
+}
+}
+break;
+@*其他*@
+default:
+GenerateRoutineFormControlsLabel(model, num);
+break;
+}
+	}
+	@*
+	 * 常规表单控件标签
+	 *@
+    void GenerateRoutineFormControlsLabel(FormControlDesignModel model, int num)
+	{
+	    var space = "          ";
+for (int i = 0; i < num; i++)
+{
+    space += "  ";
+}
+@switch(model.jnpfKey)
+{
+@*关联表单属性*@
+case "relationFormAttr":
+@*弹窗选择属性*@
+case "popupAttr":
+@switch(model.IsStorage)
+{
+case 0:
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-form-item>
+break;
+case 1:
+@:@space<a-col :span="@(model.Span)" class="ant-col-item" @(model.Hidden)@(Model.UseFormPermission ? "v-if=\"hasFormP('" + model.Name + "')\" " : "")>
+  @:@space<a-form-item name="@(model.Name)">
+break;
+}
+    @:@space@(model.ShowLabel ? "<template #label>" : string.Empty)@(model.Label)@(model.TipLabel)@(model.ShowLabel ? "</template>" : string.Empty)
+break;
+@*按钮*@
+case "button":
+@*提示*@
+case "alert":
+@*链接*@
+case "link":
+@*iframe*@
+case "iframe":
+@*文本*@
+case "text":
+@*颜色选择*@
+case "colorPicker":
+@*富文本*@
+case "editor":
+case "qrcode":
+case "barcode":
+break;
+default:
+@:@space<a-col :span="@(model.Span)" class="ant-col-item" @(model.Hidden)@(Model.UseFormPermission ? "v-if=\"hasFormP('" + model.Name + "')\" " : "")>
+  @:@space<a-form-item name="@(model.Name)">
+    @:@space@(model.ShowLabel ? "<template #label>" : string.Empty)@(model.Label)@(model.TipLabel)@(model.ShowLabel ? "</template>" : string.Empty)
+break;
+}
+GenerateFromControls(model, num, 0);
+@switch(model.jnpfKey){
+@*按钮*@
+case "button":
+@*提示*@
+case "alert":
+@*链接*@
+case "link":
+@*iframe*@
+case "iframe":
+@*文本*@
+case "text":
+@*颜色选择*@
+case "colorPicker":
+@*富文本*@
+case "editor":
+case "qrcode":
+case "barcode":
+break;
+default:
+  @:@space</a-form-item>
+@:@space</a-col>
+break;
+}
+    }
+	@*
+	 * 表单控件标签
+	 * generationType  生成类型 0 主表副表 1 子表
+	 *@
+	void GenerateFromControls(FormControlDesignModel model, int num, int generationType)
+	{
+	    var space = "          ";
+		var linked = string.Empty;
+for (int i = 0; i < num; i++)
+{
+    space += "  ";
+}
+switch(generationType){
+case 0:
+linked = string.Format("@change=\"{0}Change\" ", model.Name);
+break;
+case 1:
+linked = string.Format("@change=\"{0}TableChange(index)\" ", model.Name);
+break;
+}
+@switch(model.jnpfKey)
+{
+@*单行输入*@
+case "input":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.AddonBefore)@(model.AddonAfter)@(model.PrefixIcon)@(model.SuffixIcon)@(model.MaxLength)@(model.ShowPassword)@(model.Clearable)@(model.Readonly)@(model.Disabled)@(model.Style)@(model.ShowCount) />
+break;
+@*多行输入*@
+case "textarea":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.MaxLength)@(model.Clearable)@(model.Readonly)@(model.Disabled)@(model.AutoSize)@(model.Style)@(model.ShowCount) />
+break;
+@*数字输入*@
+case "inputNumber":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.AddonBefore)@(model.AddonAfter)@(model.Min)@(model.Max)@(model.Step)@(model.Controls)@(model.Thousands)@(model.AmountChinese)@(model.Disabled)@(model.Style) />
+break;
+@*开关*@
+case "switch":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Disabled) />
+break;
+@*单选*@
+case "radio":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Options)@(model.MainProps)@(model.Direction)@(model.Size)@(model.OptionType)@(model.Disabled)@(model.Style) />
+break;
+@*多选框*@
+case "checkbox":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Options)@(model.MainProps)@(model.Disabled)@(model.Direction)@(model.Style) />
+break;
+@*下拉框*@
+case "select":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.Options)@(model.MainProps)@(model.Clearable)@(model.Filterable)@(model.Multiple)@(model.Disabled)@(model.Style) />
+break;
+@*级联选择*@
+case "cascader":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.Options)@(model.MainProps)@(model.Clearable)@(model.Filterable)@(model.Multiple)@(model.Disabled)@(model.Style) />
+break;
+@*日期选择*@
+case "datePicker":
+@*时间选择*@
+case "timePicker":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.Format)@(model.Clearable)@(model.StartTime)@(model.EndTime)@(model.Disabled)@(model.Style) />
+break;
+@*评分*@
+case "rate":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Count)@(model.AllowHalf)@(model.Disabled)@(model.Style) />
+break;
+@*滑块*@
+case "slider":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Min)@(model.Max)@(model.Step)@(model.Disabled)@(model.Style) />
+break;
+@*文件上传*@
+case "uploadFile":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.ButtonText)@(model.ShowTip)@(model.Accept)@(model.PathType)@(model.IsAccount)@(model.Folder)@(model.FileSize)@(model.SizeUnit)@(model.Limit)@(model.Disabled)@(model.Style) />
+break;
+@*图片上传*@
+case "uploadImg":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.PathType)@(model.IsAccount)@(model.Folder)@(model.SizeUnit)@(model.FileSize)@(model.Disabled)@(model.Style) />
+break;
+@*按钮*@
+case "button":
+break;
+@*提示*@
+case "alert":
+break;
+@*链接*@
+case "link":
+break;
+@*iframe*@
+case "iframe":
+break;
+@*文本*@
+case "text":
+break;
+@*qrcode*@
+case "qrcode":
+break;
+@*barcode*@
+case "barcode":
+break;
+@*签章*@
+case "signature":
+    @:@space<jnpf-signature @(model.vModel)@(model.Disaabled)@(model.AbleIds)@(model.Disabled)/>
+break;
+@*手写签名*@
+case "sign":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Clearable)@(model.Disabled)/>
+break;
+@*定位*@
+case "location":
+    @:@space<@(model.Tag) @(model.vModel)@(model.EnableLocationScope)@(model.AutoLocation)@(model.AdjustmentScope)@(model.EnableDesktopLocation)@(model.LocationScope)@(model.Clearable)@(model.Disabled)/>
+break;
+@*组织选择*@
+case "organizeSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.SelectType)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*角色选择*@
+case "roleSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.SelectType)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*分组选择*@
+case "groupSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.SelectType)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*部门选择*@
+case "depSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.SelectType)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*岗位选择*@
+case "posSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.SelectType)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*用户选择*@
+case "userSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.SelectType)@(model.AbleRelationIds)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*用户组件*@
+case "usersSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.SelectType)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*下拉树形*@
+case "treeSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.Options)@(model.MainProps)@(model.Clearable)@(model.Filterable)@(model.Multiple)@(model.Disabled)@(model.Style) />
+break;
+@*下拉表格*@
+case "popupTableSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.Multiple)@(model.Clearable)@(model.TemplateJson)@(model.Field)@(model.ColumnOptions)@(model.HasPage)@(model.InterfaceId)@(model.RelationField)@(model.PropsValue)@(model.PageSize)@(model.PopupType)@(model.PopupTitle)@(model.PopupWidth)@(model.Disabled)@(model.Style) />
+break;
+@*下拉补全*@
+case "autoComplete":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.Clearable)@(model.InterfaceId)@(model.RelationField)@(model.TemplateJson)@(model.Total)@(model.Disabled)@(model.Style) />
+break;
+@*行政区划*@
+case "areaSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.Clearable)@(model.Filterable)@(model.Multiple)@(model.Level)@(model.Disabled)@(model.Style) />
+break;
+@*单据组件*@
+case "billRule":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.Readonly)@(model.Disabled)@(model.Style) />
+break;
+@*关联表单*@
+case "relationForm":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.Clearable)@(model.Filterable)@(model.Field)@(string.IsNullOrEmpty(model.ModelId) ? "" : "modelId=\"" + model.ModelId + "\" ")@(model.ColumnOptions)@(model.RelationField)@(model.PopupWidth)@(model.PageSize)@(model.HasPage)@(model.Disabled)@(model.Style) />
+break;
+@*弹窗选择*@
+case "popupSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.TemplateJson)@(model.Clearable)@(model.Field)@(model.InterfaceId)@(model.ColumnOptions)@(model.RelationField)@(model.PropsValue)@(model.PageSize)@(model.PopupType)@(model.PopupTitle)@(model.PopupWidth)@(model.HasPage)@(model.Disabled)@(model.Style) />
+break;
+@*关联表单属性*@
+case "relationFormAttr":
+@*弹窗选择属性*@
+case "popupAttr":
+@*是否存储字段*@
+@switch(model.IsStorage){
+case 0:
+@*生成类型*@
+@switch(generationType)
+{
+case 0:
+    @:@space<@(model.Tag) relationField="@(model.RelationField)" showField="@(model.ShowField)" @(model.Style) />
+break;
+case 1:
+    @:@space<@(model.Tag) :relationField="'@(model.RelationField)' + index" showField="@(model.ShowField)" @(model.Style) />
+break;
+}
+break;
+case 1:
+@switch(generationType)
+{
+case 0:
+    @:@space<@(model.Tag) @(model.vModel)relationField="@(model.RelationField)" isStorage="@(model.IsStorage)" showField="@(model.ShowField)" @(model.Disabled)@(model.Style) />
+break;
+case 1:
+    @:@space<@(model.Tag) @(model.vModel):relationField="'@(model.RelationField)' + index" isStorage="@(model.IsStorage)" showField="@(model.ShowField)" @(model.Disabled)@(model.Style) />
+break;
+}
+break;
+}
+break;
+@*创建人员*@
+case "createUser":
+    @:@space<@(model.Tag) v-model:value="dataForm.@(model.Name)_name" @(model.Type)@(model.Readonly)@(model.Disabled)@(model.Style) />
+break;
+@*创建时间*@
+case "createTime":
+@*所属岗位*@
+case "currPosition":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Type)@(model.Readonly)@(model.Disabled)@(model.Style) />
+break;
+@*修改人员*@
+case "modifyUser":
+    @:@space<@(model.Tag) v-model:value="dataForm.@(model.Name)_name" @(model.Placeholder)@(model.Readonly)@(model.Disabled)@(model.Style) />
+break;
+@*修改时间*@
+case "modifyTime":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.Readonly)@(model.Disabled)@(model.Style) />
+break;
+@*所属组织*@
+case "currOrganize":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Readonly)@(model.Type)@(model.ShowLevel)@(model.Disabled)@(model.Style) />
+break;
+}
+	}
+}

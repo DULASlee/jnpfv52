@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>JNPF 系统管理与系统权限业务抽象类库。</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\app\JNPF.Apps.Entitys\JNPF.Apps.Entitys.csproj" />
+		<ProjectReference Include="..\JNPF.Systems.Entitys\JNPF.Systems.Entitys.csproj" />
+	</ItemGroup>
+
+</Project>

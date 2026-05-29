@@ -1,0 +1,27 @@
+{
+    "EnCode": "@(Model.BasicInfo.EnCode)",
+    "FullName": "@(Model.BasicInfo.FullName)",
+    "Category": "@(Model.BasicInfo.Category)",
+    "UrlAddress": "@(Model.WebType == 3 ? "workFlow/workFlowForm/"+ Model.BasicInfo.MianTable +"/index.vue" : "extend/"+ Model.BasicInfo.MianTable +"/Form.vue")",
+    "AppUrlAddress": "@(Model.WebType == 3 ? "/pages/apply/"+ Model.BasicInfo.MianTable + "" : "/pages/apply/" + Model.BasicInfo.MianTable + "/index.vue")", @*app地址*@
+    @*线上模板*@
+    "PropertyJson": @(Model.BasicInfo.PropertyJson),
+    "Description": "",
+    "SortCode": 0,
+    "FlowType": @(Model.WebType == 3 ? "0" : "1"),
+    "FormType": 1,
+    "TableJson": @(Model.BasicInfo.TableJson),
+    "DbLinkId": "@(Model.BasicInfo.DbLinkId)",
+    "InterfaceUrl":"api/@(Model.WebType == 3 ? Model.NameSpace + "/Form" : Model.NameSpace)/@(Model.ClassName)",    
+    @*草稿模板*@
+    "DraftJson":"",
+    "CreatorTime": @Model.BasicInfo.CreatorTime,
+    "CreatorUserId": "@(Model.BasicInfo.CreatorUserId)",
+    "EnabledMark": 0,
+    "LastModifyTime": null,
+    "LastModifyUserId": null,
+    "DeleteMark": null,
+    "DeleteTime": null,
+    "DeleteUserId": null,
+    "Id":"@(Model.BasicInfo.Id)"
+}

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "node .cursor/hooks/episodic-session-start.mjs",
+        "timeout": 15
+      }
+    ],
+    "stop": [
+      {
+        "command": "node .cursor/hooks/episodic-stop.mjs",
+        "timeout": 15
+      }
+    ]
+  }
+}

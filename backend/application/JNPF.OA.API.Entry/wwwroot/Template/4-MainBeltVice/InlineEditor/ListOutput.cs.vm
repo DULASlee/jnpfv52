@@ -1,0 +1,241 @@
+﻿namespace JNPF.@(Model.NameSpace).Entitys.Dto.@Model.ClassName;
+
+/// <summary>
+/// @(Model.BusName)输入参数.
+/// </summary>
+public class @(Model.ClassName)ListOutput
+{
+@foreach (var column in Model.TableField)
+{
+@{var parameterName = string.Empty;}
+@switch(column.IsAuxiliary)
+{
+case true:
+@{parameterName = "jnpf_" + @column.TableName + "_jnpf_" + @column.LowerColumnName;}
+break;
+default:
+@{parameterName = @column.LowerColumnName;}
+break;
+}
+@if (column.PrimaryKey){
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @column.LowerColumnName { get; set; }
+@:
+}else if (column.IsShow){
+@switch(column.jnpfKey)
+{
+case "createTime":
+case "modifyTime":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName) { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName)_name { get; set; }
+@:
+break;
+case "uploadFile":
+case "uploadImg":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public object? @(parameterName) { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public object? @(parameterName)_name { get; set; }
+@:
+break;
+case "relationForm":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName) { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName)_name { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName)_id { get; set; }
+break;
+case "datePicker":
+case "timePicker":
+case "input":
+case "textarea":
+case "billRule":
+case "switch":
+case "usersSelect":
+case "autoComplete":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @(parameterName) { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName)_name { get; set; }
+@:
+break;
+case "modifyUser":
+case "createUser":
+case "currPosition":
+case "currOrganize":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName) { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName)_name { get; set; }
+@:
+break;
+case "popupAttr":
+case "relationFormAttr":
+@switch(column.isStorage){
+case true:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @(parameterName) { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName)_name { get; set; }
+@:
+break;
+}
+break;
+case "select":
+case "radio":
+case "treeSelect":
+@switch(column.ControlsDataType)
+{
+case "dictionary":
+@if(!column.IsMultiple)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @(parameterName) { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName)_name { get; set; }
+@:
+}else{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName) { get; set; }
+@:
+}
+break;
+default:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName) { get; set; }
+@:
+break;
+}
+break;
+case "inputNumber":
+case "popupSelect":
+case "rate":
+case "slider":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @(parameterName) { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @(parameterName)_name { get; set; }
+@:
+break;
+case "depSelect":
+case "posSelect":
+case "userSelect":
+case "roleSelect":
+case "groupSelect":
+case "popupTableSelect":
+@if(!column.IsMultiple)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @(parameterName) { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName)_name { get; set; }
+@:
+}else{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @(parameterName) { get; set; }
+@:
+}
+break;
+default:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @(parameterName) { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @(parameterName)_name { get; set; }
+@:
+break;
+}
+}
+}
+@if(Model.ConcurrencyLock)
+{
+    @:/// <summary>
+    @:/// 乐观锁.
+    @:/// </summary>
+    @:public long version { get; set; }
+@:
+}
+@if(Model.EnableFlow && Model.PrimaryKeyPolicy == 2)
+{
+    @:/// <summary>
+    @:/// 流程真实ID.
+    @:/// </summary>
+    @:public string flowTaskId { get; set; }
+@:
+}
+@if(Model.EnableFlow)
+{
+    @:/// <summary>
+    @:/// 流程ID.
+    @:/// </summary>
+    @:public string flowId { get; set; }
+@:
+    @:/// <summary>
+    @:/// 流程状态.
+    @:/// </summary>
+    @:public int? flowState { get; set; } = 0;
+}
+}

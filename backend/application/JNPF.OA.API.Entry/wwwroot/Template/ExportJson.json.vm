@@ -1,0 +1,27 @@
+{
+    "EnCode": "@(Model.EnCode)",
+    "FullName": "@(Model.FullName)",
+    "Category": "@(Model.Category)",
+    "UrlAddress": "@(Model.WebType == 3 ? "workFlow/workFlowForm/"+ Model.MianTable +"/index.vue" : "extend/"+ Model.MianTable +"/Form.vue")",
+    "AppUrlAddress": "@(Model.WebType == 3 ? "/pages/apply/"+ Model.MianTable + "" : "/pages/apply/" + Model.MianTable + "/index.vue")", @*app地址*@
+    @*线上模板*@
+    "PropertyJson": @(Model.PropertyJson),
+    "Description": "",
+    "SortCode": 0,
+    "FlowType": @(Model.WebType == 3 ? "0" : "1"),
+    "FormType": 1,
+    "TableJson": @(Model.Tables),
+    "DbLinkId": "@(Model.DbLinkId)",
+    "InterfaceUrl":"api/@(Model.WebType == 3 ? Model.NameSpace + "/Form" : Model.NameSpace)/@(Model.ClassName)",    
+    @*草稿模板*@
+    "DraftJson":"",
+    "CreatorTime": @Model.CreatorTime,
+    "CreatorUserId": "@(Model.CreatorUserId)",
+    "EnabledMark": 0,
+    "LastModifyTime": null,
+    "LastModifyUserId": null,
+    "DeleteMark": null,
+    "DeleteTime": null,
+    "DeleteUserId": null,
+    "Id":"@(Model.FormId)"
+}

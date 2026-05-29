@@ -1,0 +1,135 @@
+﻿@{var n=0;}
+@foreach (var table in Model.TableRelations)
+{
+if(table.IsShowField)
+{
+@:using JNPF.@(Model.NameSpace).Entitys.Dto.@table.ClassName;
+@{n++;}
+}
+}
+@if(n > 1)
+{
+@:
+}
+namespace JNPF.@(Model.NameSpace).Entitys.Dto.@Model.ClassName;
+
+/// <summary>
+/// @(Model.BusName)输入参数.
+/// </summary>
+public class @(Model.ClassName)ListOutput
+{
+@foreach (var column in Model.TableField)
+{
+@if (column.PrimaryKey){
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @column.LowerColumnName { get; set; }
+@:
+}
+else if (column.IsShow)
+{
+switch(column.jnpfKey)
+{
+case "datePicker":
+case "createTime":
+case "modifyTime":
+case "switch":
+case "radio":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @column.LowerColumnName { get; set; }
+@:
+break;
+case "relationForm":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @column.LowerColumnName { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(column.LowerColumnName)_id { get; set; }
+break;
+case "uploadFile":
+case "uploadImg":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public object? @column.LowerColumnName { get; set; }
+@:
+break;
+default:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @(column.NetType == "int?" ? "string" : column.NetType) @column.LowerColumnName { get; set; }
+@:
+break;
+}
+}
+}
+@foreach (var column in Model.TableField)
+{
+@switch(column.jnpfKey)
+{
+case "treeSelect":
+@if(column.IsTreeParentField && Model.TableType == 5)
+{
+@if(!column.IsShow)
+{
+    @:/// <summary>
+    @:/// @(Model.BusName).
+    @:/// </summary>
+    @:public @column.NetType @(column.LowerColumnName) { get; set; }
+@:
+}
+    @:/// <summary>
+    @:/// @(Model.BusName)-父级ID.
+    @:/// </summary>
+    @:public @column.NetType @(column.LowerColumnName)_pid { get; set; }
+@:
+    @:/// <summary>
+    @:/// @(Model.BusName)-子级.
+    @:/// </summary>
+    @:public List<@(Model.ClassName)ListOutput> children { get; set; }
+@:
+}
+break;
+}
+}
+@if(Model.PrimaryKeyPolicy == 2)
+{
+    @:/// <summary>
+    @:/// 流程任务ID.
+    @:/// </summary>
+    @:public string flowTaskId { get; set; }
+@:
+}
+@foreach (var table in Model.TableRelations)
+{
+if(table.IsShowField)
+{
+    @:/// <summary>
+    @:/// .
+    @:/// </summary>
+    @:public List<@(table.ClassName)ListOutput> @table.ControlModel { get; set; }
+@:
+}
+}
+@if(Model.IsMainTable && Model.EnableFlow)
+{
+    @:/// <summary>
+    @:/// 流程状态.
+    @:/// </summary>
+    @:public int? flowState { get; set; } = 0;
+@:
+    @:/// <summary>
+    @:/// 流程引擎ID.
+    @:/// </summary>
+    @:public string flowId { get; set; }
+@:
+}
+}

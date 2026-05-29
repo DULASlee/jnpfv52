@@ -1,0 +1,1196 @@
+@{List<int> webType = new List<int> { 3, 5 }; }
+<template>
+  <div class="jnpf-content-wrapper">
+@if(Model.Type == 2){
+    <div class="jnpf-content-wrapper-left">
+      <BasicLeftTree v-bind="getLeftTreeBindValue" ref="leftTreeRef" @@reload="getTreeView()" @@select="handleLeftTreeSelect" />
+    </div>
+}
+    <div class="jnpf-content-wrapper-center">
+@if(Model.HasSearch){
+      <div class="jnpf-content-wrapper-search-box">
+        <BasicForm @@register="registerSearchForm" :schemas="searchSchemas" @@advanced-change="redoHeight" @@submit="handleSearchSubmit" @@reset="handleSearchReset" class="search-form">
+        </BasicForm>
+      </div>
+}
+      <div class="jnpf-content-wrapper-content">
+        <BasicTable @@register="registerTable" v-bind="getTableBindValue" ref="tableRef" @@columns-change="handleColumnChange">
+          <template #tableTitle>
+@foreach (var item in Model.TopButtonDesign){
+            @:<a-button type="@(item.Type)" preIcon="@(item.Icon)" @@click="@(item.Method)"@(Model.UseBtnPermission ? " v-auth=\"'btn_" + @item.Value + "'\"" : "")>@item.Label</a-button>
+}
+          </template>
+@if(Model.TableConfig.HasSuperQuery){
+          <!-- 有高级查询：开始 -->
+          <template #toolbar>
+            <a-tooltip placement="top">
+              <template #title>
+                <span>{{ t('common.superQuery') }}</span>
+              </template>
+              <filter-outlined @@click="openSuperQuery(true, { columnOptions: superQueryJson })" />
+            </a-tooltip>
+          </template>
+          <!-- 有高级查询：结束 -->
+}
+@if(Model.HasChildTable && Model.TableConfig.ChildTableStyle == 2){
+          <!-- 有子表且是折叠展示：开始 -->
+          <template #expandedRowRender="{ record }" v-if="childColumnList.length">
+            <a-tabs size="small">
+              <a-tab-pane :key="cIndex" :tab="child.label" :label="child.label" v-for="(child, cIndex) in childColumnList">
+                <BasicTable @@register="registerChildTable" :ellipsis="@(Model.TableConfig.ShowOverflow.ToString().ToLower())" :data-source="record[child.prop]" :columns="child.children">
+                  <template #bodyCell="{ column, record: childRecord }">
+@if(Model.HasSubTableRelationDetail){
+                    @:<template v-if="column.jnpfKey === 'relationForm'">
+                      @:<p class="link-text" @@click="toDetail(column.modelId, childRecord[`${column.dataIndex}_id`])">
+                        @:{{ childRecord[column.dataIndex] }}</p>
+                    @:</template>
+}
+                    @<template v-if="column.jnpfKey === 'sign'">
+                        @<jnpf-sign v-model:value="childRecord[column.dataIndex]" detailed />
+                    @</template>
+                    @<template v-if="column.jnpfKey === 'signature'">
+                        @<jnpf-signature v-model:value="childRecord[column.dataIndex]" detailed />
+                    @</template>
+                    @<template v-if="column.jnpfKey === 'rate'">
+                        @<jnpf-rate v-model:value="childRecord[column.dataIndex]" :count="column.count" :allowHalf="column.allowHalf" disabled />
+                    @</template>
+                    @<template v-if="column.jnpfKey === 'slider'">
+                        @<jnpf-slider v-model:value="childRecord[column.dataIndex]" :min="column.min" :max="column.max" :step="column.step" disabled />
+                    @</template>
+                    @<template v-if="column.jnpfKey === 'uploadImg'">
+                        @<jnpf-upload-img v-model:value="childRecord[column.dataIndex]" disabled detailed simple v-if="childRecord[column.dataIndex]?.length" />
+                    @</template>
+                    @<template v-if="column.jnpfKey === 'uploadFile'">
+                        @<jnpf-upload-file v-model:value="childRecord[column.dataIndex]" disabled detailed simple v-if="childRecord[column.dataIndex]?.length" />
+                    @</template>
+                    @<template v-if="column.jnpfKey === 'input'">
+                        @<jnpf-input v-model:value="childRecord[column.dataIndex]" :useMask="column.useMask" :maskConfig="column.maskConfig" :showOverflow="@(Model.TableConfig.ShowOverflow.ToString().ToLower())" detailed />
+                    @</template>
+                  </template>
+                </BasicTable>
+              </a-tab-pane>
+            </a-tabs>
+          </template>
+          <!-- 有子表且是折叠展示：结束 -->
+}
+          <template #bodyCell="{ column, record }">
+@if(Model.HasChildTable && Model.TableConfig.ChildTableStyle == 1){
+            <!--  有子表且是分组展示：开始 -->
+            <template v-for="(item, index) in childColumnList" v-if="childColumnList.length">
+              <template v-if="column?.id?.includes('-') && item.children && item.children[0] && column.key === item.children[0]?.dataIndex">
+                <ChildTableColumn :data="record[item.prop]" :head="item.children" @@toggleExpand="toggleExpand(record, `${item.prop}Expand`)" @@toDetail="toDetail" :expand="record[`${item.prop}Expand`]" :key="index" :showOverflow="@(Model.TableConfig.ShowOverflow.ToString().ToLower())" />
+              </template>
+            </template>
+            <!-- 有子表且是折叠展示：结束 -->
+}
+<template v-if="!(record.top || column.id?.includes('-'))">
+            <template v-if="column.jnpfKey === 'sign'">
+                <jnpf-sign v-model:value="record[column.dataIndex]" detailed />
+            </template>
+            <template v-if="column.jnpfKey === 'signature'">
+                <jnpf-signature v-model:value="record[column.dataIndex]" detailed />
+            </template>
+            <template v-if="column.jnpfKey === 'rate'">
+                <jnpf-rate v-model:value="record[column.dataIndex]" :count="column.count" :allowHalf="column.allowHalf" disabled />
+            </template>
+            <template v-if="column.jnpfKey === 'slider'">
+                <jnpf-slider v-model:value="record[column.dataIndex]" :min="column.min" :max="column.max" :step="column.step" disabled />
+            </template>
+            <template v-if="column.jnpfKey === 'uploadImg'">
+                <jnpf-upload-img v-model:value="record[column.dataIndex]" disabled detailed simple v-if="record[column.dataIndex]?.length" />
+            </template>
+            <template v-if="column.jnpfKey === 'uploadFile'">
+                <jnpf-upload-file v-model:value="record[column.dataIndex]" disabled detailed simple v-if="record[column.dataIndex]?.length" />
+            </template>
+            <template v-if="column.jnpfKey === 'input'">
+                <jnpf-input
+                v-model:value="record[column.dataIndex]"
+                :useMask="column.useMask"
+                :maskConfig="column.maskConfig"
+                :showOverflow="@(Model.TableConfig.ShowOverflow.ToString().ToLower())"
+                detailed />
+            </template>
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail) {
+            @:<template v-if="column.jnpfKey === 'relationForm'">
+              @:<p class="link-text" @@click="toDetail(column.modelId, record[`${column.dataIndex}_id`])">{{ record[column.dataIndex] }}</p>
+            @:</template>
+}
+@if(Model.HasThousands || Model.HasSubTableThousands) {
+            @:<template v-if="column.jnpfKey === 'inputNumber'">
+              @:<jnpf-input-number v-model:value="record[column.prop]" :precision="column.precision" :thousands="column.thousands" disabled detailed />
+            @:</template>
+}
+</template>
+@if(Model.HasFlow){
+            <!-- 有工作流：开始 -->
+            <template v-if="column.key === 'flowState' && !record.top">
+              <a-tag color="processing" v-if="record.flowState == 1">等待审核</a-tag>
+              <a-tag color="success" v-else-if="record.flowState == 2">审核通过</a-tag>
+              <a-tag color="error" v-else-if="record.flowState == 3">审核退回</a-tag>
+              <a-tag v-else-if="record.flowState == 4 || record.flowState == 7">流程撤回</a-tag>
+              <a-tag v-else-if="record.flowState == 5">审核终止</a-tag>
+              <a-tag color="error" v-else-if="record.flowState == 6">已被挂起</a-tag>
+              <a-tag color="warning" v-else>等待提交</a-tag>
+            </template>
+            <!-- 有工作流：结束 -->
+}
+            <template v-if="column.key === 'action' && !record.top">
+              <TableAction :actions="getTableActions(record)" />
+            </template>
+          </template>
+@if(Model.TableConfig.ShowSummary && !webType.Contains(Model.Type)){
+          <!-- 有合计：开始 -->
+          <template #summary v-if="state.cacheList.length">
+            <a-table-summary fixed>
+              <a-table-summary-row>
+                <a-table-summary-cell :index="0">合计</a-table-summary-cell>
+                <a-table-summary-cell v-for="(item, index) in getColumnSum" :key="index" :index="index + 1" :align="getSummaryCellAlign(index)">{{ item }}</a-table-summary-cell>
+                <a-table-summary-cell :index="getColumnSum.length + 1"></a-table-summary-cell>
+              </a-table-summary-row>
+            </a-table-summary>
+          </template>
+          <!-- 有合计：结束 -->
+}
+        </BasicTable>
+      </div>
+    </div>
+@if(!Model.HasFlow) {
+    @:<Form ref="formRef" @@reload="reload" />
+}
+@if(Model.HasDetail && !Model.HasFlow){
+    @:<Detail ref="detailRef" />
+}
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail){
+    <RelationDetail ref="relationDetailRef" />
+}
+@if(Model.HasDownload){
+    <ExportModal @@register="registerExportModal" @@download="handleDownload" />
+}
+@if(Model.HasUpload){
+    <ImportModal @@register="registerImportModal" @@reload="reload" />
+}
+@if(Model.HasBatchPrint){
+    @:<PrintSelect @@register="registerPrintSelect" @@change="handleShowBrowse" />
+    @:<PrintBrowse @@register="registerPrintBrowse" />
+}
+@if(Model.TableConfig.HasSuperQuery){
+    <SuperQueryModal @@register="registerSuperQueryModal" @@superQuery="handleSuperQuery" />
+}
+@if(Model.HasFlow){
+    <!-- 带流程：开始 -->
+    <FlowParser @@register="registerFlowParser" @@reload="reload" />
+    <SelectFlowModal @@register="registerSelectFlowModal" @@change="selectFlow" />
+    <!-- 带流程：结束 -->
+}
+  </div>
+</template>
+
+<script lang="ts" setup>
+@if(Model.HasBatchPrint){
+// 有打印：开始
+  @:import { getPrintDevByIds } from '/@@/api/system/printDev';
+// 有打印：结束
+}
+  import { getList, del, exportData, batchDelete } from './helper/api';
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail){
+  @:import { getConfigData } from '/@@/api/onlineDev/visualDev';
+}
+@if(Model.HasFlow){
+// 工作流
+  @:import { getFlowByFormId } from '/@@/api/workFlow/formDesign';
+  @:import { getFlowList } from '/@@/api/workFlow/flowEngine';
+  @:import FlowParser from '/@@/views/workFlow/components/FlowParser.vue';
+  @:import { SelectFlowModal } from '/@@/components/CommonModal';
+// 工作流
+}
+  import { getDictionaryDataSelector } from '/@@/api/systemData/dictionary';
+  import { getDataInterfaceRes } from '/@@/api/systemData/dataInterface';
+  import { getOrgByOrganizeCondition } from '/@@/api/permission/organize';
+  import { ref, reactive, onMounted, toRefs, computed, unref, nextTick, provide } from 'vue';
+  import { useMessage } from '/@@/hooks/web/useMessage';
+  import { useI18n } from '/@@/hooks/web/useI18n';
+  import { useOrganizeStore } from '/@@/store/modules/organize';
+  import { useUserStore } from '/@@/store/modules/user';
+  import { @(Model.HasFlow ? "BasicModal, " : "")useModal } from '/@@/components/Modal';
+@if(Model.HasFlow){
+  @:import { ScrollContainer } from '/@@/components/Container';
+  @:import { usePopup } from '/@@/components/Popup';
+}
+@if(Model.Type == 2){
+  @:import { BasicLeftTree, TreeActionType } from '/@@/components/Tree';
+}
+  import { BasicForm, useForm } from '/@@/components/Form';
+  import { BasicTable, useTable, TableAction, ActionItem, TableActionType, SorterResult } from '/@@/components/Table';
+  import Form from './Form.vue';
+@if(Model.HasDetail && !Model.HasFlow){
+// 有详情
+  @:import Detail from './Detail.vue';
+}
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail){
+// 有关联表单详情：开始
+  @:import RelationDetail from '/@@/views/common/dynamicModel/list/detail/index.vue';
+// 有关联表单详情：结束
+}
+@if(Model.HasChildTable && Model.TableConfig.ChildTableStyle == 1){
+// 有子表分组显示
+  @:import ChildTableColumn from '/@@/views/common/dynamicModel/list/ChildTableColumn.vue';
+// 有子表分组显示
+}
+  import { ExportModal, ImportModal, SuperQueryModal } from '/@@/components/CommonModal';
+  import { downloadByUrl } from '/@@/utils/file/download';
+  import { useRoute } from 'vue-router';
+  import { FilterOutlined } from '@@ant-design/icons-vue';
+  import { getSearchFormSchemas } from '/@@/components/FormGenerator/src/helper/transform';
+  import { cloneDeep } from 'lodash-es';
+  import columnList from './helper/columnList';
+  import searchList from './helper/searchList';
+@if(Model.TableConfig.HasSuperQuery){
+  @:import superQueryJson from './helper/superQueryJson';
+}
+@if(Model.HasBatchPrint){
+  @:import PrintSelect from '/@@/components/PrintDesign/printSelect/index.vue';
+  @:import PrintBrowse from '/@@/components/PrintDesign/printBrowse/index.vue';
+}
+  import { dyOptionsList } from '/@@/components/FormGenerator/src/helper/config';
+  import { thousandsFormat,getParamList } from '/@@/utils/jnpf';
+  import { usePermission } from '/@@/hooks/web/usePermission';
+  import { noGroupList } from '/@@/components/FormGenerator/src/helper/config';
+
+  interface State {
+@if(Model.HasFlow){
+    @:formFlowId: string;
+    @:flowList: any[];
+}
+    config: any;
+    columnList: any[];
+    printListOptions: any[];
+    columnBtnsList: any[];
+    customBtnsList: any[];
+@if(Model.Type == 2){
+    @:treeFieldNames: any;
+    @:leftTreeData: any[];
+    @:leftTreeLoading: boolean;
+}
+    treeActiveId: string;
+    treeActiveNodePath: any;
+    columns: any[];
+    complexColumns: any[];
+    childColumnList: any[];
+    exportList: any[];
+    cacheList: any[];
+    currFlow: any;
+    isCustomCopy: boolean;
+    candidateType: number;
+    currRow: any;
+    workFlowFormData: any;
+    expandObj: any;
+    columnSettingList: any[];
+    searchSchemas: any[];
+    treeRelationObj: any;
+    treeQueryJson: any;
+    leftTreeActiveInfo: any;
+  }
+
+  const route = useRoute();
+  const { hasBtnP } = usePermission();
+  const { createMessage, createConfirm } = useMessage();
+  const { t } = useI18n();
+  const organizeStore = useOrganizeStore();
+  const userStore = useUserStore();
+  const userInfo = userStore.getUserInfo;
+
+  const [registerExportModal, { openModal: openExportModal, closeModal: closeExportModal, setModalProps: setExportModalProps }] = useModal();
+  const [registerImportModal, { openModal: openImportModal }] = useModal();
+  const [registerSuperQueryModal, { openModal: openSuperQuery }] = useModal();
+@if(Model.HasBatchPrint){
+  @:const [registerPrintSelect, { openModal: openPrintSelect }] = useModal();
+  @:const [registerPrintBrowse, { openModal: openPrintBrowse }] = useModal(); 
+}
+@if(Model.HasFlow){
+  @:// 工作流
+  @:const [registerFlowParser, { openPopup: openFlowParser }] = usePopup();
+  @:const [registerSelectFlowModal, { openModal: openSelectFlowModal, closeModal: closeSelectFlowModal  }] = useModal();
+  @:// 工作流
+}
+@if(Model.Type == 2){
+  @:const leftTreeRef = ref<Nullable<TreeActionType>>(null);
+}
+  const formRef = ref<any>(null);
+  const tableRef = ref<Nullable<TableActionType>>(null);
+  const detailRef = ref<any>(null);
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail){
+  @:const relationDetailRef = ref<any>(null);
+}
+  const defaultSearchInfo = {
+    menuId: route.meta.modelId as string,
+    moduleId:'@(Model.BasicInfo.Id)',
+    superQueryJson: '',
+  };
+  const searchInfo:any = reactive({
+    ...cloneDeep(defaultSearchInfo),
+  });
+  const state = reactive<State>({
+@if(Model.HasFlow){
+    @:formFlowId: '',
+    @:flowList: [],
+}
+    config: {},
+    columnList: [],
+    printListOptions: [],
+    columnBtnsList: [],
+    customBtnsList: [],
+@if(Model.Type == 2){
+    @:treeFieldNames: {
+      @:children: '@Model.LeftTree.Children',
+      @:title: '@Model.LeftTree.ShowField',
+      @:key: '@Model.LeftTree.Key',
+      @:isLeaf: 'isLeaf',
+    @:},
+    @:leftTreeData: [],
+    @:leftTreeLoading: false,
+}
+    treeActiveId: '',
+    treeActiveNodePath: [],
+    columns: [],
+    complexColumns: [], // 复杂表头
+    childColumnList: [],
+    exportList: [],
+    cacheList: [],
+    currFlow: {},
+    isCustomCopy: false,
+    candidateType: 1,
+    currRow: {},
+    workFlowFormData: {},
+    expandObj: {},
+    columnSettingList: [],
+    searchSchemas: [],
+    treeRelationObj: null,
+    treeQueryJson: {},
+    leftTreeActiveInfo: {},
+  });
+  const { childColumnList, searchSchemas } = toRefs(state);
+  const [registerSearchForm, { updateSchema, @(Model.Type == 2 ? "resetFields, " : "")submit: searchFormSubmit }] = useForm({
+    baseColProps: { span: 6 },
+    showActionButtonGroup: true,
+    showAdvancedButton: true,
+    compact: true,
+  });
+  const [registerChildTable] = useTable({
+    pagination: false,
+    canResize: false,
+    showTableSetting: false,
+  });  
+  const [registerTable, { reload, setLoading, getFetchParams, getSelectRowKeys, redoHeight, clearSelectedRowKeys }] = useTable({
+    api: getList,
+    immediate: false,
+    clickToRowSelect: false,
+    afterFetch: (data) => {
+      const list = data.map((o) => ({
+        ...o,
+        ...state.expandObj,
+      }));
+@if(Model.Type != 3) {
+      @:state.cacheList = cloneDeep(list);
+}
+@if(Model.Type == 3){
+      @:let cacheList: any[] = [];
+      @:list.map(o => {
+        @:if (o.children && o.children.length) {
+          @:cacheList.push(...o.children);
+          @:o.children = o.children.map(e => ({
+            @:...e,
+            @:...state.expandObj,
+          @:}));
+        @:}
+      @:});
+      @:state.cacheList = cacheList;
+}
+      return list;
+    },
+  });
+
+  provide('getLeftTreeActiveInfo', () => state.leftTreeActiveInfo);
+
+  const getHasBatchBtn = computed(() => {
+    let btnsList =[]
+@if(Model.HasBatchRemove){
+    @:btnsList.push('batchRemove')
+}
+@if(Model.HasBatchPrint){
+    @:btnsList.push('batchPrint')
+}
+@if(Model.HasDownload){
+    @:btnsList.push('download')
+}
+@if(Model.UseBtnPermission){
+    @:btnsList=btnsList.filter(o => hasBtnP('btn_'+ o))
+}
+    return !!btnsList.length
+  });
+@if(Model.Type == 2){
+  @:const getLeftTreeBindValue = computed(() => {
+    @:const key = +new Date();
+    @:const data: any = {
+      @:title: '@Model.LeftTree.Title',
+      @:showSearch: @(!Model.LeftTree.HasSynType ? "false" : Model.LeftTree.HasSearch.ToString().ToLower()),
+      @:fieldNames: state.treeFieldNames,
+      @:defaultExpandAll: @Model.LeftTree.HasSynType.ToString().ToLower(), //异步的时候为false
+      @:treeData: state.leftTreeData,
+      @:loading: state.leftTreeLoading,
+      @:key,
+@if(!@Model.LeftTree.HasSynType){
+      @:loadData: onLoadData,
+}
+    @:};
+    @:return data;
+  @:});
+}
+  const getTableBindValue = computed(() => {
+@switch(Model.TableConfig.ChildTableStyle){
+case 2:
+    @:let columns = state.columns;
+break;
+case 1:
+    @:let columns = state.complexColumns;
+break;
+}
+@if(Model.HasFlow){
+    // 带工作流
+    @:columns.push({ title: '状态', dataIndex: 'flowState', width: 100 });
+    // 带工作流
+}   
+    const defaultSortConfig = @Model.TableConfig.DefaultSortConfig; 
+    const sortField = defaultSortConfig.map(o => (o.sort === 'desc' ? '-' : '') + o.field); 
+    const data: any = {
+@if(Model.TableConfig.HasPage){
+      @:pagination: { pageSize: @Model.TableConfig.PageSize }, //有分页
+}else{
+      @:pagination: false, //没有分页，树形，分组
+}
+      searchInfo: unref(searchInfo),
+      ellipsis: @Model.TableConfig.ShowOverflow.ToString().ToLower(),
+      defSort: { sidx: sortField.join(',') },
+      sortFn: (sortInfo: SorterResult | SorterResult[]) => {
+        if (Array.isArray(sortInfo)) {
+          const sortList = sortInfo.map(o => (o.order === 'descend' ? '-' : '') + o.field);
+          return { sidx: sortList.join(',') };
+        } else {
+          const { field, order } = sortInfo;
+          if (field && order) {
+            // 排序字段
+            return { sidx: (order === 'descend' ? '-' : '') + field };
+          } else {
+            return {};
+          }
+        }
+      },
+      columns,
+@switch(Model.Type)
+{
+case 3:
+case 5:
+      // 分组或者树形
+      @:isTreeTable: true,
+      // 分组或者树形
+break;
+}
+@if((Model.HasChildTable && Model.TableConfig.ChildTableStyle == 1) || Model.ComplexColumns!=null){
+      // 有子表分组展示
+      @:bordered: true,
+      // 有子表分组展示
+}
+      actionColumn: {
+        width: 150,
+        title: '操作',
+        dataIndex: 'action',
+      },
+    };
+    if (unref(getHasBatchBtn)) {
+      const rowSelection: any = { type: 'checkbox' };
+@if(Model.Type == 3){
+      @:rowSelection.getCheckboxProps = record => ({ disabled: !!record.top });
+}
+      data.rowSelection = rowSelection;
+    }
+    return data;
+  });
+@if(Model.TableConfig.ShowSummary){
+  @:const getSummaryColumn = computed(() => {
+@switch(Model.TableConfig.ChildTableStyle){
+case 2:
+    @:let defaultColumns = state.columns;
+break;
+case 1:
+    @:let defaultColumns = state.complexColumns;
+break;
+}
+    @:// 处理列固定
+    @:if (state.columnSettingList?.length) {
+      @:for (let i = 0; i < defaultColumns.length; i++) {
+        @:inner: for (let j = 0; j < state.columnSettingList.length; j++) {
+          @:if (defaultColumns[i].dataIndex === state.columnSettingList[j].dataIndex) {
+            @:defaultColumns[i].fixed = state.columnSettingList[j].fixed;
+            @:defaultColumns[i].visible = state.columnSettingList[j].visible;
+            @:break inner;
+          @:}
+        @:}
+      @:}
+      @:defaultColumns = defaultColumns.filter((o) => o.visible);
+    @:}
+    @:let columns: any[] = [];
+    @:for (let i = 0; i < defaultColumns.length; i++) {
+      @:const e = defaultColumns[i];
+      @:if (e.jnpfKey === 'table' || e.jnpfKey === 'complexHeader') {
+        @:if (e.children?.length) columns.push(...e.children);
+      @:} else {
+        @:columns.push(e);
+      @:}
+      @:if (e.fixed && e.children?.length) {
+        @:for (let j = 0; j < e.children.length; j++) {
+          @:e.children[j].fixed = e.fixed;
+        @:}
+      @:}
+    @:}
+    @:const leftFixedList = columns.filter((o) => o.fixed === 'left');
+    @:const rightFixedList = columns.filter((o) => o.fixed === 'right');
+    @:const noFixedList = columns.filter((o) => o.fixed !== 'left' && o.fixed !== 'right');
+    @:return [...leftFixedList, ...noFixedList, ...rightFixedList, ];
+  @:});
+  @:// 列表合计
+  @:const getColumnSum = computed(() => {
+    @:const sums: any[] = [];
+    @:const summaryField: any = @Model.TableConfig.SummaryField;
+    @:const isSummary = (key) => summaryField.includes(key);
+    @:const useThousands = key => unref(getSummaryColumn).some(o => o.__vModel__ === key && o.thousands);
+    @:unref(getSummaryColumn).forEach((column, index) => {
+      @:let sumVal = state.cacheList.reduce((sum, d) => sum + getCmpValOfRow(d, column.prop), 0);
+      @:if (!isSummary(column.prop)) sumVal = '';
+      @:sumVal = Number.isNaN(sumVal) ? '' : sumVal;
+      @:const realVal = sumVal && !Number.isInteger(sumVal) ? Number(sumVal).toFixed(2) : sumVal;
+      @:sums[index] = useThousands(column.prop) ? thousandsFormat(realVal) : realVal;
+    @:});
+@if(!webType.Contains(Model.Type)){
+    @:if (unref(getHasBatchBtn)) {
+      @:sums.unshift('');
+    @:}
+}
+    @:return sums;
+  @:});
+  @:function getCmpValOfRow(row, key) {
+    @:const summaryField: any = @Model.TableConfig.SummaryField;
+    @:const isSummary = (key) => summaryField.includes(key);
+    @:if (!summaryField.length || !isSummary(key)) return 0;
+    @:const target = row[key];
+    @:if (!target) return 0;
+    @:const data = isNaN(target) ? 0 : Number(target);
+    @:return data;
+  @:}
+}
+function getTableActions(record): ActionItem[] {
+  return [
+@foreach (var item in Model.ColumnButtonDesign){
+    @:{
+      @:label: '@item.Label',
+@switch(item.Value)
+{
+case "edit":
+@if(Model.HasFlow){
+      @:disabled: [1, 2, 4, 5].includes(record.flowState),
+}
+      @:onClick: updateHandle.bind(null, record),
+break;
+case "remove":
+      @:color: 'error',
+@if(Model.HasFlow){
+      @:disabled: [1, 2, 3, 5].includes(record.flowState),
+}
+      @:modelConfirm: {
+        @:onOk: handleDelete.bind(null, record.@(Model.PrimaryKeyField)),
+      @:},
+break;
+case "detail":
+@if(Model.HasFlow){
+      @:disabled: !record.flowState, 
+}
+      @:onClick: goDetail.bind(null, record),
+break;
+}
+@if(Model.UseBtnPermission){
+      @:auth: 'btn_@item.Value', 
+}
+    @:},
+}
+  ];
+}
+@if(Model.HasFlow){
+  @:function getFlowId() {
+    @:getFlowByFormId('@Model.BasicInfo.Id').then((res) => {
+      @:const flowId = res.data && res.data.id;
+      @:state.formFlowId = flowId;
+      @:getFlowOptions();
+    @:});
+  @:}
+  @:// 获取子流程list
+  @:function getFlowOptions() {
+    @:getFlowList(state.formFlowId, '1').then((res) => {
+      @:state.flowList = res.data;
+    @:});
+  @:}
+  @:function selectFlow(item) {
+    @:closeSelectFlowModal();
+    @:state.currFlow = item;
+    @:const data = {
+      @:id: '',
+      @:flowId: item.id,
+      @:opType: '-1',
+    @:};
+    @:openFlowParser(true, data);
+  @:}
+}
+@if(Model.Type == 2){
+  @:function handleLeftTreeSelect(id, _node, nodePath) {
+    @:if (state.treeActiveId == id) return;
+    @:state.treeActiveId = id;
+    @:state.treeActiveNodePath = nodePath;
+    @:let queryJson: any = {};
+    @:let leftTreeActiveInfo: any = {};
+@switch(Model.Type){
+case 2:
+@switch(Model.LeftTree.TreeDataSource){
+case "organize":
+    @:// 左侧树是组织
+    @:const currValue = state.treeActiveNodePath.map((o) => o[state.treeFieldNames.key]);
+    @:queryJson = { '@(Model.LeftTree.TreeRelation)': @(Model.LeftTree.IsMultiple ? "[" : "")currValue@(Model.LeftTree.IsMultiple ? "]" : "") };
+    @:leftTreeActiveInfo = { '@(Model.LeftTree.TreeRelation)': state.treeRelationObj?.multiple ? [currValue] : currValue };
+break;
+case "formField":
+@switch(Model.LeftTree.jnpfKey){
+case "organizeSelect":
+    @:const currValue = state.treeActiveNodePath[state.treeActiveNodePath.length - 1].organizeIds;
+    @:queryJson = { '@(Model.LeftTree.TreeRelation)': @(Model.LeftTree.IsMultiple ? "[" : "")currValue@(Model.LeftTree.IsMultiple ? "]" : "") };
+    @:leftTreeActiveInfo = { '@(Model.LeftTree.TreeRelation)': state.treeRelationObj?.multiple ? [currValue] : currValue };
+break;
+default:
+    @:queryJson = { '@(Model.LeftTree.TreeRelation)': @(Model.LeftTree.IsMultiple ? "[" : "")state.treeActiveId@(Model.LeftTree.IsMultiple ? "]" : "") };
+    @:leftTreeActiveInfo = { '@(Model.LeftTree.TreeRelation)': state.treeRelationObj?.multiple ? [state.treeActiveId] : state.treeActiveId };
+break;
+}
+break;
+default:
+    @:// 左侧树是其他
+@switch(Model.LeftTree.jnpfKey){
+case "cascader":
+case "areaSelect":
+    @:const currValue = state.treeActiveNodePath.map((o) => o[state.treeFieldNames.key]);
+    @:queryJson = { '@(Model.LeftTree.TreeRelation)': @(Model.LeftTree.IsMultiple ? "[" : "")currValue@(Model.LeftTree.IsMultiple ? "]" : "") };
+    @:leftTreeActiveInfo = { '@(Model.LeftTree.TreeRelation)': state.treeRelationObj?.multiple ? [currValue] : currValue };
+break;
+default:
+    @:queryJson = { '@(Model.LeftTree.TreeRelation)': @(Model.LeftTree.IsMultiple ? "[" : "")state.treeActiveId@(Model.LeftTree.IsMultiple ? "]" : "") };
+    @:leftTreeActiveInfo = { '@(Model.LeftTree.TreeRelation)': state.treeRelationObj?.multiple ? [state.treeActiveId] : state.treeActiveId };
+break;
+}
+break;
+}
+break;
+}
+    @:state.treeQueryJson = queryJson;
+    @:state.leftTreeActiveInfo = leftTreeActiveInfo;
+@if(Model.HasSearch){
+    @:// 有搜索列表
+    @:resetFields();
+}else{
+    @:// 无搜索列表
+    @:handleSearchSubmit({});
+}
+@:}
+}
+@if(Model.HasAdd){
+@:// 新增
+@:function addHandle() {
+@if(Model.HasFlow){
+  @:if (!state.flowList.length) return createMessage.error('流程不存在');
+  @:if (state.flowList.length === 1) return selectFlow(state.flowList[0]);
+  @:openSelectFlowModal(true, { flowList:state.flowList });
+}else{
+  @:const data = {
+    @:id: '',
+    @:menuId: searchInfo.menuId,
+    @:allList: state.cacheList,
+  @:};
+  @:formRef.value?.init(data);
+}
+@:}
+}
+@if(Model.HasDownload){
+  @:// 导出
+  @:function handleDownload(data) {
+    @:data.selectKey = data.selectKey.join(',');
+    @:data.selectIds = data.selectIds.join(',');
+    @:let query = { ...getFetchParams(), ...data };
+    @:exportData(query)
+      @:.then((res) => {
+        @:setExportModalProps({ confirmLoading: false });
+        @:if (!res.data.url) return;
+        @:downloadByUrl({ url: res.data.url });
+        @:closeExportModal();
+      @:})
+      @:.catch(() => {
+        @:setExportModalProps({ confirmLoading: false });
+      @:});
+  @:}
+}
+@if(Model.HasBatchRemove){
+  @:// 批量删除
+  @:function handelBatchRemove() {
+    @:const ids = getSelectRowKeys();
+    @:if (!ids.length) return createMessage.error('请选择一条数据');
+    @:createConfirm({
+      @:iconType: 'warning',
+      @:title: t('common.tipTitle'),
+      @:content: '您确定要删除这些数据吗, 是否继续?',
+      @:onOk: () => {
+        @:batchDelete(ids).then((res) => {
+          @:createMessage.success(res.msg);
+          @:clearSelectedRowKeys();
+          @:reload();
+        @:});
+      @:},
+    @:});
+  @:}
+}
+@if(Model.HasEdit){
+  @:// 编辑
+  @:function updateHandle(record) {
+@if(Model.HasFlow){
+    @:// 带工作流
+    @:let data = {
+      @:id: record.@(Model.PrimaryKeyField),
+     @:flowId: record.flowId || state.flowList[0].id,
+      @:opType: '-1',
+    @:};
+    @:openFlowParser(true, data);
+}else{
+    @:// 不带工作流
+    @:const data = {
+      @:id: record.@(Model.PrimaryKeyField),
+      @:menuId: searchInfo.menuId,
+      @:allList: state.cacheList,
+    @:};
+    @:formRef.value?.init(data);
+}
+  @:}
+}
+@if(Model.HasDetail){
+  @:// 查看详情
+  @:function goDetail(record) {
+@if(Model.HasFlow){
+    @:// 带流程
+    @:const data = {
+      @:id: record.@(Model.FormAttribute.PrimaryKeyPolicy == 1 ? Model.PrimaryKeyField : "flowTaskId"),
+      @:flowId: record.flowId || state.flowList[0].id,
+      @:opType: 0,
+      @:status: record.flowState,
+    @:};
+    @:openFlowParser(true, data);
+}else{
+    @:// 不带流程
+    @:const data = {
+      @:id: record.@(Model.PrimaryKeyField),
+    @:};
+    @:detailRef.value?.init(data);
+}
+  @:}
+}
+@if(Model.HasRemove){
+  @:function handleDelete(id) {
+    @:del(id).then((res) => {
+      @:createMessage.success(res.msg);
+      @:clearSelectedRowKeys();
+      @:reload();
+    @:});
+  @:}
+}
+  function init() {
+    state.config = {};
+@if(Model.HasFlow){
+    @:// 带流程
+    @:getFlowId();
+}
+    searchInfo.menuId = route.meta.modelId as string;
+
+    state.columnList = columnList;
+    getSearchSchemas();
+@switch(Model.Type)
+{
+case 3:
+    @:// 分组
+    @:state.columnList = state.columnList.filter((o) => o.prop != '@Model.TableConfig.GroupField');
+break;
+case 2:
+    @:// 有左侧树
+    @:getTreeView(true);
+break;
+}
+
+    setLoading(true);
+    getColumnList();
+@switch(Model.Type){
+case 2:
+break;
+default:
+    @:nextTick(() => {
+@if(Model.HasSearch){
+      @:// 有搜索列表
+      @:searchFormSubmit();
+}else{
+      @://  无搜索列表
+      @:reload({ page: 1 });
+}
+    @:});
+break;
+}
+  }
+@switch(Model.Type){
+case 2:
+  @:async function getTreeView(isInit = false) {
+    @:state.leftTreeLoading = true;
+    @:state.leftTreeData = [];
+    @:let leftTreeData:any=[];
+@switch(Model.LeftTree.TreeDataSource){
+case "dictionary":
+    @:// 左侧数据字典
+    @:getDictionaryDataSelector('@Model.LeftTree.TreeDictionary').then(res => {
+      @:state.leftTreeData = res.data.list;
+break;
+case "formField":
+    @:// 表单字段
+    @:const treeRelationObj: any = state.treeRelationObj;
+      @:const jnpfKey = treeRelationObj?.__config__?.jnpfKey || '';
+@if(Model.LeftTree.TreeRelation!=null && Model.LeftTree.TreeRelation!="")
+{
+      @:if (['organizeSelect', 'depSelect'].includes(jnpfKey)) {
+        @:if (treeRelationObj.selectType === 'all') leftTreeData = await organizeStore.getOrganizeTree();
+        @:if (treeRelationObj.selectType === 'custom' && treeRelationObj.ableIds?.length) {
+          @:const departIds = jnpfKey === 'organizeSelect' ? treeRelationObj.ableIds.map(o => o[o.length - 1]) : treeRelationObj.ableIds;
+          @:const res = await getOrgByOrganizeCondition({ departIds });
+          @:leftTreeData = res.data.list;
+        @:}
+      @:}
+}
+    @:state.leftTreeData = leftTreeData;
+break;
+case "organize":
+    @:// 组织或者部门
+    @:state.leftTreeData = await organizeStore.getOrganizeTree();
+break;
+case "api":
+    @:// 数据接口
+    @:let templateJson: any[] = @Model.LeftTree.TemplateJson;
+    @:const query = { paramList: getParamList(templateJson) };
+    @:getDataInterfaceRes('@Model.LeftTree.TreePropsUrl',query).then((res) => {
+      @:state.leftTreeData = Array.isArray(res.data) ? res.data : [];
+break;
+}
+@switch(Model.LeftTree.TreeDataSource) {
+case "formField":
+case "organize":
+break;
+default:
+    @:});
+break;
+}
+      @:state.leftTreeLoading = false;
+      @:nextTick(() => {
+          @:if (isInit) @(Model.HasSearch ? "searchFormSubmit()" : "reload({ page: 1 })");
+      @:});
+  @:}
+break;
+}
+  function getSearchSchemas() {
+@switch(Model.Type){
+case 2:
+@if(!string.IsNullOrEmpty(Model.LeftTree.TreeRelation))
+{
+    @:// 有左侧树，有关联字段
+    @:for (let i = 0; i < superQueryJson.length; i++) {
+      @:const e = superQueryJson[i];
+      @:if (e.id === '@Model.LeftTree.TreeRelation') {
+        @:state.treeRelationObj = e;
+        @:break;
+      @:}
+    @:}
+}
+break;
+}
+    const schemas = getSearchFormSchemas(searchList);
+    state.searchSchemas = schemas;
+    schemas.forEach((cur) => {
+      const config = cur.__config__;
+      if (dyOptionsList.includes(config.jnpfKey)) {
+        if (config.dataType === 'dictionary') {
+          if (!config.dictionaryType) return;
+          getDictionaryDataSelector(config.dictionaryType).then((res) => {
+            updateSchema([{ field: cur.field, componentProps: { options: res.data.list } }]);
+          });
+        }
+        if (config.dataType === 'dynamic') {
+          if (!config.propsUrl) return;
+          const query = { paramList: getParamList(config.templateJson) || [] };
+          getDataInterfaceRes(config.propsUrl, query).then((res) => {
+            const data = Array.isArray(res.data) ? res.data : [];
+            updateSchema([{ field: cur.field, componentProps: { options: data } }]);
+          });
+        }
+      }
+      cur.defaultValue = cur.value;
+    });
+  }
+  function getColumnList() {
+@if(!Model.UseColumnPermission){
+    @:// 没有权限
+    @:let  columnList = state.columnList;
+}else{
+    @:// 过滤权限
+    @:let  columnList = [];
+    @:const permissionList = userStore.getPermissionList;
+    @:const list = permissionList.filter((o) => o.modelId === searchInfo.menuId);
+    @:const perColumnList = list[0] && list[0].column ? list[0].column : [];
+    @:for (let i = 0; i < state.columnList.length; i++) {
+      @:inner: for (let j = 0; j < perColumnList.length; j++) {
+        @:if (state.columnList[i].prop === perColumnList[j].enCode) {
+          @:columnList.push(state.columnList[i]);
+          @:break inner;
+        @:}
+      @:}
+    @:}
+}
+
+  state.exportList = columnList.filter(o => !noGroupList.includes(o.__config__.jnpfKey));
+  let columns = columnList.map((o) => ({
+    ...o,
+    title: o.label,
+    dataIndex: o.prop,
+    align: o.align,
+    fixed: o.fixed == 'none' ? false : o.fixed,
+    sorter: o.sortable ? { multiple: 1 } : o.sortable,
+    width: o.width || 100,
+  }));
+@if(Model.Type==1 ||Model.Type==2 ||Model.Type==4)
+{
+    @:columns = getComplexColumns(columns);
+}
+  state.columns = columns.filter((o) => o.prop.indexOf('-') < 0);
+  getChildComplexColumns(columns);
+}
+@if(Model.Type==1 || Model.Type==2 || Model.Type == 4)
+{
+  @:function getComplexColumns(columns) {
+    @:let complexHeaderList: any[] = @Model.ComplexColumns;
+    @:if (!complexHeaderList.length) return columns;
+    @:let childColumns: any[] = [];
+    @:let firstChildColumns: string[] = [];
+    @:for (let i = 0; i < complexHeaderList.length; i++) {
+      @:const e = complexHeaderList[i];
+      @:e.title = e.fullName;
+      @:e.align = e.align;
+      @:e.dataIndex = e.id;
+      @:e.prop = e.id;
+      @:e.children = [];
+      @:e.jnpfKey = 'complexHeader';
+      @:if (e.childColumns?.length) {
+        @:childColumns.push(...e.childColumns);
+        @:for (let k = 0; k < e.childColumns.length; k++) {
+          @:const item = e.childColumns[k];
+          @:for (let j = 0; j < columns.length; j++) {
+            @:const o = columns[j];
+            @:if (o.prop == item && o.fixed !== 'left' && o.fixed !== 'right') e.children.push({ ...o });
+          @:}
+        @:}
+      @:}
+      @:if (e.children.length) firstChildColumns.push(e.children[0].prop);
+    @:}
+    @:complexHeaderList = complexHeaderList.filter(o => o.children.length);
+    @:let list: any[] = [];
+    @:for (let i = 0; i < columns.length; i++) {
+       @:const e = columns[i];
+       @:if (!childColumns.includes(e.prop)) {
+         @:list.push(e);
+       @:} else {
+         @:if (firstChildColumns.includes(e.prop)) {
+           @:const item = complexHeaderList.find(o => o.childColumns.includes(e.prop));
+           @:list.push(item);
+         @:}
+       @:}
+    @:}
+    @:return list;
+  @:}
+}
+  function getChildComplexColumns(columnList) {
+    let list: any[] = [];
+    for (let i = 0; i < columnList.length; i++) {
+      const e = columnList[i];
+      if (!e.prop.includes('-')) {
+        list.push(e);
+      } else {
+        let prop = e.prop.split('-')[0];
+        let vModel = e.prop.split('-')[1];
+        let label = e.label.split('-')[0];
+        let childLabel = e.label.replace(label + '-', '');
+        let newItem = {
+          align: 'center',
+          jnpfKey: 'table',
+          prop,
+          label,
+          title: label,
+          dataIndex: prop,
+          children: [],
+        };
+        e.dataIndex = vModel;
+        e.title = childLabel;
+        if (!state.expandObj.hasOwnProperty(`${prop}Expand`)) state.expandObj[`${prop}Expand`] = false;
+        if (!list.some((o) => o.prop === prop)) list.push(newItem);
+        for (let i = 0; i < list.length; i++) {
+          if (list[i].prop === prop) {
+            list[i].children.push(e);
+            break;
+          }
+        }
+      }
+    }
+@switch(Model.TableConfig.ChildTableStyle){
+case 1:
+    @:// 行内分组展示
+    @:getMergeList(list);
+break;
+}
+    state.complexColumns = list;
+    state.childColumnList = list.filter((o) => o.jnpfKey === 'table');
+@if(Model.TableConfig.ChildTableStyle == 1) {
+    @:// 子表分组展示宽度取100
+    @:for (let i = 0; i < state.childColumnList.length; i++) {
+      @:const e = state.childColumnList[i];
+      @:if (e.children?.length) e.children = e.children.map(o => ({ ...o, width: 100 }));
+    @:}
+}
+  }
+@switch(Model.TableConfig.ChildTableStyle){
+case 1:
+  @:function getMergeList(list) {
+    @:list.forEach((item) => {
+      @:if (item.jnpfKey === 'table' && item.children && item.children.length) {
+        @:item.children.forEach((child, index) => {
+          @:if (index == 0) {
+            @:child.customCell = () => ({
+              @:rowspan: 1,
+              @:colspan: item.children.length,
+              @:class: 'child-table-box',
+            @:});
+          @:} else {
+            @:child.customCell = () => ({
+              @:rowspan: 0,
+              @:colspan: 0,
+            @:});
+          @:}
+        @:});
+      @:}
+    @:});
+  @:}
+break;
+}
+@if(Model.HasChildTable && Model.TableConfig.ChildTableStyle == 1){
+  @:function toggleExpand(row, field) {
+    @:row[field] = !row[field];
+  @:}
+}
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail){
+  @:// 关联表单查看详情
+  @:function toDetail(modelId, id) {
+    @:if (!id) return;
+    @:getConfigData(modelId).then((res) => {
+      @:if (!res.data || !res.data.formData) return;
+      @:const formConf = JSON.parse(res.data.formData);
+      @:formConf.popupType = 'general';
+      @:const data = { id, formConf, modelId };
+      @:relationDetailRef.value?.init(data);
+    @:});
+  @:}
+}
+  function handleColumnChange(data) {
+    state.columnSettingList = data;
+  }
+@if(Model.TableConfig.HasSuperQuery){
+  @:// 高级查询
+  @:function handleSuperQuery(superQueryJson) {
+    @:if (!superQueryJson) {
+      @:searchInfo.superQueryJson = '';
+      @:reload({ page: 1 });
+      @:return;
+    @:}
+    @:let queryJsonObj = JSON.parse(superQueryJson);
+    @:searchInfo.superQueryJson = JSON.stringify(queryJsonObj);
+    @:reload({ page: 1 });
+  @:}
+}
+@if(Model.HasSearch){
+  @:function handleSearchReset() {
+    @:searchFormSubmit();
+  @:}
+}
+  function handleSearchSubmit(data) {
+    clearSelectedRowKeys();
+    let obj = {
+      ...defaultSearchInfo,
+      superQueryJson: searchInfo.superQueryJson,
+      ...data,
+      ...(state.treeQueryJson || {})
+    };
+    Object.keys(searchInfo).map(key => {
+      delete searchInfo[key];
+    });
+    for (let [key, value] of Object.entries(obj)) {
+      searchInfo[key.replaceAll('-', '_')] = value;
+    }
+@foreach (var item in Model.QueryCriteriaQueryVarianceList){
+    @:searchInfo.@(item.Replace("-", "_")) = searchInfo.@(item.Replace("-", "_")) ? [searchInfo.@(item.Replace("-", "_"))] : null;
+}
+    reload({ page: 1 });
+  }
+@if(Model.Type == 2 && !Model.LeftTree.HasSynType){
+  @:// 左侧树异步加载
+  @:function onLoadData(node) {
+    @:return new Promise((resolve: (value?: unknown) => void) => {
+      @:let treeTemplateJson: any[] = @Model.LeftTree.TreeTemplateJson; // 获取treeTemplateJson字段
+      @:const query = { paramList: getParamList(treeTemplateJson,node) || [] };
+      @:getDataInterfaceRes('@(Model.LeftTree.TreeInterfaceId)', query).then((res) => {
+        @:const data = Array.isArray(res.data) ? res.data : [];
+        @:leftTreeRef.value?.updateNodeByKey(node.eventKey, { children: data, isLeaf: !data.length });
+        @:resolve();
+     @:});
+    @:});
+  @:}
+}
+@if(Model.HasBatchPrint){
+  @:// 批量打印
+  @:function handelBatchPrint() {
+    @:const printIds = @(Model.BatchPrints);
+    @:if (!printIds?.length) return createMessage.error('未配置打印模板');
+    @:const ids = getSelectRowKeys();
+    @:if (!ids.length) return createMessage.error('请选择一条数据');
+    @:if(printIds.length === 1)return handleShowBrowse(printIds[0]);
+    @:openPrintSelect(true, printIds);
+  @:}
+  @:function handleShowBrowse(id) {
+    @:openPrintBrowse(true, { id, batchIds: getSelectRowKeys().join() });
+  @:}
+}
+@if(Model.TableConfig.ShowSummary && !webType.Contains(Model.Type)){
+  @:function getSummaryCellAlign(index) {
+    @:if (!unref(getSummaryColumn).length) return;
+    @:return unref(getSummaryColumn)[index]?.align || 'left';
+  @:}
+}
+  onMounted(() => {
+    init();
+  });
+</script>

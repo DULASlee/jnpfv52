@@ -1,0 +1,674 @@
+<template>
+  <el-dialog :title="!dataForm.@(Model.PrimaryKey) ? '新建' : '编辑'" :close-on-click-modal="false" :visible.sync="visible" class="JNPF-dialog JNPF-dialog_center" lock-scroll="" width="600px">
+	<el-row :gutter="15" class="@(Model.FormStyle)" >
+@{ GenerateFormControls(); }
+	</el-row>
+	<span slot="footer" class="dialog-footer">
+	  <el-button @@click="visible=false">@(Model.CancelButtonText)</el-button>
+	  <el-button type="primary" @@click="dataFormSubmit()" :loading="btnLoading">@(Model.ConfirmButtonText)</el-button>
+	</span>
+  </el-dialog>
+</template>
+<script>
+import request from '@@/utils/request'
+import { getDictionaryDataSelector } from '@@/api/systemData/dictionary'
+import { getDataInterfaceRes } from '@@/api/systemData/dataInterface'
+@if(Model.IsDateSpecialAttribute || Model.IsTimeSpecialAttribute)
+{
+@:import { getDateDay, getLaterData, getBeforeData, getBeforeTime, getLaterTime } from '@@/components/Generator/utils/index.js'
+}
+export default {
+  components: {},
+  props: [],
+  data() {
+	 return {
+		btnLoading:false,
+		loading: false,
+		visible: false,
+		dataForm: {
+		  @(Model.PrimaryKey):'',
+		},
+		@(Model.FormRules): {
+@foreach(var item in Model.FormList)
+{
+@switch(item.jnpfKey)
+{
+	case "table":
+	break;
+	default:
+@if(item.Required || (item.RegList != null && item.RegList.Count > 0))
+{
+		  @:@(item.LowerName):[
+@if(item.Required)
+{
+						@:{
+							@:required:true,
+							@:message:'请输入@(item.Placeholder)',
+@if(item.Trigger.Contains("["))
+{
+							@:trigger:@(item.Trigger)
+}
+else
+{
+							@:trigger:'@(item.Trigger)'
+}
+
+						@:},
+}
+@if(item.RegList!=null && item.RegList.Count > 0)
+{
+@foreach(var items in item.RegList)
+{
+						@:{
+							@:pattern:@(items.pattern),
+							@:message:'@(items.message)',
+if(item.Trigger.Contains("["))
+{
+							@:trigger:@(item.Trigger)
+}
+else
+{
+							@:trigger:'@(item.Trigger)'
+}
+						@:},
+}
+}
+					@:],
+}
+break;
+}
+}
+				},
+@foreach(var item in Model.OptionsList)
+{
+@switch(item.jnpfKey)
+{
+case "collapse":
+				@:@(item.Name):@(item.Content),
+break;
+case "tab":
+				@:@(item.Name):"@(item.Content)",
+break;
+case "autoComplete":
+				@:@(item.Name)TemplateJson: @(item.TemplateJson == "" ? "[]" : item.TemplateJson),
+break;
+case "popupTableSelect":
+case "popupSelect":
+				@:@(item.Name)TemplateJson: @(item.TemplateJson == "" ? "[]" : item.TemplateJson),
+				@:@(item.Content)
+break;
+default:
+@if(item.IsProps)
+{
+				@:@(item.LowerName)Props:@(item.Props),
+}
+@if(!item.IsLinkage)
+{
+				@:@(item.Content)
+}
+break;
+}
+}
+			}
+		},
+		computed: {},
+        watch: {},
+        created() {
+		},
+		mounted() {
+@if(Model.OptionsList.Count > 0)
+{
+			@:this.getOptions();
+}
+        },
+		methods: {
+@if(Model.IsDateSpecialAttribute)
+{
+	@:getRelationDate(timeRule, timeType, timeTarget, timeValueData, dataValue) {
+	  @:let timeDataValue = null;
+	  @:let timeValue = Number(timeValueData)
+	  @:if (timeRule) {
+		@:if (timeType == 1) {
+		  @:timeDataValue = timeValue
+		@:} else if (timeType == 2) {
+		  @:timeDataValue = dataValue
+		@:} else if (timeType == 3) {
+		  @:timeDataValue = new Date().getTime()
+		@:} else if (timeType == 4) {
+		  @:let previousDate = '';
+		  @:if (timeTarget == 1 || timeTarget == 2) {
+			@:previousDate = getDateDay(timeTarget, timeType, timeValue)
+			@:timeDataValue = new Date(previousDate).getTime()
+		  @:} else if (timeTarget == 3) {
+			@:previousDate = getBeforeData(timeValue)
+			@:timeDataValue = new Date(previousDate).getTime()
+		  @:} else {
+			@:timeDataValue = getBeforeTime(timeTarget, timeValue).getTime()
+		  @:}
+		@:} else if (timeType == 5) {
+		  @:let previousDate = '';
+		  @:if (timeTarget == 1 || timeTarget == 2) {
+			@:previousDate = getDateDay(timeTarget, timeType, timeValue)
+			@:timeDataValue = new Date(previousDate).getTime()
+		  @:} else if (timeTarget == 3) {
+			@:previousDate = getLaterData(timeValue)
+			@:timeDataValue = new Date(previousDate).getTime()
+		  @:} else {
+			@:timeDataValue = getLaterTime(timeTarget, timeValue).getTime()
+		  @:}
+		@:}
+	  @:}
+	  @:return timeDataValue;
+	@:},
+}
+@if(Model.IsTimeSpecialAttribute)
+{
+	@:getRelationTime(timeRule, timeType, timeTarget, timeValue, formatType, dataValue) {
+	  @:let format = formatType == 'HH:mm' ? 'HH:mm:00' : formatType
+	  @:let timeDataValue = null
+	  @:if (timeRule) {
+		@:if (timeType == 1) {
+		  @:timeDataValue = timeValue || '00:00:00'
+		  @:if (timeDataValue.split(':').length == 3) {
+			@:timeDataValue = timeDataValue
+		  @:} else {
+			@:timeDataValue = timeDataValue + ':00'
+		  @:}
+		@:} else if (timeType == 2) {
+		  @:timeDataValue = dataValue
+		@:} else if (timeType == 3) {
+		  @:timeDataValue = this.jnpf.toDate(new Date(), format)
+		@:} else if (timeType == 4) {
+		  @:let previousDate = '';
+		  @:previousDate = getBeforeTime(timeTarget, timeValue)
+		  @:timeDataValue = this.jnpf.toDate(previousDate, format)
+		@:} else if (timeType == 5) {
+		  @:let previousDate = '';
+		  @:previousDate = getLaterTime(timeTarget, timeValue)
+		  @:timeDataValue = this.jnpf.toDate(previousDate, format)
+		@:}
+	  @:}
+	  @:return timeDataValue;
+	@:},
+}
+@foreach(var item in Model.OptionsList)
+{
+@if(!item.IsStatic && item.DictionaryType != null)
+{
+			@:get@(item.LowerName)Options(@(item.IsChildren ? "i" :"")){
+switch(@item.DataType)
+{
+case "dictionary":
+				@:getDictionaryDataSelector('@(item.DictionaryType)').then(res => {
+					@:this.@(item.LowerName)Options = res.data.list
+	break;
+case "dynamic":
+				@:let templateJson = @(item.TemplateJson == "" ? "[]" : item.TemplateJson)
+				@:let query = {
+					@:paramList: this.getParamList(templateJson, this.dataForm@(item.IsChildren ? " , i" :""))
+				@:}
+@if(item.IsChildren){
+@if(item.IsLinkage){
+				@:this.@(item.OptionsName)Options = []
+}else{
+				@:this.@(item.LowerName)Options = []
+}
+}else{
+				@:this.@(item.LowerName)Options = []
+}
+				@:getDataInterfaceRes('@(item.DictionaryType)', query).then(res => {
+					@:let data = res.data
+@if(item.IsChildren){
+@if(item.IsLinkage){
+					@:this.@(item.OptionsName)Options = Array.isArray(data) ? data : []
+}else{
+					@:this.@(item.LowerName)Options = Array.isArray(data) ? data : []
+}
+}else{
+					@:this.@(item.LowerName)Options = Array.isArray(data) ? data : []
+}
+	break;
+}
+				@:});
+			@:},
+}
+}
+			goBack() {
+                this.$emit('refresh')
+            },
+@{var optinsNum=0;}
+@if(Model.OptionsList.Count > 0)
+{
+			@:getOptions() {
+@foreach(var item in Model.OptionsList)
+{
+@if(!item.IsStatic && !item.IsLinkage && (item.IsChildren || item.IsIndex))
+{
+optinsNum++;
+				@:this.get@(item.LowerName)Options();
+}
+}
+			@:},
+}
+    init(item) {
+      this.dataForm = item;
+      this.visible = true;
+      this.loading = true;
+      this.$store.commit('generator/UPDATE_RELATION_DATA', {})
+      this.loading = false;
+    },
+@if(Model.SpecifyDateFormatSet.Count > 0)
+{
+    @:conversionDateTime(type, data) {
+      @:if (!data) return null
+      @:const datetime = type === 'yyyy' ? data + '-01-01 00:00:00' : type === 'yyyy-MM' ? data + '-01 00:00:00' :
+        @:type === 'yyyy-MM-dd' ? data + ' 00:00:00' : type === 'yyyy-MM-dd HH:mm' ? data + ':00' : data
+      @:return datetime
+    @:},
+}
+			dataFormSubmit() {
+				this.$refs['@(Model.FormRef)'].validate((valid) => {
+                    if (valid) {
+						this.btnLoading = true;
+@if(Model.WebType != 1)
+{
+						@:if (!this.dataForm.@(Model.PrimaryKey)) {
+                            @:request({
+                                @:url: `/api/@(Model.NameSpace)/@(Model.ClassName)`,
+                                @:method: 'post',
+                                @:data: this.dataForm,
+                            @:}).then((res) => {
+                                @:this.$message({
+                                    @:message: res.msg,
+                                    @:type: 'success',
+                                    @:duration: 1000,
+                                    @:onClose: () => {
+										@:this.btnLoading = false;
+                                        @:this.visible = false,
+                                        @:this.$emit('refresh', true)
+                                    @:}
+                                @:})
+                            @:}).catch(()=>{
+								@:this.btnLoading = false;
+							@:})
+                        @:} else {
+@if(Model.SpecifyDateFormatSet.Count > 0)
+{
+@foreach(var item in Model.SpecifyDateFormatSet)
+{
+      @:if (this.dataForm.@(item.Field) && this.dataForm.@(item.Field).length)
+	  @:{
+        @:this.dataForm.@(item.Field).forEach(res => {
+@foreach(var children in item.Children)
+{
+          @:res.@(children.Field) = this.conversionDateTime("@(children.Format)", res.@(children.Field));
+}
+        @:})
+	  @:}
+}
+}
+                            @:request({
+                                @:url: '/api/@(Model.NameSpace)/@(Model.ClassName)/' + this.dataForm.@(Model.PrimaryKey),
+                                @:method: 'PUT',
+                                @:data: this.dataForm
+                            @:}).then((res) => {
+                                @:this.$message({
+                                    @:message: res.msg,
+                                    @:type: 'success',
+                                    @:duration: 1000,
+                                    @:onClose: () => {
+										@:this.btnLoading = false;
+                                        @:this.visible = false
+                                        @:this.$emit('refresh', true)
+                                    @:}
+                                @:})
+                            @:}).catch(()=>{
+								@:this.btnLoading = false;
+							@:})
+                        @:}
+}else{
+						@:request({
+							@:url: `/api/@(Model.NameSpace)/@(Model.ClassName)`,
+							@:method: 'post',
+							@:data: this.dataForm,
+						@:}).then((res) => {
+							@:this.$message({
+								@:message: res.msg,
+								@:type: 'success',
+								@:duration: 1000,
+                                @:onClose: () => {
+									@:this.btnLoading = false;
+									@:this.resetForm()
+								@:}
+							@:})
+						@:}).catch(()=>{
+							@:this.btnLoading = false;
+						@:})
+}
+                    }
+                })
+			},
+@if(Model.WebType == 1)
+{
+			@:resetForm(){
+                @:this.$refs['@(Model.FormRef)'].resetFields()
+                @:this.init()
+            @:},
+}
+    /**
+       * 获取参数列表
+       */
+    getParamList(templateJson, formData, index) {
+      for (let i = 0; i < templateJson.length; i++) {
+        if (templateJson[i].relationField) {
+          //区分是否子表
+          if (templateJson[i].relationField.includes('-')) {
+            let tableVModel = templateJson[i].relationField.split('-')[0]
+            let childVModel = templateJson[i].relationField.split('-')[1]
+            templateJson[i].defaultValue = formData[tableVModel] && formData[tableVModel][index] && formData[tableVModel][index][childVModel] || ''
+          } else {
+            templateJson[i].defaultValue = formData[templateJson[i].relationField] || ''
+          }
+        }
+      }
+      return templateJson
+    },
+@foreach(var item in Model.FormList)
+{
+@if(item.IsLinked && item.jnpfKey != "table")
+{
+			@:@(item.LowerName)Change(){
+@foreach(var linkage in item.LinkageRelationship)
+{
+@switch(linkage.jnpfKey)
+{
+case "popupSelect":
+case "popupTableSelect":
+case "autoComplete":
+break;
+default:
+@*主表联动子表控件*@
+@if(linkage.isChildren)
+{
+				@:if(this.dataForm.@(linkage.fieldName).length){
+					@:this.dataForm.@(linkage.fieldName).forEach((ele, index) => {
+						@:this.get@(linkage.fieldName)_@(linkage.field)Options(index)
+					@:})
+				@:}
+}else{
+				@:this.dataForm.@(linkage.field) = @(linkage.IsMultiple ? "[]" : "undefined")
+				@:this.get@(linkage.fieldName)Options()
+}
+break;
+}
+}
+			@:},
+}
+}
+		}
+	}
+</script>
+@{
+	void GenerateFormControls()
+	{
+				<el-form ref="@(Model.FormRef)" :model="@(Model.FormModel)" size="@(Model.Size)" label-width="@(Model.LabelWidth)px" label-position="@(Model.LabelPosition)" :rules="@(Model.FormRules)">
+					<template v-if="!loading">
+@foreach(var item in Model.FormAllContols)
+{
+@switch(item.jnpfKey)
+{
+case "tableGrid":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+case "tableGridTr":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+case "tableGridTd":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+@*栅格布局*@
+case "row":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+@*卡片*@
+case "card":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+@*折叠面板*@
+case "collapse":
+@foreach(var collapse in item.Children)
+{
+@{GenerateFormChildrenControls(collapse.Children,item.Gutter);}
+}
+break;
+case "tab":
+@foreach(var collapse in item.Children)
+{
+@{GenerateFormChildrenControls(collapse.Children,item.Gutter);}
+}
+break;
+case null:
+@if(item.ComplexColumns!=null && item.ComplexColumns.Count>0)
+{
+@{GenerateFormChildrenControls(item.ComplexColumns,item.Gutter);}
+}
+break;
+@*无法在行内编辑控件*@
+case "colorPicker":
+case "editor":
+case "table":
+case "divider":
+case "groupTitle":
+case "button":
+case "link":
+case "iframe":
+case "alert":
+case "text":
+break;
+case "modifyUser":
+case "createUser":
+@if(item.IsInlineEditor)
+{
+@if(item.NoShow)
+{
+@if(Model.UseFormPermission)
+{
+					@:<el-col :span="@(item.Span)" v-if="jnpf.hasFormP('@(item.OriginalName)')">
+}else{
+					@:<el-col :span="@(item.Span)">
+}
+}else{
+					@:<el-col :span="@(item.Span)" @(item.NoShow)>
+}
+						@:<el-form-item label="@(item.Label)" prop="@(item.LowerName)">
+							@:<el-input :value='dataForm.@(item.LowerName)_name' @(item.Placeholder)@(item.Readonly)/>
+						@:</el-form-item>
+					@:</el-col>
+}
+break;
+case "relationFormAttr":
+case "popupAttr":
+@if(item.IsInlineEditor)
+{
+@if(item.NoShow)
+{
+@if(Model.UseFormPermission)
+{
+					@:<el-col :span="@(item.Span)" v-if="jnpf.hasFormP('@(item.OriginalName)')">
+}else{
+					@:<el-col :span="@(item.Span)">
+}
+}else{
+					@:<el-col :span="@(item.Span)" @(item.NoShow)>
+}
+						@:<el-form-item label="@(item.Label)">
+							@:<@(item.Tag) @(item.Style)relationField="@(item.RelationField)" isStorage="@(item.IsStorage)" @(item.IsStorage == 2 ? "v-model='dataForm." + item.OriginalName + "' " : "")showField="@(item.ShowField)"></@(item.Tag)>
+						@:</el-form-item>
+					@:</el-col>
+}
+break;
+default:
+@if(item.IsInlineEditor)
+{
+@if(item.NoShow)
+{
+@if(Model.UseFormPermission)
+{
+					@:<el-col :span="@(item.Span)" v-if="jnpf.hasFormP('@(item.OriginalName)')">
+}else{
+					@:<el-col :span="@(item.Span)">
+}
+}else{
+					@:<el-col :span="@(item.Span)" @(item.NoShow)>
+}
+						@:<el-form-item label="@(item.Label)" prop="@(item.LowerName)">
+							@:<@(item.Tag) v-model='dataForm.@(item.OriginalName)' @(item.Count!=null && item.Count!="" ? ":count='"+item.Count+"'" : "") @(item.TipText)@(item.StartTime)@(item.EndTime)@(item.AddonBefore)@(item.AddonAfter)@(item.Thousands)@(item.AmountChinese)@(item.PathType)@(item.IsAccount)@(item.Folder)@(item.Field)@(item.Placeholder)@(item.Clearable)@(item.Readonly)@(item.MainProps)@(item.Required)@(item.Disabled)@(item.ShowWordLimit)@(item.IsRange)@(item.Style)@(item.Type)@(item.Format)@(item.ValueFormat)@(item.AutoSize)@(item.Multiple)@(item.Size)@(item.PrefixIcon)@(item.SuffixIcon)@(item.MaxLength)@(item.Step)@(item.StepStrictly)@(item.ControlsPosition)@(item.ShowChinese)@(item.ShowPassword)@(item.Filterable)@(item.ShowAllLevels)@(item.RangeSeparator)@(item.StartPlaceholder)@(item.EndPlaceholder)@(item.Separator)@(item.PickerOptions)@(item.Max)@(item.Min)@(item.AllowHalf)@(item.ShowTexts)@(item.ShowScore)@(item.ShowAlpha)@(item.ColorFormat)@(item.ActiveColor)@(item.IsSwitch)@(item.ShowStops)@(item.Range)@(item.Accept)@(item.ShowTip)@(item.FileSize)@(item.SizeUnit)@(item.Limit)@(item.Contentposition)@(item.ButtonText)@(item.Level)@(item.Shadow)@(item.Content)@(item.Options)@(item.ModelId != ""? "modelId='"+ item.ModelId +"' " :"")@(item.RelationField)@(item.ColumnOptions)@(item.HasPage)@(item.PageSize)@(item.PropsValue)@(item.Total)@(item.InterfaceId)@(item.Precision)@(item.ShowLevel)@(item.PopupType)@(item.PopupTitle)@(item.PopupWidth)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.UserRelationAttr)@(item.TemplateJson)@(item.Direction)@(item.Border)@(item.OptionType)@(item.IsLinkage ? ":formData='dataForm' ": "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"") @(item.Format) @(item.LineColor) @(item.Background) @(item.Width) @(item.Height) @(item.StaticText) @(item.ColorLight) @(item.ColorDark)@(item.Disaabled)@(item.jnpfKey=="signature" ? @item.AbleIds : "")@(item.ShowCount)>
+@switch(item.jnpfKey)
+{
+case "input":
+@if(item.Prepend != null)
+{
+								@:<template slot="prepend">@(item.Prepend)</template>
+}
+@if(item.Append != null)
+{
+								@:<template slot="append">@(item.Append)</template>
+}
+break;
+}
+							@:</@(item.Tag)>
+						@:</el-form-item>
+					@:</el-col>
+}
+break;
+}
+}
+				  </template>
+				</el-form>
+	}
+	
+	void GenerateFormChildrenControls(ICollection<FormControlDesignModel> childrenList, int gutter)
+	{
+@foreach(var item in childrenList)
+{
+@switch(item.jnpfKey)
+{
+case "tableGrid":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+case "tableGridTr":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+case "tableGridTd":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+case "row":
+@{GenerateFormChildrenControls(item.Children, gutter);}
+break;
+case "card":
+@{GenerateFormChildrenControls(item.Children, gutter);}
+break;
+case "collapse":
+@foreach(var collapse in item.Children)
+{
+@{GenerateFormChildrenControls(collapse.Children, gutter);}
+}
+break;
+case "tab":
+@foreach(var collapse in item.Children)
+{
+@{GenerateFormChildrenControls(collapse.Children, gutter);}
+}
+break;
+@*无法在行内编辑控件*@
+case "colorPicker":
+case "editor":
+case "table":
+case "divider":
+case "groupTitle":
+case "button":
+case "link":
+case "iframe":
+case "alert":
+case "text":
+break;
+case "modifyUser":
+case "createUser":
+@if(item.IsInlineEditor)
+{
+@if(item.NoShow)
+{
+@if(Model.UseFormPermission)
+{
+					@:<el-col :span="@(item.Span)" v-if="jnpf.hasFormP('@(item.OriginalName)')">
+}else{
+					@:<el-col :span="@(item.Span)">
+}
+}else{
+					@:<el-col :span="@(item.Span)" @(item.NoShow)>
+}
+						@:<el-form-item label="@(item.Label)" prop="@(item.LowerName)">
+							@:<el-input :value='dataForm.@(item.LowerName)_name' @(item.Placeholder)@(item.Readonly)/>
+						@:</el-form-item>
+					@:</el-col>
+}
+break;
+case "relationFormAttr":
+case "popupAttr":
+@if(item.IsInlineEditor)
+{
+@if(item.NoShow)
+{
+@if(Model.UseFormPermission)
+{
+					@:<el-col :span="@(item.Span)" v-if="jnpf.hasFormP('@(item.OriginalName)')">
+}else{
+					@:<el-col :span="@(item.Span)">
+}
+}else{
+					@:<el-col :span="@(item.Span)" @(item.NoShow)>
+}
+						@:<el-form-item label="@(item.Label)">
+							@:<@(item.Tag) @(item.Style)relationField="@(item.RelationField)" isStorage="@(item.IsStorage)" @(item.IsStorage == 2 ? "v-model='dataForm." + item.OriginalName + "' " : "")showField="@(item.ShowField)"></@(item.Tag)>
+						@:</el-form-item>
+					@:</el-col>
+}
+break;
+default:
+@if(item.IsInlineEditor)
+{
+@if(item.NoShow)
+{
+@if(Model.UseFormPermission)
+{
+					@:<el-col :span="@(item.Span)" v-if="jnpf.hasFormP('@(item.OriginalName)')">
+}else{
+					@:<el-col :span="@(item.Span)">
+}
+}else{
+					@:<el-col :span="@(item.Span)" @(item.NoShow)>
+}
+						@:<el-form-item label="@(item.Label)" prop="@(item.LowerName)">
+							@:<@(item.Tag) v-model='dataForm.@(item.OriginalName)' @(item.Count!=null && item.Count!="" ? ":count='"+item.Count+"'" : "") @(item.TipText)@(item.StartTime)@(item.EndTime)@(item.AddonBefore)@(item.AddonAfter)@(item.Thousands)@(item.AmountChinese)@(item.PathType)@(item.IsAccount)@(item.Folder)@(item.Field)@(item.Placeholder)@(item.Clearable)@(item.Readonly)@(item.MainProps)@(item.Required)@(item.Disabled)@(item.ShowWordLimit)@(item.IsRange)@(item.Style)@(item.Type)@(item.Format)@(item.ValueFormat)@(item.AutoSize)@(item.Multiple)@(item.Size)@(item.PrefixIcon)@(item.SuffixIcon)@(item.MaxLength)@(item.Step)@(item.StepStrictly)@(item.ControlsPosition)@(item.ShowChinese)@(item.ShowPassword)@(item.Filterable)@(item.ShowAllLevels)@(item.RangeSeparator)@(item.StartPlaceholder)@(item.EndPlaceholder)@(item.Separator)@(item.PickerOptions)@(item.Max)@(item.Min)@(item.AllowHalf)@(item.ShowTexts)@(item.ShowScore)@(item.ShowAlpha)@(item.ColorFormat)@(item.ActiveColor)@(item.IsSwitch)@(item.ShowStops)@(item.Range)@(item.Accept)@(item.ShowTip)@(item.FileSize)@(item.SizeUnit)@(item.Limit)@(item.Contentposition)@(item.ButtonText)@(item.Level)@(item.Shadow)@(item.Content)@(item.Options)@(item.ModelId != ""? "modelId='"+ item.ModelId +"' " :"")@(item.RelationField)@(item.ColumnOptions)@(item.HasPage)@(item.PageSize)@(item.PropsValue)@(item.Total)@(item.InterfaceId)@(item.Precision)@(item.ShowLevel)@(item.PopupType)@(item.PopupTitle)@(item.PopupWidth)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.UserRelationAttr)@(item.TemplateJson)@(item.Direction)@(item.Border)@(item.OptionType)@(item.IsLinkage ? ":formData='dataForm' ": "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"") @(item.Format) @(item.LineColor) @(item.Background) @(item.Width) @(item.Height) @(item.StaticText) @(item.ColorLight) @(item.ColorDark)@(item.Disaabled)@(item.jnpfKey=="signature" ? @item.AbleIds : "")@(item.ShowCount)>
+@switch(item.jnpfKey)
+{
+case "input":
+@if(item.Prepend != null)
+{
+								@:<template slot="prepend">@(item.Prepend)</template>
+}
+@if(item.Append != null)
+{
+								@:<template slot="append">@(item.Append)</template>
+}
+break;
+}
+							@:</@(item.Tag)>
+						@:</el-form-item>
+					@:</el-col>
+}
+break;
+}
+}
+	}
+}

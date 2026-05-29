@@ -1,0 +1,66 @@
+<template>
+  <div class="jnpf-content-wrapper bg-white">
+    <FlowParser @@register="registerFlowParser" @@reload="getFlowOptions()" />
+    <SelectFlowModal @@register="registerSelectFlowModal" @@change="selectFlow" />
+  </div>
+</template>
+
+<script lang="ts" setup>
+  import { reactive, onMounted, toRefs } from 'vue';
+  import { getFlowByFormId } from '/@@/api/workFlow/formDesign';
+  import { getFlowList } from '/@@/api/workFlow/flowEngine';
+  import { useMessage } from '/@@/hooks/web/useMessage';
+  import { BasicModal, useModal } from '/@@/components/Modal';
+  import { usePopup } from '/@@/components/Popup';
+  import { ScrollContainer } from '/@@/components/Container';
+  import FlowParser from '/@@/views/workFlow/components/FlowParser.vue';
+  import { SelectFlowModal } from '/@@/components/CommonModal';
+
+  interface State {
+    flowList: any[];
+    flowItem: any;
+    formFlowId: string;
+  }
+
+  const { createMessage } = useMessage();
+  const [registerFlowParser, { openPopup: openFlowParser }] = usePopup();
+  const [registerSelectFlowModal, { openModal: openSelectFlowModal, closeModal: closeSelectFlowModal  }] = useModal();
+  const state = reactive<State>({
+    flowList: [],
+    flowItem: {},
+    formFlowId: '',
+  });
+
+  function getFlowOptions() {
+    getFlowList(state.formFlowId, '1').then((res) => {
+      const flowList = res.data;
+      state.flowList = flowList;
+      if (state.flowItem.id) return selectFlow(state.flowItem);
+      if (!flowList.length) return createMessage.error('流程不存在');
+      if (flowList.length === 1) return selectFlow(flowList[0]);
+      openSelectFlowModal(true, { flowList });
+    });
+  }
+  function selectFlow(item) {
+    closeSelectFlowModal();
+    state.flowItem = item;
+    const data = {
+      id: '',
+      flowId: item.id,
+      opType: '-1',
+      hideCancelBtn: true,
+    };
+    openFlowParser(true, data);
+  }
+  function init() {
+    getFlowByFormId('@(Model.BasicInfo.Id)').then((res) => {
+      const flowId = res.data && res.data.id;
+      state.formFlowId = flowId;
+      getFlowOptions();
+    });
+  }
+
+  onMounted(() => {
+    init();
+  });
+</script>

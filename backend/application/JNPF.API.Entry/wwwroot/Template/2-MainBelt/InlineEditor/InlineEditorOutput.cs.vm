@@ -1,0 +1,229 @@
+﻿@if(Model.IsUploading)
+{
+@:using JNPF.Common.Models;
+}
+@foreach(var table in Model.TableRelations)
+{
+@*循环出子表的命名空间*@
+@:using JNPF.@(Model.NameSpace).Entitys.Dto.@(table.ClassName);
+}
+
+namespace JNPF.@(Model.NameSpace).Entitys.Dto.@Model.ClassName;
+
+/// <summary>
+/// @(Model.BusName)输出参数.
+/// </summary>
+public class @(Model.ClassName)InlineEditorOutput
+{
+@foreach (var column in Model.TableField){
+@if (column.PrimaryKey){
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @column.LowerColumnName { get; set; }
+@:
+}
+else if(column.jnpfKey != null)
+{
+switch(column.jnpfKey)
+{
+case "datePicker":
+case "switch":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @column.LowerColumnName { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(column.LowerColumnName)_name { get; set; }
+@:
+break;
+case "createTime":
+case "modifyTime":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @column.LowerColumnName { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(column.LowerColumnName)_name { get; set; }
+@:
+break;
+case "relationForm":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @column.LowerColumnName { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(column.LowerColumnName)_name { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(column.LowerColumnName)_id { get; set; }
+break;
+case "select":
+case "userSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+case "usersSelect":
+@if(column.IsMultiple)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<string> @column.LowerColumnName { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(column.LowerColumnName)_name { get; set; }
+@:
+}
+else
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @column.LowerColumnName { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(column.LowerColumnName)_name { get; set; }
+@:
+}
+break;
+case "cascader":
+case "areaSelect":
+case "organizeSelect":
+@if(column.IsMultiple)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<List<string>> @column.LowerColumnName { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(column.LowerColumnName)_name { get; set; }
+@:
+}
+else
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<string> @column.LowerColumnName { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(column.LowerColumnName)_name { get; set; }
+@:
+}
+break;
+case "checkbox":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<string> @column.LowerColumnName { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(column.LowerColumnName)_name { get; set; }
+@:
+break;
+case "radio":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @column.LowerColumnName { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(column.LowerColumnName)_name { get; set; }
+@:
+break;
+case "uploadImg":
+case "uploadFile":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public object? @column.LowerColumnName { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public object? @(column.LowerColumnName)_name { get; set; }
+@:
+break;
+default:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @column.LowerColumnName { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @(column.LowerColumnName)_name { get; set; }
+@:
+break;
+}
+}
+}
+@if(Model.ConcurrencyLock)
+{
+    @:/// <summary>
+    @:/// 乐观锁.
+    @:/// </summary>
+    @:public string version { get; set; }
+@:
+}
+@if(Model.EnableFlow && Model.PrimaryKeyPolicy == 2)
+{
+    @:/// <summary>
+    @:/// 流程真实ID.
+    @:/// </summary>
+    @:public string flowTaskId { get; set; }
+@:
+}
+@foreach (var table in Model.TableRelations)
+{
+if(table.IsShowField)
+{
+    @:/// <summary>
+    @:/// .
+    @:/// </summary>
+    @:public List<@(table.ClassName)ListOutput> @table.ControlModel { get; set; }
+@:
+}
+}
+@if(Model.EnableFlow)
+{
+    @:/// <summary>
+    @:/// 流程状态.
+    @:/// </summary>
+    @:public int? flowState { get; set; }
+@:
+    @:/// <summary>
+    @:/// 流程引擎ID.
+    @:/// </summary>
+    @:public string flowId { get; set; }
+}
+}

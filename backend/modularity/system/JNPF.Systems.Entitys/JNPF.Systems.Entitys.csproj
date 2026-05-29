@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>JNPF 系统管理与系统权限实体类库。</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\infrastructure\JNPF.Extras.CollectiveOAuth\JNPF.Extras.CollectiveOAuth.csproj" />
+    <ProjectReference Include="..\..\..\infrastructure\JNPF.Extras.Thirdparty\JNPF.Extras.Thirdparty.csproj" />
+    <ProjectReference Include="..\..\common\JNPF.Common\JNPF.Common.csproj" />
+  </ItemGroup>
+
+</Project>

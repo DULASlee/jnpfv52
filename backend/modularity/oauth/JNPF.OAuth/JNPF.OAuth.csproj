@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<Description>JNPF 登录模块。</Description>
+	</PropertyGroup>
+	
+	<ItemGroup>
+		<ProjectReference Include="..\..\common\JNPF.Common.Core\JNPF.Common.Core.csproj" />
+		<ProjectReference Include="..\..\message\JNPF.Message.Interfaces\JNPF.Message.Interfaces.csproj" />
+		<ProjectReference Include="..\..\system\JNPF.Systems.Interfaces\JNPF.Systems.Interfaces.csproj" />
+	</ItemGroup>
+
+</Project>

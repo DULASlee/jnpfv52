@@ -1,0 +1,815 @@
+<template>
+@{var BasicTag = string.Empty;var Register = string.Empty;var SpecialStr = string.Empty;}
+@switch(Model.FormAttribute.PopupType){
+@*全屏弹窗*@
+case "fullScreen":
+BasicTag = "BasicPopup";
+Register = "registerPopup";
+SpecialStr = " destroyOnClose";
+break;
+@*普通弹窗*@
+case "general":
+BasicTag = "BasicModal";
+Register = "registerModal";
+SpecialStr = string.Format(" width=\"{0}\" :minHeight=\"100\"",Model.FormAttribute.GeneralWidth);
+break;
+@*右侧弹窗*@
+case "drawer":
+BasicTag = "BasicDrawer";
+Register = "registerDrawer";
+SpecialStr = string.Format(" width=\"{0}\" showFooter",Model.FormAttribute.GeneralWidth);
+break;
+}
+  <@BasicTag v-bind="$attrs" @@register="@Register" :title="title"@SpecialStr :showOkBtn="false">
+@switch(Model.Type){
+case 3:
+case 5:
+break;
+default:
+@switch(Model.FormAttribute.PopupType){
+@*全屏弹窗*@
+case "fullScreen":
+    @:<template #insertToolbar>
+break;
+@*普通弹窗*@
+case "general":
+@*右侧弹窗*@
+case "drawer":
+    @:<template #insertFooter>
+break;
+}
+@if(Model.FormAttribute.HasPrintBtn){
+      @:<a-button type="primary" @@click="handlePrint">@(Model.FormAttribute.PrintButtonText)</a-button>
+}
+    @:</template>
+break;
+}
+@switch(Model.FormAttribute.PopupType){
+@*全屏弹窗*@
+case "fullScreen":
+    @:<a-row class="dynamic-form p-10px" :style="{ margin: '0 auto', width: '@(Model.FormAttribute.FullScreenWidth)' }">
+break;
+@*普通弹窗*@
+case "general":
+    @:<a-row class="dynamic-form">
+break;
+@*右侧弹窗*@
+case "drawer":
+    @:<a-row class="dynamic-form p-10px">
+break;
+}
+      <a-form :colon="false" layout="@(Model.FormAttribute.LabelPosition == "top" ? "vertical" : "horizontal")" labelAlign="@(Model.FormAttribute.LabelPosition == "right" ? "right" : "left")" :labelCol="{ style: { width: '@(Model.FormAttribute.LabelWidth)px' } }" :model="dataForm" ref="formRef">
+        <a-row :gutter="@Model.FormAttribute.Gutter">
+@foreach(var item in Model.FormScript.FormControlDesign)
+{
+GenerateFormLayoutControls(item, 0);
+}
+        </a-row>
+      </a-form>
+    </a-row>    
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail){
+    <!-- 有关联表单详情：开始 -->
+    <RelationDetail ref="relationDetailRef" />
+    <!-- 有关联表单详情：结束 -->
+}
+@if(Model.FormAttribute.HasPrintBtn){  
+    <PrintSelect @@register="registerPrintSelect" @@change="handleShowBrowse" />
+    <PrintBrowse @@register="registerPrintBrowse" />
+}
+  </@BasicTag>
+</template>
+<script lang="ts" setup>
+  import { getDetail } from './helper/api';
+  import { getConfigData } from '/@@/api/onlineDev/visualDev';
+  import { reactive, toRefs, nextTick, ref, computed, unref, toRaw} from 'vue';
+  import { thousandsFormat } from '/@@/utils/jnpf';
+@if(Model.FormAttribute.PopupType == "general" || Model.FormAttribute.HasPrintBtn){
+  @:import { @(Model.FormAttribute.PopupType == "general" ? "BasicModal, " : "")useModal } from '/@@/components/Modal';
+}
+@switch(Model.FormAttribute.PopupType){
+@*全屏弹窗*@
+case "fullScreen":
+  @:import { BasicPopup, usePopup } from '/@@/components/Popup';
+break;
+@*右侧弹窗*@
+case "drawer":
+  @:import { BasicDrawer, useDrawer } from '/@@/components/Drawer';
+break;
+}
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail){
+  @:import RelationDetail from '/@@/views/common/dynamicModel/list/detail/index.vue';
+}
+@if(Model.UseFormPermission){
+  @:import { usePermission } from '/@@/hooks/web/usePermission';
+}
+@if(Model.FormAttribute.HasPrintBtn){
+  @:import { useMessage } from '/@@/hooks/web/useMessage';
+  @:// 打印模板多条生成PrintSelect
+  @:import PrintSelect from '/@@/components/PrintDesign/printSelect/index.vue';
+  @:import PrintBrowse from '/@@/components/PrintDesign/printBrowse/index.vue';
+}
+
+  interface State {
+    dataForm: any;
+    title: string;
+@if(Model.FormScript.HasCollapse){
+@foreach (var item in Model.FormScript.Collapses){
+    @:@(item.Name): any;
+}
+}
+  }
+
+  defineOptions({ name: 'Detail' });
+@switch(Model.FormAttribute.PopupType){
+@*全屏弹窗*@
+case "fullScreen":
+  @:const [registerPopup, { openPopup, closePopup, setPopupProps }] = usePopup();
+break;
+@*普通弹窗*@
+case "general":
+  @:const [registerModal, { openModal, closeModal, setModalProps }] = useModal();
+break;
+@*右侧弹窗*@
+case "drawer":
+  @:const [registerDrawer, { openDrawer, closeDrawer, setDrawerProps }] = useDrawer();
+break;
+}
+@if(Model.FormAttribute.HasPrintBtn){
+  @:const { createMessage } = useMessage();
+  @:const [registerPrintSelect, { openModal: openPrintSelect }] = useModal();
+  @:const [registerPrintBrowse, { openModal: openPrintBrowse }] = useModal();
+}
+@foreach (var item in Model.FormScript.SubTableDesign){
+  @:const @(item.Name)Columns: any[] = computed(() => {
+    @:const list = [
+@foreach (var subTable in item.Header){
+      @:{
+@if(subTable.Required) {
+        @:required: true,
+}
+@if(subTable.Thousand) {
+        @:thousands: true,
+}
+        @:title: '@(subTable.Title)',
+        @:dataIndex: '@(subTable.DataIndex)',
+        @:key: '@(subTable.Key)',
+        @:tipLabel:  "@(subTable.TipLabel)" ,
+        @:align:'@(subTable.Align)',
+        @:fixed:@(subTable.TableFixed)
+      @:},
+}
+    @:];
+    @:let columnList = list;
+    @:let complexHeaderList: any[] = @item.ComplexColumns;
+        @:if (complexHeaderList.length) {
+      @:let childColumns: any[] = [];
+	  @:let firstChildColumns: string[] = [];
+	  @:for (let i = 0; i < complexHeaderList.length; i++) {
+        @:const e = complexHeaderList[i];
+        @:e.title = e.fullName;
+        @:e.align = e.align;
+        @:e.children = [];
+        @:e.jnpfKey = 'complexHeader';
+        @:if (e.childColumns?.length) {
+          @:childColumns.push(...e.childColumns);
+          @:for (let k = 0; k < e.childColumns.length; k++) {
+            @:const item = e.childColumns[k];
+            @:for (let j = 0; j < list.length; j++) {
+              @:const o = list[j];
+              @:if (o.dataIndex == item && o.fixed !== 'left' && o.fixed !== 'right') e.children.push({ ...o });
+            @:}
+          @:}
+        @:}
+        @:if (e.children.length) firstChildColumns.push(e.children[0].dataIndex);
+      @:}
+      @:complexHeaderList = complexHeaderList.filter(o => o.children.length);
+      @:let newList: any[] = [];
+      @:for (let i = 0; i < list.length; i++) {
+        @:const e = list[i];
+        @:if (!childColumns.includes(e.dataIndex)) {
+          @:newList.push(e);
+        @:} else {
+          @:if (firstChildColumns.includes(e.dataIndex)) {
+            @:const item = complexHeaderList.find(o => o.childColumns.includes(e.dataIndex));
+            @:newList.push(item);
+          @:}
+        @:}
+      @:}
+      @:columnList = newList;
+    @:}
+    @:const noColumn = { title: '序号', dataIndex: 'index', key: 'index', align: 'center', width: 50, fixed: 'left' }
+    @:const actionColumn={ title: '操作', dataIndex: 'action', key: 'action', align: 'center', width: 50, fixed: 'right' }
+	@:let columns = [noColumn, ...columnList, actionColumn];
+    @:const leftFixedList = columns.filter(o => o.fixed === 'left');
+    @:const rightFixedList = columns.filter(o => o.fixed === 'right');
+    @:const noFixedList = columns.filter(o => o.fixed !== 'left' && o.fixed !== 'right');
+    @:return [...leftFixedList, ...noFixedList, ...rightFixedList];
+  @:});
+}
+
+  const relationDetailRef = ref<any>(null);
+  const state = reactive<State>({
+    dataForm: {},
+    title: '详情',
+@if(Model.FormScript.HasCollapse){
+@foreach (var item in Model.FormScript.Collapses){
+    @:@(item.Name): @(item.Value),
+}
+}
+  });
+  const { title, dataForm } = toRefs(state);
+@if(Model.UseFormPermission){
+  @:const { hasFormP } = usePermission();
+}
+@if(Model.FormScript.HasSubTable) {
+@foreach (var item in Model.FormScript.SubTableDesign) {
+@if(item.HasSummary){
+    @:const get@(item.Name)SummaryColumn = computed(() => {
+    @:let defaultColumns = unref(@(item.Name)Columns);
+    @:let columns: any[] = [];
+    @:for (let i = 0; i < defaultColumns.length; i++) {
+      @:const e = defaultColumns[i];
+      @:if (e.jnpfKey === 'table' || e.jnpfKey === 'complexHeader') {
+        @:if (e.children?.length) columns.push(...e.children);
+      @:} else {
+        @:columns.push(e);
+      @:}
+      @:if (e.fixed && e.children?.length) {
+		@:for (let j = 0; j < e.children.length; j++) {
+          @:e.children[j].fixed = e.fixed;
+        @:}
+      @:}
+    @:}
+    @:return columns.filter(o => o?.key != 'index' && o?.key != 'action');
+  @:});
+  @:const get@(item.Name)ColumnSum = computed(() => {
+    @:const sums: any[] = [];
+    @:const summaryField: any[] = @(item.SummaryField);
+    @:const useThousands = key => unref(get@(item.Name)SummaryColumn).some(o => o.key === key && o.thousands);
+    @:const isSummary = (key) => summaryField.includes(key);
+    @:const list = unref(get@(item.Name)SummaryColumn).filter(o => o.key !== 'index' && o.key !== 'action');
+    @:list.forEach((column, index) => {
+      @:let sumVal = state.dataForm.@(item.Name).reduce((sum, d) => sum + getCmpValOfRow(d, column.key, summaryField || []), 0);
+      @:if (!isSummary(column.key)) sumVal = '';
+      @:sumVal = Number.isNaN(sumVal) ? '' : sumVal;
+      @:const realVal = sumVal && !Number.isInteger(Number(sumVal)) ? Number(sumVal).toFixed(2) : sumVal;
+      @:sums[index] = useThousands(column.key) ? thousandsFormat(realVal) : realVal;
+    @:});
+    @:return sums;
+  @:});
+}
+}
+}
+
+  defineExpose({ init });
+
+  function init(data) {
+    state.dataForm.@(Model.PrimaryKeyField) = data.id;
+@switch(Model.FormAttribute.PopupType){
+@*全屏弹窗*@
+case "fullScreen":
+    @:openPopup();
+break;
+@*普通弹窗*@
+case "general":
+    @:openModal();
+break;
+@*右侧弹窗*@
+case "drawer":
+    @:openDrawer();
+break;
+}
+    nextTick(() => {
+      setTimeout(initData, 0);
+    });
+  }
+  function initData() {
+    changeLoading(true);
+    if (state.dataForm.@(Model.PrimaryKeyField)) {
+      getData(state.dataForm.@(Model.PrimaryKeyField));
+    } else {
+@switch(Model.FormAttribute.PopupType){
+@*全屏弹窗*@
+case "fullScreen":
+      @:closePopup();
+break;
+@*普通弹窗*@
+case "general":
+      @:closeModal();
+break;
+@*右侧弹窗*@
+case "drawer":
+      @:closeDrawer();
+break;
+}
+    }
+  }
+  function getData(id) {
+    getDetail(id).then((res) => {
+      state.dataForm = res.data || {};
+      nextTick(() => {
+        changeLoading(false);
+      });
+    });
+  }
+@*子表合计*@
+@if(Model.FormScript.HasSubTableSummary) {
+  @:function getCmpValOfRow(row, key, summaryField) {
+    @:if (!summaryField.length) return '';
+    @:const isSummary = key => summaryField.includes(key);
+    @:const target = row[key];
+    @:if (!target) return '';
+    @:let data = isNaN(target) ? 0 : Number(target);
+    @:if (isSummary(key)) return data || 0;
+    @:return '';
+  @:}
+}
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail){
+  @:function toDetail(modelId, id) {
+    @:if (!id) return;
+    @:getConfigData(modelId).then((res) => {
+      @:if (!res.data || !res.data.formData) return;
+      @:const formConf = JSON.parse(res.data.formData);
+      @:formConf.popupType = 'general';
+      @:const data = { id, formConf, modelId };
+      @:relationDetailRef.value?.init(data);
+    @:});
+  @:}
+}
+@if(Model.FormAttribute.HasPrintBtn){
+  @:function handlePrint() {
+    @:const printIds = @(Model.FormAttribute.PrintId);
+    @:if (!printIds?.length) return createMessage.error('未配置打印模板');
+    @:if(printIds.length === 1)return handleShowBrowse(printIds[0]);
+    @:openPrintSelect(true, printIds);
+  @:}
+  @:function handleShowBrowse(id) {
+    @:openPrintBrowse(true, { id,  formId: state.dataForm.@(Model.PrimaryKeyField) });
+  @:}
+}
+  function setFormProps(data) {
+@switch(Model.FormAttribute.PopupType){
+@*全屏弹窗*@
+case "fullScreen":
+    @:setPopupProps(data);
+break;
+@*普通弹窗*@
+case "general":
+    @:setModalProps(data);
+break;
+@*右侧弹窗*@
+case "drawer":
+    @:setDrawerProps(data);
+break;
+}
+  }
+  function changeLoading(loading) {
+    setFormProps({ loading });
+  }
+</script>
+@{
+    @*
+	*表单布局控件
+    *model 表单控件设计模型
+    *num 格式化补全次数
+    *@
+    void GenerateFormLayoutControls(FormControlDesignModel model, int num)
+    {
+	    var space = "          ";
+for (int i = 0; i < num; i++)
+{
+    space += "  ";
+}
+@switch(model.jnpfKey)
+{
+@*分组标题*@
+case "groupTitle":
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-form-item>
+    @:@space<JnpfGroupTitle contentPosition="@(model.Contentposition)" helpMessage="@(model.TipLabel)" content="@(model.Content)"></JnpfGroupTitle>
+  @:@space</a-form-item>
+@:@space</a-col>
+break;
+@*分割线*@
+case "divider":
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-form-item>
+    @:@space<JnpfDivider contentPosition="@(model.Contentposition)" content="@(model.Default)"></JnpfDivider>
+  @:@space</a-form-item>
+@:@space</a-col>
+break;
+@*栅格布局*@
+case "row":
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-row :gutter="@(Model.FormAttribute.Gutter)">
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num + 2);}
+}
+  @:@space</a-row>
+@:@space</a-col>
+break;
+@*表格容器*@
+case "tableGrid":
+@:@space<a-col :span="@(model.Span)">
+  @:@space<table class="table-grid-box" :style="@(model.Style)">
+    @:@space<tbody>
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num + 3);}
+}
+    @:@space</tbody>
+  @:@space</table>
+@:@space</a-col>
+break;
+@*表格容器Tr*@
+case "tableGridTr":
+@:@space<tr>
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num + 1);}
+}
+@:@space</tr>
+break;
+@*表格容器Td*@
+case "tableGridTd":
+@:@space<td colspan="@(model.Colspan)" rowspan="@(model.Rowspan)">
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num + 1);}
+}
+@:@space</td>
+break;
+@*子表*@
+case "table":
+@:@space<a-col :span="24" class="ant-col-item">
+  @:@space<a-form-item label="">
+@if(model.ShowTitle){
+    @:@space<JnpfGroupTitle content="@(model.Label)" :bordered="false" @(model.TipLabel !=null ? "helpMessage=\"" + model.TipLabel + "\"" : "")/>
+}
+    @:@space<a-table :data-source="dataForm.@(model.Name)" :columns="@(model.Name)Columns" size="small" :pagination="false" :scroll="{ x: 'max-content' }" @(model.ComplexColumns!=null ? ":bordered='true'" : "")>
+      @:@space<template #headerCell="{ column }"> <span class="required-sign" v-if="column.required">*</span>{{ column.title }}<BasicHelp :text="column.tipLabel" v-if="column.tipLabel" /></template>
+      @:@space<template #bodyCell="{ column, record, index }">
+        @:@space<template v-if="column.key === 'index'">{{ index + 1 }}</template>
+@*循环子表内控件*@
+@foreach(var item in model.Children)
+{
+GenerateSubTableFromControlsLabel(item, num + 4);
+}
+      @:@space</template>
+@if(model.ShowSummary)
+{
+      @:@space<template #summary v-if="dataForm.@(model.Name)?.length">
+        @:@space<a-table-summary fixed>
+          @:@space<a-table-summary-row>
+            @:@space<a-table-summary-cell :index="0">合计</a-table-summary-cell>
+	        @:@space<a-table-summary-cell v-for="(item, index) in get@(model.Name)ColumnSum" :key="index" :index="index + 1">{{ item }}</a-table-summary-cell>
+            @:@space<a-table-summary-cell :index="get@(model.Name)ColumnSum.length + 1"></a-table-summary-cell>
+          @:@space</a-table-summary-row>
+        @:@space</a-table-summary>
+      @:@space</template>
+}
+    @:@space</a-table>
+  @:@space</a-form-item>
+@:@space</a-col>
+break;
+@*卡片*@
+case "card":
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-card class="mb-20">
+    @:@space<template #title>@(model.Content)</template>
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num + 2);}
+}
+  @:@space</a-card>
+@:@space</a-col>
+break;
+@*折叠面板*@
+case "collapse":
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-collapse ghost expandIconPosition="right" :accordion="@(model.Accordion)" v-model:activeKey="state.@(model.Name)" class="mb-20">
+@foreach(var collapse in model.Children)
+{
+    @:@space<a-collapse-panel header="@(collapse.Title)" key="@(collapse.Name)" forceRender>
+@foreach(var collapses in collapse.Children)
+{
+@{GenerateFormLayoutControls(collapses, num + 3);}
+}
+    @:@space</a-collapse-panel>
+}
+  @:@space</a-collapse>
+@:@space</a-col>
+break;
+@*标签面板*@
+case "tab":
+@:@space<a-col :span="24" class="ant-col-item">
+  @:@space<a-tabs v-model:activeKey="state.@(model.Name)" type="@(model.Type)" tabPosition="@(model.TabPosition)" class="mb-20">
+@foreach(var tab in model.Children)
+{
+    @:@space<a-tab-pane tab="@(tab.Title)" key="@(tab.Name)" forceRender>
+@foreach(var tabs in tab.Children)
+{
+GenerateFormLayoutControls(tabs, num + 3);
+}
+    @:@space</a-tab-pane>
+}
+  @:@space</a-tabs>
+@:@space</a-col>
+break;
+@*其他*@
+default:
+GenerateRoutineFormControlsLabel(model, num);
+break;
+}
+	}
+	@*
+	 * 常规表单控件标签
+	 *@
+    void GenerateRoutineFormControlsLabel(FormControlDesignModel model, int num)
+	{
+	    var space = "          ";
+for (int i = 0; i < num; i++)
+{
+    space += "  ";
+}
+@switch(model.jnpfKey)
+{
+@*关联表单属性*@
+case "relationFormAttr":
+@*弹窗选择属性*@
+case "popupAttr":
+@switch(model.IsStorage)
+{
+case 0:
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-form-item>
+break;
+case 1:
+@:@space<a-col :span="@(model.Span)" class="ant-col-item" @(model.Hidden)@(Model.UseFormPermission ? "v-if=\"hasFormP('" + model.Name + "')\" " : "")>
+  @:@space<a-form-item name="@(model.Name)">
+break;
+}
+    @:@space@(model.ShowLabel ? "<template #label>" : string.Empty)@(model.Label)@(model.TipLabel)@(model.ShowLabel ? "</template>" : string.Empty)
+break;
+@*按钮*@
+case "button":
+@*提示*@
+case "alert":
+@*链接*@
+case "link":
+@*文本*@
+case "text":
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-form-item>
+break;
+default:
+@:@space<a-col :span="@(model.Span)" class="ant-col-item" @(model.Hidden)@(Model.UseFormPermission ? "v-if=\"hasFormP('" + model.Name + "')\" " : "")>
+  @:@space<a-form-item name="@(model.Name)">
+    @:@space@(model.ShowLabel ? "<template #label>" : string.Empty)@(model.Label)@(model.TipLabel)@(model.ShowLabel ? "</template>" : string.Empty)
+break;
+}
+GenerateFromControls(model, num, 0);
+  @:@space</a-form-item>
+@:@space</a-col>
+    }
+	@*
+	 * 子表表单控件标签
+	 *@
+	void GenerateSubTableFromControlsLabel(FormControlDesignModel model, int num)
+	{
+	    var space = "          ";
+for (int i = 0; i < num; i++)
+{
+    space += "  ";
+}
+@switch(model.jnpfKey)
+{
+@*关联表单属性*@
+case "relationFormAttr":
+@*弹窗选择属性*@
+case "popupAttr":
+@:@space<template v-if="column.key === '@(model.Name)'">
+break;
+@*按钮*@
+case "button":
+@*提示*@
+case "alert":
+@*链接*@
+case "link":
+@*iframe*@
+case "iframe":
+@*文本*@
+case "text":
+break;
+default:
+@:@space<template v-if="column.key === '@(model.Name)'">
+break;
+}
+GenerateFromControls(model, num - 1, 1);
+@:@space</template>
+	}
+	@*
+	 * 表单控件标签
+	 * generationType  生成类型 0 主表副表 1 子表
+	 *@
+	void GenerateFromControls(FormControlDesignModel model, int num, int generationType)
+	{
+	    var space = "          ";
+for (int i = 0; i < num; i++)
+{
+    space += "  ";
+}
+@switch(model.jnpfKey)
+{
+@*单行输入*@
+case "input":
+    @:@space<@(model.Tag) @(model.vModel)@(model.UseMask)@(model.MaskConfig)@(model.AddonBefore)@(model.AddonAfter)disabled detailed />
+break;
+@*多行输入*@
+case "textarea":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*数字输入*@
+case "inputNumber":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Placeholder)@(model.AddonBefore)@(model.AddonAfter)@(model.Controls)@(model.Thousands)@(model.AmountChinese)@(model.Style)disabled detailed />
+break;
+@*开关*@
+case "switch":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*单选*@
+case "radio":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*多选框*@
+case "checkbox":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*下拉框*@
+case "select":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*级联选择*@
+case "cascader":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*日期选择*@
+case "datePicker":
+@*时间选择*@
+case "timePicker":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*文件上传*@
+case "uploadFile":
+    @:@space<@(model.Tag) @(model.vModel)@(model.ButtonText)@(model.ShowTip)@(model.Accept)@(model.PathType)@(model.IsAccount)@(model.Folder)@(model.FileSize)@(model.SizeUnit)@(model.Limit)@(model.Style)disabled detailed />
+break;
+@*图片上传*@
+case "uploadImg":
+    @:@space<@(model.Tag) @(model.vModel)@(model.PathType)@(model.IsAccount)@(model.Folder)@(model.SizeUnit)@(model.FileSize)@(model.Style)disabled detailed />
+break;
+@*颜色选择*@
+case "colorPicker":
+    @:@space<@(model.Tag) @(model.vModel)@(model.ColorFormat)@(model.Style)disabled />
+break;
+@*评分*@
+case "rate":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Count)@(model.AllowHalf)@(model.Style)disabled />
+break;
+@*滑块*@
+case "slider":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Min)@(model.Max)@(model.Step)@(model.Style)disabled />
+break;
+@*富文本*@
+case "editor":
+    @:@space<div v-html="@(generationType ==0 ? "dataForm" : "record").@(model.Name)"></div>
+break;
+@*按钮*@
+case "button":
+    @:@space<JnpfButton align="@(model.Align)" buttonText="@(model.ButtonText)" @(model.Type)/>
+break;
+@*提示*@
+case "alert":
+    @:@space<JnpfAlert type="@(model.Type)" :closable="@(model.Closable.ToString().ToLower())" :show-icon="@(model.ShowIcon)" title="@(model.Title)" @(model.Description)@(model.CloseText)/>
+break;
+@*链接*@
+case "link":
+    @:@space<JnpfLink content="@(model.Content)" href="@(model.Href)" target="@(model.Target)" :textStyle='@(model.TextStyle)' />
+break;
+@*iframe*@
+case "iframe":
+	@:@space<JnpfIframe href="@(model.Href)" @(model.Height!=null ? ":height='"+model.Height+"'" : "")@(model.BorderColor)@(model.BorderType)@(model.BorderWidth)/>
+break;
+@*qrcode*@
+case "qrcode":
+    @:@space<@(model.Tag) @(model.ColorLight) @(model.ColorDark) @(model.Width) @(model.StaticText) />
+break;
+@*barcode*@
+case "barcode":
+    @:@space<@(model.Tag) @(model.Format) @(model.LineColor) @(model.Background) @(model.Width) @(model.Height) @(model.StaticText) />
+break;
+@*文本*@
+case "text":
+    @:@space<JnpfText content="@(model.Content)" :textStyle='@(model.TextStyle)' />
+break;
+@*签章*@
+case "signature":
+    @:@space<jnpf-signature @(model.vModel) detailed />
+break;
+@*手写签名*@
+case "sign":
+    @:@space<@(model.Tag) @(model.vModel) detailed />
+break;
+@*定位*@
+case "location":
+    @:@space<@(model.Tag) @(model.vModel)@(model.EnableLocationScope) detailed />
+break;
+@*组织选择*@
+case "organizeSelect":
+@*角色选择*@
+case "roleSelect":
+@*分组选择*@
+case "groupSelect":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*部门选择*@
+case "depSelect":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*岗位选择*@
+case "posSelect":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*用户选择*@
+case "userSelect":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*用户组件*@
+case "usersSelect":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*下拉树形*@
+case "treeSelect":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*下拉表格*@
+case "popupTableSelect":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*下拉补全*@
+case "autoComplete":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*行政区划*@
+case "areaSelect":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*单据组件*@
+case "billRule":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*关联表单*@
+case "relationForm":
+    @:@space<p class="link-text" @@click="toDetail('@(model.ModelId)', @(generationType ==0 ? "dataForm" : "record").@(model.Name)_id)">{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*弹窗选择*@
+case "popupSelect":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*关联表单属性*@
+case "relationFormAttr":
+@*弹窗选择属性*@
+case "popupAttr":
+@*是否存储字段*@
+@switch(model.IsStorage){
+case 0:
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.RelationField)_@(model.ShowField) }}</p>
+break;
+case 1:
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+}
+break;
+@*创建人员*@
+case "createUser":
+@*创建时间*@
+case "createTime":
+@*所属岗位*@
+case "currPosition":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*修改人员*@
+case "modifyUser":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*修改时间*@
+case "modifyTime":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+@*所属组织*@
+case "currOrganize":
+    @:@space<p>{{ @(generationType ==0 ? "dataForm" : "record").@(model.Name) }}</p>
+break;
+}
+	}
+}

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<ItemGroup>
+		<None Remove="sensitive-words.txt" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="lib\regworkerid_lib_v1.3.1\yitidgengo.dll" />
+		<EmbeddedResource Include="lib\regworkerid_lib_v1.3.1\yitidgengo.so" />
+		<EmbeddedResource Include="sensitive-words.txt" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="IGeekFan.AspNetCore.Knife4jUI" Version="0.0.13" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\JNPF.API.Entry\JNPF.API.Entry.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Remove="wwwroot\Template\**" />
+	</ItemGroup>
+
+	<ProjectExtensions><VisualStudio><UserProperties properties_4launchsettings_1json__JsonSchema="" /></VisualStudio></ProjectExtensions>
+</Project>

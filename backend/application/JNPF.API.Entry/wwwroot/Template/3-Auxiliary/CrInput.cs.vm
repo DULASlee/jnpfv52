@@ -1,0 +1,112 @@
+﻿@if(Model.IsUploading)
+{
+@:using JNPF.Common.Models;
+}
+using JNPF.JsonSerialization;
+using Newtonsoft.Json;
+
+namespace JNPF.@(Model.NameSpace).Entitys.Dto.@Model.ClassName;
+ 
+/// <summary>
+/// @(Model.BusName)修改输入参数.
+/// </summary>
+public class @(Model.ClassName)CrInput
+{
+@foreach (var column in Model.TableField)
+{
+@if (column.jnpfKey != null)
+{
+switch(column.jnpfKey)
+{
+case "select":
+case "userSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+case "usersSelect":
+@if(column.IsMultiple)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<string> jnpf_@(column.TableName)_jnpf_@column.LowerColumnName { get; set; }
+@:
+}
+else
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string jnpf_@(column.TableName)_jnpf_@column.LowerColumnName { get; set; }
+@:
+}
+break;
+case "cascader":
+case "areaSelect":
+case "organizeSelect":
+@if(column.IsMultiple)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<List<string>> jnpf_@(column.TableName)_jnpf_@column.LowerColumnName { get; set; }
+@:
+}
+else
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<string> jnpf_@(column.TableName)_jnpf_@column.LowerColumnName { get; set; }
+@:
+}
+break;
+case "switch":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:[JsonConverter(typeof(BoolJsonConverter))]
+    @:public bool jnpf_@(column.TableName)_jnpf_@column.LowerColumnName { get; set; }
+@:
+break;
+case "checkbox":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<string> jnpf_@(column.TableName)_jnpf_@column.LowerColumnName { get; set; }
+@:
+break;
+case "radio":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string jnpf_@(column.TableName)_jnpf_@column.LowerColumnName { get; set; }
+@:
+break;
+case "uploadImg":
+case "uploadFile":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<FileControlsModel> jnpf_@(column.TableName)_jnpf_@column.LowerColumnName { get; set; }
+@:
+break;
+case "createTime":
+case "modifyTime":
+    
+@:
+break;
+default:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType jnpf_@(column.TableName)_jnpf_@column.LowerColumnName { get; set; }
+@:
+break;
+}
+}
+}
+}

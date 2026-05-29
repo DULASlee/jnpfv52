@@ -1,0 +1,7 @@
+{
+  "CorsAccessorSettings": {
+    "PolicyName": "JNPFCorsAccessor",
+    "WithOrigins": [ "http://v1.zlsyun.com", "http://localhost:3100", "http://localhost:3000", "http://localhost:8080", "http://localhost:4173", "http://127.0.0.1:4173", "http://127.0.0.1:3100", "http://114.115.175.162:8092", "http://114.115.175.162:8091", "http://localhost:3800" ],
+    "WithExposedHeaders": [ "access-token", "x-access-token", "Content-Disposition" ]
+  }
+}

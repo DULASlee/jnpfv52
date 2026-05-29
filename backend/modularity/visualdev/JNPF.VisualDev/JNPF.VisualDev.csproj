@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\common\JNPF.Common.Core\JNPF.Common.Core.csproj" />
+		<ProjectReference Include="..\..\engine\JNPF.VisualDev.Engine\JNPF.VisualDev.Engine.csproj" />
+		<ProjectReference Include="..\..\extend\JNPF.Extend.Interfaces\JNPF.Extend.Interfaces.csproj" />
+		<ProjectReference Include="..\..\message\JNPF.Message.Interfaces\JNPF.Message.Interfaces.csproj" />
+		<ProjectReference Include="..\..\system\JNPF.Systems.Interfaces\JNPF.Systems.Interfaces.csproj" />
+		<ProjectReference Include="..\..\workflow\JNPF.WorkFlow.Interfaces\JNPF.WorkFlow.Interfaces.csproj" />
+		<ProjectReference Include="..\JNPF.VisualDev.Interfaces\JNPF.VisualDev.Interfaces.csproj" />
+	</ItemGroup>
+
+</Project>

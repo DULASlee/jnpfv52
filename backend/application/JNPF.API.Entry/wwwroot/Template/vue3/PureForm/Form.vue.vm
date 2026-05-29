@@ -1,0 +1,1151 @@
+<template>
+  <BasicPopup v-bind="$attrs" @@register="registerPopup" :show-back-icon="false" :show-cancel-btn="false" title="@(Model.Title)">
+    <template #insertToolbar>
+      <a-button type="primary" @@click="handleSubmit" :loading="btnLoading">确定</a-button>
+      <a-button type="warning" class="ml-10px" @@click="handleReset">重置</a-button>
+    </template>
+    <a-row class="dynamic-form p-10px" :style="{ margin: '0 auto', width: '@(Model.FormAttribute.FullScreenWidth)' }">
+      <a-form :colon="false" layout="@(Model.FormAttribute.LabelPosition == "top" ? "vertical" : "horizontal")" labelAlign="@(Model.FormAttribute.LabelPosition == "right" ? "right" : "left")" :labelCol="{ style: { width: '@(Model.FormAttribute.LabelWidth)px' } }" :model="dataForm" :rules="dataRule" ref="formRef">
+        <a-row :gutter="@Model.FormAttribute.Gutter">
+@foreach(var item in Model.FormScript.FormControlDesign)
+{
+GenerateFormLayoutControls(item, 0);
+}
+        </a-row>
+      </a-form>
+    </a-row>
+  </BasicPopup>
+    <SelectModal :config="state.currTableConf" :formData="state.dataForm" ref="selectModal" @@select="addForSelect"/>
+</template>
+<script lang="ts" setup>
+  import { create } from './helper/api';
+  import { reactive, toRefs, nextTick, ref, unref, computed, toRaw } from 'vue';
+  import { BasicPopup, usePopupInner } from '/@@/components/Popup';
+@if(Model.HasRelationDetail || Model.HasSubTableRelationDetail) {
+  @:import { JnpfRelationForm } from '/@@/components/Jnpf';
+}
+  import { useMessage } from '/@@/hooks/web/useMessage';
+  import { useUserStore } from '/@@/store/modules/user';
+  import type { FormInstance } from 'ant-design-vue';
+  import { thousandsFormat } from '/@@/utils/jnpf';
+  import { getTimeUnit, getDateTimeUnit } from '/@@/utils/jnpf';
+  import SelectModal from '/@@/components/CommonModal/src/SelectModal.vue';
+@if(Model.FormScript.HasDictionary) {
+  @:import { getDictionaryDataSelector } from '/@@/api/systemData/dictionary';
+}
+@if(Model.FormScript.HasDynamic) {
+  @:import { getDataInterfaceRes } from '/@@/api/systemData/dataInterface';
+}
+  import dayjs from 'dayjs';
+  import { cloneDeep } from 'lodash-es';
+@if(Model.UseFormPermission) {
+  @:import { usePermission } from '/@@/hooks/web/usePermission';
+}
+
+  interface State {
+    dataForm: any;
+    dataRule: any;
+@if(Model.FormScript.HasOptions) {
+    @:optionsObj: any;
+}
+@if(Model.FormScript.HasCollapse) {
+@foreach (var item in Model.FormScript.Collapses) {
+    @:@(item.Name): any;
+}
+}
+    currVmodel:any;
+    currTableConf:any;
+    addTableConf: any;
+    tableRows: any;
+@foreach (var item in Model.FormScript.SubTableDesign) {
+@if(item.IsAnyBatchRemove)
+{
+    @:selected@(item.Name)RowKeys : any[];
+}
+}
+    btnLoading: boolean;
+    currIndex: number;
+    isContinue: boolean;
+    submitType: number;
+  }
+
+  const emit = defineEmits(['reload']);
+  const userStore = useUserStore();
+  const userInfo = userStore.getUserInfo;
+  const { createMessage, createConfirm } = useMessage();
+@if(Model.UseFormPermission) {
+  @:const { hasFormP } = usePermission();
+}
+  const [registerPopup, { changeLoading }] = usePopupInner(init);
+  const formRef = ref<FormInstance>();
+  const selectModal = ref(null);
+@foreach (var item in Model.FormScript.SubTableDesign) {
+  @:const @(item.Name)Columns: any[] = computed(() => {
+    @:const list = [
+@foreach (var subTable in item.Header) {
+      @:{
+@if(subTable.Thousand) {
+        @:thousands: true,
+}
+        @:title: '@(subTable.Title)',
+        @:dataIndex: '@(subTable.DataIndex)',
+        @:key: '@(subTable.Key)',
+        @:tipLabel: "@(subTable.TipLabel)" ,
+        @:required: @(subTable.Required.ToString().ToLower()),
+        @:align:'@(subTable.Align)',
+        @:fixed:@(subTable.TableFixed)
+      @:},
+}
+    @:];
+    @:let columnList = list;
+    @:let complexHeaderList: any[] = @item.ComplexColumns;
+    @:if (complexHeaderList.length) {
+      @:let childColumns: any[] = [];
+	  @:let firstChildColumns: string[] = [];
+	  @:for (let i = 0; i < complexHeaderList.length; i++) {
+        @:const e = complexHeaderList[i];
+        @:e.title = e.fullName;
+        @:e.align = e.align;
+        @:e.children = [];
+        @:e.jnpfKey = 'complexHeader';
+        @:if (e.childColumns?.length) {
+          @:childColumns.push(...e.childColumns);
+          @:for (let k = 0; k < e.childColumns.length; k++) {
+            @:const item = e.childColumns[k];
+            @:for (let j = 0; j < list.length; j++) {
+              @:const o = list[j];
+              @:if (o.dataIndex == item && o.fixed !== 'left' && o.fixed !== 'right') e.children.push({ ...o });
+            @:}
+          @:}
+        @:}
+        @:if (e.children.length) firstChildColumns.push(e.children[0].dataIndex);
+      @:}
+      @:complexHeaderList = complexHeaderList.filter(o => o.children.length);
+      @:let newList: any[] = [];
+      @:for (let i = 0; i < list.length; i++) {
+        @:const e = list[i];
+        @:if (!childColumns.includes(e.dataIndex)) {
+          @:newList.push(e);
+        @:} else {
+          @:if (firstChildColumns.includes(e.dataIndex)) {
+            @:const item = complexHeaderList.find(o => o.childColumns.includes(e.dataIndex));
+            @:newList.push(item);
+          @:}
+        @:}
+      @:}
+      @:columnList = newList;
+    @:}
+    @:const noColumn = { title: '序号', dataIndex: 'index', key: 'index', align: 'center', width: 50, fixed: 'left' }
+@if(item.ColumnBtnsList.Count>0)
+{
+    @:const actionColumn={ title: '操作', dataIndex: 'action', key: 'action', align: 'center', width: @(item.ColumnBtnsList.Count*50), fixed: 'right' }
+}
+	@:let columns = [noColumn, ...columnList @(item.ColumnBtnsList.Count>0 ? ", actionColumn" : "")];
+    @:const leftFixedList = columns.filter(o => o.fixed === 'left');
+    @:const rightFixedList = columns.filter(o => o.fixed === 'right');
+    @:const noFixedList = columns.filter(o => o.fixed !== 'left' && o.fixed !== 'right');
+    @:return [...leftFixedList, ...noFixedList, ...rightFixedList];
+  @:});
+  @:const get@(item.Name)RowSelection = computed(() => {
+    @:const rowSelection = {
+      @:selectedRowKeys: state.selected@(item.Name)RowKeys,
+      @:onChange: (selectedRowKeys: string[]) => {
+        @:state.selected@(item.Name)RowKeys = (selectedRowKeys || []).sort().reverse();
+      @:},
+    @:};
+    @:return rowSelection;
+  @:});
+}
+  const state = reactive<State>({
+    dataForm: {
+      @(Model.PrimaryKeyField): '',
+@foreach (var item in Model.FormScript.DataForm) {
+      @:@(item.Name): @(item.Value),
+}
+    },
+@foreach (var item in Model.FormScript.SubTableDesign) {
+@if(item.IsAnyBatchRemove)
+{
+    @:selected@(item.Name)RowKeys : [],
+}
+}
+    dataRule: {
+@foreach (var item in Model.FormScript.DataRules) {
+      @:@(item.Name): [
+@foreach (var required in item.Required){
+        @:{
+          @:required: @required.required.ToString().ToLower(),
+          @:message: '@(required.message)',
+          @:trigger: @(required.trigger.ToString().StartsWith("[") ? required.trigger : "'" + required.trigger + "'"),
+        @:},
+}
+@foreach (var rule in item.Rule) {
+        @:{
+          @:pattern: @rule.pattern,
+          @:message: '@(rule.message)',
+          @:trigger: @(rule.trigger.ToString().StartsWith("[") ? rule.trigger : "'" + rule.trigger + "'"),
+          @:},
+}
+      @:],
+}
+    },
+@if(Model.FormScript.HasCollapse){
+@foreach (var item in Model.FormScript.Collapses) {
+    @:@(item.Name): @(item.Value),
+}
+}
+@if(Model.FormScript.HasOptions){
+    @:optionsObj:{
+@foreach (var item in Model.FormScript.Options) {
+      @:@(item.Name): @(item.Value),
+}
+    @:},
+}
+    currVmodel: '',
+    currTableConf:{},
+    tableRows: {
+@foreach(var item in Model.FormScript.SubTableDesign) {
+      @:@(item.Name): {
+        @:enabledmark:undefined,
+@foreach (var subTable in item.DataForm) {
+        @:@(subTable.Name): @(subTable.Value),
+}
+    @:},
+}},
+    addTableConf:{
+@foreach(var item in Model.FormScript.SubTableDesign) {
+@foreach (var btnItem in item.FooterBtnsList) {
+    @if(btnItem.value!="add" && btnItem.value!="batchRemove")
+	{
+        @:@(item.Name)List@(btnItem.value) : @(btnItem.actionConfig)
+	}
+}
+}
+    },
+    btnLoading: false,
+    currIndex: 0,
+    isContinue: false,
+    submitType: 0,
+  });
+  const { btnLoading, dataForm, dataRule@(Model.FormScript.HasOptions ? ", optionsObj" : "") } = toRefs(state);
+@switch(Model.Type) {
+case 1:
+break;
+default:
+  @:const getPrevDisabled = computed(() => state.currIndex === 0);
+  @:const getNextDisabled = computed(() => state.currIndex === state.allList.length - 1);
+break;
+}
+@if(Model.FormScript.HasSubTable) {
+@foreach (var item in Model.FormScript.SubTableDesign) {
+@if(item.HasSummary){
+    @:const get@(item.Name)SummaryColumn = computed(() => {
+    @:let defaultColumns = unref(@(item.Name)Columns);
+    @:let columns: any[] = [];
+    @:for (let i = 0; i < defaultColumns.length; i++) {
+      @:const e = defaultColumns[i];
+      @:if (e.jnpfKey === 'table' || e.jnpfKey === 'complexHeader') {
+        @:if (e.children?.length) columns.push(...e.children);
+      @:} else {
+        @:columns.push(e);
+      @:}
+      @:if (e.fixed && e.children?.length) {
+		@:for (let j = 0; j < e.children.length; j++) {
+          @:e.children[j].fixed = e.fixed;
+        @:}
+      @:}
+    @:}
+    @:return columns.filter(o => o?.key != 'index' && o?.key != 'action');
+  @:});
+  @:const get@(item.Name)ColumnSum = computed(() => {
+    @:const sums: any[] = [];
+    @:const summaryField: any[] = @(item.SummaryField);
+    @:const useThousands = key => unref(get@(item.Name)SummaryColumn).some(o => o.key === key && o.thousands);
+    @:const isSummary = (key) => summaryField.includes(key);
+    @:const list = unref(get@(item.Name)SummaryColumn).filter(o => o.key !== 'index' && o.key !== 'action');
+    @:list.forEach((column, index) => {
+      @:let sumVal = state.dataForm.@(item.Name).reduce((sum, d) => sum + getCmpValOfRow(d, column.key, summaryField || []), 0);
+      @:if (!isSummary(column.key)) sumVal = '';
+      @:sumVal = Number.isNaN(sumVal) ? '' : sumVal;
+      @:const realVal = sumVal && !Number.isInteger(Number(sumVal)) ? Number(sumVal).toFixed(2) : sumVal;
+      @:sums[index] = useThousands(column.key) ? thousandsFormat(realVal) : realVal;
+    @:});
+@if(item.IsAnyBatchRemove)
+{
+	 @:sums.unshift('');
+}
+    @:return sums;
+  @:});
+    @:function get@(item.Name)SummaryCellAlign(index) {
+    @:if (!unref(get@(item.Name)SummaryColumn).length) return;
+@if(item.IsAnyBatchRemove)
+{
+	@:index--;
+}
+    @:return unref(get@(item.Name)SummaryColumn)[index]?.align || 'left';
+  @:}
+}
+}
+}
+
+  defineExpose({ init });
+
+  function init() {
+    changeLoading(true);
+    nextTick(() => {
+@foreach (var item in Model.FormScript.SubTableDesign) {
+      @:state.dataForm.@(item.Name) = [];
+}
+@foreach (var item in Model.FormScript.DataOptions) {
+@if(!item.IsLinkage) {
+      @:get@(item.Name)Options();
+}
+else if(item.IsLinkage && !item.IsSubTable) {
+      @:get@(item.Name)Options();
+}
+else if (item.IsLinkage && item.IsSubTable && !item.IsSubTableLinkage) {
+      @:get@(item.Name)Options();
+}
+}
+      changeLoading(false);
+    });
+  }
+  async function handleSubmit() {
+    try {
+      const values = await getForm()?.validate();
+      if (!values) return;
+@*子表必填验证*@
+@foreach (var item in Model.FormScript.SubTableDesign) {
+@if(item.IsAnyRequired || (item.RegList!=null && item.RegList.Count > 0))
+{
+	@:if(!@(item.Name)Exist()) return;
+}
+}
+      state.btnLoading = true;
+      create(state.dataForm)
+        .then((res) => {
+          createMessage.success(res.msg);
+          state.btnLoading = false;
+          handleReset();
+        })
+        .catch(() => {
+          state.btnLoading = false;
+        });
+    } catch (_) {}
+  }
+  function handleReset() {
+    getForm().resetFields();
+    init();
+  }
+  function getForm() {
+    const form = unref(formRef);
+    if (!form) {
+      throw new Error('form is null!');
+    }
+    return form;
+  }
+@foreach (var item in Model.FormScript.Linkage) {
+@switch(item.IsSubTable){
+case true:
+  @:function @(item.Name)TableChange(i) {
+@foreach(var linkage in item.LinkageRelationship) {
+    @:state.dataForm.@(item.SubTableName)[i].@(linkage.field) = @(linkage.IsMultiple ? "[]" : "undefined");
+@switch(linkage.jnpfKey)
+{
+case "popupSelect":
+case "popupTableSelect":
+case "autoComplete":
+break;
+default:
+    @:get@(item.SubTableName)_@(linkage.field)Options(i);
+break;
+}
+}
+  @:}
+break;
+case false:
+  @:function @(item.Name)Change() {
+@foreach (var linkage in item.LinkageRelationship){
+@switch(linkage.jnpfKey)
+{
+case "popupSelect":
+case "popupTableSelect":
+case "autoComplete":
+break;
+default:
+@*主表联动子表控件*@
+@if(linkage.isChildren)
+{
+    @:if(state.dataForm.@(linkage.fieldName).length) {
+      @:state.dataForm.@(linkage.fieldName).forEach((_ele, index) => {
+        @:get@(linkage.fieldName)_@(linkage.field)Options(index)
+      @:})
+    @:}
+}else{
+    @:state.dataForm.@(linkage.field) = @(linkage.IsMultiple ? "[]" : "undefined")
+    @:get@(linkage.fieldName)Options()
+}
+break;
+}
+}
+  @:}
+break;
+}
+}
+@*数据选项*@
+@foreach (var item in Model.FormScript.DataOptions) {
+  @:function get@(item.Name)Options(@(item.IsSubTable && item.IsLinkage  ? "i?" : "")) {
+@switch(item.DataType)
+{
+case CodeGenFrontEndDataType.dictionary:
+    @:getDictionaryDataSelector('@(item.Value)').then(res => {
+      @:state.optionsObj.@(item.Name)Options = res.data.list
+break;
+case CodeGenFrontEndDataType.dynamic:
+    @:let templateJson = @(item.TemplateJson)
+    @:let query = {
+      @:paramList: getParamList(templateJson, state.dataForm@(item.IsSubTable && item.IsLinkage ? ", i" : ""))
+    @:}
+    @:getDataInterfaceRes('@(item.Value)', query).then(res => {
+      @:let data = res.data;
+      @:@(item.IsSubTable && item.IsLinkage && item.IsSubTableLinkage ? "state.dataForm." + item.SubTableName + "[i]" : "state.optionsObj").@(item.Name)Options = Array.isArray(data) ? data : [];
+break;
+}
+    @:});
+  @:}
+}
+@*子表设计*@
+@foreach (var item in Model.FormScript.SubTableDesign) {
+  @:function add@(item.Name)Row() {
+    @:let item = {
+@foreach (var subTable in item.DataForm) {
+      @:@(subTable.Name): @(subTable.Value),
+}
+    @:}
+    @:state.dataForm.@(item.Name).push(item);
+@foreach (var option in item.LinkageOptions) {
+    @:@(option)
+}
+  @:}
+
+  @:function remove@(item.Name)Row(index,showConfirm = false) {
+    @:if (showConfirm) {
+        @:createConfirm({
+          @:iconType: 'warning',
+          @:title: '提示',
+          @:content: '此操作将永久删除该数据, 是否继续?',
+          @:onOk: () => {
+            @:state.dataForm.@(item.Name).splice(index, 1);
+          @:},
+        @:})}
+    @:else {
+      @:state.dataForm.@(item.Name).splice(index, 1);
+    @:}	
+  @:}
+  @:function copy@(item.Name)Row(index) {
+    @:let item = cloneDeep(state.dataForm.@(item.Name)[index]);
+    @:let copyData = {};
+    @:for (let i = 0; i < unref(@(item.Name)Columns).length; i++) {
+      @:const cur = unref(@(item.Name)Columns)[i];
+      @:if (cur.key != 'index' && cur.key != 'action') {
+        @:if (cur.children?.length && cur.jnpfKey == 'complexHeader') {
+          @:for (let j = 0; j < cur.children.length; j++) {
+            @:copyData[cur.children[j].key] = item[cur.children[j].key];
+          @:}
+        @:} else {
+          @:copyData[cur.key] = item[cur.key];
+        @:}
+      @:}
+    @:}
+    @:state.dataForm.@(item.Name).push(copyData);
+  @:}
+@if(item.IsAnyBatchRemove){
+  @:function batchRemove@(item.Name)Row(showConfirm=false) {
+    @:if (!state.selected@(item.Name)RowKeys.length) return createMessage.error('请选择一条数据');
+    @:const handleBatchRemove = () => {
+      @:state.selected@(item.Name)RowKeys.map(o => {
+        @:state.dataForm.@(item.Name).splice(o, 1);
+      @:});
+      @:nextTick(() => {
+        @:state.selected@(item.Name)RowKeys = [];
+      @:});
+    @:};
+    @:if (!showConfirm) return handleBatchRemove();
+    @:createConfirm({
+      @:iconType: 'warning',
+      @:title: '提示',
+      @:content: '此操作将永久删除该数据, 是否继续?',
+      @:onOk: handleBatchRemove,
+    @:});
+  @:}
+}
+
+@if(item.IsAnyRequired || (item.RegList!=null && item.RegList.Count > 0))
+{
+			@:function @(item.Name)Exist(){
+				@:let isOk = true;
+				@:for (let i = 0; i < state.dataForm.@(item.Name).length; i++) {
+					@:const e = state.dataForm.@(item.Name)[i];
+@if(item.IsAnyRequired)
+{
+@foreach(var children in item.Controls)
+{
+@if(children.Required)
+{
+@switch(children.jnpfKey)
+{
+case "checkbox":
+case "cascader":
+case "uploadImg":
+case "uploadFile":
+case "areaSelect":
+case "organizeSelect":
+					@:if(!e.@(children.LowerName).length) {
+						@:createMessage.error('@(children.Label)不能为空');
+						@:isOk = false
+						@:break
+					@:}
+break;
+case "rate":
+case "slider":
+					@:if(!e.@(children.LowerName) && e.@(children.LowerName)!=0) {
+						@:createMessage.error('@(children.Label)不能为空');
+						@:isOk = false
+						@:break
+					@:}
+break;
+default:
+					@:if(!e.@(children.LowerName)@(children.Multiple ? ".length" : "")) {
+						@:createMessage.error('@(children.Label)不能为空');
+						@:isOk = false
+						@:break
+					@:}
+break;
+ }
+ }
+ }
+ }
+@if(item.RegList != null && item.RegList.Count > 0)
+{
+@foreach(var children in item.Controls)
+{
+@if(children.RegList != null && children.RegList.Count > 0)
+{
+					@:if (e.@(children.LowerName)) {
+@{var childrenReg = 0;}
+						@:var regPos = [@foreach(var reg in children.RegList){childrenReg++;@("{\"pattern\":" + reg.pattern + ", \"message\":\"" + reg.message + "\"}")@(childrenReg == children.RegList.Count ? "" : ",")}]
+						@:for (let i = 0; i < regPos.length; i++)
+						@:{
+							@:const element = regPos[i];
+							@:if (element.pattern && !eval(element.pattern).test(e.@(children.LowerName))) {
+						        @:createMessage.error(element.message);
+								@:isOk = false
+								@:break;
+							@:}
+						@:}
+					@:}
+ }
+ }
+ }
+				@:}
+				@:return isOk;
+			@:}
+ }
+}
+  function openSelectDialog(key,value) {
+    state.currTableConf = state.addTableConf[key+'List'+value]
+    state.currVmodel = key
+    nextTick(() => {
+      (selectModal.value as any)?.openSelectModal();
+    })
+  }
+  function addForSelect(data) {
+    for (let i = 0; i < data.length; i++) {
+      let item = {...state.tableRows[state.currVmodel],...data[i]}
+      state.dataForm[state.currVmodel].push(cloneDeep(item));
+    }
+  }
+  function getParamList(templateJson, formData, index?) {
+    for (let i = 0; i < templateJson.length; i++) {
+      if (templateJson[i].relationField && templateJson[i].sourceType == 1) {
+        //区分是否子表
+        if (templateJson[i].relationField.includes('-')) {
+          let tableVModel = templateJson[i].relationField.split('-')[0]
+          let childVModel = templateJson[i].relationField.split('-')[1]
+          templateJson[i].defaultValue = formData[tableVModel] && formData[tableVModel][index] && formData[tableVModel][index][childVModel] || ''
+        } else {
+          templateJson[i].defaultValue = formData[templateJson[i].relationField] || ''
+        }
+      }
+    }
+    return templateJson
+  }
+@*子表合计*@
+@if(Model.FormScript.HasSubTableSummary) {
+  @:function getCmpValOfRow(row, key, summaryField) {
+    @:if (!summaryField.length) return '';
+    @:const isSummary = key => summaryField.includes(key);
+    @:const target = row[key];
+    @:if (!target) return '';
+    @:let data = isNaN(target) ? 0 : Number(target);
+    @:if (isSummary(key)) return data || 0;
+    @:return '';
+  @:}
+}
+@*是否开启特殊日期*@
+@if(Model.FormScript.HasSpecialDate) {
+  @:function getRelationDate(timeRule, timeType, timeTarget, timeValueData, dataValue) {
+    @:let timeDataValue: any = null;
+    @:let timeValue = Number(timeValueData);
+    @:if (timeRule) {
+      @:if (timeType == 1) {
+        @:timeDataValue = timeValue;
+      @:} else if (timeType == 2) {
+        @:timeDataValue = dataValue;
+      @:} else if (timeType == 3) {
+        @:timeDataValue = new Date().getTime();
+      @:} else if (timeType == 4 || timeType == 5) {
+        @:const type = getTimeUnit(timeTarget);
+        @:const method = timeType == 4 ? 'subtract' : 'add';
+        @:timeDataValue = dayjs()[method](timeValue, type).valueOf();
+      @:}
+    @:}
+    @:return timeDataValue;
+  @:}
+}
+@*是否开启特殊时间*@
+@if(Model.FormScript.HasSpecialTime) {
+  @:function getRelationTime(timeRule, timeType, timeTarget, timeValue, formatType, dataValue) {
+    @:let format = formatType == 'HH:mm' ? 'HH:mm:00' : formatType;
+    @:let timeDataValue: any = null;
+    @:if (timeRule) {
+      @:if (timeType == 1) {
+        @:timeDataValue = timeValue || '00:00:00';
+        @:if (timeDataValue.split(':').length == 3) {
+          @:timeDataValue = timeDataValue;
+        @:} else {
+          @:timeDataValue = timeDataValue + ':00';
+        @:}
+      @:} else if (timeType == 2) {
+        @:timeDataValue = dataValue;
+      @:} else if (timeType == 3) {
+        @:timeDataValue = dayjs().format(format);
+      @:} else if (timeType == 4 || timeType == 5) {
+        @:const type = getTimeUnit(timeTarget + 3);
+        @:const method = timeType == 4 ? 'subtract' : 'add';
+        @:timeDataValue = dayjs()[method](timeValue, type).format(format);
+      @:}
+    @:}
+    @:return timeDataValue;
+  @:}
+}
+</script>
+@{
+    @*
+	*表单布局控件
+    *model 表单控件设计模型
+    *num 格式化补全次数
+    *@
+    void GenerateFormLayoutControls(FormControlDesignModel model, int num)
+    {
+	    var space = "          ";
+for (int i = 0; i < num; i++)
+{
+    space += "  ";
+}
+@switch(model.jnpfKey)
+{
+@*分组标题*@
+case "groupTitle":
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-form-item>
+    @:@space<JnpfGroupTitle contentPosition="@(model.Contentposition)" helpMessage="@(model.TipLabel)" content="@(model.Content)"></JnpfGroupTitle>
+  @:@space</a-form-item>
+@:@space</a-col>
+break;
+@*分割线*@
+case "divider":
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-form-item>
+    @:@space<JnpfDivider contentPosition="@(model.Contentposition)" content="@(model.Default)"></JnpfDivider>
+  @:@space</a-form-item>
+@:@space</a-col>
+break;
+@*栅格布局*@
+case "row":
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-row :gutter="@(Model.FormAttribute.Gutter)">
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num + 2);}
+}
+  @:@space</a-row>
+@:@space</a-col>
+break;
+@*表格容器*@
+case "tableGrid":
+@:@space<a-col :span="@(model.Span)">
+  @:@space<table class="table-grid-box" :style="@(model.Style)">
+    @:@space<tbody>
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num + 3);}
+}
+    @:@space</tbody>
+  @:@space</table>
+@:@space</a-col>
+break;
+@*表格容器Tr*@
+case "tableGridTr":
+@:@space<tr>
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num + 1);}
+}
+@:@space</tr>
+break;
+@*表格容器Td*@
+case "tableGridTd":
+@:@space<td colspan="@(model.Colspan)" rowspan="@(model.Rowspan)" @(model.Style)>
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num + 1);}
+}
+@:@space</td>
+break;
+@*子表*@
+case "table":
+@:@space<a-col :span="24" class="ant-col-item">
+  @:@space<a-form-item label="">
+@if(model.ShowTitle){
+    @:@space<JnpfGroupTitle content="@(model.Label)" :bordered="false" />
+}
+    @:@space<a-table :data-source="dataForm.@(model.Name)" :columns="@(model.Name)Columns" size="small" :rowKey="(_record, i) => i" :pagination="false" :scroll="{ x: 'max-content' }" @(model.IsAnyBatchRemove ? ":rowSelection='get" + model.Name + "RowSelection'" : "") @(model.ComplexColumns!=null ? ":bordered='true'" : "")>
+      @:@space<template #headerCell="{ column }"> <span class="required-sign" v-if="column.required">*</span>{{ column.title }}<BasicHelp :text="column.tipLabel" v-if="column.tipLabel" /></template>
+      @:@space<template #bodyCell="{ column, record, index }">
+        @:@space<template v-if="column.key === 'index'">{{ index + 1 }}</template>
+@*循环子表内控件*@
+@foreach(var item in model.Children)
+{
+GenerateSubTableFromControlsLabel(item, num + 4);
+}
+        @:@space<template v-if="column.key === 'action'">
+			@:@space<a-space>
+@foreach(var item in model.ColumnBtnsList)
+{
+    @if(item.show)
+	{
+        switch(item.value)
+	    {
+	        case "remove":
+		        @:@space<a-button class="action-btn" type="link" color="error" @@click="remove@(model.Name)Row(index,@(item.showConfirm))" size="small">@(item.label)</a-button>
+	        break;
+	        case "copy":
+		        @:@space<a-button class="action-btn" type="link" @@click="copy@(model.Name)Row(index)" size="small">@(item.label)</a-button>
+	        break;
+	    }
+	}
+}
+			@:@space</a-space>
+        @:@space</template>
+      @:@space</template>
+@if(model.ShowSummary)
+{
+      @:@space<template #summary v-if="dataForm.@(model.Name)?.length">
+        @:@space<a-table-summary fixed>
+          @:@space<a-table-summary-row>
+            @:@space<a-table-summary-cell :index="0">合计</a-table-summary-cell>
+	        @:@space<a-table-summary-cell v-for="(item, index) in get@(model.Name)ColumnSum" :key="index" :index="index + 1" :align="get@(model.Name)SummaryCellAlign(index)">{{ item }}</a-table-summary-cell>
+            @:@space<a-table-summary-cell :index="get@(model.Name)ColumnSum.length + 1"></a-table-summary-cell>
+          @:@space</a-table-summary-row>
+        @:@space</a-table-summary>
+      @:@space</template>
+}
+    @:@space</a-table>
+	  @:<a-space class="input-table-footer-btn">
+@foreach(var item in model.FooterBtnsList)
+{
+        @if(item.value=="add")
+		{
+		    @:<a-button type="@(item.btnType)" preIcon="@(item.btnIcon)" @@click="@(item.value)@(model.Name)Row">@(item.label)</a-button>
+		}else if(item.value=="batchRemove"){
+		    @:<a-button type="@(item.btnType)" preIcon="@(item.btnIcon)" @@click="@(item.value)@(model.Name)Row(@(item.showConfirm))">@(item.label)</a-button>
+		}else{
+		    @:<a-button type="@(item.btnType)" preIcon="@(item.btnIcon)" @@click="openSelectDialog('@(model.Name)' , '@(item.value)')">@(item.label)</a-button>
+		}
+}
+	  @:</a-space>
+  @:@space</a-form-item>
+@:@space</a-col>
+break;
+@*卡片*@
+case "card":
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-card class="mb-20" @(model.Shadow)>
+    @:@space<template #title>@(model.Content)</template>
+@foreach(var item in model.Children)
+{
+@{GenerateFormLayoutControls(item, num + 2);}
+}
+  @:@space</a-card>
+@:@space</a-col>
+break;
+@*折叠面板*@
+case "collapse":
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-collapse ghost expandIconPosition="right" :accordion="@(model.Accordion)" v-model:activeKey="state.@(model.Name)" class="mb-20">
+@foreach(var collapse in model.Children)
+{
+    @:@space<a-collapse-panel header="@(collapse.Title)" key="@(collapse.Name)" forceRender>
+@foreach(var collapses in collapse.Children)
+{
+@{GenerateFormLayoutControls(collapses, num + 3);}
+}
+    @:@space</a-collapse-panel>
+}
+  @:@space</a-collapse>
+@:@space</a-col>
+break;
+@*标签面板*@
+case "tab":
+@:@space<a-col :span="24" class="ant-col-item">
+  @:@space<a-tabs v-model:activeKey="state.@(model.Name)" type="@(model.Type)" tabPosition="@(model.TabPosition)" class="mb-20">
+@foreach(var tab in model.Children)
+{
+    @:@space<a-tab-pane tab="@(tab.Title)" key="@(tab.Name)" forceRender>
+@foreach(var tabs in tab.Children)
+{
+GenerateFormLayoutControls(tabs, num + 3);
+}
+    @:@space</a-tab-pane>
+}
+  @:@space</a-tabs>
+@:@space</a-col>
+break;
+@*其他*@
+default:
+GenerateRoutineFormControlsLabel(model, num);
+break;
+}
+	}
+	@*
+	 * 常规表单控件标签
+	 *@
+    void GenerateRoutineFormControlsLabel(FormControlDesignModel model, int num)
+	{
+	    var space = "          ";
+for (int i = 0; i < num; i++)
+{
+    space += "  ";
+}
+@switch(model.jnpfKey)
+{
+@*关联表单属性*@
+case "relationFormAttr":
+@*弹窗选择属性*@
+case "popupAttr":
+@switch(model.IsStorage)
+{
+case 0:
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-form-item>
+break;
+case 1:
+@:@space<a-col :span="@(model.Span)" class="ant-col-item" @(model.Hidden)@(Model.UseFormPermission ? "v-if=\"hasFormP('" + model.Name + "')\" " : "")>
+  @:@space<a-form-item name="@(model.Name)">
+break;
+}
+@if(model.ShowLabel)
+{
+    @:@space@(model.ShowLabel ? "<template #label>" : string.Empty)@(model.Label)@(model.TipLabel)@(model.ShowLabel ? "</template>" : string.Empty)
+}
+break;
+@*按钮*@
+case "button":
+@*提示*@
+case "alert":
+@*链接*@
+case "link":
+@*文本*@
+case "text":
+@:@space<a-col :span="@(model.Span)" class="ant-col-item">
+  @:@space<a-form-item>
+break;
+default:
+@:@space<a-col :span="@(model.Span)" class="ant-col-item" @(model.Hidden)@(Model.UseFormPermission ? "v-if=\"hasFormP('" + model.Name + "')\" " : "")>
+  @:@space<a-form-item name="@(model.Name)">
+    @:@space@(model.ShowLabel ? "<template #label>" : string.Empty)@(model.Label)@(model.TipLabel)@(model.ShowLabel ? "</template>" : string.Empty)
+break;
+}
+GenerateFromControls(model, num, 0);
+  @:@space</a-form-item>
+@:@space</a-col>
+    }
+	@*
+	 * 子表表单控件标签
+	 *@
+	void GenerateSubTableFromControlsLabel(FormControlDesignModel model, int num)
+	{
+	    var space = "          ";
+for (int i = 0; i < num; i++)
+{
+    space += "  ";
+}
+@switch(model.jnpfKey)
+{
+@*关联表单属性*@
+case "relationFormAttr":
+@*弹窗选择属性*@
+case "popupAttr":
+@:@space<template v-if="column.key === '@(model.Name)'">
+break;
+@*按钮*@
+case "button":
+@*提示*@
+case "alert":
+@*链接*@
+case "link":
+@*文本*@
+case "text":
+break;
+default:
+@:@space<template v-if="column.key === '@(model.Name)'">
+break;
+}
+GenerateFromControls(model, num - 1, 1);
+@:@space</template>
+	}
+	@*
+	 * 表单控件标签
+	 * generationType  生成类型 0 主表副表 1 子表
+	 *@
+	void GenerateFromControls(FormControlDesignModel model, int num, int generationType)
+	{
+	    var space = "          ";
+		var linked = string.Empty;
+for (int i = 0; i < num; i++)
+{
+    space += "  ";
+}
+switch(generationType){
+case 0:
+linked = string.Format("@change=\"{0}Change\" ", model.Name);
+break;
+case 1:
+linked = string.Format("@change=\"{0}TableChange(index)\" ", model.Name);
+break;
+}
+@switch(model.jnpfKey)
+{
+@*单行输入*@
+case "input":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.AddonBefore)@(model.AddonAfter)@(model.PrefixIcon)@(model.SuffixIcon)@(model.MaxLength)@(model.ShowPassword)@(model.Clearable)@(model.Readonly)@(model.Disabled)@(model.Style)@(model.ShowCount) />
+break;
+@*多行输入*@
+case "textarea":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.MaxLength)@(model.Clearable)@(model.Readonly)@(model.Disabled)@(model.AutoSize)@(model.Style)@(model.ShowCount) />
+break;
+@*数字输入*@
+case "inputNumber":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.AddonBefore)@(model.AddonAfter)@(model.Min)@(model.Max)@(model.Step)@(model.Controls)@(model.Thousands)@(model.AmountChinese)@(model.Disabled)@(model.Style) />
+break;
+@*开关*@
+case "switch":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Disabled) />
+break;
+@*单选*@
+case "radio":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Options)@(model.MainProps)@(model.Direction)@(model.Size)@(model.OptionType)@(model.Disabled)@(model.Style) />
+break;
+@*多选框*@
+case "checkbox":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Options)@(model.MainProps)@(model.Disabled)@(model.Direction)@(model.Style) />
+break;
+@*下拉框*@
+case "select":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.Options)@(model.MainProps)@(model.Clearable)@(model.Filterable)@(model.Multiple)@(model.Disabled)@(model.Style) />
+break;
+@*级联选择*@
+case "cascader":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.Options)@(model.MainProps)@(model.Clearable)@(model.Filterable)@(model.Multiple)@(model.Disabled)@(model.Style) />
+break;
+@*日期选择*@
+case "datePicker":
+@*时间选择*@
+case "timePicker":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.Format)@(model.Clearable)@(model.StartTime)@(model.EndTime)@(model.Disabled)@(model.Style) />
+break;
+@*文件上传*@
+case "uploadFile":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.ButtonText)@(model.ShowTip)@(model.Accept)@(model.PathType)@(model.IsAccount)@(model.Folder)@(model.FileSize)@(model.SizeUnit)@(model.Limit)@(model.Disabled)@(model.Style) />
+break;
+@*图片上传*@
+case "uploadImg":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.PathType)@(model.IsAccount)@(model.Folder)@(model.SizeUnit)@(model.FileSize)@(model.Disabled)@(model.Style) />
+break;
+@*颜色选择*@
+case "colorPicker":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.ColorFormat)@(model.Disabled)@(model.Style) />
+break;
+@*评分*@
+case "rate":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Count)@(model.AllowHalf)@(model.Disabled)@(model.Style) />
+break;
+@*滑块*@
+case "slider":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Min)@(model.Max)@(model.Step)@(model.Disabled)@(model.Style) />
+break;
+@*富文本*@
+case "editor":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Disabled)@(model.Style) />
+break;
+@*按钮*@
+case "button":
+    @:@space<JnpfButton align="@(model.Align)" buttonText="@(model.ButtonText)" @(model.Type)/>
+break;
+@*提示*@
+case "alert":
+    @:@space<JnpfAlert type="@(model.Type)" :closable="@(model.Closable.ToString().ToLower())" :show-icon="@(model.ShowIcon)" title="@(model.Title)" @(model.Description)@(model.CloseText="")/>
+break;
+@*链接*@
+case "link":
+    @:@space<JnpfLink content="@(model.Content)" href="@(model.Href)" target="@(model.Target)" :textStyle='@(model.TextStyle)' />
+break;
+@*iframe*@
+case "iframe":
+	@:@space<JnpfIframe href="@(model.Href)" @(model.Height!=null ? ":height='"+model.Height+"'" : "") @(model.BorderColor)@(model.BorderType)@(model.BorderWidth)/>
+break;
+@*qrcode*@
+case "qrcode":
+    @:@space<@(model.Tag) @(model.ColorLight) @(model.ColorDark) @(model.Width) @(model.StaticText) />
+break;
+@*barcode*@
+case "barcode":
+    @:@space<@(model.Tag) @(model.Format) @(model.LineColor) @(model.Background) @(model.Width) @(model.Height) @(model.StaticText) />
+break;
+@*文本*@
+case "text":
+    @:@space<JnpfText content="@(model.Content)" :textStyle='@(model.TextStyle)' />
+break;
+@*签章*@
+case "signature":
+    @:@space<jnpf-signature @(model.vModel)@(model.Disaabled)@(model.AbleIds)@(model.Disabled)/>
+break;
+@*手写签名*@
+case "sign":
+    @:@space<@(model.Tag) @(model.vModel)@(model.Clearable)@(model.Disabled)/>
+break;
+@*定位*@
+case "location":
+    @:@space<@(model.Tag) @(model.vModel)@(model.EnableLocationScope)@(model.AutoLocation)@(model.AdjustmentScope)@(model.EnableDesktopLocation)@(model.LocationScope)@(model.Clearable)@(model.Disabled)/>
+break;
+@*组织选择*@
+case "organizeSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.SelectType)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*角色选择*@
+case "roleSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.SelectType)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*分组选择*@
+case "groupSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.SelectType)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*部门选择*@
+case "depSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.SelectType)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*岗位选择*@
+case "posSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.SelectType)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*用户选择*@
+case "userSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.SelectType)@(model.AbleRelationIds)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*用户组件*@
+case "usersSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.SelectType)@(model.AbleIds)@(model.Multiple)@(model.Clearable)@(model.Disabled)@(model.Style) />
+break;
+@*下拉树形*@
+case "treeSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.Options)@(model.MainProps)@(model.Clearable)@(model.Filterable)@(model.Multiple)@(model.Disabled)@(model.Style) />
+break;
+@*下拉表格*@
+case "popupTableSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.IsLinkage ? ":formData=\"dataForm\" " : "")@(model.IsLinkage && generationType == 1 ? ":rowIndex=\"index\" " : "")@(model.Placeholder)@(model.Multiple)@(model.Clearable)@(model.TemplateJson)@(model.Field)@(model.ColumnOptions)@(model.HasPage)@(model.InterfaceId)@(model.RelationField)@(model.PropsValue)@(model.PageSize)@(model.PopupType)@(model.PopupTitle)@(model.PopupWidth)@(model.Disabled)@(model.Style) />
+break;
+@*下拉补全*@
+case "autoComplete":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.IsLinkage ? ":formData=\"dataForm\" " : "")@(model.IsLinkage && generationType == 1 ? ":rowIndex=\"index\" " : "")@(model.Placeholder)@(model.Clearable)@(model.InterfaceId)@(model.RelationField)@(model.TemplateJson)@(model.Total)@(model.Disabled)@(model.Style) />
+break;
+@*行政区划*@
+case "areaSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.Clearable)@(model.Filterable)@(model.Multiple)@(model.Level)@(model.Disabled)@(model.Style) />
+break;
+@*单据组件*@
+case "billRule":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.Readonly)@(model.Disabled)@(model.Style) />
+break;
+@*关联表单*@
+case "relationForm":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.IsLinkage ? ":formData=\"dataForm\" " : "")@(model.IsLinkage && generationType == 1 ? ":rowIndex=\"index\" " : "")@(model.Placeholder)@(model.Clearable)@(model.Filterable)@(model.Field)@(string.IsNullOrEmpty(model.ModelId) ? "" : "modelId=\"" + model.ModelId + "\" ")@(model.ColumnOptions)@(model.RelationField)@(model.PopupWidth)@(model.PageSize)@(model.HasPage)@(model.Disabled)@(model.Style) />
+break;
+@*弹窗选择*@
+case "popupSelect":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.IsLinkage ? ":formData=\"dataForm\" " : "")@(model.IsLinkage && generationType == 1 ? ":rowIndex=\"index\" " : "")@(model.Placeholder)@(model.TemplateJson)@(model.Clearable)@(model.Field)@(model.InterfaceId)@(model.ColumnOptions)@(model.RelationField)@(model.PropsValue)@(model.PageSize)@(model.PopupType)@(model.PopupTitle)@(model.PopupWidth)@(model.HasPage)@(model.Disabled)@(model.Style) />
+break;
+@*关联表单属性*@
+case "relationFormAttr":
+@*弹窗选择属性*@
+case "popupAttr":
+@*是否存储字段*@
+@switch(model.IsStorage){
+case 0:
+@*生成类型*@
+@switch(generationType)
+{
+case 0:
+    @:@space<@(model.Tag) relationField="@(model.RelationField)" showField="@(model.ShowField)" @(model.Style) />
+break;
+case 1:
+    @:@space<@(model.Tag) :relationField="'@(model.RelationField)' + index" showField="@(model.ShowField)" @(model.Style) />
+break;
+}
+break;
+case 1:
+@switch(generationType)
+{
+case 0:
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")relationField="@(model.RelationField)" isStorage="@(model.IsStorage)" showField="@(model.ShowField)" @(model.Disabled)@(model.Style) />
+break;
+case 1:
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : ""):relationField="'@(model.RelationField)' + index" isStorage="@(model.IsStorage)" showField="@(model.ShowField)" @(model.Disabled)@(model.Style) />
+break;
+}
+break;
+}
+break;
+@*创建人员*@
+case "createUser":
+@*创建时间*@
+case "createTime":
+@*所属岗位*@
+case "currPosition":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Type)@(model.Readonly)@(model.Disabled)@(model.Style) />
+break;
+@*修改人员*@
+case "modifyUser":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.Readonly)@(model.Disabled)@(model.Style) />
+break;
+@*修改时间*@
+case "modifyTime":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Placeholder)@(model.Readonly)@(model.Disabled)@(model.Style) />
+break;
+@*所属组织*@
+case "currOrganize":
+    @:@space<@(model.Tag) @(model.vModel)@(model.IsLinked ? @linked : "")@(model.Readonly)@(model.Type)@(model.ShowLevel)@(model.Disabled)@(model.Style) />
+break;
+}
+	}
+}

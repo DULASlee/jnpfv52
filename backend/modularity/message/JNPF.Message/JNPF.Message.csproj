@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<ItemGroup>
+	  <PackageReference Include="Senparc.Weixin.WxOpen" Version="3.18.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\infrastructure\JNPF.Extras.WebSockets\JNPF.Extras.WebSockets.csproj" />
+		<ProjectReference Include="..\..\common\JNPF.Common.Core\JNPF.Common.Core.csproj" />
+		<ProjectReference Include="..\..\system\JNPF.Systems.Interfaces\JNPF.Systems.Interfaces.csproj" />
+		<ProjectReference Include="..\..\workflow\JNPF.WorkFlow.Entitys\JNPF.WorkFlow.Entitys.csproj" />
+		<ProjectReference Include="..\JNPF.Message.Interfaces\JNPF.Message.Interfaces.csproj" />
+	</ItemGroup>
+
+</Project>

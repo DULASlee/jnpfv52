@@ -1,0 +1,40 @@
+﻿1、批量缴费CS是调存储过程，BS表单需要支持存储过程的业务模式，现临时使用视图，或者使用代码生成模式
+
+2、需实现业务表单的功能
+
+3、所有视图需要增加 为null的 f_inte_assistant列，主ID在首列
+
+4、存储过程中所有涉及直接导入的数据都会报异常同，因为表都加f_inte_assistant列，而insert into * 时也需要指定该列
+insert into BookMonths
+selec *
+以知以下存储过程：[sp_CreateBookMonths]
+
+5、调用官方默认的接口路由地址为：
+DataInterfaceService\GetApiData()
+
+
+6、系统迁移流程
+1、导入数据字典至新系统（执行接口）
+2、导入操作员数据
+3、执行数据表int转string 主要为操作员列
+4、PrepayRecord表已取消，需要将该表数据导入缴费表，RecordType 1代表预存缴费数据,将PayRecord表的RecordType修改为1
+5、SMS_Template增加TemplateType列，为短信模板列，需把ID值赋值给该列
+
+6、系统之前有多个抄表周期的字典表，统一引用抄表周期（MeterReadingCycle）涉及用户档案 表册 片区的字段
+
+7、以下表都应删除
+AutoCarry开头的
+WH_CustomerClass开头的
+
+
+8、验证系统是否迁移成功
+Price与PriceDetail数据水量水费数据必须一致
+
+
+
+需处理问题：
+1、所有营业厅编辑框，如果存在片区框时，应该禁止营业厅编辑，由片区带出，同理如果存在表册也是（表册档案、用户档案）
+
+
+iis nginx 80端口共存
+https://blog.csdn.net/r657225738/article/details/129259849

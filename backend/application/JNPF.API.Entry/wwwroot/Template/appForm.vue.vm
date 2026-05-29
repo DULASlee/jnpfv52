@@ -1,0 +1,2357 @@
+@{int collapseNum = 0;}
+<template>
+	<view class="jnpf-wrap jnpf-wrap-form">
+		<u-form :model="@(Model.FormModel)" :rules="@(Model.FormRules)" ref="@(Model.FormModel)" :errorType="['toast']" label-position="@(Model.LabelPosition)" :label-width="@(Model.LabelWidth) * 1.5" label-align="left" class="jnpf-form">
+			@{GenCodeAppFormControls();}
+		</u-form>
+		<view class="buttom-actions" v-if="jurisdictionType != 'btn_detail'">			
+@switch(Model.WebType){
+case 1:
+			@:<u-button class="buttom-btn" @@click.stop="resetForm">重置</u-button>
+			@:<u-button class="buttom-btn" type="primary" @@click.stop="submitForm" :loading="btnLoading">@(Model.ConfirmButtonText)</u-button>
+break;
+default:
+			@:<u-button class="buttom-btn" type="primary" @@click="submitForm" :loading="btnLoading">@(Model.ConfirmButtonText)</u-button>
+			@:<u-button class="buttom-btn" @@click="jnpf.goBack()">@(Model.CancelButtonText)</u-button>
+break;
+}
+		</view>
+	</view>
+</template>
+<script>
+    import { getDictionaryDataSelector,getDataInterfaceRes,getDefaultCurrentValueUserId,getDefaultCurrentValueDepartmentId } from '@@/api/common'
+@if(Model.IsDateSpecialAttribute || Model.IsTimeSpecialAttribute)
+{
+	@:import { getDateDay, getLaterData, getBeforeData, getBeforeTime, getLaterTime } from '@@/components/index.js'
+}
+    import request from '@@/utils/request'
+    export default {
+        data() {
+            return {
+                btnLoading: false,
+@foreach(var item in Model.FormList)
+{
+@switch(item.jnpfKey)
+{
+case "location":
+				@:@(item.LowerName)_LocationScope : @(item.LocationScope),
+break;
+case "table":
+	@foreach(var childrenItem in item.ChildrenList)
+	{
+		@if(childrenItem.jnpfKey=="location")
+		{
+				@:@(item.OriginalName)_@(childrenItem.LowerName)_LocationScope : @(childrenItem.LocationScope),
+		}
+	}
+break;
+}
+}
+				addTableConf:{
+@foreach(var item in Model.FormList) {
+@if(item.FooterBtnsList!=null){
+@foreach (var btnItem in item.FooterBtnsList) {
+	@if(btnItem.value!="add" && btnItem.value!="batchRemove")
+	{
+					@:@(item.Name)List@(btnItem.value) : @(btnItem.actionConfig)
+	}
+}
+}
+}
+				},
+                @(Model.FormModel): {
+                    @(Model.PrimaryKey):'',
+@foreach(var children in Model.FormList)
+{
+@switch(children.jnpfKey)
+{
+case "barcode":
+case "qrcode":
+break;
+case "checkbox":
+case "cascader":
+case "uploadImg":
+case "uploadFile":
+case "areaSelect":
+case "organizeSelect":
+@if(children.DefaultValue == null || children.DefaultValue.ToString() == "")
+{
+					@:@(children.LowerName):[],
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+break;
+case "select":
+case "userSelect":
+case "usersSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+@if(children.Multiple)
+{
+if(children.DefaultValue == null || children.DefaultValue == "")
+{
+					@:@(children.LowerName):[],
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}else{
+if(children.DefaultValue == null || children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}
+break;
+case "inputNumber":
+if(children.DefaultValue == null || children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+break;
+case "datePicker":
+case "rate":
+case "slider":
+if(children.DefaultValue == null || children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+break;
+case "switch":
+					@:@(children.LowerName):@(children.DefaultValue ? "1" : "0"),
+break;
+case "table":
+					@:@(children.OriginalName):[],
+break;
+default:
+if(children.DefaultValue == null || children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+break;
+}
+}
+                },
+                rules: {
+@foreach(var item in Model.FormList)
+{
+@switch(item.jnpfKey)
+{
+case "table":
+break;
+default:
+@if(item.Required || (item.RegList!=null && item.RegList.Count > 0))
+{
+					@:@(item.LowerName):[
+@if(item.Required)
+{
+						@:{
+							@:required:true,
+							@:message:'请输入@(item.Placeholder)',
+@if(item.Trigger.Contains("["))
+{
+							@:trigger:@(item.Trigger),
+}
+else
+{
+							@:trigger:'@(item.Trigger)',
+}
+switch(item.jnpfKey)
+{
+case "checkbox":
+case "cascader":
+case "organizeSelect":
+case "areaSelect":
+case "uploadImg":
+case "uploadFile":
+							@:type:'array'
+break;
+case "select":
+case "userSelect":
+case "usersSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+@*是否为多选*@
+@if(item.Multiple)
+{
+							@:type:'array'
+}
+break;
+case "inputNumber":
+case "switch":
+case "datePicker":
+case "rate":
+case "slider":
+							@:type:'number'
+break;
+}
+							
+						@:},
+}
+@if(item.RegList!=null && item.RegList.Count > 0)
+{
+@foreach(var items in item.RegList)
+{
+						@:{
+							@:pattern:@(items.pattern),
+							@:message:'@(items.message)',
+if(item.Trigger.Contains("["))
+{
+							@:trigger:@(item.Trigger)
+}
+else
+{
+							@:trigger:'@(item.Trigger)'
+}
+						@:},
+}
+}
+					@:],
+}
+break;
+}
+}
+                },
+				ruleList: {
+@foreach(var item in Model.FormList)
+{
+@switch(item.jnpfKey)
+{
+case "table":
+@if(item.Required)
+{
+					@:@(item.OriginalName): {
+@foreach(var children in item.ChildrenList)
+{
+@if(children.Required && children.jnpfKey!="rate" && children.jnpfKey!="slider")
+{
+						@:'@(children.LowerName)': '@(children.Placeholder)不能为空',
+}
+}
+					@:},
+}
+break;
+}
+}
+				},
+				regList: {
+@foreach(var item in Model.FormList)
+{
+@switch(item.jnpfKey)
+{
+case "table":
+@if(item.RegList != null && item.RegList.Count > 0)
+{
+					@:@(item.OriginalName): {
+@foreach(var children in item.ChildrenList)
+{
+@{int childrenReg = 0;}
+@if(children.RegList != null && children.RegList.Count > 0)
+{
+						@:@(children.LowerName): [@foreach(var reg in children.RegList){childrenReg++;@("{\"pattern\":" + reg.pattern + ", \"message\":\"" + reg.message + "\"}")@(childrenReg == children.RegList.Count ? "" : ",")}],
+}
+}
+					@:},
+}
+break;
+}
+}
+				},
+				index: 0,
+				idList: [],
+				dataValue: {},
+@if(Model.IsDefaultFormControl)
+{
+				@:userInfo:{},
+}
+@if(Model.UseFormPermission)
+{
+				@:menuIds:'',
+}
+				jurisdictionType:'',
+@if(Model.IsDateSpecialAttribute || Model.IsTimeSpecialAttribute)
+{
+				@:formatType: {
+					@:"yyyy": "yyyy",
+					@:"yyyy-MM": "yyyy-mm",
+					@:"yyyy-MM-dd": "yyyy-mm-dd",
+					@:"yyyy-MM-dd HH:mm": "yyyy-mm-dd hh:MM",
+					@:"yyyy-MM-dd HH:mm:ss": "yyyy-mm-dd hh:MM:ss",
+					@:"HH:mm:ss": "hh:MM:ss",
+					@:"HH:mm": "hh:MM"
+				@:},
+}
+@if(Model.IsChildDataTransfer)
+{
+				@:addType: 1,
+}else{
+				@:addType: 0,
+}
+@foreach(var item in Model.OptionsList)
+{
+@switch(item.jnpfKey)
+{
+case "collapse":
+break;
+case "tab":
+				@:@(item.Name)Title:@(item.Title),
+				@:@(item.Name)Current:@(item.Content),
+break;
+case "autoComplete":
+				@:@(item.Name)TemplateJson: @(item.TemplateJson == "" ? "[]" : item.TemplateJson),
+break;
+case "popupTableSelect":
+case "popupSelect":
+				@:@(item.Name)TemplateJson: @(item.TemplateJson == "" ? "[]" : item.TemplateJson),
+				@:@(item.Content)
+break;
+default:
+@if(item.IsProps)
+{
+				@:@(item.LowerName)Props:@(item.Props),
+}
+@if(!item.IsLinkage)
+{
+				@:@(item.Content)
+}
+break;
+}
+}
+            };
+        },
+		watch: {
+@if(Model.IsSummary)
+{
+			@:dataForm: {
+				@:handler(val, oldVal) {
+@foreach(var item in Model.FormList)
+{
+@switch(item.jnpfKey)
+{
+case "table":
+@if(item.ShowSummary)
+{
+					@:this.@(item.LowerName)();
+}
+break;
+}
+}
+				@:},
+				@:deep: true
+			@:}				
+}
+        },
+        onLoad(option) {
+@if(Model.IsDefaultFormControl)
+{
+			@:this.userInfo = uni.getStorageSync('userInfo') || {}
+}
+@if(Model.UseFormPermission)
+{
+			@:this.menuIds = option.menuIds
+}
+			this.jurisdictionType = option.jurisdictionType
+			let _title = ''
+@if(Model.IsAdd)
+{
+			@:if(option.jurisdictionType =='btn_add'){
+				@:_title = "@(Model.AddTitleName)"
+            @:}
+}
+@if(Model.IsEdit)
+{
+			@:if(option.jurisdictionType =='btn_edit'){
+				@:_title = "@(Model.EditTitleName)"
+            @:}
+}
+@if(Model.IsEdit)
+{
+			@:if(option.jurisdictionType =='btn_detail'){
+				@:_title = "@(Model.DetailTitleName)"
+            @:}
+}
+@if(Model.WebType != 1)
+{
+            @:this.@(Model.FormModel).@(Model.PrimaryKey) = option.id || ''
+			@:this.idList = option.idList ? option.idList.split(",") : []
+            @:uni.setNavigationBarTitle({
+                @:title: _title
+            @:})
+			@:this.dataValue = JSON.parse(JSON.stringify(this.dataForm))
+            @:this.initData()
+			@:this.initCollapse()
+}
+@foreach(var item in Model.OptionsList)
+{
+@if(!item.IsStatic && !item.IsLinkage && (item.IsChildren || item.IsIndex))
+{
+			@:this.get@(item.LowerName)Options();
+}
+}
+@foreach(var item in Model.FormList)
+{
+@switch(item.jnpfKey)
+{
+case "table":
+            @:uni.$on('linkPageConfirm', (subVal, Vmodel) => {
+               @:if ('@(item.Name)' === Vmodel) subVal.forEach(t => this.@(Model.FormModel).@(item.OriginalName).push(t));
+            @:});
+break;
+}
+}
+@if(Model.WebType == 1)
+{
+@if(Model.IsDefaultFormControl)
+{
+			@:this.initDefaultData();
+}
+}
+@if(!Model.IsChildDataTransfer)
+{
+			@:this.selfInit();
+}
+        },
+        onReady() {
+            this.$refs.@(Model.FormModel).setRules(this.rules);
+        },
+        methods: {
+			initCollapse() {
+				setTimeout(() => {
+@for (int i = 0; i < collapseNum; i++)
+{
+					@:this.$refs.collapseRef@(i) && this.$refs.collapseRef@(i).init()
+}
+				}, 1000)
+			},
+			onCollapseChange() {
+				this.initCollapse()
+			},
+@foreach(var item in Model.OptionsList)
+{
+@if(item.jnpfKey == "tab")
+{
+			@:@(item.LowerName)Change(index)
+			@:{
+				@:this.@(item.LowerName)Current = index;
+				@:this.initCollapse()
+			@:},
+}
+@if(!item.IsStatic && item.DictionaryType != null)
+{
+			@:get@(item.LowerName)Options(@(item.IsChildren ? "i" :"")){
+switch(@item.DataType)
+{
+case "dictionary":
+				@:getDictionaryDataSelector('@(item.DictionaryType)').then(res => {
+					@:this.@(item.LowerName)Options = res.data.list
+	break;
+case "dynamic":
+@if(item.IsChildren){
+@if(item.IsLinkage){
+				@:this.@(item.OptionsName)Options = []
+}else{
+				@:this.@(item.LowerName)Options = []
+}
+}else{
+				@:this.@(item.LowerName)Options = []
+}
+				@:let templateJson = @(item.TemplateJson == "" ? "[]" : item.TemplateJson)
+				@:let query = {
+					@:paramList: this.getParamList(templateJson, this.dataForm@(item.IsChildren ? " , i" :""))
+				@:}
+				@:getDataInterfaceRes('@(item.DictionaryType)', query).then(res => {
+					@:let data = res.data
+@if(item.IsChildren){
+@if(item.IsLinkage){
+					@:this.@(item.OptionsName)Options = Array.isArray(data) ? data : []
+}else{
+					@:this.@(item.LowerName)Options = Array.isArray(data) ? data : []
+}
+}else{
+					@:this.@(item.LowerName)Options = Array.isArray(data) ? data : []
+}
+	break;
+}
+				@:});
+			@:},
+}
+}
+@if(Model.IsDefaultFormControl)
+{
+    @:conversionDateTime(type) {
+      @:const format = type === 'yyyy' ? 'yyyy-01-01 00:00:00' : type === 'yyyy-MM' ? 'yyyy-MM-01 00:00:00' :
+        @:type === 'yyyy-MM-dd' ? 'yyyy-MM-dd 00:00:00' : type === 'yyyy-MM-dd HH:mm' ? 'yyyy-MM-dd HH:mm:00' : 'yyyy-MM-dd HH:mm:ss'
+      @:const dataTime = this.jnpf.toDate(new Date(), format)
+      @:return new Date(dataTime).getTime()
+    @:},
+	@:initDefaultData() {
+@if(Model.DefaultFormControlList.IsExistDate)
+{
+@foreach(var item in Model.DefaultFormControlList.DateField)
+{
+      @:this.dataForm.@(item.Field) = this.conversionDateTime("@(item.Format)");
+}
+}
+@if(Model.DefaultFormControlList.IsExistTime)
+{
+@foreach(var item in Model.DefaultFormControlList.TimeField)
+{
+      @:this.dataForm.@(item.Field) = this.jnpf.toDate(new Date(), "@(item.Format)");
+}
+}
+@if(Model.DefaultFormControlList.IsSignField)
+{
+@foreach(var item in Model.DefaultFormControlList.SignField)
+{
+      @:this.dataForm.@(item.Field) = this.userInfo.signImg || '';
+}
+}
+@if(Model.DefaultFormControlList.IsExistComSelect)
+{
+      @:if (this.userInfo.organizeIdList instanceof Array && this.userInfo.organizeIdList.length > 0) {
+@foreach(var item in Model.DefaultFormControlList.ComSelectList)
+{
+        @:this.dataForm.@(item.Field) = @(item.IsMultiple? "[" : "")this.userInfo.organizeIdList@(item.IsMultiple? "]" : "")
+}
+	  @:}
+}
+@if(Model.DefaultFormControlList.IsExistUsersSelect)
+{
+@foreach(var item in Model.DefaultFormControlList.UsersSelectList)
+{
+@switch(item.selectType)
+{
+case "all":
+      @:this.dataForm.@(item.Field) = @(item.IsMultiple? "[" : "")this.userInfo.userId@(item.IsMultiple? "]" : "")
+break;
+case "custom":
+break;
+}
+}
+}
+@if(Model.DefaultFormControlList.IsExistUserSelect)
+{
+@foreach(var item in Model.DefaultFormControlList.UserSelectList)
+{
+@switch(item.selectType)
+{
+case "all":
+      @:this.dataForm.@(item.Field) = @(item.IsMultiple? "[" : "")this.userInfo.userId@(item.IsMultiple? "]" : "")
+break;
+case "custom":
+break;
+}
+}
+}
+@if(Model.DefaultFormControlList.IsExistRoleSelect)
+{
+@foreach(var item in Model.DefaultFormControlList.RoleSelectList)
+{
+@switch(item.selectType)
+{
+case "all":
+      @:if(this.userInfo.roleId != null && this.userInfo.roleId != '') {
+		@:this.dataForm.@(item.Field) = @(!item.IsMultiple? "this.userInfo.roleIds[0]" : "this.userInfo.roleIds")
+      @:}
+break;
+case "custom":
+break;
+}
+}
+}
+@if(Model.DefaultFormControlList.IsExistPosSelect)
+{
+@foreach(var item in Model.DefaultFormControlList.PosSelectList)
+{
+@switch(item.selectType)
+{
+case "all":
+      @:if(this.userInfo.positionId != null && this.userInfo.positionId != '') {
+		@:this.dataForm.@(item.Field) = @(!item.IsMultiple? "this.userInfo.positionId" : "this.userInfo.positionIds.map(o => o.id)")
+      @:}
+break;
+case "custom":
+break;
+}
+}
+}
+@if(Model.DefaultFormControlList.IsExistGroupsSelect)
+{
+@foreach(var item in Model.DefaultFormControlList.GroupsSelectList)
+{
+@switch(item.selectType)
+{
+case "all":
+      @:if(this.userInfo.groupIds != null && this.userInfo.groupIds != []) {
+		@:this.dataForm.@(item.Field) = @(!item.IsMultiple? "this.userInfo.groupIds[0]" : "this.userInfo.groupIds")
+      @:}
+break;
+case "custom":
+break;
+}
+}
+}
+
+@if(Model.DefaultFormControlList.IsExistDepSelect)
+{
+@foreach(var item in Model.DefaultFormControlList.DepSelectList)
+{
+@switch(item.selectType)
+{
+case "all":
+      @:if(this.userInfo.departmentId != null && this.userInfo.departmentId != '') {
+        @:this.dataForm.@(item.Field) = @(item.IsMultiple? "[" : "")this.userInfo.departmentId@(item.IsMultiple? "]" : "")
+      @:}
+break;
+case "custom":
+break;
+}
+}
+}
+	@:},
+}
+			selfInit(){
+			},
+			resetForm() {
+@foreach(var item in Model.FormList)
+{
+@if(item.jnpfKey == "table")
+{
+				@:this.@(Model.FormModel).@(item.OriginalName) = [];
+}
+}
+				this.$refs.@(Model.FormModel).resetFields();
+				this.selfInit()
+			},
+			checkChildRule() {
+				let title = [];
+				let _ruleList = this.ruleList
+				for (let k in _ruleList) {
+					let childData = this.dataForm[k]
+					childData.forEach((item, index) => {
+						for (let model in _ruleList[k]) {
+							if (item[model] instanceof Array) {
+								if (item[model].length == 0) {
+									title.push(_ruleList[k][model])
+								}
+							} else if (!item[model]) {
+								title.push(_ruleList[k][model])
+							}
+						}
+					})
+				}
+				let _regList = this.regList
+				for (let k in _regList) {
+					let childData = this.dataForm[k]
+					for (let n in _regList[k]) {
+						for (let i = 0; i < _regList[k][n].length; i++) {
+							const element = _regList[k][n][i]
+							childData.forEach((item, index) => {
+								if (item[n]&&  !eval(element.pattern).test(item[n])) {
+									title.push(element.message)
+								}
+							})
+						}
+					}
+				}
+				if (title.length > 0) {
+					return title[0]
+				}
+			},
+@if(Model.WebType != 1)
+{
+            @:initData() {
+				@:this.$store.commit('base/UPDATE_RELATION_DATA', {})
+                @:if (this.@(Model.FormModel).@(Model.PrimaryKey)) {
+                    @:request({
+                        @:url: '/api/@(Model.NameSpace)/@(Model.ClassName)/' + this.@(Model.FormModel).@(Model.PrimaryKey),
+                        @:method: 'get',
+                    @:}).then(res => {
+                        @:this.@(Model.FormModel) = res.data;
+@foreach(var item in Model.FormList)
+{
+@switch(item.jnpfKey)
+{
+case "cascader":
+case "checkbox":
+case "uploadImg":
+case "uploadFile":
+case "areaSelect":
+case "organizeSelect":
+						@:if(!this.@(Model.FormModel).@(item.LowerName))this.@(Model.FormModel).@(item.LowerName)=[];
+break;
+}
+}
+                    @:})
+@if(Model.IsDefaultFormControl)
+{
+				@:}else{
+					@:this.initDefaultData()
+				@:}
+}else{
+                @:}
+}
+            @:},
+			@:submitForm(type) {
+                @:this.$refs.@(Model.FormModel).validate(valid => {
+                    @:if (!valid) return
+@foreach(var item in Model.FormList)
+{
+@switch(item.jnpfKey)
+{
+case "table":
+@if(item.Required || (item.RegList != null && item.RegList.Count > 0))
+{
+					@:if (!!this.checkChildRule()) return this.$u.toast(
+						@:this.checkChildRule()
+					@:)
+}
+break;
+}
+}
+                    @:this.btnLoading = true
+                    @:if (this.@(Model.FormModel).@(Model.PrimaryKey)) {
+                        @:request({
+                            @:url: '/api/@(Model.NameSpace)/@(Model.ClassName)/' + this.@(Model.FormModel).@(Model.PrimaryKey),
+                            @:method: 'put',
+                            @:data: this.@(Model.FormModel),
+                        @:}).then(res => {
+                            @:uni.showToast({
+                                @:title: res.msg,
+                                @:complete: () => {
+                                    @:setTimeout(() => {
+										@:if (type != 1) {
+											@:uni.$emit('refresh')
+											@:uni.navigateBack()
+										@:}
+                                        @:this.btnLoading = false
+                                    @:}, 1500)
+                                @:}
+                            @:})
+                        @:}).catch(()=>{
+							@:this.btnLoading = false
+						@:})
+                    @:} else {
+                        @:request({
+                            @:url: '/api/@(Model.NameSpace)/@(Model.ClassName)',
+                            @:method: 'post',
+                            @:data: this.@(Model.FormModel),
+                        @:}).then(res => {
+                            @:uni.showToast({
+                                @:title: res.msg,
+                                @:complete: () => {
+                                    @:setTimeout(() => {
+										@:if (type == 1) {
+											@:this.dataForm = JSON.parse(JSON.stringify(this.dataValue))
+@if(Model.IsDefaultFormControl)
+{
+											@:this.initDefaultData()
+}
+										@:} else {
+											@:uni.$emit('refresh')
+											@:uni.navigateBack()
+										@:}
+                                        @:this.btnLoading = false
+                                    @:}, 1500)
+                                @:}
+                            @:})
+                        @:})
+                    @:}
+                @:});
+            @:},
+}else{
+			@:submitForm() {
+				@:this.$refs.@(Model.FormModel).validate(valid => {
+					@:if (!valid) return
+					@:if (!!this.checkChildRule()) return this.$u.toast(`${this.checkChildRule()}`)
+					@:this.btnLoading = true
+					@:request({
+						@:url: '/api/@(Model.NameSpace)/@(Model.ClassName)',
+						@:method: 'post',
+						@:data: this.@(Model.FormModel),
+					@:}).then(res => {
+						@:uni.showToast({
+							@:title: res.msg,
+							@:complete: () => {
+								@:setTimeout(() => {
+									@:this.btnLoading = false
+									@:uni.navigateBack()
+								@:}, 1500)
+							@:}
+						@:})
+					@:})
+				@:});
+			@:},
+}
+@if(Model.IsDateSpecialAttribute)
+{
+	@:getRelationDate(timeRule, timeType, timeTarget, timeValueData, dataValue) {
+	  @:let timeDataValue = null;
+	  @:let timeValue = Number(timeValueData)
+	  @:if (timeRule) {
+		@:if (timeType == 1) {
+		  @:timeDataValue = timeValue
+		@:} else if (timeType == 2) {
+		  @:timeDataValue = dataValue
+		@:} else if (timeType == 3) {
+		  @:timeDataValue = new Date().getTime()
+		@:} else if (timeType == 4) {
+		  @:let previousDate = '';
+		  @:if (timeTarget == 1 || timeTarget == 2) {
+			@:previousDate = getDateDay(timeTarget, timeType, timeValue)
+			@:timeDataValue = new Date(previousDate).getTime()
+		  @:} else if (timeTarget == 3) {
+			@:previousDate = getBeforeData(timeValue)
+			@:timeDataValue = new Date(previousDate).getTime()
+		  @:} else {
+			@:timeDataValue = getBeforeTime(timeTarget, timeValue).getTime()
+		  @:}
+		@:} else if (timeType == 5) {
+		  @:let previousDate = '';
+		  @:if (timeTarget == 1 || timeTarget == 2) {
+			@:previousDate = getDateDay(timeTarget, timeType, timeValue)
+			@:timeDataValue = new Date(previousDate).getTime()
+		  @:} else if (timeTarget == 3) {
+			@:previousDate = getLaterData(timeValue)
+			@:timeDataValue = new Date(previousDate).getTime()
+		  @:} else {
+			@:timeDataValue = getLaterTime(timeTarget, timeValue).getTime()
+		  @:}
+		@:}
+	  @:}
+	  @:return timeDataValue;
+	@:},
+}
+@if(Model.IsTimeSpecialAttribute)
+{
+	@:getRelationTime(timeRule, timeType, timeTarget, timeValue, formatType, dataValue) {
+	  @:let format = formatType == 'HH:mm' ? 'HH:mm:00' : formatType
+	  @:let timeDataValue = null
+	  @:if (timeRule) {
+		@:if (timeType == 1) {
+		  @:timeDataValue = timeValue || '00:00:00'
+		  @:if (timeDataValue.split(':').length == 3) {
+			@:timeDataValue = timeDataValue
+		  @:} else {
+			@:timeDataValue = timeDataValue + ':00'
+		  @:}
+		@:} else if (timeType == 2) {
+		  @:timeDataValue = dataValue
+		@:} else if (timeType == 3) {
+		  @:timeDataValue = this.jnpf.toDate(new Date(), format)
+		@:} else if (timeType == 4) {
+		  @:let previousDate = '';
+		  @:previousDate = getBeforeTime(timeTarget, timeValue)
+		  @:timeDataValue = this.jnpf.toDate(previousDate, format)
+		@:} else if (timeType == 5) {
+		  @:let previousDate = '';
+		  @:previousDate = getLaterTime(timeTarget, timeValue)
+		  @:timeDataValue = this.jnpf.toDate(previousDate, format)
+		@:}
+	  @:}
+	  @:return timeDataValue;
+	@:},
+}
+	/**
+       * 获取参数列表
+       */
+    getParamList(templateJson, formData, index) {
+      for (let i = 0; i < templateJson.length; i++) {
+        if (templateJson[i].relationField) {
+          //区分是否子表
+          if (templateJson[i].relationField.includes('-')) {
+            let tableVModel = templateJson[i].relationField.split('-')[0]
+            let childVModel = templateJson[i].relationField.split('-')[1]
+            templateJson[i].defaultValue = formData[tableVModel] && formData[tableVModel][index] && formData[tableVModel][index][childVModel] || ''
+          } else {
+            templateJson[i].defaultValue = formData[templateJson[i].relationField] || ''
+          }
+        }
+      }
+      return templateJson
+    },
+			clickIcon(label, tipLabel) {
+				uni.showModal({
+					title: label || '',
+					content: tipLabel || '',
+					showCancel: false,
+				});
+			},
+	exist() {
+		let title = []
+		let _regList = this.regList
+		for (let k in _regList) {
+			let childData = this.dataForm[k]
+			for (let n in _regList[k]) {
+				for (let i = 0; i < _regList[k][n].length; i++) {
+					const element = _regList[k][n][i]
+					if (element.pattern) {
+						element.pattern = element.pattern.toString()
+                        let start = element.pattern.indexOf('/')
+                        let stop = element.pattern.lastIndexOf('/')
+                        let str = element.pattern.substring(start + 1, stop)
+                        let reg = new RegExp(str)
+                        element.pattern = reg
+					}
+					childData.forEach((item, index) => {
+						if (item[n] && !element.pattern.test(item[n])) {
+							title.push(element.message)
+						}
+					})
+				}
+			}
+		}
+		if (title.length > 0) {
+			return title[0]
+		}
+	},
+	openSelectDialog(key,value) {
+		let data = {
+			actionConfig: this.addTableConf[key+'List'+value],
+			formData: this.@(Model.FormModel),
+			tableVmodel: key
+		}
+		uni.navigateTo({
+			url: '/pages/apply/tableLinkage/index?data=' + encodeURIComponent(JSON.stringify(data))
+		})
+	},
+@foreach(var item in Model.FormList)
+{
+@if(item.IsLinked && item.jnpfKey != "table")
+{
+			@:@(item.LowerName)Change(){
+@foreach(var linkage in item.LinkageRelationship)
+{
+@switch(linkage.jnpfKey)
+{
+case "autoComplete":
+case "popupSelect":
+case "popupTableSelect":
+break;
+default:
+@*主表联动子表控件*@
+@if(linkage.isChildren)
+{
+				@:if(this.dataForm.@(linkage.fieldName).length){
+					@:this.dataForm.@(linkage.fieldName).forEach((ele, index) => {
+						@:this.get@(linkage.fieldName)_@(linkage.field)Options(index)
+					@:})
+				@:}
+}else{
+				@:this.dataForm.@(linkage.field) = @(linkage.IsMultiple ? "[]" : "undefined")
+				@:this.get@(linkage.fieldName)Options()
+}
+break;
+}
+}
+			@:},
+}
+@if(item.jnpfKey == "table")
+{
+@*子表内有控件联动*@
+@if(item.IsLinked)
+{
+@foreach(var children in item.ChildrenList)
+{
+@*子表内具体某个控件*@
+@if(children.IsLinked)
+{
+			@:@(children.LowerName)TableChange(i){
+@foreach(var linkage in children.LinkageRelationship)
+{
+				@:this.dataForm.@(item.OriginalName)[i].@(linkage.field) = @(linkage.IsMultiple ? "[]" : "undefined");
+@switch(linkage.jnpfKey)
+{
+case "autoComplete":
+case "popupSelect":
+case "popupTableSelect":
+break;
+default:
+				@:this.get@(item.OriginalName)_@(linkage.field)Options(i);
+break;
+}
+}
+			@:},
+}
+}
+}
+			@:add@(item.Name)Row() {
+				@:let item = {
+@foreach(var children in item.ChildrenList)
+{
+@switch(children.jnpfKey)
+{
+case "checkbox":
+case "cascader":
+case "uploadImg":
+case "uploadFile":
+case "areaSelect":
+case "organizeSelect":
+@if(children.DefaultValue == null || children.DefaultValue == "")
+{
+					@:@(children.LowerName):[],
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+break;
+case "select":
+case "userSelect":
+case "usersSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+@if(children.Multiple)
+{
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):[],
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}else{
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}
+break;
+case "inputNumber":
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+break;
+case "timePicker":
+@*子表`time`默认值*@
+if(Model.IsDefaultFormControl && Model.DefaultFormControlList.IsExistSubTable)
+{
+@foreach(var table in Model.DefaultFormControlList.SubTabelDefault)
+{
+@if(table.SubTableName.Equals(item.OriginalName))
+{
+@if(table.IsExistTime)
+{
+@foreach(var time in table.TimeField)
+{
+@if(time.Field.Equals(children.LowerName))
+{
+					@:@(children.LowerName):this.jnpf.toDate(new Date(), "@(time.Format)"),
+}
+}
+}else{
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}
+}
+}
+}else{
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}
+break;
+case "datePicker":
+@*子表`date`默认值*@
+if(Model.IsDefaultFormControl && Model.DefaultFormControlList.IsExistSubTable)
+{
+@foreach(var table in Model.DefaultFormControlList.SubTabelDefault)
+{
+@if(table.SubTableName.Equals(item.OriginalName))
+{
+@if(table.IsExistDate)
+{
+@foreach(var date in table.DateField)
+{
+@if(date.Field.Equals(children.LowerName))
+{
+					@:@(children.LowerName):this.conversionDateTime("@(date.Format)"),
+}
+}
+}else{
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}
+}
+}
+}else{
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}
+break;
+case "rate":
+case "slider":
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+break;
+case "switch":
+					@:@(children.LowerName):@(children.DefaultValue ? "1" : "0"),
+break;
+default:
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+break;
+}
+}
+@foreach(var children in item.ChildrenList)
+{
+@if(children.IsLinkage)
+{
+@switch(children.jnpfKey)
+{
+case "radio":
+case "checkbox":
+case "select":
+case "cascader":
+case "treeSelect":
+case "popupTableSelect":
+case "popupSelect":
+					@:@(children.LowerName)Options:[],
+break;
+}
+}
+}
+				@:}
+				@:this.@(Model.FormModel).@(item.OriginalName).push(item)
+@*子表组织、部门、用户、手写签名默认值*@
+if(Model.IsDefaultFormControl && Model.DefaultFormControlList.IsExistSubTable)
+{
+@foreach(var table in Model.DefaultFormControlList.SubTabelDefault)
+{
+@if(table.IsSignField && table.SubTableName.Contains(item.OriginalName))
+{
+			@:let lastItem = this.dataForm.@(table.SubTableName)[this.dataForm.@(table.SubTableName).length-1];
+@foreach(var column in table.SignField)
+{
+			@:lastItem.@(column.Field) = this.userInfo.signImg || '';
+}
+			@:this.$set(this.dataForm.@(table.SubTableName), this.dataForm.@(table.SubTableName).length-1, lastItem)
+}
+@if(table.IsExistComSelect && table.SubTableName.Contains(item.OriginalName))
+{
+		  @:if (this.userInfo.organizeIdList instanceof Array && this.userInfo.organizeIdList.length > 0) {
+			@:let lastItem = this.dataForm.@(table.SubTableName)[this.dataForm.@(table.SubTableName).length-1]
+@foreach(var column in table.ComSelectList)
+{
+			@:lastItem.@(column.Field) = @(column.IsMultiple? "[" : "")this.userInfo.organizeIdList@(column.IsMultiple? "]" : "")
+}
+			@:this.$set(this.dataForm.@(table.SubTableName), this.dataForm.@(table.SubTableName).length-1, lastItem)
+	  @:}
+}
+@if(table.IsExistDepSelect && table.SubTableName.Contains(item.OriginalName))
+{
+@foreach(var column in table.DepSelectList)
+{
+@switch(column.selectType)
+{
+case "all":
+      @:if(this.userInfo.departmentId != null && this.userInfo.departmentId != '') {
+		@:let lastItem = this.dataForm.@(table.SubTableName)[this.dataForm.@(table.SubTableName).length-1]
+        @:lastItem.@(column.Field) = @(column.IsMultiple? "[" : "")this.userInfo.departmentId@(column.IsMultiple? "]" : "")
+		@:this.$set(this.dataForm.@(table.SubTableName), this.dataForm.@(table.SubTableName).length-1, lastItem)
+      @:}
+break;
+case "custom":
+break;
+}
+}
+}
+@if(table.IsExistRoleSelect && table.SubTableName.Contains(item.OriginalName))
+{
+@foreach(var column in table.RoleSelectList)
+{
+@switch(column.selectType)
+{
+case "all":
+      @:if(this.userInfo.roleId != null && this.userInfo.roleId != '') {
+		@:let lastItem = this.dataForm.@(table.SubTableName)[this.dataForm.@(table.SubTableName).length-1]
+        @:lastItem.@(column.Field) = @(!column.IsMultiple? "this.userInfo.roleIds[0]" : "this.userInfo.roleIds")
+		@:this.$set(this.dataForm.@(table.SubTableName), this.dataForm.@(table.SubTableName).length-1, lastItem)
+      @:}
+break;
+case "custom":
+break;
+}
+}
+}
+@if(table.IsExistPosSelect && table.SubTableName.Contains(item.OriginalName))
+{
+@foreach(var column in table.PosSelectList)
+{
+@switch(column.selectType)
+{
+case "all":
+      @:if(this.userInfo.positionId != null && this.userInfo.positionId != '') {
+		@:let lastItem = this.dataForm.@(table.SubTableName)[this.dataForm.@(table.SubTableName).length-1]
+        @:lastItem.@(column.Field) = @(!column.IsMultiple? "this.userInfo.positionId" : "this.userInfo.positionIds.map(o => o.id)")
+		@:this.$set(this.dataForm.@(table.SubTableName), this.dataForm.@(table.SubTableName).length-1, lastItem)
+      @:}
+break;
+case "custom":
+break;
+}
+}
+}
+@if(table.IsExistGroupsSelect && table.SubTableName.Contains(item.OriginalName))
+{
+@foreach(var column in table.GroupsSelectList)
+{
+@switch(column.selectType)
+{
+case "all":
+      @:if(this.userInfo.groupIds != null && this.userInfo.groupIds != []) {
+		@:let lastItem = this.dataForm.@(table.SubTableName)[this.dataForm.@(table.SubTableName).length-1]
+        @:lastItem.@(column.Field) = @(!column.IsMultiple? "this.userInfo.groupIds[0]" : "this.userInfo.groupIds")
+		@:this.$set(this.dataForm.@(table.SubTableName), this.dataForm.@(table.SubTableName).length-1, lastItem)
+      @:}
+break;
+case "custom":
+break;
+}
+}
+}
+@if(table.IsExistUserSelect && table.SubTableName.Contains(item.OriginalName))
+{
+@foreach(var column in table.UserSelectList)
+{
+@switch(column.selectType)
+{
+case "all":
+	  @:if(this.userInfo.userId != null && this.userInfo.userId != '')
+	  @:{
+		@:let lastItem = this.dataForm.@(table.SubTableName)[this.dataForm.@(table.SubTableName).length-1]
+		@:lastItem.@(column.Field) = @(column.IsMultiple? "[" : "")this.userInfo.userId@(column.IsMultiple? "]" : "")
+		@:this.$set(this.dataForm.@(table.SubTableName), this.dataForm.@(table.SubTableName).length-1, lastItem)
+	  @:}
+break;
+case "custom":
+break;
+}
+}
+}
+@if(table.IsExistUsersSelect && table.SubTableName.Contains(item.OriginalName))
+{
+@foreach(var column in table.UsersSelectList)
+{
+@switch(column.selectType)
+{
+case "all":
+	  @:if(this.userInfo.userId != null && this.userInfo.userId != '')
+	  @:{
+		@:let lastItem = this.dataForm.@(table.SubTableName)[this.dataForm.@(table.SubTableName).length-1]
+		@:lastItem.@(column.Field) = @(column.IsMultiple? "[" : "")this.userInfo.userId@(column.IsMultiple? "]" : "")
+		@:this.$set(this.dataForm.@(table.SubTableName), this.dataForm.@(table.SubTableName).length-1, lastItem)
+	  @:}
+break;
+case "custom":
+break;
+}
+}
+}
+}
+}
+@*循环出主表联动子表控件的事件*@
+@foreach(var primaryTableLinkage in Model.FormList)
+{
+@if(primaryTableLinkage.IsLinked && primaryTableLinkage.jnpfKey != "table")
+{
+@foreach(var linkage in primaryTableLinkage.LinkageRelationship)
+{
+if(linkage.fieldName == item.OriginalName)
+{
+@switch(linkage.isChildren)
+{
+case true:
+@switch(linkage.jnpfKey)
+{
+case "autoComplete":
+case "popupSelect":
+case "popupTableSelect":
+break;
+default:
+				@:this.get@(linkage.fieldName)_@(linkage.field)Options(this.dataForm.@(linkage.fieldName).length - 1)
+break;
+}
+break;
+}
+}
+}
+}
+@if(primaryTableLinkage.jnpfKey == "table" && primaryTableLinkage.IsLinked)
+{
+@*子表内有控件联动*@
+@foreach(var children in primaryTableLinkage.ChildrenList)
+{
+@*子表内具体某个控件*@
+@if(children.IsLinked)
+{
+@foreach(var linkage in children.LinkageRelationship)
+{
+@switch(linkage.jnpfKey)
+{
+case "popupSelect":
+case "popupTableSelect":
+case "autoComplete":
+break;
+default:
+				@:this.get@(linkage.fieldName)_@(linkage.field)Options(this.dataForm.@(linkage.fieldName).length - 1)
+break;
+}
+}
+}
+}
+}
+}
+			@:},
+			@:remove@(item.Name)Row(i,showConfirm=false) {
+				@:const handleRemove = () => {
+					@:this.@(Model.FormModel).@(item.OriginalName).splice(i, 1)
+					@:this.initCollapse()
+				@:};
+				@:if (!showConfirm) return handleRemove();
+				@:uni.showModal({
+					@:title: '提示',
+					@:content: '确认删除该条信息吗？',
+					@:success: (res) => {
+						@:if (res.confirm) handleRemove()
+					@:}
+				@:})
+			@:},
+			@:copy@(item.Name)Row(i) {
+				@:let item = JSON.parse(JSON.stringify(this.@(Model.FormModel).@(item.OriginalName)[i]));
+				@:item.@(item.PrimaryKey) = '';
+				@:item.length && item.map(o => delete o.rowData);
+				@:this.@(Model.FormModel).@(item.OriginalName).push(item);
+			@:},
+@if(item.ShowSummary)
+{
+			@:@(item.LowerName)(){
+				 @:let table = this.@(Model.FormModel).@(item.OriginalName)
+				 @:let summaryField = @(item.SummaryField)
+				 @:let thousandsField = @(item.Thousands ? item.ChildrenThousandsField : "[]")
+                 @:let summaryFieldName = {
+@foreach(var items in item.ChildrenList)
+{
+@if(items.IsSummary)
+{
+					@:"@(items.Name)":"@(items.Placeholder)",
+}
+}
+                 @:}
+				 @:let data = {}
+                 @:for (let i in summaryField) {
+					@:let map = {}
+					@:let val = 0
+					@:for (let j = 0; j < table.length; j++) {
+						@:let summary = table[j][summaryField[i]];
+						@:if (summary) {
+							@:let data = isNaN(summary) ? 0 : Number(summary)
+							@:val += data
+						@:}
+					@:}
+					@:map.id = summaryField[i];
+					@:map.name = summaryFieldName[summaryField[i]];
+					@:map.val = thousandsField.includes(summaryField[i]) ? Number(val).toLocaleString('zh', {
+						@:maximumFractionDigits: '2',
+						@:minimumFractionDigits: '2'
+					@:}) : Number(val).toFixed(2);
+					@:data[summaryField[i]] = map;
+				@:}
+				@:return data;
+			@:},
+}
+}
+}
+        }
+    };
+</script>
+<style>
+        page{
+                background-color: #f0f2f6;
+        }
+</style>
+@{
+    void GenCodeAppFormControls()
+	{
+@foreach(var item in Model.FormAllContols)
+{
+@switch(item.jnpfKey)
+{
+case "tableGrid":
+@{GenCodeAppFormChildrenControls(item.Children);}
+break;
+case "tableGridTr":
+@{GenCodeAppFormChildrenControls(item.Children);}
+break;
+case "tableGridTd":
+@{GenCodeAppFormChildrenControls(item.Children);}
+break;
+@*现将表单内有特殊样式的控件循环出来*@
+case "groupTitle":
+			@:<jnpf-group content="@(item.Content)" content-position="@(item.Contentposition)" @(item.TipLabel != null ? "tipLabel=\"" + item.TipLabel + "\" @groupIcon=\"clickIcon('" + item.Content + "','" + item.TipLabel + "')\" " : "") />
+break;
+case "divider":
+			@:<u-divider half-width="200" height="80">@(item.Default)</u-divider>
+break;
+case "card":
+case "row":
+			@:<view class="jnpf-card">
+				@:<view class="jnpf-card-cap u-line-1">@(item.Content)
+@if(item.TipLabel != null)
+{
+					@:<u-icon name="question-circle-fill" class="u-m-l-10" color="#a0acb7"
+						@:@@click="clickIcon('@(item.Content)','@(item.TipLabel)')" />
+}
+				@:</view>
+@{GenCodeAppFormChildrenControls(item.Children);}
+			@:</view>
+break;
+@*标签面板*@
+case "tab":
+			@:<view prop="@(item.LowerName)">
+				@:<u-tabs :is-scroll="false" :list="@(item.LowerName)Title" name="title" :current="@(item.LowerName)Current" @@change="@(item.LowerName)Change"></u-tabs>
+				@:<view>
+@{ int n = 0;}
+@foreach(var tab in item.Children)
+{
+					@:<view v-show="@(n) == @(item.LowerName)Current">
+@{GenCodeAppFormChildrenControls(tab.Children);}
+					@:</view>
+					@{n++;}
+}
+				@:</view>
+			@:</view>
+break;
+@*折叠面板*@
+case "collapse":
+			@:<view prop="@(item.LowerName)">
+				@:<template>
+					@:<view class="collapse">
+						@:<u-collapse :accordion="@(item.Accordion)" ref="collapseRef@(collapseNum)">
+@{collapseNum++;}
+@foreach(var collapse in item.Children)
+{
+							@:<u-collapse-item class="collapse-item" name="@(collapse.Name)" title="@(collapse.Title)" @(collapse.Open) @@change="onCollapseChange">
+@{GenCodeAppFormChildrenControls(collapse.Children);}
+							@:</u-collapse-item>
+}
+						@:</u-collapse>
+					@:</view>
+				@:</template>
+			@:</view>
+break;
+@*文本*@
+case "text":
+			@:<jnpf-text content="@(item.Content)" :textStyle='@(item.TextStyle)'/>
+break;
+@*子表*@
+case "table":
+@if(Model.UseFormPermission)
+{
+            @:<view class="jnpf-table" v-if="$setPermission.hasFormP('@(item.Name)',menuIds)">
+}else{
+			@:<view class="jnpf-table">
+}
+				@:<view class="jnpf-table-title u-line-1" @@click="clickIcon('@(item.Label)','@(item.TipLabel)')">
+					@(item.Label)
+@if(item.TipLabel != null)
+{
+					@:<u-icon :name="'question-circle-fill'" class="u-m-l-10" color="#a0acb7" />
+}
+				@:</view>
+				@:<view class="jnpf-table-item" v-for="(item,i) in @(Model.FormModel).@(item.Name)" :key="i">
+					@:<view class="jnpf-table-item-title">
+						@:<view class="jnpf-table-item-title-num">({{i+1}})</view>
+						@:<view class="u-flex">
+@foreach(var btnItem in item.ColumnBtnsList)
+{
+    @if(btnItem.show)
+	{
+        switch(btnItem.value)
+	    {
+	        case "remove":
+		        @:<view class="jnpf-table-delete-btn" @@click="remove@(item.ChildTableName)Row(i,@(btnItem.showConfirm))">@(btnItem.label)</view>
+	        break;
+	        case "copy":
+		        @:<view class="jnpf-table-copy-btn" @@click="copy@(item.ChildTableName)Row(i)">@(btnItem.label)</view>
+	        break;
+	    }
+	}
+}
+						@:</view>
+                    @:</view>
+@foreach(var children in item.Children)
+{
+					@:<view class="u-p-l-20 u-p-r-20 form-item-box">
+@switch(children.jnpfKey)
+{
+case "relationFormAttr":
+case "popupAttr":
+						@:<u-form-item @(children.ShowLabel ? "label=\"" + children.Label + "\" " : "")prop="@(children.RelationField)" @(children.NoShow ? "v-if='false' " : (Model.UseFormPermission ? "v-if=\"$setPermission.hasFormP('" + item.Name + "-" + children.LowerName + "', menuIds)\"" : ""))@(children.ShowLabel && (children.Label != null && children.TipLabel != null) ? "left-icon=\"question-circle-fill\" @clickIcon=\"clickIcon('" + children.Label + "','" + children.TipLabel + "')\" :left-icon-style=\"{'color':'#a0acb7'}\" " : "")>
+break;
+default:
+						@:<u-form-item @(children.ShowLabel ? "label=\"" + children.Label + "\" " : "")prop="@(children.LowerName)" @(children.NoShow ? "v-if='false' " : (Model.UseFormPermission ? "v-if=\"$setPermission.hasFormP('" + item.Name + "-" + children.LowerName + "', menuIds)\"" : ""))@(children.ShowLabel && (children.Label != null && children.TipLabel != null) ? "left-icon=\"question-circle-fill\" @clickIcon=\"clickIcon('" + children.Label + "','" + children.TipLabel + "')\" :left-icon-style=\"{'color':'#a0acb7'}\" " : "")@(children.Required)>
+break;
+}
+@switch(children.jnpfKey)
+{
+case "uploadFile":
+							@:<jnpf-file v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.TipText)@(children.Disabled)@(children.Limit)@(children.SizeUnit)@(children.FileSize)@(children.Accept)@(children.PathType)@(children.IsAccount)@(children.Folder)/>
+break;
+case "uploadImg":
+							@:<jnpf-upload v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.TipText)@(children.Disabled)@(children.PathType)@(children.SizeUnit)@(children.FileSize)@(children.IsAccount)@(children.Folder)></jnpf-upload>
+break;
+case "organizeSelect":
+							@:<jnpf-com-select type="organize" v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Multiple)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-com-select>
+break;
+case "areaSelect":
+							@:<jnpf-city-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Level)@(children.Multiple)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-city-select>
+break;
+case "billRule":
+							@:<jnpf-open-data v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" type="billRule" @(children.Disabled)/>
+break;
+case "treeSelect":
+							@:<jnpf-tree-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" :options="@(children.IsLinkage ? "dataForm." + item.Name + "[i]." + children.LowerName + "Options" : item.Name + "_" + children.LowerName + "Options")" :props="@(item.Name + "_" + @children.LowerName)Props" @(children.Filterable)@(children.Disabled)@(children.Placeholder)@(children.Multiple)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-tree-select>
+break;
+case "userSelect":
+							@:<jnpf-user-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Multiple)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.UserRelationAttr)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-user-select>
+break;
+case "usersSelect":
+							@:<jnpf-user-choice v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Multiple)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-user-choice>
+break;
+case "posSelect":
+							@:<jnpf-postordep-select type="position" v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Multiple)@(children.Placeholder)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-postordep-select>
+break;
+case "depSelect":
+							@:<jnpf-postordep-select type="department" v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Multiple)@(children.Placeholder)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-postordep-select>
+break;
+@*分组选择*@
+case "groupSelect":
+							@:<jnpf-group-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Multiple)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")/>
+break;
+@*角色选择*@
+case "roleSelect":
+							@:<jnpf-role-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Multiple)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")/>
+break;
+case "select":
+							@:<jnpf-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder):options="@(children.IsLinkage ? "dataForm." + item.Name + "[i]." + children.LowerName + "Options" : item.Name + "_" + children.LowerName + "Options")" :props="@(children.LowerName)Props" @(children.Filterable)@(children.Multiple)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-select>
+break;
+case "cascader":
+							@:<jnpf-cascader v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder):options="@(children.IsLinkage ? "dataForm." + item.Name + "[i]." + children.LowerName + "Options" : item.Name + "_" + children.LowerName + "Options")" :props="@(children.LowerName)Props" @(children.Multiple)@(children.Disabled)@(children.Filterable)@(children.ShowAllLevels)@(children.Clearable)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-cascader>
+break;
+case "rate":
+							@:<jnpf-rate v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" size="40" @(children.Count!=null && children.Count!="" ? ":max='"+children.Count+"'" : "") @(children.Readonly)@(children.AllowHalf)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"Change'":"") ></jnpf-rate>
+break;
+case "slider":
+							@:<jnpf-slider v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Step)@(children.Min)@(children.Max)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"Change' ":"")style="width: 100%;">
+								@:<view class="slider-badge-button">{{@(Model.FormModel).@(item.Name)[i].@(children.LowerName)}}</view>
+							@:</jnpf-slider>
+break;
+case "inputNumber":
+							@:<jnpf-number-box v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Precision)@(children.ControlsPosition)@(children.AddonBefore)@(children.AddonAfter)@(children.Thousands)@(children.AmountChinese)@(children.Max)@(children.Min)@(children.Step)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-number-box>
+break;
+case "sign":
+							@:<jnpf-sign v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Disabled) />
+break;
+case "signature":
+							@:<jnpf-signature v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Disaabled)@(children.AbleIds)@(children.Disabled) />
+break;
+case "location":
+							@:<jnpf-location v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.EnableLocationScope)@(children.AutoLocation)@(children.AdjustmentScope)@(children.EnableDesktopLocation) :locationScope='@(item.Name+"_"+children.LowerName+"_LocationScope")' @(children.Disabled) />
+break;
+case "datePicker":
+							@:<jnpf-date-time v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Type!="" ? children.Type : "type='date'") @(children.Format)@(children.StartTime)@(children.EndTime)@(children.Placeholder)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-date-time>
+break;
+case "timePicker":
+							@:<jnpf-date-time v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" type="time" @(children.Type)@(children.Format)@(children.StartTime)@(children.EndTime)@(children.Placeholder)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-date-time>
+break;
+case "switch":
+							@:<view class="u-flex u-form-item-switch">
+								@:<jnpf-switch v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)"  @(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-switch>
+							@:</view>
+break;
+case "input":
+							@:<jnpf-input v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Disabled)@(children.IsLinked ? "@blur='"+ @children.LowerName +"TableChange(i)' ":"")@(children.UseScan)@(children.AddonBefore)@(children.AddonAfter)@(children.ShowCount)/>
+break;
+@*关联表单*@
+case "relationForm":
+							@:<jnpf-relation-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Disabled)@(children.RelationField)@(children.ColumnOptions)@(children.ModelId != "" ? "modelId='"+ children.ModelId +"' " :"")@(children.Placeholder)@(children.HasPage)@(children.PageSize)@(children.TemplateJson)@(children.IsLinkage ? ":formData='dataForm' :rowIndex='i' ": "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":""):vModel="'@(children.Name)'+i" type="relation"></jnpf-relation-select>
+break;
+@*关联表单属性*@
+case "relationFormAttr":
+							@:<jnpf-relation-attr showField="@(children.ShowField)" @(children.IsStorage == 2 ? "v-model='" + Model.FormModel + "." + item.Name + "[i]." + children.LowerName + "'" : "") :relationField="'@(children.RelationField)'+i" isStorage="@(children.IsStorage)" type='relationFormAttr'></jnpf-relation-attr>
+break;
+@*弹窗选择*@
+case "popupSelect":
+							@:<jnpf-popup-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Disabled)@(children.PropsValue)@(children.RelationField)@(children.ColumnOptions)@(children.InterfaceId)@(children.Placeholder)@(children.HasPage)@(children.PageSize)@(children.PopupType)@(children.PopupTitle)@(children.PopupWidth)@(children.TemplateJson)@(children.IsLinkage ? ":formData='dataForm' :rowIndex='i' ": "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":""):vModel="'@(children.Name)'+i" type="popup"></jnpf-popup-select>
+break;
+@*弹窗选择属性*@
+case "popupAttr":
+							@:<jnpf-relation-attr showField="@(children.ShowField)" @(children.IsStorage == 2 ? "v-model='" + Model.FormModel + "." + item.Name + "[i]." + children.LowerName + "'" : "") :relationField="'@(children.RelationField)'+i" isStorage="@(children.IsStorage)" type='popupAttr'></jnpf-relation-attr>
+break;
+case "textarea":
+							@:<jnpf-input v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" type="textarea" @(children.MaxLength)@(children.Placeholder)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")@(children.ShowCount)/>
+break;
+case "popupTableSelect":
+							@:<jnpf-table-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.InterfaceId)@(children.Placeholder)@(children.Disabled)@(children.ColumnOptions)@(children.RelationField)@(children.PropsValue)@(children.HasPage)@(children.PageSize)@(children.PopupTitle)@(children.Multiple)@(children.Filterable)@(children.TemplateJson)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":""):vModel="'@(item.Name + "-" +@children.LowerName)'+i" @(children.IsLinkage ? ":formData='dataForm' :rowIndex='i' ": "")></jnpf-table-select>
+break;
+case "autoComplete":
+							@:<jnpf-auto-complete v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Total)@(children.InterfaceId)@(children.Placeholder)@(children.Disabled)@(children.Clearable)@(children.RelationField)@(children.Style)@(children.TemplateJson)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":""):vModel="'@(item.Name + "-" +@children.LowerName)'+i" @(children.IsLinkage ? ":formData='dataForm' :rowIndex='i' ": "")/>
+break;
+}
+						@:</u-form-item>
+					@:</view>
+}
+                @:</view>
+@if(item.FooterBtnsList.Count>0)
+{		
+				@:<view class="jnpf-table-footer-btn" >
+@foreach(var btnItem in item.FooterBtnsList)
+{
+        @if(btnItem.value!="batchRemove")
+		{
+					@:<view class="jnpf-table-btn jnpf-table-@(btnItem.btnType)-btn" @@click="@(btnItem.value=="add" ? "add"+item.ChildTableName+"Row()" : "openSelectDialog('"+item.ChildTableName+"','"+btnItem.value+"')")">
+						@:<text class="jnpf-table-btn-icon @(btnItem.btnIcon)"/>
+						@:<text class="jnpf-table-btn-text">@(btnItem.label)</text>
+					@:</view>
+		}
+}
+				@:</view>
+}
+@if(item.ShowSummary)
+{
+				@:<view class="jnpf-table-item">
+					@:<view class="jnpf-table-item-title u-flex u-row-between">
+						@:<text class="jnpf-table-item-title-num">@(item.Label)合计</text>
+					@:</view>
+					@:<view class="u-p-l-20 u-p-r-20 form-item-box">
+						@:<u-form-item v-for="(item,i) in @(item.LowerChildTableName)()" :key="i" :label="item.name">
+							@:<p>{{item.val}}</p>
+						@:</u-form-item>
+					@:</view>
+				@:</view>
+}
+            @:</view>
+break;
+@*按钮*@
+case "button":
+			@:<view class="u-p-l-20 u-p-r-20 form-item-box">
+				@:<u-form-item>
+					@:<jnpf-button buttonText="@(item.ButtonText)" align="@(item.Align)" type="@(item.Type)"></jnpf-button>
+				@:</u-form-item>
+			@:</view>
+break;
+@*提示*@
+case "alert":
+			@:<view class="u-p-l-20 u-p-r-20 form-item-box">
+				@:<u-form-item>
+					@:<jnpf-alert-tips type="@(item.Type)" title="@(item.Title)" tagIcon='icon-ym icon-ym-generator-alert' :showIcon="@(item.ShowIcon)" :closable="@(item.Closable.ToString().ToLower())" description="@(item.Description)" closeText="@(item.CloseText)" />
+				@:</u-form-item>
+			@:</view>
+break;
+@*链接*@
+case "link":
+			@:<view class="u-p-l-20 u-p-r-20 form-item-box">
+				@:<u-form-item>
+					@:<jnpf-link content="@(item.Content)" href="@(item.Href)" target='@(item.Target)' :textStyle='@(item.TextStyle)' />
+				@:</u-form-item>
+			@:</view>
+break;
+default:
+			@:<view class="u-p-l-20 u-p-r-20 form-item-box">
+@switch(item.jnpfKey)
+{
+@*关联表单属性*@
+case "relationFormAttr":
+@*弹窗选择属性*@
+case "popupAttr":
+				@:<u-form-item @(item.ShowLabel ? "label='"+item.Label+"'" : "") prop="@(item.RelationField)" @(item.NoShow ? "v-if='false' " : (Model.UseFormPermission ? "v-if=\"$setPermission.hasFormP('" + item.LowerName + "',menuIds)\"" : "")) @(item.ShowLabel && (item.Label != "null" && item.TipLabel != null) ? "left-icon=\"question-circle-fill\" @clickIcon=\"clickIcon('" + item.Label + "','" + item.TipLabel + "')\" :left-icon-style=\"{'color':'#a0acb7'}\" " : "")>
+break;
+@*富文本框*@
+case "editor":
+				@:<u-form-item prop="@(item.LowerName)" @(item.NoShow ? "v-if='false' " : (Model.UseFormPermission ? "v-if=\"$setPermission.hasFormP('" + item.LowerName + "',menuIds)\"" : ""))>
+break;
+case "input":
+case "textarea":
+case "inputNumber":
+case "switch":
+case "radio":
+case "checkbox":
+case "select":
+case "cascader":
+case "areaSelect":
+case "treeSelect":
+case "uploadImg":
+case "uploadFile":
+case "rate":
+case "slider":
+case "timePicker":
+case "datePicker":
+case "organizeSelect":
+case "depSelect":
+case "posSelect":
+case "userSelect":
+case "usersSelect":
+case "groupSelect":
+case "roleSelect":
+case "relationForm":
+case "popupSelect":
+case "popupTableSelect":
+case "colorPicker":
+case "autoComplete":
+case "sign":
+case "signature":
+case "location":
+				@:<u-form-item @(item.ShowLabel ? "label='"+item.Label+"'" : "") prop="@(item.LowerName)" @(item.NoShow ? "v-if='false' " : (Model.UseFormPermission ? "v-if=\"$setPermission.hasFormP('" + item.LowerName + "',menuIds)\"" : ""))@(item.ShowLabel && (item.Label != "null" && item.TipLabel != null) ? "left-icon=\"question-circle-fill\" @clickIcon=\"clickIcon('" + item.Label + "','" + item.TipLabel + "')\" :left-icon-style=\"{'color':'#a0acb7'}\" " : "")@(item.Required)>
+break;
+default:
+				@:<u-form-item @(item.ShowLabel ? "label='"+item.Label+"'" : "") prop="@(item.LowerName)" @(item.NoShow ? "v-if='false' " : (Model.UseFormPermission ? "v-if=\"$setPermission.hasFormP('" + item.LowerName + "',menuIds)\"" : ""))>
+break;
+}
+@switch(item.jnpfKey)
+{
+case "colorPicker":
+					@:<jnpf-colorPicker v-model="@(Model.FormModel).@(item.Name)" @(item.Disabled)@(item.ColorFormat)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-colorPicker>
+break;
+@*富文本框*@
+case "editor":
+					@:<jnpf-editor @(item.vModel)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"")></jnpf-editor>
+break;
+@*关联表单属性*@
+case "relationFormAttr":
+					@:<jnpf-relation-attr showField="@(item.ShowField)" relationField="@(item.RelationField)" isStorage="@(item.IsStorage)" @(item.vModel) type='relationFormAttr' @(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"")></jnpf-relation-attr>
+break;
+@*弹窗选择属性*@
+case "popupAttr":
+					@:<jnpf-relation-attr showField="@(item.ShowField)" relationField="@(item.RelationField)" isStorage="@(item.IsStorage)" @(item.vModel) type='popupAttr' @(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"")></jnpf-relation-attr>
+break;
+case "input":
+					@:<jnpf-input v-model="@(Model.FormModel).@(item.LowerName)" @(item.MaxLength)@(item.Placeholder)@(item.Disabled)@(item.IsLinked ? "@blur='"+ @item.LowerName +"Change'":"")@(item.UseScan)@(item.AddonBefore)@(item.AddonAfter)@(item.ShowCount)/>
+break;
+case "textarea":
+					@:<jnpf-input v-model="@(Model.FormModel).@(item.LowerName)" type="textarea" @(item.MaxLength)@(item.Placeholder)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"")@(item.ShowCount)/>
+break;
+case "inputNumber":
+					@:<jnpf-number-box v-model="@(Model.FormModel).@(item.LowerName)" @(item.Precision)@(item.ControlsPosition)@(item.AddonBefore)@(item.AddonAfter)@(item.Thousands)@(item.AmountChinese)@(item.Max)@(item.Min)@(item.Step)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"")></jnpf-number-box>
+break;
+case "sign":
+					@:<jnpf-sign v-model="@(Model.FormModel).@(item.LowerName)" @(item.Disabled) />
+break;
+case "signature":
+					@:<jnpf-signature v-model="@(Model.FormModel).@(item.LowerName)" @(item.Disaabled)@(item.AbleIds)@(item.Disabled) />
+break;
+case "location":
+					@:<jnpf-location v-model="@(Model.FormModel).@(item.LowerName)" @(item.EnableLocationScope)@(item.AutoLocation)@(item.AdjustmentScope)@(item.EnableDesktopLocation) :locationScope='@(item.LowerName+"_LocationScope")' @(item.Disabled) />
+break;
+case "switch":
+					@:<view class="u-flex u-form-item-switch">
+						@:<jnpf-switch v-model="@(Model.FormModel).@(item.LowerName)" @(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"")></jnpf-switch>
+					@:</view>
+break;
+case "radio":
+					@:<jnpf-radio v-model="@(Model.FormModel).@(item.LowerName)" :options="@(item.LowerName)Options" :props="@(item.LowerName)Props" @(item.Direction)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"")></jnpf-radio>
+break;
+case "checkbox":
+					@:<jnpf-checkbox v-model="@(Model.FormModel).@(item.LowerName)" :options="@(item.LowerName)Options" :props="@(item.LowerName)Props" @(item.Direction)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"")></jnpf-checkbox>
+break;
+case "select":
+					@:<jnpf-select v-model="@(Model.FormModel).@(item.LowerName)" :options="@(item.LowerName)Options" :props="@(item.LowerName)Props" @(item.Filterable)@(item.Placeholder)@(item.Multiple)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"")></jnpf-select>
+break;
+case "cascader":
+					@:<jnpf-cascader v-model="@(Model.FormModel).@(item.LowerName)" :options="@(item.LowerName)Options" :props="@(item.LowerName)Props" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.Filterable)@(item.ShowAllLevels)@(item.Clearable)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"")></jnpf-cascader>
+break;
+case "areaSelect":
+					@:<jnpf-city-select v-model="@(Model.FormModel).@(item.LowerName)" @(item.Level)@(item.Placeholder)@(item.Disabled)@(item.Multiple)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"")></jnpf-city-select>
+break;
+case "treeSelect":
+					@:<jnpf-tree-select v-model="@(Model.FormModel).@(item.LowerName)" :options="@(item.LowerName)Options" :props="@(item.LowerName)Props" @(item.Filterable)@(item.Placeholder)@(item.Multiple)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-tree-select>
+break;
+case "uploadImg":
+					@:<jnpf-upload v-model="@(Model.FormModel).@(item.LowerName)" @(item.TipText)@(item.Disabled)@(item.PathType)@(item.SizeUnit)@(item.FileSize)@(item.IsAccount)@(item.Folder)/>
+break;
+case "uploadFile":
+					@:<jnpf-file v-model="@(Model.FormModel).@(item.LowerName)" @(item.TipText)@(item.Disabled)@(item.Limit)@(item.SizeUnit)@(item.FileSize)@(item.Accept)@(item.PathType)@(item.IsAccount)@(item.Folder)/>
+break;
+case "rate":
+					@:<jnpf-rate v-model="@(Model.FormModel).@(item.LowerName)" size="40" @(item.Count!=null && item.Count!="" ? ":max='"+item.Count+"'" : "") @(item.Readonly)@(item.AllowHalf)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change'":"")></jnpf-rate>
+break;
+case "slider":
+					@:<jnpf-slider v-model="@(Model.FormModel).@(item.LowerName)" @(item.Step)@(item.Min)@(item.Max)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")style="width: 100%;">
+						@:<view class="slider-badge-button">{{@(Model.FormModel).@(item.LowerName)}}</view>
+					@:</jnpf-slider>
+break;
+case "timePicker":
+					@:<jnpf-date-time v-model="@(Model.FormModel).@(item.LowerName)" type='time' @(item.Format)@(item.StartTime)@(item.EndTime)@(item.Placeholder)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-date-time>
+break;
+case "datePicker":
+					@:<jnpf-date-time v-model="@(Model.FormModel).@(item.LowerName)" @(item.Type!="" ? item.Type : "type='date'") @(item.Format)@(item.StartTime)@(item.EndTime)@(item.Placeholder)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-date-time>
+break;
+case "organizeSelect":
+					@:<jnpf-com-select type="organize" v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-com-select>
+break;
+case "depSelect":
+					@:<jnpf-postordep-select type="department" v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-postordep-select>
+break;
+case "posSelect":
+					@:<jnpf-postordep-select type="position" v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-postordep-select>
+break;
+case "userSelect":
+					@:<jnpf-user-select v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.UserRelationAttr)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-user-select>
+break;
+case "usersSelect":
+					@:<jnpf-user-choice v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-user-choice>
+break;
+case "groupSelect":
+					@:<jnpf-group-select v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-group-select>
+break;
+case "roleSelect":
+					@:<jnpf-role-select v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-role-select>
+break;
+case "relationForm":
+					@:<jnpf-relation-select @(item.vModel)@(item.Disabled)@(item.RelationField)@(item.ColumnOptions)@(item.ModelId != "" ? "modelId='"+ item.ModelId +"' " :"")@(item.Placeholder)@(item.HasPage)@(item.PageSize)vModel="@(item.Name)" type="relation" @(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")@(item.TemplateJson)@(item.IsLinkage ? ":formData='dataForm' ": "")></jnpf-relation-select>
+break;
+case "barcode":
+					@:<jnpf-barcode @(item.Width) @(item.Height) @(item.Format) @(item.LineColor) @(item.Background) @(item.StaticText) @(item.DataType) @(item.RelationField) :formData="dataForm" />
+break;
+case "qrcode":
+					@:<jnpf-qrcode @(item.Width) @(item.ColorDark) @(item.ColorLight) @(item.StaticText) @(item.DataType) @(item.RelationField) :formData="dataForm" />
+break;
+case "popupSelect":
+					@:<jnpf-popup-select @(item.vModel)@(item.Disabled)@(item.PropsValue)@(item.RelationField)@(item.ColumnOptions)@(item.InterfaceId)@(item.Placeholder)@(item.HasPage)@(item.PageSize)@(item.PopupType)@(item.PopupTitle)@(item.PopupWidth)@(item.TemplateJson)vModel="@(item.Name)" @(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"") @(item.IsLinkage ? ":formData='dataForm' ": "")type="popup"></jnpf-popup-select>
+break;
+case "popupTableSelect":
+					@:<jnpf-table-select @(item.vModel)@(item.InterfaceId)@(item.Placeholder)@(item.Disabled)@(item.ColumnOptions)@(item.RelationField)@(item.PropsValue)@(item.HasPage)@(item.PageSize)@(item.PopupTitle)@(item.Multiple)@(item.Filterable)@(item.TemplateJson)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":""):vModel="'@(item.LowerName)'" @(item.IsLinkage ? ":formData='dataForm' ": "")></jnpf-table-select>
+break;
+case "createUser":
+case "createTime":
+case "currOrganize":
+case "currPosition":
+case "billRule":
+case "currDept":
+					@:<jnpf-open-data v-model="@(Model.FormModel).@(item.LowerName)" type="@(item.jnpfKey)" @(item.Disabled)></jnpf-open-data>
+break;
+case "autoComplete":
+					@:<jnpf-auto-complete v-model="@(Model.FormModel).@(item.LowerName)" vModel="@(item.Name)" @(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")@(item.IsLinkage ? ":formData='dataForm' ": "")@(item.TemplateJson)@(item.Total)@(item.InterfaceId)@(item.Placeholder)@(item.Disabled)@(item.Clearable)@(item.RelationField)@(item.Style)/>
+break;
+default:
+					@:<jnpf-input v-model="@(Model.FormModel).@(item.LowerName)" placeholder="系统自动生成" disabled/>
+break;
+}
+				@:</u-form-item>
+			@:</view>
+break;
+}
+}
+	}
+}
+@{
+	void GenCodeAppFormChildrenControls(ICollection<FormControlDesignModel> childrenList)
+	{
+@foreach(var item in childrenList)
+{
+@switch(item.jnpfKey)
+{
+case "tableGrid":
+@{GenCodeAppFormChildrenControls(item.Children);}
+break;
+case "tableGridTr":
+@{GenCodeAppFormChildrenControls(item.Children);}
+break;
+case "tableGridTd":
+@{GenCodeAppFormChildrenControls(item.Children);}
+break;
+case "groupTitle":
+				@:<jnpf-group content="@(item.Content)" content-position="@(item.Contentposition)" @(item.TipLabel != null ? "tipLabel=\"" + item.TipLabel + "\" @groupIcon=\"clickIcon('" + item.Content + "','" + item.TipLabel + "')\" " : "")></jnpf-group>
+break;
+case "divider":
+				@:<u-divider half-width="200" height="80">@(item.Default)</u-divider>
+break;
+@*文本*@
+case "text":
+			@:<jnpf-text content="@(item.Content)" :textStyle='@(item.TextStyle)'/>
+break;
+@*卡片容器*@
+case "card":
+@*栅格容器*@
+case "row":
+				@:<view class="jnpf-card">
+					@:<view class="jnpf-card-cap u-line-1">@(item.Content)
+@if(item.TipLabel != null)
+{
+						@:<u-icon name="question-circle-fill" class="u-m-l-10" color="#a0acb7"
+							@:@@click="clickIcon('@(item.Content)','@(item.TipLabel)')" />
+}
+					@:</view>
+@{GenCodeAppFormChildrenControls(item.Children);}
+				@:</view>
+break;
+case "tab":
+				@:<view prop="@(item.LowerName)">
+					@:<u-tabs :is-scroll="false" :list="@(item.LowerName)Title" name="title" :current="@(item.LowerName)Current" @@change="@(item.LowerName)Change"></u-tabs>
+					@:<view>
+@{ int m = 0;}
+@foreach(var collapse in item.Children)
+{
+						@:<view v-show="@(m) == @(item.LowerName)Current">
+@{GenCodeAppFormChildrenControls(collapse.Children);}
+						@:</view>
+						@{m++;}
+}
+					@:</view>
+				@:</view>
+break;
+case "collapse":
+				@:<view prop="@(item.LowerName)">
+					@:<template>
+						@:<view class="collapse">
+							@:<u-collapse :accordion="@(item.Accordion)" ref="collapseRef@(collapseNum)">
+@{collapseNum++;}
+@foreach(var collapse in item.Children)
+{
+								@:<u-collapse-item class="collapse-item" name="@(collapse.Name)" title="@(collapse.Title)" @(collapse.Open) @@change="onCollapseChange">
+@{GenCodeAppFormChildrenControls(collapse.Children);}
+								@:</u-collapse-item>
+}
+							@:</u-collapse>
+						@:</view>
+					@:</template>
+				@:</view>
+break;
+case "button":
+				@:<view class="u-p-l-20 u-p-r-20 form-item-box">
+					@:<u-form-item>
+						@:<jnpf-button buttonText="@(item.ButtonText)" align="@(item.Align)" type="@(item.Type)"></jnpf-button>
+					@:</u-form-item>
+				@:</view>
+break;
+case "alert":
+				@:<view class="u-p-l-20 u-p-r-20 form-item-box">
+					@:<u-form-item>
+						@:<jnpf-alert-tips type="@(item.Type)" title="@(item.Title)" tagIcon='icon-ym icon-ym-generator-alert' :showIcon="@(item.ShowIcon)" :closable="@(item.Closable.ToString().ToLower())" description="@(item.Description)" closeText="@(item.CloseText)" />
+					@:</u-form-item>
+				@:</view>
+break;
+case "link":
+				@:<view class="u-p-l-20 u-p-r-20 form-item-box">
+					@:<u-form-item>
+						@:<jnpf-link content="@(item.Content)" href="@(item.Href)" target='@(item.Target)' :textStyle='@(item.TextStyle)' />
+					@:</u-form-item>
+				@:</view>
+break;
+case "table":
+@if(Model.UseFormPermission)
+{
+				@:<view class="jnpf-table" v-if="$setPermission.hasFormP('@(item.Name)',menuIds)">
+}else{
+				@:<view class="jnpf-table">
+}
+					@:<view class="jnpf-table-title u-line-1" @@click="clickIcon('@(item.Label)','@(item.TipLabel)')">
+					@(item.Label)
+@if(item.TipLabel != null)
+{
+					@:<u-icon :name="'question-circle-fill'" class="u-m-l-10" color="#a0acb7" />
+}
+				@:</view>
+				@:<view class="jnpf-table-item" v-for="(item,i) in @(Model.FormModel).@(item.Name)" :key="i">
+					@:<view class="jnpf-table-item-title">
+						@:<view class="jnpf-table-item-title-num">({{i+1}})</view>
+						@:<view class="u-flex">
+@foreach(var btnItem in item.ColumnBtnsList)
+{
+    @if(btnItem.show)
+	{
+        switch(btnItem.value)
+	    {
+	        case "remove":
+		        @:<view class="jnpf-table-delete-btn" @@click="remove@(item.ChildTableName)Row(i,@(btnItem.showConfirm))">@(btnItem.label)</view>
+	        break;
+	        case "copy":
+		        @:<view class="jnpf-table-copy-btn" @@click="copy@(item.ChildTableName)Row(i)">@(btnItem.label)</view>
+	        break;
+	    }
+	}
+}
+						@:</view>
+					@:</view>
+@foreach(var children in item.Children)
+{
+						@:<view class="u-p-l-20 u-p-r-20 form-item-box">
+@switch(children.jnpfKey)
+{
+case "relationFormAttr":
+case "popupAttr":
+							@:<u-form-item @(children.ShowLabel ? "label=\"" + children.Label + "\" " : "")prop="@(children.RelationField)" @(children.NoShow ? "v-if='false' " : (Model.UseFormPermission ? "v-if=\"$setPermission.hasFormP('" + item.Name + "-" + children.LowerName + "', menuIds)\"" : ""))@(children.ShowLabel && (children.Label != null && children.TipLabel != null) ? "left-icon=\"question-circle-fill\" @clickIcon=\"clickIcon('" + children.Label + "','" + children.TipLabel + "')\" :left-icon-style=\"{'color':'#a0acb7'}\" " : "")>
+break;
+default:
+							@:<u-form-item @(children.ShowLabel ? "label=\"" + children.Label + "\" " : "")prop="@(children.LowerName)" @(children.NoShow ? "v-if='false' " : (Model.UseFormPermission ? "v-if=\"$setPermission.hasFormP('" + item.Name + "-" + children.LowerName + "', menuIds)\"" : ""))@(children.ShowLabel && (children.Label != null && children.TipLabel != null) ? "left-icon=\"question-circle-fill\" @clickIcon=\"clickIcon('" + children.Label + "','" + children.TipLabel + "')\" :left-icon-style=\"{'color':'#a0acb7'}\" " : "")@(children.Required)>
+break;
+}
+@switch(children.jnpfKey)
+{
+case "uploadFile":
+								@:<jnpf-file v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.TipText)@(children.Disabled)@(children.Limit)@(children.SizeUnit)@(children.FileSize)@(children.Accept)@(children.PathType)@(children.IsAccount)@(children.Folder)/>
+break;
+case "uploadImg":
+								@:<jnpf-upload v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.TipText)@(children.Disabled)@(children.PathType)@(children.SizeUnit)@(children.FileSize)@(children.IsAccount)@(children.Folder)></jnpf-upload>
+break;
+case "organizeSelect":
+								@:<jnpf-com-select type="organize" v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Multiple)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-com-select>
+break;
+case "areaSelect":
+								@:<jnpf-city-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Level)@(children.Multiple)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-city-select>
+break;
+case "billRule":
+								@:<jnpf-open-data v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" type="billRule" @(children.Disabled)/>
+break;
+case "treeSelect":
+								@:<jnpf-tree-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" :options="@(children.IsLinkage ? "dataForm." + item.Name + "[i]." + children.LowerName + "Options" : item.Name + "_" + children.LowerName + "Options")" :props="@(item.Name + "_" + @children.LowerName)Props" @(children.Filterable)@(children.Disabled)@(children.Placeholder)@(children.Multiple)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-tree-select>
+break;
+case "userSelect":
+								@:<jnpf-user-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Multiple)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.UserRelationAttr)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-user-select>
+break;
+case "usersSelect":
+								@:<jnpf-user-choice v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Multiple)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-user-choice>
+break;
+case "posSelect":
+								@:<jnpf-postordep-select type="position" v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Multiple)@(children.Placeholder)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-postordep-select>
+break;
+case "depSelect":
+								@:<jnpf-postordep-select type="department" v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Multiple)@(children.Placeholder)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-postordep-select>
+break;
+@*分组选择*@
+case "groupSelect":
+								@:<jnpf-group-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Multiple)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")/>
+break;
+@*角色选择*@
+case "roleSelect":
+								@:<jnpf-role-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Multiple)@(children.Disabled)@(children.SelectType != "" ? "selectType='" + children.SelectType + "' " : "")@(children.IsCustomSelect ? @children.AbleIds : "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")/>
+break;
+case "select":
+								@:<jnpf-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder):options="@(children.IsLinkage ? "dataForm." + item.Name + "[i]." + children.LowerName + "Options" : item.Name + "_" + children.LowerName + "Options")" :props="@(item.Name + "_" + @children.LowerName)Props" @(children.Filterable)@(children.Multiple)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-select>
+break;
+case "cascader":
+								@:<jnpf-cascader v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder):options="@(children.IsLinkage ? "dataForm." + item.Name + "[i]." + children.LowerName + "Options" : item.Name + "_" + children.LowerName + "Options")" :props="@(item.Name + "_" + @children.LowerName)Props" @(children.Multiple)@(children.Disabled)@(children.Filterable)@(children.ShowAllLevels)@(children.Clearable)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-cascader>
+break;
+case "rate":
+								@:<jnpf-rate v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" size="40" @(children.Count!=null && children.Count!="" ? ":max='"+children.Count+"'" : "") @(children.Readonly)@(children.AllowHalf)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"Change'":"")/>
+break;
+case "slider":
+								@:<jnpf-slider v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Step)@(children.Min)@(children.Max)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"Change' ":"")style="width: 100%;" />
+break;
+case "inputNumber":
+								@:<jnpf-number-box v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Precision)@(children.ControlsPosition)@(children.AddonBefore)@(children.AddonAfter)@(children.Thousands)@(children.AmountChinese)@(children.Max)@(children.Min)@(children.Step)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-number-box>
+break;
+case "sign":
+								@:<jnpf-sign v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Disabled) />
+break;
+case "signature":
+								@:<jnpf-signature v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Disaabled)@(children.AbleIds)@(children.Disabled) />
+break;
+case "location":
+								@:<jnpf-location v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.EnableLocationScope)@(children.AutoLocation)@(children.AdjustmentScope)@(children.EnableDesktopLocation) :locationScope='@(item.Name+"_"+children.LowerName+"_LocationScope")' @(children.Disabled) />
+break;
+case "datePicker":
+								@:<jnpf-date-time v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Type!="" ? children.Type : "type='date'") @(children.Format)@(children.StartTime)@(children.EndTime)@(children.Placeholder)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-date-time>
+break;
+case "timePicker":
+								@:<jnpf-date-time v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" type="time" @(children.Format)@(children.StartTime)@(children.EndTime)@(children.Placeholder)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-date-time>
+break;
+case "switch":
+								@:<view class="u-flex u-form-item-switch">
+									@:<jnpf-switch v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")></jnpf-switch>
+								@:</view>
+break;
+case "input":
+								@:<jnpf-input v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Placeholder)@(children.Disabled)@(children.IsLinked ? "@blur='"+ @children.LowerName +"TableChange(i)' ":"")@(children.UseScan)@(children.AddonBefore)@(children.AddonAfter)@(children.ShowCount)/>
+break;
+@*关联表单*@
+case "relationForm":
+								@:<jnpf-relation-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Disabled)@(children.RelationField)@(children.ColumnOptions)@(children.ModelId != "" ? "modelId='"+ children.ModelId +"' " :"")@(children.Placeholder)@(children.HasPage)@(children.PageSize)@(children.TemplateJson)@(children.IsLinkage ? ":formData='dataForm' :rowIndex='i' ": "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":""):vModel="'@(children.Name)'+i" type="relation"></jnpf-relation-select>
+break;
+@*关联表单属性*@
+case "relationFormAttr":
+								@:<jnpf-relation-attr showField="@(children.ShowField)" @(children.IsStorage == 2 ? "v-model='" + Model.FormModel + "." + item.Name + "[i]." + children.LowerName + "'" : "") :relationField="'@(children.RelationField)'+i" isStorage="@(children.IsStorage)" type='relationFormAttr'></jnpf-relation-attr>
+break;
+@*弹窗选择*@
+case "popupSelect":
+								@:<jnpf-popup-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Disabled)@(children.PropsValue)@(children.RelationField)@(children.ColumnOptions)@(children.InterfaceId)@(children.Placeholder)@(children.HasPage)@(children.PageSize)@(children.PopupType)@(children.PopupTitle)@(children.PopupWidth)@(children.TemplateJson)@(children.IsLinkage ? ":formData='dataForm' :rowIndex='i' ": "")@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":""):vModel="'@(children.Name)'+i" type="popup"></jnpf-popup-select>
+break;
+@*弹窗选择属性*@
+case "popupAttr":
+								@:<jnpf-relation-attr showField="@(children.ShowField)" @(children.IsStorage == 2 ? "v-model='" + Model.FormModel + "." + item.Name + "[i]." + children.LowerName + "'" : "") :relationField="'@(children.RelationField)'+i" isStorage="@(children.IsStorage)" type='popupAttr'></jnpf-relation-attr>
+break;
+case "textarea":
+								@:<jnpf-input v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" type="textarea" @(children.MaxLength)@(children.Placeholder)@(children.Disabled)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":"")@(children.ShowCount)/>
+break;
+case "popupTableSelect":
+								@:<jnpf-table-select v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.InterfaceId)@(children.Placeholder)@(children.Disabled)@(children.ColumnOptions)@(children.RelationField)@(children.PropsValue)@(children.HasPage)@(children.PageSize)@(children.PopupTitle)@(children.Multiple)@(children.Filterable)@(children.TemplateJson)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":""):vModel="'@(item.Name + "-" +@children.LowerName)'+i" @(children.IsLinkage ? ":formData='dataForm' :rowIndex='i' ": "")></jnpf-table-select>
+break;
+case "autoComplete":
+								@:<jnpf-auto-complete v-model="@(Model.FormModel).@(item.Name)[i].@(children.LowerName)" @(children.Total)@(children.InterfaceId)@(children.Placeholder)@(children.Disabled)@(children.Clearable)@(children.RelationField)@(children.Style)@(children.TemplateJson)@(children.IsLinked ? "@change='"+ @children.LowerName +"TableChange(i)' ":""):vModel="'@(item.Name + "-" +@children.LowerName)'+i" @(children.IsLinkage ? ":formData='dataForm' :rowIndex='i' ": "")/>
+break;
+}
+							@:</u-form-item>
+						@:</view>
+}
+					@:</view>
+@if(item.FooterBtnsList.Count>0)
+{		
+				@:<view class="jnpf-table-footer-btn" >
+@foreach(var btnItem in item.FooterBtnsList)
+{
+        @if(btnItem.value!="batchRemove")
+		{
+					@:<view class="jnpf-table-btn jnpf-table-@(btnItem.btnType)-btn" @@click="@(btnItem.value=="add" ? "add"+item.ChildTableName+"Row()" : "openSelectDialog('"+item.ChildTableName+"','"+btnItem.value+"')")">
+						@:<text class="jnpf-table-btn-icon @(btnItem.btnIcon)"/>
+						@:<text class="jnpf-table-btn-text">@(btnItem.label)</text>
+					@:</view>
+		}
+}
+				@:</view>
+}
+@if(item.ShowSummary)
+{
+						@:<view class="jnpf-table-item">
+							@:<view class="jnpf-table-item-title u-flex u-row-between">
+								@:<text class="jnpf-table-item-title-num">@(item.Label)合计</text>
+							@:</view>
+							@:<view class="u-p-l-20 u-p-r-20 form-item-box">
+								@:<u-form-item v-for="(item,i) in @(item.LowerChildTableName)()" :key="i" :label="item.name">
+									@:<p>{{item.val}}</p>
+								@:</u-form-item>
+							@:</view>
+						@:</view>
+}
+					@:</view>
+break;
+default:
+					@:<view class="u-p-l-20 u-p-r-20 form-item-box">
+@switch(item.jnpfKey)
+{
+@*关联表单属性*@
+case "relationFormAttr":
+@*弹窗选择属性*@
+case "popupAttr":
+						@:<u-form-item @(item.ShowLabel ? "label='"+item.Label+"'" : "") prop="@(item.RelationField)" @(item.NoShow ? "v-if='false' " : (Model.UseFormPermission ? "v-if=\"$setPermission.hasFormP('" + item.LowerName + "',menuIds)\"" : ""))@(item.ShowLabel && (item.Label != "null" && item.TipLabel != null) ? "left-icon=\"question-circle-fill\" @clickIcon=\"clickIcon('" + item.Label + "','" + item.TipLabel + "')\" :left-icon-style=\"{'color':'#a0acb7'}\" " : "")>
+break;
+@*富文本框*@
+case "editor":
+						@:<u-form-item prop="@(item.LowerName)" @(item.NoShow ? "v-if='false' " : (Model.UseFormPermission ? "v-if=\"$setPermission.hasFormP('" + item.LowerName + "',menuIds)\"" : ""))>
+break;
+case "input":
+case "textarea":
+case "inputNumber":
+case "switch":
+case "radio":
+case "checkbox":
+case "select":
+case "cascader":
+case "areaSelect":
+case "treeSelect":
+case "uploadImg":
+case "uploadFile":
+case "rate":
+case "slider":
+case "timePicker":
+case "datePicker":
+case "organizeSelect":
+case "depSelect":
+case "posSelect":
+case "userSelect":
+case "usersSelect":
+case "groupSelect":
+case "roleSelect":
+case "relationForm":
+case "popupSelect":
+case "popupTableSelect":
+case "colorPicker":
+case "autoComplete":
+case "billRule":
+case "sign":
+case "signature":
+case "location":
+				@:<u-form-item @(item.ShowLabel ? "label='"+item.Label+"'" : "") prop="@(item.LowerName)" @(item.NoShow ? "v-if='false' " : (Model.UseFormPermission ? "v-if=\"$setPermission.hasFormP('" + item.LowerName + "',menuIds)\"" : "")) @(item.ShowLabel && (item.Label != "null" && item.TipLabel != null) ? "left-icon=\"question-circle-fill\" @clickIcon=\"clickIcon('" + item.Label + "','" + item.TipLabel + "')\" :left-icon-style=\"{'color':'#a0acb7'}\" " : "")@(item.Required) >
+break;
+default:
+				@:<u-form-item @(item.ShowLabel ? "label='"+item.Label+"'" : "") prop="@(item.LowerName)" @(item.NoShow ? "v-if='false' " : (Model.UseFormPermission ? "v-if=\"$setPermission.hasFormP('" + item.LowerName + "',menuIds)\"" : ""))>
+break;
+}
+@switch(item.jnpfKey)
+{
+case "colorPicker":
+							@:<jnpf-colorPicker v-model="@(Model.FormModel).@(item.Name)" @(item.Disabled)@(item.ColorFormat)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-colorPicker>
+break;
+@*富文本框*@
+case "editor":
+							@:<jnpf-editor @(item.vModel)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-editor>
+break;
+@*关联表单属性*@
+case "relationFormAttr":
+							@:<jnpf-relation-attr showField="@(item.ShowField)" relationField="@(item.RelationField)" isStorage="@(item.IsStorage)" @(item.vModel) type='relationFormAttr' @(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-relation-attr>
+break;
+@*弹窗选择属性*@
+case "popupAttr":
+							@:<jnpf-relation-attr showField="@(item.ShowField)" relationField="@(item.RelationField)" isStorage="@(item.IsStorage)" @(item.vModel) type='popupAttr' @(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-relation-attr>
+break;
+case "input":
+							@:<jnpf-input v-model="@(Model.FormModel).@(item.LowerName)" @(item.MaxLength)@(item.Placeholder)@(item.Disabled)@(item.IsLinked ? "@blur='"+ @item.LowerName +"Change' ":"")@(item.UseScan)@(item.AddonBefore)@(item.AddonAfter)@(item.ShowCount)/>
+break;
+case "textarea":
+							@:<jnpf-input v-model="@(Model.FormModel).@(item.LowerName)" type="textarea" @(item.MaxLength)@(item.Placeholder)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")@(item.ShowCount)/>
+break;
+case "inputNumber":
+							@:<jnpf-number-box v-model="@(Model.FormModel).@(item.LowerName)" @(item.Precision)@(item.ControlsPosition)@(item.AddonBefore)@(item.AddonAfter)@(item.Thousands)@(item.AmountChinese)@(item.Max)@(item.Min)@(item.Step)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-number-box>
+break;
+case "sign":
+							@:<jnpf-sign v-model="@(Model.FormModel).@(item.LowerName)" @(item.Disabled) />
+break;
+case "signature":
+							@:<jnpf-signature v-model="@(Model.FormModel).@(item.LowerName)" @(item.Disaabled)@(item.AbleIds)@(item.Disabled) />
+break;
+case "location":
+							@:<jnpf-location v-model="@(Model.FormModel).@(item.LowerName)" @(item.EnableLocationScope)@(item.AutoLocation)@(item.AdjustmentScope)@(item.EnableDesktopLocation) :locationScope='@(item.LowerName+"_LocationScope")' @(item.Disabled) />
+break;
+case "switch":
+							@:<view class="u-flex u-form-item-switch">
+								@:<jnpf-switch v-model="@(Model.FormModel).@(item.LowerName)" @(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-switch>
+							@:</view>
+break;
+case "radio":
+							@:<jnpf-radio v-model="@(Model.FormModel).@(item.LowerName)" :options="@(item.LowerName)Options" :props="@(item.LowerName)Props" @(item.Direction)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-radio>
+break;
+case "checkbox":
+							@:<jnpf-checkbox v-model="@(Model.FormModel).@(item.LowerName)" :options="@(item.LowerName)Options" :props="@(item.LowerName)Props" @(item.Direction)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-checkbox>
+break;
+case "select":
+							@:<jnpf-select v-model="@(Model.FormModel).@(item.LowerName)" :options="@(item.LowerName)Options" :props="@(item.LowerName)Props" @(item.Filterable)@(item.Placeholder)@(item.Multiple)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-select>
+break;
+case "cascader":
+							@:<jnpf-cascader v-model="@(Model.FormModel).@(item.LowerName)" :options="@(item.LowerName)Options" :props="@(item.LowerName)Props" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.Filterable)@(item.ShowAllLevels)@(item.Clearable)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-cascader>
+break;
+case "areaSelect":
+							@:<jnpf-city-select v-model="@(Model.FormModel).@(item.LowerName)" @(item.Level)@(item.Placeholder)@(item.Disabled)@(item.Multiple)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-city-select>
+break;
+case "treeSelect":
+							@:<jnpf-tree-select v-model="@(Model.FormModel).@(item.LowerName)" :options="@(item.LowerName)Options" :props="@(item.LowerName)Props" @(item.Filterable)@(item.Placeholder)@(item.Multiple)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-tree-select>
+break;
+case "uploadImg":
+							@:<jnpf-upload v-model="@(Model.FormModel).@(item.LowerName)" @(item.TipText)@(item.Disabled)@(item.PathType)@(item.SizeUnit)@(item.FileSize)@(item.IsAccount)@(item.Folder)></jnpf-upload>
+break;
+case "uploadFile":
+							@:<jnpf-file v-model="@(Model.FormModel).@(item.LowerName)" @(item.TipText)@(item.Disabled)@(item.Limit)@(item.SizeUnit)@(item.FileSize)@(item.Accept)@(item.PathType)@(item.IsAccount)@(item.Folder)/>
+break;
+case "rate":
+							@:<jnpf-rate v-model="@(Model.FormModel).@(item.LowerName)" size="40" @(item.Count!=null && item.Count!="" ? ":max='"+item.Count+"'" : "") @(item.Readonly)@(item.AllowHalf)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-rate>
+break;
+case "slider":
+							@:<jnpf-slider v-model="@(Model.FormModel).@(item.LowerName)" @(item.Step)@(item.Min)@(item.Max)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")style="width: 100%;">
+								@:<view class="slider-badge-button">{{@(Model.FormModel).@(item.LowerName)}}</view>
+							@:</jnpf-slider>
+break;
+case "timePicker":
+							@:<jnpf-date-time v-model="@(Model.FormModel).@(item.LowerName)" type="time" @(item.Format)@(item.StartTime)@(item.EndTime)@(item.Placeholder)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-date-time>
+break;
+case "datePicker":
+							@:<jnpf-date-time v-model="@(Model.FormModel).@(item.LowerName)" @(item.Type!="" ? item.Type : "type='date'") @(item.Format)@(item.StartTime)@(item.EndTime)@(item.Placeholder)@(item.Disabled)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-date-time>
+break;
+case "organizeSelect":
+							@:<jnpf-com-select type="organize" v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-com-select>
+break;
+case "depSelect":
+							@:<jnpf-postordep-select type="department" v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-postordep-select>
+break;
+case "posSelect":
+							@:<jnpf-postordep-select type="position" v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-postordep-select>
+break;
+case "userSelect":
+							@:<jnpf-user-select v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.UserRelationAttr)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-user-select>
+break;
+case "usersSelect":
+							@:<jnpf-user-choice v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-user-choice>
+break;
+case "groupSelect":
+							@:<jnpf-group-select v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-group-select>
+break;
+case "roleSelect":
+							@:<jnpf-role-select v-model="@(Model.FormModel).@(item.LowerName)" @(item.Multiple)@(item.Placeholder)@(item.Disabled)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")></jnpf-role-select>
+break;
+case "barcode":
+							@:<jnpf-barcode @(item.Width) @(item.Height) @(item.Format) @(item.LineColor) @(item.Background) @(item.StaticText) @(item.DataType) @(item.RelationField) :formData="dataForm" />
+break;
+case "qrcode":
+							@:<jnpf-qrcode @(item.Width) @(item.ColorDark) @(item.ColorLight) @(item.StaticText) @(item.DataType) @(item.RelationField) :formData="dataForm" />
+break;
+case "relationForm":
+							@:<jnpf-relation-select @(item.vModel)@(item.Disabled)@(item.RelationField)@(item.ColumnOptions)@(item.ModelId != "" ? "modelId='"+ item.ModelId +"' " :"")@(item.Placeholder)@(item.HasPage)@(item.PageSize)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")@(item.TemplateJson)@(item.IsLinkage ? ":formData='dataForm' ": "")vModel="@(item.Name)" type="relation"></jnpf-relation-select>
+break;
+case "popupSelect":
+							@:<jnpf-popup-select @(item.vModel)@(item.Disabled)@(item.PropsValue)@(item.RelationField)@(item.ColumnOptions)@(item.InterfaceId)@(item.Placeholder)@(item.HasPage)@(item.PageSize)@(item.PopupType)@(item.PopupTitle)@(item.PopupWidth)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")@(item.TemplateJson)@(item.IsLinkage ? ":formData='dataForm' ": "")vModel="@(item.Name)" type="popup"></jnpf-popup-select>
+break;
+case "popupTableSelect":
+							@:<jnpf-table-select @(item.vModel)@(item.InterfaceId)@(item.Placeholder)@(item.Disabled)@(item.ColumnOptions)@(item.RelationField)@(item.PropsValue)@(item.HasPage)@(item.PageSize)@(item.PopupTitle)@(item.Multiple)@(item.Filterable)@(item.TemplateJson)@(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":""):vModel="'@(item.LowerName)'" @(item.IsLinkage ? ":formData='dataForm' ": "")></jnpf-table-select>
+break;
+case "createUser":
+case "createTime":
+case "currOrganize":
+case "currPosition":
+case "billRule":
+case "currDept":
+							@:<jnpf-open-data v-model="@(Model.FormModel).@(item.LowerName)" type="@(item.jnpfKey)" @(item.Disabled)></jnpf-open-data>
+break;
+case "autoComplete":
+							@:<jnpf-auto-complete v-model="@(Model.FormModel).@(item.LowerName)" vModel="@(item.Name)" @(item.IsLinked ? "@change='"+ @item.LowerName +"Change' ":"")@(item.IsLinkage ? ":formData='dataForm' ": "")@(item.TemplateJson)@(item.Total)@(item.InterfaceId)@(item.Placeholder)@(item.Disabled)@(item.Clearable)@(item.RelationField)@(item.Style)/>
+break;
+default:
+							@:<jnpf-input v-model="@(Model.FormModel).@(item.LowerName)" placeholder="系统自动生成" disabled/>
+break;
+}
+						@:</u-form-item>
+					@:</view>
+break;
+}
+}
+	}
+}

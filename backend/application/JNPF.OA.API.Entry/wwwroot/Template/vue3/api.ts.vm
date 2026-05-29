@@ -1,0 +1,50 @@
+import { defHttp } from '/@@/utils/http/axios';
+
+enum Api {
+  Prefix = '/api/@Model.NameSpace/@Model.ClassName',
+}
+
+// 获取列表
+export function getList(data) {
+  return defHttp.post({ url: Api.Prefix + `/@(Model.Type == 5 ? "Tree" : "")List`, data });
+}
+// 获取
+export function getInfo(id) {
+  return defHttp.get({ url: Api.Prefix + `/` + id });
+}
+@if(Model.HasAdd){
+@:// 新建
+@:export function create(data) {
+  @:return defHttp.post({ url: Api.Prefix, data });
+@:}
+}
+@if(Model.HasEdit){
+@:// 修改
+@:export function update(data) {
+  @:return defHttp.put({ url: Api.Prefix + `/` + data.id, data });
+@:}
+}
+@if(Model.HasRemove){
+@:// 删除
+@:export function del(id) {
+  @:return defHttp.delete({ url: Api.Prefix + `/` + id });
+@:}
+}
+@if(Model.HasBatchRemove){
+@:// 批量删除数据
+@:export function batchDelete(ids) {
+  @:return defHttp.post({ url: Api.Prefix + `/batchRemove`, data: ids });
+@:}
+}
+@if(Model.HasDownload){
+@:// 导出
+@:export function exportData(data) {
+  @:return defHttp.post({ url: Api.Prefix + `/Actions/Export`, data });
+@:}
+}
+@if(Model.HasDetail){
+@:// 详情
+@:export function getDetail(id) {
+  @:return defHttp.get({ url: Api.Prefix + `/Detail/` + id });
+@:}
+}

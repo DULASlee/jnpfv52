@@ -1,0 +1,24 @@
+﻿数据字典表
+租户定义：租户为所有数据可自行修改 （systemId != null,tenantId != null）   CLDSEntityBase类
+应用定义：应用统一的数据，各租户不可进行自定义修改 （systemId != null, tenantId == null）	ZxSystemEntityBase类
+平台定义：只有开发人员能修改，与代码逻辑相关联，需要保持各系统同步 （tenantId == null,systemId == null）  PlatformEntityBase类
+TenantEntityBase
+
+启用租户   添加teantId过滤
+启用应用   添加systemId过滤
+
+租户通用信息，与应用无关 
+公司信息\部门信息\用户信息\租房通用字典表\系统应用通用信息\所有系统信息表
+
+租户独立信息
+业务数据表
+
+组织信息   tenantId 
+系统信息   systemId
+业务信息   tenantId+systemId
+
+	TenantId	SystemId		
+某类型1	1	1	租户应用	租户系统自定义：用户自定义字典
+某类型2	1	0	租户应用	租户通用信息：如组织机构、用户
+某类型3	0	1	系统应用	应用的定义：应用通用参数设置
+某类型4	0	0	平台	开发逻辑定义

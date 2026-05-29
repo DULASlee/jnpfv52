@@ -1,0 +1,991 @@
+<template>
+@switch(Model.PopupType)
+{
+case "fullScreen":
+@if(Model.WebType != 1)
+{
+	@:<transition name="el-zoom-in-center">
+}else if(Model.WebType == 1){
+	@:<transition name="JNPF-common-layout">
+}
+		@:<div class="JNPF-preview-main">
+			@:<div class="JNPF-common-page-header">
+@if(Model.WebType != 1)
+{
+				@:<el-page-header @@back="goBack" content="详情"/>
+}
+				@:<div class="options">
+@if(Model.HasPrintBtn)
+{
+					@:<el-button type="primary" @@click="printDialog">{{ '@(Model.PrintButtonText)' }}</el-button>
+}
+					@:<el-button @@click="goBack">@(Model.CancelButtonText)</el-button>
+				@:</div>
+			@:</div>
+			@:<div :style="{margin: '0 auto',width:'@(Model.FullScreenWidth)'}">
+				@:<el-row :gutter="15" class="@(Model.FormStyle) main">
+@{ GenerateFormControls(); }
+				@:</el-row>
+			@:</div>
+@if(Model.HasPrintBtn)
+{
+			@:<print-browse :visible.sync="printBrowseVisible" :id="printIdNow" :formId="dataForm.id" />
+			@:<PrintDialog v-if="printDialogVisible" ref="printDialog" @@change="printBrowseHandle"/>
+}
+@if(Model.IsRelationForm)
+{
+			@:<Detail v-if="detailVisible" ref="Detail" @@close="detailVisible = false" />
+}
+		@:</div>
+	@:</transition>
+	break;
+case "general":
+	@:<el-dialog title="详情" :close-on-click-modal="false" :visible.sync="visible" class="JNPF-dialog JNPF-dialog_center" lock-scroll width="@(Model.GeneralWidth)">
+		@:<el-row :gutter="15" class="@(Model.FormStyle)" >
+@{ GenerateFormControls(); }
+		@:</el-row>
+		@:<span slot="footer" class="dialog-footer">
+			@:<el-button @@click="visible=false">@(Model.CancelButtonText)</el-button>
+@if(Model.HasPrintBtn)
+{
+			@:<el-button type="primary" @@click="printDialog">@(Model.PrintButtonText)</el-button>
+}
+		@:</span>
+@if(Model.HasPrintBtn)
+{
+			@:<print-browse :visible.sync="printBrowseVisible" :id="printIdNow" :formId="dataForm.id" />
+			@:<PrintDialog v-if="printDialogVisible" ref="printDialog" @@change="printBrowseHandle"/>
+}
+@if(Model.IsRelationForm)
+{
+		@:<Detail v-if="detailVisible" ref="Detail" @@close="detailVisible = false" />
+}
+	@:</el-dialog>
+	break;
+case "drawer":
+	@:<el-drawer title="详情" :visible.sync="visible" :wrapperClosable="false" size="@(Model.DrawerWidth)" append-to-body class="JNPF-common-drawer">
+		@:<div class="JNPF-flex-main">
+			@:<div class="dynamicForm dynamicDetail">
+@{ GenerateFormControls(); }
+			@:</div>
+			@:<div class="drawer-footer">
+@if(Model.HasPrintBtn)
+{
+				@:<el-button type="primary" @@click="printDialog">@(Model.PrintButtonText)</el-button>
+}
+				@:<el-button @@click="visible = false">@(Model.CancelButtonText)</el-button>
+			@:</div>
+@if(Model.IsRelationForm)
+{
+			@:<Detail v-if="detailVisible" ref="Detail" @@close="detailVisible = false" />
+}
+@if(Model.HasPrintBtn)
+{
+			@:<print-browse :visible.sync="printBrowseVisible" :id="printIdNow" :formId="dataForm.id" />
+			@:<PrintDialog v-if="printDialogVisible" ref="printDialog" @@change="printBrowseHandle"/>
+}
+		@:</div>
+     @:</el-drawer>
+	break;
+}
+</template>
+<script>
+	import request from '@@/utils/request'
+@if(Model.HasPrintBtn)
+{
+	@:import PrintDialog from '@@/components/PrintDialog'
+	@:import PrintBrowse from "@@/components/PrintBrowse"
+}
+@if(Model.IsRelationForm)
+{
+	@:import { getConfigData } from '@@/api/onlineDev/visualDev'
+	@:import Detail from '@@/views/basic/dynamicModel/list/detail'
+}
+@if(Model.IsChildrenThousandsField)
+{
+@:import { thousandsFormat } from '@@/components/Generator/utils/index.js'
+}
+	export default {
+		props: [],
+		components: { @(Model.IsRelationForm ? "Detail, " : "")@(Model.HasPrintBtn ? "PrintDialog, PrintBrowse, " : "")},
+		data() {
+			return {
+@if(Model.HasPrintBtn)
+{
+				@:printBrowseVisible: false,
+				@:printDialogVisible:false,
+				@:printId: '@(Model.PrintId)',
+	  @:printIdNow:'@(Model.PrintId)',
+}
+				loading: false,
+				visible: false,
+				dataForm: {
+					id:'',
+@foreach(var children in Model.FormList)
+{
+@switch(children.jnpfKey)
+{
+case "barcode":
+case "qrcode":
+break;
+case "checkbox":
+case "cascader":
+case "uploadImg":
+case "uploadFile":
+case "areaSelect":
+case "organizeSelect":
+@if(children.DefaultValue == null || children.DefaultValue == "")
+{
+					@:@(children.LowerName):[],
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+break;
+case "select":
+case "userSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+@if(children.Multiple)
+{
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):[],
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}else{
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}
+break;
+case "inputNumber":
+case "datePicker":
+case "rate":
+case "slider":
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+break;
+case "switch":
+					@:@(children.LowerName):@(children.DefaultValue ? "1" : "0"),
+break;
+case "table":
+					@:@(children.OriginalName):[],
+break;
+default:
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+break;
+}
+}
+				},
+@foreach(var item in Model.OptionsList)
+{
+@switch(item.jnpfKey)
+{
+case "collapse":
+				@:@(item.Name):@(item.Content),
+break;
+case "tab":
+				@:@(item.Name):"@(item.Content)",
+break;
+case "autoComplete":
+break;
+default:
+@if(item.IsProps)
+{
+				@:@(item.LowerName)Props:@(item.Props),
+}
+				@:@item.Content
+break;
+}
+}
+@if(Model.IsRelationForm)
+{
+				@:detailVisible: false
+}
+			}
+		},
+		methods: {
+			goBack() {
+                this.$emit('refresh')
+            },
+@if(Model.HasPrintBtn)
+{
+	@:printBrowseHandle(id) {
+      @:this.printDialogVisible = false
+      @:this.printIdNow = id;
+      @:this.printBrowseVisible = true;
+    @:},
+    @:printDialog() {
+      @:this.printDialogVisible = true
+      @:this.$nextTick(() => {
+        @:if(this.printId.length == 1){
+          @:this.printBrowseHandle(this.printId[0].id)
+          @:return
+        @:}
+        @:this.$refs.printDialog.init(this.printId.split(","))
+      @:})
+    @:},
+}
+			init(id) {
+				this.dataForm.id = id || 0;
+                this.visible = true;
+				this.$nextTick(() => {
+					this.$refs['@(Model.FormRef)'].resetFields();
+					if (this.dataForm.id) {
+						request({
+							url: '/api/@(Model.NameSpace)/@(Model.ClassName)/Detail/' + this.dataForm.id,
+							method: 'get'
+						}).then(res =>{
+							this.dataForm = res.data;
+@foreach(var item in Model.FormList)
+{
+@if(item.jnpfKey == "checkbox" || item.jnpfKey == "cascader" || item.jnpfKey == "uploadImg" || item.jnpfKey == "uploadFile" || item.jnpfKey == "areaSelect" || item.jnpfKey == "organizeSelect")
+{
+							@:if(!this.dataForm.@(item.LowerName))this.dataForm.@(item.LowerName)=[];
+}
+}
+						})
+					}
+				})
+			},
+@if(Model.IsRelationForm)
+{
+			@:toDetail(modelId, id) {
+				@:if (!id) return
+				@:getConfigData(modelId).then(res => {
+					@:if (!res.data) return
+					@:if (!res.data.formData) return
+					@:let formData = JSON.parse(res.data.formData)
+					@:console.log(formData)
+					@:formData.popupType = 'general'
+					@:this.detailVisible = true
+					@:this.$nextTick(() => {
+					  @:console.log(this.$refs)
+					  @:this.$refs.Detail.init(formData, modelId, id)
+					@:})
+				@:})
+			@:},
+}
+@foreach(var item in Model.FormList)
+{
+@if(item.ShowSummary)
+{
+			@:get@(item.Name)(param) {
+				@:const summaryField = @(item.SummaryField)
+@if(item.Thousands)
+{
+				@:const thousandsField = @(item.ChildrenThousandsField)
+}
+				@:const { columns, data } = param;
+				@:const sums = [];
+				@:columns.forEach((column, index) => {
+					@:if (index === 0) {
+						@:sums[index] = '合计';
+						@:return;
+					@:}
+					@:if (!summaryField.includes(column.property)) {
+						@:sums[index] = '';
+						@:return;
+					@:}
+					@:const values = data.map(item => Number(item[column.property]));
+					@:if (!values.every(value => isNaN(value))) {
+						@:sums[index] = values.reduce((prev, curr) => {
+							@:const value = Number(curr);
+							@:if (!isNaN(value)) {
+								@:return prev + curr;
+							@:} else {
+								@:return prev;
+							@:}
+						@:}, 0);
+@if(item.Thousands)
+{
+						@:if (thousandsField.includes(column.property)) sums[index] = thousandsFormat(sums[index])
+}
+					@:} else {
+						@:sums[index] = '';
+					@:}
+				@:});
+				@:return sums
+			@:},
+}
+}
+		}
+	}
+</script>
+@{
+	void GenerateFormControls()
+	{
+				<el-form ref="@(Model.FormRef)" :model="@(Model.FormModel)" size="@(Model.Size)" label-width="@(Model.LabelWidth)px" label-position="@(Model.LabelPosition)">
+@foreach(var item in Model.FormAllContols)
+{
+@switch(item.jnpfKey)
+{
+@*栅格布局*@
+case "row":
+					@:<el-col :span="@(item.Span)">
+						@:<el-row :gutter="@(item.Gutter)">
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+						@:</el-row>
+					@:</el-col>
+break;
+case "tableGrid":
+				@:<table class="table-grid-box" :style="@(item.Style)">
+					@:<tbody>
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+					@:</tbody>
+				@:</table>
+break;
+case "tableGridTr":
+				@:<tr>
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+				@:</tr>
+break;
+case "tableGridTd":
+				@:<td colspan="@(item.Colspan)" rowspan="@(item.Rowspan)">
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+				@:</td>
+break;
+case "table":
+@if(Model.UseFormPermission)
+{
+					@:<el-col :span="@(item.Span)" v-if="jnpf.hasFormP('@(item.Name)')">
+}else{
+					@:<el-col :span="@(item.Span)">
+}
+						@:<jnpf-form-tip-item label-width="0px">
+@if(item.ShowTitle)
+{
+							@:<div class="JNPF-common-title">
+@if(item.TipLabel != null)
+{
+							  @:<span slot="label">@(item.Label)
+								@:<el-tooltip placement="top" content='@(item.TipLabel)'>
+								  @:<a class='el-icon-question tooltip-question'></a>
+								@:</el-tooltip>
+							  @:</span>
+}else{
+							  @:<h2>@(item.Label)</h2>
+}
+							@:</div>
+}
+						@:<el-table :data="dataForm.@(item.Name)" size='mini' @(item.ShowSummary ? "show-summary :summary-method='get" + item.ChildTableName + "'" : "") class="complexHeader">
+							@:<el-table-column type="index" width="50" label="序号" align="center" fixed="left" />
+@foreach (var childrens in item.Children)
+{
+@if(childrens.ComplexColumns!=null)
+{
+							@:<el-table-column prop="@(childrens.LowerName)" @(childrens.ColumnWidth)label="@(childrens.Label)" align="@(childrens.Align)" @(Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + @item.Name + "-" + @childrens.LowerName + "')\"" : "")>
+@foreach (var complexColumns in childrens.ComplexColumns)
+{
+								@{ GenerateChildrenTableControls(item, complexColumns, childrens.Align); }
+}
+							@:</el-table-column>
+}else{
+								@{ GenerateChildrenTableControls(item, childrens); }
+}
+}
+							@:</el-table>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "card":
+					@:<el-col :span="@(item.Span)">
+						@:<el-card class="mb-20" shadow="@(item.Shadow)">
+							@:<div slot="header">
+								@:<span>@(item.Content)</span>
+@if(item.TipLabel != null)
+{
+									@:<el-tooltip placement="top" content='@(item.TipLabel)'>
+									  @:<a class='el-icon-question tooltip-question'></a>
+									@:</el-tooltip>
+}
+							@:</div>
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+						@:</el-card>
+					@:</el-col>
+break;
+case "collapse":
+					@:<el-col :span="@(item.Span)">
+						@:<el-collapse :accordion="@(item.Accordion)" v-model="@(item.Name)" class="mb-20">
+@foreach(var collapse in item.Children)
+{
+							@:<el-collapse-item title="@(collapse.Title)" name="@(collapse.Name)">
+@{GenerateFormChildrenControls(collapse.Children,item.Gutter);}
+							@:</el-collapse-item>
+}
+						@:</el-collapse>
+					@:</el-col>
+break;
+case "tab":
+					@:<el-col :span="@(item.Span)">
+						@:<el-tabs type="@(item.Type)" tab-position="@(item.TabPosition)" v-model="@(item.Name)" class="mb-10">
+@foreach(var collapse in item.Children)
+{
+							@:<el-tab-pane label="@(collapse.Title)" name="@(collapse.Name)">
+@{GenerateFormChildrenControls(collapse.Children,item.Gutter);}								
+							@:</el-tab-pane>
+}
+						@:</el-tabs>
+					@:</el-col>
+break;
+case "divider":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item tip-label='@(item.TipLabel)' label-width="@(item.LabelWidth)px">
+							@:<el-divider content-position="@(item.Contentposition)">@(item.Default)</el-divider>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "groupTitle":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item label-width="0px">
+							@:<JnpfGroupTitle content-position="@(item.Contentposition)" tipLabel='@(item.TipLabel)' content="@(item.Content)"></JnpfGroupTitle>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "text":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item tip-label='@(item.TipLabel)' label-width="@(item.LabelWidth)px">
+							@:<JnpfText content="@(item.Content)" :textStyle='@(item.TextStyle)'></JnpfText>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "button":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item tip-label='@(item.TipLabel)'>
+							@:<jnpf-button align="@(item.Align)" buttonText="@(item.ButtonText)" type="@(item.Type)"></jnpf-button>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "link":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item tip-label='@(item.TipLabel)' label-width="0">
+							@:<jnpf-link content="@(item.Content)" href="@(item.Href)" target="@(item.Target)" :textStyle='@(item.TextStyle)'></jnpf-link>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "iframe":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<JnpfIframe href="@(item.Href)" @(item.Height!=null ? ":height='"+item.Height+"'" : "")@(item.BorderColor)@(item.BorderType)@(item.BorderWidth)></JnpfIframe>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "barcode":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"'" : "label-width='0'")>
+							@:<JnpfBarcode @(item.Format) @(item.LineColor) @(item.Background) @(item.Width) @(item.Height) @(item.StaticText) />
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "qrcode":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"'" : "label-width='0'")>
+							@:<JnpfQrcode @(item.ColorLight) @(item.ColorDark) @(item.Width) @(item.StaticText) />
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "alert":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item tip-label='@(item.TipLabel)' label-width="0">
+							@:<el-alert title="@(item.Title)" type="@(item.Type)" :closable="@(item.Closable.ToString().ToLower())" :show-icon="@(item.ShowIcon)" description="@(item.Description)" closeText="@(item.CloseText)"></el-alert>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "datePicker":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<p>{{dataForm.@(item.LowerName)}}</p>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "createTime":
+case "modifyTime":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<p>{{dataForm.@(item.LowerName)}}</p>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "uploadFile":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<@(item.Tag) v-model="dataForm.@(item.LowerName)" @(item.FileSize)@(item.SizeUnit)@(item.Limit)@(item.ButtonText)disabled detailed></@(item.Tag)>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "uploadImg":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item tip-label='@(item.TipLabel)'  label="@(item.Label)" label-width="@(item.LabelWidth)px">
+							@:<@(item.Tag) v-model="dataForm.@(item.LowerName)" @(item.FileSize)@(item.SizeUnit)@(item.Limit)disabled detailed></@(item.Tag)>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+@*颜色选择器*@
+case "colorPicker":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<@(item.Tag) v-model="dataForm.@(item.LowerName)" disabled></@(item.Tag)>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+@*评分*@
+case "rate":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							 @:<@(item.Tag) v-model="dataForm.@(item.LowerName)" @(item.Count!=null && item.Count!="" ? ":count='"+item.Count+"'" : "") @(item.Style)@(item.Max)disabled></@(item.Tag)>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+@*滑块*@
+case "slider":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<@(item.Tag) v-model="dataForm.@(item.LowerName)" @(item.Step)@(item.Max)disabled></@(item.Tag)>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "editor":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<div v-html="dataForm.@(item.LowerName)" disabled></div>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "relationForm":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<a @@click="toDetail('@(item.ModelId)', dataForm.@(item.LowerName)_id)" style="color:#1890ff">{{ dataForm.@(item.LowerName) }}</a>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "relationFormAttr":
+case "popupAttr":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<p>{{dataForm.@(item.IsStorage == 2 ? item.LowerName : item.RelationField + "_" + @item.ShowField)}}</p>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "inputNumber":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							<JnpfNumber v-model="dataForm.@(item.LowerName)" @(item.AddonBefore)@(item.AddonAfter)@(item.Thousands)@(item.AmountChinese)@(item.Precision)/>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "sign":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<JnpfSign v-model="dataForm.@(item.LowerName)" detailed />
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "signature":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<JnpfSignature v-model="dataForm.@(item.LowerName)" detailed />
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "location":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<JnpfLocation v-model="dataForm.@(item.LowerName)" @(item.EnableLocationScope) detailed />
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "input":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@<jnpf-input v-model="dataForm.@(item.Name)" @(item.UseMask) @(item.MaskConfig)@(item.AddonBefore)@(item.AddonAfter) detailed />
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+default:
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<p>{{dataForm.@(item.LowerName)}}</p>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+}
+}
+				</el-form>
+	}
+}
+@{
+	void GenerateFormChildrenControls(ICollection<FormControlDesignModel> childrenList, int gutter)
+	{
+@foreach(var item in childrenList)
+{
+@switch(item.jnpfKey)
+{
+@*栅格布局*@
+case "row":
+					@:<el-col :span="@(item.Span)">
+						@:<el-row :gutter="@(gutter)">
+@{GenerateFormChildrenControls(item.Children, gutter);}
+						@:</el-row>
+					@:</el-col>
+break;
+case "tableGrid":
+				@:<table class="table-grid-box" :style="@(item.Style)">
+					@:<tbody>
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+					@:</tbody>
+				@:</table>
+break;
+case "tableGridTr":
+				@:<tr>
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+				@:</tr>
+break;
+case "tableGridTd":
+				@:<td colspan="@(item.Colspan)" rowspan="@(item.Rowspan)">
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+				@:</td>
+break;
+case "table":
+@if(Model.UseFormPermission)
+{
+					@:<el-col :span="@(item.Span)" v-if="jnpf.hasFormP('@(item.Name)')">
+}else{
+					@:<el-col :span="@(item.Span)">
+}
+						@:<jnpf-form-tip-item label-width="0px">
+@if(item.ShowTitle)
+{
+							@:<div class="JNPF-common-title">
+@if(item.TipLabel != null)
+{
+							  @:<span slot="label">@(item.Label)
+								@:<el-tooltip placement="top" content='@(item.TipLabel)'>
+								  @:<a class='el-icon-question tooltip-question'></a>
+								@:</el-tooltip>
+							  @:</span>
+}else{
+							  @:<h2>@(item.Label)</h2>
+}
+							@:</div>
+}
+						@:<el-table :data="dataForm.@(item.Name)" size='mini' @(item.ShowSummary ? "show-summary :summary-method='get" + @item.ChildTableName + "'" : "") class="complexHeader">
+							@:<el-table-column type="index" width="50" label="序号" align="center" fixed="left" />
+@foreach (var childrens in item.Children)
+{
+
+@if(childrens.ComplexColumns!=null)
+{
+							@:<el-table-column prop="@(childrens.LowerName)" @(childrens.ColumnWidth)label="@(childrens.Label)" align="@(childrens.Align)" @(Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + @item.Name + "-" + @childrens.LowerName + "')\"" : "")>
+@foreach (var complexColumns in childrens.ComplexColumns)
+{
+								@{ GenerateChildrenTableControls(item, complexColumns, childrens.Align); }
+}
+							@:</el-table-column>
+}else{
+								@{ GenerateChildrenTableControls(item, childrens); }
+}
+}
+							@:</el-table>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "card":
+					@:<el-col :span="@(item.Span)">
+						@:<el-card class="mb-20" shadow="@(item.Shadow)">
+							@:<div slot="header">
+								@:<span>@(item.Content)</span>
+@if(item.TipLabel != null)
+{
+									@:<el-tooltip placement="top" content='@(item.TipLabel)'>
+									  @:<a class='el-icon-question tooltip-question'></a>
+									@:</el-tooltip>
+}
+							@:</div>
+@{GenerateFormChildrenControls(item.Children,gutter);}
+						@:</el-card>
+					@:</el-col>
+break;
+case "collapse":
+					@:<el-col :span="@(item.Span)">
+						@:<el-collapse :accordion="@(item.Accordion)" v-model="@(item.Name)" class="mb-20">
+@foreach(var collapse in item.Children)
+{
+							@:<el-collapse-item title="@(collapse.Title)" name="@(collapse.Name)">
+@{GenerateFormChildrenControls(collapse.Children,gutter);}
+							@:</el-collapse-item>
+}
+						@:</el-collapse>
+					@:</el-col>
+break;
+case "tab":
+					@:<el-col :span="@(item.Span)">
+						@:<el-tabs type="@(item.Type)" tab-position="@(item.TabPosition)" v-model="@(item.Name)" class="mb-10">
+@foreach(var collapse in item.Children)
+{
+							@:<el-tab-pane label="@(collapse.Title)" name="@(collapse.Name)">
+@{GenerateFormChildrenControls(collapse.Children,gutter);}								
+							@:</el-tab-pane>
+}
+						@:</el-tabs>
+					@:</el-col>
+break;
+case "divider":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item tip-label='@(item.TipLabel)' label-width="@(item.LabelWidth)px">
+							@:<el-divider content-position="@(item.Contentposition)">@(item.Default)</el-divider>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "groupTitle":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item label-width="0px">
+							@:<JnpfGroupTitle content-position="@(item.Contentposition)" tipLabel='@(item.TipLabel)' content="@(item.Content)"></JnpfGroupTitle>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "text":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item tip-label='@(item.TipLabel)' label-width="@(item.LabelWidth)px">
+							@:<JnpfText content="@(item.Content)" :textStyle='@(item.TextStyle)' @(item.Style)></JnpfText>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "button":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item tip-label='@(item.TipLabel)'>
+							@:<jnpf-button align="@(item.Align)" buttonText="@(item.ButtonText)" type="@(item.Type)"></jnpf-button>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "link":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item tip-label='@(item.TipLabel)' label-width="0">
+							@:<jnpf-link content="@(item.Content)" href="@(item.Href)" target="@(item.Target)" :textStyle='@(item.TextStyle)'></jnpf-link>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "iframe":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<JnpfIframe href="@(item.Href)" @(item.Height!=null ? ":height='"+item.Height+"'" : "")@(item.BorderColor)@(item.BorderType)@(item.BorderWidth)></JnpfIframe>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "barcode":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"'" : "label-width='0'")>
+							@:<JnpfBarcode @(item.Format) @(item.LineColor) @(item.Background) @(item.Width) @(item.Height) @(item.StaticText) />
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "qrcode":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"'" : "label-width='0'")>
+							@:<JnpfQrcode @(item.ColorLight) @(item.ColorDark) @(item.Width) @(item.StaticText) />
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "alert":
+					@:<el-col :span="@(item.Span)">
+						@:<jnpf-form-tip-item tip-label='@(item.TipLabel)' label-width="0">
+							@:<el-alert title="@(item.Title)" type="@(item.Type)" :closable="@(item.Closable.ToString().ToLower())" :show-icon="@(item.ShowIcon)" description="@(item.Description)" closeText="@(item.CloseText)"></el-alert>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "datePicker":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<p>{{dataForm.@(item.LowerName)}}</p>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "createTime":
+case "modifyTime":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<p>{{dataForm.@(item.LowerName)}}</p>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "uploadFile":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<@(item.Tag) v-model="dataForm.@(item.LowerName)" @(item.FileSize)@(item.SizeUnit)@(item.Limit)@(item.ButtonText)disabled detailed></@(item.Tag)>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "uploadImg":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item tip-label='@(item.TipLabel)'  label="@(item.Label)" label-width="@(item.LabelWidth)px">
+							@:<@(item.Tag) v-model="dataForm.@(item.LowerName)" @(item.FileSize)@(item.SizeUnit)@(item.Limit)disabled detailed></@(item.Tag)>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+@*颜色选择器*@
+case "colorPicker":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<@(item.Tag) v-model="dataForm.@(item.LowerName)"></@(item.Tag)>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+@*评分*@
+case "rate":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							 @:<@(item.Tag) v-model="dataForm.@(item.LowerName)" @(item.Count!=null && item.Count!="" ? ":count='"+item.Count+"'" : "") @(item.Style)@(item.Max) disabled></@(item.Tag)>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+@*滑块*@
+case "slider":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<@(item.Tag) v-model="dataForm.@(item.LowerName)" @(item.Step)@(item.Max) disabled></@(item.Tag)>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "editor":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<div v-html="dataForm.@(item.LowerName)"></div>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "relationFormAttr":
+case "popupAttr":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<p>{{dataForm.@(item.IsStorage == 2 ? item.LowerName : item.RelationField + "_" + @item.ShowField)}}</p>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "relationForm":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<a @@click="toDetail('@(item.ModelId)', dataForm.@(item.LowerName)_id)" style="color:#1890ff">{{ dataForm.@(item.LowerName) }}</a>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "inputNumber":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							<JnpfNumber v-model="dataForm.@(item.LowerName)" @(item.AddonBefore)@(item.AddonAfter)@(item.Thousands)@(item.AmountChinese)@(item.Precision)/>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "sign":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<JnpfSign v-model="dataForm.@(item.LowerName)" detailed />
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "signature":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<JnpfSignature v-model="dataForm.@(item.LowerName)" detailed />
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "location":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<JnpfLocation v-model="dataForm.@(item.LowerName)" @(item.EnableLocationScope) detailed />
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+case "input":
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@<jnpf-input v-model="dataForm.@(item.Name)" @(item.UseMask) @(item.MaskConfig)@(item.AddonBefore)@(item.AddonAfter) detailed />
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+default:
+					@:<el-col :span="@(item.Span)" @(item.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + item.OriginalName + "')\"" : ""))>
+						@:<jnpf-form-tip-item @(item.ShowLabel ? "tip-label='"+item.TipLabel+"' label='"+item.Label+"' label-width='"+item.LabelWidth+"px'" : "label-width='0px'")>
+							@:<p>{{dataForm.@(item.LowerName)}}</p>
+						@:</jnpf-form-tip-item>
+					@:</el-col>
+break;
+}
+}
+	}
+void GenerateChildrenTableControls(FormControlDesignModel item, FormControlDesignModel childrens, string pAlign="")
+{
+								@:<el-table-column @(childrens.ColumnWidth)label="@(childrens.Label)" align="@(childrens.Align)" @(childrens.TableFixed!="none" ? "fixed='"+childrens.TableFixed+"'" : "") prop="@(childrens.LowerName)" @(childrens.NoShow ? "v-if='false'" : (Model.UseFormPermission ? "v-if=\"jnpf.hasFormP('" + @item.Name + "-" + @childrens.LowerName + "')\"" : ""))>
+@if(childrens.Label != null && childrens.TipLabel != null)
+{
+									@:<template slot="header">
+									  @:<span slot="label">@(childrens.Label)
+										@:<el-tooltip placement="top" content='@(childrens.TipLabel)'>
+										  @:<a class='el-icon-question tooltip-question'></a>
+										@:</el-tooltip>
+									  @:</span>
+									@:</template>
+}
+									@:<template slot-scope="scope">
+@switch(childrens.jnpfKey)
+{
+case "uploadFile":
+										@:<@(childrens.Tag) v-model="scope.row.@(childrens.LowerName)" @(childrens.FileSize)@(childrens.SizeUnit)@(childrens.Limit)@(childrens.ButtonText)disabled detailed></@(childrens.Tag)>
+break;
+case "uploadImg":
+										@:<@(childrens.Tag) v-model="scope.row.@(childrens.LowerName)" @(childrens.FileSize)@(childrens.SizeUnit)@(childrens.Limit)disabled detailed></@(childrens.Tag)>
+break;
+case "relationFormAttr":
+case "popupAttr":
+										@:<p>{{scope.row.@(childrens.IsStorage == 2 ? childrens.LowerName : childrens.RelationField + "_" + @childrens.ShowField)}}</p>
+break;
+case "relationForm":
+										@:<el-link :underline="false" @@click.native="toDetail('@(childrens.ModelId)',scope.row.@(childrens.LowerName)_id)" type="primary">
+											@:{{ scope.row.@(childrens.LowerName) }}
+										@:</el-link>
+break;
+case "inputNumber":
+										@:<JnpfNumber v-model="scope.row.@(childrens.LowerName)" @(childrens.AddonBefore)@(childrens.AddonAfter)@(childrens.Thousands)@(childrens.AmountChinese)@(childrens.Precision)/>
+break;
+case "sign":
+										@:<JnpfSign v-model="scope.row.@(childrens.LowerName)" detailed />
+break;
+case "signature":
+										@:<JnpfSignature v-model="scope.row.@(childrens.LowerName)" detailed />
+break;
+case "location":
+										@:<JnpfLocation v-model="scope.row.@(childrens.LowerName)" @(childrens.EnableLocationScope) detailed />
+break;
+case "rate":
+										@:<JnpfRate v-model="scope.row.@(childrens.LowerName)" disabled />
+break;
+case "slider":
+										@:<JnpfSlider v-model="scope.row.@(childrens.LowerName)" disabled />
+break;
+case "input":
+										@<jnpf-input v-model="scope.row.@(childrens.Name)" @(childrens.UseMask) @(childrens.MaskConfig)@(childrens.AddonBefore)@(childrens.AddonAfter) detailed />
+break;
+default:
+										@:<p>{{scope.row.@(childrens.LowerName)}}</p>
+break;
+}
+									@:</template>
+								@:</el-table-column>
+}
+}

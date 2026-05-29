@@ -1,0 +1,24 @@
+---
+description: docs/ 目录结构强制约定 — 禁止在根目录或未授权子目录下创建文件
+globs:
+  - docs/**/*
+---
+
+# docs/ 目录结构约定
+
+## 目录权限表
+
+| 目录 | 用途 | AI可读 | AI可写 |
+|------|------|--------|--------|
+| docs/architecture/ | 架构内参 | 是 | 是 |
+| docs/架构迭代/ | 用户手工维护 | **禁止** | **禁止** |
+| docs/superpowers/ | 会话产物暂存 | 否 | 是 |
+| docs/_archive/ | 过期文档归档 | 否 | 否 |
+
+## 硬性规则
+
+1. **禁止在 docs/ 根目录下直接创建文件** — 必须放入上述子目录之一。
+2. **禁止创建约定之外的新子目录** — 如需新目录须先获用户批准。
+3. **架构分析只写 docs/architecture/** — superpowers/ 仅放计划和草稿。
+4. **技术判断只以 docs/architecture/ 和 openspec/specs/ 为依据** — 不引用 superpowers/ 或 _archive/ 的内容。
+5. **新增/删除 docs/architecture/ 下文档时同步更新其 README.md 索引。**

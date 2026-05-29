@@ -1,0 +1,192 @@
+{
+  "generatedAt": "2026-05-22T09:58:48.753Z",
+  "dist": {
+    "path": "web/dist_v1.1",
+    "viewFileCount": 344,
+    "jsChunkCount": 725,
+    "modules": {
+      "extend": 80,
+      "system": 50,
+      "workFlow": 44,
+      "basic": 33,
+      "permission": 31,
+      "systemData": 30,
+      "common": 22,
+      "msgCenter": 21,
+      "onlineDev": 18,
+      "water": 9,
+      "generator": 6
+    },
+    "markers": {
+      "libs": {
+        "echarts": true,
+        "xlsx": true,
+        "tinymce": true,
+        "logicflow": true,
+        "LogicFlow": false,
+        "monaco": true,
+        "highcharts": true,
+        "vditor": true
+      },
+      "routes": {
+        "printDevH5": true,
+        "formShortLink": true,
+        "/sso": true,
+        "whitePathList": true
+      },
+      "chunkCount": 725
+    },
+    "apiPathCount": 505,
+    "apiPathsSample": [
+      "/api/${e",
+      "/api/OAuth/gettenantinfo",
+      "/api/ZX_Water/Area",
+      "/api/ZX_Water/Area/",
+      "/api/ZX_Water/Area/Detail/",
+      "/api/ZX_Water/Area/List",
+      "/api/ZX_Water/Customer/",
+      "/api/ZX_Water/Customer/List",
+      "/api/ZX_Water/Payment/GetPayInfo",
+      "/api/ZX_Water/Payment/Pay",
+      "/api/ZxDev/Config/GetConfigData/{id}",
+      "/api/ZxDev/Config/SubmitConfigData/",
+      "/api/blade-visual/visual/Selector",
+      "/api/example/UserController",
+      "/api/extend/BigData",
+      "/api/extend/CrmOrder",
+      "/api/extend/CrmOrder/",
+      "/api/extend/CrmOrder/Customer",
+      "/api/extend/CrmOrder/Goods",
+      "/api/extend/CrmOrder/OrderEntry/{id}/Items",
+      "/api/extend/CrmOrder/{id}/CollectionPlan",
+      "/api/extend/Document",
+      "/api/extend/Document/",
+      "/api/extend/Document/Download/{id}",
+      "/api/extend/Document/FolderTree/{id}",
+      "/api/extend/Document/Share",
+      "/api/extend/Document/ShareTome",
+      "/api/extend/Document/ShareUser/{id}",
+      "/api/extend/Document/Trash",
+      "/api/extend/Document/Trash/{id}",
+      "/api/extend/Document/Trash/{id}/Actions/Recovery",
+      "/api/extend/Document/merge",
+      "/api/extend/Document/{id}",
+      "/api/extend/Document/{id}/Actions/MoveTo/{id}",
+      "/api/extend/Document/{id}/Actions/Share",
+      "/api/extend/DocumentPreview",
+      "/api/extend/DocumentPreview/{id}/Preview",
+      "/api/extend/Email",
+      "/api/extend/Email/Actions/SaveDraft",
+      "/api/extend/Email/Config"
+    ]
+  },
+  "src": {
+    "path": "jnpf-web-vue3/src/views",
+    "viewFileCount": 325,
+    "modules": {
+      "extend": 79,
+      "system": 48,
+      "workFlow": 43,
+      "basic": 32,
+      "permission": 31,
+      "systemData": 28,
+      "msgCenter": 21,
+      "common": 19,
+      "onlineDev": 18,
+      "generator": 6
+    }
+  },
+  "moduleCompare": {
+    "basic": {
+      "dist": 33,
+      "src": 32,
+      "inDist": true,
+      "inSrc": true
+    },
+    "common": {
+      "dist": 22,
+      "src": 19,
+      "inDist": true,
+      "inSrc": true
+    },
+    "extend": {
+      "dist": 80,
+      "src": 79,
+      "inDist": true,
+      "inSrc": true
+    },
+    "generator": {
+      "dist": 6,
+      "src": 6,
+      "inDist": true,
+      "inSrc": true
+    },
+    "msgCenter": {
+      "dist": 21,
+      "src": 21,
+      "inDist": true,
+      "inSrc": true
+    },
+    "onlineDev": {
+      "dist": 18,
+      "src": 18,
+      "inDist": true,
+      "inSrc": true
+    },
+    "permission": {
+      "dist": 31,
+      "src": 31,
+      "inDist": true,
+      "inSrc": true
+    },
+    "system": {
+      "dist": 50,
+      "src": 48,
+      "inDist": true,
+      "inSrc": true
+    },
+    "systemData": {
+      "dist": 30,
+      "src": 28,
+      "inDist": true,
+      "inSrc": true
+    },
+    "water": {
+      "dist": 9,
+      "src": 0,
+      "inDist": true,
+      "inSrc": false
+    },
+    "workFlow": {
+      "dist": 44,
+      "src": 43,
+      "inDist": true,
+      "inSrc": true
+    }
+  },
+  "distOnlyPages": [
+    "basic/error-log/data.tsx",
+    "common/dynamicModel/list/ChildrenList.vue",
+    "common/dynamicModel/list/CustomBatchForm.vue",
+    "common/dynamicModel/list/ExtendForm.vue",
+    "extend/formDemo/fieldForm1/schemaData.tsx",
+    "system/printDevH5/Preview.vue",
+    "system/printDevH5/index.vue",
+    "systemData/dataInterface/LogDetail.vue",
+    "systemData/dataInterface/log.vue",
+    "water/baseinfo/area/Detail.vue",
+    "water/baseinfo/area/Form.vue",
+    "water/baseinfo/area/index.vue",
+    "water/customer/Form.vue",
+    "water/customer/index.vue",
+    "water/payment/Form.vue",
+    "water/payment/index.vue",
+    "water/payment/index1.vue",
+    "water/payment/index2.vue",
+    "workFlow/flowEngine/VersionHistory.vue"
+  ],
+  "srcOnlyPages": [],
+  "srcOnlyCount": 0,
+  "bothCount": 325,
+  "distOnlyCount": 19
+}

@@ -1,0 +1,250 @@
+﻿using JNPF.Common.Security;
+@*是否需要上传文件引用*@
+@if(Model.IsUploading)
+{
+@:using JNPF.Common.Models;
+}
+using JNPF.@(Model.NameSpace).Entitys.Dto.@(Model.ClassName);
+@foreach(var table in Model.TableRelations)
+{
+@:using JNPF.@(Model.NameSpace).Entitys.Dto.@(table.ClassName);
+}
+using Mapster;
+
+namespace JNPF.@(Model.NameSpace).Entitys.Mapper.@Model.ClassName;
+ 
+public class Mapper : IRegister
+{
+	public void Register(TypeAdapterConfig config)
+	{
+@*判断是否需要映射*@
+@if(Model.IsMapper)
+{
+@*判断WebType 1-纯表单,2-常规表单,3-流程列表单*@
+@switch(Model.WebType)
+{
+case 1:
+@{GetCrInputToEntity(); }
+@if(Model.EnableFlow || Model.Type == 3){
+GetEntityToInfoOutput();
+}
+break;
+case 2:
+@{GetCrInputToEntity(); }
+@{GetEntityToInfoOutput();}
+@{GetEntityToDetailOutput();}
+@if(Model.TableType == 4)
+{
+GetListOutputToInlineEditorOutput();
+}
+break;
+}
+}
+	}
+}
+@{
+	@*新增输入转实体*@
+	void GetCrInputToEntity()
+	{	
+		@:config.ForType<@(Model.ClassName)CrInput, @(Model.ClassName)Entity>()
+@*循环表字段*@
+@foreach (var column in Model.TableField)
+{
+@*判断jnpfKey不为空*@
+@if (column.jnpfKey != null)
+{
+switch(column.jnpfKey)
+{
+@*下拉框控件*@
+case "select":
+case "userSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+case "usersSelect":
+@*是否为多选*@
+@if(column.IsMultiple)
+{
+			@:.Map(dest => dest.@(column.ColumnName), src => src.@(column.LowerColumnName) != null && src.@(column.LowerColumnName).Count > 0 ? src.@(column.LowerColumnName).ToJsonString() : null)
+}
+break;
+@*复选框、级联、省市区、图片上传、文件上传*@
+case "checkbox":
+case "cascader":
+case "organizeSelect":
+case "areaSelect":
+case "uploadImg":
+case "uploadFile":
+			@:.Map(dest => dest.@(column.ColumnName), src => src.@(column.LowerColumnName) != null && src.@(column.LowerColumnName).Count > 0 ? src.@(column.LowerColumnName).ToJsonString() : null)
+break;
+}
+}
+}
+		@:;
+	}
+}
+@{
+	@*实体转详情输出*@
+	void GetEntityToInfoOutput()
+	{
+		@:config.ForType<@(Model.ClassName)Entity, @(Model.ClassName)InfoOutput>()
+@foreach (var column in Model.TableField)
+{
+@if (column.jnpfKey != null)
+{
+switch(column.jnpfKey)
+{
+case "select":
+case "userSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+case "usersSelect":
+@if(column.IsMultiple)
+{
+			@:.Map(dest => dest.@(column.LowerColumnName), src => src.@(column.ColumnName) != null ? src.@(column.ColumnName).ToObject<List<string>>() : null)
+}
+break;
+case "cascader":
+case "organizeSelect":
+case "areaSelect":
+@if(column.IsMultiple)
+{
+			@:.Map(dest => dest.@(column.LowerColumnName), src => src.@(column.ColumnName) != null ? src.@(column.ColumnName).ToObject<List<List<string>>>() : null)
+}
+else
+{
+			@:.Map(dest => dest.@(column.LowerColumnName), src => src.@(column.ColumnName) != null ? src.@(column.ColumnName).ToObject<List<string>>() : null)
+}
+break;
+case "checkbox":
+			@:.Map(dest => dest.@(column.LowerColumnName), src => src.@(column.ColumnName) != null ? src.@(column.ColumnName).ToObject<List<string>>() : null)
+break;
+case "uploadImg":
+case "uploadFile":
+			@:.Map(dest => dest.@(column.LowerColumnName), src => src.@(column.ColumnName) != null ? src.@(column.ColumnName).ToObject<List<FileControlsModel>>() : new List<FileControlsModel>())
+break;
+case "modifyTime":
+			@:.Map(dest => dest.@(column.LowerColumnName), src => src.@(column.ColumnName) != null ? string.Format("{0:yyyy-MM-dd HH:mm:ss}", src.@(column.ColumnName)) : null)
+break;
+case "createTime":
+			@:.Map(dest => dest.@(column.LowerColumnName), src => string.Format("{0:yyyy-MM-dd HH:mm:ss}", src.@(column.ColumnName)))
+break;
+}
+}
+}
+@foreach(var table in Model.TableRelations)
+{
+            @:.Map(dest => dest.@table.ControlModel, src => src.@(table.ClassName)List.Adapt<List<@(table.ClassName)InfoOutput>>())
+}
+		@:;
+	}
+}
+@{
+	@*实体转创建输入*@
+	void GetEntityToCrInput()
+	{
+		@:config.ForType<@(Model.ClassName)Entity, @(Model.ClassName)CrInput>()
+@foreach (var column in Model.TableField)
+{
+@if (column.jnpfKey != null)
+{
+switch(column.jnpfKey)
+{
+case "select":
+case "userSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+case "usersSelect":
+@if(column.IsMultiple)
+{
+			@:.Map(dest => dest.@(column.LowerColumnName), src => src.@(column.ColumnName).ToObject<List<string>>())
+}
+break;
+case "cascader":
+case "organizeSelect":
+case "areaSelect":
+@if(column.IsMultiple)
+{
+			@:.Map(dest => dest.@(column.LowerColumnName), src => src.@(column.ColumnName).ToObject<List<List<string>>>())
+}else{
+			@:.Map(dest => dest.@(column.LowerColumnName), src => src.@(column.ColumnName).ToObject<List<string>>())
+}
+break;
+case "checkbox":
+			@:.Map(dest => dest.@(column.LowerColumnName), src => src.@(column.ColumnName).ToObject<List<string>>())
+break;
+case "uploadImg":
+case "uploadFile":
+			@:.Map(dest => dest.@(column.LowerColumnName), src => src.@(column.ColumnName).ToObject<List<FileControlsModel>>())
+break;
+}
+}
+}
+		@:;
+	}
+	@*新增输入转实体*@
+	void GetEntityToDetailOutput()
+	{	
+		@:config.ForType<@(Model.ClassName)Entity, @(Model.ClassName)DetailOutput>()
+@foreach(var table in Model.TableRelations)
+{
+            @:.Map(dest => dest.@table.ControlModel, src => src.@(table.ClassName)List.Adapt<List<@(table.ClassName)DetailOutput>>())
+}
+		@:;
+	}
+	@*列表转行内编辑输出*@
+	void GetListOutputToInlineEditorOutput()
+	{
+		@:config.ForType<@(Model.ClassName)ListOutput, @(Model.ClassName)InlineEditorOutput>()
+@foreach (var column in Model.TableField)
+{
+@if (column.IsShow)
+{
+switch(column.jnpfKey)
+{
+case "select":
+case "userSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+case "usersSelect":
+@if(column.IsMultiple)
+{
+			@:.Map(dest => dest.@(column.LowerColumnName), src => !string.IsNullOrEmpty(src.@(column.LowerColumnName)) ? src.@(column.LowerColumnName).ToObject<List<string>>() : new List<string>())
+}
+break;
+case "cascader":
+case "organizeSelect":
+case "areaSelect":
+@if(column.IsMultiple)
+{
+			@:.Map(dest => dest.@(column.LowerColumnName), src => !string.IsNullOrEmpty(src.@(column.LowerColumnName)) ? src.@(column.LowerColumnName).ToObject<List<List<string>>>() : new List<List<string>>())
+}
+else
+{
+			@:.Map(dest => dest.@(column.LowerColumnName), src => !string.IsNullOrEmpty(src.@(column.LowerColumnName)) ? src.@(column.LowerColumnName).ToObject<List<string>>() : new List<string>())
+}
+break;
+case "checkbox":
+			@:.Map(dest => dest.@(column.LowerColumnName), src => !string.IsNullOrEmpty(src.@(column.LowerColumnName)) ? src.@(column.LowerColumnName).ToObject<List<string>>() : new List<string>())
+break;
+}
+}
+}
+		@:;
+	}
+}

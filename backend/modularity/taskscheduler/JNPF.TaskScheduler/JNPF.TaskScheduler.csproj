@@ -1,0 +1,9 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\common\JNPF.Common.Core\JNPF.Common.Core.csproj" />
+		<ProjectReference Include="..\..\system\JNPF.Systems.Interfaces\JNPF.Systems.Interfaces.csproj" />
+		<ProjectReference Include="..\JNPF.TaskScheduler.Interfaces\JNPF.TaskScheduler.Interfaces.csproj" />
+	</ItemGroup>
+
+</Project>

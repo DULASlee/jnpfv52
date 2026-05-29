@@ -1,0 +1,187 @@
+.jnpf-tree-select-popup {
+		height: 100%;
+		z-index: 9999 !important;
+		.jnpf-tree-select-body {
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+			.jnpf-tree-select-title {
+				display: flex;
+				align-items: center;
+				height: 100rpx;
+				padding: 0 16rpx !important;
+				.backIcon {
+					font-size: 40rpx;
+					color: #000;
+				}
+				.title {
+					flex: 1;
+					text-align: center;
+					padding-right: 40rpx;
+					font-size: 32rpx;
+				}
+			}
+			.jnpf-tree-select-search {
+				padding: 10px 12px;
+			}
+			.jnpf-tree-selected {
+				width: 100%;
+				padding: 0 44rpx 0;
+				.jnpf-tree-selected-head {
+					width: 100%;
+					height: 60rpx;
+					display: flex;
+					justify-content: space-between;
+					.clear-btn {
+						color: #2979ff;
+					}
+				}
+				.jnpf-tree-selected-box {
+					width: 100%;
+					display: flex;
+					justify-content: center;
+					border-bottom: 1rpx solid #c0c4cc;
+					.select-list {
+						max-height: 150rpx;
+						padding-top: 10rpx;
+						justify-content: flex-start;
+						flex-wrap: wrap;
+						.u-selectTag {
+							margin-bottom: 10rpx;
+							margin-left: 10rpx;
+						}
+					}
+					.jnpf-tree-selected-list{
+						display: flex;
+						justify-content: flex-start;
+						flex-wrap: wrap;
+						padding-top: 10rpx;
+						.u-selectTag {
+							width: 310rpx;
+							border: 1px solid #2194fa;
+							background-color: #e8f4fe;
+							line-height: 40rpx;
+							margin: 10rpx;
+							padding-left: 10rpx;
+							display: flex;
+							align-items: center;
+							border-radius: 8rpx;
+							&.u-selectTag-flow{
+								.jnpf-tree-selected-content{
+									width: 100%;
+									margin-left: 0;
+								}
+							}
+							.jnpf-tree-selected-content {
+								width: 74%;
+								margin-left: 10rpx;
+								.name-box{
+									color: #353535;
+									display: flex;
+									.name {
+										flex: 1;
+										white-space: nowrap;
+										overflow: hidden;
+										text-overflow: ellipsis;
+									}
+									.close {
+										width: 26px;
+										padding-right: 8rpx;
+										justify-content: flex-end;
+										color: #2194fa;
+									}
+								}
+								.organize {
+									color: #a0a1a1;
+									white-space: nowrap;
+									overflow: hidden;
+									text-overflow: ellipsis
+								}
+							}
+						}
+					}
+					.user-select-list{
+						max-height: 240rpx;
+						display: flex;
+						justify-content: flex-start;
+						flex-wrap: wrap;
+						padding-top: 10rpx;
+					}
+				}
+			}
+			.jnpf-tree-select-tree {
+				flex: 1;
+				overflow: auto;
+				
+				.list-box{
+					height: 100%;
+					.list-item{
+						display: flex;
+						width: 100%;
+						padding: 0 10px;
+						box-sizing: border-box;
+						.radio-label{
+							display: flex;
+							width: 100%;
+						}
+						.list-item-content{
+							flex: 1;
+						}
+					}
+				}
+			}
+			
+		}
+	}
+	.nodata {
+		height: 100%;
+		margin: auto;
+		align-items: center;
+		justify-content: center;
+		color: #909399;
+	
+		.noDataIcon {
+			width: 300rpx;
+			height: 210rpx;
+		}
+	}
+	.jnpf-date-range {
+		width: 100%;
+		display: flex;
+		.u-input__input {
+			text-align: center !important;
+		}
+	}
+	.jnpf-bottom-actions,
+	.jnpf-tree-select-actions {
+		background-color: #fff;
+		display: flex;
+		width: 100%;
+		height: 88rpx;
+		box-shadow: 0 -2rpx 8rpx #e1e5ec;
+		z-index: 999999;
+		flex-shrink: 0;
+		.buttom-btn {
+			width: 100%;
+			/* #ifndef MP */
+			height: 88rpx !important;
+			line-height: 88rpx !important;
+			border-radius: 0 !important;
+			&::after {
+				border: none !important;
+			}
+			/* #endif */
+			/* #ifdef MP */
+			.u-btn {
+				width: 100%;
+				height: 88rpx !important;
+				line-height: 88rpx !important;
+				border-radius: 0 !important;
+	
+				&::after {
+					border: none !important;
+				}
+			}
+			/* #endif */
+		}
+	}

@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<Description>JNPF 公共拓展核心库。</Description>
+		<PreserveCompilationContext>true</PreserveCompilationContext>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.6" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\framework\JNPF.Extras.Authentication.JwtBearer\JNPF.Extras.Authentication.JwtBearer.csproj" />
+		<ProjectReference Include="..\..\..\infrastructure\JNPF.Extras.EventBus.RabbitMQ\JNPF.Extras.EventBus.RabbitMQ.csproj" />
+		<ProjectReference Include="..\..\..\infrastructure\JNPF.Extras.WebSockets\JNPF.Extras.WebSockets.csproj" />
+		<ProjectReference Include="..\..\engine\JNPF.Engine.Entity\JNPF.Engine.Entity.csproj" />
+		<ProjectReference Include="..\..\inteAssistant\JNPF.InteAssistant.Entitys\JNPF.InteAssistant.Entitys.csproj" />
+		<ProjectReference Include="..\..\message\JNPF.Message.Entitys\JNPF.Message.Entitys.csproj" />
+		<ProjectReference Include="..\..\system\JNPF.Systems.Entitys\JNPF.Systems.Entitys.csproj" />
+		<ProjectReference Include="..\..\taskscheduler\JNPF.TaskScheduler.Entitys\JNPF.TaskScheduler.Entitys.csproj" />
+		<ProjectReference Include="..\..\visualdev\JNPF.VisualDev.Entitys\JNPF.VisualDev.Entitys.csproj" />
+	</ItemGroup>
+
+</Project>

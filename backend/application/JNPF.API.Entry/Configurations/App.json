@@ -1,0 +1,201 @@
+{
+  "JNPF_App": {
+    "AesKey": "EY8WePvjM5GGwQzn",
+    //系统文件路径
+    "SystemPath": "C:\\wwwroot\\Resources",
+    //微信公众号允许上传文件类型
+    "MPUploadFileType": [
+      "bmp",
+      "png",
+      "jpeg",
+      "jpg",
+      "gif",
+      "mp3",
+      "wma",
+      "wav",
+      "amr",
+      "mp4"
+    ],
+    //微信允许上传文件类型
+    "WeChatUploadFileType": [
+      "jpg",
+      "png",
+      "doc",
+      "docx",
+      "ppt",
+      "pptx",
+      "xls",
+      "xlsx",
+      "pdf",
+      "txt",
+      "rar",
+      "zip",
+      "csv",
+      "amr",
+      "mp4"
+    ],
+    //允许图片类型
+    "AllowUploadImageType": [
+      "jpg",
+      "gif",
+      "png",
+      "bmp",
+      "jpeg",
+      "tiff",
+      "psd",
+      "swf",
+      "svg",
+      "pcx",
+      "dxf",
+      "wmf",
+      "emf",
+      "lic",
+      "eps",
+      "tga"
+    ],
+    //允许上传文件类型
+    "AllowUploadFileType": [
+      "jpg",
+      "mp3",
+      "gif",
+      "png",
+      "bmp",
+      "jpeg",
+      "doc",
+      "docx",
+      "ppt",
+      "pptx",
+      "xls",
+      "xlsx",
+      "pdf",
+      "txt",
+      "rar",
+      "zip",
+      "csv",
+      "ogm",
+      "wmv",
+      "asx",
+      "mpg",
+      "webm",
+      "mp4",
+      "ogv",
+      "mpeg",
+      "mov",
+      "m4v",
+      "avi"
+    ],
+    //过滤上传文件名称特殊字符
+    "SpecialString": [
+      "<",
+      ">",
+      "|",
+      "?",
+      ":",
+      "*"
+    ],
+    "PreviewType": "kkfile", //文件预览方式 （kkfile，yozo）默认使用kkfile
+    "KKFileDomain": "http://127.0.0.1:30090/FileServer",
+    "Domain": "http://yinmai.tpddns.cn:7772",
+    "YOZO": {
+      "domain": "http://dcsapi.com/",
+      "domainKey": "57462250284462899305150",
+      "UploadAPI": "http://dmc.yozocloud.cn/api/file/http?fileUrl={0}&appId={1}&sign={2}", //上传接口
+      "DownloadAPI": "http://eic.yozocloud.cn/api/view/file?fileVersionId={0}&appId={1}&sign={2}", //预览接口
+      "AppId": "yozoAQh5dPSt6063", // 应用Id
+      "AppKey": "6365bfbd733fce644fd7ac0aaeca" // 签名
+    },
+    // ================== 系统错误邮件报告反馈相关 ============================== -->
+    // 软件的错误报告
+    "ErrorReport": false,
+    // 软件的错误报告发给谁
+    "ErrorReportTo": "yinmaisoft@163.com",
+    // 扫码过期时间 / 分钟
+    "CodeCertificateTimeout": 3
+  },
+  // ================== 单点登录配置(和其他登录方式 只能二选一) ============================== -->
+  "OAuth": {
+    "Enabled": false, // 开启后将支持单点登录, 前端与后端都不可使用普通模式登录
+    "LoginPath": "http://192.168.20.119:5000/api/oauth/Login", // 前端登录页面访问登录接口进行单点登录页面跳转, 需要与身份管理系统中的 JNPF-Auth2、JNPF-CAS中的认证地址一致
+    "SucessFrontUrl": "http://192.168.20.119:3000/sso", // 从单点登录中心直接访问JNPF时登录成功后跳转的前端页面
+    "DefaultSSO": "auth2", // 默认接口
+    "TicketTimeout": 5, // 缓存过期时间 / 分钟
+    "TicketOutMessage": false, // 是否前端输出消息
+    "SSO": {
+      "auth2": {
+        "enabled": true,
+        "clientId": "747887288041603072",
+        "clientSecret": "MYgMMjIwNzIwMjIxNTU4MTAxNzQlKQ",
+        "authorizeUrl": "https://192.168.20.133:8527/sign/authz/oauth/v20/authorize",
+        "accessTokenUrl": "https://192.168.20.133:8527/sign/authz/oauth/v20/token",
+        "userInfoUrl": "https://192.168.20.133:8527/sign/api/oauth/v20/me"
+      },
+      "cas": {
+        "enabled": true,
+        "serverLoginUrl": "https://sso.test.jnpf.work/sign/authz/cas/login",
+        "serverValidateUrl": "https://sso.test.jnpf.work/sign/authz/cas"
+      }
+    },
+    "Pull": {
+      "Enabled": true,
+      "CreateRestAddress": "http://192.168.20.133:9526/sso-mgt-api/api/idm/Account",
+      "ReplaceRestAddress": "http://192.168.20.133:9526/sso-mgt-api/api/idm/Account",
+      "ChangePasswordRestAddress": "http://192.168.20.133:9526/sso-mgt-api/api/idm/Account/changePassword",
+      "DeleteRestAddress": "http://192.168.20.133:9526/sso-mgt-api/api/idm/Account",
+      "CredentialType": "Basic",
+      "UserName": "747887288041603072",
+      "Password": "MYgMMjIwNzIwMjIxNTU4MTAxNzQlKQ"
+    }
+  },
+  //================== 第三方登录配置 ============================== -->
+  "Socials": {
+    "SocialsEnabled": true,
+    "DoMain": "http://apiv1.zlsyun.com/dev", // 外网能访问的地址(域名), 回调的时候拼接接口地址用
+    "Config": [
+      {
+        "Provider": "wechat_open", // 微信
+        "ClientId": "wx8315600f7689d3b2",
+        "ClientSecret": "5e877ec4de5dd643a4d6d42e2bd294968"
+      },
+      //{
+      //  "Provider": "qq", // qq
+      //  "ClientId": "1112149755",
+      //  "ClientSecret": "hyejIUnW3LYSnFv5"
+      //},
+      {
+        "Provider": "wechat_enterprise", //  企业微信
+        "ClientId": "wwf75525d6abbf7f31",
+        "ClientSecret": "3lUofKsO3OCOOO8Lr9uZ2qqKpRxozn33ya0estNFmCX0",
+        "AgentId": "1000003"
+      },
+      {
+        "Provider": "dingtalk", //  钉钉
+        "ClientId": "dingmdsrfe5acay7dqvx",
+        "ClientSecret": "zUEQfNbVzHajZgRELsptGxukPBK-pkJOe94HTVQNLnplF4ZEcguspkHRmJLtHBB9",
+        "AgentId": "785270551"
+      },
+      {
+        "Provider": "feishu", //  飞书
+        "ClientId": "cli_a205984c98b9500d",
+        "ClientSecret": "GtzwzI7gcbAhLjFPJ6YqYfhNESJ3imFk"
+      },
+
+      //{
+      //  "Provider": "github", //  GitHub
+      //  "ClientId": "cli_a205984c98b9500d",
+      //  "ClientSecret": "GtzwzI7gcbAhLjFPJ6YqYfhNESJ3imFk"
+      //},
+      {
+        "Provider": "wechat_applets", //  小程序
+        "ClientId": "wx9d1803bebc4060da",
+        "ClientSecret": "5e877ec4de5dd364a4d6d42e2bd294968"
+      }
+    ]
+  },
+  //================== 消息跳转配置 ============================== -->
+  "Message": {
+    "ApiDoMain": "http://localhost:5000", // 后端Api路径  (发布时与DoMainPc一致)
+    "DoMainPc": "http://localhost:3000", // 前端PC外网能访问的地址(域名), 回调的时候拼接接口地址用
+    "DoMainApp": "http://localhost:8081", // 前端App外网能访问的地址(域名), 回调的时候拼接接口地址用
+    "AppPushUrl": "https://8e84eea8-6922-4033-8e86-67ad7442e692.bspapp.com/unipush"
+  }
+}

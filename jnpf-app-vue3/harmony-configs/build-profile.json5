@@ -1,0 +1,60 @@
+{
+	"app": {
+		"signingConfigs": [{
+			"name": "default",
+			"type": "HarmonyOS",
+			"material": {
+				"certpath": "C:\\Users\\JNPF\\.ohos\\config\\default_jnpfjava_1sN_oqqYapOzI9oLrujNgwulFNvqN1QSC3248pw5yuE=.cer",
+				"storePassword": "0000001BD7F63885F10BC81317E0C644153B8232AEA2DF9F6D79B32F4813B285315C53EBCAEA302CF0B5DC",
+				"keyAlias": "debugKey",
+				"keyPassword": "0000001B47FAD77BCDCC3674C089D2FCF52F1E9E770C8435D667F5991AFF3E18C3BED2421605AB85A2577F",
+				"profile": "C:\\Users\\JNPF\\.ohos\\config\\default_jnpfjava_1sN_oqqYapOzI9oLrujNgwulFNvqN1QSC3248pw5yuE=.p7b",
+				"signAlg": "SHA256withECDSA",
+				"storeFile": "C:\\Users\\JNPF\\.ohos\\config\\default_jnpfjava_1sN_oqqYapOzI9oLrujNgwulFNvqN1QSC3248pw5yuE=.p12"
+			}
+		}],
+		"products": [{
+				"name": "default",
+				"signingConfig": "default",
+				"compatibleSdkVersion": "5.0.0(12)",
+				"runtimeOS": "HarmonyOS",
+				"buildOption": {
+					"strictMode": {
+						"caseSensitiveCheck": true,
+						"useNormalizedOHMUrl": true
+					}
+				}
+			},
+			{
+				"name": "release",
+				"signingConfig": "release",
+				"compatibleSdkVersion": "5.0.0(12)",
+				"runtimeOS": "HarmonyOS",
+				"buildOption": {
+					"strictMode": {
+						"caseSensitiveCheck": true,
+						"useNormalizedOHMUrl": true
+					}
+				}
+			}
+		],
+		"buildModeSet": [{
+				"name": "debug",
+			},
+			{
+				"name": "release"
+			}
+		],
+	},
+	"modules": [{
+		"name": "entry",
+		"srcPath": "./entry",
+		"targets": [{
+			"name": "default",
+			"applyToProducts": [
+				"default",
+				"release"
+			]
+		}]
+	}]
+}

@@ -1,0 +1,8 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\engine\JNPF.VisualDev.Engine\JNPF.VisualDev.Engine.csproj" />
+		<ProjectReference Include="..\..\visualdev\JNPF.VisualDev.Interfaces\JNPF.VisualDev.Interfaces.csproj" />
+	</ItemGroup>
+
+</Project>

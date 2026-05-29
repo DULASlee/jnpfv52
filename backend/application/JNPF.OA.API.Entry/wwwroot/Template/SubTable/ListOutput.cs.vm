@@ -1,0 +1,72 @@
+﻿namespace JNPF.@(Model.NameSpace).Entitys.Dto.@Model.ClassName;
+
+/// <summary>
+/// @(Model.BusName)输入参数.
+/// </summary>
+public class @(Model.ClassName)ListOutput
+{
+@foreach (var column in Model.TableField)
+{
+@if(Model.TableType == 4)
+{
+@if (column.PrimaryKey)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @column.LowerColumnName { get; set; }
+@:
+}
+}
+@if(column.ForeignKeyField)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @column.LowerColumnName { get; set; }
+@:
+}else if (column.IsShow){
+switch(column.jnpfKey)
+{
+case "datePicker":
+case "timePicker":
+case "createTime":
+case "modifyTime":
+case "switch":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @column.LowerColumnName { get; set; }
+@:
+break;
+case "uploadFile":
+case "uploadImg":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public object? @column.LowerColumnName { get; set; }
+@:
+break;
+case "relationForm":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @column.LowerColumnName { get; set; }
+@:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(column.LowerColumnName)_id { get; set; }
+@:
+break;
+default:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @column.LowerColumnName { get; set; }
+@:
+break;
+}
+}
+}
+}

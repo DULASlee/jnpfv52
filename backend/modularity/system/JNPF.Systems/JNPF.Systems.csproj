@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<Description>JNPF 系统管理与系统权限业务实现类库。</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\infrastructure\JNPF.Extras.CollectiveOAuth\JNPF.Extras.CollectiveOAuth.csproj" />
+		<ProjectReference Include="..\..\engine\JNPF.VisualDev.Engine\JNPF.VisualDev.Engine.csproj" />
+		<ProjectReference Include="..\..\message\JNPF.Message.Interfaces\JNPF.Message.Interfaces.csproj" />
+		<ProjectReference Include="..\..\oauth\JNPF.OAuth\JNPF.OAuth.csproj" />
+		<ProjectReference Include="..\..\taskscheduler\JNPF.TaskScheduler.Interfaces\JNPF.TaskScheduler.Interfaces.csproj" />
+		<ProjectReference Include="..\..\workflow\JNPF.WorkFlow.Interfaces\JNPF.WorkFlow.Interfaces.csproj" />
+		<ProjectReference Include="..\JNPF.Systems.Interfaces\JNPF.Systems.Interfaces.csproj" />
+	</ItemGroup>
+
+</Project>

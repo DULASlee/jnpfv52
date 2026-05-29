@@ -1,0 +1,88 @@
+@if(Model.IsUploading)
+{
+@:using JNPF.Common.Models;
+@:using Newtonsoft.Json;
+}
+@foreach (var table in Model.TableRelations)
+{
+@:using JNPF.@(Model.NameSpace).Entitys.Dto.@table.ClassName;
+}
+
+namespace JNPF.@(Model.NameSpace).Entitys.Dto.@Model.ClassName;
+
+/// <summary>
+/// @(Model.BusName)详情输出参数.
+/// </summary>
+public class @(Model.ClassName)DetailOutput
+{
+@foreach (var column in Model.RelationsField)
+{
+    @:public object @column.RelationColumnName { get; set; }
+    @:
+}
+@foreach (var column in Model.TableField)
+{
+@{var parameterName = string.Empty;}
+@switch(column.IsAuxiliary)
+{
+case true:
+@{parameterName = "jnpf_" + @column.TableName + "_jnpf_" + @column.LowerColumnName;}
+break;
+default:
+@{parameterName = @column.LowerColumnName;}
+break;
+}
+@if (column.PrimaryKey){
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @column.LowerColumnName { get; set; }
+@:
+}else if (column.jnpfKey != null){
+@switch(column.jnpfKey)
+{
+case "slider":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public int @(parameterName) { get; set; }
+@:
+break;
+case "datePicker":
+case "createTime":
+case "modifyTime":
+case "switch":
+case "radio":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName) { get; set; }
+@:
+break;
+case "uploadFile":
+case "uploadImg":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public object? @(parameterName) { get; set; }
+@:
+break;
+default:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @(column.NetType == "int?" ? "string" : column.NetType) @(parameterName) { get; set; }
+@:
+break;
+}
+}
+}
+@foreach (var table in Model.TableRelations)
+{
+    @:/// <summary>
+    @:/// @(table.TableComment).
+    @:/// </summary>
+    @:public List<@(table.ClassName)DetailOutput> @table.ControlModel { get; set; }
+@:
+}
+}

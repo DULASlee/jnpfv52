@@ -1,0 +1,30 @@
+# .NET / MSBuild
+.vs
+logs
+**/bin/
+**/obj/
+.DS_Store
+nupkgs
+
+# Node / frontends
+node_modules/
+dist/
+unpackage/
+
+# Secrets
+**/Configurations/ConnectionStrings.json
+docs/token.txt
+**/token.txt
+
+# Cursor / toolchain
+.cursor/logs/
+.cursor/episodic/sync-status.json
+.cursor/edge-debug-profile/
+.env.toolchain
+
+# Local / temp
+.specstory/
+*.log
+backend-run.*
+pc-dev.*
+ds-dev.*

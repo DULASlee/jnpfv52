@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "serena": {
+      "command": "C:\\Users\\admin\\.local\\bin\\serena.exe",
+      "args": [
+        "start-mcp-server",
+        "--context",
+        "ide",
+        "--project",
+        "D:\\liu202505v2"
+      ],
+      "timeout": 600,
+      "env": {}
+    }
+  }
+}

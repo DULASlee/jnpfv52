@@ -1,0 +1,269 @@
+# 项目工作推进注册表（机器可读）
+# 用途：sync-project-progress.ps1 读取/合并；Agent 完成工作后追加条目
+# 人类可读视图：项目开发推进清单(每完成一项工作记录一条记录).md（由脚本部分刷新 + 人工叙事）
+
+schema_version: "1.0"
+last_sync: "2026-05-22T15:59:40.704Z"
+
+# OpenSpec CLI 快照（脚本自动覆盖）
+openspec:
+  cli_version: "1.3.1"
+  active_changes:
+    []
+  archived_changes: []
+
+# 工作流阶段枚举：explore | propose | apply | verify | archive | docs | review | blocked
+streams:
+  - id: architecture-docs
+    name: 架构文档与内参
+  - id: frontend-construction
+    name: 前端项目施工
+  - id: backend-construction
+    name: 应用服务施工
+  - id: iot-evaluation
+    name: IoT 能力评估
+  - id: openspec-infra
+    name: OpenSpec 工作流基建
+
+entries:
+  - id: LOG-20260522-001
+    date: "2026-05-22"
+    stream: architecture-docs
+    phase: docs
+    title: 确立架构文档编写铁律（永久强制）
+    status: done
+    openspec_change: null
+    deliverables:
+      - docs/ARCHITECTURE_DOC_RULES.md
+      - .cursor/rules/architecture-doc-standards.mdc
+    summary: 五条铁律 + 章节自检清单；后续所有 architecture/openspec design 文档须遵循
+
+  - id: LOG-20260522-002
+    date: "2026-05-22"
+    stream: architecture-docs
+    phase: docs
+    title: 专项文档04 应用前端架构深度解剖 v1.1
+    status: done
+    openspec_change: null
+    deliverables:
+      - docs/architecture/04-application-frontend-deep-dive.md
+      - docs/architecture/README.md
+    summary: 基于 dist_v1.1 反推 + jnpf-web-vue3 源码路径；路由/HTTP/Store/Layout/权限守卫
+
+  - id: LOG-20260522-003
+    date: "2026-05-22"
+    stream: frontend-construction
+    phase: explore
+    title: 引入正式前端工程 jnpf-web-vue3 v3.6.0
+    status: done
+    openspec_change: null
+    deliverables:
+      - jnpf-web-vue3/
+    summary: 自 GitHub aplyhj/jnpfsoft-jnpf-jnpf-web-vue3- clone；与 dist_v1.1 版本最匹配
+
+  - id: LOG-20260522-004
+    date: "2026-05-22"
+    stream: frontend-construction
+    phase: explore
+    title: dist_v1.1 与源码页面对照自动化审计
+    status: done
+    openspec_change: null
+    deliverables:
+      - docs/architecture/dist-src-audit.json
+    summary: dist 344 页 vs 源码 325 页；dist 独有 19 项 GAP；源码独有 0 页
+
+  - id: LOG-20260522-005
+    date: "2026-05-22"
+    stream: frontend-construction
+    phase: explore
+    title: 从 dist 提取 water 模块路径与 API 清单
+    status: done
+    openspec_change: null
+    deliverables:
+      - docs/architecture/water-module-from-dist.md
+      - docs/architecture/water-module-from-dist.json
+    summary: 9 页 views/water；dist 调 /api/ZX_Water/*；本仓库 modularity 无对应 Service
+
+  - id: LOG-20260522-006
+    date: "2026-05-22"
+    stream: frontend-construction
+    phase: propose
+    title: 生成与 dist_v1.1 对齐的生产 env 模板
+    status: done
+    openspec_change: null
+    deliverables:
+      - jnpf-web-vue3/.env.production.dist-v1.1.template
+    summary: CDN/API/WS/压缩等与 web/dist_v1.1/_app.config.js 对齐
+
+  - id: LOG-20260522-007
+    date: "2026-05-22"
+    stream: frontend-construction
+    phase: propose
+    title: 前端整理开发计划与施工包（F0–F4）
+    status: done
+    openspec_change: null
+    recommended_change: frontend-align-dist-v1
+    deliverables:
+      - docs/架构迭代/3、架构迭代子阶段施工/3、前端项目施工阶段/2、开发计划和施工包/README.md
+      - docs/架构迭代/3、架构迭代子阶段施工/3、前端项目施工阶段/2、开发计划和施工包/01-前端整理开发计划与施工包.md
+      - docs/架构迭代/3、架构迭代子阶段施工/3、前端项目施工阶段/2、开发计划和施工包/02-dist源码对照矩阵.md
+      - docs/架构迭代/3、架构迭代子阶段施工/3、前端项目施工阶段/2、开发计划和施工包/03-GAP待补清单与功能对等验收表.md
+    summary: 架构师 §8 已签字；F0–F4 施工包定稿；dist 为真理之源
+
+  - id: LOG-20260522-015
+    date: "2026-05-22"
+    stream: frontend-construction
+    phase: apply
+    title: F0–F3 施工执行（water/GAP/build/登录修复）
+    status: done
+    openspec_change: null
+    deliverables:
+      - scripts/sql/disable-water-menus.sql
+      - jnpf-web-vue3/src/views/common/dynamicModel/list/CustomBatchForm.vue
+      - jnpf-web-vue3/src/views/common/dynamicModel/list/ExtendForm.vue
+      - jnpf-web-vue3/.env.production
+      - application/JNPF.API.Entry/Configurations/Cors.json
+      - modularity/oauth/JNPF.OAuth/OAuthService.cs
+      - modularity/common/JNPF.Common/Net/UserAgent.cs
+      - jnpf-web-vue3/src/views/basic/login/LoginForm.vue
+    summary: water 菜单禁用；GAP-03 补 2 Vue；VITE_CDN=false；CORS 白名单；登录 jnpf_ticket/UA 修复；浏览器冒烟 15/15 判定全绿
+
+  - id: LOG-20260522-016
+    date: "2026-05-22"
+    stream: frontend-construction
+    phase: archive
+    title: 前端源码合并里程碑正式收口（架构师验收）
+    status: done
+    openspec_change: frontend-align-dist-v1
+    deliverables:
+      - web/dist/
+      - web/dist_v1.1_backup_20260522/
+      - .cursor/rules/docs-structure.mdc
+      - .cursor/rules/knowledge-maintenance.mdc
+      - scripts/episodic-config.mjs
+    summary: F4 部署 web/dist；:4173/:5000 正常；架构师验收通过；前端合并阶段关闭；进入三期 MES/IoT
+
+  - id: LOG-20260522-008
+    date: "2026-05-22"
+    stream: iot-evaluation
+    phase: docs
+    title: 物联网项目开发能力扩展评估 v1.1
+    status: pending_review
+    openspec_change: null
+    deliverables:
+      - docs/架构迭代/2、架构迭代方案设计/3、物联网项目开发能力扩展评估.md
+      - docs/架构迭代/1、系统架构设计说明/3、物联网项目开发能力扩展评估第一版.md
+    summary: 补齐智能更衣柜/IoT 安全/性能基线；修正 MQTT/TSDB/SignalR 等判断；待架构师批准后排期
+
+  - id: LOG-20260522-011
+    date: "2026-05-22"
+    stream: openspec-infra
+    phase: docs
+    title: episodic-memory 自动维护体系（hooks + 规则 + playbook）
+    status: done
+    openspec_change: null
+    deliverables:
+      - .cursor/hooks.json
+      - .cursor/hooks/episodic-session-start.mjs
+      - .cursor/hooks/episodic-stop.mjs
+      - .cursor/rules/episodic-memory-automation.mdc
+      - .cursor/episodic/search-templates.yaml
+      - scripts/episodic-sync.mjs
+      - scripts/episodic-config.mjs
+      - docs/架构迭代/4、项目工作推进日程清单/episodic-memory-playbook.md
+    summary: sessionStart/stop 自动 sync；Agent 首轮 search；阶段末 LOG+本会话结论
+
+  - id: LOG-20260522-010
+    date: "2026-05-22"
+    stream: openspec-infra
+    phase: docs
+    title: OpenSpec 知识库 spec 模板（frontend-align-dist-v1 + iot-capability-phase1）
+    status: done
+    openspec_change: null
+    deliverables:
+      - openspec/specs/README.md
+      - openspec/specs/frontend-align-dist-v1/spec.md
+      - openspec/specs/iot-capability-phase1/spec.md
+    summary: 能力规格归档真相；施工仍走 Superpowers 施工包，不用 opsx:apply
+
+  - id: LOG-20260522-012
+    date: "2026-05-22"
+    stream: frontend-construction
+    phase: verify
+    title: 登录 null 根因修复（jnpf_ticket + User-Agent）
+    status: done
+    deliverables:
+      - modularity/oauth/JNPF.OAuth/OAuthService.cs
+      - modularity/common/JNPF.Common/Net/UserAgent.cs
+      - jnpf-web-vue3/src/views/basic/login/LoginForm.vue
+    summary: 修复 Parameter key/input；API login 200；演示平台切换 UI-01 排后
+
+  - id: LOG-20260522-014
+    date: "2026-05-22"
+    stream: frontend-construction
+    phase: verify
+    title: F4 部署完成（web/dist 新 build）
+    status: done
+    deliverables:
+      - web/dist/
+      - web/dist_v1.1_backup_20260522/
+    summary: npm run build 零 ERROR；1600 文件覆盖 web/dist；浏览器快速验证登录/用户管理/在线开发/工作流通过
+
+  - id: LOG-20260522-013
+    date: "2026-05-22"
+    stream: frontend-construction
+    phase: blocked
+    title: UI-01 开发平台/演示平台切换
+    status: backlog
+    deliverables: []
+    summary: 低优先级 UI 锦上添花；F4 稳定运行后再补；当前不探索
+
+  - id: LOG-20260522-017
+    date: "2026-05-22"
+    stream: frontend-construction
+    phase: archive
+    title: 知识库与架构文档同步（frontend-align-dist-v1 收口）
+    status: done
+    openspec_change: frontend-align-dist-v1
+    deliverables:
+      - openspec/specs/frontend-align-dist-v1/spec.md
+      - openspec/specs/README.md
+      - docs/architecture/05-frontend-source-merge-completion.md
+      - docs/architecture/04-application-frontend-deep-dive.md
+      - docs/architecture/water-module-from-dist.md
+      - docs/architecture/README.md
+    summary: OpenSpec spec v2 已收口；新增文档05；04/v1.2 与 water 档案更新处置结论
+
+  - id: LOG-20260522-009
+    date: "2026-05-22"
+    stream: openspec-infra
+    phase: propose
+    title: 建立项目工作推进双轨清单机制
+    status: done
+    openspec_change: null
+    deliverables:
+      - docs/架构迭代/4、项目工作推进日程清单/项目开发推进清单(每完成一项工作记录一条记录).md
+      - docs/架构迭代/4、项目工作推进日程清单/progress-registry.yaml
+      - scripts/sync-project-progress.js
+      - scripts/sync-project-progress.ps1
+    summary: 人类 Markdown + 机器 YAML；脚本同步 OpenSpec CLI 快照
+
+  - id: LOG-20260526-001
+    date: "2026-05-26"
+    stream: architecture-docs
+    phase: docs
+    title: JNPF v5.2 系统部署运行手册 v2.1-final 定稿
+    status: done
+    openspec_change: null
+    deliverables:
+      - docs/架构迭代/5、部署与运维/README.md
+      - docs/架构迭代/5、部署与运维/01-阶段一-环境准备.md
+      - docs/架构迭代/5、部署与运维/02-阶段二-数据库初始化.md
+      - docs/架构迭代/5、部署与运维/03-阶段三-后端服务启动.md
+      - docs/架构迭代/5、部署与运维/04-阶段四-前端构建与Nginx部署.md
+      - docs/架构迭代/5、部署与运维/05-阶段五-辅助服务部署.md
+      - docs/架构迭代/5、部署与运维/06-阶段六-生产加固.md
+      - docs/架构迭代/5、部署与运维/07-阶段七-端到端验证.md
+      - docs/架构迭代/5、部署与运维/附录-速查表与术语.md
+      - scripts/f2-smoke-test.ps1
+    summary: 七阶段部署手册；配置锚定 Configurations/*.json 双库；flow/blade 在主库脚本；前端方案 B；待回溯 01/02 Furion 配置与双库说明

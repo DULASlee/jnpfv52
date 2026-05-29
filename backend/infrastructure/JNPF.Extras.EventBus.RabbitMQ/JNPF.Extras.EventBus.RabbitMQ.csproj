@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<Description>JNPF 事件总线 RabbitMQ 插件。</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="RabbitMQ.Client" Version="6.4.0" />
+	</ItemGroup>
+
+</Project>

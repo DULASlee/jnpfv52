@@ -1,0 +1,154 @@
+﻿@if(Model.IsUploading)
+{
+@:using JNPF.Common.Models;
+@:
+}
+namespace JNPF.@(Model.NameSpace).Entitys.Dto.@Model.ClassName;
+ 
+/// <summary>
+/// @(Model.BusName)输出参数.
+/// </summary>
+public class @(Model.ClassName)InfoOutput
+{
+@foreach (var column in Model.TableField)
+{
+@{var parameterName = string.Empty;}
+@switch(column.IsAuxiliary)
+{
+case true:
+@{parameterName = "jnpf_" + @column.TableName + "_jnpf_" + @column.LowerColumnName;}
+break;
+default:
+@{parameterName = @column.LowerColumnName;}
+break;
+}
+@if (column.PrimaryKey)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @column.LowerColumnName { get; set; }
+@:
+}
+else if(column.jnpfKey != null)
+{
+switch(column.jnpfKey)
+{
+case "select":
+case "userSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+case "usersSelect":
+@if(column.IsMultiple)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<string> @(parameterName) { get; set; }
+@:
+}
+else
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @(column.NetType == "int?" ? "int" : "string") @(parameterName) { get; set; }
+@:
+}
+break;
+case "cascader":
+case "areaSelect":
+case "organizeSelect":
+@if(column.IsMultiple)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<List<string>> @(parameterName) { get; set; }
+@:
+}
+else
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<@(column.NetType == "int?" ? "int" : "string")> @(parameterName) { get; set; }
+@:
+}
+break;
+case "checkbox":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<@(column.NetType == "int?" ? "int" : "string")> @(parameterName) { get; set; }
+@:
+break;
+case "createTime":
+case "modifyTime":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName) { get; set; }
+@:
+break;
+case "radio":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @(column.NetType == "int?" ? "int" : "string") @(parameterName) { get; set; }
+@:
+break;
+case "slider":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public int @(parameterName) { get; set; }
+@:
+break;
+case "uploadImg":
+case "uploadFile":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<FileControlsModel> @(parameterName) { get; set; }
+@:
+break;
+default:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @(parameterName) { get; set; }
+@:
+break;
+}
+}
+}
+@if(Model.PrimaryKeyPolicy == 2 && Model.EnableFlow)
+{
+    @:/// <summary>
+    @:/// 流程真实ID.
+    @:/// </summary>
+    @:public string flowTaskId { get; set; }
+@:
+}
+@if(Model.ConcurrencyLock)
+{
+    @:/// <summary>
+    @:/// 乐观锁.
+    @:/// </summary>
+    @:public string version { get; set; }
+@:
+}
+@if(Model.EnableFlow || Model.Type == 3)
+{
+    @:/// <summary>
+    @:/// 流程引擎ID.
+    @:/// </summary>
+    @:public string flowId { get; set; }
+@:
+}
+}

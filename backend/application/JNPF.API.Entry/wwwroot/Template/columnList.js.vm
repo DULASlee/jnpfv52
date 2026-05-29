@@ -1,0 +1,3 @@
+const columnList = @(@Model.ColumnList)
+
+export default columnList

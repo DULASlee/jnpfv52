@@ -1,0 +1,26 @@
+---
+description: 架构文档与知识库活性维护约定
+globs:
+  - docs/architecture/**/*.md
+  - docs/openspec/**/*.md
+---
+
+# 知识库维护约定
+
+## 索引维护
+当新增、删除或重命名 `docs/architecture/` 下的文档时：
+- **v5.2 架构内参**：同步更新 `docs/architecture/v52/README.md` 与 `v52/CATALOG.md`
+- **根目录总索引**：同步更新 `docs/architecture/README.md`
+- **二期施工包**：同步更新 `docs/architecture/phase2/README.md`（若变动）
+- **归档区**：`archive/pre-v52-rewrite/` 与 `archive/v36/` **只增登记、不改正文**
+
+## 文档与代码一致性
+当修改了某个模块的核心代码（架构变更、接口变更、数据模型变更）时，
+主动提醒用户检查 `docs/architecture/v52/` 下对应的文档是否需要更新。
+**禁止**建议从 `archive/pre-v52-rewrite/` 复制内容回填 v52。
+
+## 避免重复
+docs/architecture/ 下的文档应专注于架构层面的分析。
+具体的代码规范、开发约定放在 .cursor/rules/ 下。
+如果发现两者内容重复，以 .cursor/rules/ 为权威来源，
+在 docs/architecture/ 中注明"详细规范见 .cursor/rules/xxx.mdc"。

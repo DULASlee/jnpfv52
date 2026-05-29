@@ -1,0 +1,8 @@
+.vs
+logs
+obj
+bin
+.DS_Store
+nupkgs
+**/Cors.json
+**/ConnectionStrings.json

@@ -1,0 +1,13 @@
+{
+  "OSS": {
+    "BucketName": "zhixuan-cloud",
+    //文件存储类型(Invalid(本地),MinIo,Aliyun,QCloud,Qiniu)
+    "Provider": "Aliyun",
+    "Endpoint": "oss-cn-beijing.aliyuncs.com",
+    "AccessKey": "LTAI5t7kQUyU3mgqtoe2a79et",
+    "SecretKey": "JLvyUlI0payqjnPBh7e5tr2hcTT9YXy",
+    "Region": null,
+    "IsEnableHttps": false,
+    "IsEnableCache": true
+  }
+}

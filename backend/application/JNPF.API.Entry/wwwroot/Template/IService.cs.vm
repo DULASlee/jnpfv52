@@ -1,0 +1,8 @@
+namespace JNPF.@(@Model.NameSpace).Interfaces;
+
+/// <summary>
+/// 业务抽象：@(@Model.BusName).
+/// </summary>
+public interface I@(@Model.ClassName)Service
+{
+}

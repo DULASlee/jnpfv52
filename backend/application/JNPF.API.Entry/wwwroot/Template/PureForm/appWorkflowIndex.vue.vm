@@ -1,0 +1,76 @@
+<template>
+    <view class="jnpf-wrap jnpf-wrap-form">
+        <FlowBox ref="FlowBox" v-if="flowVisible"></FlowBox>
+        <MultSelect @(Model.VueVersion==2 ? "v-model='show'" : ":show='show'") :list="templateList" @@confirm="confirm" @@close='show=false' isFlow />
+    </view>
+</template>
+
+<script>
+	import MultSelect from '@@/components/MultSelect.vue'
+    import FlowBox from '@@/pages/workFlow/flowBefore/index.vue'
+    import {getFormById} from '@@/api/workFlow/workFlowForm'
+	import { FlowJsonList } from '@@/api/workFlow/flowEngine'
+    export default {
+        components: {
+            FlowBox,MultSelect
+        },
+        data() {
+            return {
+			    templateList: [],
+				show: false,
+                menuId: '',
+                enCode: '@(Model.EnCode)',
+                formId: '@(Model.FormId)',
+				flowVisible: false,
+                flowId: '',
+            }
+        },
+        onLoad(e) {
+            this.menuId = e.menuId
+            this.getFormById()
+        },
+        methods: {
+            getFormById() {
+                getFormById(this.formId).then(res => {
+                    this.flowId = res.data && res.data.id
+                    this.enCode = res.data && res.data.enCode
+					this.getJsonList()
+                })
+            },
+			getJsonList() {
+				FlowJsonList(this.flowId, '1').then(res => {
+					this.templateList = res.data;
+					if (!this.templateList.length) return this.$u.toast('流程不存在')
+					if (this.templateList.length > 1) {
+						setTimeout(() => {
+							this.show = true
+						},200)						
+					} else {
+						this.flowId = this.templateList[0].id
+						this.flow()
+					}
+				})
+			},
+			confirm(e) {
+				this.flowId = this.templateList[e[0]@(Model.VueVersion==2 ? "" : ".index")].id
+				this.flow()
+				this.show=false
+			},
+			flow() {
+				const config = {
+					enCode: this.enCode,
+					flowId: this.flowId,
+					menuId: this.menuId,
+					hideCancelBtn:true,
+					formType: 1,
+					opType: '-1',
+				}
+				if (!this.flowId) return this.$message.error("该功能未配置流程不可用!")
+				this.flowVisible = true
+				this.$nextTick(() => {
+					this.$refs.FlowBox.handleCodeGeneration(config)
+				})
+			},
+        },
+    }
+</script>

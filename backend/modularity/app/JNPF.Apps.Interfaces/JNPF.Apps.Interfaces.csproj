@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	
+  <ItemGroup>
+    <ProjectReference Include="..\..\system\JNPF.Systems.Entitys\JNPF.Systems.Entitys.csproj" />
+    <ProjectReference Include="..\JNPF.Apps.Entitys\JNPF.Apps.Entitys.csproj" />
+  </ItemGroup>
+
+</Project>

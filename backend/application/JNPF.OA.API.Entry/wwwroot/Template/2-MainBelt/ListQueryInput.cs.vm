@@ -1,0 +1,133 @@
+﻿using JNPF.Common.Filter;
+
+namespace JNPF.@(Model.NameSpace).Entitys.Dto.@Model.ClassName;
+
+/// <summary>
+/// @(Model.BusName)列表查询输入.
+/// </summary>
+public class @(Model.ClassName)ListQueryInput : PageInputBase
+{
+@if(Model.HasSuperQuery)
+{
+    @:/// <summary>
+    @:/// 高级查询.
+    @:/// </summary>
+    @:public string superQueryJson { get; set; }
+@:
+}
+    /// <summary>
+    /// 选择导出数据ids.
+    /// </summary>
+    public string selectIds { get; set; }
+
+    /// <summary>
+    /// 选择导出数据key.
+    /// </summary>
+    public string selectKey { get; set; }
+
+    /// <summary>
+    /// 导出类型.
+    /// </summary>
+    public int dataType { get; set; }
+    
+    /// <summary>
+    /// 关键词查询.
+    /// </summary>
+    public string jnpfKeyword { get; set; }
+
+@foreach (var column in Model.TableField)
+{
+@if (column.QueryWhether)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+@switch(column.jnpfKey)
+{
+case "organizeSelect":
+    @:public @(column.QueryMultiple ? "List<List<string>>" : "List<string>") @column.LowerColumnName { get; set; }
+break;
+case "select":
+case "depSelect":
+case "roleSelect":
+case "userSelect":
+case "usersSelect":
+case "posSelect":
+case "groupSelect":
+    @:public @(column.QueryMultiple ? "List<string>" : "string") @column.LowerColumnName { get; set; }
+break;
+case "cascader":
+case "areaSelect":
+case "currOrganize":
+case "timePicker":
+    @:public List<string> @column.LowerColumnName { get; set; }
+break;
+case "modifyTime":
+case "createTime":
+case "datePicker":
+    @:public List<DateTime> @column.LowerColumnName { get; set; }
+break;
+case "inputNumber":
+case "calculate":
+case "rate":
+case "slider":
+    @:public List<decimal?> @column.LowerColumnName { get; set; }
+break;
+default:
+    @:public string @column.LowerColumnName { get; set; }
+break;
+}
+@:
+}
+}
+@foreach(var table in Model.TableRelations){
+if(table.IsQueryWhether)
+{
+foreach(var column in table.ChilderColumnConfigList)
+{
+if(column.QueryWhether)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+@switch(column.jnpfKey)
+{
+case "organizeSelect":
+    @:public @(column.QueryMultiple ? "List<List<string>>" : "List<string>") @(table.ControlModel + "_" + @column.LowerColumnName) { get; set; }
+break;
+case "select":
+case "depSelect":
+case "roleSelect":
+case "userSelect":
+case "usersSelect":
+case "posSelect":
+case "groupSelect":
+    @:public @(column.QueryMultiple ? "List<string>" : "string") @(table.ControlModel + "_" + @column.LowerColumnName) { get; set; }
+break;
+case "cascader":
+case "areaSelect":
+case "currOrganize":
+case "timePicker":
+    @:public List<string> @(table.ControlModel + "_" + @column.LowerColumnName) { get; set; }
+break;
+case "modifyTime":
+case "createTime":
+case "datePicker":
+    @:public List<DateTime> @(table.ControlModel + "_" + @column.LowerColumnName) { get; set; }
+break;
+case "inputNumber":
+case "calculate":
+case "rate":
+case "slider":
+    @:public List<decimal?> @(table.ControlModel + "_" + @column.LowerColumnName) { get; set; }
+break;
+default:
+    @:public string @(table.ControlModel + "_" + @column.LowerColumnName) { get; set; }
+break;
+}
+@:
+}
+}
+}
+}
+}

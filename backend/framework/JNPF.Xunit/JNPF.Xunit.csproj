@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<Description>JNPF Xunit 单元测试拓展插件。</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="xunit.extensibility.execution" Version="2.6.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\JNPF\JNPF.csproj" />
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,151 @@
+﻿using JNPF.Common.CodeGenUpload;
+using SqlSugar;
+@if(Model.IsTenantColumn)
+{
+@:using JNPF.Extras.DatabaseAccessor.SqlSugar.Models;
+}
+
+namespace JNPF.@(Model.NameSpace).Entitys;
+
+/// <summary>
+/// @(Model.BusName)实体.
+/// </summary>
+[SugarTable("@(Model.OriginalMainTableName)")]
+public class @(Model.ClassName)Entity @(Model.IsTenantColumn ? ": ITenantFilter" : "")
+{
+@foreach (var column in Model.TableField)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+if(@column.PrimaryKey){       
+@if(Model.PrimaryKeyPolicy == 1)
+{
+    @:[SugarColumn(ColumnName = "@(column.OriginalColumnName)", IsPrimaryKey = true)]
+}else{
+    @:[SugarColumn(ColumnName = "@(column.OriginalColumnName)", IsPrimaryKey = true, IsIdentity = true)]
+}
+}else{
+    @:[SugarColumn(ColumnName = "@(column.OriginalColumnName)")]
+}
+@switch(column.jnpfKey)
+{
+case "relationForm":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", "@(column.LowerColumnName)", @((column.ImportConfig.multiple).ToString().ToLower()), "@(column.ImportConfig.modelId)", "@(column.ImportConfig.relationField)", "@(column.ShowField)", @(column.ImportConfig.__config__))]
+break;
+case "popupSelect":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", "@(column.LowerColumnName)", "@(column.ImportConfig.interfaceId)", "@(column.ImportConfig.propsValue)", "@(column.ImportConfig.relationField)", "@(column.ShowField)", @(column.ImportConfig.__config__))]
+break;
+case "usersSelect":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", "@(column.LowerColumnName)", @((column.ImportConfig.multiple).ToString().ToLower()), "@(column.ImportConfig.selectType)", @(column.ImportConfig.ableIds == null ? "null" : column.ImportConfig.ableIds), @(column.ImportConfig.__config__))]
+break;
+}
+@if(column.IsImportField)
+{
+@switch(column.jnpfKey)
+{
+case "popupTableSelect":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", @((column.ImportConfig.multiple).ToString().ToLower()), "@(column.ImportConfig.interfaceId)", "@(column.ImportConfig.propsValue)", "@(column.ImportConfig.relationField)", @(column.ImportConfig.__config__))]
+break;
+case "input":
+@if(column.IsUnique)
+{
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", "@(column.OriginalColumnName)", @(column.ImportConfig.__config__),true)]
+}
+else
+{
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", "@(column.OriginalColumnName)", @(column.ImportConfig.__config__))]
+}
+break;
+case "createUser":
+case "modifyUser":
+case "createTime":
+case "modifyTime":
+case "currOrganize":
+case "currPosition":
+case "currDept":
+case "billRule":
+case "textarea":
+case "colorPicker":
+case "rate":
+case "slider":
+case "editor":
+case "autoComplete":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", @(column.ImportConfig.__config__))]
+break;
+case "datePicker":
+case "timePicker":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", "@(column.ImportConfig.format)", @(column.ImportConfig.__config__))]
+break;
+case "radio":
+case "checkbox":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", @(column.ImportConfig.props), @(column.ImportConfig.options == null ? "null" : column.ImportConfig.options), @(column.ImportConfig.__config__))]
+break;
+case "inputNumber":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", @(column.ImportConfig.min == null && column.ImportConfig.max == null ? column.ImportConfig.__config__ : column.ImportConfig.__config__ + ", ")@(column.ImportConfig.min == null ? "" : (column.ImportConfig.max == null ? column.ImportConfig.min : column.ImportConfig.min + ", "))@(column.ImportConfig.max == null ? "" : column.ImportConfig.max))]
+break;
+case "switch":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", "@(column.ImportConfig.activeTxt)", "@(column.ImportConfig.inactiveTxt)", @(column.ImportConfig.__config__))]
+break;
+case "areaSelect":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", @((column.ImportConfig.multiple).ToString().ToLower()), @(column.ImportConfig.level), @(column.ImportConfig.__config__))]
+break;
+case "organizeSelect":
+case "roleSelect":
+case "groupSelect":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", @((column.ImportConfig.multiple).ToString().ToLower()), "@(column.ImportConfig.selectType)", @(column.ImportConfig.ableIds == null ? "null" : column.ImportConfig.ableIds), @(column.ImportConfig.__config__))]
+break;
+case "treeSelect":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", @((column.ImportConfig.multiple).ToString().ToLower()), @(column.ImportConfig.props), @(column.ImportConfig.options), @(column.ImportConfig.__config__))]
+break;
+case "select":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", @((column.ImportConfig.multiple).ToString().ToLower()), @(column.ImportConfig.props), @(column.ImportConfig.options == "null" ? null : column.ImportConfig.options), @(column.ImportConfig.__config__))]
+break;
+case "cascader":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", @((column.ImportConfig.multiple).ToString().ToLower()), "@(column.ImportConfig.separator == null ? "" : column.ImportConfig.separator)", @(column.ImportConfig.props), @(column.ImportConfig.options), @(column.ImportConfig.__config__))]
+break;
+case "depSelect":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", @((column.ImportConfig.multiple).ToString().ToLower()), "@(column.ImportConfig.selectType)", @(column.ImportConfig.ableIds == null ? "null" : column.ImportConfig.ableIds), @(column.ImportConfig.__config__))]
+break;
+case "posSelect":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", @((column.ImportConfig.multiple).ToString().ToLower()), "@(column.ImportConfig.selectType)", @(column.ImportConfig.ableIds == null ? "null" : column.ImportConfig.ableIds), "null", @(column.ImportConfig.__config__))]
+break;
+case "userSelect":
+    @:[CodeGenUpload("@(Model.EnableFlow ? column.LowerColumnName : column.OriginalColumnName)", @((column.ImportConfig.multiple).ToString().ToLower()), "@(column.ImportConfig.selectType)", @(column.ImportConfig.ableIds == null ? "null" : column.ImportConfig.ableIds), true, @(column.ImportConfig.__config__))]
+break;
+}
+}
+    @:public @column.NetType @column.ColumnName { get; set; }
+@:
+}
+@if(Model.IsMainTable && Model.IsLogicalDelete)
+{
+    @:/// <summary>
+    @:/// 逻辑删除.
+    @:/// </summary>
+    @:[SugarColumn(ColumnName = "F_Delete_Mark")]
+    @:public int? DeleteMark{ get; set; }
+@:
+    @:/// <summary>
+    @:/// 获取或设置 删除时间.
+    @:/// </summary>
+    @:[SugarColumn(ColumnName = "F_DELETE_TIME", ColumnDescription = "删除时间")]
+    @:public DateTime? DeleteTime { get; set; }
+@:
+    @:/// <summary>
+    @:/// 获取或设置 删除用户.
+    @:/// </summary>
+    @:[SugarColumn(ColumnName = "F_DELETE_USER_ID", ColumnDescription = "删除用户")]
+    @:public string DeleteUserId { get; set; }
+@:
+}
+@if(Model.IsMainTable && Model.IsTenantColumn)
+{
+    @:/// <summary>
+    @:/// 多租户隔离字段ID.
+    @:/// </summary>
+    @:[SugarColumn(ColumnName = "F_Tenant_Id")]
+    @:public string TenantId { get; set; }
+@:
+}
+}

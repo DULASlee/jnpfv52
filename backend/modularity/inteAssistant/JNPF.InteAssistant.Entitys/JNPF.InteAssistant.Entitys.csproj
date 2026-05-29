@@ -1,0 +1,9 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+	  <Description>JNPF 集成助手实体层。</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\common\JNPF.Common\JNPF.Common.csproj" />
+  </ItemGroup>
+
+</Project>

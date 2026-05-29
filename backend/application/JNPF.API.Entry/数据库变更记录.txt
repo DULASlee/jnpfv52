@@ -1,0 +1,15 @@
+﻿v1.1 
+业务表单增加历史流程功能
+
+ALTER TABLE [dbo].[base_visual_dev] ADD [f_parent_id] nvarchar(50) NULL
+GO
+EXEC sp_addextendedproperty
+'MS_Description', N'备份数据，存储原始流程Id',
+'SCHEMA', N'dbo',
+'TABLE', N'base_visual_dev',
+'COLUMN', N'f_parent_id'
+
+
+v1.2
+用户表增openId字段
+

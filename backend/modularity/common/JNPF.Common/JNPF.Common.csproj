@@ -1,0 +1,49 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<Description>JNPF 公共拓展库。</Description>
+		<AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove="ip2region.db" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="ip2region.db">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Aspose.Cells" Version="23.11.0" />
+		<PackageReference Include="Aspose.Words" Version="23.11.0" />
+		<PackageReference Include="FreeSpire.Office" Version="8.2.0" />
+		<PackageReference Include="IPTools.China" Version="1.6.0" />
+		<PackageReference Include="SixLabors.ImageSharp" Version="3.0.2" />
+		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="6.0.1" />
+		<PackageReference Include="System.Management" Version="6.0.2" />
+		<PackageReference Include="NPOI" Version="2.5.5" />
+		<PackageReference Include="UAParser" Version="3.1.47" />
+		<PackageReference Include="Yitter.IdGenerator" Version="1.0.14" />
+		<PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.6" />
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <ProjectReference Include="..\..\..\framework\JNPF.Extras.Authentication.JwtBearer\JNPF.Extras.Authentication.JwtBearer.csproj" />
+	  <ProjectReference Include="..\..\..\framework\JNPF.Extras.DatabaseAccessor.SqlSugar\JNPF.Extras.DatabaseAccessor.SqlSugar.csproj" />
+	  <ProjectReference Include="..\..\..\framework\JNPF.Extras.ObjectMapper.Mapster\JNPF.Extras.ObjectMapper.Mapster.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="Roslynator.Analyzers" Version="4.6.2">
+	    <PrivateAssets>all</PrivateAssets>
+	    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	  </PackageReference>
+	  <PackageReference Update="StyleCop.Analyzers" Version="1.1.118">
+	    <PrivateAssets>all</PrivateAssets>
+	    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+	  </PackageReference>
+	</ItemGroup>
+
+</Project>

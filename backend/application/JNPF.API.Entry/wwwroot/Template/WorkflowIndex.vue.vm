@@ -1,0 +1,1669 @@
+<template>
+  <div class="JNPF-common-layout">
+@*左侧树*@
+@if(Model.Type == 2)
+{
+    @:<div class="JNPF-common-layout-left">
+      @:<div class="JNPF-common-title">
+        @:<h2>@Model.TreeTitle</h2>
+@if(Model.TreeSynType == 0)
+{
+        @:<el-dropdown>
+          @:<el-link icon="icon-ym icon-ym-mpMenu" :underline="false" />
+          @:<el-dropdown-menu slot="dropdown">
+            @:<el-dropdown-item @@click.native="toggleTreeExpand(true)">展开全部</el-dropdown-item>
+            @:<el-dropdown-item @@click.native="toggleTreeExpand(false)">折叠全部</el-dropdown-item>
+          @:</el-dropdown-menu>
+        @:</el-dropdown>
+}
+      @:</div>
+@if(Model.HasTreeQuery && Model.TreeSynType == 0)
+{
+      @:<div class="JNPF-common-tree-search-box">
+        @:<el-input placeholder="输入关键字" v-model="keyword" suffix-icon="el-icon-search" clearable />
+      @:</div>
+}
+      @:<el-tree :data="treeData" :props="treeProps" :default-expand-all="@(Model.TreeSynType == 0 ? "expandsTree" : "false")" @(Model.TreeSynType == 0 ? ":filter-node-method=\"filterNode\" " : "")@(Model.TreeSynType == 1 ? ":load=\"loadNode\" " : ""):lazy="@(Model.TreeSynType == 1 ? "true" : "false")" highlight-current ref="treeBox" :expand-on-click-node="false" @@node-click="handleNodeClick" class="JNPF-common-el-tree" node-key="@(Model.TreePropsValue)" v-if="refreshTree">
+        @:<span class="custom-tree-node" slot-scope="{node,data}">
+          @:<i :class="data.icon"></i>
+          @:<span class="text">{{node.label}}</span>
+        @:</span>
+      @:</el-tree>
+    @:</div>
+}
+    <div class="JNPF-common-layout-center">
+      <el-row class="JNPF-common-search-box" :gutter="16">
+        <el-form @@submit.native.prevent>
+@if(Model.IsKeywordSearchColumn)
+{
+          @:<el-col :span="6">
+            @:<el-form-item label="关键词">
+              @:<el-input v-model="query.jnpfKeyword" placeholder="关键词" clearable />
+            @:</el-form-item>
+          @:</el-col>
+}
+@foreach (var item in @Model.SearchColumnDesign)
+{
+@{var searchMultiple = item.IsMultiple ? "multiple " : "";}
+@if(item.Index == 3)
+{
+          @:<template v-if="showAll">
+}
+          @:<el-col :span="6">
+            @:<el-form-item label="@(item.Label)">
+@if(item.QueryControlsKey != null)
+{
+@switch(item.QueryControlsKey)
+{
+case "inputList":
+              @:<el-input v-model="query.@(item.Name)" placeholder="@(item.Label)" @(searchMultiple)@(item.Clearable)/>	
+	break;
+case "dateList":
+              @:<JnpfDateRangePicker v-model="query.@(item.Name)" valueFormat="@(item.ValueFormat)" format="@(item.Format)" startPlaceholder="开始日期" endPlaceholder="结束日期" />
+	break;
+case "selectList":
+              @:<el-select v-model="query.@(item.Name)" placeholder="@(item.Label)" @(searchMultiple)@(item.Clearable)>
+              	@:<el-option v-for="(item, index) in @(item.OriginalName)Options" :key="index" :label="item.@(item.Props.label)" :value="item.@(item.Props.value)"  />
+              @:</el-select>
+	break;
+case "timePickerList":
+              @:<el-time-picker v-model="query.@(item.Name)" start-placeholder="开始时间" end-placeholder="结束时间" @(searchMultiple)@(item.Clearable)value-format="@(item.ValueFormat)" format="@(item.Format)" is-range />
+	break;
+case "numRangeList":
+case "rate":
+case "slider":
+              @:<num-range v-model="query.@(item.Name)"></num-range>
+	break;
+case "datePickerList":
+              @:<JnpfDateRangePicker v-model="query.@(item.Name)" valueFormat="@(item.ValueFormat)" format="@(item.Format)" startPlaceholder="开始日期" endPlaceholder="结束日期" />
+	break;
+case "userSelectList":
+              @:<@(item.Tag) v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" @(searchMultiple)@(item.SelectType)@(item.IsCustomSelect ? @item.AbleIds : "")/>
+	break;
+case "usersSelectList":
+              @:<JnpfUserSelect v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" @(searchMultiple)@(item.SelectType)@(item.IsCustomSelect ? @item.AbleIds : "")/>
+	break;
+case "organizeList":
+              @:<@(item.Tag) v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" :lastLevel="false"  />
+  break;
+case "comSelectList":
+              @:<JnpfOrganizeSelect v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" @(searchMultiple)/>
+	break;
+case "depSelectList":
+              @:<@(item.Tag) v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" @(searchMultiple)@(item.SelectType)@(item.IsCustomSelect ? @item.AbleIds : "")/>
+	break;
+case "posSelectList":
+              @:<JnpfPosSelect v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" @(searchMultiple)@(item.SelectType)@(item.IsCustomSelect ? @item.AbleIds : "")/>
+	break;
+case "useCascaderList":
+              @:<el-cascader v-model="query.@(item.Name)" :options="@(item.OriginalName)Options" @(item.Clearable):show-all-levels="@(item.ShowAllLevels)" :props="@(item.OriginalName)Props" placeholder="请选择@(item.Label)"></el-cascader>
+	break;
+case "JNPFAddressList":
+              @:<@(item.Tag) v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" :level="@(item.Level)" @(searchMultiple)@(item.Clearable)/>
+	break;
+case "treeSelectList":
+              @:<@(item.Tag) v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" :options="@(item.OriginalName)Options" :props='@(item.OriginalName)Props' @(searchMultiple)@(item.Clearable)/>
+	break;
+case "autoCompleteList":
+              @:<@(item.Tag) v-model='query.@(item.Name)' placeholder='请输入@(item.Label)' @(item.Clearable) @(item.Total!=null ? ":total='" + item.Total+"'" : "") relationField='@(item.RelationField)' interfaceId='@(item.InterfaceId)' :templateJson='@(item.Name)TemplateJson' />
+    break;
+}
+}else{
+              @:<@(item.Tag) v-model="query.@(item.Name)" placeholder="@(item.Label)" @(searchMultiple)@(item.Clearable)/>
+}
+            @:</el-form-item>
+          @:</el-col>
+}
+@if(Model.SearchColumnDesign.Count >= (Model.IsKeywordSearchColumn ? 3 : 4))
+{
+          @:</template>
+}
+          <el-col :span="6">
+            <el-form-item>
+              <el-button type="primary" icon="el-icon-search" @@click="search()">查询</el-button>
+              <el-button icon="el-icon-refresh-right" @@click="reset(@(Model.IsDefaultSearchField ? "1" : ""))">重置</el-button>
+@if(Model.SearchColumnDesign.Count >= (Model.IsKeywordSearchColumn ? 3 : 4))
+{
+              @:<el-button type="text" icon="el-icon-arrow-down" @@click="showAll=true" v-if="!showAll">展开</el-button>
+              @:<el-button type="text" icon="el-icon-arrow-up" @@click="showAll=false" v-else>收起</el-button>
+}
+            </el-form-item>
+          </el-col>
+        </el-form>
+	  </el-row>
+			<div class="JNPF-common-layout-main JNPF-flex-main">
+				<div class="JNPF-common-head">
+					<div>
+@foreach (var item in @Model.TopButtonDesign)
+{
+@if(Model.UseBtnPermission)
+{
+						@:<el-button type="@(item.Type)" icon="@(item.Icon)" @@click="@(item.Method)" v-has="'btn_@(item.Value)'">@(item.Label)</el-button>
+}else{
+						@:<el-button type="@(item.Type)" icon="@(item.Icon)" @@click="@(item.Method)">@(item.Label)</el-button>
+}
+}
+					</div>
+					<div class="JNPF-common-head-right">
+@if(Model.HasSuperQuery)
+{
+						@:<el-tooltip content="高级查询" placement="top" >
+							@:<el-link icon="icon-ym icon-ym-filter JNPF-common-head-icon" :underline="false" @@click="openSuperQuery()" />
+						@:</el-tooltip>
+}
+@if(Model.Type == 5) {
+    @:<el-tooltip effect="dark" content="展开" placement="top">
+      @:<el-link v-show="!expandsTable" type="text" icon="icon-ym icon-ym-btn-expand JNPF-common-head-icon" :underline="false" @@click="toggleExpandList()" />
+    @:</el-tooltip>
+    @:<el-tooltip effect="dark" content="折叠" placement="top">
+      @:<el-link v-show="expandsTable" type="text" icon="icon-ym icon-ym-btn-collapse JNPF-common-head-icon" :underline="false" @@click="toggleExpandList()" />
+    @:</el-tooltip>
+}
+						<el-tooltip effect="dark" content="刷新" placement="top">
+							<el-link icon="icon-ym icon-ym-Refresh JNPF-common-head-icon" :underline="false" @@click="reset()" />
+						</el-tooltip>
+					</div>
+				</div>
+@switch(Model.Type)
+{
+case 3:
+        @:<JNPF-table v-loading="listLoading" :data="list" @(Model.IsSort ? "@sort-change='handleTableSort' ":"")@(Model.IsBatchRemoveDel || Model.IsDownload ? "has-c @selection-change='handleSelectionChange' ":"")@(Model.IsChildTableShow ? ":span-method='arraySpanMethod' ":"") row-key="@Model.PrimaryKey" default-expand-all :tree-props="{children: 'children', hasChildren: ''}" :hasNO="false" @(Model.DefaultSortConfig!="[]" ? ":header-cell-class-name='handleHeaderClass'" : "")>
+			@:<el-table-column type="index" width="50" label="序号" align="center" @(Model.ChildTableStyle == 1 && Model.IsFixed ? "fixed='left'" : "")/>
+break;
+case 5:
+        @:<JNPF-table v-loading="listLoading" :data="list" :default-expand-all="expandsTable" row-key="id" :tree-props="{children: 'children', hasChildren: 'hasChildren'}" v-if="refreshTable" @(Model.IsFixed ? "hasNOFixed" : "")>
+break;
+default:
+        @:<JNPF-table v-loading="listLoading" :data="list" @(Model.IsSort ? "@sort-change='handleTableSort' ":"")@(Model.ShowSummary ? "show-summary :summary-method='getTableSummaries' " : "")@(Model.IsBatchRemoveDel || Model.IsDownload ? "has-c @selection-change='handleSelectionChange' ":"")@(Model.IsChildTableShow ? ":span-method='arraySpanMethod' ":"") :hasNO="false" @(Model.DefaultSortConfig!="[]" ? ":header-cell-class-name='handleHeaderClass'" : "")>
+			@:<el-table-column type="index" width="50" label="序号" align="center" @(Model.IsFixed ? "fixed='left'" : "")/>
+break;
+}
+@*折叠面板优先生成子表*@
+@switch(Model.ChildTableStyle)
+{
+case 2:
+          @:<el-table-column type="expand" width="40">
+            @:<template slot-scope="scope">
+              @:<el-tabs v-model="scope.row.activeName">
+@foreach (var item in Model.ColumnDesign)
+{
+@if(item.IsChildTable)
+{
+                @:<el-tab-pane label="@(item.Label)">
+				  @:<el-table :data="scope.row.@(item.Name)" stripe size='mini'>
+@foreach (var childs in item.ChildTableDesigns)
+{
+@switch(childs.jnpfKey)
+{
+case "relationForm":
+                          @:<el-table-column prop="@(childs.Name)" label="@(childs.Label)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\" " : "") @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+							  @:<template slot-scope="scope">
+								  @:<el-link :underline="false" @@click.native="toDetail('@(childs.ModelId)', scope.row.@(childs.Name)_id)" type="primary">{{ scope.row.@(childs.Name) }}</el-link>
+							  @:</template>
+						  @:</el-table-column>
+break;
+case "sign":
+                          @:<el-table-column prop="@(childs.Name)" label="@(childs.Label)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\" " : "") @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+							  @:<template slot-scope="scope">
+                                @:<JnpfSign v-model="scope.row.@(childs.Name)" detailed />
+							  @:</template>
+						  @:</el-table-column>
+break;
+case "signature":
+                          @:<el-table-column prop="@(childs.Name)" label="@(childs.Label)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\" " : "") @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+							  @:<template slot-scope="scope">
+                                @:<JnpfSignature v-model="scope.row.@(childs.Name)" detailed />
+							  @:</template>
+						  @:</el-table-column>
+break;
+case "rate":
+                          @:<el-table-column prop="@(childs.Name)" label="@(childs.Label)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\" " : "") @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+							  @:<template slot-scope="scope">
+                                @:<JnpfRate v-model="scope.row.@(childs.Name)" disabled @(Model.Type==3 ? "v-if='!scope.row.top'" : "")/>
+							  @:</template>
+						  @:</el-table-column>
+break;
+case "slider":
+                          @:<el-table-column prop="@(childs.Name)" label="@(childs.Label)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\" " : "") @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+							  @:<template slot-scope="scope">
+                                @:<JnpfSlider v-model="scope.row.@(childs.Name)" disabled @(Model.Type==3 ? "v-if='!scope.row.top'" : "")/>
+							  @:</template>
+						  @:</el-table-column>
+break;
+case "uploadImg":
+                          @:<el-table-column prop="@(childs.Name)" label="@(childs.Label)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\" " : "") @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+							  @:<template slot-scope="scope">
+                                @:<JnpfUploadImg v-model="scope.row.@(childs.Name)" disabled detailed simple v-if="scope.row.@(childs.Name) && scope.row.@(childs.Name).length" />
+							  @:</template>
+						  @:</el-table-column>
+break;
+case "uploadFile":
+                          @:<el-table-column prop="@(childs.Name)" label="@(childs.Label)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\" " : "") @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+							  @:<template slot-scope="scope">
+                                @:<JnpfUploadFile v-model="scope.row.@(childs.Name)" disabled detailed simple v-if="scope.row.@(childs.Name) && scope.row.@(childs.Name).length" />
+							  @:</template>
+						  @:</el-table-column>
+break;
+case "input":
+                          @:<el-table-column prop="@(childs.Name)" label="@(childs.Label)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\" " : "") @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+							  @:<template slot-scope="scope">
+								@<jnpf-input v-model="scope.row.@(childs.Name)" @(childs.UseMask) @(childs.MaskConfig) detailed />
+							  @:</template>
+						  @:</el-table-column>
+break;
+default:
+                          @:<el-table-column prop="@(childs.Name)" label="@(childs.Label)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\" " : "") @(Model.ShowOverflow ? "show-overflow-tooltip" : "") />
+break;
+}
+}
+				  @:</el-table>
+				@:</el-tab-pane>
+}
+}
+              @:</el-tabs>
+            @:</template>
+          @:</el-table-column>
+break;
+}
+@foreach (var item in Model.ColumnDesign)
+{
+if(Model.Type == 3 && item.LowerName == Model.GroupField)
+{
+    continue;
+}
+if(Model.Type == 3 && item.LowerName == Model.GroupShowField)
+{
+    @:<el-table-column label="@(item.Label)" prop="@(item.Name)" align="left"@(Model.IsFixed ? " fixed='left'" : "") @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+		@:<template slot-scope="scope">
+			@:<span v-if="scope.row.top" style="font-weight:bold;">{{scope.row.@(item.Name)}}【{{scope.row.children.length}}】</span>
+			@:<span v-else>@(item.jnpfKey=="sign" ? "<JnpfSign v-model='scope.row.shuxingxuanze' detailed />" : "{{scope.row."+item.Name+"}}")</span>
+		@:</template>
+	@:</el-table-column>
+    continue;
+}
+@switch(Model.ChildTableStyle)
+{
+case 1:
+if(item.IsChildTable)
+{
+                    @:<el-table-column label="@(item.Label)" prop="@(item.Name)" align="center">
+                        @:<el-table-column prop="@(item.Name)-child-first" width="1px" class-name="child-table-box">
+@if(Model.Type == 3)
+{ 
+    @:<template slot-scope="scope" v-if="!scope.row.top">
+}else{
+    @:<template slot-scope="scope">
+}
+								@:<div class="child-table-column">
+									@:<template v-if="!scope.row.@(item.Name)Expand">
+										@:<tr v-for="(item, index) in scope.row.@(item.Name).slice(0, 3)" class="child-table__row" :key="index">
+@foreach (var childs in item.ChildTableDesigns)
+{
+@if(@childs.Width != "0")
+{
+											@:<td class="td-flex-1" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\"" : "")>
+                                                @:<div class='@(Model.ShowOverflow ? "cell ellipsis" : "cell")' @(Model.ShowOverflow ? ":title='item."+childs.Name+"'" : "")>
+@switch(childs.jnpfKey)
+{
+case "relationForm":
+                          @:<el-link :underline="false" @@click.native="toDetail('@(childs.ModelId)', item.@(childs.Name)_id)" type="primary">{{ item.@(childs.Name) }}</el-link>
+break;
+case "inputNumber":
+                          @:<JnpfNumber v-model="item.@(childs.LowerName)" @(childs.Thousands ? "thousands" : "") :precision="@(childs.Precision)" />
+break;
+case "sign":
+                          @:<JnpfSign v-model="item.@(childs.LowerName)" detailed />
+break;
+case "signature":
+                          @:<JnpfSignature v-model="item.@(childs.LowerName)" detailed />
+break;
+case "rate":
+                          @:<JnpfRate v-model="item.@(childs.LowerName)" disabled />
+break;
+case "slider":
+                          @:<JnpfSlider v-model="item.@(childs.LowerName)" disabled />
+break;
+case "uploadImg":
+                          @:<JnpfUploadImg v-model="item.@(childs.LowerName)" disabled detailed simple v-if="item.@(childs.LowerName) && item.@(childs.LowerName).length" />
+break;
+case "uploadFile":
+                          @:<JnpfUploadFile v-model="item.@(childs.LowerName)" disabled detailed simple v-if="item.@(childs.LowerName) && item.@(childs.LowerName).length" />
+break;
+case "input":
+                          @<jnpf-input v-model="item.@(childs.LowerName)" @(childs.UseMask) @(childs.MaskConfig) @(Model.ShowOverflow ? "showOverflow" : "") detailed />
+break;
+default:
+                          @:{{ item.@(childs.Name) }}
+break;
+}
+												@:</div>
+											@:</td>
+}else{
+											@:<td class="td-flex-1" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\"" : "")>
+                                                @:<div class='@(Model.ShowOverflow ? "cell ellipsis" : "cell")' @(Model.ShowOverflow ? ":title='item."+childs.Name+"'" : "")>
+@switch(childs.jnpfKey)
+{
+case "relationForm":
+                          @:<el-link :underline="false" @@click.native="toDetail('@(childs.ModelId)', item.@(childs.Name)_id)" type="primary">{{ item.@(childs.Name) }}</el-link>
+break;
+case "inputNumber":
+                          @:<JnpfNumber v-model="item.@(childs.LowerName)" @(childs.Thousands ? "thousands" : "") :precision="@(childs.Precision)" />
+break;
+case "sign":
+                          @:<JnpfSign v-model="item.@(childs.LowerName)" detailed />
+break;
+case "signature":
+                          @:<JnpfSignature v-model="item.@(childs.LowerName)" detailed />
+break;
+case "rate":
+                          @:<JnpfRate v-model="item.@(childs.LowerName)" disabled />
+break;
+case "slider":
+                          @:<JnpfSlider v-model="item.@(childs.LowerName)" disabled />
+break;
+case "uploadImg":
+                          @:<JnpfUploadImg v-model="item.@(childs.LowerName)" disabled detailed simple v-if="item.@(childs.LowerName) && item.@(childs.LowerName).length" />
+break;
+case "uploadFile":
+                          @:<JnpfUploadFile v-model="item.@(childs.LowerName)" disabled detailed simple v-if="item.@(childs.LowerName) && item.@(childs.LowerName).length" />
+break;
+case "input":
+                          @<jnpf-input v-model="item.@(childs.LowerName)" @(childs.UseMask) @(childs.MaskConfig) @(Model.ShowOverflow ? "showOverflow" : "") detailed />
+break;
+default:
+                          @:{{ item.@(childs.Name) }}
+break;
+}
+												@:</div>
+											</td>
+}
+}
+                                        @:</tr>
+									@:</template>
+									@:<template v-if="scope.row.@(item.Name)Expand">
+										@:<tr v-for="(item, index) in scope.row.@(item.Name)" class="child-table__row" :key="index">
+@foreach (var childs in item.ChildTableDesigns)
+{
+@if(@childs.Width != "0")
+{
+											@:<td class="td-flex-1" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\"" : "")>
+                                                @:<div class='@(Model.ShowOverflow ? "cell ellipsis" : "cell")' @(Model.ShowOverflow ? ":title='item."+childs.Name+"'" : "")>
+@switch(childs.jnpfKey)
+{
+case "relationForm":
+                          @:<el-link :underline="false" @@click.native="toDetail('@(childs.ModelId)', item.@(childs.Name)_id)" type="primary">{{ item.@(childs.Name) }}</el-link>
+break;
+case "inputNumber":
+                          @:<JnpfNumber v-model="item.@(childs.LowerName)" @(childs.Thousands ? "thousands" : "") :precision="@(childs.Precision)" />
+break;
+case "sign":
+                          @:<JnpfSign v-model="item.@(childs.LowerName)" detailed />
+break;
+case "signature":
+                          @:<JnpfSignature v-model="item.@(childs.LowerName)" detailed />
+break;
+case "rate":
+                          @:<JnpfRate v-model="item.@(childs.LowerName)" disabled />
+break;
+case "slider":
+                          @:<JnpfSlider v-model="item.@(childs.LowerName)" disabled />
+break;
+case "uploadImg":
+                          @:<JnpfUploadImg v-model="item.@(childs.LowerName)" disabled detailed simple v-if="item.@(childs.LowerName) && item.@(childs.LowerName).length" />
+break;
+case "uploadFile":
+                          @:<JnpfUploadFile v-model="item.@(childs.LowerName)" disabled detailed simple v-if="item.@(childs.LowerName) && item.@(childs.LowerName).length" />
+break;
+case "input":
+                          @<jnpf-input v-model="item.@(childs.LowerName)" @(childs.UseMask) @(childs.MaskConfig) @(Model.ShowOverflow ? "showOverflow" : "") detailed />
+break;
+default:
+                          @:{{ item.@(childs.Name) }}
+break;
+}
+												@:</div>
+											@:</td>
+}else{
+											@:<td class="td-flex-1" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\"" : "")>
+                                                @:<div class='@(Model.ShowOverflow ? "cell ellipsis" : "cell")' @(Model.ShowOverflow ? ":title='item."+childs.Name+"'" : "")>
+@switch(childs.jnpfKey)
+{
+case "relationForm":
+                          @:<el-link :underline="false" @@click.native="toDetail('@(childs.ModelId)', item.@(childs.Name)_id)" type="primary">{{ item.@(childs.Name) }}</el-link>
+break;
+case "inputNumber":
+                          @:<JnpfNumber v-model="item.@(childs.LowerName)" @(childs.Thousands ? "thousands" : "") :precision="@(childs.Precision)" />
+break;
+case "sign":
+                          @:<JnpfSign v-model="item.@(childs.LowerName)" detailed />
+break;
+case "signature":
+                          @:<JnpfSignature v-model="item.@(childs.LowerName)" detailed />
+break;
+case "rate":
+                          @:<JnpfRate v-model="item.@(childs.LowerName)" disabled />
+break;
+case "slider":
+                          @:<JnpfSlider v-model="item.@(childs.LowerName)" disabled />
+break;
+case "uploadImg":
+                          @:<JnpfUploadImg v-model="item.@(childs.LowerName)" disabled detailed simple v-if="item.@(childs.LowerName) && item.@(childs.LowerName).length" />
+break;
+case "uploadFile":
+                          @:<JnpfUploadFile v-model="item.@(childs.LowerName)" disabled detailed simple v-if="item.@(childs.LowerName) && item.@(childs.LowerName).length" />
+break;
+case "input":
+                          @<jnpf-input v-model="item.@(childs.LowerName)" @(childs.UseMask) @(childs.MaskConfig) @(Model.ShowOverflow ? "showOverflow" : "") detailed />
+break;
+default:
+                          @:{{ item.@(childs.Name) }}
+break;
+}
+												@:</div>
+											</td>
+}
+}
+										@:</tr>
+									@:</template>
+									@:<div class="expand-more-btn" v-if="scope.row.@(item.Name).length > 3">
+										@:<el-button v-if="scope.row.@(item.Name)Expand" type="text" @@click="scope.row.@(item.Name)Expand =!scope.row.@(item.Name)Expand">隐藏部分</el-button>
+										@:<el-button v-if="!scope.row.@(item.Name)Expand" type="text" @@click="scope.row.@(item.Name)Expand=!scope.row.@(item.Name)Expand">加载更多</el-button>
+									@:</div>
+								@:</div>
+							@:</template>
+					    @:</el-table-column>
+@foreach (var childs in item.ChildTableDesigns)
+{
+                        @:<el-table-column label="@(childs.Label)" @(item.Width)prop="@(item.Name + "-" +@childs.Name)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + @item.Name + "-" +  childs.Name + "')\" " : "")align="@(childs.Align)" @(childs.IsSort) @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+						    @:<template slot-scope="scope">{{ scope.row.@(childs.Name) }}</template>
+					    @:</el-table-column>
+}
+                    @:</el-table-column>
+}else{
+
+@if(item.ComplexColumns!=null)
+{
+        @:<el-table-column label="@(item.Label)" @(item.Width)prop="@(item.Name)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + item.Name + "')\" " : "")align="@(item.Align)" @(item.Fixed)@(item.IsSort)>
+@foreach (var complexHeaderItem in item.ComplexColumns)
+{
+            @:<el-table-column label="@(complexHeaderItem.Label)" @(complexHeaderItem.Width)prop="@(complexHeaderItem.Name)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + complexHeaderItem.Name + "')\" " : "")align="@(complexHeaderItem.Align)" @(complexHeaderItem.Fixed)@(complexHeaderItem.IsSort) @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+			
+            @switch(complexHeaderItem.jnpfKey)
+            {
+                case "relationForm":
+                    @:<template slot-scope="scope">
+                        @:<el-link :underline="false"
+                        @:@@click.native="toDetail('@(complexHeaderItem.ModelId)', scope.row.@(complexHeaderItem.LowerName)_id)" type="primary">
+					        @:{{ scope.row.@(complexHeaderItem.LowerName) }}</el-link>
+                    @:</template>
+                break;
+                case "inputNumber":
+                    @:<template slot-scope="scope">
+                        @:<JnpfNumber v-model="scope.row.@(complexHeaderItem.LowerName)" @(complexHeaderItem.Thousands ? "thousands" : "") :precision="@(complexHeaderItem.Precision)" />
+			        @:</template>
+				break;
+				case "sign":
+				    @:<template slot-scope="scope">
+					    @:<JnpfSign v-model="scope.row.@(complexHeaderItem.LowerName)" detailed="" />
+					    @:
+				    </template>
+				break;
+                case "signature":
+                    @:<template slot-scope="scope">
+                        @:<JnpfSignature v-model="scope.row.@(complexHeaderItem.LowerName)" detailed />
+			        @:</template>
+                break;
+                case "rate":
+                    @:<template slot-scope="scope">
+                        @:<JnpfRate v-model="scope.row.@(complexHeaderItem.LowerName)" disabled @(Model.Type==3 ? "v-if='!scope.row.top'" : "")/>
+			        @:</template>
+                break;
+                case "slider":
+                    @:<template slot-scope="scope">
+                        @:<JnpfSlider v-model="scope.row.@(complexHeaderItem.LowerName)" disabled @(Model.Type==3 ? "v-if='!scope.row.top'" : "")/>
+			        @:</template>
+                break;
+                case "uploadImg":
+                    @:<template slot-scope="scope">
+                        @:<JnpfUploadImg v-model="scope.row.@(complexHeaderItem.LowerName)" disabled detailed simple v-if="scope.row.@(complexHeaderItem.LowerName) && scope.row.@(complexHeaderItem.LowerName).length" />
+			        @:</template>
+                break;
+                case "uploadFile":
+                    @:<template slot-scope="scope">
+                        @:<JnpfUploadFile v-model="scope.row.@(complexHeaderItem.LowerName)" disabled detailed simple v-if="scope.row.@(complexHeaderItem.LowerName) && scope.row.@(complexHeaderItem.LowerName).length" />
+			        @:</template>
+                break;
+                case "input":
+                    @:<template slot-scope="scope">
+					    @<jnpf-input v-model="scope.row.@(complexHeaderItem.LowerName)" @(complexHeaderItem.UseMask) @(complexHeaderItem.MaskConfig) detailed />
+					@:</template>
+                break;
+				}
+				@:</el-table-column>
+}
+
+        @:</el-table-column>
+}else{
+        @:<el-table-column label="@(item.Label)" @(item.Width)prop="@(item.Name)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + item.Name + "')\" " : "")align="@(item.Align)" @(item.Fixed)@(item.IsSort) @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+@switch(item.jnpfKey)
+{
+case "relationForm":
+            @:<template slot-scope="scope">
+              @:<el-link :underline="false"
+                @:@@click.native="toDetail('@(item.ModelId)', scope.row.@(item.LowerName)_id)" type="primary">
+                @:{{ scope.row.@(item.LowerName) }}</el-link>
+            @:</template>
+break;
+case "inputNumber":
+            @:<template slot-scope="scope">
+              @:<JnpfNumber v-model="scope.row.@(item.LowerName)" @(item.Thousands ? "thousands" : "") :precision="@(item.Precision)" />
+			@:</template>
+break;
+case "sign":
+            @:<template slot-scope="scope">
+              @:<JnpfSign v-model="scope.row.@(item.LowerName)" detailed />
+			@:</template>
+break;
+case "signature":
+            @:<template slot-scope="scope">
+              @:<JnpfSignature v-model="scope.row.@(item.LowerName)" detailed />
+			@:</template>
+break;
+case "rate":
+            @:<template slot-scope="scope">
+                @:<JnpfRate v-model="scope.row.@(item.LowerName)" disabled @(Model.Type==3 ? "v-if='!scope.row.top'" : "")/>
+	        @:</template>
+break;
+case "slider":
+            @:<template slot-scope="scope">
+                @:<JnpfSlider v-model="scope.row.@(item.LowerName)" disabled @(Model.Type==3 ? "v-if='!scope.row.top'" : "")/>
+	        @:</template>
+break;
+case "uploadImg":
+            @:<template slot-scope="scope">
+                @:<JnpfUploadImg v-model="scope.row.@(item.LowerName)" disabled detailed simple v-if="scope.row.@(item.LowerName) && scope.row.@(item.LowerName).length" />
+	        @:</template>
+break;
+case "uploadFile":
+            @:<template slot-scope="scope">
+                @:<JnpfUploadFile v-model="scope.row.@(item.LowerName)" disabled detailed simple v-if="scope.row.@(item.LowerName) && scope.row.@(item.LowerName).length" />
+	        @:</template>
+break;
+case "input":
+            @:<template slot-scope="scope">
+		        @<jnpf-input v-model="scope.row.@(item.LowerName)" @(item.UseMask) @(item.MaskConfig) detailed />
+	        @:</template>
+break;
+}
+					@:</el-table-column>
+}
+}
+break;
+case 2:
+@if(!item.IsChildTable)
+{
+@if(item.ComplexColumns!=null)
+{
+        @:<el-table-column label="@(item.Label)" @(item.Width)prop="@(item.Name)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + item.Name + "')\" " : "")align="@(item.Align)" @(item.Fixed)@(item.IsSort)>
+@foreach (var complexHeaderItem in item.ComplexColumns)
+{
+            @:<el-table-column label="@(complexHeaderItem.Label)" @(complexHeaderItem.Width)prop="@(complexHeaderItem.Name)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + complexHeaderItem.Name + "')\" " : "")align="@(complexHeaderItem.Align)" @(complexHeaderItem.Fixed)@(complexHeaderItem.IsSort) @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+			
+            @switch(complexHeaderItem.jnpfKey)
+            {
+                case "relationForm":
+                    @:<template slot-scope="scope">
+                        @:<el-link :underline="false"
+                        @:@@click.native="toDetail('@(complexHeaderItem.ModelId)', scope.row.@(complexHeaderItem.LowerName)_id)" type="primary">
+					        @:{{ scope.row.@(complexHeaderItem.LowerName) }}</el-link>
+                    @:</template>
+                break;
+                case "inputNumber":
+                    @:<template slot-scope="scope">
+                        @:<JnpfNumber v-model="scope.row.@(complexHeaderItem.LowerName)" @(complexHeaderItem.Thousands ? "thousands" : "") :precision="@(complexHeaderItem.Precision)" />
+			        @:</template>
+				break;
+				case "sign":
+				    @:<template slot-scope="scope">
+					    @:<JnpfSign v-model="scope.row.@(complexHeaderItem.LowerName)" detailed="" />
+					    @:
+				    </template>
+				break;
+                case "signature":
+                    @:<template slot-scope="scope">
+                        @:<JnpfSignature v-model="scope.row.@(complexHeaderItem.LowerName)" detailed />
+			        @:</template>
+                break;
+                case "rate":
+                    @:<template slot-scope="scope">
+                        @:<JnpfRate v-model="scope.row.@(complexHeaderItem.LowerName)" disabled @(Model.Type==3 ? "v-if='!scope.row.top'" : "")/>
+			        @:</template>
+                break;
+                case "slider":
+                    @:<template slot-scope="scope">
+                        @:<JnpfSlider v-model="scope.row.@(complexHeaderItem.LowerName)" disabled @(Model.Type==3 ? "v-if='!scope.row.top'" : "")/>
+			        @:</template>
+                break;
+                case "uploadImg":
+                    @:<template slot-scope="scope">
+                        @:<JnpfUploadImg v-model="scope.row.@(complexHeaderItem.LowerName)" disabled detailed simple v-if="scope.row.@(complexHeaderItem.LowerName) && scope.row.@(complexHeaderItem.LowerName).length" />
+			        @:</template>
+                break;
+                case "uploadFile":
+                    @:<template slot-scope="scope">
+                        @:<JnpfUploadFile v-model="scope.row.@(complexHeaderItem.LowerName)" disabled detailed simple v-if="scope.row.@(complexHeaderItem.LowerName) && scope.row.@(complexHeaderItem.LowerName).length" />
+			        @:</template>
+                break;
+                case "input":
+                    @:<template slot-scope="scope">
+		                @<jnpf-input v-model="scope.row.@(complexHeaderItem.LowerName)" @(complexHeaderItem.UseMask) @(complexHeaderItem.MaskConfig) detailed />
+	                @:</template>
+                break;
+				}
+				@:</el-table-column>
+}
+
+        @:</el-table-column>
+}else{
+                    @:<el-table-column label="@(item.Label)" @(item.Width)prop="@(item.Name)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + item.Name + "')\" " : "")align="@(item.Align)" @(item.Fixed)@(item.IsSort) @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+@switch(item.jnpfKey)
+{
+case "relationForm":
+            @:<template slot-scope="scope">
+              @:<el-link :underline="false"
+                @:@@click.native="toDetail('@(item.ModelId)', scope.row.@(item.LowerName)_id)" type="primary">
+                @:{{ scope.row.@(item.LowerName) }}</el-link>
+            @:</template>
+break;
+case "inputNumber":
+            @:<template slot-scope="scope">
+              @:<JnpfNumber v-model="scope.row.@(item.LowerName)" @(item.Thousands ? "thousands" : "") :precision="@(item.Precision)" />
+			@:</template>
+break;
+case "sign":
+            @:<template slot-scope="scope">
+              @:<JnpfSign v-model="scope.row.@(item.LowerName)" detailed />
+			@:</template>
+break;
+case "signature":
+            @:<template slot-scope="scope">
+                @:<JnpfSignature v-model="scope.row.@(item.LowerName)" detailed />
+	        @:</template>
+break;
+case "rate":
+            @:<template slot-scope="scope">
+                @:<JnpfRate v-model="scope.row.@(item.LowerName)" disabled @(Model.Type==3 ? "v-if='!scope.row.top'" : "")/>
+			@:</template>
+break;
+case "slider":
+            @:<template slot-scope="scope">
+                @:<JnpfSlider v-model="scope.row.@(item.LowerName)" disabled @(Model.Type==3 ? "v-if='!scope.row.top'" : "")/>
+			@:</template>
+break;
+case "uploadImg":
+            @:<template slot-scope="scope">
+                @:<JnpfUploadImg v-model="scope.row.@(item.LowerName)" disabled detailed simple v-if="scope.row.@(item.LowerName) && scope.row.@(item.LowerName).length" />
+			@:</template>
+break;
+case "uploadFile":
+            @:<template slot-scope="scope">
+                @:<JnpfUploadFile v-model="scope.row.@(item.LowerName)" disabled detailed simple v-if="scope.row.@(item.LowerName) && scope.row.@(item.LowerName).length" />
+			@:</template>
+break;
+case "input":
+            @:<template slot-scope="scope">
+		        @<jnpf-input v-model="scope.row.@(item.LowerName)" @(item.UseMask) @(item.MaskConfig) detailed />
+	        @:</template>
+break;
+}
+					@:</el-table-column>
+}
+}
+break;
+}
+}
+					 <el-table-column prop="flowState" label="状态" width="100" @(Model.IsFixed ? "fixed='right'" : "")>
+@if(Model.Type == 3)
+{
+    @:<template slot-scope="scope" v-if="!scope.row.top">
+}else{
+    @:<template slot-scope="scope">
+}
+                            <el-tag v-if="scope.row.flowState==1">等待审核</el-tag>
+                            <el-tag type="success" v-else-if="scope.row.flowState==2">审核通过</el-tag>
+                            <el-tag type="danger" v-else-if="scope.row.flowState==3">审核驳回</el-tag>
+							<el-tag type="warning" v-else-if="scope.row.flowState==4 || scope.row.flowState==7">流程撤回</el-tag>
+                            <el-tag type="info" v-else-if="scope.row.flowState==5">审核终止</el-tag>
+                            <el-tag type="info" v-else>等待提交</el-tag>
+                        </template>
+                    </el-table-column>
+					<el-table-column label="操作"@(Model.ChildTableStyle == 2 ? "" :" fixed=\"right\"") width="@(Model.ColumnButtonDesign.Count * 50)">
+@if(Model.Type == 3)
+{
+    @:<template slot-scope="scope" v-if="!scope.row.top">
+}else{
+    @:<template slot-scope="scope">
+}
+@foreach (var item in @Model.ColumnButtonDesign)
+{
+							@:<el-button type="text" @@click="@(item.Method)" @(item.Type)@(item.Disabled)@(Model.UseBtnPermission ? " v-has=\"'btn_" + @item.Value + "'\"":"")>@(item.Label)</el-button>
+}
+						</template>
+					</el-table-column>
+				</JNPF-table>
+@if(Model.HasPage && Model.Type != 3)
+{
+                @:<pagination :total="total" :page.sync="listQuery.currentPage" :limit.sync="listQuery.pageSize" @@pagination="initData" />
+}
+            </div>
+        </div>
+		<FlowBox v-show="flowVisible" ref="FlowBox" @@close="colseFlow" />
+		<ExportBox v-if="exportBoxVisible" ref="ExportBox" @@download="download" />
+@if(Model.IsUpload)
+{
+		@:<ImportBox v-if="uploadBoxVisible" ref="UploadBox" @@refresh="initData" />
+}
+@if(Model.HasSuperQuery)
+{
+        @:<SuperQuery v-if="superQueryVisible" ref="SuperQuery" :columnOptions="superQueryJson" @@superQuery="superQuery" />
+}
+@if(Model.IsBatchPrint)
+{
+    @:<print-browse :visible.sync="printBrowseVisible" :id="printIdNow" :batchIds="multipleSelection.join()"/>
+    @:<PrintDialog v-if="printDialogVisible" ref="printDialog" @@change="printBrowseHandle"></PrintDialog>
+}
+    <RelevanceDetail v-if="detailsVisible" ref="RelevanceDetail" @@close="detailsVisible = false" />
+	  <SelectFlow ref="selectFlow" v-if="flowListVisible" @@selectFlow='selectFlow' />
+	</div>
+</template>
+<script>
+    import request from '@@/utils/request'
+	import columnList from './columnList'
+    import { getDictionaryDataSelector } from '@@/api/systemData/dictionary'
+    import FlowBox from '@@/views/workFlow/components/FlowBox'
+    import { getFormById } from '@@/api/workFlow/FormDesign'
+    import { getFlowList } from '@@/api/workFlow/FlowEngine'
+    import RelevanceDetail from '@@/views/basic/dynamicModel/list/RelevanceDetail'
+    import { getConfigData } from '@@/api/onlineDev/visualDev'
+    import { noGroupList } from '@@/components/Generator/generator/comConfig'
+    import { getOrgByOrganizeCondition } from '@@/api/permission/organize'
+	import SelectFlow from '@@/components/SelectFlowDialog'
+@if(Model.IsDownload)
+{
+	@:import ExportBox from '@@/components/ExportBox'
+}
+@if(Model.HasSuperQuery)
+{
+    @:import SuperQuery from '@@/components/SuperQuery'
+    @:import superQueryJson from './superQueryJson'
+}
+    import { getDataInterfaceRes } from '@@/api/systemData/dataInterface'
+
+@if(Model.IsBatchPrint)
+{
+@:import PrintBrowse from "@@/components/PrintBrowse/batch";
+@:import PrintDialog from '@@/components/PrintDialog'
+}
+@if(Model.AllThousandsField != "[]")
+{
+@:import { thousandsFormat } from '@@/components/Generator/utils/index.js'
+}
+	export default {
+        components: { FlowBox,SelectFlow, RelevanceDetail@(Model.IsDownload ? ", ExportBox":"")@(Model.HasSuperQuery ? ", SuperQuery" : "")@(Model.IsBatchPrint ? ", PrintBrowse, PrintDialog" : "") },
+        data() {
+            return {
+@if(Model.Type == 5)
+{
+      @:expandsTable: true,
+      @:refreshTable: false,
+}
+@if(Model.Type == 2)
+{
+      @:expandsTree: true,
+      @:refreshTree: true,
+}
+@if(Model.IsUpload)
+{
+			    @:uploadBoxVisible:false,
+}
+@if(Model.IsChildTableShow)
+{
+                @:columnOptions: [],
+                @:expandObj: {},
+	            @:mergeList: [],
+}
+                ordersList: [],
+	            columnList,
+				formFlowId: undefined,
+                flowList:[],
+                flowListVisible: false,
+      mainLoading: false,
+      detailsVisible: false,
+@if(Model.HasSuperQuery)
+{
+                @:superQueryVisible: false,
+                @:superQueryJson,
+}
+@if(Model.SearchColumnDesign.Count >= 3){
+                @:showAll: false,
+}
+				query: {
+@foreach (var item in @Model.SearchColumnDesign)
+{
+                    @:@(item.Name) : @(item.DefaultValues),
+}
+@if(!Model.IsExistQuery && Model.Type == 2)
+{
+                    @:@(Model.TreeRelation):undefined,
+}
+				},
+@if(Model.Type == 2)
+{
+				@:treeProps: {
+                    @:children: '@(Model.TreePropsChildren)',
+                    @:label: '@(Model.TreePropsLabel)',
+					@:value: '@(Model.TreePropsValue)',
+                @:},
+	  @:keyword:'',
+}
+                list: [],
+                listLoading: true,
+@if(Model.IsBatchPrint)
+{
+      @:printDialogVisible: false,
+      @:printBrowseVisible: false,
+      @:printId: "@(Model.PrintIds)",
+	  @:printIdNow:'@(Model.PrintId)',
+}
+@if(Model.IsBatchPrint || Model.IsBatchRemoveDel || Model.IsDownload)
+{
+      @:multipleSelection: [], 
+}
+				total: 0,
+                listQuery: {
+@if(Model.HasPage && Model.Type != 3)
+{
+                    @:currentPage: 1,
+                    @:pageSize: 20,
+}
+					sort: "desc",
+                    sidx: "",
+@if(Model.HasSuperQuery)
+{
+                    @:superQueryJson: ''
+}
+                },
+                defListQuery: {
+                    sort: "desc",
+                    sidx: ""
+                },
+                flowVisible: false,
+                exportBoxVisible: false,
+@if(Model.Type == 2)
+{
+                @:treeData:[],
+}
+@foreach(var item in Model.OptionsList)
+{
+@switch(item.jnpfKey)
+{
+case "organizeSelect":
+case "roleSelect":
+case "groupSelect":
+case "posSelect":
+case "userSelect":
+case "depSelect":
+case "usersSelect":
+      @:@item.Content
+break;
+case "autoComplete":
+      @:@(item.Name)TemplateJson : @(item.TemplateJson),
+break;
+default:
+@if(item.IsIndex)
+{
+      @:@item.Content
+}
+@if(item.IsProps)
+{
+      @:@(item.LowerName)Props:@(item.QueryProps),
+}
+break;
+}
+}
+			}
+        },
+		computed: {
+            menuId() {
+                return this.$route.meta.modelId || ''
+            }
+        },
+		created() {
+    this.setDefaultQuery(@Model.DefaultSortConfig)
+    this.getFormById();
+@if(Model.IsChildTableShow)
+{
+            @:this.getColumnList();
+}
+@if(Model.Type == 2)
+{
+            @:this.getTreeView();
+}
+else{
+    @:this.initData()
+}
+@foreach(var item in Model.OptionsList)
+{
+@if(!item.IsStatic && item.IsIndex)
+{
+			@:this.get@(item.LowerName)Options();
+}
+}
+@if(Model.IsDefaultSearchField)
+{
+    @:this.queryData = JSON.parse(JSON.stringify(this.query))
+}
+		},
+@if(Model.Type == 2 && Model.HasTreeQuery && Model.TreeSynType == 0)
+{
+  @:watch: {
+    @:keyword(val) {
+      @:this.$refs.treeBox.filter(val)
+    @:}
+  @:},
+}
+		methods: {
+    toDetail(modelId, id) {
+      if (!id) return
+      this.mainLoading = true
+      getConfigData(modelId).then(res => {
+        this.mainLoading = false
+        if (!res.data || !res.data.formData) return
+        let formData = JSON.parse(res.data.formData)
+        formData.popupType = 'general'
+        this.detailsVisible = true
+        this.$nextTick(() => {
+          this.$refs.RelevanceDetail.init(formData, modelId, id)
+        })
+      }).catch(() => { this.mainLoading = false })
+    },
+	setDefaultQuery(defaultSortList) {
+      const defaultSortConfig = (defaultSortList || []).map(o =>
+        (o.sort === 'desc' ? '-' : '') + o.field);
+      this.defListQuery.sidx = defaultSortConfig.join(',')
+    },
+	handleHeaderClass({ column }) {
+      column.order = column.multiOrder
+    },
+    handleOrderChange(orderColumn, orderState) {
+      let index = this.ordersList.findIndex(e => e.field === orderColumn);
+      let sort = orderState === 'ascending' ? 'asc' : orderState === 'descending' ? 'desc' : '';
+      if (index > -1) {
+        this.ordersList[index].sort = orderState;
+      } else {
+        this.ordersList.push({ field: orderColumn, sort });
+      }
+      this.ordersList = this.ordersList.filter(e => e.sort);
+      this.ordersList.length ? this.setDefaultQuery(this.ordersList) : this.setDefaultQuery(@Model.DefaultSortConfig)
+      this.initData()
+    },
+    handleTableSort({ column }) {
+      if (column.sortable !== 'custom') return
+      column.multiOrder = column.multiOrder === 'descending' ? 'ascending' : column.multiOrder ? '' : 'descending';
+      this.handleOrderChange(column.property, column.multiOrder)
+    },
+    getFormById() {
+        getFormById("@(Model.FormId)").then(res => {
+          const flowId = res.data && res.data.id
+          this.formFlowId = flowId;
+		  this.getFlowList();
+        })
+    },
+    getFlowList() {
+      getFlowList(this.formFlowId).then(res => {
+        this.flowList = res.data
+      })
+    },
+@if(Model.ShowSummary)
+{
+    @:getTableSummaries(param) {
+	  @:const summaryField = @(Model.SummaryField)
+@if(Model.AllThousandsField != "[]")
+{
+	  @:const thousandsField= @(Model.AllThousandsField)
+}
+      @:const { columns, data } = param;
+      @:const sums = [];
+      @:columns.forEach((column, index) => {
+        @:if (index === 0) {
+          @:sums[index] = '合计';
+          @:return;
+        @:} else if (summaryField.includes(column.property)) {
+          @:const values = data.map(item => Number(item[column.property]));
+          @:if (!values.every(value => isNaN(value))) {
+            @:sums[index] = values.reduce((prev, curr) => {
+              @:const value = Number(curr);
+              @:if (!isNaN(value)) {
+                @:return prev + curr;
+              @:} else {
+                @:return prev;
+              @:}
+            @:}, 0);
+@if(Model.AllThousandsField != "[]")
+{
+			@:if (thousandsField.includes(column.property)) sums[index] = thousandsFormat(sums[index])
+}
+            @:sums[index] += '';
+          @:} else {
+            @:sums[index] = '';
+          @:}
+        @:}
+      @:})
+      @:return sums;
+    @:},
+}
+@if(Model.IsBatchPrint)
+{
+    @:printBrowseHandle(id) {
+      @:this.printDialogVisible = false;
+      @:this.handleBatchPrint(id);
+    @:},
+    @:printDialog() {
+      @:if (!this.multipleSelection.length) {
+        @:this.$message({
+          @:type: "warning",
+          @:message: "请选择一条数据",
+          @:duration: 1500
+        @:});
+        @:return;
+      @:}
+      @:this.printDialogVisible = true;
+      @:this.$nextTick(() => {
+        @:if (this.printId.length == 1) {
+          @:this.printBrowseHandle(this.printId[0].id);
+          @:return;
+        @:}
+        @:this.$refs.printDialog.init(this.printId.split(","));
+      @:});
+    @:},
+    @:handleBatchPrint(id) {
+      @:if (!id) {
+        @:this.$message({
+          @:type: "warning",
+          @:message: "请配置打印模板",
+          @:duration: 1500
+        @:});
+        @:return;
+      @:}
+      @:this.printIdNow = id;
+      @:this.printBrowseVisible = true;
+    @:},
+}
+@if(Model.HasSuperQuery)
+{
+            @:openSuperQuery() {
+                @:this.superQueryVisible = true
+                @:this.$nextTick(() => {
+                    @:this.$refs.SuperQuery.init()
+                @:})
+            @:},
+            @:superQuery(queryJson) {
+                @:this.listQuery.superQueryJson = this.getSuperQueryJson(queryJson) 
+                @:this.listQuery.currentPage = 1
+                @:this.initData()
+            @:},
+			@:getSuperQueryJson(queryJson){
+				@:if (!queryJson) return ''
+				@:let queryJsonObj=JSON.parse(queryJson)
+				@:return JSON.stringify(queryJsonObj)
+			@:},
+}
+@foreach(var item in Model.OptionsList)
+{
+@if(!item.IsStatic && item.IsIndex)
+{
+			@:get@(item.LowerName)Options(){
+switch(@item.DataType)
+{
+case "dictionary":
+				@:getDictionaryDataSelector('@(item.DictionaryType)').then(res => {
+					@:this.@(item.LowerName)Options = res.data.list
+	break;
+case "dynamic":
+				@:getDataInterfaceRes('@(item.DictionaryType)').then(res => {
+					@:let data = res.data
+					@:this.@(item.LowerName)Options = data
+	break;
+}
+				@:});
+			@:},
+}
+}
+@if(Model.IsSort)
+{
+                @:sortChange({ column, prop, order }) {
+                    @:this.listQuery.sort = order == 'ascending' ? 'asc' : 'desc'
+                    @:this.listQuery.sidx = !order ? '' : prop
+                    @:this.initData()
+                @:},
+}
+@if(Model.IsUpload)
+{
+            @:handelUpload(){
+                @:this.uploadBoxVisible = true
+                @:this.$nextTick(() => {
+                    @:this.$refs.UploadBox.init("",'@(Model.NameSpace)/@(Model.ClassName)', 1, this.flowList)
+                @:})
+            @:},
+}
+			initData() {
+@if(Model.Type == 5)
+{
+                @:this.refreshTable = false;
+}
+                this.listLoading = true;
+                let query = {
+                    ...this.listQuery,
+                    ...this.query,
+                    ...this.defListQuery,
+					menuId : this.menuId,
+                };
+@foreach(var item in Model.QueryCriteriaQueryVarianceList)
+{
+                @:query.@item.__vModel__.Replace("-", "_") = query.@item.__vModel__.Replace("-", "_") ? [query.@item.__vModel__.Replace("-", "_")] : null
+}
+                request({
+                    url: `/api/@(Model.NameSpace)/@(Model.ClassName)/@(Model.Type == 5 ? "Tree" : "")List`,
+                    method: 'Post',
+                    data: query
+                }).then(res => {
+                    this.list = @(Model.HasPage ? "res.data.list" : "res.data").map(o => ({
+                        ...o,
+                        ...this.expandObj
+                    }))
+@if(Model.Type == 3)
+{
+                    @:this.list.map(o => {
+                        @:if (o.children && o.children.length) {
+                            @:o.children = o.children.map(e => ({
+                                @:...e,
+                                @:...this.expandObj
+                            @:}))
+                        @:}
+                    @:})
+}
+                    this.listLoading = false
+@if(Model.HasPage)
+{
+                    @:this.total = res.data.pagination.total
+}
+@if(Model.Type == 5)
+{
+                    @:this.$nextTick(() => {
+					  @:this.refreshTable = true
+					@:})
+}
+                })
+            },
+@if(Model.Type == 5)
+{
+            @:toggleExpandList() {
+              @:this.refreshTable = false;
+              @:this.expandsTable = !this.expandsTable;
+              @:this.$nextTick(() => {
+                @:this.refreshTable = true;
+              @:});
+            @:},
+}
+@if(Model.IsRemoveDel)
+{
+			@:handleDel(id) {
+                @:this.$confirm('此操作将永久删除该数据, 是否继续?', '提示', {
+                    @:type: 'warning'
+                @:}).then(() => {
+                    @:request({
+                        @:url: `/api/@(Model.NameSpace)/@(Model.ClassName)/${id}`,
+                        @:method: 'DELETE'
+                    @:}).then(res => {
+                        @:this.$message({
+                            @:type: 'success',
+                            @:message: res.msg,
+                            @:onClose: () => {
+                                @:this.initData()
+                            @:}
+                        @:});
+                    @:})
+                @:}).catch(() => {
+                @:});
+            @:},
+}
+@if(Model.IsChildTableShow)
+{
+            @:getColumnList() {
+@if(!Model.UseColumnPermission)
+{
+                @:this.columnOptions = this.transformColumnList(this.columnList)
+}else{
+                @:let columnPermissionList = []
+                @:const permissionList = this.$store.getters.permissionList
+                @:const modelId = this.$route.meta.modelId
+                @:const list = permissionList.filter(o => o.modelId === modelId)
+                @:const columnList = list[0] && list[0].column ? list[0].column : []
+                @:for (let i = 0; i < this.columnList.length; i++) {
+                    @:inner: for (let j = 0; j < columnList.length; j++) {
+                        @:if (this.columnList[i].prop === columnList[j].enCode) {
+                            @:columnPermissionList.push(this.columnList[i])
+                            @:break inner
+                        @:}
+                    @:}
+                @:}
+                @:this.columnOptions = this.transformColumnList(columnPermissionList)
+}
+            @:},
+            @:transformColumnList(columnList) {
+                @:let list = []
+                @:for (let i = 0; i < columnList.length; i++) {
+                    @:const e = columnList[i];
+                    @:if (!e.prop.includes('-')) {
+                        @:list.push(e)
+                    @:} else {
+                        @:let prop = e.prop.split('-')[0]
+                        @:let label = e.label.split('-')[0]
+                        @:let vModel = e.prop.split('-')[1]
+                        @:let newItem = {
+                            @:align: "center",
+                            @:jnpfKey: "table",
+                            @:prop,
+                            @:label,
+                            @:children: []
+                        @:}
+                        @:e.vModel = vModel
+                        @:if (!this.expandObj.hasOwnProperty(`${prop}Expand`)) this.$set(this.expandObj, `${prop}Expand`, false)
+                        @:if (!list.some(o => o.prop === prop)) list.push(newItem)
+                        @:for (let i = 0; i < list.length; i++) {
+                            @:if (list[i].prop === prop) {
+                                @:list[i].children.push(e)
+                                @:break
+                            @:}
+                        @:}
+                    @:}
+                @:}
+                @:this.getMergeList(list)
+                @:return list
+            @:},
+            @:getMergeList(list) {
+                @:let newList = JSON.parse(JSON.stringify(list))
+                @:newList.forEach(item => {
+                    @:if (item.children && item.children.length) {
+                        @:let child = {
+                            @:prop: item.prop + '-child-first'
+                        @:}
+                        @:item.children.unshift(child)
+                    @:}
+                @:})
+                @:newList.forEach(item => {
+                    @:if (item.children && item.children.length > 0) {
+                        @:item.children.forEach((child, index) => {
+                            @:if (index == 0) {
+                                @:this.mergeList.push({
+                                    @:prop: child.prop,
+                                    @:rowspan: 1,
+                                    @:colspan: item.children.length
+                                @:})
+                            @:} else {
+                                @:this.mergeList.push({
+                                    @:prop: child.prop,
+                                    @:rowspan: 0,
+                                    @:colspan: 0
+                                @:})
+                            @:}
+                        @:})
+                    @:} else {
+                        @:this.mergeList.push({
+                            @:prop: item.prop,
+                            @:rowspan: 1,
+                            @:colspan: 1
+                        @:})
+                    @:}
+                @:})
+            @:},
+            @:arraySpanMethod({ column }) {
+                @:for (let i = 0; i < this.mergeList.length; i++) {
+                    @:if (column.property == this.mergeList[i].prop) {
+                        @:return [this.mergeList[i].rowspan, this.mergeList[i].colspan]
+                    @:}
+                @:}
+            @:},
+}
+@if(Model.IsBatchRemoveDel || Model.IsDownload)
+{
+			@:handleSelectionChange(val) {
+                @:const res = val.map(item => item.@(Model.PrimaryKey))
+                @:this.multipleSelection = res
+            @:},
+            @:handleBatchRemoveDel() {
+                @:if (!this.multipleSelection.length) {
+                    @:this.$message({
+                        @:type: 'error',
+                        @:message: '请选择一条数据',
+                        @:duration: 1500,
+                    @:})
+                    @:return
+                @:}
+                @:const ids = this.multipleSelection
+                @:this.$confirm('您确定要删除这些数据吗, 是否继续？', '提示', {
+                    @:type: 'warning'
+                @:}).then(() => {
+                    @:request({
+                        @:url: `/api/@(Model.NameSpace)/@(Model.ClassName)/batchRemove`,
+                        @:method: 'POST',
+                        @:data: ids ,
+                    @:}).then(res => {
+                        @:this.$message({
+                            @:type: 'success',
+                            @:message: res.msg,
+                            @:onClose: () => {
+                                @:this.initData()
+                            @:}
+                        @:});
+                    @:})
+                @:}).catch(() => { })
+            @:},
+}
+    addHandle() {
+      if (!this.flowList.length) {
+        this.$message({type: 'error',message: '流程不存在'});
+      } else if (this.flowList.length === 1) {
+        this.selectFlow(this.flowList[0])
+      } else {
+        this.flowListVisible = true
+		 this.$nextTick(() => {
+            this.$refs.selectFlow.init(this.flowList)
+          })
+      }
+    },
+    //选择流程发起
+    selectFlow(item) {
+      let data = {
+        id: '',
+        flowId: item.id,
+        opType: '-1'
+      }
+      this.flowListVisible = false
+      this.flowVisible = true
+      this.$nextTick(() => {
+        this.$refs.FlowBox.init(data)
+      })
+    },
+    updateHandle(row) {
+      let data = {
+        id: row.@(Model.PrimaryKey),
+        flowId: row.flowId || this.flowList[0].id,
+        opType: '-1'
+      }
+      this.flowVisible = true
+      this.$nextTick(() => {
+        this.$refs.FlowBox.init(data)
+      })
+    },
+    detailHandle(row) {
+      let data = {
+        id: row.@(Model.PrimaryKey),
+        flowId: row.flowId,
+        opType: 0,
+        status: row.flowState
+      }
+      this.flowVisible = true
+      this.$nextTick(() => {
+        this.$refs.FlowBox.init(data)
+      })
+    },
+@if(Model.IsDownload)
+{
+			@:exportData() {
+                @:this.exportBoxVisible = true
+                @:this.$nextTick(() => {
+                    @:let columnList = this.columnList.filter(o => !noGroupList.includes(o.__config__.jnpfKey)) || []
+                    @:this.$refs.ExportBox.init(columnList, this.multipleSelection)
+                @:})
+            @:},
+            @:download(data) {
+                @:let query = { dataType:data.dataType, selectKey:data.selectKey.join(','), ...this.listQuery, ...this.query, menuId:this.menuId, selectIds: this.multipleSelection.join(',') }
+                @:request({
+                    @:url: `/api/@(Model.NameSpace)/@(Model.ClassName)/Actions/Export`,
+                    @:method: 'POST',
+                    @:data: query
+                @:}).then(res => {
+                    @:if (!res.data.url) return
+                    @:window.location.href = this.define.comUrl + res.data.url
+                    @:this.$refs.ExportBox.visible = false
+                    @:this.exportBoxVisible = false
+                @:})
+            @:},
+}
+@if(Model.Type == 2)
+{
+@switch(Model.TreeDataSource)
+{
+case "formField":
+case "organize":
+            
+            @:getNodePath(node) {
+                @:let fullPath = []
+                @:const loop = (node) => {
+                    @:if (node.level) fullPath.unshift(node.data)
+                    @:if (node.parent) loop(node.parent)
+                @:}
+                @:loop(node)
+                @:return fullPath
+            @:},
+break;
+default:
+@switch(Model.TreeRelationControlKey)
+{
+case "cascader":
+            @:getNodePath(node) {
+                @:let fullPath = []
+                @:const loop = (node) => {
+                    @:if (node.level) fullPath.unshift(node.data)
+                    @:if (node.parent) loop(node.parent)
+                @:}
+                @:loop(node)
+                @:return fullPath
+            @:},
+break;
+}
+break;
+}
+            @:handleNodeClick(data, node){
+			    @:this.treeActiveId = data.@(Model.TreePropsValue)
+				@:for (let key in this.query) {
+				    @:this.query[key] = undefined
+				@:}
+@switch(Model.TreeDataSource)
+{
+case "formField":
+                @:const nodePath = this.getNodePath(node)
+                @:const currValue = nodePath.map(o => o.@(Model.TreePropsValue))
+				@if(Model.TreeJnpfKey=="depSelect"){
+				    if(Model.IsTreeRelationMultiple){
+				        @:this.query.@(Model.TreeRelation) = @("[")currValue@("]")
+					}else{
+					    @:this.query.@(Model.TreeRelation) = this.treeActiveId
+					}
+				}else{
+				    @:this.query.@(Model.TreeRelation) = @(Model.IsTreeRelationMultiple ? "[" : "")currValue@(Model.IsTreeRelationMultiple ? "]" : "")
+				}
+    break;
+case "organize":
+            
+                @:const nodePath = this.getNodePath(node)
+                @:const currValue = nodePath.map(o => o.@(Model.TreePropsValue))    
+				@:this.query.@(Model.TreeRelation) = @(Model.IsTreeRelationMultiple ? "[" : "")currValue@(Model.IsTreeRelationMultiple ? "]" : "")
+    break;
+default:
+@switch(Model.TreeRelationControlKey)
+{
+case "cascader":
+                @:const nodePath = this.getNodePath(node)
+                @:const currValue = nodePath.map(o => o.@(Model.TreePropsValue))    
+				@:this.query.@(Model.TreeRelation) = @(Model.IsTreeRelationMultiple ? "[" : "")currValue@(Model.IsTreeRelationMultiple ? "]" : "")
+break;
+default:
+                if(Model.TreeJnpfKey=="cascader"){
+                    @:this.query.@(Model.TreeRelation) = @("[")data.@(Model.TreePropsValue)@("]")
+				}else{
+                    @:this.query.@(Model.TreeRelation) = @(Model.IsTreeRelationMultiple ? "[" : "")data.@(Model.TreePropsValue)@(Model.IsTreeRelationMultiple ? "]" : "")
+				}
+break;
+}
+    break;
+}
+				@:this.listQuery = {
+				    @:currentPage: 1,
+					@:pageSize: @(Model.PageSize),
+					@:sort: "@(Model.Sort)",
+					@:sidx: "@(Model.DefaultSidx)",
+				@:}
+				@:this.initData()
+			@:},
+			@:getTreeView() {
+@switch(Model.TreeDataSource)
+{
+case "dictionary":
+                @:getDictionaryDataSelector('@(Model.TreeDictionary)').then(res => {
+				    @:this.treeData = res.data.list
+					@:this.initData()
+				@:})
+    break;
+case "organize":
+                @:this.$store.dispatch('generator/getDepTree').then(res => {
+                    @:this.treeData = res
+                    @:this.initData()
+                @:})
+    break;
+case "formField":
+                @if(Model.TreeSelectType=="custom")
+				{
+				    @if(Model.TreeJnpfKey=="organizeSelect"){
+				        @:let departIds = @(Model.TreeAbleIds)
+					    @:departIds = departIds.map(o => o[o.length - 1]);
+				    }else{
+                        @:const departIds = @(Model.TreeAbleIds)
+				    }
+                    @:getOrgByOrganizeCondition({ departIds }).then(res => {
+                        @:this.treeData = res.data.list
+                        @:this.treeLoading = false
+                        @:this.initData()
+                    @:})
+				}else{
+                    @:this.$store.dispatch('generator/getDepTree').then(res => {
+                        @:this.treeData = res
+					    @:this.initData()
+                    @:})
+				}
+    break;
+case "api":
+                @:getDataInterfaceRes('@(Model.TreePropsUrl)').then(res => {
+                    @:if (Array.isArray(res.data)) {
+                        @:this.treeData = res.data
+                    @:} else {
+                        @:this.treeData = []
+                    @:}
+					@:this.initData()
+                @:})
+    break;
+}
+			@:},
+@if(Model.TreeSynType == 0)
+{
+    @:filterNode(value, data) {
+      @:if (!value) return true;
+      @:return data[this.treeProps.label].indexOf(value) !== -1;
+    @:},
+    @:toggleTreeExpand(expands) {
+      @:this.refreshTree = false
+      @:this.expandsTree = expands
+      @:this.$nextTick(() => {
+        @:this.refreshTree = true
+        @:this.$nextTick(() => {
+          @:this.$refs.treeBox.setCurrentKey(null)
+        @:})
+      @:})
+    @:},
+}else {
+    @:loadNode(node, resolve) {
+      @:const nodeData = node.data
+      @:const config = @(Model.ColumnData)
+      @:if (config.treeInterfaceId) {
+        @:if (config.treeTemplateJson && config.treeTemplateJson.length) {
+          @:for (let i = 0; i < config.treeTemplateJson.length; i++) {
+            @:const element = config.treeTemplateJson[i];
+            @:element.defaultValue = nodeData[element.relationField] || ''
+          @:}
+        @:}
+        @:let query = {
+          @:paramList: config.treeTemplateJson || [],
+        @:}
+        @:getDataInterfaceRes(config.treeInterfaceId, query).then(res => {
+          @:let data = res.data
+          @:if (Array.isArray(data)) {
+            @:resolve(data);
+          @:} else {
+            @:resolve([]);
+          @:}
+        @:})
+      @:}
+    @:},
+}
+}
+			search() {
+                this.listQuery = {
+                    currentPage: 1,
+                    pageSize: @(Model.PageSize),
+                    sort: "@(Model.Sort)",
+                    sidx: "@(Model.DefaultSidx)",
+    @if(Model.HasSuperQuery)
+    {
+                    @:superQueryJson: this.listQuery.superQueryJson
+    }
+                }
+                this.initData()
+            },
+            colseFlow(isrRefresh) {
+                this.flowVisible = false
+                if (isrRefresh) this.reset()
+            },
+            reset(@(Model.IsDefaultSearchField ? "isReset" : "")) {
+@if(Model.IsDefaultSearchField)
+{
+                @:this.query = JSON.parse(JSON.stringify(this.queryData))
+                @:this.search() 
+}else{
+@if(Model.Type == 2)
+{
+                @:const data = this.query.@(Model.TreeRelation)
+}  
+                @:for (let key in this.query) {
+                    @:this.query[key] = undefined
+                @:}
+@if(Model.Type == 2)
+{
+                @:this.query.@(Model.TreeRelation) = data
+}
+                @:this.listQuery = {
+                    @:currentPage: 1,
+                    @:pageSize: @(Model.PageSize),
+                    @:sort: "@(Model.Sort)",
+                    @:sidx: "@(Model.DefaultSidx)",
+@if(Model.HasSuperQuery)
+{
+                    @:superQueryJson: this.listQuery.superQueryJson
+}
+                @:}
+				@:this.initData()
+}
+            }
+		}
+    }
+</script>

@@ -1,0 +1,1465 @@
+<template>
+	<div class="JNPF-common-layout">
+		<div class="JNPF-common-layout-center">
+      <el-row class="JNPF-common-search-box" :gutter="16">
+        <el-form @@submit.native.prevent>
+@if(Model.IsKeywordSearchColumn)
+{
+          @:<el-col :span="6">
+            @:<el-form-item label="关键词">
+              @:<el-input v-model="query.jnpfKeyword" placeholder="关键词" clearable />
+            @:</el-form-item>
+          @:</el-col>
+}
+@foreach (var item in @Model.SearchColumnDesign)
+{
+@{var searchMultiple = item.IsMultiple ? "multiple " : "";}
+@if(item.Index == 3)
+{
+          @:<template v-if="showAll">
+}
+          @:<el-col :span="6">
+            @:<el-form-item label="@(item.Label)">
+@if(item.QueryControlsKey != null)
+{
+@switch(item.QueryControlsKey)
+{
+case "inputList":
+              @:<el-input v-model="query.@(item.Name)" placeholder="@(item.Label)" @(searchMultiple)@(item.Clearable)/>	
+	break;
+case "dateList":
+              @:<JnpfDateRangePicker v-model="query.@(item.Name)" startPlaceholder="开始日期" endPlaceholder="结束日期" valueFormat="timestamp" format="yyyy-MM-dd" />
+	break;
+case "selectList":
+              @:<el-select v-model="query.@(item.Name)" placeholder="@(item.Label)" @(searchMultiple)@(item.Clearable)>
+              	@:<el-option v-for="(item, index) in @(item.OriginalName)Options" :key="index" :label="item.@(item.Props.label)" :value="item.@(item.Props.value)"  />
+              @:</el-select>
+	break;
+case "timePickerList":
+              @:<el-time-picker v-model="query.@(item.Name)" start-placeholder="开始时间" end-placeholder="结束时间" @(searchMultiple)@(item.Clearable)value-format="@(item.ValueFormat)" format="@(item.Format)" is-range />
+	break;
+case "numRangeList":
+case "rate":
+case "slider":
+              @:<num-range v-model="query.@(item.Name)"></num-range>
+	break;
+case "datePickerList":
+              @:<JnpfDateRangePicker v-model="query.@(item.Name)" valueFormat="@(item.ValueFormat)" format="@(item.Format)" startPlaceholder="开始日期" endPlaceholder="结束日期" />
+	break;
+case "userSelectList":
+              @:<JnpfUserSelect v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" @(searchMultiple)@(item.SelectType)@(item.IsCustomSelect ? @item.AbleIds : "")/>
+	break;
+case "usersSelectList":
+              @:<@(item.Tag) v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" @(searchMultiple)@(item.SelectType)@(item.IsCustomSelect ? @item.AbleIds : "")/>
+	break;
+case "organizeList":
+              @:<@(item.Tag) v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" :lastLevel="false"  />
+  break;
+case "comSelectList":
+              @:<JnpfOrganizeSelect v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" @(searchMultiple)/>
+	break;
+case "depSelectList":
+              @:<@(item.Tag) v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" @(searchMultiple)@(item.SelectType)@(item.IsCustomSelect ? @item.AbleIds : "")/>
+	break;
+case "posSelectList":
+              @:<JnpfPosSelect v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" @(searchMultiple)@(item.SelectType)@(item.IsCustomSelect ? @item.AbleIds : "")/>
+	break;
+case "useCascaderList":
+              @:<el-cascader v-model="query.@(item.Name)" :options="@(item.OriginalName)Options" @(item.Clearable):show-all-levels="@(item.ShowAllLevels)" :props="@(item.OriginalName)Props" placeholder="请选择@(item.Label)" />
+	break;
+case "JNPFAddressList":
+              @:<@(item.Tag) v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" :level="@(item.Level)" @(searchMultiple)@(item.Clearable)/>
+	break;
+case "treeSelectList":
+              @:<@(item.Tag) v-model="query.@(item.Name)" placeholder="请选择@(item.Label)" :options="@(item.OriginalName)Options" :props='@(item.OriginalName)Props' @(searchMultiple)@(item.Clearable)/>
+	break;
+case "autoCompleteList":
+              @:<@(item.Tag) v-model='query.@(item.Name)' placeholder='请输入@(item.Label)' @(item.Clearable) @(item.Total!=null ? ":total='" + item.Total+"'" : "") relationField='@(item.RelationField)' interfaceId='@(item.InterfaceId)' :templateJson='@(item.Name)TemplateJson' />
+    break;
+}
+}else{
+              @:<@(item.Tag) v-model="query.@(item.Name)" placeholder="@(item.Label)" @(searchMultiple)@(item.Clearable)/>
+}
+            @:</el-form-item>
+          @:</el-col>
+}
+@if(Model.SearchColumnDesign.Count >= 4)
+{
+          @:</template>
+}
+          <el-col :span="6">
+            <el-form-item>
+              <el-button type="primary" icon="el-icon-search" @@click="search()">查询</el-button>
+              <el-button icon="el-icon-refresh-right" @@click="reset(@(Model.IsDefaultSearchField ? "1" : ""))">重置</el-button>
+@if(Model.SearchColumnDesign.Count >= 4)
+{
+              @:<el-button type="text" icon="el-icon-arrow-down" @@click="showAll=true" v-if="!showAll">展开</el-button>
+              @:<el-button type="text" icon="el-icon-arrow-up" @@click="showAll=false" v-else>收起</el-button>
+}
+            </el-form-item>
+          </el-col>
+        </el-form>
+	  </el-row>
+			<div class="JNPF-common-layout-main JNPF-flex-main">
+				<div class="JNPF-common-head">
+					<div>
+@foreach (var item in @Model.TopButtonDesign)
+{
+						@:<el-button type="@(item.Type)" icon="@(item.Icon)" @@click="@(item.Method)"@(Model.UseBtnPermission ? " v-has=\"'btn_" + @item.Value + "'\"":"")>@(item.Label)</el-button>
+}
+					</div>
+					<div class="JNPF-common-head-right">
+@if(Model.HasSuperQuery)
+{
+						@:<el-tooltip content="高级查询" placement="top" >
+							@:<el-link icon="icon-ym icon-ym-filter JNPF-common-head-icon" :underline="false" @@click="openSuperQuery()" />
+						@:</el-tooltip>
+}
+						<el-tooltip effect="dark" content="刷新" placement="top">
+							<el-link icon="icon-ym icon-ym-Refresh JNPF-common-head-icon" :underline="false" @@click="reset()" />
+						</el-tooltip>
+					</div>
+				</div>
+				<JNPF-table v-loading="listLoading" :data="list" @(Model.IsSort ? "@sort-change='handleTableSort' ":"")@(Model.ShowSummary ? "show-summary :summary-method='getTableSummaries' " : "")@(Model.IsBatchRemoveDel || Model.IsDownload ? "has-c @selection-change='handleSelectionChange' ":"") @(Model.DefaultSortConfig!="[]" ? ":header-cell-class-name='handleHeaderClass'" : "") @(Model.IsFixed ? "hasNOFixed" : "")>
+@{ GenerateFormControls(); }
+					 <el-table-column prop="flowState" label="状态" width="100" @(Model.IsFixed ? "fixed='right'" : "")>
+                        <template slot-scope="scope">
+                            <el-tag v-if="scope.row.flowState==1">等待审核</el-tag>
+                            <el-tag type="success" v-else-if="scope.row.flowState==2">审核通过</el-tag>
+                            <el-tag type="danger" v-else-if="scope.row.flowState==3">审核驳回</el-tag>
+							<el-tag type="warning" v-else-if="scope.row.flowState==4 || scope.row.flowState==7">流程撤回</el-tag>
+                            <el-tag type="info" v-else-if="scope.row.flowState==5">审核终止</el-tag>
+                            <el-tag type="info" v-else>等待提交</el-tag>
+                        </template>
+                    </el-table-column>
+					<el-table-column label="操作" fixed="right" width="@(Model.ColumnButtonDesign.Count * 50)">
+						<template slot-scope="scope">
+						    <template v-if="scope.row.rowEdit">
+                                <el-button size="mini" type="text" @@click="saveForRowEdit(scope.row,1)">保存</el-button>
+                                <el-button size="mini" type="text" class="JNPF-table-delBtn" @@click="cancelRowEdit(scope.row,scope.$index)">取消</el-button>
+								<el-button size="mini" type="text" @@click="submitForRowEdit(scope.row)">提交</el-button>
+                            </template>
+							<template v-else>
+@foreach (var item in @Model.ColumnButtonDesign)
+{
+							    @:<el-button type="text" @@click="@(item.Method)" @(item.Type)@(item.Disabled)@(Model.UseBtnPermission ? " v-has=\"'btn_" + @item.Value + "'\"":"")>@(item.Label)</el-button>
+}
+							</template>
+						</template>
+					</el-table-column>
+				</JNPF-table>
+@if(Model.HasPage)
+{
+                @:<pagination :total="total" :page.sync="listQuery.currentPage" :limit.sync="listQuery.pageSize" @@pagination="initData" />
+}
+            </div>
+        </div>
+		<FlowBox v-show="flowVisible" ref="FlowBox" @@close="colseFlow" />
+		<ExportBox v-if="exportBoxVisible" ref="ExportBox" @@download="download" />
+@if(Model.IsUpload)
+{
+    @:<ImportBox v-if="uploadBoxVisible" ref="UploadBox" @@refresh="initData" />
+}
+@if(Model.IsDetail)
+{
+        @:<Detail v-if="detailVisible" ref="Detail" @@refresh="detailVisible=false"/>
+}
+@if(Model.HasSuperQuery)
+{
+        @:<SuperQuery v-if="superQueryVisible" ref="SuperQuery" :columnOptions="superQueryJson" @@superQuery="superQuery" />
+}
+@if(Model.IsBatchPrint)
+{
+    @:<print-browse :visible.sync="printBrowseVisible" :id="printIdNow" :batchIds="multipleSelection.join()"/>
+    @:<PrintDialog v-if="printDialogVisible" ref="printDialog" @@change="printBrowseHandle"></PrintDialog>
+}
+    <RelevanceDetail v-if="detailsVisible" ref="RelevanceDetail" @@close="detailsVisible = false" />
+        <candidate-form :visible.sync="candidateVisible" :candidateList="candidateList" :branchList="branchList" taskId="0" :formData="workFlowFormData" @@submitCandidate="submitCandidate" />
+	    <SelectFlow ref="selectFlow" v-if="flowListVisible" @@selectFlow='selectFlow' />
+	</div>
+</template>
+<script>
+	import request from '@@/utils/request'
+    import CandidateForm from '@@/views/workFlow/components/CandidateForm'
+    import { Candidates } from '@@/api/workFlow/FlowBefore'
+    import FlowBox from '@@/views/workFlow/components/FlowBox'
+	import columnList from './columnList'
+    import { getFormById } from '@@/api/workFlow/FormDesign'
+    import { Create, Update } from '@@/api/workFlow/workFlowForm'
+	import { getDictionaryDataSelector } from '@@/api/systemData/dictionary'
+	import { getDataInterfaceRes } from '@@/api/systemData/dataInterface'
+    import { getFlowList } from '@@/api/workFlow/FlowEngine'
+    import RelevanceDetail from '@@/views/basic/dynamicModel/list/RelevanceDetail'
+    import { getConfigData } from '@@/api/onlineDev/visualDev'
+    import { mapGetters } from "vuex";
+    import { noGroupList } from '@@/components/Generator/generator/comConfig'
+	import SelectFlow from '@@/components/SelectFlowDialog'
+@if(Model.IsDownload)
+{
+	@:import ExportBox from '@@/components/ExportBox'
+}
+@if(Model.HasSuperQuery)
+{
+    @:import SuperQuery from '@@/components/SuperQuery'
+    @:import superQueryJson from './superQueryJson'
+}
+@if(Model.IsBatchPrint)
+{
+@:import PrintBrowse from "@@/components/PrintBrowse/batch";
+@:import PrintDialog from '@@/components/PrintDialog'
+}
+@if(Model.AllThousandsField != "[]")
+{
+@:import { thousandsFormat } from '@@/components/Generator/utils/index.js'
+}
+@if(Model.IsDateSpecialAttribute || Model.IsTimeSpecialAttribute)
+{
+@:import { getDateDay, getLaterData, getBeforeData, getBeforeTime, getLaterTime } from '@@/components/Generator/utils/index.js'
+}
+	export default {
+        components: { @(Model.IsDownload ? "ExportBox, ":"")@(Model.HasSuperQuery ? "SuperQuery, " : "")@(Model.IsBatchPrint ? "PrintBrowse, PrintDialog, " : "")CandidateForm, FlowBox, SelectFlow, RelevanceDetail },
+	    data() {
+	        return {
+@if(Model.IsUpload)
+{
+                @:uploadBoxVisible:false,
+}
+                ordersList: [],
+	            columnList,
+				cacheList: [],
+                candidateVisible: false,
+                candidateType: 1,
+                branchList: [],
+                candidateList: [],
+                currRow: {},
+                workFlowFormData: {},
+@if(Model.IsDetail)
+{
+	            @:detailVisible: false,
+}
+@if(Model.HasSuperQuery)
+{
+                @:superQueryVisible: false,
+                @:superQueryJson,
+}
+@if(Model.SearchColumnDesign.Count >= 3)
+{
+	            @:showAll: false,
+}
+	            query: {
+@foreach (var item in @Model.SearchColumnDesign)
+{
+	                @:@(item.Name) : @(item.DefaultValues),
+}
+				},
+                list: [],
+                listLoading: true,
+@if(Model.IsBatchPrint)
+{
+      @:printDialogVisible: false,
+      @:printBrowseVisible: false,
+      @:printId: "@(Model.PrintIds)",
+	  @:printIdNow:'',
+}
+@if(Model.IsBatchPrint || Model.IsBatchRemoveDel || Model.IsDownload)
+{
+      @:multipleSelection: [], 
+}
+				total: 0,
+                formFlowId: '',
+                listQuery: {
+@if(Model.HasPage)
+{
+                    @:currentPage: 1,
+                    @:pageSize: @(Model.PageSize),
+}
+					sort: "desc",
+                    sidx: "",
+@if(Model.HasSuperQuery)
+{
+                    @:superQueryJson: ''
+}
+                },
+                defListQuery: {
+                    sort: "desc",
+                    sidx: ""
+                },
+                flowVisible: false,
+                exportBoxVisible: false,
+				flowListVisible: false,
+				flowList: [],
+      mainLoading: false,
+      detailsVisible: false,
+@foreach(var item in Model.OptionsList)
+{
+@switch(item.jnpfKey)
+{
+case "collapse":
+case "tab":
+break;
+case "autoComplete":
+				@:@(item.Name)TemplateJson: @(item.TemplateJson == "" ? "[]" : item.TemplateJson),
+break;
+case "popupTableSelect":
+case "popupSelect":
+				@:@(item.Name)TemplateJson: @(item.TemplateJson == "" ? "[]" : item.TemplateJson),
+				@:@(item.Content)
+break;
+default:
+@if(item.IsProps)
+{
+				@:@(item.LowerName)Props:@(item.Props),
+}
+@if(!item.IsLinkage)
+{
+				@:@(item.Content)
+}
+break;
+}
+}
+			}
+        },
+		computed: {
+            ...mapGetters(['userInfo']),
+            menuId() {
+                return this.$route.meta.modelId || ''
+            }
+        },
+		created() {
+            this.setDefaultQuery(@Model.DefaultSortConfig)
+			this.initData()
+@foreach(var item in Model.OptionsList)
+{
+@if(!item.IsStatic && (item.IsChildren || item.IsIndex))
+{
+			@:this.get@(item.LowerName)Options();
+}
+}
+@if(Model.IsDefaultSearchField)
+{
+    @:this.queryData = JSON.parse(JSON.stringify(this.query))
+}
+            this.getFormById();
+		},
+		methods: {
+    getFormById() {
+      getFormById("@(Model.FormId)").then(res => {
+        const flowId = res.data && res.data.id
+        this.formFlowId = flowId;
+		this.getFlowList();
+      })
+    },
+	getFlowList() {
+      getFlowList(this.formFlowId).then(res => {
+        this.flowList = res.data
+      })
+    },
+@if(Model.ShowSummary)
+{
+    @:getTableSummaries(param) {
+	  @:const summaryField = @(Model.SummaryField)
+@if(Model.AllThousandsField != "[]")
+{
+	  @:const thousandsField= @(Model.AllThousandsField)
+}
+      @:const { columns, data } = param;
+      @:const sums = [];
+      @:columns.forEach((column, index) => {
+        @:if (index === 0) {
+          @:sums[index] = '合计';
+          @:return;
+        @:} else if (summaryField.includes(column.property)) {
+          @:const values = data.map(item => Number(item[column.property]));
+          @:if (!values.every(value => isNaN(value))) {
+            @:sums[index] = values.reduce((prev, curr) => {
+              @:const value = Number(curr);
+              @:if (!isNaN(value)) {
+                @:return prev + curr;
+              @:} else {
+                @:return prev;
+              @:}
+            @:}, 0);
+@if(Model.AllThousandsField != "[]")
+{
+			@:if (thousandsField.includes(column.property)) sums[index] = thousandsFormat(sums[index])
+}
+            @:sums[index] += '';
+          @:} else {
+            @:sums[index] = '';
+          @:}
+        @:}
+      @:})
+      @:return sums;
+    @:},
+}
+@if(Model.IsBatchPrint)
+{
+    @:printBrowseHandle(id) {
+      @:this.printDialogVisible = false;
+      @:this.handleBatchPrint(id);
+    @:},
+    @:printDialog() {
+      @:if (!this.multipleSelection.length) {
+        @:this.$message({
+          @:type: "warning",
+          @:message: "请选择一条数据",
+          @:duration: 1500
+        @:});
+        @:return;
+      @:}
+      @:this.printDialogVisible = true;
+      @:this.$nextTick(() => {
+        @:if (this.printId.length == 1) {
+          @:this.printBrowseHandle(this.printId[0].id);
+          @:return;
+        @:}
+        @:this.$refs.printDialog.init(this.printId.split(","));
+      @:});
+    @:},
+    @:handleBatchPrint(id) {
+      @:if (!id) {
+        @:this.$message({
+          @:type: "warning",
+          @:message: "请配置打印模板",
+          @:duration: 1500
+        @:});
+        @:return;
+      @:}
+      @:this.printIdNow = id;
+      @:this.printBrowseVisible = true;
+    @:},
+}
+@if(Model.IsDateSpecialAttribute)
+{
+	@:getRelationDate(timeRule, timeType, timeTarget, timeValueData, dataValue) {
+	  @:let timeDataValue = null;
+	  @:let timeValue = Number(timeValueData)
+	  @:if (timeRule) {
+		@:if (timeType == 1) {
+		  @:timeDataValue = timeValue
+		@:} else if (timeType == 2) {
+		  @:timeDataValue = dataValue
+		@:} else if (timeType == 3) {
+		  @:timeDataValue = new Date().getTime()
+		@:} else if (timeType == 4) {
+		  @:let previousDate = '';
+		  @:if (timeTarget == 1 || timeTarget == 2) {
+			@:previousDate = getDateDay(timeTarget, timeType, timeValue)
+			@:timeDataValue = new Date(previousDate).getTime()
+		  @:} else if (timeTarget == 3) {
+			@:previousDate = getBeforeData(timeValue)
+			@:timeDataValue = new Date(previousDate).getTime()
+		  @:} else {
+			@:timeDataValue = getBeforeTime(timeTarget, timeValue).getTime()
+		  @:}
+		@:} else if (timeType == 5) {
+		  @:let previousDate = '';
+		  @:if (timeTarget == 1 || timeTarget == 2) {
+			@:previousDate = getDateDay(timeTarget, timeType, timeValue)
+			@:timeDataValue = new Date(previousDate).getTime()
+		  @:} else if (timeTarget == 3) {
+			@:previousDate = getLaterData(timeValue)
+			@:timeDataValue = new Date(previousDate).getTime()
+		  @:} else {
+			@:timeDataValue = getLaterTime(timeTarget, timeValue).getTime()
+		  @:}
+		@:}
+	  @:}
+	  @:return timeDataValue;
+	@:},
+}
+@if(Model.IsTimeSpecialAttribute)
+{
+	@:getRelationTime(timeRule, timeType, timeTarget, timeValue, formatType, dataValue) {
+	  @:let format = formatType == 'HH:mm' ? 'HH:mm:00' : formatType
+	  @:let timeDataValue = null
+	  @:if (timeRule) {
+		@:if (timeType == 1) {
+		  @:timeDataValue = timeValue || '00:00:00'
+		  @:if (timeDataValue.split(':').length == 3) {
+			@:timeDataValue = timeDataValue
+		  @:} else {
+			@:timeDataValue = timeDataValue + ':00'
+		  @:}
+		@:} else if (timeType == 2) {
+		  @:timeDataValue = dataValue
+		@:} else if (timeType == 3) {
+		  @:timeDataValue = this.jnpf.toDate(new Date(), format)
+		@:} else if (timeType == 4) {
+		  @:let previousDate = '';
+		  @:previousDate = getBeforeTime(timeTarget, timeValue)
+		  @:timeDataValue = this.jnpf.toDate(previousDate, format)
+		@:} else if (timeType == 5) {
+		  @:let previousDate = '';
+		  @:previousDate = getLaterTime(timeTarget, timeValue)
+		  @:timeDataValue = this.jnpf.toDate(previousDate, format)
+		@:}
+	  @:}
+	  @:return timeDataValue;
+	@:},
+}
+@if(Model.IsUpload)
+{
+    @:handelUpload(){
+      @:this.uploadBoxVisible = true
+      @:this.$nextTick(() => {
+        @:this.$refs.UploadBox.init("",'@(Model.NameSpace)/@(Model.ClassName)', 1, this.flowList)
+      @:})
+    @:},
+}
+@if(Model.HasSuperQuery)
+{
+            @:openSuperQuery() {
+                @:this.superQueryVisible = true
+                @:this.$nextTick(() => {
+                    @:this.$refs.SuperQuery.init()
+                @:})
+            @:},
+            @:superQuery(queryJson) {
+                @:this.listQuery.superQueryJson = this.getSuperQueryJson(queryJson) 
+                @:this.listQuery.currentPage = 1
+                @:this.initData()
+            @:},
+			@:getSuperQueryJson(queryJson){
+				@:if (!queryJson) return ''
+				@:let queryJsonObj=JSON.parse(queryJson)
+				@:return JSON.stringify(queryJsonObj)
+			@:},
+}
+@foreach(var item in Model.OptionsList)
+{
+@if(!item.IsStatic && item.DictionaryType != null)
+{
+			@:get@(item.LowerName)Options(){
+switch(@item.DataType)
+{
+case "dictionary":
+				@:getDictionaryDataSelector('@(item.DictionaryType)').then(res => {
+					@:this.@(item.LowerName)Options = res.data.list
+	break;
+case "dynamic":
+				@:getDataInterfaceRes('@(item.DictionaryType)').then(res => {
+					@:let data = res.data
+					@:this.@(item.LowerName)Options = data
+	break;
+}
+				@:});
+			@:},
+}
+}
+@if(Model.IsSort)
+{
+            @:sortChange({ column, prop, order }) {
+                @:this.listQuery.sort = order == 'ascending' ? 'asc' : 'desc'
+                @:this.listQuery.sidx = !order ? '' : prop
+                @:this.initData()
+            @:},
+}
+			initData() {
+                this.listLoading = true;
+                let query = {
+                    ...this.listQuery,
+                    ...this.query,
+                    ...this.defListQuery,
+					menuId : this.menuId,
+                };
+@foreach(var item in Model.QueryCriteriaQueryVarianceList)
+{
+                @:query.@item.__vModel__.Replace("-", "_") = query.@item.__vModel__.Replace("-", "_") ? [query.@item.__vModel__.Replace("-", "_")] : null
+}
+                request({
+                    url: `/api/@(Model.NameSpace)/@(Model.ClassName)/List`,
+                    method: 'POST',
+                    data: query
+                }).then(res => {
+                    this.list = @(Model.HasPage ? "res.data.list" : "res.data").map(o =>{
+@foreach(var item in Model.FormRealControl)
+{
+@switch(item.jnpfKey)
+{
+case "table":
+                        @:o.@(item.vModel).map(t => {
+@foreach(var column in item.children)
+{
+switch(column.jnpfKey)
+{
+case "cascader":
+case "areaSelect":
+case "organizeSelect":
+case "checkbox":
+case "uploadImg":
+case "uploadFile":
+                            @:t.@(column.vModel) = t.@(column.vModel) ? JSON.parse(t.@(column.vModel)) : []
+break;
+case "select":
+case "userSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+case "usersSelect":
+@if(column.multiple)
+{
+                            @:t.@(column.vModel) = t.@(column.vModel) ? JSON.parse(t.@(column.vModel)) : []
+}
+break;
+case "switch":
+                            @:t.@(column.vModel) = Number(t.@(column.vModel));
+break;
+}
+}
+						@:})
+break;
+}
+}
+					    return {
+						  ...o,
+                          rowEdit: false
+						}
+					});
+					this.cacheList = JSON.parse(JSON.stringify(this.list))
+@if(Model.HasPage)
+{
+                    @:this.total = res.data.pagination.total
+}
+                    this.listLoading = false
+                })
+            },
+@if(Model.IsRemoveDel)
+{
+			@:handleDel(id) {
+                @:this.$confirm('此操作将永久删除该数据, 是否继续?', '提示', {
+                    @:type: 'warning'
+                @:}).then(() => {
+                    @:request({
+                        @:url: `/api/@(Model.NameSpace)/@(Model.ClassName)/${id}`,
+                        @:method: 'DELETE'
+                    @:}).then(res => {
+                        @:this.$message({
+                            @:type: 'success',
+                            @:message: res.msg,
+                            @:onClose: () => {
+                                @:this.initData()
+                            @:}
+                        @:});
+                    @:})
+                @:}).catch(() => {
+                @:});
+            @:},
+}
+@if(Model.IsBatchRemoveDel || Model.IsDownload)
+{
+			@:handleSelectionChange(val) {
+                @:const res = val.map(item => item.@(Model.PrimaryKey))
+                @:this.multipleSelection = res
+            @:},
+            @:handleBatchRemoveDel() {
+                @:if (!this.multipleSelection.length) {
+                    @:this.$message({
+                        @:type: 'error',
+                        @:message: '请选择一条数据',
+                        @:duration: 1500,
+                    @:})
+                    @:return
+                @:}
+                @:const ids = this.multipleSelection
+                @:this.$confirm('您确定要删除这些数据吗, 是否继续？', '提示', {
+                    @:type: 'warning'
+                @:}).then(() => {
+                    @:request({
+                        @:url: `/api/@(Model.NameSpace)/@(Model.ClassName)/batchRemove`,
+                        @:method: 'POST',
+                        @:data: ids ,
+                    @:}).then(res => {
+                        @:this.$message({
+                            @:type: 'success',
+                            @:message: res.msg,
+                            @:onClose: () => {
+                                @:this.initData()
+                            @:}
+                        @:});
+                    @:})
+                @:}).catch(() => { })
+            @:},
+}
+            goDetail(id, flowState,flowId) {
+                let data = {
+                    id: id || '',
+                    enCode: '@(Model.EnCode)',
+                    flowId: flowId,
+                    formType: 1,
+                    opType: flowState ? 0 : '-1',
+                    status: flowState
+                }
+                this.flowVisible = true
+                this.$nextTick(() => {
+                    this.$refs.FlowBox.init(data)
+                })
+            },
+    toDetail(modelId, id) {
+      if (!id) return
+      this.mainLoading = true
+      getConfigData(modelId).then(res => {
+        this.mainLoading = false
+        if (!res.data || !res.data.formData) return
+        let formData = JSON.parse(res.data.formData)
+        formData.popupType = 'general'
+        this.detailsVisible = true
+        this.$nextTick(() => {
+          this.$refs.RelevanceDetail.init(formData, modelId, id)
+        })
+      }).catch(() => { this.mainLoading = false })
+    },
+	setDefaultQuery(defaultSortList) {
+      const defaultSortConfig = (defaultSortList || []).map(o =>
+        (o.sort === 'desc' ? '-' : '') + o.field);
+      this.defListQuery.sidx = defaultSortConfig.join(',')
+    },
+	handleHeaderClass({ column }) {
+      column.order = column.multiOrder
+    },
+    handleOrderChange(orderColumn, orderState) {
+      let index = this.ordersList.findIndex(e => e.field === orderColumn);
+      let sort = orderState === 'ascending' ? 'asc' : orderState === 'descending' ? 'desc' : '';
+      if (index > -1) {
+        this.ordersList[index].sort = orderState;
+      } else {
+        this.ordersList.push({ field: orderColumn, sort });
+      }
+      this.ordersList = this.ordersList.filter(e => e.sort);
+      this.ordersList.length ? this.setDefaultQuery(this.ordersList) : this.setDefaultQuery(@Model.DefaultSortConfig)
+      this.initData()
+    },
+    handleTableSort({ column }) {
+      if (column.sortable !== 'custom') return
+      column.multiOrder = column.multiOrder === 'descending' ? 'ascending' : column.multiOrder ? '' : 'descending';
+      this.handleOrderChange(column.property, column.multiOrder)
+    },
+		    addHandle() {
+			    if (!this.flowList.length) {
+				    this.$message({ type: 'error', message: '流程不存在' });
+				} else if (this.flowList.length === 1) {
+				    this.selectFlow(this.flowList[0])
+				} else {
+				    this.flowListVisible = true
+		            this.$nextTick(() => {
+                    this.$refs.selectFlow.init(this.flowList)
+                    })
+				}
+			},
+			selectFlow(row) {
+			    let item = {
+                    rowEdit: true,
+					flowId: row.id,
+@foreach(var children in Model.FormList)
+{
+@switch(children.jnpfKey)
+{
+case "checkbox":
+case "cascader":
+case "uploadImg":
+case "uploadFile":
+case "areaSelect":
+case "organizeSelect":
+@if(children.IsInlineEditor)
+{
+@if(children.DefaultValue == null || children.DefaultValue == "")
+{
+					@:@(children.LowerName):[],
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}
+break;
+case "select":
+case "userSelect":
+case "usersSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+@if(children.IsInlineEditor)
+{
+@if(children.Multiple)
+{
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):[],
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}else{
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}
+}
+break;
+case "inputNumber":
+case "datePicker":
+case "rate":
+case "slider":
+@if(children.IsInlineEditor)
+{
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}
+break;
+case "switch":
+@if(children.IsInlineEditor)
+{
+					@:@(children.LowerName):@(children.DefaultValue ? "1" : "0"),
+}
+break;
+default:
+@if(children.IsInlineEditor)
+{
+if(@children.DefaultValue == null || @children.DefaultValue == "")
+{
+					@:@(children.LowerName):undefined,
+}else{
+					@:@(children.LowerName):@(children.DefaultValue),
+}
+}
+break;
+}
+}
+                }
+                this.list.unshift(item)
+@if(Model.IsDefaultFormControl)
+{
+				@:this.initDefaultData();
+}
+			    this.flowListVisible = false
+			},
+@if(Model.IsDefaultFormControl)
+{
+@if(Model.DefaultFormControlList.IsExistDate)
+{
+    @:conversionDateTime(type) {
+      @:const format = type === 'yyyy' ? 'yyyy-01-01 00:00:00' : type === 'yyyy-MM' ? 'yyyy-MM-01 00:00:00' :
+        @:type === 'yyyy-MM-dd' ? 'yyyy-MM-dd 00:00:00' : type === 'yyyy-MM-dd HH:mm' ? 'yyyy-MM-dd HH:mm:00' : 'yyyy-MM-dd HH:mm:ss'
+      @:const dataTime = this.jnpf.toDate(new Date(), format)
+      @:return new Date(dataTime).getTime()
+    @:},
+}
+	@:initDefaultData() {
+@if(Model.DefaultFormControlList.IsExistDate)
+{
+@foreach(var item in Model.DefaultFormControlList.DateField)
+{
+      @:this.list[0].@(item.Field) = this.conversionDateTime("@(item.Format)");
+}
+}
+@if(Model.DefaultFormControlList.IsExistTime)
+{
+@foreach(var item in Model.DefaultFormControlList.TimeField)
+{
+      @:this.list[0].@(item.Field) = this.jnpf.toDate(new Date(), "@(item.Format)");
+}
+}
+@if(Model.DefaultFormControlList.IsSignField)
+{
+@foreach(var item in Model.DefaultFormControlList.SignField)
+{
+      @:this.list[0].@(item.Field) = this.userInfo.signImg || '';
+}
+}
+@if(Model.DefaultFormControlList.IsExistComSelect)
+{
+@foreach(var item in Model.DefaultFormControlList.ComSelectList)
+{
+@switch(item.selectType)
+{
+case "all":
+      @:if (this.userInfo.organizeIdList instanceof Array && this.userInfo.organizeIdList.length > 0) {
+        @:this.list[0].@(item.Field) = @(item.IsMultiple? "[" : "")this.userInfo.organizeIdList@(item.IsMultiple? "]" : "")
+	  @:}
+break;
+}
+}
+}
+@if(Model.DefaultFormControlList.IsExistUserSelect)
+{
+@foreach(var item in Model.DefaultFormControlList.UserSelectList)
+{
+@switch(item.selectType)
+{
+case "all":
+      @:this.list[0].@(item.Field) = @(item.IsMultiple? "[" : "")this.userInfo.userId@(item.IsMultiple? "]" : "")
+break;
+}
+}
+}
+@if(Model.DefaultFormControlList.IsExistPosSelect)
+{
+@foreach(var item in Model.DefaultFormControlList.PosSelectList)
+{
+@switch(item.selectType)
+{
+case "all":
+      @:if(this.userInfo.positionId != null && this.userInfo.positionId != '') {
+		@:this.list[0].@(item.Field) = @(!item.IsMultiple? "this.userInfo.positionId" : "this.userInfo.positionIds.map(o => o.id)")
+      @:}
+break;
+}
+}
+}
+@if(Model.DefaultFormControlList.IsExistRoleSelect)
+{
+@foreach(var item in Model.DefaultFormControlList.RoleSelectList)
+{
+@switch(item.selectType)
+{
+case "all":
+      @:if(this.userInfo.roleId != null && this.userInfo.roleId != '') {
+		@:this.list[0].@(item.Field) = @(!item.IsMultiple? "this.userInfo.roleIds[0]" : "this.userInfo.roleIds")
+      @:}
+break;
+}
+}
+}
+@if(Model.DefaultFormControlList.IsExistGroupsSelect)
+{
+@foreach(var item in Model.DefaultFormControlList.GroupsSelectList)
+{
+@switch(item.selectType)
+{
+case "all":
+      @:if(this.userInfo.groupIds != null && this.userInfo.groupIds != []) {
+		@:this.list[0].@(item.Field) = @(!item.IsMultiple? "this.userInfo.groupIds[0]" : "this.userInfo.groupIds")
+      @:}
+break;
+}
+}
+}
+@if(Model.DefaultFormControlList.IsExistDepSelect)
+{
+@foreach(var item in Model.DefaultFormControlList.DepSelectList)
+{
+@switch(item.selectType)
+{
+case "all":
+      @:if(this.userInfo.departmentId != null && this.userInfo.departmentId != '') {
+        @:this.list[0].@(item.Field) = @(item.IsMultiple? "[" : "")this.userInfo.departmentId@(item.IsMultiple? "]" : "")
+      @:}
+break;
+}
+}
+}
+@if(Model.DefaultFormControlList.IsExistUsersSelect)
+{
+@foreach(var item in Model.DefaultFormControlList.UsersSelectList)
+{
+@switch(item.selectType)
+{
+case "all":
+      @:this.list[0].@(item.Field) = @(item.IsMultiple? "[" : "")this.userInfo.userId@(item.IsMultiple? "]" : "")
+break;
+}
+}
+}
+	@:},
+}
+@if(Model.IsDownload)
+{
+			@:exportData() {
+                @:this.exportBoxVisible = true
+                @:this.$nextTick(() => {
+                    @:let columnList = this.columnList.filter(o => !noGroupList.includes(o.__config__.jnpfKey) && !o.__config__.isSubTable) || []
+                    @:this.$refs.ExportBox.init(columnList, this.multipleSelection)
+                @:})
+            @:},
+            @:download(data) {
+                @:let query = {dataType:data.dataType, selectKey:data.selectKey.join(','), ...this.listQuery, ...this.query, menuId:this.menuId, selectIds: this.multipleSelection.join(',') }
+                @:request({
+                    @:url: `/api/@(Model.NameSpace)/@(Model.ClassName)/Actions/Export`,
+                    @:method: 'POST',
+                    @:data: query
+                @:}).then(res => {
+                    @:if (!res.data.url) return
+                    @:this.jnpf.downloadFile(res.data.url)
+                    @:this.$refs.ExportBox.visible = false
+                    @:this.exportBoxVisible = false
+                @:})
+            @:},
+}
+			search() {
+                this.listQuery = {
+                    currentPage: 1,
+                    pageSize: @(Model.PageSize),
+                    sort: "@(Model.Sort)",
+                    sidx: "@(Model.DefaultSidx)",
+    @if(Model.HasSuperQuery)
+    {
+                    @:superQueryJson: this.listQuery.superQueryJson
+    }
+                }
+                this.initData()
+            },
+            refresh(isrRefresh) {
+                this.formVisible = false
+                if (isrRefresh) this.reset()
+            },
+            reset(@(Model.IsDefaultSearchField ? "isReset" : "")) {
+@if(Model.IsDefaultSearchField){
+                @:this.query = JSON.parse(JSON.stringify(this.queryData))
+                @:this.search() 
+}else{
+                @:for (let key in this.query) {
+                    @:this.query[key] = undefined
+                @:}
+                @:this.listQuery = {
+                    @:currentPage: 1,
+                    @:pageSize: @(Model.PageSize),
+                    @:sort: "@(Model.Sort)",
+                    @:sidx: "@(Model.DefaultSidx)",
+@if(Model.HasSuperQuery){
+                    @:superQueryJson: this.listQuery.superQueryJson
+}
+                @:}
+                @:this.initData()
+}
+            },
+            cancelRowEdit(row, index) {
+			    if (!row.id) return this.list.splice(index, 1)
+				row.rowEdit = false
+				let item = JSON.parse(JSON.stringify(this.cacheList[index]))
+				this.$set(this.list, index, item)
+			},
+@if(Model.SpecifyDateFormatSet.Count > 0)
+{
+    @:subtableTimeRestoration(type, data) {
+      @:if (!data) return null
+      @:const datetime = type === 'yyyy' ? data + '-01-01 00:00:00' : type === 'yyyy-MM' ? data + '-01 00:00:00' :
+        @:type === 'yyyy-MM-dd' ? data + ' 00:00:00' : type === 'yyyy-MM-dd HH:mm' ? data + ':00' : data
+      @:return datetime
+    @:},
+}
+            saveForRowEdit(row, status, candidateData) {
+@if(Model.SpecifyDateFormatSet.Count > 0)
+{
+@foreach(var item in Model.SpecifyDateFormatSet)
+{
+      @:if (row.@(item.Field) && row.@(item.Field).length)
+	  @:{
+        @:row.@(item.Field).forEach(res => {
+@foreach(var children in item.Children)
+{
+          @:res.@(children.Field) = this.subtableTimeRestoration("@(children.Format)", res.@(children.Field));
+}
+        @:})
+	  @:}
+}
+}
+                let query = {
+                    id: row.id,
+                    status: status || "1",
+                    candidateType: this.candidateType,
+                    formData: row,
+                    flowId: row.flowId || this.flowList[0].id,
+                    flowUrgent: 1
+                }
+                if (candidateData) query = { ...query, ...candidateData }
+			    const formMethod = query.id ? Update : Create
+                formMethod(query).then(res => {
+                    this.$message({
+                        message: res.msg,
+                        type: 'success',
+                        duration: 1500,
+                        onClose: () => {
+                            this.candidateVisible = false
+                            this.initData()
+                        }
+                    })
+                })
+		    },
+            submitForRowEdit(row) {
+@if(Model.SpecifyDateFormatSet.Count > 0)
+{
+@foreach(var item in Model.SpecifyDateFormatSet)
+{
+      @:if (row.@(item.Field) && row.@(item.Field).length)
+	  @:{
+        @:row.@(item.Field).forEach(res => {
+@foreach(var children in item.Children)
+{
+          @:res.@(children.Field) = this.subtableTimeRestoration("@(children.Format)", res.@(children.Field));
+}
+        @:})
+	  @:}
+}
+}
+                this.currRow = row
+                this.workFlowFormData = {
+                    id: row.id,
+                    formData: row,
+                    flowId: row.flowId || this.flowList[0].id
+                }
+                Candidates(0, this.workFlowFormData).then(res => {
+                    let data = res.data
+                    this.candidateType = data.type
+                    if (data.type == 1) {
+                        this.branchList = res.data.list
+                        this.candidateList = []
+                        this.candidateVisible = true
+                    } else if (data.type == 2) {
+                        this.branchList = []
+                        this.candidateList = res.data.list.filter(o => o.isCandidates)
+                        this.candidateVisible = true
+                    } else {
+                        this.$confirm('您确定要提交当前流程吗, 是否继续?', '提示', {
+                            type: 'warning'
+                        }).then(() => {
+                            this.saveForRowEdit(row, '0')
+                        }).catch(() => { })
+                    }
+                }).catch(() => { })
+            },
+            submitCandidate(data) {
+                this.saveForRowEdit(this.currRow, '0', data)
+            },
+            colseFlow(isrRefresh) {
+                this.flowVisible = false
+                if (isrRefresh) this.reset()
+            },
+		}
+    }
+</script>
+@{
+void GenerateFormControls()
+{
+@foreach(var item in Model.ComplexFormAllContols != null && Model.ComplexFormAllContols.Count>0 ? Model.ComplexFormAllContols : Model.FormAllContols)
+{
+@if(item.ComplexColumns!=null)
+{
+	@:<el-table-column prop="@(item.LowerName)" label="@(item.Label)" align="@(item.Align)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + item.Name + "')\" " : "")@(item.Fixed)@(item.IsSort ? "sortable='custom'":"")>
+		@{GenerateFormChildrenControls(item.ComplexColumns,item.Gutter);}
+	@:</el-table-column>
+}
+@switch(item.jnpfKey)
+{
+case "tableGrid":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+case "tableGridTr":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+case "tableGridTd":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+@*栅格布局*@
+case "row":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+@*卡片*@
+case "card":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+@*折叠面板*@
+case "collapse":
+@foreach(var collapse in item.Children)
+{
+@{GenerateFormChildrenControls(collapse.Children,item.Gutter);}
+}
+break;
+case "tab":
+@foreach(var collapse in item.Children)
+{
+@{GenerateFormChildrenControls(collapse.Children,item.Gutter);}
+}
+break;
+@*无法在行内编辑控件*@
+case "colorPicker":
+case "editor":
+case "table":
+case "divider":
+case "groupTitle":
+case "button":
+case "link":
+case "iframe":
+case "alert":
+case "text":
+break;
+@*系统自动生成控件*@
+case "createUser":
+case "createTime":
+case "modifyUser":
+case "modifyTime":
+case "currOrganize":
+case "currPosition":
+case "billRule":
+case "relationFormAttr":
+case "popupAttr":
+@if(item.IsInlineEditor){
+                    @:<el-table-column prop="@(item.LowerName)" label="@(item.Label)" width="@(item.IndexWidth)" align="@(item.IndexAlign)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + item.Name + "')\" " : "")@(item.Fixed)@(item.IsSort ? "sortable='custom'":"") @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+						@:<template slot-scope="scope">
+							@:{{scope.row.@(item.LowerName)_name}}
+						@:</template>
+                    @:</el-table-column>
+}
+break;
+@*其他控件*@
+default:
+@{
+    var showOverflow=true;
+    if(item.jnpfKey=="slider" || item.jnpfKey=="rate" || item.jnpfKey=="sign" || item.jnpfKey=="signature" || item.jnpfKey=="location" || item.jnpfKey=="cascader" || item.jnpfKey=="uploadImg" || item.jnpfKey=="uploadFile") showOverflow=false;
+    else showOverflow=true;
+}
+@if(item.IsInlineEditor && item.IsStorage != 1){
+                    @:<el-table-column prop="@(item.LowerName)" label="@(item.Label)" width="@(item.IndexWidth)" align="@(item.IndexAlign)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + item.Name + "')\" " : "")@(item.Fixed)@(item.IsSort ? "sortable='custom'":"") @(Model.ShowOverflow && showOverflow ? "show-overflow-tooltip" : "")>
+                        @:<template slot-scope="scope">
+                            @:<template v-if="scope.row.rowEdit">
+@switch(item.jnpfKey)
+{
+case "checkbox":
+case "radio":
+                                @:<JnpfSelect @(item.jnpfKey == "checkbox" ? "multiple " : "")@(item.vModel)@(item.TipText)@(item.StartTime)@(item.EndTime)@(item.AddonBefore)@(item.AddonAfter)@(item.Thousands)@(item.PathType)@(item.IsAccount)@(item.Folder)@(item.Field)@(item.Placeholder)@(item.Clearable)@(item.Readonly)@(item.MainProps)@(item.Required)@(item.Disabled)@(item.ShowWordLimit)@(item.IsRange)@(item.Style)@(item.Type)@(item.Format)@(item.ValueFormat)@(item.AutoSize)@(item.Multiple)@(item.Size)@(item.PrefixIcon)@(item.SuffixIcon)@(item.MaxLength)@(item.Step)@(item.StepStrictly)@(item.ControlsPosition)@(item.ShowChinese)@(item.ShowPassword)@(item.Filterable)@(item.ShowAllLevels)@(item.RangeSeparator)@(item.StartPlaceholder)@(item.EndPlaceholder)@(item.Separator)@(item.PickerOptions)@(item.Max)@(item.Min)@(item.AllowHalf)@(item.ShowTexts)@(item.ShowScore)@(item.ShowAlpha)@(item.ColorFormat)@(item.ActiveText)@(item.InactiveText)@(item.ActiveColor)@(item.IsSwitch)@(item.ShowStops)@(item.Range)@(item.Accept)@(item.ShowTip)@(item.FileSize)@(item.SizeUnit)@(item.Limit)@(item.Contentposition)@(item.ButtonText)@(item.Level)@(item.Shadow)@(item.Content)@(item.Options)@(item.ModelId != ""? "modelId='"+ item.ModelId +"' " :"")@(item.RelationField)@(item.ColumnOptions)@(item.HasPage)@(item.PageSize)@(item.PropsValue)@(item.Total)@(item.InterfaceId)@(item.Precision)@(item.ShowLevel)@(item.PopupType)@(item.PopupTitle)@(item.PopupWidth)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.TemplateJson)@(item.Direction)@(item.Border)@(item.OptionType)>
+                                @:</JnpfSelect>
+break;
+case "textarea":
+                                @:<el-input @(item.vModel)@(item.Readonly)@(item.Placeholder)@(item.Clearable)@(item.Disabled)@(item.MaxLength)@(item.Style)@(item.ShowWordLimit)/>
+break;
+default:
+                                @:<@(item.Tag) @(item.vModel)@(item.TipText)@(item.StartTime)@(item.EndTime)@(item.AddonBefore)@(item.AddonAfter)@(item.Thousands)@(item.PathType)@(item.IsAccount)@(item.Folder)@(item.Field)@(item.Placeholder)@(item.Clearable)@(item.Readonly)@(item.MainProps)@(item.Required)@(item.Disabled)@(item.ShowWordLimit)@(item.IsRange)@(item.Style)@(item.Type)@(item.Format)@(item.ValueFormat)@(item.AutoSize)@(item.Multiple)@(item.Size)@(item.PrefixIcon)@(item.SuffixIcon)@(item.MaxLength)@(item.Step)@(item.StepStrictly)@(item.ControlsPosition)@(item.ShowChinese)@(item.ShowPassword)@(item.Filterable)@(item.ShowAllLevels)@(item.RangeSeparator)@(item.StartPlaceholder)@(item.EndPlaceholder)@(item.Separator)@(item.PickerOptions)@(item.Max)@(item.Min)@(item.AllowHalf)@(item.ShowTexts)@(item.ShowScore)@(item.ShowAlpha)@(item.ColorFormat)@(item.ActiveText)@(item.InactiveText)@(item.ActiveColor)@(item.IsSwitch)@(item.ShowStops)@(item.Range)@(item.Accept)@(item.ShowTip)@(item.FileSize)@(item.SizeUnit)@(item.Limit)@(item.Contentposition)@(item.ButtonText)@(item.Level)@(item.Shadow)@(item.Content)@(item.Options)@(item.ModelId != ""? "modelId='"+ item.ModelId +"' " :"")@(item.RelationField)@(item.ColumnOptions)@(item.HasPage)@(item.PageSize)@(item.PropsValue)@(item.Total)@(item.InterfaceId)@(item.Precision)@(item.ShowLevel)@(item.PopupType)@(item.PopupTitle)@(item.PopupWidth)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.UserRelationAttr)@(item.TemplateJson)@(item.Direction)@(item.Border)@(item.OptionType)@(item.Disaabled)@(item.jnpfKey=="signature" ? @item.AbleIds : "")@(item.ShowCount)>
+@switch(item.jnpfKey)
+{
+case "input":
+@if(item.Prepend != null)
+{
+								    @:<template slot="prepend">@(item.Prepend)</template>
+}
+@if(item.Append != null)
+{
+								    @:<template slot="append">@(item.Append)</template>
+}
+break;
+}
+							    @:</@(item.Tag)>
+break;
+}
+                            @:</template>
+                            @:<template v-else>
+@switch(item.jnpfKey)
+{
+case "relationForm":
+                                @:<el-link :underline="false" @@click.native="toDetail('@(item.ModelId)', scope.row.@(item.LowerName)_id)" type="primary">{{ scope.row.@(item.LowerName)_name }}</el-link>
+break;
+case "inputNumber":
+                                @:<JnpfNumber v-model="scope.row.@(item.LowerName)" @(item.Thousands)@(item.Precision)/>
+break;
+case "sign":
+                                @:<JnpfSign v-model="scope.row.@(item.LowerName)" detailed />
+break;
+case "signature":
+                                @:<JnpfSignature v-model="scope.row.@(item.LowerName)" @(item.Disaabled)@(item.AbleIds) detailed />
+break;
+case "rate":
+                                @:<JnpfRate v-model="scope.row.@(item.LowerName)" disabled />
+break;
+case "slider":
+                                @:<JnpfSlider v-model="scope.row.@(item.LowerName)" disabled />
+break;
+case "uploadImg":
+                                @:<JnpfUploadImg v-model="scope.row.@(item.LowerName)" disabled detailed simple v-if="scope.row.@(item.LowerName).length" />
+break;
+case "uploadFile":
+                                @:<JnpfUploadFile v-model="scope.row.@(item.LowerName)" disabled detailed simple v-if="scope.row.@(item.LowerName).length" />
+break;
+case "input":
+                                @:<jnpf-input v-model="scope.row.@(item.LowerName)" @(item.UseMask) @(item.MaskConfig) @(Model.ShowOverflow ? "showOverflow" : "") detailed />
+break;
+case "cascader":
+case "location":
+if(Model.ShowOverflow)
+{
+                                @:<el-tooltip effect="dark" :content="scope.row.@(item.LowerName)_name" placement="top">
+                                    @:<div style="white-space: nowrap;text-overflow: ellipsis;overflow: hidden;">{{scope.row.@(item.LowerName)_name}}</div>
+                                @:</el-tooltip>
+}else{
+                                @:{{scope.row.@(item.LowerName)_name}}
+}
+break;
+default:
+                                @:{{scope.row.@(item.LowerName)_name}}
+break;
+}
+                            @:</template>
+                        @:</template>
+					@:</el-table-column>
+}
+break;
+}
+}
+	}	
+	void GenerateFormChildrenControls(ICollection<FormControlDesignModel> childrenList, int gutter)
+	{
+@foreach(var item in childrenList)
+{
+@switch(item.jnpfKey)
+{
+case "tableGrid":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+case "tableGridTr":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+case "tableGridTd":
+@{GenerateFormChildrenControls(item.Children,item.Gutter);}
+break;
+@*栅格布局*@
+case "row":
+@{GenerateFormChildrenControls(item.Children,gutter);}
+break;
+@*卡片*@
+case "card":
+@{GenerateFormChildrenControls(item.Children,gutter);}
+break;
+@*折叠面板*@
+case "collapse":
+@foreach(var collapse in item.Children)
+{
+@{GenerateFormChildrenControls(collapse.Children,gutter);}
+}
+break;
+case "tab":
+@foreach(var collapse in item.Children)
+{
+@{GenerateFormChildrenControls(collapse.Children,gutter);}
+}
+break;
+@*无法在行内编辑控件*@
+case "colorPicker":
+case "editor":
+case "table":
+case "divider":
+case "groupTitle":
+case "button":
+case "link":
+case "iframe":
+case "alert":
+case "text":
+break;
+@*系统自动生成控件*@
+case "createUser":
+case "createTime":
+case "modifyUser":
+case "modifyTime":
+case "currOrganize":
+case "currPosition":
+case "billRule":
+case "relationFormAttr":
+case "popupAttr":
+@if(item.IsInlineEditor && item.IsStorage != 1){
+                    @:<el-table-column prop="@(item.LowerName)" label="@(item.Label)" width="@(item.IndexWidth)" align="@(item.IndexAlign)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + item.Name + "')\" " : "")@(item.Fixed)@(item.IsSort ? "sortable='custom'":"") @(Model.ShowOverflow ? "show-overflow-tooltip" : "")>
+						@:<template slot-scope="scope">
+							@:{{scope.row.@(item.LowerName)_name}}
+						@:</template>
+                    @:</el-table-column>
+}
+break;
+@*其他控件*@
+default:
+@{
+    var showOverflow=true;
+    if(item.jnpfKey=="slider" || item.jnpfKey=="rate" || item.jnpfKey=="sign" || item.jnpfKey=="signature" || item.jnpfKey=="location" || item.jnpfKey=="cascader" || item.jnpfKey=="uploadImg" || item.jnpfKey=="uploadFile") showOverflow=false;
+    else showOverflow=true;
+}
+@if(item.IsInlineEditor){
+                    @:<el-table-column prop="@(item.LowerName)" label="@(item.Label) AAA" width="@(item.IndexWidth)" align="@(item.IndexAlign)" @(Model.UseColumnPermission ? "v-if=\"jnpf.hasP('" + item.Name + "')\" " : "")@(item.Fixed)@(item.IsSort ? "sortable='custom'":"") @(Model.ShowOverflow && showOverflow ? "show-overflow-tooltip" : "")>
+                        @:<template slot-scope="scope">
+                            @:<template v-if="scope.row.rowEdit">
+@switch(item.jnpfKey)
+{
+case "checkbox":
+case "radio":
+                                @:<JnpfSelect @(item.jnpfKey == "checkbox" ? "multiple " : "")@(item.vModel)@(item.TipText)@(item.StartTime)@(item.EndTime)@(item.AddonBefore)@(item.AddonAfter)@(item.Thousands)@(item.PathType)@(item.IsAccount)@(item.Folder)@(item.Field)@(item.Placeholder)@(item.Clearable)@(item.Readonly)@(item.MainProps)@(item.Required)@(item.Disabled)@(item.ShowWordLimit)@(item.IsRange)@(item.Style)@(item.Type)@(item.Format)@(item.ValueFormat)@(item.AutoSize)@(item.Multiple)@(item.Size)@(item.PrefixIcon)@(item.SuffixIcon)@(item.MaxLength)@(item.Step)@(item.StepStrictly)@(item.ControlsPosition)@(item.ShowChinese)@(item.ShowPassword)@(item.Filterable)@(item.ShowAllLevels)@(item.RangeSeparator)@(item.StartPlaceholder)@(item.EndPlaceholder)@(item.Separator)@(item.PickerOptions)@(item.Max)@(item.Min)@(item.AllowHalf)@(item.ShowTexts)@(item.ShowScore)@(item.ShowAlpha)@(item.ColorFormat)@(item.ActiveText)@(item.InactiveText)@(item.ActiveColor)@(item.IsSwitch)@(item.ShowStops)@(item.Range)@(item.Accept)@(item.ShowTip)@(item.FileSize)@(item.SizeUnit)@(item.Limit)@(item.Contentposition)@(item.ButtonText)@(item.Level)@(item.Shadow)@(item.Content)@(item.Options)@(item.ModelId != ""? "modelId='"+ item.ModelId +"' " :"")@(item.RelationField)@(item.ColumnOptions)@(item.HasPage)@(item.PageSize)@(item.PropsValue)@(item.Total)@(item.InterfaceId)@(item.Precision)@(item.ShowLevel)@(item.PopupType)@(item.PopupTitle)@(item.PopupWidth)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.TemplateJson)@(item.Direction)@(item.Border)@(item.OptionType)>
+                                @:</JnpfSelect>
+break;
+case "textarea":
+                                @:<el-input @(item.vModel)@(item.Readonly)@(item.Placeholder)@(item.Clearable)@(item.Disabled)@(item.MaxLength)@(item.Style)@(item.ShowWordLimit)/>
+break;
+default:
+                                @:<@(item.Tag) @(item.vModel)@(item.TipText)@(item.StartTime)@(item.EndTime)@(item.AddonBefore)@(item.AddonAfter)@(item.Thousands)@(item.PathType)@(item.IsAccount)@(item.Folder)@(item.Field)@(item.Placeholder)@(item.Clearable)@(item.Readonly)@(item.MainProps)@(item.Required)@(item.Disabled)@(item.ShowWordLimit)@(item.IsRange)@(item.Style)@(item.Type)@(item.Format)@(item.ValueFormat)@(item.AutoSize)@(item.Multiple)@(item.Size)@(item.PrefixIcon)@(item.SuffixIcon)@(item.MaxLength)@(item.Step)@(item.StepStrictly)@(item.ControlsPosition)@(item.ShowChinese)@(item.ShowPassword)@(item.Filterable)@(item.ShowAllLevels)@(item.RangeSeparator)@(item.StartPlaceholder)@(item.EndPlaceholder)@(item.Separator)@(item.PickerOptions)@(item.Max)@(item.Min)@(item.AllowHalf)@(item.ShowTexts)@(item.ShowScore)@(item.ShowAlpha)@(item.ColorFormat)@(item.ActiveText)@(item.InactiveText)@(item.ActiveColor)@(item.IsSwitch)@(item.ShowStops)@(item.Range)@(item.Accept)@(item.ShowTip)@(item.FileSize)@(item.SizeUnit)@(item.Limit)@(item.Contentposition)@(item.ButtonText)@(item.Level)@(item.Shadow)@(item.Content)@(item.Options)@(item.ModelId != ""? "modelId='"+ item.ModelId +"' " :"")@(item.RelationField)@(item.ColumnOptions)@(item.HasPage)@(item.PageSize)@(item.PropsValue)@(item.Total)@(item.InterfaceId)@(item.Precision)@(item.ShowLevel)@(item.PopupType)@(item.PopupTitle)@(item.PopupWidth)@(item.SelectType != "" ? "selectType='" + item.SelectType + "' " : "")@(item.IsCustomSelect ? @item.AbleIds : "")@(item.UserRelationAttr)@(item.TemplateJson)@(item.Direction)@(item.Border)@(item.OptionType)@(item.Disaabled)@(item.jnpfKey=="signature" ? @item.AbleIds : "")@(item.ShowCount)>
+@switch(item.jnpfKey)
+{
+case "input":
+@if(item.Prepend != null)
+{
+								    @:<template slot="prepend">@(item.Prepend)</template>
+}
+@if(item.Append != null)
+{
+								    @:<template slot="append">@(item.Append)</template>
+}
+break;
+}
+							    @:</@(item.Tag)>
+break;
+}
+                            @:</template>
+                            @:<template v-else>
+@switch(item.jnpfKey)
+{
+case "relationForm":
+                                @:<el-link :underline="false" @@click.native="toDetail('@(item.ModelId)', scope.row.@(item.LowerName)_id)" type="primary">{{ scope.row.@(item.LowerName)_name }}</el-link>
+break;
+case "inputNumber":
+                                @:<JnpfNumber v-model="scope.row.@(item.LowerName)" @(item.Thousands)@(item.Precision)/>
+break;
+case "sign":
+                                @:<JnpfSign v-model="scope.row.@(item.LowerName)" detailed />
+break;
+case "signature":
+                                @:<JnpfSignature v-model="scope.row.@(item.LowerName)" @(item.Disaabled)@(item.AbleIds) detailed />
+break;
+case "rate":
+                                @:<JnpfRate v-model="scope.row.@(item.LowerName)" disabled />
+break;
+case "slider":
+                                @:<JnpfSlider v-model="scope.row.@(item.LowerName)" disabled />
+break;
+case "uploadImg":
+                                @:<JnpfUploadImg v-model="scope.row.@(item.LowerName)" disabled detailed simple v-if="scope.row.@(item.LowerName).length" />
+break;
+case "uploadFile":
+                                @:<JnpfUploadFile v-model="scope.row.@(item.LowerName)" disabled detailed simple v-if="scope.row.@(item.LowerName).length" />
+break;
+case "input":
+                                @<jnpf-input v-model="scope.row.@(item.LowerName)" @(item.UseMask) @(item.MaskConfig) @(Model.ShowOverflow ? "showOverflow" : "") detailed />
+break;
+case "cascader":
+case "location":
+if(Model.ShowOverflow)
+{
+                                @:<el-tooltip effect="dark" :content="scope.row.@(item.LowerName)_name" placement="top">
+                                    @:<div style="white-space: nowrap;text-overflow: ellipsis;overflow: hidden;">{{scope.row.@(item.LowerName)_name}}</div>
+                                @:</el-tooltip>
+}else{
+                                @:{{scope.row.@(item.LowerName)_name}}
+}
+break;
+default:
+                                @:{{scope.row.@(item.LowerName)_name}}
+break;
+}
+                            @:</template>
+                        @:</template>
+					@:</el-table-column>
+}
+break;
+}
+}
+	}
+}

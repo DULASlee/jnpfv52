@@ -1,0 +1,75 @@
+@*本模板只适用于纯表单带流程*@
+<template>
+  <div class="JNPF-common-layout">
+    <FlowBox v-show="flowVisible" ref="FlowBox" @@close="closeFlow" />
+	<SelectFlow ref="selectFlow" v-if="flowListVisible" @@selectFlow='selectFlow' />
+  </div>
+</template>
+<script>
+import FlowBox from '@@/views/workFlow/components/FlowBox'
+import { getFormById } from '@@/api/workFlow/FormDesign'
+import { getFlowList } from '@@/api/workFlow/FlowEngine'
+import SelectFlow from '@@/components/SelectFlowDialog'
+export default {
+  components: { FlowBox,SelectFlow },
+  data() {
+    return {
+      formFlowId: "",
+      flowVisible: false,
+      flowListVisible: false,
+      flowList: [],
+      flowItem: {}
+    }
+  },
+  created() {
+    this.getFormById();
+  },
+  methods: {
+    getFormById() {
+        getFormById("@(Model.FormId)").then(res => {
+          const flowId = res.data && res.data.id
+          this.formFlowId = flowId;
+          this.init()
+        })
+    },
+    init(flag) {
+      this.getFlowList(flag);      
+    },
+    getFlowList(flag) {
+      getFlowList(this.formFlowId).then(res => {
+        this.flowList = res.data
+        if (flag && this.flowItem.id) return this.selectFlow(this.flowItem)
+        if (!this.flowList.length) return this.$message({ type: 'error', message: '流程不存在' })
+        if (this.flowList.length === 1) return this.selectFlow(this.flowList[0])
+        this.flowListVisible = true
+		this.$nextTick(() => {
+            this.$refs.selectFlow.init(this.flowList)
+        })
+      })
+    },
+    selectFlow(item) {
+      this.flowItem = item
+      let data = {
+        id: '',
+        enCode: '',
+        flowId: item.id,
+        formType: 2,
+        opType: '-1',
+        type: 1,
+        modelId: this.modelId,
+        isPreview: this.isPreview,
+        fromForm: 1,
+        hideCancelBtn: true
+      }
+      this.flowListVisible = false
+      this.flowVisible = true
+      this.$nextTick(() => {
+        this.$refs.FlowBox.init(data)
+      })
+    },
+    closeFlow(isRefresh) {
+      if (isRefresh) this.init(true)
+    },
+  }
+}
+</script>

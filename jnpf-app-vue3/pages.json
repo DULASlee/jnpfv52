@@ -1,0 +1,604 @@
+{
+	"easycom": {
+		"autoscan": true,
+		"custom": {
+			"^Jnpf(.*)": "@/components/Jnpf/$1/index.vue",
+			"^jnpf-(.*)": "@/components/Jnpf/$1/index.vue"
+		}
+	},
+	"pages": [ //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+		// #ifdef APP
+		{
+			"path": "pages/launch/index",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTextStyle": "black" // 状态栏字体为白色
+			}
+		},
+		{
+			"path": "pages/launch/policy",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTextStyle": "black" // 状态栏字体为白色
+			}
+		},
+		{
+			"path": "pages/launch/guide",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTextStyle": "black" // 状态栏字体为白色
+			}
+		},
+		// #endif
+		{
+			"path": "pages/login/index",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTextStyle": "black" // 状态栏字体为白色
+			}
+		},
+		{
+			"path": "pages/login/sso-redirect",
+			"style": {
+				"navigationStyle": "custom", // 隐藏系统导航栏
+				"navigationBarTextStyle": "black" // 状态栏字体为白色
+			}
+		},
+		{
+			"path": "pages/login/scanLogin",
+			"style": {
+				"navigationBarTitleText": "扫码登录"
+			}
+		},
+		{
+			"path": "pages/login/otherLogin",
+			"style": {
+				"navigationBarTitleText": ""
+			}
+		},
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTextStyle": "black",
+				"app-plus": {
+					"bounce": "none" // 取消APP端iOS回弹,避免与下拉刷新冲突 (可统一配在 'globalStyle')
+				}
+			}
+		},
+		{
+			"path": "pages/index/message",
+			"style": {
+				"navigationBarTitleText": "%app.tabBar.message%"
+			}
+		},
+		{
+			"path": "pages/index/workFlow",
+			"style": {
+				"navigationBarTitleText": "%app.tabBar.workFlow%"
+			}
+		},
+		{
+			"path": "pages/index/apply",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTextStyle": "black",
+				"app-plus": {
+					"bounce": "none" // 取消APP端iOS回弹,避免与下拉刷新冲突 (可统一配在 'globalStyle')
+				}
+			}
+		},
+		// #ifndef MP
+		{
+			"path": "pages/formShortLink/index",
+			"style": {
+				"navigationBarTitleText": "表单外链",
+				"app-plus": {
+					"titleNView": false,
+					"bounce": "none"
+				}
+			}
+		},
+		{
+			"path": "pages/formShortLink/detail",
+			"style": {
+				"navigationBarTitleText": "详情",
+				"app-plus": {
+					"titleNView": false,
+					"bounce": "none"
+				}
+			}
+		},
+		// #endif
+		{
+			"path": "pages/index/my",
+			"style": {
+				"navigationBarTitleText": "%app.tabBar.my%",
+				"app-plus": {
+					"bounce": "none"
+				}
+			}
+		}
+	],
+	"subPackages": [{
+			"root": "pages/portal",
+			"pages": [
+				// #ifndef MP
+				{
+					"path": "applyPortal/index",
+					"style": {
+						"navigationStyle": "custom", // 隐藏系统导航栏
+						"navigationBarTextStyle": "black" // 状态栏字体为白色
+					}
+				},
+				// #endif
+				// #ifdef H5
+				{
+					"path": "mpPortal/index",
+					"style": {
+						"navigationStyle": "custom", // 隐藏系统导航栏
+						"navigationBarTextStyle": "black" // 状态栏字体为白色
+					}
+				},
+				// #endif
+				{
+					"path": "scanPortal/index",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				}
+			]
+		},
+		{
+			"root": "pages/message",
+			"pages": [{
+					"path": "contacts/index",
+					"style": {
+						"navigationBarTitleText": "通讯录"
+					}
+				},
+				{
+					"path": "userDetail/index",
+					"style": {
+						"navigationBarTitleText": "",
+						"navigationBarTextStyle": "black",
+						"navigationBarBackgroundColor": "#f0f2f6"
+					}
+				},
+				{
+					"path": "message/index",
+					"style": {
+						"navigationBarTitleText": "站内消息",
+						"navigationStyle": "custom", // 隐藏系统导航栏
+						"navigationBarTextStyle": "white" // 状态栏字体为白色
+					}
+				},
+				{
+					"path": "messageDetail/index",
+					"style": {
+						"navigationBarTitleText": "详情"
+					}
+				},
+				{
+					"path": "im/index",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				}
+			]
+		},
+		{
+			"root": "pages/workFlow",
+			"pages": [{
+					"path": "flowBefore/index",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				},
+				{
+					"path": "flowBefore/revokeForm",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				},
+				{
+					"path": "flowBefore/logError",
+					"style": {
+						"navigationBarTitleText": "异常详情"
+					}
+				},
+				{
+					"path": "document/index",
+					"style": {
+						"navigationBarTitleText": "文档中心"
+					}
+				},
+				{
+					"path": "document/detail",
+					"style": {
+						"navigationBarTitleText": "文档中心"
+					}
+				},
+				{
+					"path": "schedule/index",
+					"style": {
+						"navigationBarTitleText": "日程"
+					}
+				},
+				{
+					"path": "schedule/form",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				},
+				{
+					"path": "schedule/detail",
+					"style": {
+						"navigationStyle": "custom", // 隐藏系统导航栏
+						"navigationBarTitleText": "详情",
+						"app-plus": {
+							"titleNView": false,
+							"bounce": "none"
+						}
+					}
+				},
+				{
+					"path": "webView/index",
+					"style": {
+						"navigationBarTitleText": "",
+						"app-plus": {
+							"titleNView": false,
+							"bounce": "none"
+						}
+					}
+				},
+				{
+					"path": "flowTodo/index",
+					"style": {
+						"navigationBarTitleText": "工作流程"
+					}
+				},
+				// #ifdef MP
+				{
+					"path": "filePreview/index",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				},
+				// #endif
+				{
+					"path": "operate/index",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				},
+				{
+					"path": "operate/revoke",
+					"style": {
+						"navigationBarTitleText": "流程撤销"
+					}
+				},
+				{
+					"path": "scanForm/index",
+					"style": {
+						"navigationBarTitleText": "预览页面"
+					}
+				},
+				{
+					"path": "comment/index",
+					"style": {
+						"navigationBarTitleText": "填写评论"
+					}
+				},
+				{
+					"path": "candiDateUserSelect/index",
+					"style": {
+						"navigationBarTitleText": "审批候选人",
+						"enablePullDownRefresh": false,
+						"app-plus": {
+							"bounce": "none"
+						}
+					}
+				},
+				{
+					"path": "assistantMsg/viewData",
+					"style": {
+						"navigationBarTitleText": "查看数据"
+					}
+				}
+			]
+		},
+		{
+			"root": "pages/commonPage",
+			"pages": [{
+					"path": "morePage/index",
+					"style": {
+						"navigationBarTitleText": "常用菜单"
+					}
+				},
+				{
+					"path": "allApp/index",
+					"style": {
+						"navigationBarTitleText": "收藏流程"
+					}
+				}
+			]
+		},
+		{
+			"root": "pages/apply",
+			"pages": [{
+					"path": "reportLog/index",
+					"style": {
+						"navigationBarTitleText": "汇报日志"
+					}
+				},
+				{
+					"path": "reportLog/form",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				},
+				{
+					"path": "catalog/index",
+					"style": {
+						"navigationStyle": "custom" // 隐藏系统导航栏
+					}
+				},
+				{
+					"path": "interPage/signInvokeList",
+					"style": {
+						"navigationBarTitleText": "个人签名"
+					}
+				},
+				{
+					"path": "order/index",
+					"style": {
+						"navigationBarTitleText": "订单示例"
+					}
+				},
+				{
+					"path": "popSelect/index",
+					"style": {
+						"navigationBarTitleText": "选择数据",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "dynamicModel/index",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				},
+				{
+					"path": "dynamicModel/form",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				},
+				{
+					"path": "dynamicModel/detail",
+					"style": {
+						"navigationBarTitleText": "详情"
+					}
+				},
+				{
+					"path": "dynamicModel/scanForm",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				},
+				{
+					"path": "tableLinkage/index",
+					"style": {
+						"navigationBarTitleText": "选择数据",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "location/index",
+					"style": {
+						"navigationBarTitleText": "%app.apply.location.modalTitle%",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "customBtn/index",
+					"style": {
+						"navigationBarTitleText": "自定义操作"
+					}
+				},
+				// {
+				// 	"path": "tableSelect/index",
+				// 	"style": {
+				// 		"navigationBarTitleText": "选择数据",
+				// 		"enablePullDownRefresh": false
+				// 	}
+				// },
+				{
+					"path": "externalLink/index",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				}
+			]
+		},
+		{
+			"root": "pages/my",
+			"pages": [{
+					"path": "settings/index",
+					"style": {
+						"navigationBarTitleText": "%app.my.setting%",
+						"app-plus": {
+							"bounce": "none"
+						}
+					}
+				},
+				{
+					"path": "scanResult/index",
+					"style": {
+						"navigationBarTitleText": "扫描结果",
+						"app-plus": {
+							"bounce": "none"
+						}
+					}
+				},
+				{
+					"path": "modifyPsd/index",
+					"style": {
+						"navigationBarTitleText": "修改密码",
+						"app-plus": {
+							"bounce": "none"
+						}
+					}
+				},
+				{
+					"path": "contactUs/index",
+					"style": {
+						"navigationBarTitleText": "联系我们",
+						"app-plus": {
+							"bounce": "none"
+						}
+					}
+				},
+				{
+					"path": "abouts/index",
+					"style": {
+						"navigationBarTitleText": "关于平台"
+					}
+				},
+				{
+					"path": "accountSecurity/index",
+					"style": {
+						"navigationBarTitleText": "账号安全",
+						"app-plus": {
+							"bounce": "none"
+						}
+					}
+				},
+				{
+					"path": "cancellation/index",
+					"style": {
+						"navigationBarTitleText": "注销账号",
+						"app-plus": {
+							"bounce": "none"
+						}
+					}
+				},
+				{
+					"path": "personalData/index",
+					"style": {
+						"navigationBarTitleText": "%layout.header.profile%",
+						"app-plus": {
+							"bounce": "none"
+						}
+					}
+				},
+				{
+					"path": "business/index",
+					"style": {
+						"navigationBarTitleText": "企业组织",
+						"app-plus": {
+							"bounce": "none"
+						}
+					}
+				},
+				{
+					"path": "subordinate/index",
+					"style": {
+						"navigationBarTitleText": "%app.my.subordinates%",
+						"enablePullDownRefresh": false
+					}
+				},
+				{
+					"path": "entrustAgent/index",
+					"style": {
+						"navigationBarTitleText": "%app.my.entrustedAgency%"
+					}
+				},
+				{
+					"path": "entrustAgent/form",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				},
+				{
+					"path": "entrustAgent/detail",
+					"style": {
+						"navigationBarTitleText": "详情"
+					}
+				}
+			]
+		}
+	],
+	"preloadRule": {
+		"pages/index/message": {
+			"network": "all",
+			"packages": [
+				"pages/message"
+			]
+		},
+		"pages/index/workFlow": {
+			"network": "all",
+			"packages": [
+				"pages/workFlow"
+			]
+		},
+		"pages/index/apply": {
+			"network": "all",
+			"packages": [
+				"pages/apply"
+			]
+		},
+		"pages/index/my": {
+			"network": "all",
+			"packages": [
+				"pages/my"
+			]
+		}
+	},
+	"tabBar": {
+		"color": "#303133",
+		"selectedColor": "#2979FF",
+		"backgroundColor": "#ffffff",
+		"list": [{
+				"pagePath": "pages/index/index",
+				"text": "%app.tabBar.home%",
+				"iconPath": "static/image/tabbar/home.png",
+				"selectedIconPath": "static/image/tabbar/homeHL.png"
+			},
+			{
+				"pagePath": "pages/index/workFlow",
+				"text": "%app.tabBar.workFlow%",
+				"iconPath": "static/image/tabbar/workFlow.png",
+				"selectedIconPath": "static/image/tabbar/workFlowHL.png"
+			},
+			{
+				"pagePath": "pages/index/apply",
+				"text": "%app.tabBar.apply%",
+				"iconPath": "static/image/tabbar/apply.png",
+				"selectedIconPath": "static/image/tabbar/applyHL.png"
+			},
+			{
+				"pagePath": "pages/index/message",
+				"text": "%app.tabBar.message%",
+				"iconPath": "static/image/tabbar/message.png",
+				"selectedIconPath": "static/image/tabbar/messageHL.png"
+			},
+			{
+				"pagePath": "pages/index/my",
+				"text": "%app.tabBar.my%",
+				"iconPath": "static/image/tabbar/my.png",
+				"selectedIconPath": "static/image/tabbar/myHL.png"
+			}
+		]
+	},
+	"globalStyle": {
+		"navigationBarTitleText": "",
+		"navigationBarTextStyle": "black",
+		"navigationBarBackgroundColor": "#ffffff",
+		"backgroundColor": "#f0f2f6",
+		"usingComponents": {
+			"ly-tree-node": "/components/ly-tree/ly-tree-node"
+		}
+	}
+}

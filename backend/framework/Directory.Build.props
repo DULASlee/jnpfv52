@@ -1,0 +1,34 @@
+<Project>
+	<PropertyGroup>
+		<TargetFrameworks>net5.0;net6.0;net7.0</TargetFrameworks>
+		<Version>3.4.7</Version>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Authors>引迈</Authors>
+		<Company>福建引迈信息技术有限公司</Company>
+		<Product>JNPF</Product>
+		<Copyright>© 2019-present 福建引迈信息技术有限公司</Copyright>
+		<RepositoryUrl>https://www.jnpfsoft.com</RepositoryUrl>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSource>true</EmbedUntrackedSource>
+		<EmbedAllSources>true</EmbedAllSources>
+		<RepositoryType>Gitee</RepositoryType>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<PackageOutputPath>../nupkgs</PackageOutputPath>
+		<DelaySign>False</DelaySign>
+	</PropertyGroup>
+
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+		<DocumentationFile>bin\Debug\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+	</PropertyGroup>
+
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+		<DocumentationFile>bin\Release\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+</Project>

@@ -1,0 +1,723 @@
+<template>
+	<view class="dynamicModel-list-v">
+		<view class="head-warp com-dropdown">
+			<u-dropdown class="u-dropdown" ref="uDropdown">
+				<u-dropdown-item title="排序">
+					<view class="screen-box">
+						<view class="screen-list" v-if="sortOptions.length">
+							<view class="u-p-l-20 u-p-r-20 list">
+								<scroll-view scroll-y="true" style="height: 100%;">
+									<u-cell-group :border="false">
+										<u-cell-item @@click="cellClick(item)" :arrow="false" :title="item.label" v-for="(item, index) in sortOptions" :key="index" :title-style="{ color: sortValue.includes(item.value) ? '#2979ff' : '#606266' }">
+											<u-icon v-if="sortValue.includes(item.value)" name="checkbox-mark" color="#2979ff" size="32" />
+										</u-cell-item>
+									</u-cell-group>
+								</scroll-view>
+							</view>
+						</view>
+						<view v-else class="notData-box u-flex-col">
+							<view class="u-flex-col notData-inner">
+								<image :src="icon" class="iconImg"></image>
+								<text class="notData-inner-text">暂无数据</text>
+							</view>
+						</view>
+						<view class="buttom-actions" v-if="sortOptions.length" style="z-index: 1;">
+							<u-button class="buttom-btn" @@click="handleSortReset">清空</u-button>
+							<u-button class="buttom-btn" type="primary" @@click="handleSortSearch">确定</u-button>
+						</view>
+					</view>
+				</u-dropdown-item>
+				<u-dropdown-item title="筛选">
+					<view class="dropdown-slot-content">
+						<view class="dropdown-slot-content-main search-main">
+							<view class="u-p-l-32 u-p-r-32 search-form">
+@switch(Model.SearchColumnDesign.Count > 0)
+{
+case true:
+								<scroll-view scroll-y="true" style="height: 100%;">
+								    <u-form :model="searchForm" ref="searchForm" :errorType="['toast']" label-position="left" label-width="150">
+@if(Model.IsKeywordSearchColumn)
+{
+										<u-form-item label="关键词">
+											<JnpfInput v-model="searchForm.jnpfKeyword" placeholder="请输入关键词" />
+										</u-form-item>
+}
+@*循环查询条件*@
+@foreach(var search in Model.SearchColumnDesign)
+{
+                                        <u-form-item label="@(search.Label)" prop="@(search.Name)">
+@switch(search.QueryControlsKey)
+{
+case "input":
+case "location":
+										    <JnpfInput v-model="searchForm.@(search.Name)" placeholder="请输入@(search.Label)" />
+break;
+case "numRange":
+										    <JnpfNumberRange v-model="searchForm.@(search.Name)" />
+break;
+case "switch":
+                                            <@(search.Tag) v-model="searchForm.@(search.Name)" />
+break;
+case "select":
+                                            <JnpfSelect v-model="searchForm.@(search.Name)" placeholder="请选择@(search.Label)" :options=" @(search.OriginalName)Options" :props="@(search.OriginalName)Props" @(search.IsMultiple ? "multiple " : "") filterable/>
+break;
+case "cascader":
+                                            <@(search.Tag) v-model="searchForm.@(search.Name)" placeholder="请选择@(search.Label)" :options="@(search.OriginalName)Options" :props="@(search.OriginalName)Props" @(search.IsMultiple ? "multiple " : "") filterable/>
+break;
+case "timePicker":
+                                            <JnpfTimeRange v-model="searchForm.@(search.Name)" format='@(search.Format)'/>
+break;
+case "datePicker":
+                                            <JnpfDateRange v-model="searchForm.@(search.Name)" format='@(search.Format)'/>
+break;
+case "organizeSelect":
+										    <JnpfOrganizeSelect v-model="searchForm.@(search.Name)" placeholder="请选择@(search.Label)" @(search.IsMultiple ? "multiple " : "")@(search.SelectType)@(search.IsCustomSelect ? @search.AbleIds : "")/>
+break;
+case "depSelect":
+										    <JnpfDepSelect v-model="searchForm.@(search.Name)" placeholder="请选择@(search.Label)" @(search.IsMultiple ? "multiple " : "")@(search.SelectType)@(search.IsCustomSelect ? @search.AbleIds : "")/>
+break;
+case "posSelect":
+										    <JnpfPosSelect v-model="searchForm.@(search.Name)" placeholder="请选择@(search.Label)" @(search.IsMultiple ? "multiple " : "") @(search.SelectType)@(search.IsCustomSelect ? @search.AbleIds : "")/>
+break;
+case "userSelect":
+                                            <JnpfUserSelect v-model="searchForm.@(search.Name)" placeholder="请选择@(search.Label)" @(search.IsMultiple ? "multiple " : "")@(search.SelectType)@(search.IsCustomSelect ? @search.AbleIds : "")/>
+break;
+case "usersSelect":
+										    <@(search.Tag) v-model="searchForm.@(search.Name)" placeholder="请选择@(search.Label)" @(search.IsMultiple ? "multiple " : "")@(search.SelectType)@(search.IsCustomSelect ? @search.AbleIds : "")/>
+break;
+case "treeSelect":
+                                            <@(search.Tag) v-model="searchForm.@(search.Name)" :options="@(search.OriginalName)Options" :props="@(search.OriginalName)Props" placeholder="请选择@(search.Label)" @(search.IsMultiple ? "multiple " : "") filterable/>
+break;
+case "areaSelect":
+                                            <@(search.Tag) v-model="searchForm.@(search.Name)" placeholder="请选择@(search.Label)" :level="@(search.Level)" @(search.IsMultiple ? "multiple " : "")/>
+break;
+case "groupSelect":
+                                            <@(search.Tag) v-model="searchForm.@(search.Name)" placeholder="请选择@(search.Label)" @(search.IsMultiple ? "multiple " : "")@(search.SelectType)@(search.IsCustomSelect ? @search.AbleIds : "")/>
+break;
+case "roleSelect":
+                                            <@(search.Tag) v-model="searchForm.@(search.Name)" placeholder="请选择@(search.Label)" @(search.IsMultiple ? "multiple " : "")@(search.SelectType)@(search.IsCustomSelect ? @search.AbleIds : "")/>
+break;
+case "autoComplete":
+                                            <@(search.Tag) v-model="searchForm.@(search.Name)" placeholder='请输入@(search.Label)' :total="@(search.Total)" relationField='@(search.RelationField)' interfaceId='@(search.InterfaceId)' :templateJson='@(search.Name)TemplateJson'/>
+break;
+}
+                                        </u-form-item>
+}
+								    </u-form>
+								</scroll-view>
+break;
+case false:
+                                <view class="notData-box u-flex-col">
+                                    <view class="u-flex-col notData-inner">
+                                        <image :src="icon" class="iconImg"></image>
+                                        <text class="notData-inner-text">暂无数据</text>
+                                    </view>
+                                </view>
+break;
+}
+							</view>
+							<view class="buttom-actions">
+								<u-button class="buttom-btn" @@click="reset">重置</u-button>
+								<u-button class="buttom-btn" type="primary" @@click="closeDropdown">检索</u-button>
+							</view>
+						</view>
+						<view class="dropdown-slot-bg" @@click="$refs.uDropdown.close()"></view>
+					</view>
+				</u-dropdown-item>
+			</u-dropdown>
+		</view>
+		<view class="list-warp">
+			<mescroll-uni ref="mescrollRef" @@init="mescrollInit" @@down="downCallback" @@up="upCallback" :fixed="false" :down="downOption" :up="upOption">
+				<view class="list">
+					<view class="list-box">
+						<uni-swipe-action ref="swipeAction">
+							<uni-swipe-action-item v-for="(item, index) in list" :key="item.@(Model.PrimaryKey)" :threshold="0" :right-options="options">
+							    <view class="item" @@click="goDetail(item.@(Model.PrimaryKey))">
+									<view class="item-cell" v-for="(column,i) in columnList" :key="i">
+										<template v-if="column.jnpfKey != 'table'">
+											<text class="item-cell-label">{{column.label}}:</text>
+											<text class="item-cell-content" v-if="column.jnpfKey=='inputNumber'">{{toThousands(item[column.prop],column)}}</text>
+											<text class="item-cell-content text-primary" @@click.stop="relationFormClick(item,column)" v-else-if="column.jnpfKey == 'relationForm'">{{item[column.prop]}}</text>
+											<view class="item-cell-content" v-else-if="column.jnpfKey == 'sign'" >
+												<JnpfSign v-model="item[column.prop]" detailed align='left' />
+											</view>
+											<view class="item-cell-content" v-else-if="column.jnpfKey == 'signature'" >
+												<JnpfSignature v-model="item[column.prop]" detailed align='left' />
+											</view>
+											<view class="item-cell-content" v-else-if="column.jnpfKey == 'uploadImg'" @@click.stop>
+												<JnpfUploadImg v-model="item[column.prop]" detailed simple v-if="item[column.prop]&&item[column.prop].length" />
+											</view>
+											<view class="item-cell-content" v-else-if="column.jnpfKey == 'uploadFile'" @@click.stop>
+												<JnpfUploadFile v-model="item[column.prop]" detailed v-if="item[column.prop]&&item[column.prop].length" align="left" />
+											</view>
+											<view class="item-cell-content" v-else-if="column.jnpfKey == 'rate'">
+												<JnpfRate v-model="item[column.prop]" :max="column.count" :allowHalf="column.allowHalf" disabled />
+											</view>
+											<view class="item-cell-content item-cell-slider" v-else-if="column.jnpfKey == 'slider'">
+												<JnpfSlider v-model="item[column.prop]" :min="column.min" :max="column.max" :step="column.step" disabled />
+											</view>
+											<view class="item-cell-content" v-else-if="column.jnpfKey == 'input'">
+												<JnpfInput v-model="item[column.prop]" detailed showOverflow :useMask="column.useMask" :maskConfig="column.maskConfig" align='left' />
+											</view>
+											<text class="item-cell-content" v-else>{{item[column.prop]}}</text>
+										</template>
+										<tableCell v-else @@click.stop class="tableCell" :label="column.label" :childList="item[column.prop]" :children="column.children" ref="tableCell" :pageLen="3" @@cRelationForm="relationFormClick" />
+									</view>
+							    </view>
+								<template v-slot:right>
+                                    <view class="right-option-box">
+                                        <view class="right-option" v-for="(it,i) in options"  @@click="handleClick(index)" :key="i">
+                                            <text>{{it.text}}</text>
+                                        </view>
+                                    </view>
+                                </template>
+						    </uni-swipe-action-item>
+						</uni-swipe-action>
+					</view>
+				</view>
+			</mescroll-uni>
+		</view>
+@if(Model.IsAdd)
+{
+@if(Model.UseBtnPermission)
+{
+		@:<view class="com-addBtn" @@click="addPage()" v-if="$permission.hasBtnP('btn_add',menuIds)">
+}else{
+        @:<view class="com-addBtn" @@click="addPage()">
+}
+			<u-icon name="plus" size="60" color="#fff" />
+		</view>
+}
+	</view>
+</template>
+
+<script>
+	import {getDictionaryDataSelector, getDataInterfaceRes} from '@@/api/common'
+    import resources from '@@/libs/resources.js'
+    import MescrollMixin from "@@/uni_modules/mescroll-uni/components/mescroll-uni/mescroll-mixins.js";
+	import request from '@@/utils/request'
+	import columnList from './columnList'
+    import tableCell from '../dynamicModel/components/tableCell.vue'
+    export default {
+        mixins: [MescrollMixin],
+		components:{tableCell},
+        data() {
+            return {
+	            icon: resources.message.nodata,
+                sortValue: [],
+                searchForm: {
+					jnpfKeyword:'',
+@foreach(var search in Model.SearchColumnDesign)
+{
+                    @:@(search.Name):@(search.DefaultValues),
+}
+				},
+                downOption: {
+                    use: true,
+                    auto: false
+                },
+				dataOptions: {
+@foreach (var item in Model.ColumnDesign)
+{
+@if(item.IsChildTable)
+{
+                    @:@(item.Name): {},
+}
+}
+				},
+                upOption: {
+                    page: {
+                        num: 0,
+                        size: 20,
+                        time: null
+                    },
+                    empty: {
+                        use: true,
+                        icon: resources.message.nodata,
+                        tip: "暂无数据",
+                        fixed: true,
+                        top: "300rpx",
+                        zIndex: 5
+                    },
+                    textNoMore: '没有更多数据',
+                    toTop: {
+                        bottom: 250
+                    }
+                },
+                list: [],
+				appColumnList: columnList,
+                listQuery: {
+                    sort: 'desc',
+                    sidx: '@(Model.DefaultSidx)',
+                    keyword: '',
+                    json: ''
+                },
+@if(Model.AppThousandField != null)
+{
+                @:thousandsField: @Model.AppThousandField,
+}
+                options: [
+@if(@Model.IsRemoveDel){
+@foreach (var item in @Model.ColumnButtonDesign)
+{
+@if(item.Value == "remove")
+{
+				    @:{
+                        @:text: '@(item.Label)',
+                        @:style: {
+                            @:backgroundColor: '#dd524d'
+                        @:}
+                    @:}
+}
+}
+}
+				],
+@if(Model.SortFieldDesign.Count > 0){
+                @:sortOptions: [
+@foreach(var sort in Model.SortFieldDesign)
+{
+                    @:{
+                        @:label: '@(sort.Label)降序',
+                        @:sidx:  '@(sort.Name)',
+                        @:value: '-@(sort.Name)',
+                        @:sort: 'desc'
+                    @:},
+					@:{
+                        @:label: '@(sort.Label)升序',
+                        @:sidx:  '@(sort.Name)',
+                        @:value: '@(sort.Name)',
+                        @:sort: 'asc'
+                    @:},
+}
+                @:],
+}else{
+				@:sortOptions:[],
+}
+				menuIds:'',
+                columnList: [],
+				isTree: false,
+@if(Model.IsDefaultFormControl)
+{
+				@:userInfo:{},
+				@:firstInitSearchData:false,
+}
+@foreach(var item in @Model.OptionsList)
+{
+@switch(item.jnpfKey)
+{
+case "organizeSelect":
+case "roleSelect":
+case "groupSelect":
+case "posSelect":
+case "userSelect":
+case "depSelect":
+case "usersSelect":
+      @:@item.Content
+break;
+case "autoComplete":
+                @:@(item.Name)TemplateJson: @(item.TemplateJson),
+break;
+default:
+@if(item.IsIndex)
+{
+                @:@item.Content
+}
+@if(item.IsProps)
+{
+                @:@(item.LowerName)Props:@(item.Props),
+}
+break;
+}
+}
+            }
+        },
+        onLoad(e) {
+			this.setDefaultQuery()
+@if(Model.IsDefaultFormControl)
+{
+			@:this.userInfo = uni.getStorageSync('userInfo') || {}
+}
+			this.menuIds = e.menuId
+            uni.$on('refresh', () => {
+                this.list = [];
+                this.mescroll.resetUpScroll();
+            })
+			this.getColumnList()
+@foreach(var item in @Model.OptionsList)
+{
+@if(!item.IsStatic && item.IsIndex)
+{
+			@:this.get@(item.LowerName)Options();
+}
+}
+@if(Model.IsDefaultSearchField)
+{
+			@:this.dataValue = JSON.parse(JSON.stringify(this.searchForm))
+}
+        },
+        onUnload() {
+            uni.$off('refresh')
+        },
+        methods: {
+			toThousands(val, column) {
+				if (val || val == 0) {
+					let valList = val.toString().split('.')
+					let num = Number(valList[0])
+					let newVal = column.thousands ? num.toLocaleString() : num
+					return valList[1] ? newVal + '.' + valList[1] : newVal
+				} else {
+					return val
+				}
+			},
+@foreach(var item in @Model.OptionsList)
+{
+@if(!item.IsStatic && item.IsIndex)
+{
+			@:get@(item.LowerName)Options(){
+switch(@item.DataType)
+{
+case "dictionary":
+				@:getDictionaryDataSelector('@(item.DictionaryType)').then(res => {
+					@:this.@(item.LowerName)Options = res.data.list
+	break;
+case "dynamic":
+				@:const query = { paramList: this.jnpf.getParamList(@(item.TemplateJson)) };
+				@:getDataInterfaceRes('@(item.DictionaryType)',query).then(res => {
+					@:let data = res.data
+					@:this.@(item.LowerName)Options = data
+	break;
+}
+				@:});
+			@:},
+}
+}
+            upCallback(page) {
+                let query = {
+                    currentPage: page.num,
+                    pageSize: page.size,
+                    ...this.listQuery,
+                    ...this.searchForm,
+					menuId:this.menuIds
+                }
+@foreach(var item in Model.QueryCriteriaQueryVarianceList)
+{
+                @:query.@item.__vModel__.Replace("-", "_") = query.@item.__vModel__.Replace("-", "_") ? [query.@item.__vModel__.Replace("-", "_")] : null
+}
+                request({
+                    url: '/api/@(Model.NameSpace)/@(Model.ClassName)/List',
+                    method: 'post',
+                    data: query,
+                }).then(res => {
+                    if (page.num == 1) this.list = [];
+@if(Model.HasPage)
+{
+                    @:const list = res.data.list.map(o => {
+}
+else{
+                    @:const list = res.data.map(o => {
+}
+                        return {
+						    show: false,
+                            ...o
+						}
+                    });
+@if(Model.HasPage)
+{
+                    @:this.mescroll.endSuccess(res.data.list.length);
+}
+else
+{
+                    @:this.mescroll.endSuccess(res.data.length, false);
+}
+                    this.list = this.list.concat(list);
+                }).catch(() => {
+                    this.mescroll.endErr();
+                })
+            },
+            handleClick(index) {
+@if(Model.IsRemoveDel && Model.UseBtnPermission){
+				@:if (!this.$permission.hasBtnP("btn_remove",this.menuIds)) return this.$u.toast("未开启删除权限")
+}
+			    const item = this.list[index]
+                request({
+                    url: '/api/@(Model.NameSpace)/@(Model.ClassName)/' + item.@(Model.PrimaryKey),
+                    method: 'delete'
+                }).then(res => {
+                    uni.showToast({
+                        title: res.msg,
+                        complete: () => {
+                            this.$u.toast(res.msg)
+                            this.list.splice(index, 1)
+                        }
+                    })
+                })
+            },
+            open(index) {
+                this.list[index].show = true;
+                this.list.map((val, idx) => {
+                    if (index != idx) this.list[idx].show = false;
+                })
+            },
+			addPage() {
+				this.jumPage()
+			},
+			jumPage(id, btnType){
+				if (!id) btnType = 'btn_add'
+				let query = id ? id : '';
+				let idList = [];
+				for (let i = 0; i < this.list.length; i++) {
+					idList.push(this.list[i].@(Model.PrimaryKey))
+				}
+				let url = './form?id='+ query+'&jurisdictionType='+btnType+'&menuIds='+this.menuIds+'&idList='+idList;
+				if(btnType == 'btn_detail')url = './detail?id='+ query+'&jurisdictionType='+btnType+'&menuIds='+this.menuIds+'&idList='+idList;
+				uni.navigateTo({
+					url: url
+				})
+			},
+            search() {
+				if (this.isPreview == '1') return
+                this.searchTimer && clearTimeout(this.searchTimer)
+                this.searchTimer = setTimeout(() => {
+                    this.list = [];
+                    this.mescroll.resetUpScroll();
+                }, 300)
+            },
+            goDetail(id) {
+@if(Model.IsEdit && Model.IsDetail){
+                @:let btnType = 'btn_detail';
+}else if(Model.IsEdit && !Model.IsDetail){
+                @:let btnType = 'btn_edit';
+}else if(!Model.IsEdit && Model.IsDetail){
+                @:let btnType = 'btn_detail';
+}else{
+				@:let btnType = '';
+}
+                if(!btnType) return
+@if(Model.UseBtnPermission){
+@if(Model.IsEdit && Model.IsDetail){
+				@:if (!this.$permission.hasBtnP('btn_edit', this.menuIds) && !this.$permission.hasBtnP('btn_detail', this.menuIds)) return
+				@:if (this.$permission.hasBtnP('btn_edit', this.menuIds) && this.$permission.hasBtnP('btn_detail', this.menuIds)) btnType = 'btn_detail'
+				@:if (this.$permission.hasBtnP('btn_edit', this.menuIds) && !this.$permission.hasBtnP('btn_detail', this.menuIds)) btnType = 'btn_edit'
+}else if(Model.IsEdit && !Model.IsDetail){
+                @:if (!this.$permission.hasBtnP('btn_edit', this.menuIds) && !this.$permission.hasBtnP('', this.menuIds)) return
+				@:if (this.$permission.hasBtnP('btn_edit', this.menuIds)) btnType = 'btn_edit'
+}
+else if(!Model.IsEdit && Model.IsDetail){
+                @:if (!this.$permission.hasBtnP('btn_detail', this.menuIds) && !this.$permission.hasBtnP('', this.menuIds)) return
+				@:if (this.$permission.hasBtnP('btn_detail', this.menuIds)) btnType = 'btn_detail'
+}
+}
+				this.jumPage(id,btnType)
+            },
+			getColumnList() {
+				let columnPermissionList = []
+				let _appColumnList = this.appColumnList
+@if(Model.IsAnyDefaultSearch)
+{
+                @:for (let i = 0; i < _appColumnList.length; i++) {
+					@:columnPermissionList.push(_appColumnList[i])
+				@:}
+}
+@if(Model.UseColumnPermission)
+{
+				@:let permissionList = uni.getStorageSync('permissionList')
+				@:let list = permissionList.filter(o => o.modelId === this.menuIds)
+				@:let _columnList = list[0] && list[0].column ? list[0].column : []
+				@:for (let i = 0; i < _appColumnList.length; i++) {
+					@:let _app = _appColumnList[i].prop
+					@:inner: for (let j = 0; j < _columnList.length; j++) {
+						@:let _encode = _columnList[j].enCode
+						@:if (_app == _encode) {
+							@:columnPermissionList.push(this.appColumnList[i])
+							@:break inner
+						@:}
+					@:}
+				@:}
+				@:this.columnList = this.transformColumnList(columnPermissionList, this.dataOptions)
+}else{
+				@:this.columnList = this.transformColumnList(_appColumnList, this.dataOptions)
+}
+			},
+			transformColumnList(columnList, dataOptions) {
+				let list = []
+				for (let i = 0; i < columnList.length; i++) {
+					let e = columnList[i]
+					let columProp = e.prop
+					let label = e.label
+					let option = null
+					let options = columProp + "Options"
+					if (!columProp.includes('-')) {
+						if (dataOptions[options]) {
+							option = dataOptions[options]
+						} else {
+@if(Model.IsInlineEditor)
+{
+							@:columProp = columProp + "_name"
+}else{
+							@:columProp = columProp
+}
+						}
+						if (label.length > 4) {
+							label = label.substring(0, 4)
+						}
+						e.label = label
+						e.prop = columProp
+						e.option = option
+						list.push(e)
+					} else {
+						e.vModel = columProp.split('-')[1]
+						e.childLabel = e.label.split('-')[1]
+						options = e.vModel + "Options"
+						let prop = columProp.split('-')[0]
+						let label = e.label.split('-')[0]
+						let newItem = {
+							align: "center",
+							jnpfKey: "table",
+							prop,
+							label,
+							children: []
+						}
+						if (!list.some(o => o.prop === prop)) list.push(newItem)
+						for (let i = 0; i < list.length; i++) {
+							if (list[i].prop === prop) {
+								if (dataOptions[prop][options]) {
+									option = dataOptions[prop][options]
+								}
+								e.option = option
+								list[i].children.push(e)
+								break
+							}
+						}
+					}
+				}
+				return list
+			},
+            cellClick(item) {
+				const findIndex = this.sortValue.findIndex(o => o === item.value);
+				if (findIndex < 0) {
+					const findLikeIndex = this.sortValue.findIndex(o => o.indexOf(item.sidx) > -1);
+					if (findLikeIndex > -1) this.sortValue.splice(findLikeIndex, 1)
+					this.sortValue.push(item.value)
+				} else {
+					this.sortValue.splice(findIndex, 1)
+				}
+			},
+			handleSortReset() {
+				this.sortValue = []
+			},
+			handleSortSearch() {
+				if (this.sortValue.length) {
+					this.listQuery.sidx = this.sortValue.join(',')
+				} else {
+					this.setDefaultQuery()
+				}
+				this.$refs.uDropdown.close();
+				this.$nextTick(() => {
+					this.list = [];
+					this.mescroll.resetUpScroll();
+				})
+			},
+			setDefaultQuery() {
+				const defaultSortConfig = (@Model.TableConfig.DefaultSortConfig).map(o =>
+					(o.sort === 'desc' ? '-' : '') + o.field);
+				this.listQuery.sidx = defaultSortConfig.join(',')
+			},
+            reset() {
+@if(Model.IsDefaultSearchField){
+                @:this.searchForm = JSON.parse(JSON.stringify(this.dataValue))
+}else{
+			    @:this.searchForm = {}
+}
+                this.$refs.searchForm.resetFields()
+            },
+            closeDropdown() {
+                this.$refs.uDropdown.close();
+                this.$nextTick(() => {
+                    this.list = [];
+                    this.mescroll.resetUpScroll();
+                })
+            },
+			relationFormClick(item, column) {
+				let vModel = column.vModel ? column.vModel + "_id" : column.__vModel__+ "_id"
+				let id = item[vModel]
+				let modelId = column.modelId
+				if (!id || !modelId) return
+				let config = {
+					modelId: modelId,
+					id: id,
+					formTitle: '详情',
+					noShowBtn: 1
+				}
+				this.$nextTick(() => {
+					const url = '/pages/apply/dynamicModel/detail?config=' + this.jnpf.base64.encode(JSON.stringify(config), "UTF-8")
+					uni.navigateTo({
+						url: url
+					})
+				})
+			}
+        }
+    }
+</script>
+
+<style lang="scss">
+    page {
+        background-color: #f0f2f6;
+        height: 100%;
+        /* #ifdef MP-ALIPAY */
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        /* #endif */
+    }
+	
+	.right-option-box {
+	    display: flex;
+		width: max-content;	
+		.right-option {
+		    width: 144rpx;
+			height: 100%;
+			font-size: 16px;
+			color: #fff;
+			background-color: #dd524d;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+		.more-option {
+		    background-color: #1890ff;
+		}
+	}
+	
+	.item{
+		padding: 0 !important;
+	}
+	
+	.list-warp{
+		padding: 20rpx 0 !important;
+	}
+	
+	.notData-box {
+        width: 100%;
+        height: 100%;
+        justify-content: center;
+        align-items: center;
+        padding-bottom: 200rpx;
+        
+        .notData-inner {
+            width: 280rpx;
+            height: 308rpx;
+            align-items: center;
+        
+            .iconImg {
+                width: 100%;
+                height: 100%;
+            }
+        
+            .notData-inner-text {
+                padding: 30rpx 0;
+                color: #909399;
+            }
+        }
+    }
+</style>

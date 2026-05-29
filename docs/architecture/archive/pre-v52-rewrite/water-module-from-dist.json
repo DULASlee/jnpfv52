@@ -1,0 +1,93 @@
+{
+  "extractedAt": "2026-05-22",
+  "source": "web/dist_v1.1/static/js/*.js",
+  "totalVuePaths": 9,
+  "note": "克隆的 jnpf-web-vue3 不含 views/water，需从 dist 反编译或历史源码补回",
+  "submodules": [
+    "views/water/baseinfo",
+    "views/water/customer",
+    "views/water/payment"
+  ],
+  "paths": [
+    "views/water/baseinfo/area/Detail.vue",
+    "views/water/baseinfo/area/Form.vue",
+    "views/water/baseinfo/area/index.vue",
+    "views/water/customer/Form.vue",
+    "views/water/customer/index.vue",
+    "views/water/payment/Form.vue",
+    "views/water/payment/index.vue",
+    "views/water/payment/index1.vue",
+    "views/water/payment/index2.vue"
+  ],
+  "bySubmodule": {
+    "views/water/baseinfo": [
+      {
+        "vuePath": "views/water/baseinfo/area/Detail.vue",
+        "targetInRepo": "jnpf-web-vue3/src/views/water/baseinfo/area/Detail.vue",
+        "distChunks": [
+          "web/dist_v1.1/static/js/index-f8698ae9.js"
+        ]
+      },
+      {
+        "vuePath": "views/water/baseinfo/area/Form.vue",
+        "targetInRepo": "jnpf-web-vue3/src/views/water/baseinfo/area/Form.vue",
+        "distChunks": [
+          "web/dist_v1.1/static/js/index-f8698ae9.js"
+        ]
+      },
+      {
+        "vuePath": "views/water/baseinfo/area/index.vue",
+        "targetInRepo": "jnpf-web-vue3/src/views/water/baseinfo/area/index.vue",
+        "distChunks": [
+          "web/dist_v1.1/static/js/index-f8698ae9.js"
+        ]
+      }
+    ],
+    "views/water/customer": [
+      {
+        "vuePath": "views/water/customer/Form.vue",
+        "targetInRepo": "jnpf-web-vue3/src/views/water/customer/Form.vue",
+        "distChunks": [
+          "web/dist_v1.1/static/js/index-f8698ae9.js"
+        ]
+      },
+      {
+        "vuePath": "views/water/customer/index.vue",
+        "targetInRepo": "jnpf-web-vue3/src/views/water/customer/index.vue",
+        "distChunks": [
+          "web/dist_v1.1/static/js/index-f8698ae9.js"
+        ]
+      }
+    ],
+    "views/water/payment": [
+      {
+        "vuePath": "views/water/payment/Form.vue",
+        "targetInRepo": "jnpf-web-vue3/src/views/water/payment/Form.vue",
+        "distChunks": [
+          "web/dist_v1.1/static/js/index-f8698ae9.js"
+        ]
+      },
+      {
+        "vuePath": "views/water/payment/index.vue",
+        "targetInRepo": "jnpf-web-vue3/src/views/water/payment/index.vue",
+        "distChunks": [
+          "web/dist_v1.1/static/js/index-f8698ae9.js"
+        ]
+      },
+      {
+        "vuePath": "views/water/payment/index1.vue",
+        "targetInRepo": "jnpf-web-vue3/src/views/water/payment/index1.vue",
+        "distChunks": [
+          "web/dist_v1.1/static/js/index-f8698ae9.js"
+        ]
+      },
+      {
+        "vuePath": "views/water/payment/index2.vue",
+        "targetInRepo": "jnpf-web-vue3/src/views/water/payment/index2.vue",
+        "distChunks": [
+          "web/dist_v1.1/static/js/index-f8698ae9.js"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "System": {
+    "MultiSystem": true,
+    "MultiTenancyType": "SCHEMA", //COLUMN SCHEMA
+    "MultiTenancyDBInterFace": "http://localhost:5000/api/"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "SpecificationDocumentSettings": {
+    "DocumentTitle": "JNPF.NET",
+    "DocExpansionState": "None",
+    "GroupOpenApiInfos": [
+      {
+        "Group": "Default",
+        "Title": "智轩开发基础平台",
+        "Description": "默认分组",
+        "Version": "5.4.7"
+      }
+    ],
+    "XmlComments": [
+      "JNPF.OAuth",
+      "JNPF.Systems",
+      "JNPF.Common"
+    ],
+    "LoginInfo": {
+      "Enabled": false
+    }
+  }
+}

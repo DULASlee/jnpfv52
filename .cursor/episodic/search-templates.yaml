@@ -1,0 +1,30 @@
+﻿# episodic-memory 默认检索模板（Agent sessionStart 注入 + 按需 search）
+# project filter：见 project_id（与 toolchain.manifest.json 一致）
+
+project_id: D--JNPF-v52
+
+templates:
+  - id: session-resume
+    when: 每次新会话
+    query: ["JNPF-v52", "决策", "待审"]
+    limit: 5
+
+  - id: demo
+    when: 客户演示 / v52-demo
+    query: ["演示", "v52", "大屏"]
+    limit: 5
+
+  - id: backend-startup
+    when: API 启动 / 数据库
+    query: ["ConnectionStrings", "5000", "SqlServer"]
+    limit: 5
+
+  - id: frontend
+    when: PC/大屏前端
+    query: ["jnpf-web-vue3", "datascreen", "token"]
+    limit: 5
+
+  - id: toolchain
+    when: 工具链/OpenSpec/Superpowers 分工
+    query: ["OpenSpec", "Superpowers", "toolchain"]
+    limit: 5

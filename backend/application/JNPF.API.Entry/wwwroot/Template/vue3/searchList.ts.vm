@@ -1,0 +1,2 @@
+const searchList = @Model.SearchList
+export default searchList

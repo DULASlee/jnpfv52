@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<Description>JNPF 第三方组件拓展插件。</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="AlibabaCloud.SDK.Dysmsapi20170525" Version="2.0.8" />
+		<PackageReference Include="DingDing.SDK.NetCore" Version="2021.1.7.1" />
+		<PackageReference Include="JavaScriptEngineSwitcher.ChakraCore" Version="3.18.2" />
+		<PackageReference Include="JavaScriptEngineSwitcher.ChakraCore.Native.win-x64" Version="3.18.2" />
+		<PackageReference Include="JavaScriptEngineSwitcher.V8" Version="3.18.1" />
+		<PackageReference Include="JavaScriptEngineSwitcher.V8.Native.linux-x64" Version="3.18.1" />
+		<PackageReference Include="JavaScriptEngineSwitcher.V8.Native.win-x64" Version="3.18.1" />
+		<PackageReference Include="MailKit" Version="4.3.0" />
+		<PackageReference Include="OnceMi.AspNetCore.OSS" Version="1.2.0" />
+		<PackageReference Include="Senparc.Weixin.MP" Version="16.20.2" />
+		<PackageReference Include="Senparc.Weixin.Work" Version="3.18.1" />
+		<PackageReference Include="Senparc.Weixin.WxOpen" Version="3.16.0" />
+		<PackageReference Include="TencentCloudSDK.Sms" Version="3.0.368" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\modularity\common\JNPF.Common\JNPF.Common.csproj" />
+	</ItemGroup>
+
+</Project>

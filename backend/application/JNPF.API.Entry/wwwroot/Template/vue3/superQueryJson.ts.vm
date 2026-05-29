@@ -1,0 +1,2 @@
+const superQueryJson = @Model.SuperQueryJson
+export default superQueryJson

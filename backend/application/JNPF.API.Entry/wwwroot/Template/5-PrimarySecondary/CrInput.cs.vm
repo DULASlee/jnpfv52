@@ -1,0 +1,175 @@
+﻿@if(Model.IsUploading )
+{
+@:using JNPF.Common.Models;
+}
+@if(Model.EnableFlow)
+{
+@:using JNPF.Common.Models.WorkFlow;
+}
+@foreach(var table in Model.TableRelations)
+{
+@*循环出子表的命名空间*@
+@:using JNPF.@(Model.NameSpace).Entitys.Dto.@(table.ClassName);
+}
+using JNPF.JsonSerialization;
+using Newtonsoft.Json;
+
+namespace JNPF.@(Model.NameSpace).Entitys.Dto.@Model.ClassName;
+
+/// <summary>
+/// @(Model.BusName)修改输入参数.
+/// </summary>
+public class @(Model.ClassName)CrInput@(Model.EnableFlow ? " : FlowTaskOtherModel" : "")
+{
+@foreach (var column in Model.TableField)
+{
+@{var parameterName = string.Empty;}
+@switch(column.IsAuxiliary)
+{
+case true:
+@{parameterName = "jnpf_" + @column.TableName + "_jnpf_" + @column.LowerColumnName;}
+break;
+default:
+@{parameterName = @column.LowerColumnName;}
+break;
+}
+@if (column.jnpfKey != null)
+{
+switch(column.jnpfKey)
+{
+case "select":
+case "userSelect":
+case "treeSelect":
+case "depSelect":
+case "posSelect":
+case "popupTableSelect":
+case "roleSelect":
+case "groupSelect":
+case "usersSelect":
+@if(column.IsMultiple)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<string> @(parameterName) { get; set; }
+@:
+}
+else
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName) { get; set; }
+@:
+}
+break;
+case "cascader":
+case "areaSelect":
+case "organizeSelect":
+@if(column.IsMultiple)
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<List<string>> @(parameterName) { get; set; }
+@:
+}
+else
+{
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<string> @(parameterName) { get; set; }
+@:
+}
+break;
+case "switch":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:[JsonConverter(typeof(BoolJsonConverter))]
+    @:public bool @(parameterName) { get; set; }
+@:
+break;
+case "checkbox":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<string> @(parameterName) { get; set; }
+@:
+break;
+case "radio":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public string @(parameterName) { get; set; }
+@:
+break;
+case "uploadImg":
+case "uploadFile":
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public List<FileControlsModel> @(parameterName) { get; set; }
+@:
+break;
+case "createTime":
+case "modifyTime":
+    
+@:
+break;
+default:
+    @:/// <summary>
+    @:/// @column.ColumnComment.
+    @:/// </summary>
+    @:public @column.NetType @(parameterName) { get; set; }
+@:
+break;
+}
+}
+}
+@if(Model.IsMainTable && Model.PrimaryKeyPolicy == 2)
+{
+    @:/// <summary>
+    @:/// 流程真实ID.
+    @:/// </summary>
+    @:public string flowTaskId { get; set; }
+@:
+}
+@if(Model.IsMainTable && Model.ConcurrencyLock)
+{
+    @:/// <summary>
+    @:/// 乐观锁.
+    @:/// </summary>
+    @:public string version { get; set; }
+@:
+}
+@foreach (var table in Model.TableRelations)
+{
+    @:/// <summary>
+    @:/// @table.TableComment.
+    @:/// </summary>
+    @:public List<@(table.ClassName)CrInput> @table.ControlModel { get; set; }
+@:
+}
+@if(Model.EnableFlow)
+{
+    @:/// <summary>
+    @:/// 紧急程度.
+    @:/// </summary>
+    @:public int? flowUrgent { get; set; } = 1;
+@:
+    @:/// <summary>
+    @:/// 流程状态.
+    @:/// </summary>
+    @:public int flowState { get; set; }
+@:
+}
+@if(Model.EnableFlow || Model.Type == 3)
+{
+    @:/// <summary>
+    @:/// 流程状态.
+    @:/// </summary>
+    @:public string flowId { get; set; }
+}
+}
