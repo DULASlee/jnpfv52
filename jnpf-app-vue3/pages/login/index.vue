@@ -207,7 +207,7 @@
 			this.appIcon = !!this.sysConfigInfo.appIcon ? this.baseURL + this.sysConfigInfo.appIcon :
 				logoImg
 			this.sysName = !!this.sysConfigInfo.companyName ? this.sysConfigInfo.sysName :
-				'JNPF快速开发平台'
+				'Baobab快速开发平台'
 			this.copyright = !!this.sysConfigInfo.copyright ? this.sysConfigInfo.copyright :
 				this.define.copyright
 			let needCode = uni.getStorageSync('app_loginNeedCode')

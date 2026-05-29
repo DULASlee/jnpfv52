@@ -13,7 +13,7 @@
 			<template #default>
 				<view class="nav-left">
 					<view class="nav-left-text">
-						JNPF快速开发平台
+						Baobab快速开发平台
 					</view>
 				</view>
 			</template>
