@@ -4,7 +4,7 @@
       <AppDarkModeToggle class="enter-x mr-2" v-if="!sessionTimeout" />
     </div>
     <div class="login-header">
-      <a class="login-company-logo" target="_blank" href="https://www.jnpfsoft.com">
+      <a class="login-company-logo" target="_blank" href="https://www.baobab.com">
         <img class="login-company-logo-img -enter-x" src="../../../assets/images/login-company-logo.png" alt="" />
       </a>
     </div>
@@ -43,3 +43,4 @@
 <style lang="less">
   @import url('./index.less');
 </style>
+

@@ -506,7 +506,7 @@
         };
         createPrintLog(data);
       };
-      document.title = 'JNPF快速开发平台';
+      document.title = 'Baobab快速开发平台';
       iframe.contentWindow.print();
       document.title = oldTitle;
       document.body.removeChild(iframe);
@@ -721,3 +721,4 @@
     }
   }
 </style>
+

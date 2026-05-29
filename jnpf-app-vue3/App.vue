@@ -64,7 +64,7 @@
 					let data = res.data.sysVersion || ''
 					const matches = data.match(/(\d+\.\d+\.\d+)/);
 					if (matches && matches.length > 0) this.Apk =
-						`https://cdn.jnpfsoft.com/apk/Android-java-${matches[0]}.apk`
+						`https://cdn.baobab.com/apk/Android-java-${matches[0]}.apk`
 					data.trim();
 					this.version = Number(data.replace(/[^0-9]/ig, ""))
 					this.$nextTick(() => {

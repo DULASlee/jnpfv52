@@ -1,7 +1,7 @@
 <template>
   <div class="tem-container h-full">
     <div ref="printRef" class="tem_list">
-      <h1>引迈信息技术有限公司</h1>
+      <h1>面包树科技有限公司</h1>
       <h2>报 价 单</h2>
       <h4>TO：</h4>
       <p class="title"> 感谢惠顾，现将贵公司所需配件报价如下：</p>
@@ -225,3 +225,4 @@
     }
   }
 </style>
+

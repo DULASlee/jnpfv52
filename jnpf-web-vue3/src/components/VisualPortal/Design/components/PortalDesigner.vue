@@ -193,9 +193,9 @@
   }
   function getDefaultValue(row) {
     const jnpfKey = row.jnpfKey;
-    if (jnpfKey == 'text') return 'JNPF快速开发平台';
-    if (jnpfKey == 'image') return 'https://app.cdn.jnpfsoft.com/image/3.2/banner1.png';
-    if (jnpfKey == 'video') return 'https://cdn.jnpfsoft.com/2022/video/index_video.mp4';
+    if (jnpfKey == 'text') return 'Baobab快速开发平台';
+    if (jnpfKey == 'image') return 'https://app.cdn.baobab.com/image/3.2/banner1.png';
+    if (jnpfKey == 'video') return 'https://cdn.baobab.com/2022/video/index_video.mp4';
     if (jnpfKey == 'barChart' || jnpfKey == 'lineChart' || jnpfKey == 'pieChart') return chartData.baseBarData;
     if (jnpfKey == 'radarChart') return chartData.radarData;
     if (jnpfKey == 'mapChart') return mapChartData;
@@ -383,3 +383,4 @@
 
   onMounted(() => init());
 </script>
+

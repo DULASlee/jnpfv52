@@ -6,7 +6,7 @@
 			<view class="launch-img">
 				<image :src="startup" mode="widthFix"></image>
 			</view>
-			<view class="copyright">Copyright © 2024 引迈信息技术有限公司出品</view>
+			<view class="copyright">Copyright © 2024 面包树科技有限公司出品</view>
 		</view>
 	</view>
 </template>

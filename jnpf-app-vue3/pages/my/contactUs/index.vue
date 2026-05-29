@@ -41,7 +41,7 @@
 				holidayWorkingHours: '9:30-12:00 ，13:30-17:30',
 				workingHours: '8:30-12:00 ，13:00-20:00',
 				tell: '400-6868-969',
-				url: 'https://www.jnpfsoft.com',
+				url: 'https://www.baobab.com',
 				showPopup: false,
 				list: [{
 						name: '微信公众号',
@@ -57,12 +57,12 @@
 					},
 					{
 						name: '官方网站',
-						title: 'www.jnpfsoft.com',
+						title: 'www.baobab.com',
 						icon: 'ie',
 						bcg: 'u-type-primary-bg'
 					}
 				],
-				copyright: 'Copyright © 2024 引迈信息技术有限公司出品',
+				copyright: 'Copyright © 2024 面包树科技有限公司出品',
 				show: false
 			}
 		},
@@ -70,7 +70,7 @@
 			uni.showLoading({
 				title: '加载中'
 			});
-			this.copyright = uni.getStorageSync('copyright') || 'Copyright © 2024 引迈信息技术有限公司出品'
+			this.copyright = uni.getStorageSync('copyright') || 'Copyright © 2024 面包树科技有限公司出品'
 			setTimeout(() => {
 				uni.hideLoading()
 				this.show = true
@@ -94,7 +94,7 @@
 						// #endif
 						// #ifndef APP-PLUS
 						uni.navigateTo({
-							url: '/pages/apply/externalLink/index?fullName=福建引迈信息技术有限公司&url=' + encodeURIComponent(
+							url: '/pages/apply/externalLink/index?fullName=面包树科技有限公司&url=' + encodeURIComponent(
 								this.url)
 						})
 						// #endif

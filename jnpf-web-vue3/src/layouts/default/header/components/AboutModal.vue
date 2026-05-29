@@ -5,11 +5,11 @@
       <img class="about-logo" :src="logoImg" v-else />
       <div>
         <p class="title">
-          <a href="https://www.jnpfsoft.com" target="_blank">{{ getSysConfig.sysName }}</a>
+          <a href="https://www.baobab.com" target="_blank">{{ getSysConfig.sysName }}</a>
         </p>
         <p>版本：{{ getSysConfig.sysVersion }}</p>
-        <p>作者：引迈软件</p>
-        <p>引迈信息技术有限公司出品</p>
+        <p>作者：面包树科技</p>
+        <p>面包树科技有限公司出品</p>
       </div>
     </div>
     <p class="about-modal-main-tip">解放90%重复性的代码编写工作，让你更加专注于业务和体验！</p>
@@ -65,3 +65,4 @@
     }
   }
 </style>
+

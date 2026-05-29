@@ -178,14 +178,15 @@ const setting: ProjectConfig = {
   // 系统配置
   sysConfigInfo: {
     sysVersion: '',
-    copyright: 'Copyright @ 2024 引迈信息技术有限公司版权所有',
+    copyright: 'Copyright @ 2026 面包树科技有限公司版权所有',
     navigationIcon: '',
     workLogoIcon: '',
     logoIcon: '',
     loginIcon: '',
-    sysName: 'JNPF快速开发平台',
+    sysName: 'Baobab快速开发平台',
     title: '',
   },
 };
 
 export default setting;
+

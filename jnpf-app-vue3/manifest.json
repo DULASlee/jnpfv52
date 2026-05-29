@@ -77,7 +77,7 @@
                 "urltypes" : "jnpf",
                 "capabilities" : {
                     "entitlements" : {
-                        "com.apple.developer.associated-domains" : [ "applinks:unlink.java.jnpfsoft.com" ]
+                        "com.apple.developer.associated-domains" : [ "applinks:unlink.java.baobab.com" ]
                     }
                 },
                 "idfa" : false
@@ -229,4 +229,5 @@
     }
 }
 /* 5+App特有相关 */
+
 

@@ -461,7 +461,7 @@ export const basicComponents = [
           fullName: 'JNPF快速开发',
           moduleId: '',
           linkType: '2',
-          urlAddress: 'https://www.jnpfsoft.com/',
+          urlAddress: 'https://www.baobab.com/',
           linkTarget: '_blank',
           icon: 'icon-ym icon-ym-webDesign',
           iconBgColor: '#33B932',
@@ -713,7 +713,7 @@ export const basicComponents = [
     option: {
       styleType: 2,
       defaultValue: '',
-      textDefaultValue: 'JNPF快速开发平台',
+      textDefaultValue: 'Baobab快速开发平台',
       textFontSize: 14,
       textFontColor: '#fff',
       textFontWeight: false,
@@ -770,7 +770,7 @@ export const basicComponents = [
       styleType: 1,
       defaultValue: [
         {
-          imageUrl: 'https://app.cdn.jnpfsoft.com/image/3.2/banner1.png',
+          imageUrl: 'https://app.cdn.baobab.com/image/3.2/banner1.png',
           dataType: 2,
           propsApi: '',
           moduleId: '',
@@ -781,7 +781,7 @@ export const basicComponents = [
           id: '1',
         },
         {
-          imageUrl: 'https://app.cdn.jnpfsoft.com/image/3.2/banner2.png',
+          imageUrl: 'https://app.cdn.baobab.com/image/3.2/banner2.png',
           dataType: 2,
           propsApi: '',
           moduleId: '',
@@ -792,7 +792,7 @@ export const basicComponents = [
           id: '2',
         },
         {
-          imageUrl: 'https://app.cdn.jnpfsoft.com/image/3.2/banner4.png',
+          imageUrl: 'https://app.cdn.baobab.com/image/3.2/banner4.png',
           dataType: 2,
           propsApi: '',
           moduleId: '',
@@ -805,7 +805,7 @@ export const basicComponents = [
       ],
       appDefaultValue: [
         {
-          imageUrl: 'https://app.cdn.jnpfsoft.com/image/3.2/banner1.png',
+          imageUrl: 'https://app.cdn.baobab.com/image/3.2/banner1.png',
           dataType: 2,
           propsApi: '',
           moduleId: '',
@@ -816,7 +816,7 @@ export const basicComponents = [
           id: '1',
         },
         {
-          imageUrl: 'https://app.cdn.jnpfsoft.com/image/3.2/banner2.png',
+          imageUrl: 'https://app.cdn.baobab.com/image/3.2/banner2.png',
           dataType: 2,
           propsApi: '',
           moduleId: '',
@@ -827,7 +827,7 @@ export const basicComponents = [
           id: '2',
         },
         {
-          imageUrl: 'https://app.cdn.jnpfsoft.com/image/3.2/banner4.png',
+          imageUrl: 'https://app.cdn.baobab.com/image/3.2/banner4.png',
           dataType: 2,
           propsApi: '',
           moduleId: '',
@@ -973,7 +973,7 @@ export const basicComponents = [
       appUrlAddress: '',
     },
     option: {
-      defaultValue: 'https://www.jnpfsoft.com/',
+      defaultValue: 'https://www.baobab.com/',
     },
     w: 12,
     h: 8,
@@ -1585,3 +1585,4 @@ export const chartComponents = [
     maxH: 20,
   },
 ];
+

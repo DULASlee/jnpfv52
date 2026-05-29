@@ -15,7 +15,7 @@ const flow = 'http://localhost:3100'
 // #endif
 
 const define = {
-	copyright: "Copyright @ 2024 引迈信息技术有限公司版权所有",
+	copyright: "Copyright @ 2026 面包树科技有限公司版权所有",
 	sysVersion: "V5.2",
 	baseURL, // 接口前缀
 	report,

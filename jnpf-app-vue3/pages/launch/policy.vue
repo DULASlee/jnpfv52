@@ -2,9 +2,9 @@
 	<view class="policy-v">
 		<view class="reminder-content">
 			<image :src="loginlogo" class="logo" mode="widthFix"></image>
-			<view class="u-font-36 u-m-t-20 u-m-b-30">引迈开发平台</view>
+			<view class="u-font-36 u-m-t-20 u-m-b-30">Baobab快速开发平台</view>
 			<view class="policy-tips u-m-t-20">
-				<view>欢迎使用引迈开发平台,依据政策要求,为了您能使用所有功能，在使用中需要连接网络、定位、调用麦克风等服务，请仔细阅读
+				<view>欢迎使用Baobab快速开发平台,依据政策要求,为了您能使用所有功能，在使用中需要连接网络、定位、调用麦克风等服务，请仔细阅读
 					<text class="u-type-primary" @click="userAgreement">《用户协议》</text>和<text class="u-type-primary"
 						@click="privacyPolicy">《隐私政策》</text>，选择下方“同意并继续”表示您同意以上协议内容。
 				</view>

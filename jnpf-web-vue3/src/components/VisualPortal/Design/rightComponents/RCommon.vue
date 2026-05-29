@@ -551,11 +551,11 @@
   }
   function textChange() {
     props.activeData.option.defaultValue = '';
-    if (props.activeData.dataType == 'static') props.activeData.option.defaultValue = 'JNPF快速开发平台';
+    if (props.activeData.dataType == 'static') props.activeData.option.defaultValue = 'Baobab快速开发平台';
   }
   function dataTypeChange() {
     props.activeData.option.defaultValue = '';
-    if (props.activeData.dataType == 'static') props.activeData.option.defaultValue = 'JNPF快速开发平台';
+    if (props.activeData.dataType == 'static') props.activeData.option.defaultValue = 'Baobab快速开发平台';
     props.activeData.propsApi = '';
     props.activeData.propsName = '';
   }
@@ -620,3 +620,4 @@
     initData();
   });
 </script>
+

@@ -2,7 +2,7 @@
   <div class="jnpf-content-wrapper">
     <div class="jnpf-content-wrapper-center bg-white p-10px">
       <a-alert
-        message="免责声明：Highcharts组件不属于JNPF产品，只用于介绍第三方组件如何在《JNPF快速开发平台》中使用。如果对这些组件感兴趣，请使用正版。"
+        message="免责声明：Highcharts组件不属于Baobab产品，只用于介绍第三方组件如何在《Baobab快速开发平台》中使用。如果对这些组件感兴趣，请使用正版。"
         type="warning"
         show-icon
         class="!mb-30px" />
@@ -71,3 +71,4 @@
     ],
   });
 </script>
+
