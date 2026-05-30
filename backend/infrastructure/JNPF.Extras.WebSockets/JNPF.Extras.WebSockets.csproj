@@ -1,12 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<Description>JNPF WebSocket 拓展插件。</Description>
 	</PropertyGroup>
-
-	<ItemGroup>
-		<PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.3.0" />
-	</ItemGroup>
 
 	<ItemGroup>
 	  <ProjectReference Include="..\..\framework\JNPF.Extras.Authentication.JwtBearer\JNPF.Extras.Authentication.JwtBearer.csproj" />

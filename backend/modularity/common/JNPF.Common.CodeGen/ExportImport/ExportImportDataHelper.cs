@@ -1,4 +1,5 @@
 ﻿using JNPF.Common.CodeGenUpload;
+using JNPF.Extensions;
 using JNPF.Common.Configuration;
 using JNPF.Common.Const;
 using JNPF.Common.Core.Manager;

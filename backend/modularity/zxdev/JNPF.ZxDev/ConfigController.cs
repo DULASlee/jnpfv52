@@ -1,4 +1,5 @@
 ﻿using JNPF.Common.Core.Manager;
+using JNPF.Extensions;
 using JNPF.Common.CodeGen.DataParsing;
 using JNPF.Common.Manager;
 using JNPF.Common.Enums;

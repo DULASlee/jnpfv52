@@ -2,27 +2,17 @@
 
 	<PropertyGroup>
 		<Description>JNPF 程序集扫描和代码分析拓展插件。</Description>
-		<TargetFrameworks>net6.0</TargetFrameworks>
 	</PropertyGroup>
 
-
-
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
-		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
-		<PackageReference Include="Microsoft.AspNetCore.Razor.Language" Version="6.0.24" />
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.5.0" />
-		<PackageReference Include="Microsoft.Extensions.DependencyModel" Version="6.0.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="6.0.24" />
-		<PackageReference Include="System.Text.Json" Version="6.0.8" />
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 	</ItemGroup>
 
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net7.0' ">
+	<ItemGroup>
 		<PackageReference Include="Ben.Demystifier" Version="0.4.1" />
-		<PackageReference Include="Microsoft.AspNetCore.Razor.Language" Version="6.0.24" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.5.0" />
-		<PackageReference Include="Microsoft.Extensions.DependencyModel" Version="7.0.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="7.0.13" />
-		<PackageReference Include="System.Text.Json" Version="7.0.3" />
+		<PackageReference Include="Microsoft.Extensions.DependencyModel" Version="10.0.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="10.0.0" />
 	</ItemGroup>
 
 </Project>

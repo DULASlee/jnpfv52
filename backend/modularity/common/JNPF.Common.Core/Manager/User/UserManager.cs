@@ -13,6 +13,7 @@ using JNPF.Systems.Entitys.Permission;
 using JNPF.Systems.Entitys.System;
 using Mapster;
 using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
 using SqlSugar;
 using System.Security.Claims;
 
@@ -1183,7 +1184,7 @@ public class UserManager : IUserManager, IScoped
 
         var condList = await GetCondition<object>(primaryKey, moduleId, isDataPermissions, primaryKeyPolicy.Equals(2));
 
-        var minTable = GetIConditionalModelListByTableName(condList.Copy(), null);
+        var minTable = GetIConditionalModelListByTableName(JsonConvert.DeserializeObject<List<IConditionalModel>>(JsonConvert.SerializeObject(condList)), null);
 
         if (minTable.Any())
         {
@@ -1197,7 +1198,7 @@ public class UserManager : IUserManager, IScoped
 
         foreach (var tName in allTableName.Distinct().ToList())
         {
-            var tNameConditional = GetIConditionalModelListByTableName(condList.Copy(), tName);
+            var tNameConditional = GetIConditionalModelListByTableName(JsonConvert.DeserializeObject<List<IConditionalModel>>(JsonConvert.SerializeObject(condList)), tName);
 
             if (tNameConditional.Any())
             {

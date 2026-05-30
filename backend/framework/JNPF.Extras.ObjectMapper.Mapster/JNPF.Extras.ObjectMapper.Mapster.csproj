@@ -2,18 +2,12 @@
 
   <PropertyGroup>
 	  <Description>JNPF 对象映射 Mapster 插件。</Description>
-	  <TargetFrameworks>net6.0</TargetFrameworks>
   </PropertyGroup>
 
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
+	<ItemGroup>
 		<PackageReference Include="Mapster" Version="7.4.0" />
 		<PackageReference Include="Mapster.DependencyInjection" Version="1.0.1" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
 	</ItemGroup>
 
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net7.0' ">
-		<PackageReference Include="Mapster" Version="7.4.0" />
-		<PackageReference Include="Mapster.DependencyInjection" Version="1.0.1" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
-	</ItemGroup>
 </Project>

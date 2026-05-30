@@ -1,8 +1,0 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-	
-  <ItemGroup>
-    <ProjectReference Include="..\..\common\JNPF.Common.CodeGen\JNPF.Common.CodeGen.csproj" />
-    <ProjectReference Include="..\JNPF.SubDev.Entitys\JNPF.ZxDev.Entitys.csproj" />
-  </ItemGroup>
-
-</Project>

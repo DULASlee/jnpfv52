@@ -1,6 +1,6 @@
 <Project>
 	<PropertyGroup>
-		<TargetFrameworks>net5.0;net6.0;net7.0</TargetFrameworks>
+		<TargetFramework>net10.0</TargetFramework>
 		<Version>3.4.7</Version>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Authors>引迈</Authors>
