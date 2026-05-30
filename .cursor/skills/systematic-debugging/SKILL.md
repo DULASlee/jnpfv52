@@ -1,6 +1,7 @@
 ---
 name: systematic-debugging
 description: Systematic debugging with reproduce→hypothesize→verify→fix→confirm workflow. Use when encountering bugs, errors, or unexpected behavior that needs investigation.
+scope: JNPF-v52
 ---
 
 # Systematic Debugging — 系统化调试

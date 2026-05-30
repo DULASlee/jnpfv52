@@ -193,7 +193,7 @@
   }
   function getDefaultValue(row) {
     const jnpfKey = row.jnpfKey;
-    if (jnpfKey == 'text') return 'Baobab快速开发平台';
+    if (jnpfKey == 'text') return '面包树科技快速开发平台';
     if (jnpfKey == 'image') return 'https://app.cdn.baobab.com/image/3.2/banner1.png';
     if (jnpfKey == 'video') return 'https://cdn.baobab.com/2022/video/index_video.mp4';
     if (jnpfKey == 'barChart' || jnpfKey == 'lineChart' || jnpfKey == 'pieChart') return chartData.baseBarData;

@@ -13,8 +13,14 @@ unpackage/
 
 # Secrets
 **/Configurations/ConnectionStrings.json
+**/Configurations/JWT.json
 docs/token.txt
 **/token.txt
+*.key
+*.pfx
+*.pem
+.env.local
+.env.*.local
 
 # Cursor / toolchain
 .cursor/logs/

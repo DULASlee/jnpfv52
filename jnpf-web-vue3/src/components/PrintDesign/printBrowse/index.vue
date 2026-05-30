@@ -506,7 +506,7 @@
         };
         createPrintLog(data);
       };
-      document.title = 'Baobab快速开发平台';
+      document.title = '面包树科技快速开发平台';
       iframe.contentWindow.print();
       document.title = oldTitle;
       document.body.removeChild(iframe);

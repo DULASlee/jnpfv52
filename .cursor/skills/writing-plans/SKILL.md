@@ -1,6 +1,7 @@
 ---
 name: writing-plans
 description: Create detailed construction packages (施工包) for non-trivial changes. Use when the task involves multiple files, architectural decisions, or needs review before implementation.
+scope: JNPF-v52
 ---
 
 # Writing Plans — 编写施工包

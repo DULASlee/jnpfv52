@@ -1,6 +1,8 @@
 ---
 name: verification-before-completion
 description: Run verification checks before claiming work is complete. Use at the end of any implementation task to ensure build passes, tests pass, and manual verification is documented.
+scope: JNPF-v52
+tech-stack: [dotnet, pnpm]
 ---
 
 # Verification Before Completion — 完成前验证
@@ -48,9 +50,13 @@ pnpm build
 
 启动服务后检查日志，确认没有异常报错：
 
-```bash
-# 后端日志
-Get-Content "d:\liu202505v2\application\JNPF.API.Entry\logs\*.log" -Tail 20
+```powershell
+# 方式 A：在仓库根目录下使用相对路径（推荐）
+Get-Content "backend\application\JNPF.API.Entry\logs\*.log" -Tail 20
+
+# 方式 B：跨目录或 CI 环境，先设项目根（替换为实际路径）
+# $env:JNPF_ROOT = (git rev-parse --show-toplevel)  # 或在 shell profile 中持久化
+Get-Content "$env:JNPF_ROOT\backend\application\JNPF.API.Entry\logs\*.log" -Tail 20
 ```
 
 ### 5. 输出验证报告

@@ -7,6 +7,7 @@ metadata:
   author: openspec
   version: "1.0"
   generatedBy: "1.3.1"
+scope: JNPF-v52
 ---
 
 Archive a completed change in the experimental workflow.

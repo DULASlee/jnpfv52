@@ -183,7 +183,7 @@ const setting: ProjectConfig = {
     workLogoIcon: '',
     logoIcon: '',
     loginIcon: '',
-    sysName: 'Baobab快速开发平台',
+    sysName: '面包树科技快速开发平台',
     title: '',
   },
 };

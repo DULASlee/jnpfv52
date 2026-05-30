@@ -1,6 +1,7 @@
 ---
 name: requesting-code-review
 description: Request a code review after completing a significant piece of work. Use after implementing a feature, fixing a bug, or completing a construction package phase.
+scope: JNPF-v52
 ---
 
 # Requesting Code Review — 请求代码审查

@@ -1,6 +1,8 @@
 ---
 name: executing-plans
 description: Execute a construction package phase by phase, tracking progress with todo_write and verifying each step. Use when a construction package is approved and ready for implementation.
+scope: JNPF-v52
+tech-stack: [dotnet, pnpm]
 ---
 
 # Executing Plans — 按施工包执行

@@ -1,6 +1,7 @@
 ---
 name: subagent-driven-development
 description: Decompose large tasks into parallel sub-tasks executed by specialized subagents. Use when the task is large enough to benefit from parallel execution across multiple agents.
+scope: JNPF-v52
 ---
 
 # Subagent-Driven Development — 子代理并行开发

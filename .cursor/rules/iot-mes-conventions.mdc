@@ -1,0 +1,44 @@
+---
+description: IoT/MES 开发约定：接入层、表命名、消息边界、安全红线。扩展新模块时必须遵循。
+globs: 
+  - backend/modularity/iot/**
+  - backend/modularity/mes/**
+  - backend/infrastructure/JNPF.Extras.Mqtt/**
+  - jnpf-web-vue3/src/iot/**
+---
+
+# IoT / MES 开发约定
+
+## 表命名
+
+- IoT 表前缀 `IOT_`：`IOT_DEVICE`、`IOT_PRODUCT`、`IOT_COMMAND_LOG`
+- MES 表前缀 `MES_`：`MES_WORK_ORDER`、`MES_ROUTE`、`MES_BATCH`
+- 全大写下划线，与现有 `BASE_`/`EXT_`/`FLOW_` 风格一致
+
+## 设备遥测数据
+
+- **禁止**直接写入 SqlSugar 业务表（会造成主库膨胀）
+- 实时态走 Redis Device Shadow；历史明细走时序库（TDengine/InfluxDB）
+- 仅 **设备主数据**（`IOT_DEVICE`/`IOT_PRODUCT`）走 SqlSugar
+
+## 消息边界
+
+- 同进程轻量事件：`framework/JNPF/EventBus`（Channel）—— 日志、缓存刷新
+- 设备遥测/控制指令/计费/报警：**必须走 RabbitMQ**（`JNPF.Extras.EventBus.RabbitMQ`），进程重启不丢消息
+- 设备上行消息必须幂等：`msgId` + Redis SETNX 去重
+
+## 设备身份
+
+- 设备**禁止**复用用户 JWT
+- 使用一机一密（`product_key + device_secret` 换短期连接 Token）
+- 健康/定位等敏感数据须列级加密落库
+
+## API
+
+- 走 DynamicApiController 自动生成，**禁止**手动创建 Controller
+- Service 实现 `IDynamicApiController`
+
+## 前端
+
+- IoT 手写组件放 `src/iot/`，与 visualdev 低代码渲染器隔离
+- 实时数据用独立 Pinia store + `shallowRef` + `requestAnimationFrame` 节流

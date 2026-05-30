@@ -1,6 +1,7 @@
 ---
 name: brainstorming
 description: Explore codebase to understand problems, requirements, or root causes before coding. Use when the problem is ambiguous, the scope is unclear, or you need to trace code paths before writing a plan.
+scope: JNPF-v52
 ---
 
 # Brainstorming — 探索与根因分析

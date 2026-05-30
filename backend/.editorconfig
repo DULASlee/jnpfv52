@@ -1,6 +1,15 @@
-﻿# Rules in this file were initially inferred by Visual Studio IntelliCode from the F:\引迈\后端\JNPF.NET\src codebase based on best match to current usage at 2021-5-16
-# You can modify the rules from these initially generated values to suit your own policies
-# You can learn more about editorconfig here: https://docs.microsoft.com/en-us/visualstudio/ide/editorconfig-code-style-settings-reference
+﻿# JNPF V5.2 EditorConfig — 覆盖后端 + 前端统一格式（IDE 自动读取）
+# 原始规则由 VS IntelliCode 推断；2026-05 经架构审定后增补前端规则与全局基线
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+charset = utf-8-bom
+trim_trailing_whitespace = true
+insert_final_newline = true
+
 [*.cs]
 
 
@@ -134,4 +143,21 @@ dotnet_style_qualification_for_method = false:suggestion
 #prefer properties not to be prefaced with this. or Me. in Visual Basic
 dotnet_style_qualification_for_property = false:suggestion
 
-# Add copyright file header
+# ── 前端文件 ──────────────────────────────────────────
+
+[*.{vue,ts,tsx,js,jsx}]
+indent_size = 2
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+# ── 其他 ──────────────────────────────────────────────
+
+[Dockerfile]
+indent_size = 2
+
+[*.{xml,csproj,props,targets,ruleset}]
+indent_size = 2

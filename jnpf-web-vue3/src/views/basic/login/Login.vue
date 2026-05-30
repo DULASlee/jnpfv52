@@ -4,9 +4,12 @@
       <AppDarkModeToggle class="enter-x mr-2" v-if="!sessionTimeout" />
     </div>
     <div class="login-header">
-      <a class="login-company-logo" target="_blank" href="https://www.baobab.com">
-        <img class="login-company-logo-img -enter-x" src="../../../assets/images/login-company-logo.png" alt="" />
-      </a>
+      <div class="login-company-logo">
+        <a class="login-company-logo-link" target="_blank" href="https://www.baobab.com">
+          <img class="login-company-logo-img -enter-x" src="../../../assets/images/login-company-logo.png" alt="" />
+          <span class="login-company-name -enter-x">面包树科技有限公司</span>
+        </a>
+      </div>
     </div>
     <div class="login-content">
       <div class="login-left hidden xl:block">
@@ -43,4 +46,3 @@
 <style lang="less">
   @import url('./index.less');
 </style>
-

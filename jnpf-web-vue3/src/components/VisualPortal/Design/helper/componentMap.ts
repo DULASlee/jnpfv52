@@ -713,7 +713,7 @@ export const basicComponents = [
     option: {
       styleType: 2,
       defaultValue: '',
-      textDefaultValue: 'Baobab快速开发平台',
+      textDefaultValue: '面包树科技快速开发平台',
       textFontSize: 14,
       textFontColor: '#fff',
       textFontWeight: false,

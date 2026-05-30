@@ -137,10 +137,24 @@ html[data-theme='dark'] {
     align-items: center;
     justify-content: space-between;
     .login-company-logo {
-      display: block;
-      height: 39px;
-      .login-company-logo-img {
-        height: 100%;
+      display: flex;
+      align-items: center;
+      .login-company-logo-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+        .login-company-logo-img {
+          height: 42px;
+          width: auto;
+        }
+        .login-company-name {
+          color: #fff;
+          font-size: 18px;
+          font-weight: 500;
+          letter-spacing: 2px;
+          white-space: nowrap;
+        }
       }
     }
     .vue2-link {

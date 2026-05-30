@@ -1,6 +1,7 @@
 ---
 name: architecture-doc
 description: Write or revise Fruit+JNPF architecture/technical internal reference documents. Use when the user asks to write architecture docs, technical internal references (技术内参), module design docs, or review architecture documentation quality.
+scope: JNPF-v52
 ---
 
 # Architecture Document Writing

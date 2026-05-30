@@ -1,6 +1,7 @@
 ---
 name: code-reviewer
 description: Review code for correctness, style, edge cases, security, and performance. This skill is designed to be used as a subagent for automated code review.
+scope: JNPF-v52
 ---
 
 # Code Reviewer — 代码审查子代理

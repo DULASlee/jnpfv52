@@ -24,6 +24,16 @@ alwaysApply: true
 - 执行：`executing-plans` / `subagent-driven-development`
 - 质量：`test-driven-development` · `systematic-debugging` · `verification-before-completion`
 
+### 技能加载机制
+
+**加载机制：** Cursor 通过 Read 工具读取 `.cursor/skills/<name>/SKILL.md`。项目目录下的技能为**唯一权威**来源；插件内置同名技能被忽略；插件独有、且项目中不存在同名的技能可作为补充。
+
+完整技能索引与调度规范见 `using-superpowers` 技能。
+
+### 版本漂移维护
+
+项目技能为插件的中文适配副本。Superpowers 插件**大版本更新**后，须人工 diff 项目版与插件缓存中的同名 `SKILL.md`，将有价值的变更合并进 `.cursor/skills/`（插件路径见 Cursor 插件缓存 `cursor-public/superpowers`）。不得假设插件会自动覆盖项目版。
+
 ## Serena — C# 模块改动
 
 - 改 Service/接口前：`find_symbol` · `find_referencing_symbols`

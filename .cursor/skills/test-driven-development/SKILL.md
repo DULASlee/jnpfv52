@@ -1,6 +1,7 @@
 ---
 name: test-driven-development
 description: Write failing tests first, then implement code to make them pass, then refactor. Use when implementing new features, fixing bugs, or refactoring critical code.
+scope: JNPF-v52
 ---
 
 # Test-Driven Development — 测试驱动开发

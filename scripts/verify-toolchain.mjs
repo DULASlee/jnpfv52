@@ -22,6 +22,22 @@ function fail(name, detail = '') {
   console.log(`  [FAIL] ${name}${detail ? ` — ${detail}` : ''}`);
 }
 
+function warn(name, detail = '') {
+  results.push({ name, pass: true, warn: true, detail });
+  console.log(`  [WARN] ${name}${detail ? ` — ${detail}` : ''}`);
+}
+
+function parseSkillFrontmatter(content) {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!match) return {};
+  const fm = {};
+  for (const line of match[1].split('\n')) {
+    const m = line.match(/^([\w-]+):\s*(.+)$/);
+    if (m) fm[m[1]] = m[2].trim();
+  }
+  return fm;
+}
+
 console.log('\n=== Toolchain Verification ===\n');
 console.log(`Repo: ${repoRoot}\n`);
 
@@ -42,10 +58,31 @@ if (skills.length >= 10) ok('Superpowers skills', `${skills.length} skills`);
 else fail('Superpowers skills', `found ${skills.length}, expected >= 10`);
 
 const requiredSkills = ['brainstorming', 'writing-plans', 'executing-plans', 'verification-before-completion'];
+const recommendedSkills = [
+  'using-superpowers',
+  'using-git-worktrees',
+  'dispatching-parallel-agents',
+  'receiving-code-review',
+  'finishing-a-development-branch',
+  'writing-skills',
+];
 for (const s of requiredSkills) {
   if (skills.includes(s)) ok(`skill:${s}`);
   else fail(`skill:${s}`, 'missing');
 }
+for (const s of recommendedSkills) {
+  if (skills.includes(s)) ok(`skill:${s}`);
+  else fail(`skill:${s}`, 'missing (sync from superpowers plugin)');
+}
+
+const missingScope = [];
+for (const s of skills) {
+  const content = fs.readFileSync(path.join(skillDir, s, 'SKILL.md'), 'utf8');
+  const fm = parseSkillFrontmatter(content);
+  if (!fm.scope) missingScope.push(s);
+}
+if (missingScope.length === 0) ok('skill frontmatter:scope', 'all skills tagged');
+else warn('skill frontmatter:scope', `missing in: ${missingScope.join(', ')}`);
 
 if (fs.existsSync(path.join(repoRoot, '.cursor', 'hooks.json'))) ok('Cursor hooks.json');
 else fail('Cursor hooks.json');
@@ -81,7 +118,8 @@ for (const c of opsxCmds) {
 if (fs.existsSync(path.join(repoRoot, '.cursor', 'rules', 'toolchain-division.mdc'))) ok('rule:toolchain-division');
 else fail('rule:toolchain-division');
 
-const passed = results.filter((r) => r.pass).length;
+const passed = results.filter((r) => r.pass && !r.warn).length;
+const warned = results.filter((r) => r.warn).length;
 const failed = results.filter((r) => !r.pass).length;
-console.log(`\n=== Summary: ${passed} passed, ${failed} failed ===\n`);
+console.log(`\n=== Summary: ${passed} passed, ${warned} warned, ${failed} failed ===\n`);
 process.exit(failed > 0 ? 1 : 0);
