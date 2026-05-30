@@ -1,0 +1,43 @@
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://token-plan-cn.xiaomimimo.com/anthropic",
+    "ANTHROPIC_AUTH_TOKEN": "tp-cu5unlnpxecv11b9h9pcln9tnscsih5irvko2fszyvo3rtg5",
+    "ANTHROPIC_MODEL": "mimo-v2.5-pro",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "mimo-v2.5-pro",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "mimo-v2.5-pro",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "mimo-v2.5-pro"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm:*)", "Bash(npx:*)", "Bash(node:*)", "Bash(pnpm:*)",
+      "Bash(git:*)", "Bash(ls:*)", "Bash(cat:*)", "Bash(find:*)",
+      "Bash(grep:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(wc:*)",
+      "Bash(sort:*)", "Bash(diff:*)", "Bash(sed:*)", "Bash(awk:*)",
+      "Bash(mkdir:*)", "Bash(cp:*)", "Bash(mv:*)", "Bash(rm:*)",
+      "Bash(touch:*)", "Bash(echo:*)", "Bash(curl:*)", "Bash(chmod:*)",
+      "Bash(cd:*)", "Bash(pwd:*)", "Bash(tree:*)", "Bash(bash:*)",
+      "Bash(vitest:*)", "Bash(npx playwright:*)",
+      "Bash(dotnet:*)", "Bash(openssl:*)", "Bash(python:*)", "Bash(pip:*)",
+      "Bash(docker:*)", "Bash(docker-compose:*)",
+      "Bash(gh:*)", "Bash(jq:*)", "Bash(yq:*)",
+      "Bash(which:*)", "Bash(where:*)", "Bash(env:*)",
+      "Bash(date:*)", "Bash(xargs:*)", "Bash(tee:*)",
+      "Bash(ps:*)", "Bash(kill:*)", "Bash(pkill:*)",
+      "Bash(tar:*)", "Bash(zip:*)", "Bash(unzip:*)",
+      "Bash(sqlcmd:*)", "Bash(sqlpackage:*)",
+
+      "Read", "Write", "Edit", "MultiEdit",
+      "Glob", "Grep", "WebFetch", "WebSearch",
+      "NotebookEdit",
+      "Skill", "Agent", "TaskCreate", "TaskUpdate", "TaskList", "TaskGet",
+
+      "mcp__context7__*",
+      "mcp__playwright__*",
+      "mcp__fetch__*",
+      "mcp__serena__*",
+      "mcp__plugin_episodic-memory_episodic-memory__search",
+      "mcp__plugin_episodic-memory_episodic-memory__read",
+      "mcp__plugin_superpowers-chrome_chrome__use_browser"
+    ]
+  }
+}

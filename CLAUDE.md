@@ -156,3 +156,64 @@ Episodic project ID: `D--JNPF-v52` (from `.cursor/toolchain.manifest.json`).
 > 所有文档必须标注日期和适用版本。AI 引用时应检查版本兼容性。
 >
 > 日期格式：YYYY-MM-DD。文档首次建立时填写实际日期，后续更新时同步修改。
+
+---
+
+## JNPF Vue3 前端手工开发规范
+
+> 本段落仅指导 JNPF 代码引擎覆盖不到的手工自定义页面开发。
+> JNPF 自动生成的页面由后端 .vm 模板管理，不属于本规范管辖范围。
+
+### 铁律：先读后写
+
+每次开发新的自定义页面，必须按顺序执行：
+
+1. Read `docs/frontend/jnpf-taste-blueprint.md`，了解黄金页面索引、骨架决策树、组件映射、布局规则
+2. 在 `jnpf-web-vue3/src/views/` 下找一个同类的成熟页面 Read 后作为参照
+3. 按蓝图中的骨架决策树选择正确的骨架模式
+4. 再动手写代码
+
+### 铁律：禁止 a-card 默认化
+
+普通业务页面（列表、表单、详情）禁止使用 `<a-card>` 包裹内容或分区。
+
+| 场景 | 正确做法 | 禁止做法 |
+|------|---------|---------|
+| 列表页 | jnpf-content-wrapper + BasicTable | a-card 包裹表格 |
+| 表单分区 | a-divider orientation="left" 或 BasicForm GroupTitle | a-card 分区 |
+| 弹窗表单 | BasicPopup/BasicModal + BasicForm(FormSchema) | a-card 包裹表单 |
+| 仅 Dashboard/监控页允许 | a-card 做 KPI 指标卡 | — |
+
+### 铁律：禁止自造类名
+
+样式只使用 `common.less` 中已有的类名（jnpf-content-wrapper 系列等）。
+禁止自造 `.search-wrapper`、`.form-page-header` 等不存在的类名。
+
+### 技术栈锁定
+
+- UI：Ant Design Vue 3.2.20（a- 前缀）
+- 样式：Less + WindiCSS 工具类，不用 SCSS
+- 表格：BasicTable，不用原生 a-table
+- 表单：BasicForm（schema 驱动）或手写 a-form
+- 弹窗：BasicPopup 或 BasicModal
+- 操作列：TableAction + #bodyCell slot
+- 字典：baseStore.getDictionaryData 加载后通过 :options 传入 jnpf-select
+- 自定义组件：优先 jnpf-* 全局组件
+- 路由：后端菜单动态注入，前端不定义静态路由
+- 路径别名：/@/ 指向 src，不用 /src/
+
+### 视觉自检
+
+代码写完后：
+1. 如果本地 dev server 在运行，用 Playwright MCP 截图检查
+2. 自检：无白屏、无双滚动条、无溢出、按钮层级主次分明、页面像 JNPF 原生页面
+3. 发现问题立刻修改，重新截图
+
+### 代码风格
+
+- Vue 3 `<script setup>` + Composition API
+- `<style lang="less" scoped>`
+- 禁止 inline style
+- 禁止 !important
+- 禁止 console.log
+- 单文件不超过 300 行

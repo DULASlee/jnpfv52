@@ -1,0 +1,39 @@
+---
+globs: jnpf-web-vue3/**
+alwaysApply: false
+---
+
+# JNPF 前端手工开发规范（Cursor 自动注入）
+
+> 仅在编辑 jnpf-web-vue3 目录下的文件时注入。
+
+## 第一步：必须先读蓝图
+
+Read `docs/frontend/jnpf-taste-blueprint.md`，了解：
+- 黄金页面索引（什么场景参照哪个真实文件）
+- 骨架决策树（什么场景用什么容器结构）
+- 组件映射表（用 jnpf-select 不用原生 a-select）
+- 布局优先级（列表用 BasicTable，表单用 a-divider 分区）
+
+## 第二步：必须找同类页面参照
+
+在 `jnpf-web-vue3/src/views/` 下找到同类的成熟页面 Read 后再动手。
+
+## 禁止事项
+
+1. **禁止 a-card 默认化**：普通业务页（列表、表单、详情）禁止使用 `<a-card>` 包裹或分区。表单分区用 `a-divider orientation="left"` 或 BasicForm 的 GroupTitle。仅 Dashboard/监控页允许 a-card。
+2. **禁止自造类名**：样式只用 `common.less` 中已有的 jnpf-content-wrapper 系列类名。
+3. **禁止原生 a-table**：必须用 BasicTable。
+4. **禁止硬编码色值**：使用 @primary-color 等 Less 变量或 WindiCSS 色系工具类。
+5. **禁止 inline style**。
+6. **禁止双滚动条**：容器 height: 100%，内容区 flex: 1 + overflow-y: auto。
+
+## 技术栈
+
+- Ant Design Vue 3.2.20
+- Less + WindiCSS
+- 路径别名 /@/ 指向 src
+- 自定义组件优先 jnpf-* 系列
+- 弹窗表单优先 BasicPopup 或 BasicModal + BasicForm
+- 操作列使用 TableAction + #bodyCell slot
+- 字典通过 baseStore.getDictionaryData 加载，jnpf-select 用 :options 传入
