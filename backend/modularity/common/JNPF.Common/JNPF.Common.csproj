@@ -3,6 +3,7 @@
 	<PropertyGroup>
 		<Description>JNPF 公共拓展库。</Description>
 		<AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+		<AcceptNPOIOSMFLicense>true</AcceptNPOIOSMFLicense>
 	</PropertyGroup>
 
 	<ItemGroup>
