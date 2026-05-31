@@ -104,7 +104,7 @@ Roslynator + StyleCop enforced via `backend/dotnet.ruleset`, `backend/stylecop.j
 - Naming: [`docs/conventions/naming.md`](docs/conventions/naming.md)
 - Error response: [`docs/conventions/error-response.md`](docs/conventions/error-response.md) — `RESTfulResult<T>` format, code 600 = JWT expired
 - Logging: [`docs/conventions/logging.md`](docs/conventions/logging.md) — Serilog levels, prod ≥ Warning
-- Git workflow: [`docs/conventions/git-workflow.md`](docs/conventions/git-workflow.md) — Conventional Commits, branch strategy
+- Git workflow: [`docs/conventions/git-workflow.md`](docs/conventions/git-workflow.md) — Conventional Commits, branch strategy, **Git 工作铁律**（任何操作前保证工作区干净、已提交、已推送；untracked 文件必须立即 commit；stash 不是长期存储）
 - IoT/MES rules: [`.cursor/rules/iot-mes-conventions.mdc`](.cursor/rules/iot-mes-conventions.mdc) — telemetry off SqlSugar, device auth separation
 
 ## Architecture Documentation
