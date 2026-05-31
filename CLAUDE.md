@@ -217,3 +217,14 @@ Episodic project ID: `D--JNPF-v52` (from `.cursor/toolchain.manifest.json`).
 - 禁止 !important
 - 禁止 console.log
 - 单文件不超过 300 行
+
+## 知识会话引导（Claude Code）
+
+Claude Code **不**使用本地向量库。每次开发任务前：
+
+1. 若 episodic-memory MCP 可用：`search` project=`D--JNPF-v52`
+2. 读 `openspec/specs/README.md` 与相关 spec
+3. 读 `openspec/adr/` 中相关 ADR
+4. 遵守 `.cursor/rules/`（与 Cursor 共用）
+
+代码搜索：优先 Grep；C# 精确符号用 Serena MCP。详见 ADR-001。

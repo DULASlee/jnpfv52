@@ -1,7 +1,15 @@
 # OpenSpec 知识库（`openspec/specs/`）
 
-> OpenSpec **仅知识库**；开发执行走 Superpowers。见 `.cursor/rules/toolchain-division.mdc`。
+> **自动生成**：`node scripts/update-openspec-index.mjs` — 请勿手工改表格行
 
-| Capability | 说明 |
-|------------|------|
-| [`jnpf-v52-workspace`](jnpf-v52-workspace/spec.md) | v5.2 干净工作区 `d:\JNPF-v52` 范围与运行锚点 |
+| Capability | Spec | 标题 | 文件 mtime |
+|------------|------|------|------------|
+| frontend-align-dist-v1 | [`frontend-align-dist-v1/spec.md`](frontend-align-dist-v1/spec.md) | Capability: frontend-align-dist-v1 | 2026-05-28 |
+| iot-capability-phase1 | [`iot-capability-phase1/spec.md`](iot-capability-phase1/spec.md) | Capability: iot-capability-phase1 | 2026-05-28 |
+| jnpf-v52-workspace | [`jnpf-v52-workspace/spec.md`](jnpf-v52-workspace/spec.md) | jnpf-v52-workspace | 2026-05-28 |
+
+## 维护规则
+
+- 新标准：`openspec/changes/` 起草 → `/opsx:archive` 归档到本目录
+- 开发执行：Superpowers（**禁止** /opsx:apply 编码）
+- 无 spec 的架构切面不得进入 `executing-plans`

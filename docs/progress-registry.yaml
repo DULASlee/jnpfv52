@@ -1,4 +1,19 @@
 # JNPF-v52 推进登记（Superpowers 阶段完成时追加）
 version: 1
 project: JNPF-v52
-entries: []
+entries:
+  - id: knowledge-base-infra-20260531
+    date: 2026-05-31
+    phase: 知识库基础设施（施工包阶段0-5）
+    status: completed
+    deliverables:
+      - openspec/adr/ADR-001-reject-local-vector-rag.md
+      - .cursor/rules/knowledge-base.mdc
+      - scripts/update-openspec-index.mjs
+      - scripts/check-knowledge-freshness.mjs
+      - scripts/refresh-knowledge.mjs
+      - .githooks/post-commit
+      - openspec/changes/add-logging-audit-spec/
+    decisions:
+      - 驳回 ChromaDB 向量 RAG，改用原生工具链知识库
+    next: 启动切面1日志系统施工（executing-plans）

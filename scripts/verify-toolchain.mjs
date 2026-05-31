@@ -118,6 +118,16 @@ for (const c of opsxCmds) {
 if (fs.existsSync(path.join(repoRoot, '.cursor', 'rules', 'toolchain-division.mdc'))) ok('rule:toolchain-division');
 else fail('rule:toolchain-division');
 
+if (fs.existsSync(path.join(repoRoot, '.cursor', 'rules', 'knowledge-base.mdc'))) ok('rule:knowledge-base');
+else fail('rule:knowledge-base');
+
+if (fs.existsSync(path.join(repoRoot, 'scripts', 'check-knowledge-freshness.mjs'))) ok('check-knowledge-freshness.mjs');
+else fail('check-knowledge-freshness.mjs');
+
+const adr001 = path.join(repoRoot, 'openspec', 'adr', 'ADR-001-reject-local-vector-rag.md');
+if (fs.existsSync(adr001)) ok('ADR-001');
+else fail('ADR-001', 'missing openspec/adr/ADR-001-reject-local-vector-rag.md');
+
 const passed = results.filter((r) => r.pass && !r.warn).length;
 const warned = results.filter((r) => r.warn).length;
 const failed = results.filter((r) => !r.pass).length;

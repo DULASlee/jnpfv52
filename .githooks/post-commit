@@ -1,0 +1,4 @@
+#!/bin/sh
+# Lightweight knowledge refresh after each commit
+echo "[Auto-Knowledge] post-commit hook"
+node scripts/refresh-knowledge.mjs 2>/dev/null || true
