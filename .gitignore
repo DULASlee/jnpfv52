@@ -27,6 +27,7 @@ docs/token.txt
 .cursor/episodic/sync-status.json
 .cursor/edge-debug-profile/
 .env.toolchain
+.claude/
 
 # Local / temp
 .specstory/

@@ -61,35 +61,24 @@ refactor(workflow): 提取工单状态机为独立类
 
 ---
 
-## Git 工作铁律
+## Git 工作铁律（精简版）
 
-> **一句话核心：任何操作前，保证工作区干净、已提交、已推送。**
+> **一句核心：任何操作前，保证工作区干净、已提交、已推送。**
 
-### 铁律一：绝不带未提交改动执行分支操作
+### 铁律三条
 
-凡有改动，先 `add` → `commit` → `push`，哪怕提交信息写 `WIP`。
+1. **绝不带未提交改动切分支、合并或变基。**  
+   凡有改动，先 `add` → `commit` → `push`，哪怕提交信息写 `WIP`。
+2. **新建或修改文件后，立即 `add` 并提交。**  
+   文档与代码同等重要，没有例外。未跟踪文件最易丢失，stash 也救不了。
+3. **合并/切分支前，执行三步检查：**  
+   - `git status` 必须 clean  
+   - `git stash list` 必须为空  
+   - `git log origin/当前分支..当前分支` 必须空（本地已全推送）
 
-**禁止：** 带着未提交改动执行 `checkout`、`merge`、`rebase`、`stash drop`。
+**记住：远程仓库是你唯一的不可丢失备份。每 30 分钟至少 commit + push 一次。**
 
-### 铁律二：新建或修改文件后，立即 add 并提交
-
-文档与代码同等重要，没有例外。**未跟踪文件（untracked）是最脆弱的** — stash 不保护它，分支切换可能清除它，`git stash drop` 后无法通过 stash 找回。
-
-### 铁律三：分支操作前执行三步检查
-
-```bash
-git status                        # 必须 clean
-git stash list                    # 必须为空（有则 pop/drop 后提交）
-git log origin/分支名..分支名      # 必须空（本地已全推送）
-```
-
-三步全部通过，才可执行 checkout/merge/rebase。
-
-### 铁律四：远程仓库是唯一不可丢失备份
-
-- 每个工作块完成即 commit + push，间隔不超过 30 分钟
-- `git stash` 只是临时暂存，**绝不能当作长期存储**
-- stash 内容必须在下次 commit 时一并提交，禁止遗留 stash 过夜
+> Cursor Agent 永久规则：`.cursor/rules/git-workflow.mdc`（`alwaysApply: true`）
 
 ---
 
