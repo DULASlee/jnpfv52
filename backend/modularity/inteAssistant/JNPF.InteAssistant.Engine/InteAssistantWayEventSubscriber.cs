@@ -24,7 +24,7 @@ public class InteAssistantWayEventSubscriber : IEventSubscriber, ISingleton, IDi
     /// <summary>
     /// 初始化客户端.
     /// </summary>
-    private static ISqlSugarClient? _sqlSugarClient;
+    private readonly ISqlSugarClient _sqlSugarClient;
 
     /// <summary>
     /// 服务提供器.
@@ -76,21 +76,24 @@ public class InteAssistantWayEventSubscriber : IEventSubscriber, ISingleton, IDi
 
         var _cacheManager = _serviceScope.ServiceProvider.GetService<ICacheManager>();
 
-        if (KeyVariable.MultiTenancy && !string.IsNullOrEmpty(inte.TenantId) && !_sqlSugarClient.AsTenant().IsAnyConnection(inte.TenantId))
-        {
-            await _tenantManager.ChangTenant(_sqlSugarClient, inte.TenantId);
-        }
+        // CopyNew() MUST be called BEFORE ChangTenant to isolate tenant state.
+        // ChangTenant mutates the SqlSugarScope's internal connections/filters;
+        // calling it on the shared singleton would leak tenant state across requests.
+        var db = _sqlSugarClient.CopyNew();
 
-        _sqlSugarClient = _sqlSugarClient.CopyNew();
+        if (KeyVariable.MultiTenancy && !string.IsNullOrEmpty(inte.TenantId) && !db.AsTenant().IsAnyConnection(inte.TenantId))
+        {
+            await _tenantManager.ChangTenant(db, inte.TenantId);
+        }
 
         cacheKey = string.Format("{0}:{1}", CommonConst.INTEASSISTANT, inte.TenantId);
         List<string> caCheIntegrateList = await _cacheManager.GetAsync<List<string>>(cacheKey);
 
-        if (await _sqlSugarClient.Queryable<IntegrateQueueEntity>().AnyAsync(it => it.Id.Equals(inte.QueueId) && it.State == 1 && it.DeleteMark == null) && caCheIntegrateList.Contains(inte.QueueId))
+        if (await db.Queryable<IntegrateQueueEntity>().AnyAsync(it => it.Id.Equals(inte.QueueId) && it.State == 1 && it.DeleteMark == null) && caCheIntegrateList.Contains(inte.QueueId))
         {
             var dataList = new List<InteAssiDataModel>();
-            var queueEntity = await _sqlSugarClient.Queryable<IntegrateQueueEntity>().Where(it => it.Id.Equals(inte.QueueId)).FirstAsync();
-            var inteEntity = await _sqlSugarClient.Queryable<IntegrateEntity>().Where(it => it.Id.Equals(queueEntity.IntegrateId)).FirstAsync();
+            var queueEntity = await db.Queryable<IntegrateQueueEntity>().Where(it => it.Id.Equals(inte.QueueId)).FirstAsync();
+            var inteEntity = await db.Queryable<IntegrateEntity>().Where(it => it.Id.Equals(queueEntity.IntegrateId)).FirstAsync();
             var dataValue = queueEntity.Description?.ToObject<InteAssiDataModel>();
             if (dataValue != null)
                 dataList.Add(dataValue);
@@ -127,12 +130,12 @@ public class InteAssistantWayEventSubscriber : IEventSubscriber, ISingleton, IDi
             }
 
             // 操作成功
-            var taskResult = await _sqlSugarClient.Insertable(taskEntity).IgnoreColumns(ignoreNullColumn: true).ExecuteCommandAsync();
-            var nodeResult = await _sqlSugarClient.Insertable(runModel.NodeEntity).ExecuteCommandAsync();
+            var taskResult = await db.Insertable(taskEntity).IgnoreColumns(ignoreNullColumn: true).ExecuteCommandAsync();
+            var nodeResult = await db.Insertable(runModel.NodeEntity).ExecuteCommandAsync();
             if (taskResult == 1)
             {
                 // 删除 队列
-                var result1 = await _sqlSugarClient.Updateable<IntegrateQueueEntity>().SetColumns(it => new IntegrateQueueEntity()
+                var result1 = await db.Updateable<IntegrateQueueEntity>().SetColumns(it => new IntegrateQueueEntity()
                 {
                     DeleteMark = 1,
                     Description = null,
@@ -152,7 +155,7 @@ public class InteAssistantWayEventSubscriber : IEventSubscriber, ISingleton, IDi
 
                     var scheduleResult = _schedulerFactory.TryGetJob("job_builtIn_ExecutionQueue", out var scheduler);
 
-                    var inteQueueCount = await _sqlSugarClient.Queryable<IntegrateQueueEntity>().CountAsync(it => it.State == 0 && it.ExecutionTime == null && it.DeleteMark == null);
+                    var inteQueueCount = await db.Queryable<IntegrateQueueEntity>().CountAsync(it => it.State == 0 && it.ExecutionTime == null && it.DeleteMark == null);
                     if (inteQueueCount > 0)
                     {
                         // 启动调度
