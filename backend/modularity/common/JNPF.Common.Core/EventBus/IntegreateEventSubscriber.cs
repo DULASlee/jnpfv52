@@ -31,7 +31,7 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton, IDisposab
     /// <summary>
     /// 初始化客户端.
     /// </summary>
-    private static ISqlSugarClient? _sqlSugarClient;
+    private ISqlSugarClient _sqlSugarClient;
 
     /// <summary>
     /// 服务提供器.
@@ -83,25 +83,24 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton, IDisposab
 
         var _cacheManager = _serviceScope.ServiceProvider.GetService<ICacheManager>();
 
-        if (KeyVariable.MultiTenancy && !string.IsNullOrEmpty(inte.TenantId) && !_sqlSugarClient.AsTenant().IsAnyConnection(inte.TenantId))
+        var db = _sqlSugarClient.CopyNew();
+        if (KeyVariable.MultiTenancy && !string.IsNullOrEmpty(inte.TenantId) && !db.AsTenant().IsAnyConnection(inte.TenantId))
         {
-            await _tenantManager.ChangTenant(_sqlSugarClient, inte.TenantId);
+            await _tenantManager.ChangTenant(db, inte.TenantId);
         }
-
-        _sqlSugarClient = _sqlSugarClient.CopyNew();
 
         // 集成助手表单ID一致 且 未删除 且 状态启用 且 触发事件作为 一致的数据
         List<IntegrateEntity>? inteAssiEntity = new List<IntegrateEntity>();
         switch (inte.Model.TriggerType)
         {
             case 4:
-                inteAssiEntity = await _sqlSugarClient.Queryable<IntegrateEntity>().Where(it => it.Type.Equals(1) && it.FormId.Equals(inte.Model.ModelId) && it.DeleteMark == null && it.EnabledMark.Equals(1) && it.TriggerType.Equals(1)).ToListAsync();
+                inteAssiEntity = await db.Queryable<IntegrateEntity>().Where(it => it.Type.Equals(1) && it.FormId.Equals(inte.Model.ModelId) && it.DeleteMark == null && it.EnabledMark.Equals(1) && it.TriggerType.Equals(1)).ToListAsync();
                 break;
             case 5:
-                inteAssiEntity = await _sqlSugarClient.Queryable<IntegrateEntity>().Where(it => it.Type.Equals(1) && it.FormId.Equals(inte.Model.ModelId) && it.DeleteMark == null && it.EnabledMark.Equals(1) && it.TriggerType.Equals(3)).ToListAsync();
+                inteAssiEntity = await db.Queryable<IntegrateEntity>().Where(it => it.Type.Equals(1) && it.FormId.Equals(inte.Model.ModelId) && it.DeleteMark == null && it.EnabledMark.Equals(1) && it.TriggerType.Equals(3)).ToListAsync();
                 break;
             default:
-                inteAssiEntity = await _sqlSugarClient.Queryable<IntegrateEntity>().Where(it => it.Type.Equals(1) && it.FormId.Equals(inte.Model.ModelId) && it.DeleteMark == null && it.EnabledMark.Equals(1) && it.TriggerType.Equals(inte.Model.TriggerType)).ToListAsync();
+                inteAssiEntity = await db.Queryable<IntegrateEntity>().Where(it => it.Type.Equals(1) && it.FormId.Equals(inte.Model.ModelId) && it.DeleteMark == null && it.EnabledMark.Equals(1) && it.TriggerType.Equals(inte.Model.TriggerType)).ToListAsync();
                 break;
         }
 
@@ -204,7 +203,7 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton, IDisposab
                                     {
                                         var dicHerader = new Dictionary<string, object>();
 
-                                        var user = await _sqlSugarClient.Queryable<UserEntity>().FirstAsync(it => it.Id.Equals(inte.UserId));
+                                        var user = await db.Queryable<UserEntity>().FirstAsync(it => it.Id.Equals(inte.UserId));
 
                                         // 生成实时token
                                         var toKen = NetHelper.GetToken(user.Id, user.Account, user.RealName, user.IsAdministrator, inte.TenantId);
@@ -231,7 +230,7 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton, IDisposab
                         break;
                 }
 
-                var result1 = await _sqlSugarClient.Insertable(inteQueueList).ExecuteCommandAsync();
+                var result1 = await db.Insertable(inteQueueList).ExecuteCommandAsync();
 
                 // 添加队列的数量与实际添加的数量一致
                 if (result1 == inteQueueList.Count)
@@ -329,7 +328,8 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton, IDisposab
         var response = new RESTfulResult<object>();
 
         var dicHerader = new Dictionary<string, object>();
-        var user = await _sqlSugarClient.Queryable<UserEntity>().FirstAsync(it => it.Id.Equals(userId));
+        var db = _sqlSugarClient.CopyNew();
+        var user = await db.Queryable<UserEntity>().FirstAsync(it => it.Id.Equals(userId));
 
         // 生成实时token
         var toKen = NetHelper.GetToken(user.Id, user.Account, user.RealName, user.IsAdministrator, tenantId);
