@@ -4,6 +4,7 @@ using JNPF.DatabaseAccessor;
 using JNPF.Logging;
 using Mapster;
 using SqlSugar;
+using System.Diagnostics;
 using System.Reflection;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -89,28 +90,35 @@ public static class SqlSugarConfigureExtensions
         // 设置超时时间
         db.Ado.CommandTimeOut = 30;
 
-        // 打印SQL语句
+        var sqlStopwatch = new Stopwatch();
+
         db.Aop.OnLogExecuting = (sql, pars) =>
         {
-            var originColor = Console.ForegroundColor;
-            if (sql.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
-                Console.ForegroundColor = ConsoleColor.Green;
-            if (sql.StartsWith("UPDATE", StringComparison.OrdinalIgnoreCase) || sql.StartsWith("INSERT", StringComparison.OrdinalIgnoreCase))
-                Console.ForegroundColor = ConsoleColor.Yellow;
-            if (sql.StartsWith("DELETE", StringComparison.OrdinalIgnoreCase))
-                Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("【" + DateTime.Now + "——执行SQL】\r\n" + UtilMethods.GetSqlString(config.DbType, sql, pars) + "\r\n");
-            Console.ForegroundColor = originColor;
+            sqlStopwatch.Restart();
             App.PrintToMiniProfiler("SqlSugar", "Info", sql + "\r\n" + db.Utilities.SerializeObject(pars.ToDictionary(it => it.ParameterName, it => it.Value)));
         };
+
+        db.Aop.OnLogExecuted = (sql, pars) =>
+        {
+            sqlStopwatch.Stop();
+            var elapsed = sqlStopwatch.ElapsedMilliseconds;
+
+            if (elapsed > 1000) // Slow query threshold: 1 second
+            {
+                Serilog.Log.ForContext("Sql", sql)
+                   .ForContext("Elapsed", elapsed)
+                   .Warning("Slow SQL ({Elapsed}ms): {Sql}", elapsed, sql);
+            }
+        };
+
         db.Aop.OnError = ex =>
         {
             if (ex.Parametres == null) return;
-            var originColor = Console.ForegroundColor;
-            Console.ForegroundColor = ConsoleColor.DarkRed;
             var pars = db.Utilities.SerializeObject(((SugarParameter[])ex.Parametres).ToDictionary(it => it.ParameterName, it => it.Value));
-            Console.WriteLine("【" + DateTime.Now + "——错误SQL】\r\n" + UtilMethods.GetSqlString(config.DbType, ex.Sql, (SugarParameter[])ex.Parametres) + "\r\n");
-            Console.ForegroundColor = originColor;
+
+            Serilog.Log.ForContext("Sql", ex.Sql)
+               .Error(ex, "SQL Error: {Sql}", ex.Sql);
+
             App.PrintToMiniProfiler("SqlSugar", "Error", $"{ex.Message}{Environment.NewLine}{ex.Sql}{pars}{Environment.NewLine}");
         };
     }
