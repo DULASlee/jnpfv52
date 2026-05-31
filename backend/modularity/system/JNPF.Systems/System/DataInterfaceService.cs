@@ -285,7 +285,7 @@ public class DataInterfaceService : IDataInterfaceService, IDynamicApiController
     /// 访问接口 选中 回写.
     /// </summary>
     /// <returns></returns>
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreResponse)]
     [HttpPost("{id}/Actions/InfoByIds")]
     [UnifySerializerSetting("datainterfaceSpecial")]
     public async Task<dynamic> ActionsResponseInfo(string id, [FromBody] DataInterfacePreviewInput input)
@@ -320,7 +320,7 @@ public class DataInterfaceService : IDataInterfaceService, IDynamicApiController
     /// 访问接口 分页.
     /// </summary>
     /// <returns></returns>
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreResponse)]
     [HttpPost("{id}/Actions/List")]
     [UnifySerializerSetting("datainterfaceSpecial")]
     public async Task<dynamic> ActionsResponseList(string id, [FromBody] DataInterfacePreviewInput input)
@@ -341,7 +341,7 @@ public class DataInterfaceService : IDataInterfaceService, IDynamicApiController
     /// <param name="tenantId">有值则为地址请求，没有则是内部请求.</param>
     /// <returns></returns>
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreResponse)]
     [HttpPost("{id}/Actions/Response")]
     [UnitOfWork]
     [UnifySerializerSetting("datainterfaceSpecial")]
@@ -492,7 +492,7 @@ public class DataInterfaceService : IDataInterfaceService, IDynamicApiController
     /// <param name="dic"></param>
     /// <returns></returns>
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     [HttpPost("Actions/GetAuth")]
     public async Task<dynamic> GetAuthorization([FromQuery] string appId, [FromQuery] string tenantId, [FromQuery] string intefaceId, [FromBody] Dictionary<string, string> dic)
     {

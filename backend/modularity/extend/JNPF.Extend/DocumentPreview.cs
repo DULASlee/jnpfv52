@@ -88,7 +88,7 @@ public class DocumentPreview : IDynamicApiController, ITransient
     /// </summary>
     /// <param name="fileName"></param>
     [HttpGet("down/{fileName}")]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreResponse)]
     [AllowAnonymous]
     public async Task FileDown(string fileName)
     {

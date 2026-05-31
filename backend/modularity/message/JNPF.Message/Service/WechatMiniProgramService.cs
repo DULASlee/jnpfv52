@@ -61,7 +61,7 @@ public class WechatMiniProgramService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("token/GetOpenId")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreRequest)]
     public async Task<dynamic> GetOpenId(string code)
     {
         var messageAccountEntity = _repository.AsSugarClient().Queryable<MessageAccountEntity>().First(x => x.EnCode == "xiaoyou" && x.Category == "7" && x.DeleteMark == null);

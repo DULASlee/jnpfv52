@@ -127,7 +127,7 @@ public class SocialsUserService : ISocialsUserService, IDynamicApiController, IT
     /// <param name="source"></param>
     /// <returns></returns>
     [HttpGet("Render/{source}")]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     [NonUnify]
     public async Task<dynamic> Render(string source)
     {
@@ -262,7 +262,7 @@ public class SocialsUserService : ISocialsUserService, IDynamicApiController, IT
     /// </summary>
     /// <returns></returns>
     [HttpDelete("{id}")]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     [NonUnify]
     public async Task<dynamic> DeleteSocials(string id)
     {

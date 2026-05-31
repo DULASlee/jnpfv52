@@ -25,7 +25,7 @@ public class LocationService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("around")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> GetAroundList([FromQuery] LocationAroundListInput input)
     {
         var url = "https://restapi.amap.com/v3/place/around";
@@ -49,7 +49,7 @@ public class LocationService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("text")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> GetTextList([FromQuery] LocationTextListInput input)
     {
         var url = "https://restapi.amap.com/v3/place/text";
@@ -73,7 +73,7 @@ public class LocationService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("inputtips")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> GetInputtips([FromQuery] LocationInputtipsInput input)
     {
         var url = "https://restapi.amap.com/v3/assistant/inputtips";
@@ -90,7 +90,7 @@ public class LocationService : IDynamicApiController, ITransient
 
     [HttpGet("regeo")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> GetRegeo([FromQuery] LocationRegeoInput input)
     {
         var url = "https://restapi.amap.com/v3/geocode/regeo";
@@ -111,7 +111,7 @@ public class LocationService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("staticmap")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     [NonUnify]
     public async Task<IActionResult> GetStaticmap([FromQuery] LocationStaticmap input)
     {

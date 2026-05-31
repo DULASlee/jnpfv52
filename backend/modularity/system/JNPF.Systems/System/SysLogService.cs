@@ -54,7 +54,7 @@ public class SysLogService : IDynamicApiController, ITransient
     /// </summary>
     /// <param name="input">请求参数.</param>
     /// <returns></returns>
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreResponse)]
     [HttpGet("")]
     public async Task<dynamic> GetList([FromQuery] LogListQuery input)
     {

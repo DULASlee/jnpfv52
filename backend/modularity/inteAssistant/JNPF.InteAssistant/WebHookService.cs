@@ -151,7 +151,7 @@ public class WebHookService : IDynamicApiController, ITransient
     /// <param name="randomStr">随机值字符串.</param>
     /// <returns></returns>
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     [HttpGet("{id}/params/{randomStr}")]
     public async Task GetWebhookParams(string id, string randomStr)
     {
@@ -170,7 +170,7 @@ public class WebHookService : IDynamicApiController, ITransient
     /// <param name="parameter">参数.</param>
     /// <returns></returns>
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.Minimal)]
     [HttpPost("{id}")]
     public async Task GetWebHookTrigger(string id, [FromQuery] string tenantId, [FromBody] Dictionary<string, string>? parameter)
     {
@@ -238,7 +238,7 @@ public class WebHookService : IDynamicApiController, ITransient
     /// <param name="parameter">参数.</param>
     /// <returns></returns>
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     [HttpPost("{id}/params/{randomStr}")]
     public async Task PostWebhookParams(string id, string randomStr, [FromBody] Dictionary<string, string>? parameter)
     {

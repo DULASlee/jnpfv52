@@ -32,7 +32,6 @@ namespace JNPF.Systems.Common;
 [ApiDescriptionSettings(Tag = "Common", Name = "File", Order = 161)]
 [Route("api/[controller]")]
 [AllowAnonymous]
-[IgnoreLog]
 public class FileService : IFileService, IDynamicApiController, ITransient
 {
     private readonly AppOptions _appOptions;
@@ -81,6 +80,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpGet("Uploader/Preview")]
+    [LogPolicy(LogPolicy.IgnoreResponse)]
     public async Task<dynamic> Preview(string fileName, string fileDownloadUrl)
     {
         string[]? typeList = new string[] { "doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf", "jpg", "jpeg", "gif", "png", "bmp" };
@@ -120,6 +120,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// <param name="fileName">注意 后缀名前端故意把 .替换@ .</param>
     /// <returns></returns>
     [HttpGet("Image/{type}/{fileName}")]
+    [LogPolicy(LogPolicy.IgnoreResponse)]
     public async Task<IActionResult> GetImg(string type, string fileName)
     {
         string? filePath = Path.Combine(GetPathByType(type), fileName.Replace("@", "."));
@@ -133,6 +134,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// <param name="fileName">注意 后缀名前端故意把 .替换@ .</param>
     /// <returns></returns>
     [HttpGet("VisusalImg/BiVisualPath/{type}/{fileName}")]
+    [LogPolicy(LogPolicy.IgnoreResponse)]
     public async Task<IActionResult> GetScreenImg(string type, string fileName)
     {
         string filePath = Path.Combine(GetPathByType(type), type, fileName.Replace("@", "."));
@@ -146,6 +148,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("ImageCode/{timestamp}")]
     [NonUnify]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<IActionResult> GetCode(string timestamp)
     {
         return new FileContentResult(await _captchaHandler.CreateCaptchaImage(timestamp, 114, 32), "image/jpeg");
@@ -157,6 +160,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// <param name="fileName"></param>
     /// <param name="type"></param>
     [HttpGet("down/{fileName}")]
+    [LogPolicy(LogPolicy.IgnoreResponse)]
     public async Task FileDown(string fileName, [FromQuery] string type)
     {
         string? systemFilePath = Path.Combine(FileVariable.SystemFilePath, fileName);
@@ -188,6 +192,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// <param name="fileName">文件名称.</param>
     /// <returns></returns>
     [HttpGet("Download/{type}/{fileName}")]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public dynamic DownloadUrl(string type, string fileName)
     {
         string? url = string.Format("{0}|{1}|{2}", _userManager.UserId, fileName, type);
@@ -203,6 +208,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// <param name="fileName">文件名称.</param>
     /// <returns></returns>
     [HttpPost("PackDownload/{type}")]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> DownloadAll(string type, [FromBody] List<FileControlsModel> input)
     {
         var fileName = RandomExtensions.NextLetterAndNumberString(new Random(), 7);
@@ -233,6 +239,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// 下载文件链接.
     /// </summary>
     [HttpGet("Download")]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> DownloadFile([FromQuery] string encryption, [FromQuery] string name)
     {
         string decryptStr = DESCEncryption.Decrypt(encryption, "JNPF");
@@ -263,6 +270,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// App启动信息.
     /// </summary>
     [HttpGet("AppStartInfo/{appName}")]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> AppStartInfo(string appName)
     {
         return new { appVersion = KeyVariable.AppVersion, appUpdateContent = KeyVariable.AppUpdateContent };
@@ -276,6 +284,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// <param name="input">请求参数.</param>
     /// <returns></returns>
     [HttpGet("chunk")]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> CheckChunk([FromQuery] ChunkModel input)
     {
         try
@@ -306,7 +315,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("Uploader/{type}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.Minimal)]
     public async Task<dynamic> Uploader(string type, [FromForm] ChunkModel input)
     {
         string? fileType = Path.GetExtension(input.file.FileName).Replace(".", string.Empty);
@@ -351,7 +360,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("Uploader/userAvatar")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.Minimal)]
     public async Task<dynamic> UploadImage(IFormFile file)
     {
         string? ImgType = Path.GetExtension(file.FileName).Replace(".", string.Empty);
@@ -371,7 +380,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("chunk")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.Minimal)]
     public async Task<dynamic> UploadChunk([FromForm] ChunkModel input)
     {
         if (!AllowFileType(input.extension, input.extension))
@@ -386,7 +395,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("merge")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.Minimal)]
     public async Task<dynamic> Merge([FromForm] ChunkModel input)
     {
         return await _fileManager.Merge(input);

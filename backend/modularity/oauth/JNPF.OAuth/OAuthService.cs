@@ -203,7 +203,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("ImageCode/{codeLength}/{timestamp}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     [NonUnify]
     public async Task<IActionResult> GetCode(int codeLength, string timestamp)
     {
@@ -216,7 +216,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <param name="account">账号.</param>
     [HttpGet("getConfig/{account}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> GetConfigCode(string account)
     {
         ConnectionConfigOptions options = new ConnectionConfigOptions();
@@ -613,7 +613,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("resetOfficialPassword/{mobile}/{smsCode}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task ResetOfficialPassword(string mobile, string smsCode)
     {
         var apiUrl = string.Format("{0}/Tenant/ResetPasswordSmsCodeCheck/{1}/{2}", _tenant.MultiTenancyDBInterFace.Split("/Tenant").First(), mobile, smsCode);
@@ -654,7 +654,7 @@ public class OAuthService : IDynamicApiController, ITransient
 
     [HttpGet("GetTenantInfo")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreRequest)]
     public async Task<dynamic> GetTenantInfo()
     {
         string domain = _httpContextAccessor.HttpContext.Request.Host.Value.ToString();
@@ -690,7 +690,7 @@ public class OAuthService : IDynamicApiController, ITransient
     [HttpPost("Login")]
     [Consumes("application/x-www-form-urlencoded")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreRequest)]
     public async Task<dynamic> Login([FromForm] LoginInput input)
     {
         // 普通登录 密码 AES 解密.
@@ -1417,7 +1417,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("Login/socials")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreRequest)]
     [NonUnify]
     public async Task<dynamic> SocialsLoginCallBack([FromQuery] SocialsUserInputModel req)
     {
@@ -1617,7 +1617,7 @@ public class OAuthService : IDynamicApiController, ITransient
     [HttpPost("Login/socials")]
     [Consumes("application/x-www-form-urlencoded")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreRequest)]
     public async Task<dynamic> SocialsLogin([FromForm] SocialsUserCallBackModel req)
     {
         if (req.tenantLogin)
@@ -1635,7 +1635,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// </summary>
     [HttpGet("GetLoginConfig")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public dynamic GetSocialsLoginConfig()
     {
         var loginConfigModel = new SocialsLoginConfigModel();
@@ -1669,7 +1669,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <returns>return {msg:有效期, data:票据}.</returns>
     [HttpGet("getTicket")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public dynamic GetTicket()
     {
         SocialsLoginTicketModel ticketModel = new SocialsLoginTicketModel();
@@ -1686,7 +1686,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("getTicketStatus/{ticket}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public dynamic GetTicketStatus(string ticket)
     {
         var ticketModel = _cacheManager.Get<SocialsLoginTicketModel>(ticket);
@@ -1709,7 +1709,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("Login/{type}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreRequest)]
     [NonUnify]
     public async Task<dynamic> LoginByType(string type, [FromQuery] Dictionary<string, string> input)
     {
@@ -1954,7 +1954,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("CodeCertificate")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public dynamic GetCodeCertificate()
     {
         ScanCodeLoginConfigModel ticketModel = new ScanCodeLoginConfigModel();
@@ -1972,7 +1972,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("CodeCertificateStatus/{ticket}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public dynamic GetCodeCertificateStatus(string ticket)
     {
         var ticketModel = _cacheManager.Get<ScanCodeLoginConfigModel>(ticket);
@@ -1990,7 +1990,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("SetCodeCertificateStatus/{ticket}/{status}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.Minimal)]
     public dynamic SetCodeCertificateStatus(string ticket, int status)
     {
         var ticketModel = _cacheManager.Get<ScanCodeLoginConfigModel>(ticket);

@@ -44,7 +44,7 @@ public class WechatOpenService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("token/{enCode}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     [NonUnify]
     public dynamic CheckToken(string enCode, [FromQuery] PostModel postModel, [FromQuery] string echostr)
     {
@@ -77,7 +77,7 @@ public class WechatOpenService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("token/{enCode}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     [NonUnify]
     public async Task<dynamic> Create(string enCode, [FromQuery] PostModel postModel, [FromQuery] string openid, [FromQuery] string encrypt_type)
     {

@@ -337,7 +337,7 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("{modelId}/ListLink")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> ListLink(string modelId, [FromBody] VisualDevModelListQueryInput input)
     {
         VisualDevEntity? templateEntity = await _visualDevService.GetInfoById(modelId, true);

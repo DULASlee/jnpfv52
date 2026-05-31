@@ -66,7 +66,7 @@ public class TenantService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("menu")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> GetMenuTree([FromBody] TenantInterFaceOutput input)
     {
         VerificationHeaders();
@@ -153,7 +153,7 @@ public class TenantService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("menuList")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> GetMenuList([FromBody] TenantInterFaceOutput input)
     {
         VerificationHeaders();
@@ -239,7 +239,7 @@ public class TenantService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("getAdminInfo")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> GetAdminInfo([FromBody] TenantInterFaceOutput input)
     {
         VerificationHeaders();
@@ -266,7 +266,7 @@ public class TenantService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("resetAdminPassword")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<bool> resetAdminPassword([FromBody] TenantInterFaceOutput input)
     {
         VerificationHeaders();
@@ -285,7 +285,7 @@ public class TenantService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("modifyAdminInfo")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<bool> modifyAdminInfo([FromBody] TenantInterFaceOutput input)
     {
         VerificationHeaders();
@@ -307,7 +307,7 @@ public class TenantService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("updateTenantCache")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<bool> UpdateTenantCache([FromBody] TenantInterFaceOutput input)
     {
         VerificationHeaders();
@@ -344,7 +344,7 @@ public class TenantService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("{type}/ClearTenantOnlineUser")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<bool> ClearTenantOnlineUser(string type, [FromBody] TenantInterFaceOutput input)
     {
         VerificationHeaders();

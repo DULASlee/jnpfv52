@@ -60,7 +60,7 @@ public class ShortLinkService : IShortLinkService, IDynamicApiController, ITrans
     [HttpGet("{shortLink}")]
     [HttpGet("{shortLink}/{tenantId}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task GetInfo(string shortLink, string tenantId)
     {
         UserAgent userAgent = new UserAgent(App.HttpContext);

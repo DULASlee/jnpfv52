@@ -113,7 +113,7 @@ public class VisualdevShortLinkService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("getConfig/{id}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> GetConfig(string id, [FromQuery] VisualDevShortLinkInput model)
     {
         var visualDevShortLinkInput = AESEncryption.AesDecrypt(model.encryption, _shortLinkKey).ToObject<VisualDevShortLinkInput>();
@@ -133,7 +133,7 @@ public class VisualdevShortLinkService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpGet("trigger/{id}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task GetLink(string id, [FromQuery] VisualDevShortLinkInput model)
     {
         var visualDevShortLinkInput = AESEncryption.AesDecrypt(model.encryption, _shortLinkKey).ToObject<VisualDevShortLinkInput>();
@@ -168,7 +168,7 @@ public class VisualdevShortLinkService : IDynamicApiController, ITransient
     /// </summary>
     [HttpGet("{modelId}/Config")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> GetConfig(string modelId, string type, string encryption)
     {
         var visualDevShortLinkInput = AESEncryption.AesDecrypt(encryption, _shortLinkKey).ToObject<VisualDevShortLinkInput>();
@@ -188,7 +188,7 @@ public class VisualdevShortLinkService : IDynamicApiController, ITransient
     /// </summary>
     [HttpGet("{modelId}/{id}/DataChange")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> InfoWithDataChange(string modelId, string id, string encryption)
     {
         var visualDevShortLinkInput = AESEncryption.AesDecrypt(encryption, _shortLinkKey).ToObject<VisualDevShortLinkInput>();
@@ -250,7 +250,7 @@ public class VisualdevShortLinkService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("checkPwd")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task CheckPwd([FromBody] VisualDevShortLinkPwdInput form)
     {
         var visualDevShortLinkInput = AESEncryption.AesDecrypt(form.encryption, _shortLinkKey).ToObject<VisualDevShortLinkInput>();
@@ -285,7 +285,7 @@ public class VisualdevShortLinkService : IDynamicApiController, ITransient
     /// </summary>
     [HttpPost("{modelId}/ListLink")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task<dynamic> ListLink(string modelId, string encryption, [FromBody] VisualDevModelListQueryInput input)
     {
         var visualDevShortLinkInput = AESEncryption.AesDecrypt(encryption, _shortLinkKey).ToObject<VisualDevShortLinkInput>();
@@ -305,7 +305,7 @@ public class VisualdevShortLinkService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("{modelId}")]
     [AllowAnonymous]
-    [IgnoreLog]
+    [LogPolicy(LogPolicy.IgnoreAll)]
     public async Task Create(string modelId, string encryption, [FromBody] VisualDevModelDataCrInput visualdevModelDataCrForm)
     {
         var visualDevShortLinkInput = AESEncryption.AesDecrypt(encryption, _shortLinkKey).ToObject<VisualDevShortLinkInput>();
