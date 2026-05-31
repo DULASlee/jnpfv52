@@ -129,4 +129,16 @@ public class SysLogEntity : CLDEntityBase
     /// </summary>
     [SugarColumn(ColumnName = "F_LOGIN_TYPE")]
     public int? LoginType { get; set; }
+
+    /// <summary>
+    /// TraceId for full-chain tracing.
+    /// </summary>
+    [SugarColumn(ColumnName = "F_TRACE_ID", Length = 64, IsNullable = true)]
+    public string TraceId { get; set; }
+
+    /// <summary>
+    /// Tenant ID for multi-tenant isolation.
+    /// </summary>
+    [SugarColumn(ColumnName = "F_TENANT_ID", Length = 64, IsNullable = true)]
+    public string TenantId { get; set; }
 }
