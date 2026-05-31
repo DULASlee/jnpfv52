@@ -1,5 +1,6 @@
 ﻿using JNPF.Common.Const;
 using JNPF.Common.Enums;
+using JNPF.Extensions;
 using JNPF.Common.Extension;
 using JNPF.Common.Security;
 using JNPF.Engine.Entity.Model;

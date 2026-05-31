@@ -1,6 +1,6 @@
 <Project>
     <PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<Version>3.6.0</Version>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
@@ -9,22 +9,30 @@
         <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoDefaultExcludes>true</NoDefaultExcludes>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
     </PropertyGroup>
+
+    <!-- 本地开发关闭第三方分析器，CI 通过 CI_BUILD=true 开启 -->
+    <PropertyGroup Condition="'$(CI_BUILD)' != 'true'">
+        <EnableNETAnalyzers>true</EnableNETAnalyzers>
+        <AnalysisLevel>latest-recommended</AnalysisLevel>
+        <RunRoslynator>false</RunRoslynator>
+        <StyleCopEnabled>false</StyleCopEnabled>
+        <NoWarn>$(NoWarn);CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625</NoWarn>
+    </PropertyGroup>
+
     <ItemGroup>
-        <PackageReference Include="Roslynator.Analyzers" Version="4.3.0">
+        <PackageReference Include="Roslynator.Analyzers" Version="4.3.0" Condition="'$(CI_BUILD)' == 'true'">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.406">
+        <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.406" Condition="'$(CI_BUILD)' == 'true'">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Link="Properties\stylecop.json" />
         <AdditionalFiles Include="$(MSBuildThisFileDirectory).editorconfig" Link="Properties\.editorconfig" />
     </ItemGroup>
-	
+
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
 		<DocumentationFile>bin\Debug\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
 	</PropertyGroup>

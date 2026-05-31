@@ -1,5 +1,6 @@
 ﻿using JNPF.Common.Const;
 using JNPF.Common.Core.Manager;
+using JNPF.Extensions;
 using JNPF.Common.Enums;
 using JNPF.Common.Extension;
 using JNPF.Common.Filter;

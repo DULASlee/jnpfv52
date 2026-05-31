@@ -274,7 +274,7 @@ public class ExcelExportHelper<T>
             font.FontHeightInPoints = excelConfig.TitlePoint;
             if (excelConfig.ForeColor != new Color())
                 font.Color = GetXLColour(workbook, excelConfig.ForeColor);
-            font.Boldweight = 700;
+            font.IsBold = true;
             headStyle.SetFont(font);
 
             #endregion
@@ -535,7 +535,7 @@ public class ExcelExportHelper<T>
             if (excelConfig.ForeColor != new Color())
                 font.Color = GetXLColour(workbook, excelConfig.ForeColor);
 
-            font.Boldweight = 700;
+            font.IsBold = true;
             headStyle.SetFont(font);
             #endregion
 
@@ -867,7 +867,7 @@ public class ExcelExportHelper<T>
             if (excelConfig.ForeColor != new Color())
                 font.Color = GetXLColour(workbook, excelConfig.ForeColor);
 
-            font.Boldweight = 700;
+            font.IsBold = true;
             headStyle.SetFont(font);
             #endregion
 

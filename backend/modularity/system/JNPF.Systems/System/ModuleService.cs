@@ -1,5 +1,6 @@
 ﻿using JNPF.Apps.Entitys;
 using JNPF.Apps.Entitys.Dto;
+using JNPF.Extensions;
 using JNPF.Common.Core.Manager;
 using JNPF.Common.Core.Manager.Files;
 using JNPF.Common.Enums;

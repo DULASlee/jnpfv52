@@ -3,6 +3,7 @@
 	<PropertyGroup>
 		<Description>JNPF 公共拓展库。</Description>
 		<AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+		<AcceptNPOIOSMFLicense>true</AcceptNPOIOSMFLicense>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -21,12 +22,12 @@
 		<PackageReference Include="FreeSpire.Office" Version="8.2.0" />
 		<PackageReference Include="IPTools.China" Version="1.6.0" />
 		<PackageReference Include="SixLabors.ImageSharp" Version="3.0.2" />
-		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="6.0.1" />
-		<PackageReference Include="System.Management" Version="6.0.2" />
-		<PackageReference Include="NPOI" Version="2.5.5" />
+		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
+		<PackageReference Include="System.Management" Version="8.0.0" />
+		<PackageReference Include="NPOI" Version="2.8.0" />
 		<PackageReference Include="UAParser" Version="3.1.47" />
 		<PackageReference Include="Yitter.IdGenerator" Version="1.0.14" />
-		<PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.6" />
+		<PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.2" />
 	</ItemGroup>
 	
 	<ItemGroup>

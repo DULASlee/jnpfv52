@@ -1,5 +1,6 @@
 ﻿using JNPF.Common.Core.Manager;
 using JNPF.Common.Enums;
+using JNPF.Extensions;
 using JNPF.Common.Extension;
 using JNPF.Common.Models.WorkFlow;
 using JNPF.Common.Security;
