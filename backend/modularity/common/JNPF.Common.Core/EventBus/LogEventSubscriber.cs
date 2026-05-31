@@ -3,6 +3,7 @@ using JNPF.Common.Core.Manager.Tenant;
 using JNPF.Common.Extension;
 using JNPF.DependencyInjection;
 using JNPF.EventBus;
+using Microsoft.Extensions.Logging;
 using SqlSugar;
 
 namespace JNPF.EventHandler;
@@ -12,29 +13,24 @@ namespace JNPF.EventHandler;
 /// </summary>
 public class LogEventSubscriber : IEventSubscriber, ISingleton
 {
-    /// <summary>
-    /// 初始化客户端.
-    /// </summary>
-    private static SqlSugarScope? _sqlSugarClient;
-
-    /// <summary>
-    /// 租户管理.
-    /// </summary>
+    private readonly ISqlSugarClient _sqlSugarClient;
     private readonly ITenantManager _tenantManager;
-
-    /// <summary>
-    /// 用户管理器.
-    /// </summary>
     private readonly IUserManager _userManager;
+    private readonly ILogger<LogEventSubscriber> _logger;
 
     /// <summary>
     /// 构造函数.
     /// </summary>
-    public LogEventSubscriber(ISqlSugarClient sqlSugarClient, IUserManager userManager, TenantManager tenantManager)
+    public LogEventSubscriber(
+        ISqlSugarClient sqlSugarClient,
+        IUserManager userManager,
+        ITenantManager tenantManager,
+        ILogger<LogEventSubscriber> logger)
     {
-        _sqlSugarClient = (SqlSugarScope)sqlSugarClient;
+        _sqlSugarClient = sqlSugarClient;
         _userManager = userManager;
         _tenantManager = tenantManager;
+        _logger = logger;
     }
 
     /// <summary>
@@ -49,12 +45,26 @@ public class LogEventSubscriber : IEventSubscriber, ISingleton
     public async Task CreateLog(EventHandlerExecutingContext context)
     {
         var log = (LogEventSource)context.Source;
-         
-        if (log.TenantId.IsNotEmptyOrNull())
-        {
-            await _tenantManager.ChangTenant(_sqlSugarClient, log.TenantId);
-        }
 
-        await _sqlSugarClient.CopyNew().Insertable(log.Entity).IgnoreColumns(ignoreNullColumn: true).ExecuteCommandAsync();
+        try
+        {
+            // CopyNew() MUST be called BEFORE ChangTenant to isolate tenant state.
+            // ChangTenant mutates the SqlSugarScope's internal connections/filters;
+            // calling it on the shared singleton would leak tenant state across requests.
+            var db = _sqlSugarClient.CopyNew();
+
+            if (log.TenantId.IsNotEmptyOrNull())
+            {
+                await _tenantManager.ChangTenant(db, log.TenantId);
+            }
+
+            await db.Insertable(log.Entity).IgnoreColumns(ignoreNullColumn: true).ExecuteCommandAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Operation log write failed, TraceId={TraceId}, TenantId={TenantId}",
+                log.Entity.TraceId, log.TenantId);
+        }
     }
 }
