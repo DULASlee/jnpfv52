@@ -35,34 +35,35 @@ public class LogExceptionHandler : IGlobalExceptionHandler, ISingleton
         var userContext = App.User;
         var httpContext = context.HttpContext;
         var httpRequest = httpContext?.Request;
-        var headers = httpRequest?.Headers;
         UserAgent userAgent = new UserAgent(httpContext);
 
-        if (!context.ActionDescriptor.EndpointMetadata.Any(m => m.GetType() == typeof(IgnoreLogAttribute)))
+        // ★ Core: Exception logs are NOT controlled by [IgnoreLog]/[LogPolicy]
+        // Any exception must be recorded regardless of attribute settings
+        var traceId = httpContext?.Items["TraceId"]?.ToString() ?? "unknown";
+        var userId = userContext?.FindFirstValue(ClaimConst.CLAINMUSERID);
+        var userName = userContext?.FindFirstValue(ClaimConst.CLAINMREALNAME);
+        var userAccount = userContext?.FindFirstValue(ClaimConst.CLAINMACCOUNT);
+        var tenantId = userContext?.FindFirstValue(ClaimConst.TENANTID);
+
+        var ipAddress = NetHelper.Ip;
+        var ipAddressName = await NetHelper.GetLocation(ipAddress);
+
+        await _eventPublisher.PublishAsync(new LogEventSource("Log:CreateExLog", tenantId, new SysLogEntity
         {
-            var userId = userContext?.FindFirstValue(ClaimConst.CLAINMUSERID);
-            var userName = userContext?.FindFirstValue(ClaimConst.CLAINMREALNAME);
-            var userAccount = userContext?.FindFirstValue(ClaimConst.CLAINMACCOUNT);
-            var tenantId = userContext?.FindFirstValue(ClaimConst.TENANTID);
-
-            var ipAddress = NetHelper.Ip;
-            var ipAddressName = await NetHelper.GetLocation(ipAddress);
-
-            await _eventPublisher.PublishAsync(new LogEventSource("Log:CreateExLog", tenantId, new SysLogEntity
-            {
-                Id = SnowflakeIdHelper.NextId(),
-                UserId = userId,
-                UserName = string.Format("{0}/{1}", userName, userAccount),
-                Type = 4,
-                IPAddress = ipAddress,
-                IPAddressName = ipAddressName,
-                RequestURL = httpRequest.Path,
-                RequestMethod = httpRequest.Method,
-                Json = context.Exception.Message + "\n" + context.Exception.StackTrace + "\n" + context.Exception.TargetSite.GetParameters().ToString(),
-                PlatForm = userAgent.OS.ToString(),
-                Browser = userAgent.userAgent.ToString(),
-                CreatorTime = DateTime.Now
-            }));
-        }
+            Id = SnowflakeIdHelper.NextId(),
+            UserId = userId,
+            UserName = string.Format("{0}/{1}", userName, userAccount),
+            Type = 4,
+            IPAddress = ipAddress,
+            IPAddressName = ipAddressName,
+            RequestURL = httpRequest.Path,
+            RequestMethod = httpRequest.Method,
+            Json = context.Exception.Message + "\n" + context.Exception.StackTrace,
+            PlatForm = userAgent.OS.ToString(),
+            Browser = userAgent.userAgent.ToString(),
+            CreatorTime = DateTime.Now,
+            TraceId = traceId,
+            TenantId = tenantId
+        }));
     }
 }
