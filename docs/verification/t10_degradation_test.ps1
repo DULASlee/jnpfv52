@@ -29,7 +29,6 @@
 
 param(
     [string]$BaseUrl          = "http://localhost:5000",
-    [string]$Token            = "",
     [string]$LogDir           = "logs",
     [string]$LogDirFullPath   = "",
     [int]   $RequestCount     = 5,
@@ -95,13 +94,11 @@ function Send-TestBatch {
     $ok   = 0
     $fail = 0
     $latencies = @()
-    $authHeaders = @{}
-    if ($Token) { $authHeaders["Authorization"] = "Bearer $Token" }
 
     for ($i = 0; $i -lt $Count; $i++) {
         try {
             $sw = [System.Diagnostics.Stopwatch]::StartNew()
-            $resp = Invoke-WebRequest -Uri $Url -Method GET -UseBasicParsing -TimeoutSec 30 -Headers $authHeaders -ErrorAction SilentlyContinue
+            $resp = Invoke-WebRequest -Uri $Url -Method GET -UseBasicParsing -TimeoutSec 30 -ErrorAction SilentlyContinue
             $sw.Stop()
             $latencies += $sw.ElapsedMilliseconds
             if ([int]$resp.StatusCode -ge 200 -and [int]$resp.StatusCode -lt 500) {
@@ -170,16 +167,7 @@ try {
         $file.IsReadOnly = $true
     }
 
-    # Also try to make the directory itself read-only (new files can't be created)
-    $dirAcl = Get-Acl $LogDirFullPath
-    $denyRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-        "Users", "Write", "ContainerInherit,ObjectInherit", "None", "Deny"
-    )
-    $dirAcl.AddAccessRule($denyRule)
-    Set-Acl -Path $LogDirFullPath -AclObject $dirAcl -ErrorAction SilentlyContinue
-
     Write-Host "  Locked $($logFiles.Count) log file(s) as read-only" -ForegroundColor Yellow
-    Write-Host "  Added Write-Deny ACL to log directory" -ForegroundColor Yellow
 
     # Send requests while logging is broken
     Write-Host ""
@@ -201,7 +189,7 @@ try {
 
     # Verify TraceId still present
     try {
-        $resp = Invoke-WebRequest -Uri $testUrl -Method GET -UseBasicParsing -TimeoutSec 10 -Headers $authHeaders
+        $resp = Invoke-WebRequest -Uri $testUrl -Method GET -UseBasicParsing -TimeoutSec 10
         if ($resp.Headers["X-Trace-Id"]) {
             Write-Host "  PASS: X-Trace-Id header still present (middleware unaffected)" -ForegroundColor Green
         } else {
@@ -214,18 +202,6 @@ finally {
     # ── CRITICAL: Restore permissions even if test fails ─────────────────────
     Write-Host ""
     Write-Host "  [finally] Restoring file permissions ..." -ForegroundColor Magenta
-
-    # Remove deny ACL
-    try {
-        $dirAcl = Get-Acl $LogDirFullPath
-        $denyRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-            "Users", "Write", "ContainerInherit,ObjectInherit", "None", "Deny"
-        )
-        $dirAcl.RemoveAccessRule($denyRule) | Out-Null
-        Set-Acl -Path $LogDirFullPath -AclObject $dirAcl -ErrorAction SilentlyContinue
-    } catch {
-        Write-Host "  WARN: Could not remove deny ACL: $($_.Exception.Message)" -ForegroundColor Yellow
-    }
 
     # Restore read-only flags
     foreach ($entry in $originalReadOnly) {

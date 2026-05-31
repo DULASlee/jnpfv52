@@ -10,23 +10,19 @@
     Compatible with Windows PowerShell 5.1 (uses runspace pool, not -Parallel).
 .PARAMETER BaseUrl
     API base URL (default: http://localhost:5000)
-.PARAMETER Token
-    JWT Bearer token. Get from browser DevTools (Network tab → any request → Authorization header)
-    or from login response. If empty, requests will be unauthenticated (code:600).
 .PARAMETER RequestCount
     Number of concurrent requests to send (default: 100)
 .PARAMETER WaitSeconds
     Seconds to wait for async EventBus log writing (default: 5)
 .PARAMETER Endpoints
     Comma-separated list of relative paths to cycle through.
-    Default mix of read-only endpoints that exercise the logging pipeline.
+    Default endpoints return HTTP 200 with X-Trace-Id even without authentication.
 .EXAMPLE
-    .\t8_concurrent_test.ps1 -BaseUrl http://localhost:5000 -Token "eyJhbGciOi..." -RequestCount 100
+    .\t8_concurrent_test.ps1 -BaseUrl http://localhost:5000 -RequestCount 100
 #>
 
 param(
     [string]$BaseUrl   = "http://localhost:5000",
-    [string]$Token     = "",
     [int]   $RequestCount = 100,
     [int]   $WaitSeconds  = 5,
     [string[]]$Endpoints  = @(
@@ -48,63 +44,18 @@ Write-Host "Prerequisites:" -ForegroundColor Yellow
 Write-Host "  [1] API service is running at $BaseUrl"
 Write-Host "  [2] Database connection is healthy (BASE_SYS_LOG table exists)"
 Write-Host "  [3] Serilog log directory is writable"
-Write-Host "  [4] JWT Token (get from browser DevTools or login API)"
 Write-Host ""
-Write-Host "To get a token:" -ForegroundColor Yellow
-Write-Host "  1. Open browser → F12 → Network tab"
-Write-Host "  2. Login to JNPF admin panel"
-Write-Host "  3. Find any API request → copy Authorization header value (without 'Bearer ' prefix)"
+Write-Host "NOTE: No authentication required. Endpoints return HTTP 200 with X-Trace-Id" -ForegroundColor Yellow
+Write-Host "      even for unauthenticated requests (code:600 in body)." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Parameters:" -ForegroundColor Yellow
 Write-Host "  RequestCount  = $RequestCount"
 Write-Host "  WaitSeconds   = $WaitSeconds"
-Write-Host "  Token         = $(if ($Token) { 'provided (' + $Token.Substring(0, [Math]::Min(20, $Token.Length)) + '...)' } else { 'NOT PROVIDED — requests will get code:600 (auth required)' })"
 Write-Host "  Endpoints     = $($Endpoints -join ', ')"
 Write-Host ""
 
 $confirm = Read-Host "All prerequisites met? (y/n)"
 if ($confirm -ne 'y') { Write-Host "Aborted." -ForegroundColor Red; exit 0 }
-
-# ── Helper: send one request and return TraceId + StatusCode ────────────────
-function Send-OneRequest {
-    param(
-        [string]$Url,
-        [int]   $Index
-    )
-    $endpoint = $Endpoints[$Index % $Endpoints.Count]
-    $fullUrl  = "$BaseUrl$endpoint"
-
-    try {
-        $headers = @{}
-        if ($Token) { $headers["Authorization"] = "Bearer $Token" }
-        $response = Invoke-WebRequest -Uri $fullUrl -Method GET -UseBasicParsing `
-                       -TimeoutSec 30 -Headers $headers -ErrorAction SilentlyContinue
-        $traceId = $response.Headers["X-Trace-Id"]
-        return [PSCustomObject]@{
-            Index      = $Index
-            StatusCode = [int]$response.StatusCode
-            TraceId    = $traceId
-            Endpoint   = $endpoint
-            Error      = $null
-        }
-    }
-    catch {
-        # Some endpoints may return 401/403 — still capture TraceId if present
-        $traceId = $null
-        $statusCode = 0
-        if ($_.Exception.Response) {
-            $statusCode = [int]$_.Exception.Response.StatusCode
-            $traceId    = $_.Exception.Response.Headers["X-Trace-Id"]
-        }
-        return [PSCustomObject]@{
-            Index      = $Index
-            StatusCode = $statusCode
-            TraceId    = $traceId
-            Endpoint   = $endpoint
-            Error      = $_.Exception.Message
-        }
-    }
-}
 
 # ── Phase 1: Send concurrent requests via runspace pool ─────────────────────
 Write-Host ""
@@ -178,16 +129,16 @@ Write-Host "  Completed in $($sw.ElapsedMilliseconds) ms" -ForegroundColor Gray
 Write-Host ""
 Write-Host "[Phase 2] Analyzing TraceId uniqueness ..." -ForegroundColor Cyan
 
-$successResults = $results | Where-Object { $_.TraceId -and $_.TraceId -ne "" }
-$nullTraceIds   = $results | Where-Object { -not $_.TraceId -or $_.TraceId -eq "" }
-$uniqueTraceIds = $successResults | Select-Object -ExpandProperty TraceId -Unique
-$duplicateGroups = $successResults | Group-Object -Property TraceId | Where-Object { $_.Count -gt 1 }
+$successResults = @($results | Where-Object { $_.TraceId -and $_.TraceId -ne "" })
+$nullTraceIds   = @($results | Where-Object { -not $_.TraceId -or $_.TraceId -eq "" })
+$uniqueTraceIds = @($successResults | Select-Object -ExpandProperty TraceId -Unique)
+$duplicateGroups = @($successResults | Group-Object -Property TraceId | Where-Object { $_.Count -gt 1 })
 
 $traceIdCheck = "PASS"
 if ($duplicateGroups.Count -gt 0) {
     $traceIdCheck = "FAIL"
     Write-Host "  FAIL: $($duplicateGroups.Count) duplicate TraceId group(s) found!" -ForegroundColor Red
-    foreach ($group in $duplicateGroups | Select-Object -First 5) {
+    foreach ($group in ($duplicateGroups | Select-Object -First 5)) {
         Write-Host "    TraceId=$($group.Name)  Count=$($group.Count)" -ForegroundColor Red
     }
 } else {
@@ -250,7 +201,7 @@ foreach ($cg in $codeGroups) {
 }
 
 $httpCheck = "PASS"
-$non2xx = ($results | Where-Object { $_.StatusCode -lt 200 -or $_.StatusCode -ge 300 }).Count
+$non2xx = @($results | Where-Object { $_.StatusCode -lt 200 -or $_.StatusCode -ge 300 }).Count
 if ($non2xx -gt ($RequestCount * 0.1)) {
     $httpCheck = "FAIL"
     Write-Host "  FAIL: More than 10% non-2xx responses ($non2xx/$RequestCount)" -ForegroundColor Red

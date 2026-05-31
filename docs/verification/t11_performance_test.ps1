@@ -29,7 +29,6 @@
 
 param(
     [string]$BaseUrl       = "http://localhost:5000",
-    [string]$Token         = "",
     [int]   $RequestCount  = 500,
     [int]   $P99ThresholdMs = 100,
     [string]$Endpoint      = "/api/system/TechnicalLog/errors"
@@ -61,11 +60,9 @@ if ($confirm -ne 'y') { Write-Host "Aborted." -ForegroundColor Red; exit 0 }
 Write-Host ""
 Write-Host "[Warmup] Sending 10 warmup requests ..." -ForegroundColor Cyan
 $warmupUrl = "$BaseUrl$Endpoint"
-$authHeaders = @{}
-if ($Token) { $authHeaders["Authorization"] = "Bearer $Token" }
 for ($i = 0; $i -lt 10; $i++) {
     try {
-        Invoke-WebRequest -Uri $warmupUrl -Method GET -UseBasicParsing -TimeoutSec 30 -Headers $authHeaders -ErrorAction SilentlyContinue | Out-Null
+        Invoke-WebRequest -Uri $warmupUrl -Method GET -UseBasicParsing -TimeoutSec 30 -ErrorAction SilentlyContinue | Out-Null
     } catch {}
 }
 Write-Host "  Warmup complete" -ForegroundColor Gray
@@ -82,7 +79,7 @@ $totalSw    = [System.Diagnostics.Stopwatch]::StartNew()
 for ($i = 0; $i -lt $RequestCount; $i++) {
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     try {
-        $resp = Invoke-WebRequest -Uri $warmupUrl -Method GET -UseBasicParsing -TimeoutSec 30 -Headers $authHeaders -ErrorAction SilentlyContinue
+        $resp = Invoke-WebRequest -Uri $warmupUrl -Method GET -UseBasicParsing -TimeoutSec 30 -ErrorAction SilentlyContinue
         $sw.Stop()
         $latencies += $sw.ElapsedMilliseconds
 
