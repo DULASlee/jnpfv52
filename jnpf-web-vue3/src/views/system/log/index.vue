@@ -38,6 +38,9 @@
                 <a-button type="link" danger @click="handleDelAll">一键清空</a-button>
               </template>
               <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'traceId'">
+                  <a v-if="record.traceId" @click="goToTrace(record.traceId)">{{ record.traceId }}</a>
+                </template>
                 <template v-if="column.key === 'action'">
                   <TableAction :actions="getTableActions(record)" />
                 </template>
@@ -51,6 +54,9 @@
                 <a-button type="link" danger @click="handleDelAll">一键清空</a-button>
               </template>
               <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'traceId'">
+                  <a v-if="record.traceId" @click="goToTrace(record.traceId)">{{ record.traceId }}</a>
+                </template>
                 <template v-if="column.key === 'action'">
                   <TableAction :actions="getTableActions(record)" />
                 </template>
@@ -64,6 +70,9 @@
                 <a-button type="link" danger @click="handleDelAll">一键清空</a-button>
               </template>
               <template #bodyCell="{ column, record }">
+                <template v-if="column.key === 'traceId'">
+                  <a v-if="record.traceId" @click="goToTrace(record.traceId)">{{ record.traceId }}</a>
+                </template>
                 <template v-if="column.key === 'action'">
                   <TableAction :actions="getTableActions(record)" />
                 </template>
@@ -78,6 +87,7 @@
 </template>
 <script lang="ts" setup>
   import { reactive, toRefs, watch, onMounted, computed, nextTick } from 'vue';
+  import { useRouter } from 'vue-router';
   import { getLogList, delLog, batchDelLog } from '/@/api/system/log';
   import { BasicForm, useForm } from '/@/components/Form';
   import { useMessage } from '/@/hooks/web/useMessage';
@@ -96,6 +106,7 @@
 
   const { createMessage, createConfirm } = useMessage();
   const { t } = useI18n();
+  const router = useRouter();
   const state = reactive<State>({
     activeKey: '1',
     searchInfo: {},
@@ -129,6 +140,7 @@
     { title: '操作系统', dataIndex: 'platForm', width: 120 },
     { title: '请求方式', dataIndex: 'requestMethod', width: 80 },
     { title: '耗时(毫秒)', dataIndex: 'requestDuration', width: 90, align: 'center' },
+    { title: 'TraceId', dataIndex: 'traceId', width: 180, ellipsis: true },
     { title: '请求地址', dataIndex: 'requestUrl', width: 200 },
   ];
   const operationTableColumns: BasicColumn[] = [
@@ -141,6 +153,7 @@
     { title: '操作模块', dataIndex: 'moduleName', width: 80 },
     { title: '请求方式', dataIndex: 'requestMethod', width: 80 },
     { title: '耗时(毫秒)', dataIndex: 'requestDuration', width: 90, align: 'center' },
+    { title: 'TraceId', dataIndex: 'traceId', width: 180, ellipsis: true },
     { title: '请求地址', dataIndex: 'requestUrl', width: 200 },
   ];
   const errorTableColumns: BasicColumn[] = [
@@ -151,6 +164,7 @@
     { title: '浏览器', dataIndex: 'browser', width: 120 },
     { title: '操作系统', dataIndex: 'platForm', width: 120 },
     { title: '请求方式', dataIndex: 'requestMethod', width: 80 },
+    { title: 'TraceId', dataIndex: 'traceId', width: 180, ellipsis: true },
     { title: '请求地址', dataIndex: 'requestUrl', width: 200 },
   ];
   const useTableAttrs: any = {
@@ -330,6 +344,9 @@
   }
   function toDetail(id) {
     openDrawer(true, { id, activeKey: state.activeKey });
+  }
+  function goToTrace(traceId: string) {
+    router.push({ path: '/system/traceDetail', query: { traceId } });
   }
 
   onMounted(() => {
