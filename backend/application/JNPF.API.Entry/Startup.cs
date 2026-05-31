@@ -283,6 +283,9 @@ public class Startup : AppStartup
 
         app.UseWebSockets();
 
+        // TraceId - must be early in pipeline
+        app.UseMiddleware<TraceIdMiddleware>();
+
         app.UseRouting();
 
         app.UseCorsAccessor();
