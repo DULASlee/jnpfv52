@@ -20,7 +20,7 @@ public class UserEventSubscriber : IEventSubscriber, ISingleton
     /// <summary>
     /// 初始化客户端.
     /// </summary>
-    private static SqlSugarScope? _sqlSugarClient;
+    private readonly ISqlSugarClient _sqlSugarClient;
 
     private readonly ITenantManager _tenantManager;
 
@@ -31,7 +31,7 @@ public class UserEventSubscriber : IEventSubscriber, ISingleton
         ISqlSugarClient sqlSugarClient,
         ITenantManager tenantManager)
     {
-        _sqlSugarClient = (SqlSugarScope)sqlSugarClient;
+        _sqlSugarClient = sqlSugarClient;
         _tenantManager = tenantManager;
     }
 
@@ -44,9 +44,10 @@ public class UserEventSubscriber : IEventSubscriber, ISingleton
     public async Task UpdateUserLoginInfo(EventHandlerExecutingContext context)
     {
         var log = (UserEventSource)context.Source;
-        if (KeyVariable.MultiTenancy) await _tenantManager.ChangTenant(_sqlSugarClient, log.TenantId);
+        var db = _sqlSugarClient.CopyNew();
+        if (KeyVariable.MultiTenancy) await _tenantManager.ChangTenant(db, log.TenantId);
 
-        await _sqlSugarClient.CopyNew().Updateable(log.Entity).UpdateColumns(m => new { m.FirstLogIP, m.FirstLogTime, m.PrevLogTime, m.PrevLogIP, m.LastLogTime, m.LastLogIP, m.LogSuccessCount }).ExecuteCommandAsync();
+        await db.Updateable(log.Entity).UpdateColumns(m => new { m.FirstLogIP, m.FirstLogTime, m.PrevLogTime, m.PrevLogIP, m.LastLogTime, m.LastLogIP, m.LogSuccessCount }).ExecuteCommandAsync();
     }
 
     /// <summary>
@@ -93,9 +94,10 @@ public class UserEventSubscriber : IEventSubscriber, ISingleton
             userEntity.EnabledMark = userInfo.status == 1 ? 1 : 0;
             userEntity.HeadIcon = "001.png";
 
-            if (KeyVariable.MultiTenancy) await _tenantManager.ChangTenant(_sqlSugarClient, userInfo.instId);
+            var db = _sqlSugarClient.CopyNew();
+            if (KeyVariable.MultiTenancy) await _tenantManager.ChangTenant(db, userInfo.instId);
 
-            isSuccess = await process(userEntity, mqMessage.actionType, userInfo.instId);
+            isSuccess = await process(db, userEntity, mqMessage.actionType, userInfo.instId);
         }
         catch (Exception)
         {
@@ -121,14 +123,14 @@ public class UserEventSubscriber : IEventSubscriber, ISingleton
     /// <param name="actionType"></param>
     /// <param name="instId"></param>
     /// <returns></returns>
-    private async Task<bool> process(UserEntity entity, string actionType, string instId)
+    private async Task<bool> process(ISqlSugarClient db, UserEntity entity, string actionType, string instId)
     {
         if (actionType.Equals("CREATE_ACTION"))
         {
-            if (_sqlSugarClient.Queryable<UserEntity>().Any(x => x.Account.Equals(entity.Account) && x.DeleteMark == null)) return true;
+            if (db.Queryable<UserEntity>().Any(x => x.Account.Equals(entity.Account) && x.DeleteMark == null)) return true;
             entity.Secretkey = Guid.NewGuid().ToString();
 
-            var defaultPassWord = await _sqlSugarClient.Queryable<SysConfigEntity>()
+            var defaultPassWord = await db.Queryable<SysConfigEntity>()
                 .Where(it => it.Key.Equals("newUserDefaultPassword"))
                 .Select(it => it.Value)
                 .FirstAsync();
@@ -137,34 +139,34 @@ public class UserEventSubscriber : IEventSubscriber, ISingleton
             UserRelationEntity? entityRelation = new UserRelationEntity();
             entityRelation.Id = SnowflakeIdHelper.NextId();
             entityRelation.ObjectType = "Organize";
-            entityRelation.ObjectId = _sqlSugarClient.Queryable<OrganizeEntity>().First(x => x.ParentId.Equals("-1")).Id;
+            entityRelation.ObjectId = db.Queryable<OrganizeEntity>().First(x => x.ParentId.Equals("-1")).Id;
             entityRelation.SortCode = 0;
             entityRelation.UserId = entity.Id;
             entityRelation.CreatorTime = DateTime.Now;
             entityRelation.CreatorUserId = entity.CreatorUserId;
-            _sqlSugarClient.Insertable(entityRelation).ExecuteCommand(); // 批量新增用户关系
+            db.Insertable(entityRelation).ExecuteCommand(); // 批量新增用户关系
 
             // 新增用户记录
-            return await _sqlSugarClient.Insertable(entity).CallEntityMethod(m => m.Create()).IgnoreColumns(ignoreNullColumn: true).ExecuteCommandAsync() > 0;
+            return await db.Insertable(entity).CallEntityMethod(m => m.Create()).IgnoreColumns(ignoreNullColumn: true).ExecuteCommandAsync() > 0;
         }
         else if (actionType.Equals("UPDATE_ACTION"))
         {
-            var oldEntity = await _sqlSugarClient.Queryable<UserEntity>().FirstAsync(x => x.Account.Equals(entity.Account) && x.DeleteMark == null);
+            var oldEntity = await db.Queryable<UserEntity>().FirstAsync(x => x.Account.Equals(entity.Account) && x.DeleteMark == null);
             entity.Id = oldEntity.Id;
-            return await _sqlSugarClient.Updateable(entity).CallEntityMethod(m => m.LastModify()).IgnoreColumns(ignoreAllNullColumns: true).ExecuteCommandAsync() > 0;
+            return await db.Updateable(entity).CallEntityMethod(m => m.LastModify()).IgnoreColumns(ignoreAllNullColumns: true).ExecuteCommandAsync() > 0;
         }
         else if (actionType.Equals("DELETE_ACTION"))
         {
-            var oldEntity = await _sqlSugarClient.Queryable<UserEntity>().FirstAsync(x => x.Account.Equals(entity.Account) && x.DeleteMark == null);
+            var oldEntity = await db.Queryable<UserEntity>().FirstAsync(x => x.Account.Equals(entity.Account) && x.DeleteMark == null);
             oldEntity.EnabledMark = 0;
 
             // 同步删除用户 只能 该状态为 ： 禁用
-            return await _sqlSugarClient.Updateable(oldEntity).CallEntityMethod(m => m.LastModify()).IgnoreColumns(ignoreAllNullColumns: true).ExecuteCommandAsync() > 0;
+            return await db.Updateable(oldEntity).CallEntityMethod(m => m.LastModify()).IgnoreColumns(ignoreAllNullColumns: true).ExecuteCommandAsync() > 0;
 
         }
         else if (actionType.Equals("PASSWORD_ACTION"))
         {
-            return await _sqlSugarClient.Updateable<UserEntity>().SetColumns(it => new UserEntity()
+            return await db.Updateable<UserEntity>().SetColumns(it => new UserEntity()
             {
                 Password = entity.Password,
                 ChangePasswordDate = SqlFunc.GetDate(),
