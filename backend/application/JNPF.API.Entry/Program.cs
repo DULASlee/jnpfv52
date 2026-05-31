@@ -1,3 +1,6 @@
+using JNPF.API.Entry.Infrastructure;
+using Serilog;
+
 Serve.Run(RunOptions.Default
     .AddWebComponent<WebComponent>().WithArgs(args));
 
@@ -5,6 +8,10 @@ public class WebComponent : IWebComponent
 {
     public void Load(WebApplicationBuilder builder, ComponentContext componentContext)
     {
+        // Configure Serilog
+        SerilogBootstrap.Configure(builder.Configuration);
+        builder.Host.UseSerilog();
+
         // 日志过滤
         builder.Logging.AddFilter((provider, category, logLevel) =>
         {
@@ -16,13 +23,6 @@ public class WebComponent : IWebComponent
         {
             // 长度最好不要设置 null
             options.Limits.MaxRequestBodySize = 52428800;
-        });
-
-        builder.Logging.AddConsoleFormatter(options =>
-        {
-            options.DateFormat = "yyyy-MM-dd HH:mm:ss(zzz) dddd";
-            options.WithTraceId = true; // 显示线程Id
-            options.WithStackFrame = true; // 显示程序集
         });
     }
 }

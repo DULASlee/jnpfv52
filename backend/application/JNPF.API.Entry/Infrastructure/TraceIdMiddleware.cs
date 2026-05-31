@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Serilog.Context;
 
 namespace JNPF.API.Entry.Infrastructure;
 
@@ -31,7 +32,10 @@ public class TraceIdMiddleware
             return Task.CompletedTask;
         });
 
-        await _next(context);
+        using (LogContext.PushProperty("TraceId", traceId))
+        {
+            await _next(context);
+        }
     }
 }
 
