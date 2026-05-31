@@ -596,4 +596,14 @@ public static class ObjectExtensions
             ? type.GetCustomAttribute<TAttribute>(inherit)
             : default;
     }
+
+    /// <summary>
+    /// 深拷贝对象（通过 JSON 序列化/反序列化实现）
+    /// </summary>
+    public static T Copy<T>(this T obj) where T : class
+    {
+        if (obj == null) return null;
+        var json = JsonSerializer.Serialize(obj);
+        return JsonSerializer.Deserialize<T>(json);
+    }
 }

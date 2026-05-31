@@ -1,5 +1,6 @@
 ﻿using JNPF.Common.Core.Manager;
 using JNPF.Common.Core.Manager.Job;
+using JNPF.Extensions;
 using JNPF.Common.Enums;
 using JNPF.Common.Extension;
 using JNPF.Common.Manager;

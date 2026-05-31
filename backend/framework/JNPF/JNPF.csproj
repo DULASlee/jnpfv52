@@ -1,9 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<OpenApiGenerateDocuments>false</OpenApiGenerateDocuments>
 		<LangVersion>preview</LangVersion>
-		<TargetFrameworks>net6.0</TargetFrameworks>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -27,13 +26,6 @@
 	<ItemGroup>
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
 		<PackageReference Include="CSRedisCore" Version="3.8.670" />
-	</ItemGroup>
-
-	<ItemGroup Condition=" '$(TargetFramework)' == 'net5.0' ">
-		<PackageReference Include="MiniProfiler.AspNetCore.Mvc" Version="4.2.22" />
-	</ItemGroup>
-
-	<ItemGroup Condition=" '$(TargetFramework)' != 'net5.0' ">
 		<PackageReference Include="MiniProfiler.AspNetCore.Mvc" Version="4.3.8" />
 	</ItemGroup>
 

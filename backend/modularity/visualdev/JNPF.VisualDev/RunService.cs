@@ -1,5 +1,6 @@
 ﻿using JNPF.Common.Const;
 using JNPF.Common.Core.Manager;
+using JNPF.Extensions;
 using JNPF.Common.Dtos.Datainterface;
 using JNPF.Common.Dtos.VisualDev;
 using JNPF.Common.Enums;

@@ -1,5 +1,6 @@
 ﻿using JNPF.Common.CodeGenUpload;
 using JNPF.Common.Configuration;
+using JNPF.Extensions;
 using JNPF.Common.Const;
 using JNPF.Common.Core.Manager;
 using JNPF.Common.Core.Manager.Files;

@@ -1,5 +1,6 @@
 ﻿using JNPF.Common.Configuration;
 using JNPF.Common.Const;
+using JNPF.Extensions;
 using JNPF.Common.Core.Manager;
 using JNPF.Common.Core.Manager.Files;
 using JNPF.Common.Dtos.VisualDev;
