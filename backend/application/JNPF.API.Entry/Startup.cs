@@ -27,8 +27,6 @@ public class Startup : AppStartup
 {
     public void ConfigureServices(IServiceCollection services)
     {
-        services.AddConsoleFormatter();
-
         // SqlSugar
         services.SqlSugarConfigure();
 
