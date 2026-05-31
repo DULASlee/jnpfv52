@@ -1,6 +1,7 @@
 ﻿using IGeekFan.AspNetCore.Knife4jUI;
 using JNPF.API.Entry.Handlers;
 using JNPF.API.Entry.Infrastructure;
+using JNPF.API.Entry.Services;
 using JNPF.Common.Cache;
 using JNPF.Common.Core;
 using JNPF.Common.Core.Filter;
@@ -240,6 +241,9 @@ public class Startup : AppStartup
         services.OSSServiceConfigure();
 
         services.AddHttpContextAccessor();
+
+        // 日志磁盘空间保护
+        services.AddHostedService<LogDiskGuardService>();
 
         // Swagger 文档缓存（须在 AddSwaggerGen 之后注册）
         services.AddCachingSwaggerProvider();
