@@ -10,6 +10,9 @@
     Compatible with Windows PowerShell 5.1 (uses runspace pool, not -Parallel).
 .PARAMETER BaseUrl
     API base URL (default: http://localhost:5000)
+.PARAMETER Token
+    JWT Bearer token. Get from browser DevTools (Network tab → any request → Authorization header)
+    or from login response. If empty, requests will be unauthenticated (code:600).
 .PARAMETER RequestCount
     Number of concurrent requests to send (default: 100)
 .PARAMETER WaitSeconds
@@ -18,11 +21,12 @@
     Comma-separated list of relative paths to cycle through.
     Default mix of read-only endpoints that exercise the logging pipeline.
 .EXAMPLE
-    .\t8_concurrent_test.ps1 -BaseUrl http://localhost:5000 -RequestCount 100
+    .\t8_concurrent_test.ps1 -BaseUrl http://localhost:5000 -Token "eyJhbGciOi..." -RequestCount 100
 #>
 
 param(
     [string]$BaseUrl   = "http://localhost:5000",
+    [string]$Token     = "",
     [int]   $RequestCount = 100,
     [int]   $WaitSeconds  = 5,
     [string[]]$Endpoints  = @(
@@ -44,10 +48,17 @@ Write-Host "Prerequisites:" -ForegroundColor Yellow
 Write-Host "  [1] API service is running at $BaseUrl"
 Write-Host "  [2] Database connection is healthy (BASE_SYS_LOG table exists)"
 Write-Host "  [3] Serilog log directory is writable"
+Write-Host "  [4] JWT Token (get from browser DevTools or login API)"
+Write-Host ""
+Write-Host "To get a token:" -ForegroundColor Yellow
+Write-Host "  1. Open browser → F12 → Network tab"
+Write-Host "  2. Login to JNPF admin panel"
+Write-Host "  3. Find any API request → copy Authorization header value (without 'Bearer ' prefix)"
 Write-Host ""
 Write-Host "Parameters:" -ForegroundColor Yellow
 Write-Host "  RequestCount  = $RequestCount"
 Write-Host "  WaitSeconds   = $WaitSeconds"
+Write-Host "  Token         = $(if ($Token) { 'provided (' + $Token.Substring(0, [Math]::Min(20, $Token.Length)) + '...)' } else { 'NOT PROVIDED — requests will get code:600 (auth required)' })"
 Write-Host "  Endpoints     = $($Endpoints -join ', ')"
 Write-Host ""
 
@@ -64,8 +75,10 @@ function Send-OneRequest {
     $fullUrl  = "$BaseUrl$endpoint"
 
     try {
+        $headers = @{}
+        if ($Token) { $headers["Authorization"] = "Bearer $Token" }
         $response = Invoke-WebRequest -Uri $fullUrl -Method GET -UseBasicParsing `
-                       -TimeoutSec 30 -ErrorAction SilentlyContinue
+                       -TimeoutSec 30 -Headers $headers -ErrorAction SilentlyContinue
         $traceId = $response.Headers["X-Trace-Id"]
         return [PSCustomObject]@{
             Index      = $Index

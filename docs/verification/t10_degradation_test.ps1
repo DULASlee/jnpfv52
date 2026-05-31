@@ -29,6 +29,7 @@
 
 param(
     [string]$BaseUrl          = "http://localhost:5000",
+    [string]$Token            = "",
     [string]$LogDir           = "logs",
     [string]$LogDirFullPath   = "",
     [int]   $RequestCount     = 5,
@@ -94,11 +95,13 @@ function Send-TestBatch {
     $ok   = 0
     $fail = 0
     $latencies = @()
+    $authHeaders = @{}
+    if ($Token) { $authHeaders["Authorization"] = "Bearer $Token" }
 
     for ($i = 0; $i -lt $Count; $i++) {
         try {
             $sw = [System.Diagnostics.Stopwatch]::StartNew()
-            $resp = Invoke-WebRequest -Uri $Url -Method GET -UseBasicParsing -TimeoutSec 30 -ErrorAction SilentlyContinue
+            $resp = Invoke-WebRequest -Uri $Url -Method GET -UseBasicParsing -TimeoutSec 30 -Headers $authHeaders -ErrorAction SilentlyContinue
             $sw.Stop()
             $latencies += $sw.ElapsedMilliseconds
             if ([int]$resp.StatusCode -ge 200 -and [int]$resp.StatusCode -lt 500) {
@@ -198,7 +201,7 @@ try {
 
     # Verify TraceId still present
     try {
-        $resp = Invoke-WebRequest -Uri $testUrl -Method GET -UseBasicParsing -TimeoutSec 10
+        $resp = Invoke-WebRequest -Uri $testUrl -Method GET -UseBasicParsing -TimeoutSec 10 -Headers $authHeaders
         if ($resp.Headers["X-Trace-Id"]) {
             Write-Host "  PASS: X-Trace-Id header still present (middleware unaffected)" -ForegroundColor Green
         } else {
