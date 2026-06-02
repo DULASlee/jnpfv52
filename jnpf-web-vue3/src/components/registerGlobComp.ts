@@ -1,4 +1,5 @@
 import type { App } from 'vue';
+import { defineAsyncComponent } from 'vue';
 import { Button } from './Button';
 import {
   Input,
@@ -73,7 +74,6 @@ import { JnpfSwitch } from '/@/components/Jnpf/Switch';
 import { JnpfText } from '/@/components/Jnpf/Text';
 import { JnpfTreeSelect } from '/@/components/Jnpf/TreeSelect';
 import { JnpfUploadFile, JnpfUploadImg, JnpfUploadImgSingle, JnpfUploadBtn } from '/@/components/Jnpf/Upload';
-import { Tinymce } from '/@/components/Tinymce/index';
 import { JnpfNumberRange } from '/@/components/Jnpf/NumberRange';
 import { JnpfRelationFormAttr } from '/@/components/Jnpf/RelationFormAttr';
 import { JnpfPopupSelect, JnpfPopupTableSelect } from '/@/components/Jnpf/PopupSelect';
@@ -82,8 +82,9 @@ import { JnpfCalculate } from '/@/components/Jnpf/Calculate';
 import { JnpfLocation } from '/@/components/Jnpf/Location';
 import { JnpfIframe } from '/@/components/Jnpf/Iframe';
 
-const JnpfEditor = Tinymce;
-JnpfEditor.name = 'JnpfEditor';
+// P0-3: 重型组件懒加载 — Tinymce (7.9MB) 不进首屏
+const JnpfEditorAsync = defineAsyncComponent(() => import('/@/components/Tinymce/index').then(m => m.Tinymce));
+const JnpfEditor = { install: (app: App) => app.component('JnpfEditor', JnpfEditorAsync) };
 const JnpfGroupTitle = BasicCaption;
 JnpfGroupTitle.name = 'JnpfGroupTitle';
 

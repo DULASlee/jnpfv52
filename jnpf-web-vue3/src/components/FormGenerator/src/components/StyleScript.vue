@@ -19,7 +19,7 @@
 <script lang="ts" setup>
   import { ref } from 'vue';
   import { BasicModal, useModalInner } from '/@/components/Modal';
-  import { MonacoEditor } from '/@/components/CodeEditor';
+  import { MonacoEditor } from '/@/components/CodeEditor/src/MonacoEditor';
 
   const emit = defineEmits(['register', 'confirm']);
   const [registerModal, { closeModal }] = useModalInner(init);

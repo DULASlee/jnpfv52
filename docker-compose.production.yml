@@ -1,0 +1,224 @@
+# =============================================================================
+# JNPF V5.2 - Production Environment Docker Compose
+# =============================================================================
+# Usage:
+#   docker compose -f docker-compose.production.yml --env-file .env.production up -d
+#   docker compose -f docker-compose.production.yml down
+#
+# Security Notes:
+#   - All passwords must be changed from defaults
+#   - Swagger UI is disabled by default
+#   - Resource limits are enforced
+#   - Networks are isolated
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # SQL Server Database
+  # ---------------------------------------------------------------------------
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: jnpf-sqlserver-prod
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      MSSQL_PID: Standard
+    ports:
+      - "127.0.0.1:${DB_PORT:-1433}:1433"
+    volumes:
+      - sqlserver_data_prod:/var/opt/mssql
+      - ./backend/web/jnpf_sundial_init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - jnpf-internal
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$${MSSQL_SA_PASSWORD}" -Q "SELECT 1" || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: ${DB_MEMORY_LIMIT:-4g}
+          cpus: "2.0"
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Redis Cache
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: jnpf-redis-prod
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      --rename-command FLUSHDB ""
+      --rename-command FLUSHALL ""
+      --rename-command DEBUG ""
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data_prod:/data
+    networks:
+      - jnpf-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: ${REDIS_MEMORY_LIMIT:-512m}
+          cpus: "0.5"
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Backend API (Main)
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ./backend
+      dockerfile: application/JNPF.API.Entry/Dockerfile.production
+      args:
+        - BUILD_ENV=Production
+    container_name: jnpf-api-prod
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=${DB_NAME:?DB_NAME must be set};User Id=${DB_USER:-sa};Password=${DB_PASSWORD};TrustServerCertificate=true;Encrypt=false
+      - Redis__ConnectionString=redis:6379,password=${REDIS_PASSWORD},defaultdatabase=${REDIS_DB:-0}
+      - JWT__SecretKey=${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set}
+      - JWT__Issuer=${JWT_ISSUER:-JNPF}
+      - JWT__Audience=${JWT_AUDIENCE:-JNPF}
+      - JWT__ExpireMinutes=${JWT_EXPIRE_MINUTES:-120}
+      - Logging__LogLevel__Default=${LOG_LEVEL:-Warning}
+      - Swagger__Enabled=false
+      - CORS__Origins=${CORS_ORIGINS:?CORS_ORIGINS must be set}
+    ports:
+      - "127.0.0.1:${API_PORT:-5000}:5000"
+    volumes:
+      - api_logs_prod:/app/logs
+      - api_wwwroot_prod:/app/wwwroot
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - jnpf-internal
+      - jnpf-external
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: ${API_MEMORY_LIMIT:-2g}
+          cpus: "${API_CPU_LIMIT:-2.0}"
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # PC Admin Frontend (jnpf-web-vue3)
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: ./jnpf-web-vue3
+      dockerfile: Dockerfile.production
+      args:
+        - VITE_GLOB_API_URL=${VITE_GLOB_API_URL:-/api}
+        - VITE_GLOB_WEBSOCKET_URL=${VITE_GLOB_WEBSOCKET_URL:-wss://localhost}
+        - VITE_GLOB_APP_TITLE=${VITE_GLOB_APP_TITLE:-JNPF快速开发平台}
+        - VITE_DROP_CONSOLE=true
+        - VITE_CDN=${VITE_CDN:-true}
+    container_name: jnpf-web-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./jnpf-web-vue3/deploy/nginx.production.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - jnpf-external
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Data Screen Frontend (jnpf-web-datascreen)
+  # ---------------------------------------------------------------------------
+  datascreen:
+    build:
+      context: ./jnpf-web-datascreen
+      dockerfile: Dockerfile
+    container_name: jnpf-datascreen-prod
+    ports:
+      - "127.0.0.1:${DATAV_PORT:-8100}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - jnpf-external
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.25"
+    security_opt:
+      - no-new-privileges:true
+
+# -----------------------------------------------------------------------------
+# Volumes
+# -----------------------------------------------------------------------------
+volumes:
+  sqlserver_data_prod:
+    driver: local
+  redis_data_prod:
+    driver: local
+  api_logs_prod:
+    driver: local
+  api_wwwroot_prod:
+    driver: local
+
+# -----------------------------------------------------------------------------
+# Networks
+# -----------------------------------------------------------------------------
+networks:
+  jnpf-internal:
+    driver: bridge
+    name: jnpf-internal
+    internal: true
+  jnpf-external:
+    driver: bridge
+    name: jnpf-external

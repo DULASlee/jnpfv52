@@ -118,7 +118,7 @@ public class OnlineUserService : IDynamicApiController, ITransient
         var userList = list.FindAll(it => it.tenantId == tenantId && it.connectionId == id);
         userList.ForEach(async item =>
         {
-            _imReplyService.ForcedOffline(item.connectionId);
+            await _imReplyService.ForcedOffline(item.connectionId);
             await DelOnlineUser(tenantId, item.userId);
             await DelUserInfo(tenantId, item.userId);
         });
@@ -137,7 +137,7 @@ public class OnlineUserService : IDynamicApiController, ITransient
         var userList = list.FindAll(it => it.tenantId == tenantId && input.ids.Contains(it.userId));
         userList.ForEach(async item =>
         {
-            _imReplyService.ForcedOffline(item.connectionId);
+            await _imReplyService.ForcedOffline(item.connectionId);
             await DelOnlineUser(tenantId, item.userId);
             await DelUserInfo(tenantId, item.userId);
         });
@@ -179,6 +179,9 @@ public class OnlineUserService : IDynamicApiController, ITransient
     public async Task<bool> DelUserInfo(string tenantId, string userId)
     {
         var cacheKey = string.Format("{0}:{1}:{2}", tenantId, CommonConst.CACHEKEYUSER, userId);
+        // P0-2: 同步清除 CurrentUser 缓存
+        await _cacheManager.DelAsync($"CurrentUser:{tenantId}:{userId}:Web");
+        await _cacheManager.DelAsync($"CurrentUser:{tenantId}:{userId}:App");
         return await _cacheManager.DelAsync(cacheKey);
     }
 }

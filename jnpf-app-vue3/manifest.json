@@ -199,11 +199,18 @@
     "vueVersion" : "3",
     "h5" : {
         "devServer" : {
-            "port" : 3800
+            "port" : 3800,
+            "proxy" : {
+                "/api" : {
+                    "target" : "http://localhost:5000",
+                    "changeOrigin" : true,
+                    "secure" : false
+                }
+            }
         },
         "title" : "jnpf java vue3版",
         "router" : {
-            "mode" : "history"
+            "mode" : "hash"
         },
         "optimization" : {
             "treeShaking" : {

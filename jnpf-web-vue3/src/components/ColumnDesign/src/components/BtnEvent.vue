@@ -210,7 +210,7 @@
 <script lang="ts" setup>
   import { reactive, ref, toRefs } from 'vue';
   import { BasicModal, useModalInner } from '/@/components/Modal';
-  import { MonacoEditor } from '/@/components/CodeEditor';
+  import { MonacoEditor } from '/@/components/CodeEditor/src/MonacoEditor';
   import { getVisualDevSelector, getFormDataFields } from '/@/api/onlineDev/visualDev';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { InterfaceModal } from '/@/components/CommonModal';

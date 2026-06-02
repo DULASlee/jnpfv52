@@ -8,6 +8,7 @@ import { createProxy } from './build/vite/proxy';
 import { wrapperEnv } from './build/utils';
 import { createVitePlugins } from './build/vite/plugin';
 import { OUTPUT_DIR } from './build/constant';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 function pathResolve(dir: string) {
   return resolve(process.cwd(), '.', dir);
@@ -89,6 +90,14 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
           chunkFileNames: 'static/js/[name]-[hash].js',
           entryFileNames: 'static/js/[name]-[hash].js',
           assetFileNames: 'static/[ext]/[name]-[hash].[ext]',
+          // P0-3: 拆分重型依赖为独立 chunk，不进首屏
+          manualChunks: {
+            'vendor-vue': ['vue', 'vue-router', 'pinia'],
+            'vendor-antd': ['ant-design-vue', '@ant-design/icons-vue'],
+            'vendor-tinymce': ['tinymce'],
+            'vendor-monaco': ['monaco-editor'],
+            'vendor-codemirror': ['codemirror'],
+          },
         },
       },
     },
@@ -108,7 +117,16 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
     },
 
     // The vite plugin used by the project. The quantity is large, so it is separately extracted and managed
-    plugins: createVitePlugins(viteEnv, isBuild),
+    plugins: [
+      ...createVitePlugins(viteEnv, isBuild),
+      // P0-3: 分析 entry chunk 组成
+      visualizer({
+        open: false,
+        filename: 'stats.json',
+        gzipSize: true,
+        json: true,
+      }),
+    ],
 
     optimizeDeps: {
       esbuildOptions: {

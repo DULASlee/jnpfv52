@@ -184,7 +184,7 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useBaseStore } from '/@/store/modules/base';
   import { useI18n } from '/@/hooks/web/useI18n';
-  import { MonacoEditor } from '/@/components/CodeEditor';
+  import { MonacoEditor } from '/@/components/CodeEditor/src/MonacoEditor';
   import { useModal } from '/@/components/Modal';
   import { DownOutlined } from '@ant-design/icons-vue';
   import { InputSearch } from 'ant-design-vue';

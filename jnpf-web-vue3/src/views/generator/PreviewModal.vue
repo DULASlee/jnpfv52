@@ -29,7 +29,7 @@
   import { BasicModal, useModalInner } from '/@/components/Modal';
   import { useI18n } from '/@/hooks/web/useI18n';
   import { BasicLeftTree, TreeActionType } from '/@/components/Tree';
-  import { MonacoEditor } from '/@/components/CodeEditor';
+  import { MonacoEditor } from '/@/components/CodeEditor/src/MonacoEditor';
 
   interface State {
     treeData: any[];

@@ -18,15 +18,16 @@
 			<view class="loginSwitch u-flex-col">
 				<view class="loginInputBox u-flex-col" v-show="!isSso && !ssoLoading">
 					<u-form :model="formData" :rules="rules" ref="dataForm" :errorType="['toast']" label-position="left"
-						label-width="150" label-align="left">
+						label-width="150" label-align="left" @submit.native.prevent="onFormSubmit">
 						<u-form-item prop="account" :borderBottom="false">
 							<u-input input-align='left' v-model="formData.account" placeholder="请输入帐号" @focus="onFocus"
-								@blur="onBlur" border border-color="#F0F1F3" placeholder-style="#9D9D9D">
+								@blur="onBlur" @confirm="onFormSubmit" border border-color="#F0F1F3"
+								placeholder-style="#9D9D9D">
 							</u-input>
 						</u-form-item>
 						<u-form-item prop="password" :border-bottom="false">
 							<u-input input-align='left' v-model="formData.password" type="password" placeholder="请输入密码"
-								border border-color="#F0F1F3" placeholder-style="#9D9D9D">
+								@confirm="onFormSubmit" border border-color="#F0F1F3" placeholder-style="#9D9D9D">
 							</u-input>
 						</u-form-item>
 						<u-form-item prop="code" required v-if="needCode">
@@ -44,7 +45,8 @@
 						<u-checkbox v-model="remember"><span class="remember-text">记住账号密码</span></u-checkbox>
 					</view>
 					<view class="loginBtnBox">
-						<u-button @click="login" type="primary" :loading="loading">{{ loading ? "登录中...":"登录"}}
+						<u-button native-type="button" @click="login" type="primary" :loading="loading">
+							{{ loading ? "登录中...":"登录"}}
 						</u-button>
 					</view>
 					<template v-if="socialsList.length">
@@ -74,7 +76,8 @@
 					</template>
 				</view>
 				<view class="sso-login-btn" v-show="isSso  && !ssoLoading">
-					<u-button @click="ssoLogin" type="primary" :loading="loading">{{ loading ? "登录中...":"登录"}}
+					<u-button native-type="button" @click="ssoLogin" type="primary" :loading="loading">
+						{{ loading ? "登录中...":"登录"}}
 					</u-button>
 				</view>
 			</view>
@@ -228,6 +231,9 @@
 			// #endif
 		},
 		methods: {
+			onFormSubmit() {
+				this.login()
+			},
 			initAccount() {
 				let model = uni.getStorageSync('rememberAccount')
 				if (model && model.remember) {
@@ -477,19 +483,25 @@
 						/* unipush2.0 */
 						// query.Client_Id = uni.getStorageSync('cid')
 						// #endif
+						uni.showLoading({
+							title: '登录中'
+						})
 						login(query).then(res => {
 							let token = res.data.token
 							userStore.setToken(token)
 							this.rememberAccount()
 							userStore.getCurrentUser().then(res => {
+								uni.hideLoading()
 								this.loading = false
 								uni.switchTab({
 									url: '/pages/index/index'
 								});
 							}).catch(() => {
+								uni.hideLoading()
 								this.loading = false
 							})
 						}).catch((err) => {
+							uni.hideLoading()
 							this.getCodeConfig(this.formData.account)
 							this.formData.code = ''
 							this.changeCode()

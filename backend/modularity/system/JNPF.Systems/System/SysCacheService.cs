@@ -136,7 +136,7 @@ public class SysCacheService : IDynamicApiController, ITransient
         var user = list?.FirstOrDefault(it => it.tenantId == tenantId && it.userId == _userManager.UserId);
         if (user != null)
         {
-            _imReplyService.ForcedOffline(user.connectionId);
+            await _imReplyService.ForcedOffline(user.connectionId);
             await DelOnlineUser(tenantId, user.userId);
             await DelUserInfo(tenantId, user.userId);
         }
@@ -184,6 +184,9 @@ public class SysCacheService : IDynamicApiController, ITransient
     private async Task<bool> DelUserInfo(string tenantId, string userId)
     {
         var cacheKey = string.Format("{0}:{1}:{2}", tenantId, CommonConst.CACHEKEYUSER, userId);
+        // P0-2: 同步清除 CurrentUser 缓存
+        await _cacheManager.DelAsync($"CurrentUser:{tenantId}:{userId}:Web");
+        await _cacheManager.DelAsync($"CurrentUser:{tenantId}:{userId}:App");
         return await _cacheManager.DelAsync(cacheKey);
     }
 }

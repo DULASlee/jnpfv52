@@ -869,6 +869,95 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
     }
 
     /// <summary>
+    /// 获取用户菜单列表（使用预取的授权菜单 ID，避免重复查询 AuthorizeEntity）.
+    /// </summary>
+    [NonAction]
+    public async Task<List<ModuleNodeOutput>> GetUserModuleListWithAuthIds(string type, List<string> authorizeModuleIds, List<string> mIds = null, List<string> mUrls = null)
+    {
+        var result = await GetUserModuleListInternal(type, "", authorizeModuleIds);
+        if (mIds == null) mIds = new List<string>();
+        if (mUrls == null) mUrls = new List<string>();
+        return result.Where(x => !mIds.Contains(x.id) && !mUrls.Contains(x.urlAddress)).ToList();
+    }
+
+    /// <summary>
+    /// 获取用户树形模块功能列表（内部实现，支持传入预取的授权 ID）.
+    /// </summary>
+    [NonAction]
+    private async Task<List<ModuleNodeOutput>> GetUserModuleListInternal(string type, string systemId, List<string> authorizeModuleIds)
+    {
+        var output = new List<ModuleNodeOutput>();
+        var userSystemId = _userManager.UserOrigin.Equals("pc") ? _userManager.User.SystemId : _userManager.User.AppSystemId;
+        if (systemId.IsNotEmptyOrNull()) userSystemId = systemId;
+        if (!_userManager.IsAdministrator)
+        {
+            var dataScop = _userManager.DataScope;
+            var objectIdList = dataScop.Where(x => x.organizeType != null && (x.organizeType.Equals("System") || x.organizeType.Equals("Module"))).Select(x => x.organizeId).ToList();
+
+            if (objectIdList.Any(x => x.Equals(userSystemId)))
+            {
+                if (await _repository.AsSugarClient().Queryable<SystemEntity>().AnyAsync(a => a.Id.Equals(userSystemId) && a.EnCode.Equals("mainSystem")))
+                {
+                    var menus = await _repository.AsQueryable()
+                        .Where(a => (a.SystemId.Equals(userSystemId) && objectIdList.Contains(a.Id) && a.EnabledMark == 1 && a.Category.Equals(type) && a.DeleteMark == null)
+                        || _userManager.CommonModuleEnCodeList.Contains(a.EnCode))
+                        .OrderBy(q => q.ParentId).OrderBy(q => q.SortCode).ToListAsync();
+                    output = menus.Adapt<List<ModuleNodeOutput>>();
+                }
+                else
+                {
+                    var menus = await _repository.AsQueryable()
+                        .Where(a => (a.SystemId.Equals(userSystemId) && a.EnabledMark == 1 && a.Category.Equals(type) && a.DeleteMark == null)
+                        || _userManager.CommonModuleEnCodeList.Contains(a.EnCode))
+                        .OrderBy(q => q.ParentId).OrderBy(q => q.SortCode).ToListAsync();
+                    output = menus.Adapt<List<ModuleNodeOutput>>();
+                }
+            }
+            else
+            {
+                // 使用预取的授权 ID，不再查询 AuthorizeEntity
+                if (authorizeModuleIds != null && authorizeModuleIds.Any() && userSystemId.IsNotEmptyOrNull())
+                {
+                    var menus = await _repository.AsQueryable()
+                        .Where(a => ((a.SystemId.Equals(userSystemId) || a.SystemId.Equals("workFlow")) && authorizeModuleIds.Contains(a.Id) && a.EnabledMark == 1 && a.Category.Equals(type) && a.DeleteMark == null)
+                       || _userManager.CommonModuleEnCodeList.Contains(a.EnCode)).ClearFilter<IZxSystemFilter>()
+                        .OrderBy(q => q.ParentId).OrderBy(q => q.SortCode).ToListAsync();
+                    output = menus.Adapt<List<ModuleNodeOutput>>();
+                }
+            }
+        }
+        else
+        {
+            var menus = await _repository.AsQueryable()
+                .Where(a => (a.SystemId.Equals(userSystemId) && a.EnabledMark == 1 && a.Category.Equals(type) && a.DeleteMark == null)
+                || _userManager.CommonModuleEnCodeList.Contains(a.EnCode))
+                .ClearFilter<IZxSystemFilter>()
+                .OrderBy(q => q.ParentId).OrderBy(q => q.SortCode).ToListAsync();
+
+            output = menus.Adapt<List<ModuleNodeOutput>>();
+        }
+
+        if (output.Any())
+        {
+            output.ForEach(x =>
+            {
+                x.systemId = userSystemId;
+            });
+        }
+
+        var workflowEnabled = await _repository.AsSugarClient().Queryable<SystemEntity>().Where(it => it.Id.Equals(userSystemId) && it.DeleteMark == null).Select(it => it.WorkflowEnabled).FirstAsync();
+        var workFlow = output.Where(it => it.enCode.Equals("workFlow")).FirstOrDefault();
+        if (workFlow.IsNotEmptyOrNull())
+        {
+            output.Remove(workFlow);
+            if (workflowEnabled.IsNotEmptyOrNull() && workflowEnabled.Equals(1))
+                output.Insert(0, workFlow);
+        }
+
+        return output;
+    }
+
+    /// <summary>
     /// 获取用户树形模块功能列表.
     /// </summary>
     /// <param name="type">登录类型.</param>

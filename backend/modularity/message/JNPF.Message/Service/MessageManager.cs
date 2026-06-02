@@ -13,6 +13,7 @@ using JNPF.Extras.Thirdparty.Email;
 using JNPF.Extras.Thirdparty.Sms;
 using JNPF.Extras.Thirdparty.WeChat;
 using JNPF.FriendlyException;
+using Microsoft.Extensions.Logging;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.Message.Entitys;
 using JNPF.Message.Entitys.Entity;
@@ -44,6 +45,8 @@ public class MessageManager : IMessageManager, ITransient
     private readonly ISysConfigService _sysConfigService;
     private readonly MessageOptions _messageOptions = App.GetConfig<MessageOptions>("Message", true);
     private readonly WechatMiniProgramService _wechatMiniProgramService;
+    private readonly ILogger<MessageManager> _logger;
+
     public MessageManager(
         ISqlSugarRepository<MessageEntity> repository,
         IUsersService usersService,
@@ -51,7 +54,8 @@ public class MessageManager : IMessageManager, ITransient
         IShortLinkService shortLinkService,
         ISysConfigService sysConfigService,
         IUserManager userManager,
-        WechatMiniProgramService wechatMiniProgramService)
+        WechatMiniProgramService wechatMiniProgramService,
+        ILogger<MessageManager> logger)
     {
         _repository = repository;
         _usersService = usersService;
@@ -60,6 +64,7 @@ public class MessageManager : IMessageManager, ITransient
         _imHandler = imHandler;
         _userManager = userManager;
         _wechatMiniProgramService = wechatMiniProgramService;
+        _logger = logger;
     }
 
     #region Public
@@ -173,7 +178,7 @@ public class MessageManager : IMessageManager, ITransient
                         break;
                     case "7"://微信公众号
                         var body = bodyDic.ContainsKey(item) ? bodyDic[item].ToJsonString() : string.Empty;
-                        WeChatMpSend(userId, messageTemplateEntity, messageAccountEntity, paramsDic, body);
+                        await WeChatMpSendAsync(userId, messageTemplateEntity, messageAccountEntity, paramsDic, body);
                         break;
                     case "8"://消息弹窗
                         var messageList2 = GetMessageList(messageTemplateEntity.EnCode, new List<string>() { userId }, paramsDic, messageTemplateEntity.MessageSource.ParseToInt(), bodyDic);
@@ -531,37 +536,48 @@ public class MessageManager : IMessageManager, ITransient
     /// <param name="messageAccountEntity"></param>
     /// <param name="paramDic"></param>
     /// <param name="bodyDic"></param>
-    private async void WeChatMpSend(string userId, MessageTemplateEntity messageTemplateEntity, MessageAccountEntity messageAccountEntity, Dictionary<string, string> paramDic, string bodyDic)
+    private async Task WeChatMpSendAsync(string userId, MessageTemplateEntity messageTemplateEntity, MessageAccountEntity messageAccountEntity, Dictionary<string, string> paramDic, string bodyDic)
     {
-        var weChatMP = new WeChatMPUtil(messageAccountEntity.AppId, messageAccountEntity.AppSecret);
-        var wechatUser = _repository.AsSugarClient().Queryable<MessageWechatUserEntity>().First(x => userId == x.UserId && x.CloseMark == 1 && x.DeleteMark == null);
-        if (wechatUser == null) throw Oops.Oh(ErrorCode.D7016);
-        var openId = wechatUser.IsNotEmptyOrNull() ? wechatUser.OpenId : string.Empty;
-        var mpFieldList = _repository.AsSugarClient().Queryable<MessageSmsFieldEntity>().Where(x => x.TemplateId == messageTemplateEntity.Id).ToList();
-        var mpTempDic = new Dictionary<string, object>();
-        foreach (var item in mpFieldList)
+        try
         {
-            if (paramDic.Keys.Contains(item.Field))
+            var weChatMP = new WeChatMPUtil(messageAccountEntity.AppId, messageAccountEntity.AppSecret);
+            var wechatUser = _repository.AsSugarClient().Queryable<MessageWechatUserEntity>().First(x => userId == x.UserId && x.CloseMark == 1 && x.DeleteMark == null);
+            if (wechatUser == null)
             {
-                GetGZHTemplate(mpTempDic, paramDic[item.Field], item.SmsField);
+                _logger.LogWarning("微信公众号消息发送失败: 用户 {UserId} 未绑定微信", userId);
+                return;
+            }
+            var openId = wechatUser.IsNotEmptyOrNull() ? wechatUser.OpenId : string.Empty;
+            var mpFieldList = _repository.AsSugarClient().Queryable<MessageSmsFieldEntity>().Where(x => x.TemplateId == messageTemplateEntity.Id).ToList();
+            var mpTempDic = new Dictionary<string, object>();
+            foreach (var item in mpFieldList)
+            {
+                if (paramDic.Keys.Contains(item.Field))
+                {
+                    GetGZHTemplate(mpTempDic, paramDic[item.Field], item.SmsField);
+                }
+            }
+            var url = paramDic.ContainsKey("@FlowLink") ? paramDic["@FlowLink"] : string.Empty;
+            // 跳转小程序
+            if (messageTemplateEntity.WxSkip == "1")
+            {
+                var config = bodyDic.ToBase64String();
+                var token = await _shortLinkService.CreateToken(userId, _userManager.TenantId);
+                var miniProgram = new TemplateModel_MiniProgram
+                {
+                    appid = messageTemplateEntity.XcxAppId,
+                    pagepath = "/pages/workFlow/flowBefore/index?config=" + config + "&token=" + token
+                };
+                weChatMP.SendTemplateMessage(openId, messageTemplateEntity.TemplateCode, url, mpTempDic, miniProgram);
+            }
+            else
+            {
+                weChatMP.SendTemplateMessage(openId, messageTemplateEntity.TemplateCode, url, mpTempDic);
             }
         }
-        var url = paramDic.ContainsKey("@FlowLink") ? paramDic["@FlowLink"] : string.Empty;
-        // 跳转小程序
-        if (messageTemplateEntity.WxSkip == "1")
+        catch (Exception ex)
         {
-            var config = bodyDic.ToBase64String();
-            var token = await _shortLinkService.CreateToken(userId, _userManager.TenantId);
-            var miniProgram = new TemplateModel_MiniProgram
-            {
-                appid = messageTemplateEntity.XcxAppId,
-                pagepath = "/pages/workFlow/flowBefore/index?config=" + config + "&token=" + token
-            };
-            weChatMP.SendTemplateMessage(openId, messageTemplateEntity.TemplateCode, url, mpTempDic, miniProgram);
-        }
-        else
-        {
-            weChatMP.SendTemplateMessage(openId, messageTemplateEntity.TemplateCode, url, mpTempDic);
+            _logger.LogError(ex, "微信公众号消息发送异常: UserId={UserId}, TemplateId={TemplateId}", userId, messageTemplateEntity?.Id);
         }
     }
 

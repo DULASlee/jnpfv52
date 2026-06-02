@@ -7,6 +7,7 @@ using JNPF.TaskScheduler.Entitys;
 using JNPF.TaskScheduler.Entitys.Enum;
 using Mapster;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SqlSugar;
 
 namespace JNPF.Common.Core;
@@ -139,30 +140,38 @@ public class DbJobPersistence : IJobPersistence, IDisposable
     /// <param name="context"></param>
     public async void OnChanged(PersistenceContext context)
     {
-        var sqlSugarClient = _serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
-
-        sqlSugarClient = sqlSugarClient.CopyNew();
-
-        // 获取到对应库连接
-        var sqlSugarScope = sqlSugarClient.AsTenant().GetConnectionScopeWithAttr<JobDetails>();
-
-        var jobDetail = context.JobDetail.Adapt<JobDetails>();
-        switch (context.Behavior)
+        try
         {
-            case PersistenceBehavior.Appended:
-                await sqlSugarScope.Insertable(jobDetail).ExecuteCommandAsync();
-                break;
+            var sqlSugarClient = _serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
 
-            case PersistenceBehavior.Updated:
-                await sqlSugarScope.Updateable(jobDetail).WhereColumns(u => new { u.JobId }).IgnoreColumns(u => new { u.Id, u.CreateType, u.ScriptCode, u.TenantId }).ExecuteCommandAsync();
-                break;
+            sqlSugarClient = sqlSugarClient.CopyNew();
 
-            case PersistenceBehavior.Removed:
-                await sqlSugarScope.Deleteable<JobDetails>().Where(u => u.JobId == jobDetail.JobId).ExecuteCommandAsync();
-                break;
+            // 获取到对应库连接
+            var sqlSugarScope = sqlSugarClient.AsTenant().GetConnectionScopeWithAttr<JobDetails>();
 
-            default:
-                throw new ArgumentOutOfRangeException();
+            var jobDetail = context.JobDetail.Adapt<JobDetails>();
+            switch (context.Behavior)
+            {
+                case PersistenceBehavior.Appended:
+                    await sqlSugarScope.Insertable(jobDetail).ExecuteCommandAsync();
+                    break;
+
+                case PersistenceBehavior.Updated:
+                    await sqlSugarScope.Updateable(jobDetail).WhereColumns(u => new { u.JobId }).IgnoreColumns(u => new { u.Id, u.CreateType, u.ScriptCode, u.TenantId }).ExecuteCommandAsync();
+                    break;
+
+                case PersistenceBehavior.Removed:
+                    await sqlSugarScope.Deleteable<JobDetails>().Where(u => u.JobId == jobDetail.JobId).ExecuteCommandAsync();
+                    break;
+
+                default:
+                    System.Diagnostics.Trace.WriteLine($"[DbJobPersistence] OnChanged: 未知 Behavior {context.Behavior}");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.WriteLine($"[DbJobPersistence] OnChanged failed: JobId={context.JobDetail?.JobId}, Behavior={context.Behavior}, Error={ex}");
         }
     }
 
@@ -172,30 +181,38 @@ public class DbJobPersistence : IJobPersistence, IDisposable
     /// <param name="context"></param>
     public async void OnTriggerChanged(PersistenceTriggerContext context)
     {
-        var sqlSugarClient = _serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
-
-        sqlSugarClient = sqlSugarClient.CopyNew();
-
-        // 获取到对应库连接
-        var sqlSugarScope = sqlSugarClient.AsTenant().GetConnectionScopeWithAttr<JobDetails>();
-
-        var jobTrigger = context.Trigger.Adapt<JobTriggers>();
-        switch (context.Behavior)
+        try
         {
-            case PersistenceBehavior.Appended:
-                await sqlSugarScope.Insertable(jobTrigger).ExecuteCommandAsync();
-                break;
+            var sqlSugarClient = _serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
 
-            case PersistenceBehavior.Updated:
-                await sqlSugarScope.Updateable(jobTrigger).WhereColumns(u => new { u.TriggerId, u.JobId }).IgnoreColumns(u => new { u.Id }).ExecuteCommandAsync();
-                break;
+            sqlSugarClient = sqlSugarClient.CopyNew();
 
-            case PersistenceBehavior.Removed:
-                await sqlSugarScope.Deleteable<JobTriggers>().Where(u => u.TriggerId == jobTrigger.TriggerId && u.JobId == jobTrigger.JobId).ExecuteCommandAsync();
-                break;
+            // 获取到对应库连接
+            var sqlSugarScope = sqlSugarClient.AsTenant().GetConnectionScopeWithAttr<JobDetails>();
 
-            default:
-                throw new ArgumentOutOfRangeException();
+            var jobTrigger = context.Trigger.Adapt<JobTriggers>();
+            switch (context.Behavior)
+            {
+                case PersistenceBehavior.Appended:
+                    await sqlSugarScope.Insertable(jobTrigger).ExecuteCommandAsync();
+                    break;
+
+                case PersistenceBehavior.Updated:
+                    await sqlSugarScope.Updateable(jobTrigger).WhereColumns(u => new { u.TriggerId, u.JobId }).IgnoreColumns(u => new { u.Id }).ExecuteCommandAsync();
+                    break;
+
+                case PersistenceBehavior.Removed:
+                    await sqlSugarScope.Deleteable<JobTriggers>().Where(u => u.TriggerId == jobTrigger.TriggerId && u.JobId == jobTrigger.JobId).ExecuteCommandAsync();
+                    break;
+
+                default:
+                    System.Diagnostics.Trace.WriteLine($"[DbJobPersistence] OnTriggerChanged: 未知 Behavior {context.Behavior}");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.WriteLine($"[DbJobPersistence] OnTriggerChanged failed: TriggerId={context.Trigger?.TriggerId}, Behavior={context.Behavior}, Error={ex}");
         }
     }
 
@@ -205,45 +222,52 @@ public class DbJobPersistence : IJobPersistence, IDisposable
     /// <param name="timeline"></param>
     public async void OnExecutionRecord(TriggerTimeline timeline)
     {
-        var sqlSugarClient = _serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
-
-        var timeTask = timeline.Adapt<TimeTaskEntity>();
-
-        // 根据 `作业Id` 获取到租户ID
-        var tenantId = timeline.TriggerId.Match("(.+(?=_trigger_schedule_))");
-        timeTask.Id = timeline.TriggerId.Match("((?<=_trigger_schedule_).+)");
-
-        if (timeline.JobId.Equals("job_builtIn_ExecutionQueue"))
+        try
         {
-            tenantId = timeline.TriggerId.Match("((?<=_trigger_schedule_).+)");
-            timeTask.Id = null;
-        }
+            var sqlSugarClient = _serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
 
-        if (KeyVariable.MultiTenancy && !string.IsNullOrEmpty(tenantId) && !sqlSugarClient.AsTenant().IsAnyConnection(tenantId))
-        {
-            await _tenantManager.ChangTenant(sqlSugarClient, tenantId);
-        }
+            var timeTask = timeline.Adapt<TimeTaskEntity>();
 
-        sqlSugarClient = sqlSugarClient.CopyNew();
+            // 根据 `作业Id` 获取到租户ID
+            var tenantId = timeline.TriggerId.Match("(.+(?=_trigger_schedule_))");
+            timeTask.Id = timeline.TriggerId.Match("((?<=_trigger_schedule_).+)");
 
-        if (!string.IsNullOrEmpty(tenantId) && !string.IsNullOrEmpty(timeTask.Id))
-        {
-            timeTask.LastModifyTime = DateTime.Now;
-            await sqlSugarClient.Updateable(timeTask).WhereColumns(u => new { u.Id }).UpdateColumns(u => new { u.LastRunTime, u.NextRunTime, u.RunCount, u.LastModifyTime }).ExecuteCommandAsync();
-
-            // 执行结果不为空、状态 为就绪时记录日记
-            if ((timeline.Status.Equals(TriggerStatus.Ready) || timeline.Status.Equals(TriggerStatus.Archived)) && !string.IsNullOrEmpty(timeline.Result))
+            if (timeline.JobId.Equals("job_builtIn_ExecutionQueue"))
             {
-                var timeTaskLog = new TimeTaskLogEntity
-                {
-                    Id = SnowflakeIdHelper.NextId(),
-                    TaskId = timeTask.Id,
-                    RunTime = timeTask.LastRunTime,
-                    RunResult = 0,
-                    Description = timeline.Result.ToJsonString(),
-                };
-                await sqlSugarClient.Insertable(timeTaskLog).ExecuteCommandAsync();
+                tenantId = timeline.TriggerId.Match("((?<=_trigger_schedule_).+)");
+                timeTask.Id = null;
             }
+
+            if (KeyVariable.MultiTenancy && !string.IsNullOrEmpty(tenantId) && !sqlSugarClient.AsTenant().IsAnyConnection(tenantId))
+            {
+                await _tenantManager.ChangTenant(sqlSugarClient, tenantId);
+            }
+
+            sqlSugarClient = sqlSugarClient.CopyNew();
+
+            if (!string.IsNullOrEmpty(tenantId) && !string.IsNullOrEmpty(timeTask.Id))
+            {
+                timeTask.LastModifyTime = DateTime.Now;
+                await sqlSugarClient.Updateable(timeTask).WhereColumns(u => new { u.Id }).UpdateColumns(u => new { u.LastRunTime, u.NextRunTime, u.RunCount, u.LastModifyTime }).ExecuteCommandAsync();
+
+                // 执行结果不为空、状态 为就绪时记录日记
+                if ((timeline.Status.Equals(TriggerStatus.Ready) || timeline.Status.Equals(TriggerStatus.Archived)) && !string.IsNullOrEmpty(timeline.Result))
+                {
+                    var timeTaskLog = new TimeTaskLogEntity
+                    {
+                        Id = SnowflakeIdHelper.NextId(),
+                        TaskId = timeTask.Id,
+                        RunTime = timeTask.LastRunTime,
+                        RunResult = 0,
+                        Description = timeline.Result.ToJsonString(),
+                    };
+                    await sqlSugarClient.Insertable(timeTaskLog).ExecuteCommandAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.WriteLine($"[DbJobPersistence] OnExecutionRecord failed: TriggerId={timeline?.TriggerId}, JobId={timeline?.JobId}, Error={ex}");
         }
     }
 

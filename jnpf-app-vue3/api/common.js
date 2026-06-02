@@ -239,10 +239,13 @@ export function getDataInterfaceRes(id, data) {
 export function login(data) {
 	return request({
 		url: '/api/oauth/Login',
-		method: 'post',
+		method: 'POST',
 		data,
 		header: {
 			'Content-Type': 'application/x-www-form-urlencoded',
+		},
+		options: {
+			load: false
 		}
 	})
 }
@@ -359,7 +362,10 @@ export function getSubordinate(id) {
 export function getConfig(account) {
 	return request({
 		url: `/api/oauth/getConfig/${account}`,
-		method: 'get'
+		method: 'get',
+		options: {
+			load: false
+		}
 	})
 }
 // 获取行政区划下拉框数据
@@ -476,6 +482,10 @@ export function otherlogin(data, ticket) {
 export function getLoginConfig() {
 	return request({
 		url: '/api/oauth/getLoginConfig',
+		method: 'GET',
+		options: {
+			load: false
+		},
 	})
 }
 //获取登录票据
@@ -682,6 +692,9 @@ export function getLangJson(locale) {
 	return request({
 		url: '/api/system/BaseLang/LangJson',
 		method: 'GET',
-		header
+		header,
+		options: {
+			load: false
+		}
 	})
 }

@@ -131,15 +131,14 @@ public static class NetHelper
         string res = string.Empty;
         try
         {
-            switch (ip.Equals("127.0.0.1") || ip.StartsWith("192.168"))
+            if (IsInternalIp(ip))
             {
-                case true:
-                    res = "本地局域网";
-                    break;
-                default:
-                    var ipinfo = IpTool.Search(ip);
-                    res = string.Format("{0}{1} {2}", ipinfo.Province, ipinfo.City, ipinfo.NetworkOperator);
-                    break;
+                res = "本地局域网";
+            }
+            else
+            {
+                var ipinfo = IpTool.Search(ip);
+                res = string.Format("{0}{1} {2}", ipinfo.Province, ipinfo.City, ipinfo.NetworkOperator);
             }
         }
         catch
@@ -148,6 +147,24 @@ public static class NetHelper
         }
 
         return res;
+    }
+
+    /// <summary>
+    /// 判断是否为内网 IP（127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16）.
+    /// </summary>
+    private static bool IsInternalIp(string ip)
+    {
+        if (string.IsNullOrEmpty(ip)) return false;
+        if (ip == "127.0.0.1" || ip == "::1") return true;
+        if (ip.StartsWith("10.")) return true;
+        if (ip.StartsWith("192.168.")) return true;
+        if (ip.StartsWith("172."))
+        {
+            var parts = ip.Split('.');
+            if (parts.Length >= 2 && int.TryParse(parts[1], out var second) && second >= 16 && second <= 31)
+                return true;
+        }
+        return false;
     }
 
     #endregion

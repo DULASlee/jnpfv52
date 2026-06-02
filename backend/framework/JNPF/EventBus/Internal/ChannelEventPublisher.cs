@@ -37,13 +37,23 @@ internal sealed partial class ChannelEventPublisher : IEventPublisher
     /// <returns><see cref="Task"/> 实例</returns>
     public Task PublishDelayAsync(IEventSource eventSource, long delay)
     {
-        // 创建新线程
-        Task.Factory.StartNew(async () =>
+        // Fire-and-forget: 使用 Task.Run 正确处理 async lambda
+        _ = Task.Run(async () =>
         {
-            // 延迟 delay 毫秒
-            await Task.Delay(TimeSpan.FromMilliseconds(delay), eventSource.CancellationToken);
-
-            await _eventSourceStorer.WriteAsync(eventSource, eventSource.CancellationToken);
+            try
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(delay), eventSource.CancellationToken);
+                await _eventSourceStorer.WriteAsync(eventSource, eventSource.CancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // 正常取消，忽略
+            }
+            catch (Exception ex)
+            {
+                // 延迟发布失败，记录诊断日志
+                System.Diagnostics.Debug.WriteLine($"[EventBus] PublishDelayAsync failed: {ex.Message}");
+            }
         }, eventSource.CancellationToken);
 
         return Task.CompletedTask;

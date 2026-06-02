@@ -10,6 +10,13 @@ import {
 	setupI18n
 } from '@/locale/setupI18n';
 
+// #ifdef H5
+// 演示联调：强制 API 走 5000，避免旧发行包 baseURL 为空导致请求落在 3800 并被当成页面路由
+define.baseURL = 'http://localhost:5000'
+define.comUploadUrl = define.baseURL + '/api/file/Uploader/'
+define.webSocketUrl = 'ws://localhost:5000/api/message/websocket'
+// #endif
+
 // #ifndef VUE3
 import Vue from 'vue'
 import './uni.promisify.adaptor'

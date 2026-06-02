@@ -6,7 +6,7 @@ import {
 const {
 	getBackLocale
 } = useLocale();
-const host = define.baseURL
+const host = define.baseURL || 'http://localhost:5000'
 const defaultOpt = {
 	load: true
 }
@@ -38,6 +38,17 @@ function request(config) {
 	}
 	if (token) header['Authorization'] = token
 	let url = config.url.indexOf('http') > -1 ? config.url : host + config.url
+	let body = config.data || null
+	const contentType = (header['Content-Type'] || header['content-type'] || '').toLowerCase()
+	if (
+		body &&
+		typeof body === 'object' &&
+		contentType.includes('application/x-www-form-urlencoded')
+	) {
+		body = Object.keys(body)
+			.map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(body[key] ?? '')}`)
+			.join('&')
+	}
 
 	if (config.options.load) {
 		uni.showLoading({
@@ -46,33 +57,35 @@ function request(config) {
 	}
 
 	return new Promise((resolve, reject) => {
+		const showLoad = config.options.load
 		uni.request({
 			url: url,
-			data: config.data || null,
-			method: config.method || 'GET',
+			data: body,
+			method: (config.method || 'GET').toUpperCase(),
 			header: header,
 			timeout: define.timeout,
 			success: res => {
-				uni.hideLoading()
+				if (showLoad) uni.hideLoading()
 				if (res.statusCode === 200) {
-					if (res.data.code == 200) {
+					if (res.data && res.data.code == 200) {
 						resolve(res.data)
 					} else {
-						ajaxError(res.data)
-						reject(res.data.msg)
+						ajaxError(res.data || {})
+						reject((res.data && res.data.msg) || '请求失败')
 					}
 				} else {
-					ajaxError(res.data)
-					reject(res.errMsg)
+					const errMsg = (res.data && res.data.msg) || `HTTP ${res.statusCode}`
+					ajaxError(res.data || { msg: errMsg })
+					reject(errMsg)
 				}
 			},
 			fail: err => {
+				if (showLoad) uni.hideLoading()
 				uni.showToast({
 					title: '连接服务器失败',
 					icon: 'none',
 				})
-				uni.hideLoading()
-				reject(err)
+				reject(err.errMsg || err)
 			}
 		})
 	})

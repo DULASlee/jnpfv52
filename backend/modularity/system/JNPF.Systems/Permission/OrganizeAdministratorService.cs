@@ -1051,6 +1051,9 @@ public class OrganizeAdministratorService : IOrganizeAdministratorService, IDyna
                 // 删除用户登录信息缓存
                 cacheKey = string.Format("{0}:{1}:{2}", _userManager.TenantId, CommonConst.CACHEKEYUSER, onlineUser.userId);
                 await _cacheManager.DelAsync(cacheKey);
+                // P0-2: 同步清除 CurrentUser 缓存
+                await _cacheManager.DelAsync($"CurrentUser:{_userManager.TenantId}:{onlineUser.userId}:Web");
+                await _cacheManager.DelAsync($"CurrentUser:{_userManager.TenantId}:{onlineUser.userId}:App");
             }
         }
     }

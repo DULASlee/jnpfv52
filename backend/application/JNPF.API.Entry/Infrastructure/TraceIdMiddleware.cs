@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using JNPF.Common.Const;
 using Serilog.Context;
 
 namespace JNPF.API.Entry.Infrastructure;
@@ -32,7 +33,12 @@ public class TraceIdMiddleware
             return Task.CompletedTask;
         });
 
+        var userId = context.User?.FindFirst(ClaimConst.CLAINMUSERID)?.Value;
+        var tenantId = context.User?.FindFirst(ClaimConst.TENANTID)?.Value;
+
         using (LogContext.PushProperty("TraceId", traceId))
+        using (LogContext.PushProperty("UserId", userId ?? string.Empty))
+        using (LogContext.PushProperty("TenantId", tenantId ?? string.Empty))
         {
             await _next(context);
         }

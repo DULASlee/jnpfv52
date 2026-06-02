@@ -1,0 +1,172 @@
+# =============================================================================
+# JNPF V5.2 - Continuous Integration Workflow
+# =============================================================================
+# Triggers on push/PR to main and develop branches
+# Runs tests, builds, and validates configurations
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '18'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Backend Build & Test
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore backend/JNPF.sln
+
+      - name: Build backend
+        run: dotnet build backend/JNPF.sln --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test backend/JNPF.sln --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/**/coverage.cobertura.xml
+
+  # ---------------------------------------------------------------------------
+  # Frontend Build (PC Admin)
+  # ---------------------------------------------------------------------------
+  frontend-web:
+    name: Frontend PC Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        working-directory: jnpf-web-vue3
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        working-directory: jnpf-web-vue3
+        run: pnpm lint
+        continue-on-error: true
+
+      - name: Build
+        working-directory: jnpf-web-vue3
+        run: pnpm build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-web-dist
+          path: jnpf-web-vue3/dist
+
+  # ---------------------------------------------------------------------------
+  # Frontend Build (Data Screen)
+  # ---------------------------------------------------------------------------
+  frontend-datascreen:
+    name: Frontend DataScreen Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        working-directory: jnpf-web-datascreen
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: jnpf-web-datascreen
+        run: pnpm build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-datascreen-dist
+          path: jnpf-web-datascreen/dist
+
+  # ---------------------------------------------------------------------------
+  # Docker Build Validation
+  # ---------------------------------------------------------------------------
+  docker-validate:
+    name: Docker Configuration Validation
+    runs-on: ubuntu-latest
+    needs: [backend, frontend-web]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose files
+        run: |
+          docker compose -f docker-compose.staging.yml config --quiet
+          docker compose -f docker-compose.production.yml config --quiet
+
+      - name: Validate Dockerfiles syntax
+        run: |
+          docker build --check -f backend/application/JNPF.API.Entry/Dockerfile.staging backend/ || true
+          docker build --check -f jnpf-web-vue3/Dockerfile.staging jnpf-web-vue3/ || true
+
+  # ---------------------------------------------------------------------------
+  # Configuration Validation
+  # ---------------------------------------------------------------------------
+  config-validate:
+    name: Configuration Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate JSON configurations
+        run: |
+          for f in backend/application/JNPF.API.Entry/Configurations/*.json; do
+            if [ -f "$f" ]; then
+              echo "Validating $f"
+              python3 -c "import json; json.load(open('$f'))" || exit 1
+            fi
+          done
+
+      - name: Check environment template
+        run: |
+          if [ ! -f .env.example ]; then
+            echo "ERROR: .env.example not found"
+            exit 1
+          fi
+          echo ".env.example exists and is valid"

@@ -1,4 +1,5 @@
-﻿using JNPF.Common.Const;
+﻿using System.Diagnostics;
+using JNPF.Common.Const;
 using JNPF.Common.Enums;
 using JNPF.Common.Extension;
 using JNPF.Common.Manager;
@@ -326,10 +327,13 @@ public class UserManager : IUserManager, IScoped
     /// <returns></returns>
     public async Task<UserInfoModel> GetUserInfo()
     {
+        var __swTotal = Stopwatch.StartNew();
         UserAgent userAgent = new UserAgent(_httpContext);
         var data = new UserInfoModel();
         var userCache = string.Format("{0}:{1}:{2}", TenantId, CommonConst.CACHEKEYUSER, UserId);
+        var __sw = Stopwatch.StartNew();
         var userDataScope = GetUserDataScope(UserId);
+        Console.WriteLine($"[P0-1-TIMING] GetUserDataScope: {__sw.ElapsedMilliseconds}ms");
 
         var ipAddress = NetHelper.Ip;
         var ipAddressName = await NetHelper.GetLocation(ipAddress);
@@ -404,7 +408,9 @@ public class UserManager : IUserManager, IScoped
         data.positionName = await _repository.AsSugarClient().Queryable<PositionEntity>().Where(it => it.DeleteMark == null && it.Id.Equals(data.positionId)).Select(it => it.FullName).FirstAsync();
 
         var roleList = GetUserRoleIds(data.roleId, data.organizeId);
+        __sw.Restart();
         data.roleName = await GetRoleNameByIds(string.Join(",", roleList));
+        Console.WriteLine($"[P0-1-TIMING] GetRoleNameByIds: {__sw.ElapsedMilliseconds}ms");
         data.roleIds = roleList.ToArray();
         data.groupIds = await _repository.AsSugarClient().Queryable<GroupEntity, UserRelationEntity>((a, b) => new JoinQueryInfos(JoinType.Left, a.Id.Equals(b.ObjectId) && b.ObjectType.Equals("Group"))).Where((a, b) => a.EnabledMark == 1 && a.DeleteMark == null && b.UserId.Equals(data.userId)).Select((a, b) => b.ObjectId).ToListAsync();
         data.groupNames = await _repository.AsSugarClient().Queryable<GroupEntity>().Where(it => data.groupIds.Contains(it.Id)).Select(x => x.FullName).ToListAsync();
@@ -417,6 +423,9 @@ public class UserManager : IUserManager, IScoped
 
         // 根据系统配置过期时间自动过期
         await SetUserInfo(userCache, data, TimeSpan.FromMinutes(sysConfigInfo.Value.ParseToDouble()));
+
+        __swTotal.Stop();
+        Console.WriteLine($"[P0-1-TIMING] GetUserInfo total: {__swTotal.ElapsedMilliseconds}ms");
 
         return data;
     }
@@ -449,13 +458,17 @@ public class UserManager : IUserManager, IScoped
         List<UserDataScopeModel> subData = new List<UserDataScopeModel>();
         List<UserDataScopeModel> inteList = new List<UserDataScopeModel>();
 
+        // 一次性加载所有启用组织，避免循环内重复全表扫描
+        var allOrganizes = _repository.AsSugarClient().Queryable<OrganizeEntity>()
+            .Where(it => it.DeleteMark == null && it.EnabledMark.Equals(1)).ToList();
+
         // 填充数据
         foreach (var item in _repository.AsSugarClient().Queryable<OrganizeAdministratorEntity>()
             .Where(it => it.UserId == userId && it.DeleteMark == null).ToList())
         {
             if (item.SubLayerSelect.ParseToBool() || item.SubLayerAdd.ParseToBool() || item.SubLayerEdit.ParseToBool() || item.SubLayerDelete.ParseToBool())
             {
-                var subsidiary = GetSubsidiary(item.OrganizeId, false).ToList();
+                var subsidiary = GetSubsidiaryFromCache(allOrganizes, item.OrganizeId, false).ToList();
                 subsidiary.Remove(item.OrganizeId);
                 subsidiary.ToList().ForEach(it =>
                 {
@@ -1948,6 +1961,18 @@ public class UserManager : IUserManager, IScoped
     }
 
     /// <summary>
+    /// 从已加载的组织列表中获取下属机构（避免重复查库）.
+    /// </summary>
+    private string[] GetSubsidiaryFromCache(List<OrganizeEntity> allOrganizes, string organizeId, bool isAdmin)
+    {
+        var data = allOrganizes;
+        if (!isAdmin)
+            data = data.TreeChildNode(organizeId, t => t.Id, t => t.ParentId);
+
+        return data.Select(m => m.Id).ToArray();
+    }
+
+    /// <summary>
     /// 获取下属.
     /// </summary>
     /// <param name="managerId">主管Id.</param>
@@ -2117,16 +2142,9 @@ public class UserManager : IUserManager, IScoped
             return string.Empty;
 
         var idList = ids.Split(",").ToList();
-        var nameList = new List<string>();
-        var roleList = await _repository.AsSugarClient().Queryable<RoleEntity>().Where(x => x.DeleteMark == null && x.EnabledMark == 1).ToListAsync();
-        foreach (var item in idList)
-        {
-            var info = roleList.Find(x => x.Id == item);
-            if (info != null && info.FullName.IsNotEmptyOrNull())
-            {
-                nameList.Add(info.FullName);
-            }
-        }
+        var nameList = await _repository.AsSugarClient().Queryable<RoleEntity>()
+            .Where(x => idList.Contains(x.Id) && x.DeleteMark == null && x.EnabledMark == 1)
+            .Select(x => x.FullName).ToListAsync();
 
         return string.Join(",", nameList);
     }

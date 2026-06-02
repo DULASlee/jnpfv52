@@ -1,7 +1,7 @@
 {
   "JWTSettings": {
     "ValidateIssuerSigningKey": true,
-    "IssuerSigningKey": null,
+    "IssuerSigningKey": "9i/wnrMnkrf4aQtSQXkSF9t5j7f7CRb9pImFJJMSguQ=",
     "ValidateIssuer": true,
     "ValidIssuer": "baobabtech",
     "ValidateAudience": true,

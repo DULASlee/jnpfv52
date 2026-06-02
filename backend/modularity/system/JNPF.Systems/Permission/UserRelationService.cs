@@ -469,6 +469,9 @@ public class UserRelationService : IUserRelationService, IDynamicApiController, 
                 // 删除用户登录信息缓存
                 var cacheKey = string.Format("{0}:{1}:{2}", _userManager.TenantId, CommonConst.CACHEKEYUSER, user.userId);
                 await _cacheManager.DelAsync(cacheKey);
+                // P0-2: 同步清除 CurrentUser 缓存
+                await _cacheManager.DelAsync($"CurrentUser:{_userManager.TenantId}:{user.userId}:Web");
+                await _cacheManager.DelAsync($"CurrentUser:{_userManager.TenantId}:{user.userId}:App");
             }
         }
     }

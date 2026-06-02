@@ -1,7 +1,4 @@
 import {
-	getLangJson
-} from '@/api/common';
-import {
 	i18n
 } from './setupI18n';
 import messages from './index'
@@ -17,18 +14,13 @@ export function useLocale() {
 	}
 	async function changeLocale(locale) {
 		const defaultMessage = messages[locale] || {}
-		const res = await getLangJson(getBackLocale(locale));
-		if (!res || !res.data) return setLocale(locale, defaultMessage);
-		const message = JSON.parse(res.data);
-		setLocale(locale, {
-			...defaultMessage,
-			...message
-		})
+		// v5.2 后端无 /api/system/BaseLang/LangJson，演示联调仅用本地语言包
+		setLocale(locale, defaultMessage);
 		return locale;
 	}
 	async function initLocale() {
 		const locale = uni.getLocale()
-		changeLocale(locale)
+		await changeLocale(locale)
 	}
 
 	function setLocale(locale, message) {

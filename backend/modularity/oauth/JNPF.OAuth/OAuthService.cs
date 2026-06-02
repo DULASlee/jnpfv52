@@ -1,4 +1,5 @@
-﻿using JNPF.Common.Captcha.General;
+﻿using System.Diagnostics;
+using JNPF.Common.Captcha.General;
 using JNPF.Common.Const;
 using JNPF.Common.Core.Manager;
 using JNPF.Common.Core.Manager.Tenant;
@@ -322,11 +323,23 @@ public class OAuthService : IDynamicApiController, ITransient
     [HttpGet("CurrentUser")]
     public async Task<dynamic> GetCurrentUser(string type, string systemCode)
     {
+        var __sw = Stopwatch.StartNew();
         if (type.IsNullOrEmpty()) type = "Web"; // 默认为Web端菜单目录
         if (type.ToLower().Equals("app")) type = "App";
         if (type.ToLower().Equals("web") || type.ToLower().Equals("pc")) type = "Web";
 
         var userId = _userManager.UserId;
+        var tenantId = _userManager.TenantId ?? "default";
+        var currentUserCacheKey = $"CurrentUser:{tenantId}:{userId}:{type}";
+
+        // P0-2: 优先读取缓存
+        var cachedResult = await _cacheManager.GetAsync<CurrentUserOutput>(currentUserCacheKey);
+        if (cachedResult != null)
+        {
+            __sw.Stop();
+            Console.WriteLine($"[P0-2-TIMING] GetCurrentUser cache HIT: {__sw.ElapsedMilliseconds}ms");
+            return cachedResult;
+        }
 
         var loginOutput = new CurrentUserOutput();
         loginOutput.userInfo = await _userManager.GetUserInfo();
@@ -385,14 +398,26 @@ public class OAuthService : IDynamicApiController, ITransient
             }).ToListAsync();
 
         // 菜单
+        __sw.Restart();
         loginOutput.menuList = (await _moduleService.GetUserModuleListByIds(type, sysId, noContainsMIdList, noContainsMUrlList)).ToTree("-1");
+        Console.WriteLine($"[P0-1-TIMING] GetUserModuleListByIds (menu): {__sw.ElapsedMilliseconds}ms");
 
         var portalManageList = new List<PortalManageEntity>();
         var currSysId = _userManager.UserOrigin.Equals("pc") ? loginOutput.userInfo.systemId : loginOutput.userInfo.appSystemId;
+
+        // 预取授权菜单 ID，避免循环内重复查询 AuthorizeEntity
+        List<string> cachedModuleAuthorizeIds = null;
         if (!_userManager.IsAdministrator)
         {
             var pIds = _userManager.GetPermissionByUserId(_userManager.UserId);
             var sId = await _userRepository.AsSugarClient().Queryable<AuthorizeEntity>().Where(a => pIds.Contains(a.ObjectId)).Where(a => a.ItemType == "system").Select(a => a.ItemId).ToListAsync();
+
+            if (pIds.Any())
+            {
+                cachedModuleAuthorizeIds = await _userRepository.AsSugarClient().Queryable<AuthorizeEntity>()
+                    .Where(a => pIds.Contains(a.ObjectId)).Where(a => a.ItemType == "module")
+                    .Select(a => a.ItemId).ToListAsync();
+            }
 
             // 分管只捞取分管应用 (权限组授权的权限失效)
             if (loginOutput.userInfo.dataScope.Any(x => x.organizeType.IsNotEmptyOrNull()))
@@ -428,7 +453,7 @@ public class OAuthService : IDynamicApiController, ITransient
                         _userManager.User.AppSystemId = loginOutput.userInfo.systemId;
                     }
 
-                    loginOutput.menuList = (await _moduleService.GetUserModuleListByIds(type, string.Empty, noContainsMIdList, noContainsMUrlList)).ToTree("-1");
+                    loginOutput.menuList = (await _moduleService.GetUserModuleListWithAuthIds(type, cachedModuleAuthorizeIds, noContainsMIdList, noContainsMUrlList)).ToTree("-1");
                     if (!loginOutput.menuList.Any())
                     {
                         for (var i = 1; i < loginOutput.userInfo.systemIds.Count; i++)
@@ -453,7 +478,7 @@ public class OAuthService : IDynamicApiController, ITransient
                                 _userManager.User.AppSystemId = loginOutput.userInfo.systemId;
                             }
 
-                            loginOutput.menuList = (await _moduleService.GetUserModuleListByIds(type, string.Empty, noContainsMIdList, noContainsMUrlList)).ToTree("-1");
+                            loginOutput.menuList = (await _moduleService.GetUserModuleListWithAuthIds(type, cachedModuleAuthorizeIds, noContainsMIdList, noContainsMUrlList)).ToTree("-1");
                             if (loginOutput.menuList.Any()) break;
                         }
                     }
@@ -517,12 +542,16 @@ public class OAuthService : IDynamicApiController, ITransient
         loginOutput.userInfo.appPortalId = await GetPortalId(appPortalManageList, portalId, loginOutput.userInfo.appSystemId, loginOutput.userInfo.userId, "App");
 
         var currentUserModel = new CurrentUserModelOutput();
+        var __sw2 = Stopwatch.StartNew();
         currentUserModel.moduleList = (await _moduleService.GetUserModuleListByIds(type, sysId, noContainsMIdList, noContainsMUrlList)).Adapt<List<ModuleOutput>>();
+        Console.WriteLine($"[P0-1-TIMING] GetUserModuleListByIds (permission): {__sw2.ElapsedMilliseconds}ms");
+        __sw2.Restart();
         var dataScopeModuleIds = await _userRepository.AsSugarClient().Queryable<ModuleEntity>().Where(x => dataScope.Contains(x.SystemId)).Select(x => x.Id).ToListAsync();
         currentUserModel.buttonList = await _moduleButtonService.GetUserModuleButtonList(dataScopeModuleIds);
         currentUserModel.columnList = await _columnService.GetUserModuleColumnList(dataScopeModuleIds);
         currentUserModel.resourceList = await _moduleDataAuthorizeSchemeService.GetResourceList(dataScopeModuleIds);
         currentUserModel.formList = await _formService.GetUserModuleFormList(dataScopeModuleIds);
+        Console.WriteLine($"[P0-1-TIMING] Permission queries (button+column+resource+form): {__sw2.ElapsedMilliseconds}ms");
 
         // 权限信息
         var permissionList = new List<PermissionModel>();
@@ -562,6 +591,12 @@ public class OAuthService : IDynamicApiController, ITransient
         }
 
         loginOutput.sysConfigInfo.jnpfDomain = GetLocalAddress();
+
+        __sw.Stop();
+        Console.WriteLine($"[P0-1-TIMING] GetCurrentUser elapsed: {__sw.ElapsedMilliseconds}ms");
+
+        // P0-2: 写入缓存（30分钟过期）
+        await _cacheManager.SetAsync(currentUserCacheKey, loginOutput, TimeSpan.FromMinutes(30));
 
         return loginOutput;
     }
@@ -1199,6 +1234,9 @@ public class OAuthService : IDynamicApiController, ITransient
     private async Task<bool> DelUserInfo(string tenantId, string userId)
     {
         string cacheKey = string.Format("{0}:{1}:{2}", tenantId, CommonConst.CACHEKEYUSER, userId);
+        // P0-2: 同步清除 CurrentUser 缓存（Web + App）
+        await _cacheManager.DelAsync($"CurrentUser:{tenantId}:{userId}:Web");
+        await _cacheManager.DelAsync($"CurrentUser:{tenantId}:{userId}:App");
         return await _cacheManager.DelAsync(cacheKey);
     }
 
@@ -1360,6 +1398,7 @@ public class OAuthService : IDynamicApiController, ITransient
     {
         var ipAddress = NetHelper.Ip;
         var ipAddressName = await NetHelper.GetLocation(ipAddress);
+        var traceId = App.HttpContext?.Items["TraceId"]?.ToString();
 
         var _OS = string.Empty;
         var _Browser = string.Empty;
@@ -1390,7 +1429,9 @@ public class OAuthService : IDynamicApiController, ITransient
             CreatorTime = DateTime.Now,
             LoginType = loginType,
             LoginMark = loginMark,
-            Description = description.Contains(']') ? description.Split("]").Last().TrimStart() : description
+            Description = description.Contains(']') ? description.Split("]").Last().TrimStart() : description,
+            TraceId = traceId,
+            TenantId = tenantId
         }));
     }
 

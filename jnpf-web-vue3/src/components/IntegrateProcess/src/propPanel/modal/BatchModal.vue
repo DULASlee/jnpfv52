@@ -24,7 +24,7 @@
   import { reactive } from 'vue';
   import { BasicModal, useModalInner } from '/@/components/Modal';
   import { useMessage } from '/@/hooks/web/useMessage';
-  import { MonacoEditor } from '/@/components/CodeEditor';
+  import { MonacoEditor } from '/@/components/CodeEditor/src/MonacoEditor';
 
   interface State {
     jsonStr: string;

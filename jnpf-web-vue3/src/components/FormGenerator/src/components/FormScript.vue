@@ -27,7 +27,7 @@
   import { ref, unref } from 'vue';
   import { BasicModal, useModalInner } from '/@/components/Modal';
   import { BasicTree, TreeActionType } from '/@/components/Tree';
-  import { MonacoEditor } from '/@/components/CodeEditor';
+  import { MonacoEditor } from '/@/components/CodeEditor/src/MonacoEditor';
   import ScriptDemo from './ScriptDemo.vue';
 
   const props = defineProps(['treeTitle', 'drawingList', 'type']);

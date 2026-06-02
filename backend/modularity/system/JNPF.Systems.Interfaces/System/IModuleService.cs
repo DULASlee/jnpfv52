@@ -49,4 +49,14 @@ public interface IModuleService
     /// <param name="type">登录类型.</param>
     /// <param name="systemId">SystemId.</param>
     Task<List<ModuleNodeOutput>> GetUserModuleList(string type, string systemId = "");
+
+    /// <summary>
+    /// 获取用户菜单树（使用预取的授权模块ID，避免循环内重复查询AuthorizeEntity）.
+    /// </summary>
+    /// <param name="type">登录类型.</param>
+    /// <param name="authorizeModuleIds">预取的授权模块ID列表.</param>
+    /// <param name="mIds">指定过滤Ids.</param>
+    /// <param name="mUrls">指定过滤Urls.</param>
+    /// <returns></returns>
+    Task<List<ModuleNodeOutput>> GetUserModuleListWithAuthIds(string type, List<string> authorizeModuleIds, List<string> mIds = null, List<string> mUrls = null);
 }

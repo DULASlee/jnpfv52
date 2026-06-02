@@ -139,8 +139,15 @@ public class ImReplyService : IImReplyService, IDynamicApiController, ITransient
     /// </summary>
     /// <param name="connectionId"></param>
     [NonAction]
-    public async void ForcedOffline(string connectionId)
+    public async Task ForcedOffline(string connectionId)
     {
-        await _imHandler.SendMessageAsync(connectionId, new { method = "logout", msg = "此账号已在其他地方登录" }.ToJsonString());
+        try
+        {
+            await _imHandler.SendMessageAsync(connectionId, new { method = "logout", msg = "此账号已在其他地方登录" }.ToJsonString());
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.WriteLine($"[ImReplyService] ForcedOffline failed: connectionId={connectionId}, Error={ex}");
+        }
     }
 }

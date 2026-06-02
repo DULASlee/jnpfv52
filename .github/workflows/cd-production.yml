@@ -1,0 +1,203 @@
+# =============================================================================
+# JNPF V5.2 - Production Deployment Workflow
+# =============================================================================
+# Triggers on release creation or manual dispatch
+# Deploys to production environment with approval gates
+# =============================================================================
+
+name: Deploy to Production
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., v1.0.0)'
+        required: true
+        type: string
+      confirm:
+        description: 'Type "deploy-production" to confirm'
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Validate Deployment Request
+  # ---------------------------------------------------------------------------
+  validate:
+    name: Validate Deployment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate confirmation
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "deploy-production" ]; then
+            echo "::error::Invalid confirmation. Type 'deploy-production' to confirm."
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Build Docker Images
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build Production Images
+    runs-on: ubuntu-latest
+    needs: [validate]
+
+    strategy:
+      matrix:
+        service:
+          - name: api
+            context: ./backend
+            dockerfile: application/JNPF.API.Entry/Dockerfile.production
+          - name: web
+            context: ./jnpf-web-vue3
+            dockerfile: Dockerfile.production
+          - name: datascreen
+            context: ./jnpf-web-datascreen
+            dockerfile: Dockerfile
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service.name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha,prefix=prod-
+            type=raw,value=prod-latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ matrix.service.context }}/${{ matrix.service.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------------
+  # Deploy to Production
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build]
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create backup
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd ${{ vars.DEPLOY_PATH || '/opt/jnpf' }}
+
+            # Backup current state
+            BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
+            mkdir -p "$BACKUP_DIR"
+
+            # Backup database
+            docker exec jnpf-sqlserver-prod /opt/mssql-tools/bin/sqlcmd \
+              -S localhost -U sa -P "${{ secrets.DB_PASSWORD }}" \
+              -Q "BACKUP DATABASE [${{ vars.DB_NAME }}] TO DISK = '/var/opt/mssql/backup/latest.bak' WITH FORMAT"
+
+            # Backup docker compose state
+            docker compose -f docker-compose.production.yml ps > "$BACKUP_DIR/services.txt"
+            cp docker-compose.production.yml "$BACKUP_DIR/"
+            cp .env.production "$BACKUP_DIR/" 2>/dev/null || true
+
+            echo "Backup created in $BACKUP_DIR"
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd ${{ vars.DEPLOY_PATH || '/opt/jnpf' }}
+
+            # Pull latest images
+            docker compose -f docker-compose.production.yml pull
+
+            # Create .env file from secrets
+            cat > .env.production << EOF
+            ENVIRONMENT=production
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_NAME=${{ vars.DB_NAME || 'jnpf_v52_prod' }}
+            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+            JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+            CORS_ORIGINS=${{ vars.CORS_ORIGINS }}
+            LOG_LEVEL=${{ vars.LOG_LEVEL || 'Warning' }}
+            SWAGGER_ENABLED=false
+            VITE_DROP_CONSOLE=true
+            EOF
+
+            # Rolling update
+            docker compose -f docker-compose.production.yml up -d --remove-orphans
+
+            # Wait for health checks
+            sleep 45
+
+            # Verify deployment
+            docker compose -f docker-compose.production.yml ps
+            curl -f http://localhost:5000/health || exit 1
+
+      - name: Verify production health
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            # Run health check script
+            cd ${{ vars.DEPLOY_PATH || '/opt/jnpf' }}
+            ./scripts/health-check.sh production
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "::notice::Production deployment successful"
+          echo "Version: ${{ github.event.release.tag_name || github.event.inputs.version }}"
+          echo "URL: ${{ vars.PRODUCTION_URL }}"
+
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "::error::Production deployment failed - manual intervention may be required"
+          echo "Check backup in backups/ directory"

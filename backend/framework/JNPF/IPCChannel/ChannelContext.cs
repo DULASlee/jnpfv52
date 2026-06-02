@@ -77,14 +77,19 @@ public sealed class ChannelContext<TMessage, THandler>
               {
                   if (!reader.TryRead(out var message)) continue;
 
-                  // 并行执行（非等待）
-                  var task = new Task(async () =>
+                  // 使用 Task.Run 正确处理 async lambda
+                  _ = Task.Run(async () =>
                   {
-                      // 默认重试 3 次（每次间隔 1s）
-                      await Retry.InvokeAsync(async () => await Activator.CreateInstance<THandler>().InvokeAsync(message), 3, 1000, finalThrow: false);
+                      try
+                      {
+                          // 默认重试 3 次（每次间隔 1s）
+                          await Retry.InvokeAsync(async () => await Activator.CreateInstance<THandler>().InvokeAsync(message), 3, 1000, finalThrow: false);
+                      }
+                      catch (Exception ex)
+                      {
+                          System.Diagnostics.Debug.WriteLine($"[IPCChannel] Handler failed: {ex.Message}");
+                      }
                   });
-
-                  task.Start();
               }
           }, TaskCreationOptions.LongRunning);
     }

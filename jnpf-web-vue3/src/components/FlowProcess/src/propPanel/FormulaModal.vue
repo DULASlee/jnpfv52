@@ -33,7 +33,8 @@
   import { ref } from 'vue';
   import { BasicModal, useModalInner } from '/@/components/Modal';
   import { BasicTree, TreeActionType } from '/@/components/Tree';
-  import { CodeEditor, MODE } from '/@/components/CodeEditor';
+  import { CodeEditor } from '/@/components/CodeEditor/src/CodeEditorWrapper';
+import { MODE } from '/@/components/CodeEditor/src/typing';
   import formulaData from '../helper/formulaData';
 
   const emit = defineEmits(['register', 'confirm']);

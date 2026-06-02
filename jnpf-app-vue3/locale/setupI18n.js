@@ -8,6 +8,7 @@ export let i18n;
 function createI18nOptions() {
 	const locale = uni.getLocale();
 	return {
+		legacy: false,
 		locale,
 		messages,
 		sync: true,

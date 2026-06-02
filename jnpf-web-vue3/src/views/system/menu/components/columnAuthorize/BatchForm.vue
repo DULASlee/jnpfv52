@@ -28,7 +28,7 @@
   import { BasicModal, useModalInner } from '/@/components/Modal';
   import { batchCreate } from '/@/api/system/columnAuthorize';
   import { useMessage } from '/@/hooks/web/useMessage';
-  import { MonacoEditor } from '/@/components/CodeEditor';
+  import { MonacoEditor } from '/@/components/CodeEditor/src/MonacoEditor';
 
   interface State {
     columnJson: string;

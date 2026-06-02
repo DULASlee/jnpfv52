@@ -14,7 +14,7 @@
 
 <script lang="ts" setup>
   import { reactive, toRefs } from 'vue';
-  import { MonacoEditor } from '/@/components/CodeEditor';
+  import { MonacoEditor } from '/@/components/CodeEditor/src/MonacoEditor';
 
   interface State {
     currentContent: string;

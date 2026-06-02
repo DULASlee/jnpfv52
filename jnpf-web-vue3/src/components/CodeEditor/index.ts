@@ -1,10 +1,11 @@
-import { withInstall } from '/@/utils';
-import codeEditor from './src/CodeEditor.vue';
-import monacoEditor from './src/monacoEditor/MonacoEditor.vue';
-import jsonPreview from './src/json-preview/JsonPreview.vue';
+// P0-3: 拆分 barrel — 各组件独立导出，避免 monaco/codemirror 被拖入 entry chunk
+// 消费方请直接引用子组件路径：
+//   MonacoEditor  → '/@/components/CodeEditor/src/MonacoEditor'
+//   CodeEditor    → '/@/components/CodeEditor/src/CodeEditorWrapper'
+//   JsonPreview   → '/@/components/CodeEditor/src/JsonPreviewWrapper'
+//   MODE          → '/@/components/CodeEditor/src/typing'
 
-export const CodeEditor = withInstall(codeEditor);
-export const MonacoEditor = withInstall(monacoEditor);
-export const JsonPreview = withInstall(jsonPreview);
-
+export { CodeEditor } from './src/CodeEditorWrapper';
+export { MonacoEditor } from './src/MonacoEditor';
+export { JsonPreview } from './src/JsonPreviewWrapper';
 export * from './src/typing';

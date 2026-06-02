@@ -7,8 +7,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="lib\regworkerid_lib_v1.3.1\yitidgengo.dll" />
-		<EmbeddedResource Include="lib\regworkerid_lib_v1.3.1\yitidgengo.so" />
+		<Content Include="lib\regworkerid_lib_v1.3.1\yitidgengo.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="lib\regworkerid_lib_v1.3.1\yitidgengo.so">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 		<EmbeddedResource Include="sensitive-words.txt" />
 	</ItemGroup>
 

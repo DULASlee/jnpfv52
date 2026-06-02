@@ -6,7 +6,8 @@
 <script lang="ts" setup>
   import { ref } from 'vue';
   import { BasicModal, useModalInner } from '/@/components/Modal';
-  import { CodeEditor, MODE } from '/@/components/CodeEditor';
+  import { CodeEditor } from '/@/components/CodeEditor/src/CodeEditorWrapper';
+import { MODE } from '/@/components/CodeEditor/src/typing';
 
   const emit = defineEmits(['register', 'change']);
   const [registerModal, { closeModal }] = useModalInner(init);
