@@ -2,7 +2,7 @@
 // #ifdef H5
 // H5 模式 baseURL 留空，通过 Vite proxy 转发到后端
 const baseURL = ''
-const webSocketUrl = 'ws://localhost:3800/api/message/websocket'
+const webSocketUrl = 'ws://localhost:5000/api/message/websocket'
 const report = 'http://localhost:8200'
 const flow = 'http://localhost:3100'
 // #endif

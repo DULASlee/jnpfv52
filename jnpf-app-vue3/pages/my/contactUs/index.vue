@@ -34,6 +34,8 @@
 <script>
 	import resources from '@/libs/resources.js'
 	export default {
+		onHide() { uni.hideLoading() },
+		onUnload() { uni.hideLoading() },
 		data() {
 			return {
 				contactus: resources.banner.contactus,

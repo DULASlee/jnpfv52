@@ -278,7 +278,7 @@
 			upCallback(keyword) {
 				auth(this.userInfo.appPortalId).then(res => {
 					this.authConfig = res.data || {}
-					let data = JSON.parse(res.data.formData) || {};
+					let data = res.data.formData ? JSON.parse(res.data.formData) : {};
 					this.formData = data.layout ? JSON.parse(JSON.stringify(data.layout)) : [];
 					this.handelFormData(data);
 					this.getSystemConfig()

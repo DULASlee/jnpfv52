@@ -209,6 +209,10 @@
 		},
 		onUnload() {
 			uni.$off("updateUsualList");
+			uni.hideLoading();
+		},
+		onHide() {
+			uni.hideLoading();
 		},
 		methods: {
 			async getContentHeight() {
@@ -355,7 +359,7 @@
 			},
 			processObject(obj) {
 				const objectDataParsed = obj.objectData ? JSON.parse(obj.objectData) : {};
-				const propertyJsonParsed = JSON.parse(obj.propertyJson);
+				const propertyJsonParsed = obj.propertyJson ? JSON.parse(obj.propertyJson) : {};
 				const moduleId = propertyJsonParsed.moduleId || "";
 				this.$set(obj, "moduleId", moduleId);
 				return {

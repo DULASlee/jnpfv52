@@ -150,7 +150,9 @@
 				this.selectShow = false
 				this.userInfo = uni.getStorageSync('userInfo') || {}
 				this.selectList = []
-				this.selectList = JSON.parse(JSON.stringify(this.userInfo.standingList))
+				const standingList = this.userInfo.standingList
+				if (!standingList || !Array.isArray(standingList)) return
+				this.selectList = JSON.parse(JSON.stringify(standingList))
 				this.selectList.forEach((o, i) => {
 					o.id = Number(this.selectList[i].id)
 				})

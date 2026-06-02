@@ -162,6 +162,7 @@
 		},
 		onUnload() {
 			uni.$off("updateUsualList");
+			uni.hideLoading();
 		},
 		onShow() {
 			this.keyword = ""
@@ -177,6 +178,7 @@
 		},
 		onHide() {
 			this.restTabs()
+			uni.hideLoading();
 		},
 		methods: {
 			async getContentHeight() {

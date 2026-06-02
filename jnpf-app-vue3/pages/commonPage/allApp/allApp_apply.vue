@@ -51,6 +51,8 @@
 		delUsual
 	} from '@/api/apply/apply.js'
 	export default {
+		onHide() { uni.hideLoading() },
+		onUnload() { uni.hideLoading() },
 		components: {
 			CommonTabs,
 			NoData

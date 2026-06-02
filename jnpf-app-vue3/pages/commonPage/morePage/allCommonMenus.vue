@@ -40,6 +40,8 @@
 	import CommonTabs from '@/components/CommonTabs'
 	import MescrollMixin from "@/uni_modules/mescroll-uni/components/mescroll-uni/mescroll-mixins.js";
 	export default {
+		onHide() { uni.hideLoading() },
+		onUnload() { uni.hideLoading() },
 		mixins: [MescrollMixin],
 		components: {
 			NoData,

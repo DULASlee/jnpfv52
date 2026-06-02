@@ -204,6 +204,8 @@
 	} from '@/api/apply/order'
 	export default {
 		name: 'crmOrder',
+		onHide() { uni.hideLoading() },
+		onUnload() { uni.hideLoading() },
 		mixins: [comMixin],
 		data() {
 			return {
