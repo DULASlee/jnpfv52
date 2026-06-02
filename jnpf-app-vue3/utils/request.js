@@ -6,7 +6,7 @@ import {
 const {
 	getBackLocale
 } = useLocale();
-const host = define.baseURL || 'http://localhost:5000'
+const host = define.baseURL
 const defaultOpt = {
 	load: true
 }

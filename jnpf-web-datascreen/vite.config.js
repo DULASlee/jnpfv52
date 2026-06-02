@@ -31,7 +31,8 @@ export default ({ mode, command }) => {
     server: {
       https: false,
       host: true,
-      port: 8100,
+      port: 3102,
+      strictPort: true,
       proxy: {
         "/dev": {
           target: VITE_PROXY,//代理接口

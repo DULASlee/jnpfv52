@@ -58,6 +58,7 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
       // Listening on all local IPs
       host: true,
       port: VITE_PORT,
+      strictPort: true,
       // Load proxy configuration from .env
       proxy: createProxy(VITE_PROXY),
       open: true, //vite项目启动时自动打开浏览器

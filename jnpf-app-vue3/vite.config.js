@@ -19,6 +19,10 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/websocket': {
+        target: 'ws://localhost:5000',
+        ws: true,
+      },
     },
     hmr: {
       host: 'localhost',
