@@ -27,7 +27,11 @@ docs/token.txt
 .cursor/episodic/sync-status.json
 .cursor/edge-debug-profile/
 .env.toolchain
-.claude/
+# Claude Code — track team-shared, ignore local
+.claude/settings.local.json
+.claude/projects/
+.claude/*.log
+.claude/hooks/_test-*
 
 # Local / temp
 .specstory/

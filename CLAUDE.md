@@ -142,3 +142,54 @@ Code search: Grep first. C# precise symbols: Serena MCP.
 ## Technical Preferences
 
 Prefer reusing existing code — don't reinvent. Simple solution > over-engineering. Check impact surface before any change. Clear commit messages, minimal changeset.
+
+---
+
+## 增量规则（追加于现有规则之后）
+
+### 跨会话记忆使用规范
+- 每次会话开始时，MUST 读取项目内 `.claude/memory/` 下的文件了解团队共享上下文
+- 同时参考 auto-memory（系统自动维护的个人记忆）
+- 两者分工：`.claude/memory/` = 团队共享知识（提交到 Git），auto-memory = AI 个人笔记
+- 每次会话结束前，MUST 将以下内容写入 `.claude/memory/`：
+  - 重要技术决策 → `decisions.md`
+  - 未解决的问题 → `pending-issues.md`
+  - 踩坑记录 → `lessons-learned.md`
+
+### 复杂任务规划增强
+> 补充现有 Default Workflow 中 Plan 步骤的细节，不替换现有流程。
+
+当 Plan 步骤判定为复杂任务（涉及 3+ 文件或 50+ 行逻辑）时：
+- MUST 调用 superpowers 技能集的头脑风暴模式，输出至少 2 种实现路径
+- MUST 在计划中包含影响面分析和测试策略
+- MUST 将计划写入 `.claude/memory/decisions.md` 留档
+- 简单任务（单文件 ≤10 行 bug 修复、纯样式调整、文档更新）可跳过，但出现意外错误时 MUST 转入完整规划
+
+### 禁止推脱补充
+> 补充现有 Law 1 中未覆盖的具体行为规范。
+
+当发现错误但无法在当前会话快速修复时（≥ 15 分钟），MUST：
+1. 明确告知人类："我发现了一个需要单独处理的问题"
+2. 给出具体代码级修复方案（不是"建议排查"）
+3. 写入 `.claude/memory/pending-issues.md`，包含：问题描述、复现步骤、修复方案、影响评估
+4. 绝对不允许发现错误后沉默或跳过
+
+### 项目健康验证
+> 补充 R5，仅验证已启用且被修改的项目。
+
+每次代码修改后，被修改的项目 MUST 能编译通过：
+- 前端（jnpf-web-vue3）：`vue-tsc --noEmit` 通过
+- 后端（已启用的 Entry）：`dotnet build` 通过
+- DataV（jnpf-web-datascreen）：如被修改则需验证
+- UniApp（jnpf-app-vue3）：如被修改则需验证
+- **OA（禁用）、IoT/MES（未创建）：不验证，与 R5 一致**
+
+### 安全知识库
+- 处理安全相关任务时，MUST 先查阅 `.claude/knowledge/` 下的相关文件
+- 不确定时明确说"我不确定，请安全团队审核"
+
+### MCP 技能主动调用
+- 面对复杂编程任务，MUST 主动调用 superpowers 技能集，不要等到人类提醒
+- 需要架构设计时 → 调用头脑风暴技能
+- 需要制定开发计划时 → 调用开发计划技能
+- 如果不确定是否需要，宁可调用
