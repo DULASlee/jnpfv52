@@ -148,11 +148,16 @@
 			},
 			setStanding() {
 				this.selectShow = false
-				this.userInfo = uni.getStorageSync('userInfo') || {}
+				const raw = uni.getStorageSync('userInfo')
+				this.userInfo = (raw && typeof raw === 'object') ? raw : {}
 				this.selectList = []
 				const standingList = this.userInfo.standingList
 				if (!standingList || !Array.isArray(standingList)) return
-				this.selectList = JSON.parse(JSON.stringify(standingList))
+				try {
+					this.selectList = JSON.parse(JSON.stringify(standingList))
+				} catch (e) {
+					return
+				}
 				this.selectList.forEach((o, i) => {
 					o.id = Number(this.selectList[i].id)
 				})

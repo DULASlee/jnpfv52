@@ -373,7 +373,7 @@
 					let list = res.data.list.map(o => (this.processObject(o))).slice(0, 11);
 					// 更新 usualList
 					this.usualList = [...list];
-				});
+				}).catch(() => {});
 			},
 			upCallback(keyword) {
 				let query = {
@@ -398,6 +398,7 @@
 							this.key = +new Date();
 							this.mescroll.endSuccess(this.menuList.length, false);
 						}).catch(() => {
+							uni.hideLoading()
 							this.mescroll.endSuccess(0);
 							this.mescroll.endErr();
 						});

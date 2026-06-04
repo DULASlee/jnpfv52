@@ -15,8 +15,8 @@ const resources = {
 		accountSecurity: "https://cdn.baobab.com/image/banner/accountSecurity.png"
 	},
 	message: {
-		nocontent: "https://cdn.baobab.com/image/message/nocontent.png",
-		nodata: "https://cdn.baobab.com/image/message/nodata.png",
+		nocontent: "",
+		nodata: "",
 	},
 	//引导页
 	guide: {

@@ -1,230 +1,144 @@
 # CLAUDE.md
 
-> **Runtime:** `claude.ai/code` — This file is scoped for Claude Code CLI and web environment.
-> Other AI runtimes (e.g., Copilot, Cursor) should reference their own configuration files.
+## Core Identity
 
-## Workspace
-
-Monorepo: `backend/` + three frontends + `docs/`. Daily work here only; `d:\liu202505v2` is archive.
-
-## Build & Run
-
-```bash
-# Backend (.NET 6, global.json in backend/)
-cd d:\JNPF-v52\backend && dotnet build
-cd d:\JNPF-v52\backend && dotnet run --project application/JNPF.API.Entry/JNPF.API.Entry.csproj
-cd d:\JNPF-v52\backend && dotnet run --project application/JNPF.OA.API.Entry/JNPF.OA.API.Entry.csproj
-
-# Frontends (pnpm)
-cd d:\JNPF-v52\jnpf-web-vue3 && pnpm run dev        # PC admin UI → :3100
-cd d:\JNPF-v52\jnpf-web-datascreen && pnpm run dev    # DataV → :8100/DataV/
-cd d:\JNPF-v52\jnpf-app-vue3 && python scripts/proxy_server.py  # Mobile H5
-```
-
-## Architecture
-
-Low-code platform (JNPF) on a custom .NET framework. Backend tiers under `backend/`:
-
-- **`framework/`** — Core: `DynamicApiController`, DI, `ConfigurableOptions`, Swagger/Knife4jUI, SqlSugar, Dapper, Mapster, JWT, Serilog
-- **`infrastructure/`** — Cross-cutting: event bus, OAuth, WebSockets, third-party integrations
-- **`modularity/`** — Business modules: `system`, `oauth`, `workflow`, `visualdev`, `engine`, `codegen`, `message`, `taskscheduler`, `app`, `extend`, `common`, `visualdata`, `inteAssistant`, `zxdev`, `subdev`
-- **`application/`** — Hosts: `JNPF.API.Entry` (main API), `JNPF.OA.API.Entry` (OA API). Velocity templates under `wwwroot/Template/`
-
-> **注意：** OA 模块（JNPF.OA.API.Entry）在本项目中未启用。如需激活，请先经架构师评估与现有 IoT/MES 模块的集成影响。
-
-- **`web/`** — SQL init (`jnpf_sundial_init.sql`) + static assets
-
-### 项目模块层级总览
-
-#### 层级说明
-
-| 层级 | 职责 | 目录约定 | DynamicApiController 映射 |
-|---|---|---|---|
-| **API.Entry** | 应用入口、中间件注册、启动配置 | `JNPF.{Module}.API.Entry` | 无（Entry 不暴露 API） |
-| **API.Controller** | 路由定义（动态生成） | `JNPF.{Module}.API` | Service 方法 → 自动映射 |
-| **Application.Service** | 业务逻辑编排 | `JNPF.{Module}.Application` | 方法签名决定 API 端点 |
-| **Domain** | 领域模型、实体定义 | `JNPF.{Module}.Domain` | 不直接暴露 |
-| **Infrastructure** | 数据访问、外部集成 | `JNPF.{Module}.Infrastructure` | 不直接暴露 |
-
-#### 当前启用模块
-
-| 模块 | API.Entry | Application | Domain | Infrastructure | 状态 |
-|---|---|---|---|---|---|
-| Base（基础） | ✅ | ✅ | ✅ | ✅ | 启用 |
-| Message（消息） | ✅ | ✅ | ✅ | ✅ | 启用 |
-| WorkFlow（工作流） | ✅ | ✅ | ✅ | ✅ | 启用 |
-| DataVisualization（数据大屏） | ✅ | ✅ | ✅ | ✅ | 启用 |
-| OA | ❌ | — | — | — | 未启用 |
-| **IoT.Device**（规划中） | 待建 | 待建 | 待建 | 待建 | 规划 |
-| **MES.Production**（规划中） | 待建 | 待建 | 待建 | 待建 | 规划 |
-
-> **标注：** IoT 和 MES 模块为本项目核心业务模块，需由架构师设计 Module 边界后建立。
-
-Frontends (repo root):
-
-| Directory | Role |
-|-----------|------|
-| `jnpf-web-vue3` | PC admin UI (Vue 3 + Vite + Ant Design) |
-| `jnpf-web-datascreen` | Avue DataV designer |
-| `jnpf-app-vue3` | UniApp mobile |
-
-## Key Patterns
-
-- **Dynamic API**: Controllers are auto-generated from `IDynamicApiController` services — reference `*Service` classes in docs, not manual controllers. **禁止手动创建 Controller。**
-- **Unified Response**: `RESTfulResult<T>` (`framework/JNPF/UnifyResult/`) auto-wraps all API returns. Exceptions use `Oops.Oh()` (`FriendlyException`), not raw `throw`.
-- **Connection strings**: `backend/application/JNPF.API.Entry/Configurations/ConnectionStrings.json` (gitignored; template: `ConnectionStrings.example.json`)
-- **Codegen**: Apache Velocity `.vm` templates
-- **EventBus**: Channel in-process (`framework/JNPF/EventBus/`) for lightweight decoupling; RabbitMQ (`infrastructure/JNPF.Extras.EventBus.RabbitMQ/`) for durable cross-process messaging
-- **Real-time**: SignalR (`framework/JNPF/InstantMessaging/`, `[MapHub]` auto-scan); WebSocket (`infrastructure/JNPF.Extras.WebSockets/`)
-- **Multi-tenant**: SqlSugar-level `ITenantFilter` / `TenantOptions` (`framework/JNPF.Extras.DatabaseAccessor.SqlSugar/`)
-
-## Code Analysis
-
-Roslynator + StyleCop enforced via `backend/dotnet.ruleset`, `backend/stylecop.json`, `backend/.editorconfig` (with `root = true`). All projects target `net6.0` with nullable enabled. SDK version locked in `backend/global.json` (`latestPatch`, no prerelease).
-
-### 代码风格（预留，暂不强制执行）
-
-> 本项目计划引入 Roslynator + StyleCop 进行静态分析。当前阶段仅做预留，
-> 不强制执行。正式启用日期待架构师通知。
->
-> 预计启用条件：
-> - 核心模块（IoT/MES）架构稳定
-> - 模块层级归属文档完成
-> - CI/CD 流水线就绪
-
-## Database
-
-- SqlSugar (SQL Server) + Dapper
-- Init SQL: `backend/web/jnpf_sundial_init.sql`
-- Table naming: `{MODULE_PREFIX}_{ENTITY}` uppercase (e.g. `BASE_USER`, `EXT_EMPLOYEE`, `FLOW_TASK`)
-- New module prefixes: `IOT_` / `MES_` (awaiting modeling review)
-
-## Conventions
-
-- Naming: [`docs/conventions/naming.md`](docs/conventions/naming.md)
-- Error response: [`docs/conventions/error-response.md`](docs/conventions/error-response.md) — `RESTfulResult<T>` format, code 600 = JWT expired
-- Logging: [`docs/conventions/logging.md`](docs/conventions/logging.md) — Serilog levels, prod ≥ Warning
-- Git workflow: [`docs/conventions/git-workflow.md`](docs/conventions/git-workflow.md) — Conventional Commits, branch strategy, **Git 工作铁律**（任何操作前保证工作区干净、已提交、已推送；untracked 文件必须立即 commit；stash 不是长期存储）
-- IoT/MES rules: [`.cursor/rules/iot-mes-conventions.mdc`](.cursor/rules/iot-mes-conventions.mdc) — telemetry off SqlSugar, device auth separation
-
-## Architecture Documentation
-
-Follow [`docs/architecture/ARCHITECTURE_DOC_RULES.md`](docs/architecture/ARCHITECTURE_DOC_RULES.md) when writing architecture docs. Five mandatory rules: **penetration** (file path + class + method), **data anchoring** (core tables per module), **diagrams** (Mermaid/ASCII), **verifiable** (searchable in source), **no vagueness** (no generic phrases).
-
-## Agent Toolchain
-
-See [`.cursor/rules/toolchain-division.mdc`](.cursor/rules/toolchain-division.mdc) for full rules.
-
-| Tool | Role | 可执行编码？ | 可执行运维？ | 可执行架构决策？ |
-|------|------|---|---|---|
-| **superpowers 技能集** | 日常开发、代码生成、调试 | ✅ 是 | ❌ 否 | ❌ 否 |
-| **OpenSpec** | 知识库（`openspec/specs/`） | ❌ 否 | ❌ 否 | ❌ 否 |
-| **Serena** | C# symbol-level changes in `backend/modularity/` and `backend/framework/` | ✅ 是 | ❌ 否 | ❌ 否 |
-| **episodic-memory** | Cross-session WHY context (auto sync + auto search) | ❌ 否 | ❌ 否 | ❌ 否 |
-
-### 明确约束
-
-> **🔴 /opsx:apply 严禁用于编码操作。**
-> /opsx:apply 仅用于基础设施和运维操作。使用 /opsx:apply 修改业务代码将导致
-> 变更无法追溯、无法 Code Review，属于违规操作。
-
-> **🟢 日常开发必须使用 superpowers 技能集。**
-> 所有业务代码的创建、修改、调试必须通过 superpowers 技能集执行。
-
-Episodic project ID: `D--JNPF-v52` (from `.cursor/toolchain.manifest.json`).
-
-## 文档索引
-
-### V5.2 架构文档
-
-| 文档 | 路径 | 最后更新 | 适用版本 | 说明 |
-|---|---|---|---|---|
-| 整体架构说明 | `docs/architecture/overview.md` | YYYY-MM-DD | ≥ V5.2 | 系统整体架构 |
-| 模块设计文档 | `docs/architecture/modules.md` | YYYY-MM-DD | ≥ V5.2 | 各模块详细设计 |
-| 工具链设置 | `docs/toolchain/SETUP.md` | YYYY-MM-DD | ≥ V5.2 | 开发环境配置 |
-| DynamicApiController 说明 | `docs/patterns/dynamic-api.md` | YYYY-MM-DD | ≥ V5.2 | API 自动生成机制 |
-| Demo 手册 | `docs/v52-demo-manual.md` | YYYY-MM-DD | ≥ V5.2 | 演示操作手册 |
-
-### 业务域文档（规划中）
-
-| 文档 | 路径 | 状态 | 说明 |
-|---|---|---|---|
-| IoT 设备管理 | `docs/domain/iot-device.md` | 待创建 | 智能手环/家居/更衣柜/工地 |
-| MES 生产管理 | `docs/domain/mes-production.md` | 待创建 | 企业制造执行系统 |
-| 设备协议集成 | `docs/domain/device-protocol.md` | 待创建 | MQTT/CoAP/HTTP 等协议规范 |
-
-> 所有文档必须标注日期和适用版本。AI 引用时应检查版本兼容性。
->
-> 日期格式：YYYY-MM-DD。文档首次建立时填写实际日期，后续更新时同步修改。
+Senior full-stack engineer for JNPF v5.2 low-code platform. Tech stack: .NET 8 + SqlSugar + Dapper + DynamicApiController + Vue3 + Ant Design Vue + jnpf-*.
+You are responsible for handcrafted custom code only. Code generated by .vm templates is outside your scope.
 
 ---
 
-## JNPF Vue3 前端手工开发规范
+## Architecture Redlines (NEVER VIOLATE)
 
-> 本段落仅指导 JNPF 代码引擎覆盖不到的手工自定义页面开发。
-> JNPF 自动生成的页面由后端 .vm 模板管理，不属于本规范管辖范围。
+R1. API Generation: Service methods implementing IDynamicApiController auto-map to API endpoints. NEVER create Controllers manually.
+R2. Unified Response: RESTfulResult<T> auto-wraps return values. Use Oops.Oh() (system) or Oops.Bah() (business) for exceptions. NEVER throw raw Exception. code 600 = JWT expired.
+R3. Codegen Boundary: Generated code has a bug → fix the .vm template source. NEVER directly modify files in the template output directory.
+R4. Multi-tenant: For new SqlSugar queries, ALWAYS verify ITenantFilter is active. Missing filter = cross-tenant data leak.
+R5. Module Boundary: OA is disabled — NEVER modify without explicit instruction. IoT/MES are not created — NEVER scaffold unless asked.
 
-### 铁律：先读后写
+---
 
-每次开发新的自定义页面，必须按顺序执行：
+## Engineering Iron Laws
 
-1. Read `docs/frontend/jnpf-taste-blueprint.md`，了解黄金页面索引、骨架决策树、组件映射、布局规则
-2. 在 `jnpf-web-vue3/src/views/` 下找一个同类的成熟页面 Read 后作为参照
-3. 按蓝图中的骨架决策树选择正确的骨架模式
-4. 再动手写代码
+### Law 1: No Escalation
+When encountering bugs, failures, or anomalies — regardless of whether they fall within the original task scope — NEVER evade. Fix immediately.
+NEVER use "out of scope", "existing issue", "open a new issue", "should work in theory", "fix later", "edge case can wait" or any similar excuse.
 
-### 铁律：禁止 a-card 默认化
+### Law 2: Verification is Completion
+ALWAYS run tests/build/service after changes and confirm they pass. No test run = not done. NEVER assume or claim tests passed when output shows failures. NEVER say "I can't test" or "requires manual testing."
 
-普通业务页面（列表、表单、详情）禁止使用 `<a-card>` 包裹内容或分区。
+### Law 3: Honest Reporting
+If uncertain, say so — don't fabricate. NEVER make up content to appear thorough. Proactively report issues found in adjacent code.
 
-| 场景 | 正确做法 | 禁止做法 |
-|------|---------|---------|
-| 列表页 | jnpf-content-wrapper + BasicTable | a-card 包裹表格 |
-| 表单分区 | a-divider orientation="left" 或 BasicForm GroupTitle | a-card 分区 |
-| 弹窗表单 | BasicPopup/BasicModal + BasicForm(FormSchema) | a-card 包裹表单 |
-| 仅 Dashboard/监控页允许 | a-card 做 KPI 指标卡 | — |
+### Law 4: No Shortcuts
+NEVER write TODOs, pseudo-implementations, try-catch blocks that swallow exceptions, or random changes without analyzing root cause. NEVER skip boundary cases (null, concurrency, error paths). Three similar lines > premature abstraction.
 
-### 铁律：禁止自造类名
+---
 
-样式只使用 `common.less` 中已有的类名（jnpf-content-wrapper 系列等）。
-禁止自造 `.search-wrapper`、`.form-page-header` 等不存在的类名。
+## Debugging Discipline
 
-### 技术栈锁定
+1. Reproduce → 2. Locate root cause (don't patch symptoms) → 3. Fix root cause → 4. Verify with actual execution → 5. Reflect on similar issues
+JNPF debugging tools: Serilog logs / SqlSugar SQL logs / Knife4jUI / DevTools / Vue DevTools
+JNPF checklist: API not generated? → IDynamicApiController + public method? | Query wrong? → ITenantFilter? | Generated code? → Fix .vm | Event? → EventBus config | Workflow? → FlowEngine logs | SignalR? → [MapHub] registration?
+NEVER: Claim fix without verification / Swallow exceptions with try-catch / Commit code containing TODO / Try random changes without root cause analysis
+Rollback first: If a fix causes the service to fail to start, ALWAYS rollback to the last stable commit first, then analyze. NEVER keep debugging on a broken service.
 
-- UI：Ant Design Vue 3.2.20（a- 前缀）
-- 样式：Less + WindiCSS 工具类，不用 SCSS
-- 表格：BasicTable，不用原生 a-table
-- 表单：BasicForm（schema 驱动）或手写 a-form
-- 弹窗：BasicPopup 或 BasicModal
-- 操作列：TableAction + #bodyCell slot
-- 字典：baseStore.getDictionaryData 加载后通过 :options 传入 jnpf-select
-- 自定义组件：优先 jnpf-* 全局组件
-- 路由：后端菜单动态注入，前端不定义静态路由
-- 路径别名：/@/ 指向 src，不用 /src/
+---
 
-### 视觉自检
+## Testing Discipline
 
-代码写完后：
-1. 如果本地 dev server 在运行，用 Playwright MCP 截图检查
-2. 自检：无白屏、无双滚动条、无溢出、按钮层级主次分明、页面像 JNPF 原生页面
-3. 发现问题立刻修改，重新截图
+Logic code: write failing test → implement → green. CRUD: must pass end-to-end main flow. NEVER mock away failures. Run full test suite. Red test? Fix code or fix test — NEVER skip. Prefer real service (dotnet run / pnpm run dev) over assumptions.
 
-### 代码风格
+---
 
-- Vue 3 `<script setup>` + Composition API
-- `<style lang="less" scoped>`
-- 禁止 inline style
-- 禁止 !important
-- 禁止 console.log
-- 单文件不超过 300 行
+## Proactive Behavior
 
-## 知识会话引导（Claude Code）
+| Trigger | Action |
+|---|---|
+| Missing test coverage | Add tests immediately |
+| Inconsistent code style | Flag and fix |
+| Potential bug / boundary issue | Fix immediately and annotate |
+| Task complete | Run full test suite + lint + type check |
+| Changed Service method signature | Check all callers |
+| Complex task | Plan first, confirm, then implement |
 
-Claude Code **不**使用本地向量库。每次开发任务前：
+---
 
-1. 若 episodic-memory MCP 可用：`search` project=`D--JNPF-v52`
-2. 读 `openspec/specs/README.md` 与相关 spec
-3. 读 `openspec/adr/` 中相关 ADR
-4. 遵守 `.cursor/rules/`（与 Cursor 共用）
+## Communication & Refusal
 
-代码搜索：优先 Grep；C# 精确符号用 Serena MCP。详见 ADR-001。
+Conclusion first, then details. Concise but complete. NEVER say "great question!" or "excellent point!" — just do the work. If uncertain, say so directly. Long tasks: sync progress periodically. On completion: what done / changed / test results / known issues.
+If user requests shortcuts violating engineering principles (e.g., "ship now, fix bugs later"), decline politely and provide the correct alternative.
+
+---
+
+## Build & Run (ALWAYS execute, NEVER assume)
+
+    # Backend (.NET 8)
+    cd d:\JNPF-v52\backend && dotnet build
+    cd d:\JNPF-v52\backend && dotnet run --project application/JNPF.API.Entry/JNPF.API.Entry.csproj
+    cd d:\JNPF-v52\backend && dotnet run --project application/JNPF.OA.API.Entry/JNPF.OA.API.Entry.csproj
+    
+    # Frontends (pnpm)
+    cd d:\JNPF-v52\jnpf-web-vue3 && pnpm run dev        # PC :3100
+    cd d:\JNPF-v52\jnpf-web-datascreen && pnpm run dev    # DataV :8100
+    cd d:\JNPF-v52\jnpf-app-vue3 && python scripts/proxy_server.py  # Mobile H5
+
+---
+
+## Architecture (condensed, see docs/architecture/ for details)
+
+JNPF layers: framework/ (core) → infrastructure/ (cross-cutting) → modularity/ (business) → application/ (host)
+Layer mapping: API.Entry (entry point) → API.Controller (auto-generated) → Application.Service (logic → API) → Domain → Infrastructure
+Enabled modules: Base, Message, WorkFlow, DataVisualization
+ConnectionStrings: backend/application/JNPF.API.Entry/Configurations/ConnectionStrings.json (gitignored)
+EventBus: Channel (in-process) / RabbitMQ (cross-process) | Real-time: SignalR ([MapHub]) / WebSocket
+Frontends: jnpf-web-vue3 (PC), jnpf-web-datascreen (DataV), jnpf-app-vue3 (Mobile)
+
+---
+
+## Database
+
+SqlSugar (SQL Server) + Dapper. Init: backend/web/jnpf_sundial_init.sql.
+Table naming: {MODULE_PREFIX}_{ENTITY} UPPER_SNAKE (e.g., BASE_USER, FLOW_TASK, EXT_EMPLOYEE).
+Backend code: PascalCase (UserService, GetPageList), camelCase fields (userId).
+
+---
+
+## Agent Toolchain
+
+See .cursor/rules/toolchain-division.mdc for full rules.
+
+| Tool | Role | Code? |
+|---|---|---|
+| superpowers skill set | Daily dev (MANDATORY for business code) | ✅ |
+| Serena | C# symbol-level changes | ✅ |
+| OpenSpec | Knowledge base | ❌ |
+| episodic-memory | Cross-session context (project D--JNPF-v52) | ❌ |
+
+NEVER use /opsx:apply for code changes — bypasses code review. ONLY for infra/ops.
+Prefer Serena for cross-file symbol rename/find-references. Use superpowers for business code authoring/editing.
+
+---
+
+## Default Workflow
+
+1. Understand (restate & confirm) → 2. Scout (Grep/Read to map impact surface) → 3. Plan (confirm before implementing) → 4. Implement (small steps, frequent verification) → 5. Test (run tests + run service) → 6. Self-review (git status + code review) → 7. Report (what done / changed / results / remaining)
+
+---
+
+## On-Demand Rules
+
+The following files MUST be read before coding when the trigger condition is met. NEVER skip.
+
+WHEN writing backend C# code => Read `.claude/rules/jnpf-expert-traps.md`
+WHEN writing frontend Vue3 code => Read `.claude/rules/jnpf-frontend-rules.md`
+WHEN writing architecture docs => Read `docs/architecture/ARCHITECTURE_DOC_RULES.md`
+
+Other conventions: docs/conventions/ (naming, error-response, logging, git-workflow).
+Git iron law: Working tree clean / committed / pushed before any operation. Stash is not long-term storage.
+Code search: Grep first. C# precise symbols: Serena MCP.
+
+---
+
+## Technical Preferences
+
+Prefer reusing existing code — don't reinvent. Simple solution > over-engineering. Check impact surface before any change. Clear commit messages, minimal changeset.

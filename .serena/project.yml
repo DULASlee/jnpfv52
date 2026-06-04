@@ -83,7 +83,11 @@ read_only: false
 # list of tool names to exclude.
 # This extends the existing exclusions (e.g. from the global configuration)
 # Find the list of tools here: https://oraios.github.io/serena/01-about/035_tools.html
-excluded_tools: []
+# Trim tools that overlap with Cursor native tools, OpenSpec workflow, or episodic-memory.
+# See docs/superpowers/cursor-openspec-superpowers-serena-workflow.md § Serena 工具精简
+excluded_tools:
+  - get_current_config      # 调试专用，日常不用
+  - search_for_pattern      # 非符号搜索用 Cursor Grep；符号搜索用 find_symbol
 
 # list of tools to include that would otherwise be disabled (particularly optional tools that are disabled by default).
 # This extends the existing inclusions (e.g. from the global configuration).
@@ -109,6 +113,7 @@ default_modes:
 # The full set of modes to be activated is base_modes (from global config) + default_modes + added_modes.
 # See https://oraios.github.io/serena/02-usage/050_configuration.html#modes
 added_modes:
+  - no-memories            # 关闭 memory* + onboarding（由 OpenSpec specs/ 与 CLAUDE.md 承担）
 
 # initial prompt for the project. It will always be given to the LLM upon activating the project
 # (contrary to the memories, which are loaded on demand).

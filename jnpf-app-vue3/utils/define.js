@@ -1,8 +1,10 @@
 /* process.env.NODE_ENV设置生产环境模式 */
 // #ifdef H5
-// H5 模式 baseURL 留空，通过 Vite proxy 转发到后端
+// H5 模式 baseURL 留空，通过同域代理转发到后端
 const baseURL = ''
-const webSocketUrl = 'ws://localhost:5000/api/message/websocket'
+// WebSocket 走同域代理：开发环境 Vite proxy / 生产环境 Nginx proxy
+const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+const webSocketUrl = `${wsProtocol}//${location.host}/api/message/websocket`
 const report = 'http://localhost:8200'
 const flow = 'http://localhost:3100'
 // #endif

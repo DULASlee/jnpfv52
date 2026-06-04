@@ -27,7 +27,7 @@ export const useGlobSetting = (): Readonly<GlobConfig> => {
     // 本地文件预览
     filePreviewServer: isDevMode() ? 'http://localhost:30090/FileServer' : VITE_GLOB_API_URL + '/FileServer',
     // 大屏应用前端路径
-    dataVUrl: isDevMode() ? 'http://localhost:8100/DataV/' : prodUrlPrefix + '/DataV/',
+    dataVUrl: isDevMode() ? 'http://localhost:3102/DataV/' : prodUrlPrefix + '/DataV/',
     // 数据报表接口
     reportServer: isDevMode() ? 'http://localhost:30007' : VITE_GLOB_API_URL + '/ReportServer',
     // 报表前端路径
