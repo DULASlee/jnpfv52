@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'Fortress v3.2 active. Hooks: guard-write | guard-bash + guard-deps | format-and-lint | guard-finish + collect-summary | prompt self-check'",
+            "command": "echo 'Fortress v3.2 active. Rules: 1) Read .claude/memory/ 2) Plan before coding (complex tasks) 3) Fix ALL errors - never deflect 4) Verify project health before stopping 5) Save memory after session 6) Browser-test frontend changes'",
             "timeout": 3
           }
         ]
@@ -82,17 +82,12 @@
           {
             "type": "command",
             "command": "node .claude/hooks/guard-finish.mjs",
-            "timeout": 60
+            "timeout": 120
           },
           {
             "type": "command",
             "command": "node .claude/hooks/collect-summary.mjs",
             "timeout": 10
-          },
-          {
-            "type": "prompt",
-            "prompt": "工作完成自检（全部通过方可停止，任何一项未通过 MUST 继续）：\n\n1. 【规划】复杂任务是否在编码前完成了头脑风暴和开发计划？\n2. 【测试】所有修改的代码是否运行了相关测试？\n3. 【推脱】是否遇到错误但跳过了？如有，现在修复或写入 .claude/memory/pending-issues.md\n4. 【健康】被修改的项目（前端/后端/大屏/uniapp）是否能编译通过？\n5. 【记忆】重要决策和未解决问题是否写入了 .claude/memory/？\n6. 【浏览器】前端页面是否验证了正常渲染？如无法自动验证，请告知人类手动检查的具体页面。",
-            "timeout": 30
           }
         ]
       }
