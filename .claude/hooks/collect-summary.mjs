@@ -25,7 +25,10 @@ try {
 }
 
 // 人类手动打断 → 跳过收集
-if (input.stop_reason === 'user_interrupt') process.exit(0);
+if (input.stop_reason === 'user_interrupt') {
+  console.log(JSON.stringify({ decision: 'approve', reason: 'User interrupted' }));
+  process.exit(0);
+}
 
 try {
   // ─── 收集未提交变更 ─────────────────────────────────────────
@@ -52,7 +55,7 @@ try {
     .join('\n');
 
   if (!allFiles) {
-    // 无变更，跳过
+    console.log(JSON.stringify({ decision: 'approve', reason: 'No uncommitted changes' }));
     process.exit(0);
   }
 
@@ -109,5 +112,11 @@ try {
   // 静默跳过，不阻断停止流程
   console.error('⚠️ 会话摘要收集跳过');
 }
+
+// stdout 输出 JSON（Claude Code 要求每个 command hook 都返回有效 JSON）
+console.log(JSON.stringify({
+  decision: 'approve',
+  reason: 'Session summary collected',
+}));
 
 process.exit(0);
