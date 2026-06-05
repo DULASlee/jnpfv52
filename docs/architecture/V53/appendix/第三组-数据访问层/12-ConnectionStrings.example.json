@@ -1,0 +1,15 @@
+{
+  "ConnectionStrings": [
+    {
+      "ConfigId": "0",
+      "DBType": 4,
+      "Host": "localhost",
+      "Port": 1433,
+      "DbName": "jnpf_v52_dev",
+      "DbUser": "sa",
+      "DbPwd": "<CHANGE_ME>",
+      "TablePre": "",
+      "Remark": "开发主库 — 复制为 ConnectionStrings.json 后修改"
+    }
+  ]
+}

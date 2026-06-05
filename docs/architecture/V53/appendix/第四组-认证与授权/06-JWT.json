@@ -1,0 +1,13 @@
+{
+  "JWTSettings": {
+    "ValidateIssuerSigningKey": true,
+    "IssuerSigningKey": "9i/wnrMnkrf4aQtSQXkSF9t5j7f7CRb9pImFJJMSguQ=",
+    "ValidateIssuer": true,
+    "ValidIssuer": "baobabtech",
+    "ValidateAudience": true,
+    "ValidAudience": "baobabtech",
+    "ValidateLifetime": true,
+    "ExpiredTime": 1440,
+    "ClockSkew": 5
+  }
+}

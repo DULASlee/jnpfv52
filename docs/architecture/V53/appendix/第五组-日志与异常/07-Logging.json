@@ -1,0 +1,15 @@
+{
+    "Logging": {
+        "LogLevel": {
+            "Default": "Information",
+            "Microsoft.AspNetCore": "Warning"
+        },
+        "File": {
+            "LogDir": "logs"
+        },
+        "Seq": {
+            "Enabled": "false",
+            "ServerUrl": "http://localhost:5341"
+        }
+    }
+}

@@ -1,0 +1,5 @@
+{
+  "AllowedHosts": "*",
+  // 配置扫描目录
+  "ConfigurationScanDirectories": [ "Configurations" ]
+}
