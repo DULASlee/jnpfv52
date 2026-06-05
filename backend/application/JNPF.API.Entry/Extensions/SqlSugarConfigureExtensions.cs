@@ -40,9 +40,10 @@ public static class SqlSugarConfigureExtensions
             });
         });
 
-        services.AddSingleton<ISqlSugarClient>(sqlSugar); // 单例注册
-        services.AddScoped(typeof(ISqlSugarRepository<>), typeof(SqlSugarRepository<>)); // 仓储注册
-        services.AddUnitOfWork<SqlSugarUnitOfWork>(); // 事务与工作单元注册
+        services.AddSingleton<ISqlSugarClient>(sqlSugar);                                    // 单例注册
+        services.AddScoped<ISqlSugarDbContextProvider, SqlSugarDbContextProvider>();           // 【新增】上下文提供器注册
+        services.AddScoped(typeof(ISqlSugarRepository<>), typeof(SqlSugarRepository<>));      // 仓储注册
+        services.AddUnitOfWork<SqlSugarUnitOfWork>();                                          // 事务与工作单元注册
 
     }
 
