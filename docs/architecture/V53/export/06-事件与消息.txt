@@ -1,0 +1,170 @@
+============================================================
+第六组：事件与消息
+包含：EventBus配置, 重试处理器, 日志订阅者, EventBus配置文件
+============================================================
+
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第六组-事件与消息/01-EventBusOptions.cs
+------------------------------------------------------------
+﻿using JNPF.ConfigurableOptions;
+
+namespace JNPF.Common.Core;
+
+/// <summary>
+/// 事件总线配置.
+/// </summary>
+public class EventBusOptions : IConfigurableOptions
+{
+    /// <summary>
+    /// 事件总线类型.
+    /// </summary>
+    public EventBusType EventBusType { get; set; }
+
+    /// <summary>
+    /// 服务器地址.
+    /// </summary>
+    public string HostName { get; set; }
+
+    /// <summary>
+    /// 账号.
+    /// </summary>
+    public string UserName { get; set; }
+
+    /// <summary>
+    /// 密码.
+    /// </summary>
+    public string Password { get; set; }
+}
+
+/// <summary>
+/// 事件总线自定义事件源存储器类型.
+/// </summary>
+public enum EventBusType
+{
+    /// <summary>
+    /// 内存.
+    /// </summary>
+    Memory,
+
+    /// <summary>
+    /// RabbitMQ.
+    /// </summary>
+    RabbitMQ,
+
+    /// <summary>
+    /// Redis.
+    /// </summary>
+    Redis,
+
+    /// <summary>
+    /// Kafka.
+    /// </summary>
+    Kafka,
+}
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第六组-事件与消息/02-RetryEventHandlerExecutor.cs
+------------------------------------------------------------
+﻿using JNPF.EventBus;
+using JNPF.FriendlyException;
+
+namespace JNPF.EventHandler;
+
+/// <summary>
+/// 事件执行器-超时控制、失败重试熔断等等.
+/// </summary>
+public class RetryEventHandlerExecutor : IEventHandlerExecutor
+{
+    public async Task ExecuteAsync(EventHandlerExecutingContext context, Func<EventHandlerExecutingContext, Task> handler)
+    {
+        // 如果执行失败，每隔 1s 重试，最多三次
+        await Retry.InvokeAsync(
+            async () =>
+        {
+            await handler(context);
+        }, 3, 1000);
+    }
+}
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第六组-事件与消息/03-LogEventSubscriber.cs
+------------------------------------------------------------
+﻿using JNPF.Common.Core.Manager;
+using JNPF.Common.Core.Manager.Tenant;
+using JNPF.Common.Extension;
+using JNPF.DependencyInjection;
+using JNPF.EventBus;
+using Microsoft.Extensions.Logging;
+using SqlSugar;
+
+namespace JNPF.EventHandler;
+
+/// <summary>
+/// 日记事件订阅.
+/// </summary>
+public class LogEventSubscriber : IEventSubscriber, ISingleton
+{
+    private readonly ISqlSugarClient _sqlSugarClient;
+    private readonly ITenantManager _tenantManager;
+    private readonly IUserManager _userManager;
+    private readonly ILogger<LogEventSubscriber> _logger;
+
+    /// <summary>
+    /// 构造函数.
+    /// </summary>
+    public LogEventSubscriber(
+        ISqlSugarClient sqlSugarClient,
+        IUserManager userManager,
+        ITenantManager tenantManager,
+        ILogger<LogEventSubscriber> logger)
+    {
+        _sqlSugarClient = sqlSugarClient;
+        _userManager = userManager;
+        _tenantManager = tenantManager;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// 创建日记.
+    /// </summary>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    [EventSubscribe("Log:CreateReLog")]
+    [EventSubscribe("Log:CreateExLog")]
+    [EventSubscribe("Log:CreateVisLog")]
+    [EventSubscribe("Log:CreateOpLog")]
+    public async Task CreateLog(EventHandlerExecutingContext context)
+    {
+        var log = (LogEventSource)context.Source;
+
+        try
+        {
+            // CopyNew() MUST be called BEFORE ChangTenant to isolate tenant state.
+            // ChangTenant mutates the SqlSugarScope's internal connections/filters;
+            // calling it on the shared singleton would leak tenant state across requests.
+            var db = _sqlSugarClient.CopyNew();
+
+            if (log.TenantId.IsNotEmptyOrNull())
+            {
+                await _tenantManager.ChangTenant(db, log.TenantId);
+            }
+
+            await db.Insertable(log.Entity).IgnoreColumns(ignoreNullColumn: true).ExecuteCommandAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Operation log write failed, TraceId={TraceId}, TenantId={TenantId}",
+                log.Entity.TraceId, log.TenantId);
+        }
+    }
+}
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第六组-事件与消息/04-EventBus.json
+------------------------------------------------------------
+{
+  "EventBus": {
+    "EventBusType": "Memory", //Memory,RabbitMQ,Redis
+    "HostName": "192.168.0.232",
+    "UserName": "jnpf",
+    "Password": "jnpf@2019"
+  }
+}

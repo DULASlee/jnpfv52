@@ -1,0 +1,406 @@
+============================================================
+第三组：数据访问层
+包含：SqlSugar配置, Repository, 租户过滤, 缓存配置
+============================================================
+
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第三组-数据访问层/09-SqlSugarConfigureExtensions.cs
+------------------------------------------------------------
+﻿using JNPF;
+using JNPF.Common.Security;
+using JNPF.DatabaseAccessor;
+using JNPF.Logging;
+using Mapster;
+using SqlSugar;
+using System.Diagnostics;
+using System.Reflection;
+
+namespace Microsoft.Extensions.DependencyInjection;
+
+/// <summary>
+/// SqlSugar配置拓展.
+/// </summary>
+public static class SqlSugarConfigureExtensions
+{
+    public static void SqlSugarConfigure(this IServiceCollection services)
+    {
+        // 获取选项
+        var dbOptions = App.GetOptions<ConnectionStringsOptions>();
+        //add by harry  域名模式，只保留一个，现模式会自动取第一个
+        var defaulConnection = dbOptions.DefaultConnectionConfig;
+        if(defaulConnection!.ConnectionString == null) 
+        {
+            var existConn = dbOptions.ConnectionConfigs.FirstOrDefault(aa => aa.ConfigId == defaulConnection.ConfigId);
+            dbOptions.ConnectionConfigs.Remove(existConn);
+            dbOptions.ConnectionConfigs.Insert(0, existConn);
+        }
+        //end
+        dbOptions.ConnectionConfigs.ForEach(SetDbConfig);
+
+        List<ConnectionConfig> connectConfigList = new List<ConnectionConfig>();
+
+        SqlSugarScope sqlSugar = new(dbOptions.ConnectionConfigs.Adapt<List<ConnectionConfig>>(), db =>
+        {
+            dbOptions.ConnectionConfigs.ForEach(config =>
+            {
+                var dbProvider = db.GetConnectionScope(config.ConfigId);
+                SetDbAop(dbProvider);
+            });
+        });
+
+        services.AddSingleton<ISqlSugarClient>(sqlSugar); // 单例注册
+        services.AddScoped(typeof(ISqlSugarRepository<>), typeof(SqlSugarRepository<>)); // 仓储注册
+        services.AddUnitOfWork<SqlSugarUnitOfWork>(); // 事务与工作单元注册
+
+    }
+
+    /// <summary>
+    /// 配置连接属性.
+    /// </summary>
+    /// <param name="config"></param>
+    private static void SetDbConfig(DbConnectionConfig config)
+    {
+        Log.Information(config.ToJsonString());
+        config.ConnectionString = JNPFTenantExtensions.ToConnectionString(config);
+        config.ConfigureExternalServices = new ConfigureExternalServices
+        {
+            EntityService = (type, column) => // 处理列
+            {
+                if (new NullabilityInfoContext().Create(type).WriteState is NullabilityState.Nullable)
+                    column.IsNullable = true;
+
+                if (config.DbType == SqlSugar.DbType.Oracle)
+                {
+                    if (type.PropertyType == typeof(long) || type.PropertyType == typeof(long?))
+                        column.DataType = "number(18)";
+                    if (type.PropertyType == typeof(bool) || type.PropertyType == typeof(bool?))
+                        column.DataType = "number(1)";
+                }
+            },
+        };
+        config.IsAutoCloseConnection = true;
+        config.MoreSettings = new ConnMoreSettings
+        {
+            IsAutoRemoveDataCache = true,
+            SqlServerCodeFirstNvarchar = true, // 采用Nvarchar
+            IsAutoToUpper = false
+        };
+    }
+
+    /// <summary>
+    /// 配置Aop.
+    /// </summary>
+    /// <param name="db"></param>
+    public static void SetDbAop(SqlSugarScopeProvider db)
+    {
+        var config = db.CurrentConnectionConfig;
+
+        // 设置超时时间
+        db.Ado.CommandTimeOut = 30;
+
+        var sqlStopwatch = new Stopwatch();
+
+        db.Aop.OnLogExecuting = (sql, pars) =>
+        {
+            sqlStopwatch.Restart();
+            App.PrintToMiniProfiler("SqlSugar", "Info", sql + "\r\n" + db.Utilities.SerializeObject(pars.ToDictionary(it => it.ParameterName, it => it.Value)));
+        };
+
+        db.Aop.OnLogExecuted = (sql, pars) =>
+        {
+            sqlStopwatch.Stop();
+            var elapsed = sqlStopwatch.ElapsedMilliseconds;
+
+            if (elapsed > 1000) // Slow query threshold: 1 second
+            {
+                Serilog.Log.ForContext("Sql", sql)
+                   .ForContext("Elapsed", elapsed)
+                   .Warning("Slow SQL ({Elapsed}ms): {Sql}", elapsed, sql);
+            }
+        };
+
+        db.Aop.OnError = ex =>
+        {
+            if (ex.Parametres == null) return;
+            var pars = db.Utilities.SerializeObject(((SugarParameter[])ex.Parametres).ToDictionary(it => it.ParameterName, it => it.Value));
+
+            Serilog.Log.ForContext("Sql", ex.Sql)
+               .Error(ex, "SQL Error: {Sql}", ex.Sql);
+
+            App.PrintToMiniProfiler("SqlSugar", "Error", $"{ex.Message}{Environment.NewLine}{ex.Sql}{pars}{Environment.NewLine}");
+        };
+    }
+}
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第三组-数据访问层/10-ITenantFilter.cs
+------------------------------------------------------------
+﻿using SqlSugar;
+
+namespace JNPF.Extras.DatabaseAccessor.SqlSugar.Models;
+
+/// <summary>
+/// 实体类基类.
+/// </summary>
+public interface ITenantFilter
+{
+    /// <summary>
+    /// 租户id.
+    /// </summary>
+    [SugarColumn(ColumnName = "F_TENANT_ID", ColumnDescription = "租户id")]
+    string TenantId { get; set; }
+}
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第三组-数据访问层/10-IZxSystemFilter.cs
+------------------------------------------------------------
+﻿using SqlSugar;
+
+namespace JNPF.Extras.DatabaseAccessor.SqlSugar.Models;
+
+/// <summary>
+/// 实体类基类.
+/// </summary>
+public interface IZxSystemFilter
+{
+    /// <summary>
+    /// 系统id.
+    /// </summary>
+    [SugarColumn(ColumnName = "F_ZX_SYSTEM_ID", ColumnDescription = "系统id")]
+    string ZxSystemId { get; set; }
+
+}
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第三组-数据访问层/10-SqlSugarRepository.cs
+------------------------------------------------------------
+using JNPF;
+using JNPF.Common.Manager;
+using JNPF.Extras.DatabaseAccessor.SqlSugar.Models;
+using JNPF.FriendlyException;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using SqlSugar;
+
+namespace SqlSugar;
+
+/// <summary>
+/// SqlSugar 仓储实现类
+/// </summary>
+/// <typeparam name="TEntity"></typeparam>
+public partial class SqlSugarRepository<TEntity> : SimpleClient<TEntity>, ISqlSugarRepository<TEntity>
+where TEntity : class, new()
+{
+    /// <summary>
+    /// 构造函数
+    /// </summary>
+    public SqlSugarRepository(IServiceProvider serviceProvider, ISqlSugarClient context = null) : base(context)
+    {
+        using var serviceScope = serviceProvider.CreateScope();
+        var _cacheManager = serviceScope.ServiceProvider.GetService<ICacheManager>();
+
+        // 获取数据库连接选项
+        ConnectionStringsOptions connectionStrings = App.GetConfig<ConnectionStringsOptions>("ConnectionStrings", true);
+
+        // 获取多租户选项
+        TenantOptions tenant = App.GetConfig<TenantOptions>("Tenant", true);
+        var httpContext = App.HttpContext;
+
+        base.Context = (SqlSugarScope)context;
+
+        string tenantId = connectionStrings.DefaultConnectionConfig.ConfigId.ToString();
+        string tenantDbName = string.Empty;
+        if (httpContext?.GetEndpoint()?.Metadata?.GetMetadata<AllowAnonymousAttribute>() == null)
+        {
+            if (tenant.MultiTenancy && httpContext != null)
+            {
+                tenantId = httpContext?.User.FindFirst("TenantId")?.Value;
+                var tenantCache = _cacheManager.Get<List<GlobalTenantCacheModel>>("jnpf:global:tenant").Find(it => it.TenantId.Equals(tenantId));
+                if (tenantCache != null)
+                {
+                    if (!base.Context.AsTenant().IsAnyConnection(tenantCache.connectionConfig.ConfigId))
+                    {
+                        base.Context.AsTenant().AddConnection(JNPFTenantExtensions.GetConfig(tenantCache.connectionConfig));
+                    }
+                    base.Context = base.Context.AsTenant().GetConnectionScope(tenantCache.connectionConfig.ConfigId);
+                    // 字段隔离追加过滤器
+                    if (tenantCache.type == 1)
+                    {
+                        tenantDbName = tenantCache.connectionConfig.IsolationField;
+                        if (!"default".Equals(tenantId))
+                        {
+                            base.Context.QueryFilter.Clear();
+                            base.Context.QueryFilter.AddTableFilter<ITenantFilter>(it => it.TenantId == tenantDbName);
+                            base.Context.Aop.DataExecuting = (oldValue, entityInfo) =>
+                            {
+                                if (!typeof(ITenantFilter).IsAssignableFrom(entityInfo.EntityValue.GetType()))
+                                {
+                                    return;
+                                }
+
+                                if (entityInfo.PropertyName == "TenantId" && entityInfo.OperationType == DataFilterType.InsertByObject)
+                                {
+                                    entityInfo.SetValue(tenantDbName);
+                                }
+                                if (entityInfo.PropertyName == "TenantId" && entityInfo.OperationType == DataFilterType.UpdateByObject)
+                                {
+                                    entityInfo.SetValue(tenantDbName);
+                                }
+                                if (entityInfo.PropertyName == "TenantId" && entityInfo.OperationType == DataFilterType.DeleteByObject)
+                                {
+                                    entityInfo.SetValue(tenantDbName);
+                                }
+                            };
+                        }
+                    }
+                    if (!base.Context.Ado.IsValidConnection())
+                    {
+                        throw Oops.Oh("数据库连接错误");
+                    }
+                }
+            }
+            else
+            {
+                base.Context = base.Context.AsTenant().GetConnectionScope(tenantId);
+            }
+        }
+
+
+        if (tenant.MultiSystem && httpContext != null) //tenant.MultiSystem
+        {
+            string systemConst = "ZxSystemId";
+
+            string userId = httpContext?.User.FindFirst("UserId")?.Value;
+
+            string systemId = null;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                systemId = _cacheManager.Get(userId + "_devSystemId");
+            }
+
+            if(string.IsNullOrEmpty(systemId)) systemId = httpContext.User.FindFirst(systemConst)?.Value;
+
+            //组织架构子系统是管理所有子系统，不需要进行系统过虑
+            if (systemId == "orgSystem")
+            {
+                return;
+            }
+
+            base.Context.QueryFilter.AddTableFilter<IZxSystemFilter>(it => it.ZxSystemId == systemId);
+            base.Context.QueryFilter.Clear<IZxSystemFilter>(); //首次移除时出现异常，故前面先添加一个
+
+            base.Context.QueryFilter.AddTableFilter<IZxSystemFilter>(it => it.ZxSystemId == systemId);                      
+
+            base.Context.Aop.DataExecuting = (oldValue, entityInfo) =>
+            {
+                if (!typeof(IZxSystemFilter).IsAssignableFrom(entityInfo.EntityValue.GetType())) return;
+
+                if (entityInfo.PropertyName == systemConst && entityInfo.OperationType == DataFilterType.InsertByObject)
+                {
+                    entityInfo.SetValue(systemId);
+                }
+                if (entityInfo.PropertyName == systemConst && entityInfo.OperationType == DataFilterType.UpdateByObject)
+                {
+                    entityInfo.SetValue(systemId);
+                }
+                if (entityInfo.PropertyName == systemConst && entityInfo.OperationType == DataFilterType.DeleteByObject)
+                {
+                    entityInfo.SetValue(systemId);
+                }
+            };
+        }
+
+        // 设置超时时间
+        base.Context.Ado.CommandTimeOut = 30;
+
+        base.Context.Aop.OnLogExecuting = (sql, pars) =>
+        {
+            if (sql.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+                Console.ForegroundColor = ConsoleColor.Green;
+            if (sql.StartsWith("UPDATE", StringComparison.OrdinalIgnoreCase) || sql.StartsWith("INSERT", StringComparison.OrdinalIgnoreCase))
+                Console.ForegroundColor = ConsoleColor.White;
+            if (sql.StartsWith("DELETE", StringComparison.OrdinalIgnoreCase))
+                Console.ForegroundColor = ConsoleColor.Blue;
+            // 在控制台输出sql语句
+            Console.WriteLine("【" + DateTime.Now + "——执行SQL】\r\n" + UtilMethods.GetSqlString(base.Context.CurrentConnectionConfig.DbType, sql, pars) + "\r\n");
+            //App.PrintToMiniProfiler("SqlSugar", "Info", sql + "\r\n" + base.Context.Utilities.SerializeObject(pars.ToDictionary(it => it.ParameterName, it => it.Value)));
+        };
+
+        base.Context.Aop.OnError = (ex) =>
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            var pars = base.Context.Utilities.SerializeObject(((SugarParameter[])ex.Parametres).ToDictionary(it => it.ParameterName, it => it.Value));
+            Console.WriteLine("【" + DateTime.Now + "——错误SQL】\r\n" + UtilMethods.GetSqlString(base.Context.CurrentConnectionConfig.DbType, ex.Sql, (SugarParameter[])ex.Parametres) + "\r\n");
+            //App.PrintToMiniProfiler("SqlSugar", "Error", $"{ex.Message}{Environment.NewLine}{ex.Sql}{pars}{Environment.NewLine}");
+        };
+
+        if (base.Context.CurrentConnectionConfig.DbType == DbType.Oracle)
+        {
+            base.Context.Aop.OnExecutingChangeSql = (sql, pars) =>
+            {
+                if (pars != null)
+                {
+                    foreach (var item in pars)
+                    {
+                        //如果是DbTppe=string设置成OracleDbType.Nvarchar2 
+                        item.IsNvarchar2 = true;
+                    }
+                };
+                return new KeyValuePair<string, SugarParameter[]>(sql, pars);
+            };
+        }
+    }
+}
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第三组-数据访问层/11-Cache.json
+------------------------------------------------------------
+{
+  "Cache": {
+    "CacheType": "MemoryCache", // MemoryCache
+    "ip": "127.0.0.1",
+    "port": 6379,
+    "RedisConnectionString": "{0}:{1}, poolsize=500,ssl=false,defaultDatabase=7"
+
+  }
+}
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第三组-数据访问层/11-ISqlSugarRepository.cs
+------------------------------------------------------------
+namespace SqlSugar;
+
+/// <summary>
+/// SqlSugar 仓储接口定义
+/// </summary>
+/// <typeparam name="TEntity"></typeparam>
+public partial interface ISqlSugarRepository<TEntity> : ISimpleClient<TEntity>
+    where TEntity : class, new()
+{
+}
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第三组-数据访问层/12-ConnectionStrings.example.json
+------------------------------------------------------------
+{
+  "ConnectionStrings": [
+    {
+      "ConfigId": "0",
+      "DBType": 4,
+      "Host": "localhost",
+      "Port": 1433,
+      "DbName": "jnpf_v52_dev",
+      "DbUser": "sa",
+      "DbPwd": "<CHANGE_ME>",
+      "TablePre": "",
+      "Remark": "开发主库 — 复制为 ConnectionStrings.json 后修改"
+    }
+  ]
+}
+
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第三组-数据访问层/12-Tenant.json
+------------------------------------------------------------
+{
+  "Tenant": {
+    "MultiTenancy": false,
+    "MultiTenancyType": "SCHEMA", //COLUMN SCHEMA
+    "MultiTenancyDBInterFace": "https://www.jnpfsoft.com/api/Saas/Tenant/DbContent/",
+    "MultiSystem": true
+  }
+}

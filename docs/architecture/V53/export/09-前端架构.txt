@@ -1,0 +1,954 @@
+============================================================
+第九组：前端架构
+包含：package.json, vite.config.ts, main.ts, router, Axios, userStore
+============================================================
+
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第九组-前端架构/01-package.json
+------------------------------------------------------------
+{
+  "name": "jnpf-web-vue3",
+  "version": "3.6.0",
+  "description": "JNPF快速开发平台",
+  "author": {
+    "name": "面包树科技有限公司",
+    "email": "support@baobab.com",
+    "url": "https://www.baobab.com"
+  },
+  "homepage": "https://www.baobab.com",
+  "scripts": {
+    "commit": "czg",
+    "bootstrap": "pnpm install --registry=https://registry.npmmirror.com",
+    "serve": "npm run dev",
+    "dev": "vite",
+    "build": "cross-env NODE_ENV=production NODE_OPTIONS=--max-old-space-size=8192 vite build && esno ./build/script/postBuild.ts",
+    "build:test": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build --mode test && esno ./build/script/postBuild.ts",
+    "build:no-cache": "pnpm clean:cache && npm run build",
+    "report": "cross-env REPORT=true npm run build",
+    "type:check": "vue-tsc --noEmit --skipLibCheck",
+    "preview": "npm run build && vite preview",
+    "preview:dist": "vite preview",
+    "log": "conventional-changelog -p angular -i CHANGELOG.md -s",
+    "clean:cache": "rimraf node_modules/.cache/ && rimraf node_modules/.vite",
+    "clean:lib": "rimraf node_modules",
+    "lint:eslint": "eslint --cache --max-warnings 0  \"{src,mock}/**/*.{vue,ts,tsx}\" --fix",
+    "lint:prettier": "prettier --write  \"src/**/*.{js,json,tsx,css,less,scss,vue,html,md}\"",
+    "lint:stylelint": "stylelint --cache --fix \"**/*.{vue,less,postcss,css,scss}\" --cache --cache-location node_modules/.cache/stylelint/",
+    "lint:lint-staged": "lint-staged",
+    "reinstall": "rimraf pnpm-lock.yaml && rimraf package.lock.json && rimraf node_modules && npm run bootstrap",
+    "gen:icon": "esno ./build/generate/icon/index.ts"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "{!(package)*.json,*.code-snippets,.!(browserslist)*rc}": [
+      "prettier --write--parser json"
+    ],
+    "package.json": [
+      "prettier --write"
+    ],
+    "*.vue": [
+      "eslint --fix",
+      "prettier --write",
+      "stylelint --fix"
+    ],
+    "*.{scss,less,styl,html}": [
+      "stylelint --fix",
+      "prettier --write"
+    ],
+    "*.md": [
+      "prettier --write"
+    ]
+  },
+  "config": {
+    "commitizen": {
+      "path": "node_modules/cz-git"
+    }
+  },
+  "resolutions": {
+    "bin-wrapper": "npm:bin-wrapper-china",
+    "gifsicle": "5.2.0"
+  },
+  "dependencies": {
+    "@amap/amap-jsapi-loader": "^1.0.1",
+    "@ant-design/colors": "^7.0.0",
+    "@ant-design/icons-vue": "^6.1.0",
+    "@fullcalendar/core": "^6.1.8",
+    "@fullcalendar/daygrid": "^6.1.8",
+    "@fullcalendar/interaction": "^6.1.8",
+    "@fullcalendar/timegrid": "^6.1.8",
+    "@fullcalendar/vue3": "^6.1.8",
+    "@iconify/iconify": "^3.1.0",
+    "@logicflow/core": "^1.2.1",
+    "@logicflow/extension": "^1.2.1",
+    "@vue/runtime-core": "3.3.4",
+    "@vue/shared": "3.3.4",
+    "@vueuse/core": "^10.1.2",
+    "@vueuse/shared": "^10.1.2",
+    "@zxcvbn-ts/core": "^2.2.1",
+    "ant-design-vue": "^3.2.20",
+    "axios": "^1.4.0",
+    "codemirror": "^5.65.12",
+    "cron-parser": "^4.8.1",
+    "cropperjs": "^1.5.13",
+    "crypto-js": "^4.1.1",
+    "dayjs": "^1.11.7",
+    "echarts": "^5.4.2",
+    "echarts-stat": "^1.2.0",
+    "highcharts": "^11.0.1",
+    "highcharts-vue": "^1.4.1",
+    "intro.js": "^7.0.1",
+    "jsbarcode": "^3.11.5",
+    "lodash-es": "^4.17.21",
+    "monaco-editor": "^0.38.0",
+    "nprogress": "^0.2.0",
+    "path-to-regexp": "^6.2.1",
+    "pinia": "^2.1.3",
+    "print-js": "^1.6.0",
+    "qrcode": "^1.5.1",
+    "qs": "^6.11.1",
+    "reconnecting-websocket": "^4.4.0",
+    "resize-observer-polyfill": "^1.5.1",
+    "showdown": "^2.1.0",
+    "sortablejs": "^1.15.0",
+    "spark-md5": "^3.0.2",
+    "terser": "^5.14.2",
+    "tinymce": "^5.10.7",
+    "vditor": "^3.9.1",
+    "vue": "3.3.4",
+    "vue-grid-layout": "^3.0.0-beta1",
+    "vue-i18n": "^9.2.2",
+    "vue-json-pretty": "^2.2.4",
+    "vue-router": "^4.2.1",
+    "vue-simple-uploader": "1.0.0",
+    "vue-types": "^5.0.2",
+    "vue3-draggable-resizable": "^1.6.5",
+    "vue3-tree-org": "^4.2.2",
+    "vuedraggable": "^4.1.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^17.6.3",
+    "@commitlint/config-conventional": "^17.6.3",
+    "@iconify/json": "^2.2.43",
+    "@purge-icons/generated": "^0.9.0",
+    "@rys-fe/vite-plugin-theme": "^0.8.6",
+    "@types/codemirror": "^5.60.7",
+    "@types/crypto-js": "^4.1.1",
+    "@types/fs-extra": "^11.0.1",
+    "@types/inquirer": "^8.2.6",
+    "@types/intro.js": "^5.1.1",
+    "@types/lodash-es": "^4.17.7",
+    "@types/node": "^18.15.11",
+    "@types/nprogress": "^0.2.0",
+    "@types/qrcode": "^1.5.0",
+    "@types/qs": "^6.9.7",
+    "@types/showdown": "^2.0.0",
+    "@types/sortablejs": "^1.15.1",
+    "@typescript-eslint/eslint-plugin": "^5.57.0",
+    "@typescript-eslint/parser": "^5.57.0",
+    "@vitejs/plugin-legacy": "^4.0.3",
+    "@vitejs/plugin-vue": "^4.2.3",
+    "@vitejs/plugin-vue-jsx": "^3.0.1",
+    "@vue/compiler-sfc": "^3.2.47",
+    "@vue/test-utils": "^2.3.2",
+    "autoprefixer": "^10.4.14",
+    "conventional-changelog-cli": "^2.2.2",
+    "cross-env": "^7.0.3",
+    "cz-git": "^1.6.1",
+    "czg": "^1.6.1",
+    "dotenv": "^16.0.3",
+    "eslint": "^8.37.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-vue": "^9.10.0",
+    "esno": "^0.16.3",
+    "fs-extra": "^11.1.1",
+    "inquirer": "^9.1.5",
+    "less": "^4.1.3",
+    "lint-staged": "13.2.0",
+    "npm-run-all": "^4.1.5",
+    "picocolors": "^1.0.0",
+    "postcss": "^8.4.21",
+    "postcss-html": "^1.5.0",
+    "postcss-less": "^6.0.0",
+    "prettier": "^2.8.8",
+    "rimraf": "^4.4.1",
+    "rollup": "^3.7.4",
+    "rollup-plugin-visualizer": "^5.9.0",
+    "stylelint": "^15.4.0",
+    "stylelint-config-prettier": "^9.0.3",
+    "stylelint-config-recommended": "^11.0.0",
+    "stylelint-config-recommended-vue": "^1.4.0",
+    "stylelint-config-standard": "^32.0.0",
+    "stylelint-order": "^6.0.3",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4",
+    "vite": "^4.3.8",
+    "vite-plugin-cdn-import": "^0.3.5",
+    "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-html": "^3.2.0",
+    "vite-plugin-imagemin": "^0.6.1",
+    "vite-plugin-mkcert": "^1.10.1",
+    "vite-plugin-purge-icons": "^0.9.2",
+    "vite-plugin-pwa": "^0.14.0",
+    "vite-plugin-style-import": "^2.0.0",
+    "vite-plugin-svg-icons": "^2.0.1",
+    "vite-plugin-vue-setup-extend": "^0.4.0",
+    "vite-plugin-windicss": "^1.8.10",
+    "vue-eslint-parser": "^9.1.1",
+    "vue-tsc": "^1.6.5"
+  },
+  "packageManager": "^pnpm@8.1.0",
+  "engines": {
+    "node": ">=16.15.0",
+    "pnpm": ">=8.1.0"
+  }
+}
+
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第九组-前端架构/02-vite.config.ts
+------------------------------------------------------------
+import type { UserConfig, ConfigEnv } from 'vite';
+import pkg from './package.json';
+import dayjs from 'dayjs';
+import { loadEnv } from 'vite';
+import { resolve } from 'path';
+import { generateModifyVars } from './build/generate/generateModifyVars';
+import { createProxy } from './build/vite/proxy';
+import { wrapperEnv } from './build/utils';
+import { createVitePlugins } from './build/vite/plugin';
+import { OUTPUT_DIR } from './build/constant';
+import { visualizer } from 'rollup-plugin-visualizer';
+
+function pathResolve(dir: string) {
+  return resolve(process.cwd(), '.', dir);
+}
+
+const { dependencies, devDependencies, name, version } = pkg;
+const __APP_INFO__ = {
+  pkg: { dependencies, devDependencies, name, version },
+  lastBuildTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+};
+
+export default ({ command, mode }: ConfigEnv): UserConfig => {
+  const root = process.cwd();
+
+  const env = loadEnv(mode, root);
+
+  // The boolean type read by loadEnv is a string. This function can be converted to boolean type
+  const viteEnv = wrapperEnv(env);
+
+  const { VITE_PORT, VITE_PUBLIC_PATH, VITE_PROXY, VITE_DROP_CONSOLE } = viteEnv;
+
+  const isBuild = command === 'build';
+
+  return {
+    base: VITE_PUBLIC_PATH,
+    root,
+    resolve: {
+      alias: [
+        {
+          find: 'vue-i18n',
+          replacement: 'vue-i18n/dist/vue-i18n.cjs.js',
+        },
+        // /@/xxxx => src/xxxx
+        {
+          find: /\/@\//,
+          replacement: pathResolve('src') + '/',
+        },
+        // /#/xxxx => types/xxxx
+        {
+          find: /\/#\//,
+          replacement: pathResolve('types') + '/',
+        },
+      ],
+    },
+    server: {
+      https: false,
+      // Listening on all local IPs
+      host: true,
+      port: VITE_PORT,
+      strictPort: true,
+      // Load proxy configuration from .env
+      proxy: createProxy(VITE_PROXY),
+      open: true, //vite项目启动时自动打开浏览器
+    },
+    esbuild: {
+      drop: VITE_DROP_CONSOLE ? ['console', 'debugger'] : [],
+    },
+    build: {
+      target: 'es2015',
+      cssTarget: 'chrome80',
+      outDir: OUTPUT_DIR,
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          keep_infinity: true,
+          // Used to delete console in production environment
+          drop_console: VITE_DROP_CONSOLE,
+          drop_debugger: true,
+        },
+      },
+      // Turning off reportCompressedSize display can slightly reduce packaging time
+      reportCompressedSize: false,
+      chunkSizeWarningLimit: 2000,
+      rollupOptions: {
+        input: {
+          index: pathResolve('index.html'),
+        },
+        // 静态资源分类打包
+        output: {
+          chunkFileNames: 'static/js/[name]-[hash].js',
+          entryFileNames: 'static/js/[name]-[hash].js',
+          assetFileNames: 'static/[ext]/[name]-[hash].[ext]',
+          // P0-3: 拆分重型依赖为独立 chunk，不进首屏
+          manualChunks: {
+            'vendor-vue': ['vue', 'vue-router', 'pinia'],
+            'vendor-antd': ['ant-design-vue', '@ant-design/icons-vue'],
+            'vendor-tinymce': ['tinymce'],
+            'vendor-monaco': ['monaco-editor'],
+            'vendor-codemirror': ['codemirror'],
+          },
+        },
+      },
+    },
+    define: {
+      // setting vue-i18-next
+      // Suppress warning
+      __INTLIFY_PROD_DEVTOOLS__: false,
+      __APP_INFO__: JSON.stringify(__APP_INFO__),
+    },
+    css: {
+      preprocessorOptions: {
+        less: {
+          modifyVars: generateModifyVars(),
+          javascriptEnabled: true,
+        },
+      },
+    },
+
+    // The vite plugin used by the project. The quantity is large, so it is separately extracted and managed
+    plugins: [
+      ...createVitePlugins(viteEnv, isBuild),
+      // P0-3: 分析 entry chunk 组成
+      visualizer({
+        open: false,
+        filename: 'stats.json',
+        gzipSize: true,
+        json: true,
+      }),
+    ],
+
+    optimizeDeps: {
+      esbuildOptions: {
+        target: 'es2020',
+      },
+      // @iconify/iconify: The dependency is dynamically and virtually loaded by @purge-icons/generated, so it needs to be specified explicitly
+      include: [
+        '@vue/runtime-core',
+        '@vue/shared',
+        '@iconify/iconify',
+        'ant-design-vue/es/locale/zh_CN',
+        'ant-design-vue/es/locale/zh_TW',
+        'ant-design-vue/es/locale/en_US',
+        `monaco-editor/esm/vs/language/json/json.worker`,
+        `monaco-editor/esm/vs/language/css/css.worker`,
+        `monaco-editor/esm/vs/language/html/html.worker`,
+        `monaco-editor/esm/vs/language/typescript/ts.worker`,
+        `monaco-editor/esm/vs/editor/editor.worker`,
+      ],
+    },
+  };
+};
+
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第九组-前端架构/03-main.ts
+------------------------------------------------------------
+import '/@/design/index.less';
+import '/@/design/windi-base.css';
+import 'virtual:windi-components.css';
+import 'virtual:windi-utilities.css';
+// Register icon sprite
+import 'virtual:svg-icons-register';
+import App from './App.vue';
+import { createApp } from 'vue';
+import { initAppConfigStore } from '/@/logics/initAppConfig';
+import { setupErrorHandle } from '/@/logics/error-handle';
+import { router, setupRouter } from '/@/router';
+import { setupRouterGuard } from '/@/router/guard';
+import { setupStore } from '/@/store';
+import { setupGlobDirectives } from '/@/directives';
+import { setupI18n } from '/@/locales/setupI18n';
+import { registerGlobComp } from '/@/components/registerGlobComp';
+import gridLayout from 'vue-grid-layout';
+import mitt from '/@/utils/mitt';
+
+const emitter = mitt();
+
+import { isDevMode } from './utils/env';
+
+if (isDevMode()) {
+  import('ant-design-vue/es/style');
+}
+
+async function bootstrap() {
+  const app = createApp(App);
+
+  app.provide('emitter', emitter); // 注入provider
+
+  // Configure store
+  // 配置 store
+  setupStore(app);
+
+  // Initialize internal system configuration
+  // 初始化内部系统配置
+  initAppConfigStore();
+
+  // Register global components
+  // 注册全局组件
+  registerGlobComp(app);
+
+  // Multilingual configuration
+  // 多语言配置
+  // Asynchronous case: language files may be obtained from the server side
+  // 异步案例：语言文件可能从服务器端获取
+  await setupI18n(app);
+
+  // Configure routing
+  // 配置路由
+  setupRouter(app);
+
+  // router-guard
+  // 路由守卫
+  setupRouterGuard(router);
+
+  // Register global directive
+  // 注册全局指令
+  setupGlobDirectives(app);
+
+  // Configure global error handling
+  // 配置全局错误处理
+  setupErrorHandle(app);
+
+  // https://next.router.vuejs.org/api/#isready
+  // await router.isReady();
+  app.use(gridLayout);
+
+  app.mount('#app');
+}
+
+bootstrap();
+
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第九组-前端架构/04-router-index.ts
+------------------------------------------------------------
+import type { RouteRecordRaw } from 'vue-router';
+import type { App } from 'vue';
+
+import { createRouter, createWebHistory } from 'vue-router';
+import { basicRoutes } from './routes';
+import { getJnpfAppId } from '/@/utils/jnpf';
+
+// 白名单应该包含基本静态路由
+const WHITE_NAME_LIST: string[] = [];
+const getRouteNames = (array: any[]) =>
+  array.forEach(item => {
+    WHITE_NAME_LIST.push(item.name);
+    getRouteNames(item.children || []);
+  });
+getRouteNames(basicRoutes);
+
+// app router
+// 创建一个可以被 Vue 应用程序使用的路由实例
+
+// 取路径上的应用识别码的作为基础路由
+let VITE_PUBLIC_PATH = import.meta.env.VITE_PUBLIC_PATH;
+const appId = getJnpfAppId();
+if (appId) VITE_PUBLIC_PATH = '/' + appId;
+
+export const router = createRouter({
+  // 创建一个 hash 历史记录。
+  history: createWebHistory(VITE_PUBLIC_PATH),
+  // 应该添加到路由的初始路由列表。
+  routes: basicRoutes as unknown as RouteRecordRaw[],
+  // 是否应该禁止尾部斜杠。默认为假
+  strict: true,
+  scrollBehavior: () => ({ left: 0, top: 0 }),
+});
+
+// reset router
+export function resetRouter() {
+  router.getRoutes().forEach(route => {
+    const { name } = route;
+    if (name && !WHITE_NAME_LIST.includes(name as string)) {
+      router.hasRoute(name) && router.removeRoute(name);
+    }
+  });
+}
+
+// config router
+// 配置路由器
+export function setupRouter(app: App<Element>) {
+  app.use(router);
+}
+
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第九组-前端架构/05-Axios.ts
+------------------------------------------------------------
+import type { AxiosRequestConfig, AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import type { RequestOptions, Result, UploadFileParams } from '/#/axios';
+import type { CreateAxiosOptions } from './axiosTransform';
+import axios from 'axios';
+import qs from 'qs';
+import { AxiosCanceler } from './axiosCancel';
+import { isFunction } from '/@/utils/is';
+import { cloneDeep } from 'lodash-es';
+import { ContentTypeEnum } from '/@/enums/httpEnum';
+import { RequestEnum } from '/@/enums/httpEnum';
+
+export * from './axiosTransform';
+
+/**
+ * @description:  axios module
+ */
+export class VAxios {
+  private axiosInstance: AxiosInstance;
+  private readonly options: CreateAxiosOptions;
+
+  constructor(options: CreateAxiosOptions) {
+    this.options = options;
+    this.axiosInstance = axios.create(options);
+    this.setupInterceptors();
+  }
+
+  /**
+   * @description:  Create axios instance
+   */
+  private createAxios(config: CreateAxiosOptions): void {
+    this.axiosInstance = axios.create(config);
+  }
+
+  private getTransform() {
+    const { transform } = this.options;
+    return transform;
+  }
+
+  getAxios(): AxiosInstance {
+    return this.axiosInstance;
+  }
+
+  /**
+   * @description: Reconfigure axios
+   */
+  configAxios(config: CreateAxiosOptions) {
+    if (!this.axiosInstance) {
+      return;
+    }
+    this.createAxios(config);
+  }
+
+  /**
+   * @description: Set general header
+   */
+  setHeader(headers: any): void {
+    if (!this.axiosInstance) {
+      return;
+    }
+    Object.assign(this.axiosInstance.defaults.headers, headers);
+  }
+
+  /**
+   * @description: Interceptor configuration 拦截器配置
+   */
+  private setupInterceptors() {
+    const transform = this.getTransform();
+    if (!transform) {
+      return;
+    }
+    const { requestInterceptors, requestInterceptorsCatch, responseInterceptors, responseInterceptorsCatch } = transform;
+
+    const axiosCanceler = new AxiosCanceler();
+
+    // Request interceptor configuration processing
+    this.axiosInstance.interceptors.request.use((config: AxiosRequestConfig) => {
+      // If cancel repeat request is turned on, then cancel repeat request is prohibited
+      // @ts-ignore
+      const { ignoreCancelToken } = config.requestOptions;
+      const ignoreCancel = ignoreCancelToken !== undefined ? ignoreCancelToken : this.options.requestOptions?.ignoreCancelToken;
+
+      !ignoreCancel && axiosCanceler.addPending(config);
+      if (requestInterceptors && isFunction(requestInterceptors)) {
+        config = requestInterceptors(config, this.options);
+      }
+      return config;
+    }, undefined);
+
+    // Request interceptor error capture
+    requestInterceptorsCatch && isFunction(requestInterceptorsCatch) && this.axiosInstance.interceptors.request.use(undefined, requestInterceptorsCatch);
+
+    // Response result interceptor processing
+    this.axiosInstance.interceptors.response.use((res: AxiosResponse<any>) => {
+      res && axiosCanceler.removePending(res.config);
+      if (responseInterceptors && isFunction(responseInterceptors)) {
+        res = responseInterceptors(res);
+      }
+      return res;
+    }, undefined);
+
+    // Response result interceptor error capture
+    responseInterceptorsCatch &&
+      isFunction(responseInterceptorsCatch) &&
+      this.axiosInstance.interceptors.response.use(undefined, error => {
+        // @ts-ignore
+        return responseInterceptorsCatch(this.axiosInstance, error);
+      });
+  }
+
+  /**
+   * @description:  File Upload
+   */
+  uploadFile<T = any>(config: AxiosRequestConfig, params: UploadFileParams) {
+    const formData = new window.FormData();
+    const customFilename = params.name || 'file';
+
+    if (params.filename) {
+      formData.append(customFilename, params.file, params.filename);
+    } else {
+      formData.append(customFilename, params.file);
+    }
+
+    if (params.data) {
+      Object.keys(params.data).forEach(key => {
+        const value = params.data![key];
+        if (Array.isArray(value)) {
+          value.forEach(item => {
+            formData.append(`${key}[]`, item);
+          });
+          return;
+        }
+
+        formData.append(key, params.data![key]);
+      });
+    }
+
+    return this.axiosInstance.request<T>({
+      ...config,
+      method: 'POST',
+      data: formData,
+      headers: {
+        'Content-type': ContentTypeEnum.FORM_DATA,
+        // @ts-ignore
+        ignoreCancelToken: true,
+      },
+    });
+  }
+
+  // support form-data
+  supportFormData(config: AxiosRequestConfig) {
+    const headers = config.headers || this.options.headers;
+    const contentType = headers?.['Content-Type'] || headers?.['content-type'];
+
+    if (contentType !== ContentTypeEnum.FORM_URLENCODED || !Reflect.has(config, 'data') || config.method?.toUpperCase() === RequestEnum.GET) {
+      return config;
+    }
+
+    return {
+      ...config,
+      data: qs.stringify(config.data, { arrayFormat: 'brackets' }),
+    };
+  }
+
+  get<T = any>(config: AxiosRequestConfig, options?: RequestOptions): Promise<T> {
+    return this.request({ ...config, method: 'GET' }, options);
+  }
+
+  post<T = any>(config: AxiosRequestConfig, options?: RequestOptions): Promise<T> {
+    return this.request({ ...config, method: 'POST' }, options);
+  }
+
+  put<T = any>(config: AxiosRequestConfig, options?: RequestOptions): Promise<T> {
+    return this.request({ ...config, method: 'PUT' }, options);
+  }
+
+  delete<T = any>(config: AxiosRequestConfig, options?: RequestOptions): Promise<T> {
+    return this.request({ ...config, method: 'DELETE' }, options);
+  }
+
+  request<T = any>(config: AxiosRequestConfig, options?: RequestOptions): Promise<T> {
+    let conf: CreateAxiosOptions = cloneDeep(config);
+    // cancelToken 如果被深拷贝，会导致最外层无法使用cancel方法来取消请求
+    if (config.cancelToken) {
+      conf.cancelToken = config.cancelToken;
+    }
+    const transform = this.getTransform();
+
+    const { requestOptions } = this.options;
+
+    const opt: RequestOptions = Object.assign({}, requestOptions, options);
+
+    const { beforeRequestHook, requestCatchHook, transformResponseHook } = transform || {};
+    if (beforeRequestHook && isFunction(beforeRequestHook)) {
+      conf = beforeRequestHook(conf, opt);
+    }
+    conf.requestOptions = opt;
+
+    conf = this.supportFormData(conf);
+
+    return new Promise((resolve, reject) => {
+      this.axiosInstance
+        .request<any, AxiosResponse<Result>>(conf)
+        .then((res: AxiosResponse<Result>) => {
+          if (transformResponseHook && isFunction(transformResponseHook)) {
+            try {
+              const ret = transformResponseHook(res, opt);
+              resolve(ret);
+            } catch (err) {
+              reject(err || new Error('request error!'));
+            }
+            return;
+          }
+          resolve(res as unknown as Promise<T>);
+        })
+        .catch((e: Error | AxiosError) => {
+          if (requestCatchHook && isFunction(requestCatchHook)) {
+            reject(requestCatchHook(e, opt));
+            return;
+          }
+          if (axios.isAxiosError(e)) {
+            // rewrite error message from axios in here
+          }
+          reject(e);
+        });
+    });
+  }
+}
+
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第九组-前端架构/06-userStore.ts
+------------------------------------------------------------
+import type { UserInfo, PermissionInfo } from '/#/store';
+import type { ErrorMessageMode } from '/#/axios';
+import { defineStore } from 'pinia';
+import { store } from '/@/store';
+import { PageEnum } from '/@/enums/pageEnum';
+import { PERMISSIONS_KEY, TOKEN_KEY, USER_INFO_KEY } from '/@/enums/cacheEnum';
+import { getAuthCache, setAuthCache } from '/@/utils/auth';
+import { GetUserInfoModel, LoginParams, LoginRequestParams, BackMenu } from '/@/api/basic/model/userModel';
+import { loginApi, getUserInfo, doLogout } from '/@/api/basic/user';
+import { useI18n } from '/@/hooks/web/useI18n';
+import { useMessage } from '/@/hooks/web/useMessage';
+import { router } from '/@/router';
+import { usePermissionStore } from '/@/store/modules/permission';
+import { useBaseStore } from '/@/store/modules/base';
+import { useOrganizeStore } from '/@/store/modules/organize';
+import { useAppStore } from '/@/store/modules/app';
+import { useLocale } from '/@/locales/useLocale';
+import { RouteRecordRaw } from 'vue-router';
+import { PAGE_NOT_FOUND_ROUTE } from '/@/router/routes/basic';
+import { h } from 'vue';
+import { deepMerge } from '/@/utils';
+
+interface UserState {
+  userInfo: Nullable<UserInfo>;
+  token?: string;
+  permissionList: PermissionInfo[];
+  backMenuList: BackMenu[];
+  backRouterList: BackMenu[];
+  sessionTimeout?: boolean;
+  lastUpdateTime: number;
+}
+
+export const useUserStore = defineStore({
+  id: 'app-user',
+  state: (): UserState => ({
+    // user info
+    userInfo: null,
+    // token
+    token: undefined,
+    // permissionList
+    permissionList: [],
+    backMenuList: [],
+    backRouterList: [],
+    // Whether the login expired
+    sessionTimeout: false,
+    // Last fetch time
+    lastUpdateTime: 0,
+  }),
+  getters: {
+    getUserInfo(): UserInfo {
+      return this.userInfo || getAuthCache<UserInfo>(USER_INFO_KEY) || {};
+    },
+    getToken(): string {
+      return this.token || getAuthCache<string>(TOKEN_KEY);
+    },
+    getPermissionList(): PermissionInfo[] {
+      return this.permissionList.length ? this.permissionList : getAuthCache<PermissionInfo[]>(PERMISSIONS_KEY);
+    },
+    getBackMenuList(): BackMenu[] {
+      return this.backMenuList;
+    },
+    getBackRouterList(): BackMenu[] {
+      return this.backRouterList;
+    },
+    getSessionTimeout(): boolean {
+      return !!this.sessionTimeout;
+    },
+    getLastUpdateTime(): number {
+      return this.lastUpdateTime;
+    },
+  },
+  actions: {
+    setToken(info: string | undefined) {
+      this.token = info ? info : ''; // for null or undefined value
+      setAuthCache(TOKEN_KEY, info);
+    },
+    updateToken(info: string | undefined) {
+      this.lastUpdateTime = 0;
+      this.setToken(info);
+    },
+    setPermissionList(permissionList: PermissionInfo[]) {
+      this.permissionList = permissionList;
+      setAuthCache(PERMISSIONS_KEY, permissionList);
+    },
+    setBackMenuList(backMenuList: BackMenu[]) {
+      this.backMenuList = backMenuList;
+    },
+    setBackRouterList(backRouterList: BackMenu[]) {
+      this.backRouterList = backRouterList;
+    },
+    setUserInfo(info: DeepPartial<UserInfo> | null) {
+      this.userInfo = info ? deepMerge(this.userInfo || {}, info as any) : info;
+      this.lastUpdateTime = new Date().getTime();
+      setAuthCache(USER_INFO_KEY, info);
+    },
+    setSessionTimeout(flag: boolean) {
+      this.sessionTimeout = flag;
+    },
+    resetState() {
+      this.userInfo = null;
+      this.token = '';
+      this.permissionList = [];
+      this.backMenuList = [];
+      this.backRouterList = [];
+      this.sessionTimeout = false;
+    },
+    /**
+     * @description: login
+     */
+    async login(
+      params: LoginParams & {
+        goHome?: boolean;
+        mode?: ErrorMessageMode;
+      },
+    ): Promise<UserInfo | null> {
+      try {
+        const { goHome = false, mode, ...loginParams } = params;
+        const loginRequestParams: LoginRequestParams = {
+          ...loginParams,
+          grant_type: 'password',
+        };
+        const res = await loginApi(loginRequestParams);
+        const { token } = res.data;
+        this.setToken(token);
+        const baseStore = useBaseStore();
+        const organizeStore = useOrganizeStore();
+        baseStore.resetState();
+        organizeStore.resetState();
+        return this.afterLoginAction(goHome);
+      } catch (error) {
+        return null;
+      }
+    },
+    async afterLoginAction(goHome?: boolean): Promise<UserInfo | null> {
+      if (!this.getToken) return null;
+      // get user info
+      const res = await this.getUserInfoAction();
+      const { userInfo } = res as GetUserInfoModel;
+      const sessionTimeout = this.sessionTimeout;
+      if (sessionTimeout) {
+        this.setSessionTimeout(false);
+      } else {
+        const permissionStore = usePermissionStore();
+
+        if (!permissionStore.isDynamicAddedRoute) {
+          const routes = await permissionStore.buildRoutesAction();
+          routes.forEach(route => {
+            router.addRoute(route as unknown as RouteRecordRaw);
+          });
+          router.addRoute(PAGE_NOT_FOUND_ROUTE as unknown as RouteRecordRaw);
+          permissionStore.setDynamicAddedRoute(true);
+        }
+        goHome && (await router.replace(PageEnum.BASE_HOME));
+      }
+      return userInfo;
+    },
+    async getUserInfoAction(): Promise<GetUserInfoModel | null> {
+      if (!this.getToken) return null;
+      const { createMessage } = useMessage();
+      const { t } = useI18n();
+      // createMessage.loading({
+      //   content: t('sys.app.menuLoading'),
+      //   duration: 1,
+      // });
+      const res = await getUserInfo();
+      const { userInfo, sysConfigInfo, menuList = [], permissionList = [] } = res.data;
+      const { changeLocale } = useLocale();
+      // changeLocale('zh_CN');
+      if (!menuList.length) {
+        this.resetToken();
+        return Promise.reject('您的权限不足，请联系管理员');
+      }
+      this.setUserInfo(userInfo);
+      this.setPermissionList(permissionList);
+      this.setBackMenuList(menuList);
+      this.setBackRouterList(menuList);
+      const appStore = useAppStore();
+      appStore.setProjectConfig({ sysConfigInfo });
+      return res.data;
+    },
+    /**
+     * @description: logout
+     */
+    async logout(goLogin = false) {
+      if (this.getToken) {
+        try {
+          await doLogout();
+        } catch {
+          console.log('注销Token失败');
+        }
+      }
+      this.resetToken();
+    },
+
+    resetToken() {
+      this.setToken(undefined);
+      this.setSessionTimeout(false);
+      this.setUserInfo(null);
+      router.push(PageEnum.BASE_LOGIN);
+    },
+    /**
+     * @description: Confirm before logging out
+     */
+    confirmLoginOut() {
+      const { createConfirm } = useMessage();
+      const { t } = useI18n();
+      createConfirm({
+        iconType: 'warning',
+        title: () => h('span', t('sys.app.logoutTip')),
+        content: () => h('span', t('sys.app.logoutMessage')),
+        onOk: async () => {
+          await this.logout(true);
+        },
+      });
+    },
+  },
+});
+
+// Need to be used outside the setup
+export function useUserStoreWithOut() {
+  return useUserStore(store);
+}
+

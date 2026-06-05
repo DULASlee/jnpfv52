@@ -1,0 +1,975 @@
+============================================================
+第五组：日志与异常
+包含：Serilog, TraceId, FriendlyException, Oops, LogException, RequestActionFilter
+============================================================
+
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第五组-日志与异常/01-SerilogBootstrap.cs
+------------------------------------------------------------
+using Serilog;
+using Serilog.Core;
+using Serilog.Debugging;
+using Serilog.Events;
+using Serilog.Formatting.Json;
+
+namespace JNPF.API.Entry.Infrastructure;
+
+/// <summary>
+/// Serilog configuration bootstrap.
+/// </summary>
+public static class SerilogBootstrap
+{
+    /// <summary>
+    /// 全局日志级别开关，可由 LogDiskGuardService 动态调整.
+    /// </summary>
+    public static LoggingLevelSwitch LevelSwitch { get; } = new(LogEventLevel.Information);
+
+    public static void Configure(IConfiguration cfg)
+    {
+        // SelfLog: sink 写入失败时输出到 stderr（Docker/K8s 环境可通过 docker logs 捕获）
+        SelfLog.Enable(Console.Error);
+
+        var logDir = cfg["Logging:File:LogDir"] ?? "logs";
+        var fileFormatter = new JsonFormatter(renderMessage: true);
+
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.ControlledBy(LevelSwitch)
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("System", LogEventLevel.Warning)
+            .MinimumLevel.Override("SqlSugar", LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+
+            // Error logs
+            .WriteTo.File(
+                formatter: fileFormatter,
+                path: Path.Combine(logDir, "error-.json"),
+                rollingInterval: RollingInterval.Day,
+                restrictedToMinimumLevel: LogEventLevel.Error,
+                retainedFileCountLimit: 30,
+                fileSizeLimitBytes: 50 * 1024 * 1024)
+
+            // Warning logs (includes slow SQL)
+            .WriteTo.File(
+                formatter: fileFormatter,
+                path: Path.Combine(logDir, "warning-.json"),
+                rollingInterval: RollingInterval.Day,
+                restrictedToMinimumLevel: LogEventLevel.Warning,
+                retainedFileCountLimit: 14,
+                fileSizeLimitBytes: 50 * 1024 * 1024)
+
+            // Console
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+
+            .CreateLogger();
+    }
+}
+
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第五组-日志与异常/02-TraceIdMiddleware.cs
+------------------------------------------------------------
+using System.Diagnostics;
+using JNPF.Common.Const;
+using Serilog.Context;
+
+namespace JNPF.API.Entry.Infrastructure;
+
+/// <summary>
+/// TraceId middleware - generates unique trace ID per request, injects into response header and context.
+/// </summary>
+public class TraceIdMiddleware
+{
+    private const string TraceIdHeader = "X-Trace-Id";
+    private readonly RequestDelegate _next;
+
+    public TraceIdMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        // Priority: request header (distributed) > Activity.Current > new GUID
+        var traceId = context.Request.Headers[TraceIdHeader].FirstOrDefault()
+                      ?? Activity.Current?.Id
+                      ?? Guid.NewGuid().ToString("N");
+
+        context.Items["TraceId"] = traceId;
+        TraceContext.TraceId = traceId;
+
+        context.Response.OnStarting(() =>
+        {
+            context.Response.Headers[TraceIdHeader] = traceId;
+            return Task.CompletedTask;
+        });
+
+        var userId = context.User?.FindFirst(ClaimConst.CLAINMUSERID)?.Value;
+        var tenantId = context.User?.FindFirst(ClaimConst.TENANTID)?.Value;
+
+        using (LogContext.PushProperty("TraceId", traceId))
+        using (LogContext.PushProperty("UserId", userId ?? string.Empty))
+        using (LogContext.PushProperty("TenantId", tenantId ?? string.Empty))
+        {
+            await _next(context);
+        }
+    }
+}
+
+/// <summary>
+/// Async context TraceId propagation (works across Task.Run/ThreadPool).
+/// </summary>
+public static class TraceContext
+{
+    private static readonly AsyncLocal<string> _traceId = new();
+
+    public static string TraceId
+    {
+        get => _traceId.Value ?? "unknown";
+        set => _traceId.Value = value;
+    }
+}
+
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第五组-日志与异常/03-FriendlyExceptionFilter.cs
+------------------------------------------------------------
+﻿using JNPF;
+using JNPF.DataValidation;
+using JNPF.DynamicApiController;
+using JNPF.FriendlyException;
+using JNPF.UnifyResult;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System.Diagnostics;
+using System.Logging;
+
+namespace Microsoft.AspNetCore.Mvc.Filters;
+
+/// <summary>
+/// 友好异常拦截器
+/// </summary>
+[SuppressSniffer]
+public sealed class FriendlyExceptionFilter : IAsyncExceptionFilter
+{
+    /// <summary>
+    /// 异常拦截
+    /// </summary>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    public async Task OnExceptionAsync(ExceptionContext context)
+    {
+        // 判断是否是验证异常
+        var isValidationException = context.Exception is AppFriendlyException friendlyException && friendlyException.ValidationException;
+
+        // 只有不是验证异常才处理
+        if (!isValidationException)
+        {
+            // 解析异常处理服务，实现自定义异常额外操作，如记录日志等
+            var globalExceptionHandler = context.HttpContext.RequestServices.GetService<IGlobalExceptionHandler>();
+            if (globalExceptionHandler != null)
+            {
+                await globalExceptionHandler.OnExceptionAsync(context);
+            }
+        }
+
+        // 排除 WebSocket 请求处理
+        if (context.HttpContext.IsWebSocketRequest()) return;
+
+        // 如果异常在其他地方被标记了处理，那么这里不再处理
+        if (context.ExceptionHandled) return;
+
+        // 解析异常信息
+        var exceptionMetadata = UnifyContext.GetExceptionMetadata(context);
+
+        // 判断是否是 Razor Pages
+        var isPageDescriptor = context.ActionDescriptor is CompiledPageActionDescriptor;
+
+        // 判断是否是验证异常，如果是，则不处理
+        if (isValidationException)
+        {
+            var resultHttpContext = context.HttpContext.Items[nameof(DataValidationFilter) + nameof(AppFriendlyException)];
+            // 读取验证执行结果
+            if (resultHttpContext != null)
+            {
+                var result = isPageDescriptor
+                    ? (resultHttpContext as PageHandlerExecutedContext).Result
+                    : (resultHttpContext as ActionExecutedContext).Result;
+
+                // 直接将验证结果设置为异常结果
+                context.Result = result ?? new BadPageResult(StatusCodes.Status400BadRequest)
+                {
+                    Code = ValidatorContext.GetValidationMetadata((context.Exception as AppFriendlyException).ErrorMessage).Message
+                };
+
+                // 标记验证异常已被处理
+                context.ExceptionHandled = true;
+                return;
+            }
+        }
+
+        // 处理 Razor Pages
+        if (isPageDescriptor)
+        {
+            // 返回自定义错误页面
+            context.Result = new BadPageResult(isValidationException ? StatusCodes.Status400BadRequest : exceptionMetadata.StatusCode)
+            {
+                Title = isValidationException ? "ModelState Invalid" : ("Internal Server: " + exceptionMetadata.Errors.ToString()),
+                Code = isValidationException
+                    ? ValidatorContext.GetValidationMetadata((context.Exception as AppFriendlyException).ErrorMessage).Message
+                    : context.Exception.ToString()
+            };
+        }
+        // Mvc/WebApi
+        else
+        {
+            // 获取控制器信息
+            var actionDescriptor = context.ActionDescriptor as ControllerActionDescriptor;
+
+            // 判断是否跳过规范化结果，如果是，则只处理为友好异常消息
+            if (UnifyContext.CheckFailedNonUnify(actionDescriptor.MethodInfo, out var unifyResult))
+            {
+                // WebAPI 情况
+                if (Penetrates.IsApiController(actionDescriptor.MethodInfo.DeclaringType))
+                {
+                    // 返回 JsonResult
+                    context.Result = new JsonResult(exceptionMetadata.Errors)
+                    {
+                        StatusCode = exceptionMetadata.StatusCode,
+                    };
+                }
+                else
+                {
+                    // 返回自定义错误页面
+                    context.Result = new BadPageResult(exceptionMetadata.StatusCode)
+                    {
+                        Title = "Internal Server: " + exceptionMetadata.Errors.ToString(),
+                        Code = context.Exception.ToString()
+                    };
+                }
+            }
+            else
+            {
+                // 判断是否支持 MVC 规范化处理
+                if (!UnifyContext.CheckSupportMvcController(context.HttpContext, actionDescriptor, out _)
+                    || UnifyContext.CheckHttpContextNonUnify(context.HttpContext)) return;
+
+                // 执行规范化异常处理
+                context.Result = unifyResult.OnException(context, exceptionMetadata);
+            }
+        }
+
+        // 读取异常配置
+        var friendlyExceptionSettings = context.HttpContext.RequestServices.GetRequiredService<IOptions<FriendlyExceptionSettingsOptions>>();
+
+        // 判断是否启用异常日志输出
+        if (friendlyExceptionSettings.Value.LogError == true)
+        {
+            // 创建日志记录器
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<FriendlyException>>();
+
+            // 记录拦截日常
+            logger.LogError(context.Exception, context.Exception.Message);
+        }
+
+        // 打印错误消息
+        PrintToMiniProfiler(context.Exception);
+    }
+
+    /// <summary>
+    /// 打印错误到 MiniProfiler 中
+    /// </summary>
+    /// <param name="exception"></param>
+    internal static void PrintToMiniProfiler(Exception exception)
+    {
+        // 判断是否注入 MiniProfiler 组件
+        if (App.Settings.InjectMiniProfiler != true || exception == null) return;
+
+        // 获取异常堆栈
+        var stackTrace = new StackTrace(exception, true);
+        if (stackTrace.FrameCount == 0) return;
+        var traceFrame = stackTrace.GetFrame(0);
+
+        // 获取出错的文件名
+        var exceptionFileName = traceFrame.GetFileName();
+
+        // 获取出错的行号
+        var exceptionFileLineNumber = traceFrame.GetFileLineNumber();
+
+        // 打印错误文件名和行号
+        if (!string.IsNullOrWhiteSpace(exceptionFileName) && exceptionFileLineNumber > 0)
+        {
+            App.PrintToMiniProfiler("errors", "Locator", $"{exceptionFileName}:line {exceptionFileLineNumber}", true);
+        }
+
+        // 打印完整的堆栈信息
+        App.PrintToMiniProfiler("errors", "StackTrace", exception.ToString(), true);
+    }
+}
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第五组-日志与异常/04-Oops.cs
+------------------------------------------------------------
+﻿using JNPF.DynamicApiController;
+using JNPF.Extensions;
+using JNPF.Localization;
+using JNPF.Templates.Extensions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Concurrent;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Reflection;
+
+namespace JNPF.FriendlyException;
+
+/// <summary>
+/// 抛异常静态类
+/// </summary>
+[SuppressSniffer]
+public static class Oops
+{
+    /// <summary>
+    /// 方法错误异常特性
+    /// </summary>
+    private static readonly ConcurrentDictionary<MethodBase, MethodIfException> _errorMethods;
+
+    /// <summary>
+    /// 错误代码类型
+    /// </summary>
+    private static readonly IEnumerable<Type> _errorCodeTypes;
+
+    /// <summary>
+    /// 错误消息字典
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, string> _errorCodeMessages;
+
+    /// <summary>
+    /// 友好异常设置
+    /// </summary>
+    private static readonly FriendlyExceptionSettingsOptions _friendlyExceptionSettings;
+
+    /// <summary>
+    /// 构造函数
+    /// </summary>
+    static Oops()
+    {
+        _errorMethods = new ConcurrentDictionary<MethodBase, MethodIfException>();
+        _friendlyExceptionSettings = App.GetConfig<FriendlyExceptionSettingsOptions>("FriendlyExceptionSettings", true);
+        _errorCodeTypes = GetErrorCodeTypes();
+        _errorCodeMessages = GetErrorCodeMessages();
+    }
+
+    /// <summary>
+    /// 抛出业务异常信息
+    /// </summary>
+    /// <param name="errorMessage">异常消息</param>
+    /// <param name="args">String.Format 参数</param>
+    /// <returns>异常实例</returns>
+    public static AppFriendlyException Bah(string errorMessage, params object[] args)
+    {
+        var friendlyException = Oh(errorMessage, typeof(ValidationException), args).StatusCode(StatusCodes.Status400BadRequest);
+        friendlyException.ValidationException = true;
+        return friendlyException;
+    }
+
+    /// <summary>
+    /// 抛出业务异常信息
+    /// </summary>
+    /// <param name="errorCode">错误码</param>
+    /// <param name="args">String.Format 参数</param>
+    /// <returns>异常实例</returns>
+    public static AppFriendlyException Bah(object errorCode, params object[] args)
+    {
+        var friendlyException = Oh(errorCode, typeof(ValidationException), args).StatusCode(StatusCodes.Status400BadRequest);
+        friendlyException.ValidationException = true;
+        return friendlyException;
+    }
+
+    /// <summary>
+    /// 抛出字符串异常
+    /// </summary>
+    /// <param name="errorMessage">异常消息</param>
+    /// <param name="args">String.Format 参数</param>
+    /// <returns>异常实例</returns>
+    public static AppFriendlyException Oh(string errorMessage, params object[] args)
+    {
+        var friendlyException = new AppFriendlyException(MontageErrorMessage(errorMessage, default, null, args), default);
+
+        // 处理默认配置为业务异常问题
+        if (_friendlyExceptionSettings.ThrowBah == true)
+        {
+            friendlyException.StatusCode(StatusCodes.Status400BadRequest);
+            friendlyException.ValidationException = true;
+        }
+        return friendlyException;
+    }
+
+    /// <summary>
+    /// 抛出字符串异常
+    /// </summary>
+    /// <param name="errorMessage">异常消息</param>
+    /// <param name="exceptionType">具体异常类型</param>
+    /// <param name="args">String.Format 参数</param>
+    /// <returns>异常实例</returns>
+    public static AppFriendlyException Oh(string errorMessage, Type exceptionType, params object[] args)
+    {
+        var exceptionMessage = MontageErrorMessage(errorMessage, default, null, args);
+        return new AppFriendlyException(exceptionMessage, default,
+            Activator.CreateInstance(exceptionType, new object[] { exceptionMessage }) as Exception);
+    }
+
+    /// <summary>
+    /// 抛出字符串异常
+    /// </summary>
+    /// <typeparam name="TException">具体异常类型</typeparam>
+    /// <param name="errorMessage">异常消息</param>
+    /// <param name="args">String.Format 参数</param>
+    /// <returns>异常实例</returns>
+    public static AppFriendlyException Oh<TException>(string errorMessage, params object[] args)
+        where TException : class
+    {
+        return Oh(errorMessage, typeof(TException), args);
+    }
+
+    /// <summary>
+    /// 抛出错误码异常
+    /// </summary>
+    /// <param name="errorCode">错误码</param>
+    /// <param name="args">String.Format 参数</param>
+    /// <returns>异常实例</returns>
+    public static AppFriendlyException Oh(object errorCode, params object[] args)
+    {
+        var (ErrorCode, Message) = GetErrorCodeMessage(errorCode, null, args);
+        var friendlyException = new AppFriendlyException(Message, errorCode) { ErrorCode = ErrorCode };
+
+        // 处理默认配置为业务异常问题
+        if (_friendlyExceptionSettings.ThrowBah == true)
+        {
+            friendlyException.StatusCode(StatusCodes.Status400BadRequest);
+            friendlyException.ValidationException = true;
+        }
+        return friendlyException;
+    }
+
+    /// <summary>
+    /// 抛出错误码异常
+    /// </summary>
+    /// <param name="errorCode">错误码</param>
+    /// <param name="exceptionType">具体异常类型</param>
+    /// <param name="args">String.Format 参数</param>
+    /// <returns>异常实例</returns>
+    public static AppFriendlyException Oh(object errorCode, Type exceptionType, params object[] args)
+    {
+        var (ErrorCode, Message) = GetErrorCodeMessage(errorCode, null, args);
+        return new AppFriendlyException(Message, errorCode,
+            Activator.CreateInstance(exceptionType, new object[] { Message }) as Exception)
+        { ErrorCode = ErrorCode };
+    }
+
+    /// <summary>
+    /// 抛出错误码异常
+    /// </summary>
+    /// <typeparam name="TException">具体异常类型</typeparam>
+    /// <param name="errorCode">错误码</param>
+    /// <param name="args">String.Format 参数</param>
+    /// <returns>异常实例</returns>
+    public static AppFriendlyException Oh<TException>(object errorCode, params object[] args)
+        where TException : class
+    {
+        return Oh(errorCode, typeof(TException), args);
+    }
+
+    /// <summary>
+    /// 获取错误码错误消息
+    /// </summary>
+    /// <param name="errorCode"></param>
+    /// <param name="hideErrorCode"></param>
+    /// <param name="args"></param>
+    /// <returns></returns>
+    public static string Text(object errorCode, bool? hideErrorCode = null, params object[] args)
+    {
+        var (_, Message) = GetErrorCodeMessage(errorCode, hideErrorCode, args);
+        return Message;
+    }
+
+    /// <summary>
+    /// 获取错误码消息
+    /// </summary>
+    /// <param name="errorCode"></param>
+    /// <param name="hideErrorCode"></param>
+    /// <param name="args"></param>
+    /// <returns></returns>
+    private static (object ErrorCode, string Message) GetErrorCodeMessage(object errorCode, bool? hideErrorCode, params object[] args)
+    {
+        errorCode = HandleEnumErrorCode(errorCode);
+
+        // 获取出错的方法
+        var methodIfException = GetEndPointExceptionMethod();
+
+        // 获取当前状态码匹配异常特性
+        var ifExceptionAttribute = methodIfException?.IfExceptionAttributes?.FirstOrDefault(u => u.ErrorCode != null && HandleEnumErrorCode(u.ErrorCode).ToString().Equals(errorCode.ToString()));
+
+        // 获取错误码消息
+        var errorCodeMessage = ifExceptionAttribute == null || string.IsNullOrWhiteSpace(ifExceptionAttribute.ErrorMessage)
+            ? (_errorCodeMessages.GetValueOrDefault(errorCode.ToString()) ?? _friendlyExceptionSettings.DefaultErrorMessage)
+            : ifExceptionAttribute.ErrorMessage;
+
+        // 如果所有错误码都获取不到，则找全局 [IfException] 错误
+        if (string.IsNullOrWhiteSpace(errorCodeMessage))
+        {
+            errorCodeMessage = methodIfException?.IfExceptionAttributes?.FirstOrDefault(u => u.ErrorCode == null && !string.IsNullOrWhiteSpace(u.ErrorMessage))?.ErrorMessage;
+        }
+
+        // 字符串格式化
+        return (errorCode, MontageErrorMessage(errorCodeMessage, errorCode.ToString(), hideErrorCode
+            , args != null && args.Length > 0 ? args : ifExceptionAttribute?.Args));
+    }
+
+    /// <summary>
+    /// 处理枚举类型错误码
+    /// </summary>
+    /// <param name="errorCode">错误码</param>
+    /// <returns></returns>
+    private static object HandleEnumErrorCode(object errorCode)
+    {
+        // 获取类型
+        var errorType = errorCode.GetType();
+
+        // 判断是否是内置枚举类型，如果是解析特性
+        if (_errorCodeTypes.Any(u => u == errorType))
+        {
+            var fieldinfo = errorType.GetField(Enum.GetName(errorType, errorCode));
+            if (fieldinfo.IsDefined(typeof(ErrorCodeItemMetadataAttribute), true))
+            {
+                errorCode = GetErrorCodeItemInformation(fieldinfo).Key;
+            }
+        }
+
+        return errorCode;
+    }
+
+    /// <summary>
+    /// 获取错误代码类型
+    /// </summary>
+    /// <returns></returns>
+    private static IEnumerable<Type> GetErrorCodeTypes()
+    {
+        // 查找所有公开的枚举贴有 [ErrorCodeType] 特性的类型
+        var errorCodeTypes = App.EffectiveTypes
+            .Where(u => u.IsDefined(typeof(ErrorCodeTypeAttribute), true) && u.IsEnum);
+
+        // 获取错误代码提供器中定义的类型
+        var errorCodeTypeProvider = App.GetService<IErrorCodeTypeProvider>(App.RootServices);
+        if (errorCodeTypeProvider is { Definitions: not null }) errorCodeTypes = errorCodeTypes.Concat(errorCodeTypeProvider.Definitions);
+
+        return errorCodeTypes.Distinct();
+    }
+
+    /// <summary>
+    /// 获取所有错误消息
+    /// </summary>
+    /// <returns></returns>
+    private static ConcurrentDictionary<string, string> GetErrorCodeMessages()
+    {
+        var defaultErrorCodeMessages = new ConcurrentDictionary<string, string>();
+
+        // 查找所有 [ErrorCodeType] 类型中的 [ErrorCodeMetadata] 元数据定义
+        var errorCodeMessages = _errorCodeTypes.SelectMany(u => u.GetFields().Where(u => u.IsDefined(typeof(ErrorCodeItemMetadataAttribute))))
+            .Select(u => GetErrorCodeItemInformation(u))
+           .ToDictionary(u => u.Key.ToString(), u => u.Value);
+
+        defaultErrorCodeMessages.AddOrUpdate(errorCodeMessages);
+
+        // 加载配置文件状态码
+        var errorCodeMessageSettings = App.GetConfig<ErrorCodeMessageSettingsOptions>("ErrorCodeMessageSettings", true);
+        if (errorCodeMessageSettings is { Definitions: not null })
+        {
+            // 获取所有参数大于1的配置
+            var fitErrorCodes = errorCodeMessageSettings.Definitions
+                .Where(u => u.Length > 1)
+                .ToDictionary(u => u[0].ToString(), u => FixErrorCodeSettingMessage(u));
+
+            defaultErrorCodeMessages.AddOrUpdate(fitErrorCodes);
+        }
+
+        return defaultErrorCodeMessages;
+    }
+
+    /// <summary>
+    /// 处理异常配置数据
+    /// </summary>
+    /// <param name="errorCodes">错误消息配置对象</param>
+    /// <remarks>
+    /// 方式：数组第一个元素为错误码，第二个参数为错误消息，剩下的参数为错误码格式化字符串
+    /// </remarks>
+    /// <returns></returns>
+    private static string FixErrorCodeSettingMessage(object[] errorCodes)
+    {
+        var args = errorCodes.Skip(2).ToArray();
+        var errorMessage = errorCodes[1].ToString();
+        return errorMessage.Format(args);
+    }
+
+    /// <summary>
+    /// 获取堆栈中顶部抛异常方法
+    /// </summary>
+    /// <returns></returns>
+    private static MethodIfException GetEndPointExceptionMethod()
+    {
+        try
+        {
+            // 获取调用堆栈信息
+            var stackTrace = EnhancedStackTrace.Current();
+
+            // 获取出错的堆栈信息，在 web 请求中获取控制器或动态API的方法，除外获取第一个出错的方法
+            var stackFrame = stackTrace.FirstOrDefault(u => typeof(ControllerBase).IsAssignableFrom(u.MethodInfo.DeclaringType) || typeof(IDynamicApiController).IsAssignableFrom(u.MethodInfo.DeclaringType))
+                ?? stackTrace.FirstOrDefault(u => u.GetMethod().DeclaringType.Namespace != typeof(Oops).Namespace);
+
+            // 获取出错的方法
+            var errorMethod = stackFrame.MethodInfo.MethodBase;
+
+            // 判断是否已经缓存过该方法，避免重复解析
+            var isCached = _errorMethods.TryGetValue(errorMethod, out var methodIfException);
+            if (isCached) return methodIfException;
+
+            // 获取堆栈中所有的 [IfException] 特性
+            var ifExceptionAttributes = stackTrace
+                .Where(u => u.MethodInfo.MethodBase != null && u.MethodInfo.MethodBase.IsDefined(typeof(IfExceptionAttribute), true))
+                .SelectMany(u => u.MethodInfo.MethodBase.GetCustomAttributes<IfExceptionAttribute>(true));
+
+            // 组装方法异常对象
+            methodIfException = new MethodIfException
+            {
+                ErrorMethod = errorMethod,
+                IfExceptionAttributes = ifExceptionAttributes
+            };
+
+            // 存入缓存
+            _errorMethods.TryAdd(errorMethod, methodIfException);
+
+            return methodIfException;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 获取错误代码信息
+    /// </summary>
+    /// <param name="fieldInfo">字段对象</param>
+    /// <returns>(object key, object value)</returns>
+    private static (object Key, string Value) GetErrorCodeItemInformation(FieldInfo fieldInfo)
+    {
+        var errorCodeItemMetadata = fieldInfo.GetCustomAttribute<ErrorCodeItemMetadataAttribute>();
+        return (errorCodeItemMetadata.ErrorCode ?? fieldInfo.Name, errorCodeItemMetadata.ErrorMessage.Format(errorCodeItemMetadata.Args));
+    }
+
+    /// <summary>
+    /// 获取错误码字符串
+    /// </summary>
+    /// <param name="errorMessage"></param>
+    /// <param name="errorCode"></param>
+    /// <param name="hideErrorCode">隐藏错误码</param>
+    /// <param name="args"></param>
+    /// <returns></returns>
+    private static string MontageErrorMessage(string errorMessage, string errorCode, bool? hideErrorCode, params object[] args)
+    {
+        // 支持读取配置渲染
+        var realErrorMessage = errorMessage.Render();
+
+        // 多语言处理
+        realErrorMessage = L.Text == null ? realErrorMessage : L.Text[realErrorMessage];
+
+        // 判断是否隐藏错误码
+        var msg = (hideErrorCode == true || _friendlyExceptionSettings.HideErrorCode == true || string.IsNullOrWhiteSpace(errorCode)
+            ? string.Empty
+            : $"[{errorCode}] ") + realErrorMessage;
+
+        return msg.Format(args);
+    }
+}
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第五组-日志与异常/05-LogExceptionHandler.cs
+------------------------------------------------------------
+﻿using JNPF.Common.Const;
+using JNPF.Common.Net;
+using JNPF.Common.Security;
+using JNPF.DependencyInjection;
+using JNPF.EventBus;
+using JNPF.EventHandler;
+using JNPF.FriendlyException;
+using JNPF.Logging.Attributes;
+using JNPF.Systems.Entitys.System;
+using Microsoft.AspNetCore.Mvc.Filters;
+using SqlSugar;
+using System.Security.Claims;
+
+namespace JNPF.Common.Core.Filter;
+
+/// <summary>
+/// 全局异常处理.
+/// </summary>
+public class LogExceptionHandler : IGlobalExceptionHandler, ISingleton
+{
+    private readonly IEventPublisher _eventPublisher;
+
+    public LogExceptionHandler(IEventPublisher eventPublisher)
+    {
+        _eventPublisher = eventPublisher;
+    }
+
+    /// <summary>
+    /// 异步写入异常日记.
+    /// </summary>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    public async Task OnExceptionAsync(ExceptionContext context)
+    {
+        var userContext = App.User;
+        var httpContext = context.HttpContext;
+        var httpRequest = httpContext?.Request;
+        UserAgent userAgent = new UserAgent(httpContext);
+
+        // ★ Core: Exception logs are NOT controlled by [IgnoreLog]/[LogPolicy]
+        // Any exception must be recorded regardless of attribute settings
+        var traceId = httpContext?.Items["TraceId"]?.ToString() ?? "unknown";
+        var userId = userContext?.FindFirstValue(ClaimConst.CLAINMUSERID);
+        var userName = userContext?.FindFirstValue(ClaimConst.CLAINMREALNAME);
+        var userAccount = userContext?.FindFirstValue(ClaimConst.CLAINMACCOUNT);
+        var tenantId = userContext?.FindFirstValue(ClaimConst.TENANTID);
+
+        var ipAddress = NetHelper.Ip;
+        var ipAddressName = await NetHelper.GetLocation(ipAddress);
+
+        await _eventPublisher.PublishAsync(new LogEventSource("Log:CreateExLog", tenantId, new SysLogEntity
+        {
+            Id = SnowflakeIdHelper.NextId(),
+            UserId = userId,
+            UserName = string.Format("{0}/{1}", userName, userAccount),
+            Type = 4,
+            IPAddress = ipAddress,
+            IPAddressName = ipAddressName,
+            RequestURL = httpRequest.Path,
+            RequestMethod = httpRequest.Method,
+            Json = context.Exception.Message + "\n" + context.Exception.StackTrace,
+            PlatForm = userAgent.OS.ToString(),
+            Browser = userAgent.userAgent.ToString(),
+            CreatorTime = DateTime.Now,
+            TraceId = traceId,
+            TenantId = tenantId
+        }));
+    }
+}
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第五组-日志与异常/06-RequestActionFilter.cs
+------------------------------------------------------------
+﻿using JNPF.Common.Const;
+using JNPF.Common.Net;
+using JNPF.Common.Security;
+using JNPF.EventBus;
+using JNPF.EventHandler;
+using JNPF.Logging.Attributes;
+using JNPF.Systems.Entitys.System;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Logging;
+using SqlSugar;
+using System.Diagnostics;
+using System.Security.Claims;
+
+namespace JNPF.Common.Core.Filter;
+
+/// <summary>
+/// 请求日志拦截.
+/// </summary>
+public class RequestActionFilter : IAsyncActionFilter
+{
+    /// <summary>
+    /// 事件总线.
+    /// </summary>
+    private readonly IEventPublisher _eventPublisher;
+
+    /// <summary>
+    /// 日志.
+    /// </summary>
+    private readonly ILogger<RequestActionFilter> _logger;
+
+    /// <summary>
+    /// 构造函数.
+    /// </summary>
+    public RequestActionFilter(IEventPublisher eventPublisher, ILogger<RequestActionFilter> logger)
+    {
+        _eventPublisher = eventPublisher;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// 请求日记写入.
+    /// </summary>
+    /// <param name="context"></param>
+    /// <param name="next"></param>
+    /// <returns></returns>
+    public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+    {
+        var userContext = App.User;
+        var httpContext = context.HttpContext;
+        var httpRequest = httpContext.Request;
+        UserAgent userAgent = new UserAgent(httpContext);
+
+        // Read LogPolicy from action metadata
+        var policy = LogPolicy.Full;
+        var policyAttr = context.ActionDescriptor.EndpointMetadata
+            .OfType<LogPolicyAttribute>().FirstOrDefault();
+        if (policyAttr != null)
+        {
+            policy = policyAttr.Policy;
+        }
+
+        // Check IgnoreAll
+        if (policy.HasFlag(LogPolicy.IgnoreAll))
+        {
+            await next();
+            return;
+        }
+
+        // Also support legacy [IgnoreLog] during transition
+        if (context.ActionDescriptor.EndpointMetadata.Any(m => m.GetType() == typeof(IgnoreLogAttribute)))
+        {
+            await next();
+            return;
+        }
+
+        Stopwatch sw = new Stopwatch();
+        sw.Start();
+        var actionContext = await next();
+        sw.Stop();
+
+        var traceId = httpContext.Items["TraceId"]?.ToString() ?? "unknown";
+        var userId = userContext?.FindFirstValue(ClaimConst.CLAINMUSERID);
+        var userName = userContext?.FindFirstValue(ClaimConst.CLAINMREALNAME);
+        var userAccount = userContext?.FindFirstValue(ClaimConst.CLAINMACCOUNT);
+        var tenantId = userContext?.FindFirstValue(ClaimConst.TENANTID);
+
+        var ipAddress = NetHelper.Ip;
+        var ipAddressName = await NetHelper.GetLocation(ipAddress);
+
+        // Summary mode serialization
+        string args = null;
+        if (!policy.HasFlag(LogPolicy.IgnoreRequest))
+        {
+            args = SerializeAsSummary(context.ActionArguments);
+        }
+
+        string resultJson = null;
+        if (!policy.HasFlag(LogPolicy.IgnoreResponse))
+        {
+            var result = (actionContext.Result as JsonResult)?.Value;
+            resultJson = result?.ToJsonString();
+            if (resultJson != null && resultJson.Length > 500)
+            {
+                resultJson = resultJson[..500] + $"...(truncated, total {resultJson.Length} chars)";
+            }
+        }
+
+        try
+        {
+            await _eventPublisher.PublishAsync(new LogEventSource("Log:CreateReLog", tenantId, new SysLogEntity
+            {
+                Id = SnowflakeIdHelper.NextId(),
+                UserId = userId,
+                UserName = string.Format("{0}/{1}", userName, userAccount),
+                Type = 5,
+                IPAddress = ipAddress,
+                IPAddressName = ipAddressName,
+                RequestURL = httpRequest.Path,
+                RequestDuration = (int)sw.ElapsedMilliseconds,
+                RequestMethod = httpRequest.Method,
+                PlatForm = userAgent.OS.ToString(),
+                Browser = userAgent.userAgent.ToString(),
+                CreatorTime = DateTime.Now,
+                RequestParam = args,
+                RequestTarget = context.ActionDescriptor.DisplayName,
+                Json = resultJson,
+                TraceId = traceId,
+                TenantId = tenantId
+            }));
+
+            if (context.ActionDescriptor.EndpointMetadata.Any(m => m.GetType() == typeof(OperateLogAttribute)))
+            {
+                var module = context.ActionDescriptor.EndpointMetadata
+                    .Where(x => x.GetType() == typeof(OperateLogAttribute))
+                    .FirstOrDefault() as OperateLogAttribute;
+
+                await _eventPublisher.PublishAsync(new LogEventSource("Log:CreateOpLog", tenantId, new SysLogEntity
+                {
+                    Id = SnowflakeIdHelper.NextId(),
+                    UserId = userId,
+                    UserName = string.Format("{0}/{1}", userName, userAccount),
+                    Type = 3,
+                    IPAddress = ipAddress,
+                    IPAddressName = ipAddressName,
+                    RequestURL = httpRequest.Path,
+                    RequestDuration = (int)sw.ElapsedMilliseconds,
+                    RequestMethod = httpRequest.Method,
+                    PlatForm = userAgent.OS.ToString(),
+                    Browser = userAgent.userAgent.ToString(),
+                    CreatorTime = DateTime.Now,
+                    ModuleName = module.ModuleName,
+                    RequestParam = args,
+                    RequestTarget = context.ActionDescriptor.DisplayName,
+                    Json = resultJson,
+                    TraceId = traceId,
+                    TenantId = tenantId
+                }));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Serialize action arguments in summary mode, truncating large values.
+    /// </summary>
+    private string SerializeAsSummary(IDictionary<string, object> args)
+    {
+        if (args == null || args.Count == 0) return null;
+
+        var summaries = args.Select(kv =>
+        {
+            var value = kv.Value;
+            if (value == null) return $"{kv.Key}=null";
+
+            var json = value.ToJsonString();
+            if (json.Length > 200)
+            {
+                return $"{kv.Key}={json[..200]}...(truncated, total {json.Length} chars)";
+            }
+            return $"{kv.Key}={json}";
+        });
+
+        return "{" + string.Join(", ", summaries) + "}";
+    }
+}
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第五组-日志与异常/07-Logging.json
+------------------------------------------------------------
+{
+    "Logging": {
+        "LogLevel": {
+            "Default": "Information",
+            "Microsoft.AspNetCore": "Warning"
+        },
+        "File": {
+            "LogDir": "logs"
+        },
+        "Seq": {
+            "Enabled": "false",
+            "ServerUrl": "http://localhost:5341"
+        }
+    }
+}
