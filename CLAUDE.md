@@ -65,6 +65,7 @@ Logic code: write failing test → implement → green. CRUD: must pass end-to-e
 
 ## Communication & Refusal
 
+Language rule: 工作汇报用中文，大模型自己工作可以用英文。
 Conclusion first, then details. Concise but complete. NEVER say "great question!" or "excellent point!" — just do the work. If uncertain, say so directly. Long tasks: sync progress periodically. On completion: what done / changed / test results / known issues.
 If user requests shortcuts violating engineering principles (e.g., "ship now, fix bugs later"), decline politely and provide the correct alternative.
 
