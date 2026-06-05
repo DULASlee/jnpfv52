@@ -1,11 +1,4 @@
-======================================================================
-JNPF V5.2 架构全面体检报告及关键文件汇总
-生成时间：2026-06-05 15:17:07
-======================================================================
 
-======================================================================
-体检报告正文
-======================================================================
 # JNPF V5.2 架构全面体检报告
 
 > **审计日期：** 2026-06-05
@@ -1479,9 +1472,14 @@ UniApp 代码通过代码生成引擎（第 11 章）的 `.vm` 模板生成。�
 | 23 | Service Locator 反模式 86 次 | 框架内部为主 |
 
 
-======================================================================
+============================================================
+第一组：系统骨架
+包含：sln, Program.cs, Startup.cs, appsettings.json, AppStartup
+============================================================
+
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第一组-系统骨架/01-JNPF-framework.sln
-======================================================================
+------------------------------------------------------------
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
@@ -1580,10 +1578,9 @@ Global
 	EndGlobalSection
 EndGlobal
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第一组-系统骨架/01-zx_lowcode_netcore.sln
-======================================================================
+------------------------------------------------------------
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
@@ -2011,10 +2008,9 @@ Global
 	EndGlobalSection
 EndGlobal
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第一组-系统骨架/02-Program.cs
-======================================================================
+------------------------------------------------------------
 using JNPF.API.Entry.Infrastructure;
 using Serilog;
 
@@ -2053,10 +2049,9 @@ public class WebComponent : IWebComponent
     }
 }
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第一组-系统骨架/03-Startup.cs
-======================================================================
+------------------------------------------------------------
 ﻿using IGeekFan.AspNetCore.Knife4jUI;
 using JNPF.API.Entry.Handlers;
 using JNPF.API.Entry.Infrastructure;
@@ -2363,19 +2358,17 @@ public class Startup : AppStartup
         serviceProvider.WarmupSwagger();
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第一组-系统骨架/04-appsettings.json
-======================================================================
+------------------------------------------------------------
 {
   "AllowedHosts": "*",
   // 配置扫描目录
   "ConfigurationScanDirectories": [ "Configurations" ]
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第一组-系统骨架/05-AppStartup.cs
-======================================================================
+------------------------------------------------------------
 ﻿namespace JNPF;
 
 /// <summary>
@@ -2386,9 +2379,15 @@ public abstract class AppStartup
 {
 }
 
-======================================================================
+
+============================================================
+第二组：依赖注入与服务注册
+包含：ITransient/IScoped/ISingleton, AppServiceCollectionExtensions, App.cs
+============================================================
+
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第二组-依赖注入与服务注册/06-IScoped.cs
-======================================================================
+------------------------------------------------------------
 ﻿namespace JNPF.DependencyInjection;
 
 /// <summary>
@@ -2397,10 +2396,9 @@ public abstract class AppStartup
 public interface IScoped : IPrivateDependency
 {
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第二组-依赖注入与服务注册/06-ISingleton.cs
-======================================================================
+------------------------------------------------------------
 ﻿namespace JNPF.DependencyInjection;
 
 /// <summary>
@@ -2409,10 +2407,9 @@ public interface IScoped : IPrivateDependency
 public interface ISingleton : IPrivateDependency
 {
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第二组-依赖注入与服务注册/06-ITransient.cs
-======================================================================
+------------------------------------------------------------
 ﻿namespace JNPF.DependencyInjection;
 
 /// <summary>
@@ -2421,10 +2418,9 @@ public interface ISingleton : IPrivateDependency
 public interface ITransient : IPrivateDependency
 {
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第二组-依赖注入与服务注册/07-AppServiceCollectionExtensions.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF;
 using JNPF.UnifyResult;
 using Microsoft.Extensions.Hosting;
@@ -2683,10 +2679,9 @@ public static class AppServiceCollectionExtensions
         return !type.IsDefined(typeof(AppStartupAttribute), true) ? 0 : type.GetCustomAttribute<AppStartupAttribute>(true).Order;
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第二组-依赖注入与服务注册/08-App.cs
-======================================================================
+------------------------------------------------------------
 using JNPF.ConfigurableOptions;
 using JNPF.Reflection;
 using JNPF.Templates;
@@ -3372,9 +3367,15 @@ public static class App
     }
 }
 
-======================================================================
+
+============================================================
+第三组：数据访问层
+包含：SqlSugar配置, Repository, 租户过滤, 缓存配置
+============================================================
+
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第三组-数据访问层/09-SqlSugarConfigureExtensions.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF;
 using JNPF.Common.Security;
 using JNPF.DatabaseAccessor;
@@ -3500,10 +3501,9 @@ public static class SqlSugarConfigureExtensions
         };
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第三组-数据访问层/10-ITenantFilter.cs
-======================================================================
+------------------------------------------------------------
 ﻿using SqlSugar;
 
 namespace JNPF.Extras.DatabaseAccessor.SqlSugar.Models;
@@ -3519,10 +3519,9 @@ public interface ITenantFilter
     [SugarColumn(ColumnName = "F_TENANT_ID", ColumnDescription = "租户id")]
     string TenantId { get; set; }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第三组-数据访问层/10-IZxSystemFilter.cs
-======================================================================
+------------------------------------------------------------
 ﻿using SqlSugar;
 
 namespace JNPF.Extras.DatabaseAccessor.SqlSugar.Models;
@@ -3539,10 +3538,9 @@ public interface IZxSystemFilter
     string ZxSystemId { get; set; }
 
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第三组-数据访问层/10-SqlSugarRepository.cs
-======================================================================
+------------------------------------------------------------
 using JNPF;
 using JNPF.Common.Manager;
 using JNPF.Extras.DatabaseAccessor.SqlSugar.Models;
@@ -3721,10 +3719,9 @@ where TEntity : class, new()
         }
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第三组-数据访问层/11-Cache.json
-======================================================================
+------------------------------------------------------------
 {
   "Cache": {
     "CacheType": "MemoryCache", // MemoryCache
@@ -3734,10 +3731,9 @@ where TEntity : class, new()
 
   }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第三组-数据访问层/11-ISqlSugarRepository.cs
-======================================================================
+------------------------------------------------------------
 namespace SqlSugar;
 
 /// <summary>
@@ -3748,10 +3744,9 @@ public partial interface ISqlSugarRepository<TEntity> : ISimpleClient<TEntity>
     where TEntity : class, new()
 {
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第三组-数据访问层/12-ConnectionStrings.example.json
-======================================================================
+------------------------------------------------------------
 {
   "ConnectionStrings": [
     {
@@ -3768,10 +3763,9 @@ public partial interface ISqlSugarRepository<TEntity> : ISimpleClient<TEntity>
   ]
 }
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第三组-数据访问层/12-Tenant.json
-======================================================================
+------------------------------------------------------------
 {
   "Tenant": {
     "MultiTenancy": false,
@@ -3781,9 +3775,15 @@ public partial interface ISqlSugarRepository<TEntity> : ISimpleClient<TEntity>
   }
 }
 
-======================================================================
+
+============================================================
+第四组：认证与授权
+包含：JWTEncryption, JwtHandler, UserManager, CurrentUser, JWT配置
+============================================================
+
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第四组-认证与授权/01-JWTEncryption.cs
-======================================================================
+------------------------------------------------------------
 using JNPF.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -4293,10 +4293,9 @@ public class JWTEncryption
         return jnpfAssembly;
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第四组-认证与授权/02-JwtHandler.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF.Authorization;
 using JNPF.Common.Const;
 using JNPF.Common.Enums;
@@ -4378,10 +4377,9 @@ public class JwtHandler : AppAuthorizeHandler
     }
 }
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第四组-认证与授权/03-IUserManager.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF.Common.Models.Authorize;
 using JNPF.Common.Models.User;
 using JNPF.Systems.Entitys.Permission;
@@ -4626,10 +4624,9 @@ public interface IUserManager
     /// <returns></returns>
     List<GlobalTenantCacheModel> GetGlobalTenantCache();
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第四组-认证与授权/04-UserManager.cs
-======================================================================
+------------------------------------------------------------
 ﻿using System.Diagnostics;
 using JNPF.Common.Const;
 using JNPF.Common.Enums;
@@ -7029,10 +7026,9 @@ public class UserManager : IUserManager, IScoped
         return op;
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第四组-认证与授权/05-CurrentUserOutput.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF.Common.Models.User;
 using JNPF.DependencyInjection;
 using JNPF.Systems.Entitys.Dto.Module;
@@ -7285,10 +7281,9 @@ public class UserAllMenu
     public string sortCode { get; set; }
     public string systemId { get; set; }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第四组-认证与授权/06-JWT.json
-======================================================================
+------------------------------------------------------------
 {
   "JWTSettings": {
     "ValidateIssuerSigningKey": true,
@@ -7304,9 +7299,15 @@ public class UserAllMenu
 }
 
 
-======================================================================
+
+============================================================
+第五组：日志与异常
+包含：Serilog, TraceId, FriendlyException, Oops, LogException, RequestActionFilter
+============================================================
+
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第五组-日志与异常/01-SerilogBootstrap.cs
-======================================================================
+------------------------------------------------------------
 using Serilog;
 using Serilog.Core;
 using Serilog.Debugging;
@@ -7365,10 +7366,9 @@ public static class SerilogBootstrap
     }
 }
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第五组-日志与异常/02-TraceIdMiddleware.cs
-======================================================================
+------------------------------------------------------------
 using System.Diagnostics;
 using JNPF.Common.Const;
 using Serilog.Context;
@@ -7430,10 +7430,9 @@ public static class TraceContext
     }
 }
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第五组-日志与异常/03-FriendlyExceptionFilter.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF;
 using JNPF.DataValidation;
 using JNPF.DynamicApiController;
@@ -7610,10 +7609,9 @@ public sealed class FriendlyExceptionFilter : IAsyncExceptionFilter
         App.PrintToMiniProfiler("errors", "StackTrace", exception.ToString(), true);
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第五组-日志与异常/04-Oops.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF.DynamicApiController;
 using JNPF.Extensions;
 using JNPF.Localization;
@@ -7995,10 +7993,9 @@ public static class Oops
         return msg.Format(args);
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第五组-日志与异常/05-LogExceptionHandler.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF.Common.Const;
 using JNPF.Common.Net;
 using JNPF.Common.Security;
@@ -8068,10 +8065,9 @@ public class LogExceptionHandler : IGlobalExceptionHandler, ISingleton
         }));
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第五组-日志与异常/06-RequestActionFilter.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF.Common.Const;
 using JNPF.Common.Net;
 using JNPF.Common.Security;
@@ -8261,10 +8257,9 @@ public class RequestActionFilter : IAsyncActionFilter
         return "{" + string.Join(", ", summaries) + "}";
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第五组-日志与异常/07-Logging.json
-======================================================================
+------------------------------------------------------------
 {
     "Logging": {
         "LogLevel": {
@@ -8281,9 +8276,15 @@ public class RequestActionFilter : IAsyncActionFilter
     }
 }
 
-======================================================================
+
+============================================================
+第六组：事件与消息
+包含：EventBus配置, 重试处理器, 日志订阅者, EventBus配置文件
+============================================================
+
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第六组-事件与消息/01-EventBusOptions.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF.ConfigurableOptions;
 
 namespace JNPF.Common.Core;
@@ -8339,10 +8340,9 @@ public enum EventBusType
     /// </summary>
     Kafka,
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第六组-事件与消息/02-RetryEventHandlerExecutor.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF.EventBus;
 using JNPF.FriendlyException;
 
@@ -8363,10 +8363,9 @@ public class RetryEventHandlerExecutor : IEventHandlerExecutor
         }, 3, 1000);
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第六组-事件与消息/03-LogEventSubscriber.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF.Common.Core.Manager;
 using JNPF.Common.Core.Manager.Tenant;
 using JNPF.Common.Extension;
@@ -8437,10 +8436,9 @@ public class LogEventSubscriber : IEventSubscriber, ISingleton
         }
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第六组-事件与消息/04-EventBus.json
-======================================================================
+------------------------------------------------------------
 {
   "EventBus": {
     "EventBusType": "Memory", //Memory,RabbitMQ,Redis
@@ -8450,9 +8448,15 @@ public class LogEventSubscriber : IEventSubscriber, ISingleton
   }
 }
 
-======================================================================
+
+============================================================
+第七组：API层与动态API
+包含：IDynamicApiController, 动态API特性, RESTful结果, Swagger配置
+============================================================
+
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第七组-API层与动态API/01-IDynamicApiController.cs
-======================================================================
+------------------------------------------------------------
 ﻿namespace JNPF.DynamicApiController;
 
 /// <summary>
@@ -8461,10 +8465,9 @@ public class LogEventSubscriber : IEventSubscriber, ISingleton
 public interface IDynamicApiController
 {
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第七组-API层与动态API/02-DynamicApiControllerAttribute.cs
-======================================================================
+------------------------------------------------------------
 ﻿namespace System;
 
 /// <summary>
@@ -8474,10 +8477,9 @@ public interface IDynamicApiController
 public sealed class DynamicApiControllerAttribute : Attribute
 {
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第七组-API层与动态API/03-DynamicApiControllerServiceCollectionExtensions.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF;
 using JNPF.DynamicApiController;
 using Microsoft.AspNetCore.Mvc;
@@ -8585,10 +8587,9 @@ public static class DynamicApiControllerServiceCollectionExtensions
         return mvcBuilder;
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第七组-API层与动态API/04-DynamicApiControllerApplicationModelConvention.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF.Extensions;
 using JNPF.UnifyResult;
 using Microsoft.AspNetCore.Http;
@@ -9514,10 +9515,9 @@ internal sealed class DynamicApiControllerApplicationModelConvention : IApplicat
         return isStartDiagonal ? "/" + tmp : tmp;
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第七组-API层与动态API/05-RESTfulResultProvider.cs
-======================================================================
+------------------------------------------------------------
 using JNPF.DataValidation;
 using JNPF.FriendlyException;
 using Microsoft.AspNetCore.Http;
@@ -9626,10 +9626,9 @@ public class RESTfulResultProvider : IUnifyResultProvider
         };
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第七组-API层与动态API/06-RESTfulResult.cs
-======================================================================
+------------------------------------------------------------
 ﻿namespace JNPF.UnifyResult;
 
 /// <summary>
@@ -9664,10 +9663,9 @@ public class RESTfulResult<T>
     /// </summary>
     public long timestamp { get; set; }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第七组-API层与动态API/07-Swagger.json
-======================================================================
+------------------------------------------------------------
 {
   "SpecificationDocumentSettings": {
     "DocumentTitle": "JNPF.NET",
@@ -9692,9 +9690,15 @@ public class RESTfulResult<T>
 }
 
 
-======================================================================
+
+============================================================
+第八组：代码生成引擎
+包含：CodeGenService, Service模板, Entity模板, 前端页面模板
+============================================================
+
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第八组-代码生成引擎/01-CodeGenService.cs
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF.Common.Configuration;
 using JNPF.Common.Const;
 using JNPF.Extensions;
@@ -11720,10 +11724,9 @@ public class CodeGenService : IDynamicApiController, ITransient
     }
 }
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第八组-代码生成引擎/02-Service.cs.vm
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF.Common.Core.Manager;
 using JNPF.Engine.Entity.Model;
 @if(Model.IsExport)
@@ -13999,10 +14002,9 @@ break;
 }
     }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第八组-代码生成引擎/03-Entity.cs.vm
-======================================================================
+------------------------------------------------------------
 ﻿using JNPF.Common.CodeGenUpload;
 using SqlSugar;
 @if(Model.IsTenantColumn)
@@ -14181,10 +14183,9 @@ break;
 @:
 }
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第八组-代码生成引擎/04-index.vue.vm
-======================================================================
+------------------------------------------------------------
 @{List<int> webType = new List<int> { 3, 5 }; }
 <template>
   <div class="jnpf-content-wrapper">
@@ -15383,9 +15384,15 @@ break;
 </script>
 
 
-======================================================================
+
+============================================================
+第九组：前端架构
+包含：package.json, vite.config.ts, main.ts, router, Axios, userStore
+============================================================
+
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第九组-前端架构/01-package.json
-======================================================================
+------------------------------------------------------------
 {
   "name": "jnpf-web-vue3",
   "version": "3.6.0",
@@ -15588,10 +15595,9 @@ break;
   }
 }
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第九组-前端架构/02-vite.config.ts
-======================================================================
+------------------------------------------------------------
 import type { UserConfig, ConfigEnv } from 'vite';
 import pkg from './package.json';
 import dayjs from 'dayjs';
@@ -15745,10 +15751,9 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
   };
 };
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第九组-前端架构/03-main.ts
-======================================================================
+------------------------------------------------------------
 import '/@/design/index.less';
 import '/@/design/windi-base.css';
 import 'virtual:windi-components.css';
@@ -15824,10 +15829,9 @@ async function bootstrap() {
 
 bootstrap();
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第九组-前端架构/04-router-index.ts
-======================================================================
+------------------------------------------------------------
 import type { RouteRecordRaw } from 'vue-router';
 import type { App } from 'vue';
 
@@ -15878,10 +15882,9 @@ export function setupRouter(app: App<Element>) {
   app.use(router);
 }
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第九组-前端架构/05-Axios.ts
-======================================================================
+------------------------------------------------------------
 import type { AxiosRequestConfig, AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import type { RequestOptions, Result, UploadFileParams } from '/#/axios';
 import type { CreateAxiosOptions } from './axiosTransform';
@@ -16110,10 +16113,9 @@ export class VAxios {
   }
 }
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第九组-前端架构/06-userStore.ts
-======================================================================
+------------------------------------------------------------
 import type { UserInfo, PermissionInfo } from '/#/store';
 import type { ErrorMessageMode } from '/#/axios';
 import { defineStore } from 'pinia';
@@ -16338,13 +16340,15 @@ export function useUserStoreWithOut() {
 }
 
 
-======================================================================
-第十组：UniApp 移动端（jnpf-app-vue3）
-======================================================================
 
-======================================================================
+============================================================
+第十组：UniApp移动端
+包含：package.json, manifest.json, pages.json, App.vue, main.js, request.js, uni.scss, vite.config.js, userStore.js, dynamicModel, utils, libs, store, components, index.html
+============================================================
+
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第十组-UniApp移动端/01-package.json
-======================================================================
+------------------------------------------------------------
 {
   "name": "jnpf-app-vue3",
   "version": "5.2.0",
@@ -16352,12 +16356,26 @@ export function useUserStoreWithOut() {
   "dependencies": {
     "crypto-js": "^4.2.0",
     "sass": "^1.77.2"
-  }
+  },
+  "_comment": "UniApp 项目大量依赖通过 uni_modules 管理，不在此文件声明。以下为 uni_modules 清单（51个）：",
+  "_uni_modules": [
+    "jnpf-exitApp", "lsj-upload", "mescroll-uni", "mp-html", "qiun-data-charts",
+    "uni-badge", "uni-calendar", "uni-card", "uni-collapse", "uni-combox",
+    "uni-countdown", "uni-data-checkbox", "uni-data-picker", "uni-data-select",
+    "uni-dateformat", "uni-datetime-picker", "uni-drawer", "uni-easyinput",
+    "uni-fab", "uni-fav", "uni-file-picker", "uni-forms", "uni-goods-nav",
+    "uni-grid", "uni-group", "uni-icons", "uni-indexed-list", "uni-link",
+    "uni-list", "uni-load-more", "uni-nav-bar", "uni-notice-bar", "uni-number-box",
+    "uni-pagination", "uni-popup", "uni-rate", "uni-row", "uni-scss",
+    "uni-search-bar", "uni-section", "uni-segmented-control", "uni-steps",
+    "uni-swipe-action", "uni-swiper-dot", "uni-table", "uni-tag", "uni-title",
+    "uni-tooltip", "uni-transition", "uni-ui", "vk-uview-ui"
+  ]
 }
 
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第十组-UniApp移动端/02-manifest.json
-======================================================================
+------------------------------------------------------------
 {
     "name" : "jnpf java vue3版",
     "appid" : "__UNI__ECC49B0",
@@ -16599,10 +16617,9 @@ export function useUserStoreWithOut() {
 
 
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第十组-UniApp移动端/03-pages.json
-======================================================================
+------------------------------------------------------------
 {
 	"easycom": {
 		"autoscan": true,
@@ -17207,10 +17224,9 @@ export function useUserStoreWithOut() {
 		}
 	}
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第十组-UniApp移动端/04-App.vue
-======================================================================
+------------------------------------------------------------
 <script>
 	import chat from '@/libs/chat.js'
 	import {
@@ -17463,10 +17479,9 @@ export function useUserStoreWithOut() {
 	@import "@/assets/scss/common.scss";
 	@import "@/assets/scss/components.scss";
 </style>
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第十组-UniApp移动端/05-main.js
-======================================================================
+------------------------------------------------------------
 import App from './App'
 import store from './store'
 import uView from './uni_modules/vk-uview-ui';
@@ -17531,10 +17546,9 @@ export function createApp() {
 	}
 }
 // #endif
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第十组-UniApp移动端/06-request.js
-======================================================================
+------------------------------------------------------------
 import define from './define'
 import {
 	useLocale
@@ -17651,10 +17665,9 @@ function ajaxError(data) {
 }
 
 export default request
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第十组-UniApp移动端/07-uni.scss
-======================================================================
+------------------------------------------------------------
 /**
  * 这里是uni-app内置的常用样式变量
  *
@@ -17735,10 +17748,9 @@ $uni-font-size-subtitle:26px;
 $uni-color-paragraph: #3F536E; // 文章段落颜色
 $uni-font-size-paragraph:15px;
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第十组-UniApp移动端/08-vite.config.js
-======================================================================
+------------------------------------------------------------
 import { defineConfig } from 'vite';
 import uni from '@dcloudio/vite-plugin-uni';
 
@@ -17773,10 +17785,9 @@ export default defineConfig({
   },
 });
 
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第十组-UniApp移动端/09-userStore.js
-======================================================================
+------------------------------------------------------------
 import {
 	defineStore
 } from 'pinia';
@@ -17879,10 +17890,9 @@ export const useUserStore = defineStore({
 export function useUserStoreWithOut() {
 	return useUserStore(store);
 }
-
-======================================================================
+------------------------------------------------------------
 文件：docs/architecture/V53/appendix/第十组-UniApp移动端/10-dynamicModel-index.vue
-======================================================================
+------------------------------------------------------------
 <template>
 	<view class="dynamicModel-v">
 		<Form v-if="webType == 1" :config="config" :modelId="modelId" :isPreview="isPreview" />
@@ -17998,3 +18008,1341 @@ export function useUserStoreWithOut() {
 		height: 100%;
 	}
 </style>
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第十组-UniApp移动端/11-utils-jnpf.js
+------------------------------------------------------------
+import CryptoJS from 'crypto-js'
+import request from '@/utils/request'
+import define from '@/utils/define'
+
+const jnpf = {
+	goBack() {
+		uni.navigateBack()
+	},
+	// 跳链接
+	jumpLink(urlAddress, pageTitle = "") {
+		if (!urlAddress) return
+		let url = '/pages/apply/externalLink/index?url=' + encodeURIComponent(urlAddress) + '&fullName= ' +
+			pageTitle
+		uni.navigateTo({
+			url: url,
+		})
+	},
+	/* 传参字符串转义 */
+	encodeContent(key) {
+		const encodeArr = [{
+			code: '%',
+			encode: '%25'
+		}, {
+			code: '?',
+			encode: '%3F'
+		}, {
+			code: '#',
+			encode: '%23'
+		}, {
+			code: '&',
+			encode: '%26'
+		}, {
+			code: '=',
+			encode: '%3D'
+		}];
+		return key.replace(/[%?#&=]/g, ($, index, str) => {
+			for (const k of encodeArr) {
+				if (k.code === $) {
+					return k.encode;
+				}
+			}
+		});
+	},
+	solveAddressParam(item, config) {
+		let jnpfKey = config.jnpfKey
+		item.urlAddress = item.urlAddress ? item.urlAddress : config.option.appUrlAddress
+		if (!item.urlAddress) return
+		let urlAddress = item.urlAddress
+		const regex = /\${[^{}]+}/g;
+		urlAddress = urlAddress.replace(regex, match => {
+			const key = match.slice(2, -1);
+			let value = '';
+			if (jnpfKey === 'text') {
+				return key == 'Field' || key == 'field' ? item.value : match
+			}
+			if (jnpfKey === 'timeAxis') {
+				if (key == 'name') value = item['content'];
+				if (key == 'timestamp') value = item['timestamp'];
+			}
+			if (jnpfKey === 'tableList') {
+				return item[key] || match
+			}
+			if (jnpfKey === 'dataBoard') {
+				return key == 'Field' || key == 'field' ? item.num : match
+			}
+			if (jnpfKey === 'rankList') {
+				if (key === 'name') value = item.label;
+				if (key === 'value') value = item.value.replace("¥ ", "");
+			}
+			// 图标替换
+			if (jnpfKey === 'barChart' || jnpfKey === 'lineChart' || jnpfKey === 'pieChart' ||
+				jnpfKey == 'radarChart' || jnpfKey === 'mapChart') {
+				if (key === 'name') value = item.name;
+				if (key === 'long') value = item.long;
+				if (key === 'lat') value = item.lat;
+				if (key === 'value') value = item.value;
+				if (key === 'type') value = item.type;
+			}
+			return value || match;
+		});
+		item.urlAddress = urlAddress
+	},
+	handelFormat(format) {
+		let formatObj = {
+			'yyyy': 'yyyy',
+			'yyyy-MM': 'yyyy-MM',
+			'yyyy-MM-dd': 'yyyy-MM-dd',
+			'yyyy-MM-dd HH:mm': 'yyyy-MM-dd HH:mm',
+			'yyyy-MM-dd HH:mm:ss': 'yyyy-MM-dd HH:mm:ss',
+			'HH:mm:ss': 'HH:mm:ss',
+			"HH:mm": "HH:mm",
+			'YYYY': 'yyyy',
+			'YYYY-MM': 'yyyy-MM',
+			'YYYY-MM-DD': 'yyyy-MM-dd',
+			'YYYY-MM-DD HH:mm': 'yyyy-MM-dd HH:mm',
+			'YYYY-MM-DD HH:mm:ss': 'yyyy-MM-dd HH:mm:ss',
+		}
+		return formatObj[format]
+	},
+	toDate(v, format) {
+		format = format ? format : "yyyy-MM-dd HH:mm:ss"
+		if (!v) return "";
+		var d = v;
+		if (typeof v === 'string') {
+			if (v.indexOf("/Date(") > -1)
+				d = new Date(parseInt(v.replace("/Date(", "").replace(")/", ""), 10));
+			else
+				d = new Date(Date.parse(v.replace(/-/g, "/").replace("T", " ").split(".")[0]));
+		} else {
+			d = new Date(v)
+		}
+		var o = {
+			"M+": d.getMonth() + 1,
+			"d+": d.getDate(),
+			"h+": d.getHours(),
+			"H+": d.getHours(),
+			"m+": d.getMinutes(),
+			"s+": d.getSeconds(),
+			"q+": Math.floor((d.getMonth() + 3) / 3),
+			"S": d.getMilliseconds()
+		};
+		if (/(y+)/.test(format)) {
+			format = format.replace(RegExp.$1, (d.getFullYear() + "").substr(4 - RegExp.$1.length));
+		}
+		for (var k in o) {
+			if (new RegExp("(" + k + ")").test(format)) {
+				format = format.replace(RegExp.$1, RegExp.$1.length == 1 ? o[k] : ("00" + o[k]).substr(("" +
+						o[k])
+					.length));
+			}
+		}
+		return format;
+	},
+	toFileSize(size) {
+		if (size == null || size == "") {
+			return "";
+		}
+		if (size < 1024.00)
+			return jnpf.toDecimal(size) + " 字节";
+		else if (size >= 1024.00 && size < 1048576)
+			return jnpf.toDecimal(size / 1024.00) + " KB";
+		else if (size >= 1048576 && size < 1073741824)
+			return jnpf.toDecimal(size / 1024.00 / 1024.00) + " MB";
+		else if (size >= 1073741824)
+			return jnpf.toDecimal(size / 1024.00 / 1024.00 / 1024.00) + " GB";
+	},
+	toDecimal(num) {
+		if (num == null) {
+			num = "0";
+		}
+		num = num.toString().replace(/\$|\,/g, '');
+		if (isNaN(num))
+			num = "0";
+		var sign = (num == (num = Math.abs(num)));
+		num = Math.floor(num * 100 + 0.50000000001);
+		var cents = num % 100;
+		num = Math.floor(num / 100).toString();
+		if (cents < 10)
+			cents = "0" + cents;
+		for (var i = 0; i < Math.floor((num.length - (1 + i)) / 3); i++)
+			num = num.substring(0, num.length - (4 * i + 3)) + '' +
+			num.substring(num.length - (4 * i + 3));
+		return (((sign) ? '' : '-') + num + '.' + cents);
+	},
+	getScriptFunc(str) {
+		// #ifndef MP
+		let func = null
+		try {
+			func = eval(str)
+			if (Object.prototype.toString.call(func) !== '[object Function]') return false;
+			return func
+		} catch (error) {
+			console.log(error);
+			return false
+		}
+		// #endif
+		// #ifdef MP
+		return false
+		// #endif
+	},
+	interfaceDataHandler(data) {
+		if (!data.dataProcessing) return data.data
+		const dataHandler = this.getScriptFunc(data.dataProcessing)
+		if (!dataHandler) return data.data
+		return dataHandler(data.data)
+	},
+	toDateText(dateTimeStamp) {
+		if (!dateTimeStamp) return ''
+		let result = ''
+		let minute = 1000 * 60; //把分，时，天，周，半个月，一个月用毫秒表示
+		let hour = minute * 60;
+		let day = hour * 24;
+		let week = day * 7;
+		let halfamonth = day * 15;
+		let month = day * 30;
+		let now = new Date().getTime(); //获取当前时间毫秒
+		let diffValue = now - dateTimeStamp; //时间差
+		if (diffValue < 0) return "刚刚"
+		let minC = diffValue / minute; //计算时间差的分，时，天，周，月
+		let hourC = diffValue / hour;
+		let dayC = diffValue / day;
+		let weekC = diffValue / week;
+		let monthC = diffValue / month;
+		if (monthC >= 1 && monthC <= 3) {
+			result = " " + parseInt(monthC) + "月前"
+		} else if (weekC >= 1 && weekC <= 3) {
+			result = " " + parseInt(weekC) + "周前"
+		} else if (dayC >= 1 && dayC <= 6) {
+			result = " " + parseInt(dayC) + "天前"
+		} else if (hourC >= 1 && hourC <= 23) {
+			result = " " + parseInt(hourC) + "小时前"
+		} else if (minC >= 1 && minC <= 59) {
+			result = " " + parseInt(minC) + "分钟前"
+		} else if (diffValue >= 0 && diffValue <= minute) {
+			result = "刚刚"
+		} else {
+			let datetime = new Date();
+			datetime.setTime(dateTimeStamp);
+			let Nyear = datetime.getFullYear();
+			let Nmonth = datetime.getMonth() + 1 < 10 ? "0" + (datetime.getMonth() + 1) : datetime
+				.getMonth() + 1;
+			let Ndate = datetime.getDate() < 10 ? "0" + datetime.getDate() : datetime.getDate();
+			let Nhour = datetime.getHours() < 10 ? "0" + datetime.getHours() : datetime.getHours();
+			let Nminute = datetime.getMinutes() < 10 ? "0" + datetime.getMinutes() : datetime.getMinutes();
+			let Nsecond = datetime.getSeconds() < 10 ? "0" + datetime.getSeconds() : datetime.getSeconds();
+			result = Nyear + "-" + Nmonth + "-" + Ndate
+		}
+		return result;
+	},
+	//取整
+	toRound(number) {
+		var bite = 0;
+		if (number < 10) {
+			return 10;
+		}
+		if (number > 10 && number < 50) {
+			return 50;
+		}
+		while (number >= 10) {
+			number /= 10;
+			bite += 1;
+		}
+		return Math.ceil(number) * Math.pow(10, bite);
+	},
+	getAmountChinese(val) {
+		if (!val && val !== 0) return '';
+		if (val == 0) return '零元整';
+		const regExp = /[a-zA-Z]/;
+		if (regExp.test(val)) return '数字较大溢出';
+		let amount = +val;
+		if (isNaN(amount)) return '';
+		if (amount < 0) amount = Number(amount.toString().split('-')[1]);
+		const NUMBER = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
+		const N_UNIT1 = ['', '拾', '佰', '仟'];
+		const N_UNIT2 = ['', '万', '亿', '兆'];
+		const D_UNIT = ['角', '分', '厘', '毫'];
+		let [integer, decimal] = amount.toString().split('.');
+		if (integer && (integer.length > 15 || integer.indexOf('e') > -1)) return '数字较大溢出';
+		let res = '';
+		// 整数部分
+		if (integer) {
+			let zeroCount = 0;
+			for (let i = 0, len = integer.length; i < len; i++) {
+				const num = integer.charAt(i);
+				const pos = len - i - 1; // 排除个位后 所处的索引位置
+				const q = pos / 4;
+				const m = pos % 4;
+				if (num === '0') {
+					zeroCount++;
+				} else {
+					if (zeroCount > 0 && m !== 3) res += NUMBER[0];
+					zeroCount = 0;
+					res += NUMBER[parseInt(num)] + N_UNIT1[m];
+				}
+				if (m == 0 && zeroCount < 4) res += N_UNIT2[Math.floor(q)];
+			}
+		}
+		if (Number(integer) != 0) res += '元';
+		// 小数部分
+		if (parseInt(decimal)) {
+			for (let i = 0; i < 4; i++) {
+				const num = decimal.charAt(i);
+				if (parseInt(num)) res += NUMBER[num] + D_UNIT[i];
+			}
+		} else {
+			res += '整';
+		}
+		if (val < 0) res = '负数' + res;
+		return res;
+	},
+	thousandsFormat(num) {
+		if (num === 0) return '0';
+		if (!num) return '';
+		const numArr = num.toString().split('.');
+		numArr[0] = numArr[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+		return numArr.join('.');
+	},
+	base64: {
+		encode(str, isEncodeURIComponent = true) {
+			if (!str) return ''
+			const newStr = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(str))
+			return isEncodeURIComponent ? encodeURIComponent(newStr) : newStr
+		},
+		decode(str, isDecodeURIComponent = true) {
+			if (!str) return ''
+			const newStr = isDecodeURIComponent ? decodeURIComponent(str) : str
+			const result = CryptoJS.enc.Utf8.stringify(CryptoJS.enc.Base64.parse(newStr))
+			return result
+		}
+	},
+	idGenerator() {
+		let quotient = (new Date() - new Date('2020-08-01'))
+		quotient += Math.ceil(Math.random() * 1000)
+		const chars = '0123456789ABCDEFGHIGKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz';
+		const charArr = chars.split("")
+		const radix = chars.length;
+		const res = []
+		do {
+			let mod = quotient % radix;
+			quotient = (quotient - mod) / radix;
+			res.push(charArr[mod])
+		} while (quotient);
+		return res.join('')
+	},
+	dynamicText(value, options) {
+		if (!value) return ''
+		if (Array.isArray(value)) {
+			if (!options || !Array.isArray(options)) return value.join()
+			let textList = []
+			for (let i = 0; i < value.length; i++) {
+				let item = options.filter(o => o.id == value[i])[0]
+				if (!item || !item.fullName) {
+					textList.push(value[i])
+				} else {
+					textList.push(item.fullName)
+				}
+			}
+			return textList.join()
+		}
+		if (!options || !Array.isArray(options)) return value
+		let item = options.filter(o => o.id == value)[0]
+		if (!item || !item.fullName) return value
+		return item.fullName
+	},
+	treeToArray(treeData, type = '') {
+		let list = []
+		const loop = (treeData) => {
+			for (let i = 0; i < treeData.length; i++) {
+				const item = treeData[i]
+				if (!type || item.type === type) list.push(item)
+				if (item.children && Array.isArray(item.children)) loop(item.children)
+			}
+		}
+		loop(treeData)
+		return list
+	},
+	dynamicTreeText(value, options) {
+		if (!value) return ''
+		const transfer = (data, partition) => {
+			let textList = []
+			const loop = (data, id) => {
+				for (let i = 0; i < data.length; i++) {
+					if (data[i].id === id) {
+						textList.push(data[i].fullName)
+						break
+					}
+					if (data[i].children) loop(data[i].children, id)
+				}
+			}
+			for (let i = 0; i < data.length; i++) {
+				if (Array.isArray(data[i])) {
+					textList.push(transfer(data[i], "/"))
+				} else {
+					loop(options, data[i])
+				}
+			}
+			return textList.join(partition)
+		}
+		if (!options || !Array.isArray(options)) return Array.isArray(value) ? value.join() : value
+		if (Array.isArray(value)) return transfer(value)
+		return transfer(value.split())
+	},
+	onlineUtils: {
+		// 获取用户信息
+		getUserInfo() {
+			const userInfo = uni.getStorageSync('userInfo') || {};
+			userInfo.token = uni.getStorageSync('token') || '';
+			return userInfo;
+		},
+		// 获取设备信息
+		getDeviceInfo() {
+			const deviceInfo = {
+				vueVersion: '3',
+				origin: 'app'
+			};
+			return deviceInfo;
+		},
+		// 请求
+		request(url, method, data, header) {
+			return request({
+				url: url,
+				method: method || 'GET',
+				data: data || {},
+				header: header || {},
+				options: {
+					load: false
+				}
+			})
+		},
+		// 路由跳转
+		route(url, type = 'navigateTo') {
+			if (!url) return;
+			uni.$u.route({
+				url,
+				type
+			})
+		},
+		// 消息提示
+		toast(message, _type = 'info', duration = 3000) {
+			uni.$u.toast(message, duration)
+		},
+	},
+	aesEncryption: {
+		decrypt(str, cipherKey = '') {
+			if (!cipherKey) cipherKey = define.cipherKey
+			const hexStr = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Hex.parse(str))
+			const decryptedData = CryptoJS.AES.decrypt(hexStr, CryptoJS.enc.Utf8.parse(cipherKey), {
+				mode: CryptoJS.mode.ECB,
+				padding: CryptoJS.pad.Pkcs7
+			}).toString(CryptoJS.enc.Utf8);
+			return decryptedData
+		},
+		encrypt(str, cipherKey = '') {
+			if (!cipherKey) cipherKey = define.cipherKey
+			const encryptedData = CryptoJS.AES.encrypt(str, CryptoJS.enc.Utf8.parse(cipherKey), {
+				mode: CryptoJS.mode.ECB,
+				padding: CryptoJS.pad.Pkcs7
+			}).toString();
+			const result = CryptoJS.enc.Hex.stringify(CryptoJS.enc.Base64.parse(encryptedData))
+			return result
+		}
+	},
+	getDistance(lat1, lon1, lat2, lon2) {
+		const toRadians = (degrees) => {
+			return degrees * (Math.PI / 180);
+		}
+		const R = 6371;
+		const dLat = toRadians(lat2 - lat1);
+		const dLon = toRadians(lon2 - lon1);
+		const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+			Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+			Math.sin(dLon / 2) * Math.sin(dLon / 2);
+		const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+		const distance = R * c;
+		return distance * 1000;
+	},
+	getParamList(templateJson, data, rowKey = 'id') {
+		if (!templateJson || !templateJson.length) return [];
+		for (let i = 0; i < templateJson.length; i++) {
+			const e = templateJson[i];
+			if (e.sourceType == 1 && data) {
+				e.defaultValue = data[e.relationField] || data[e.relationField] == 0 || data[e
+						.relationField] ==
+					false ? data[e.relationField] : '';
+			}
+			if (e.sourceType == 4 && e.relationField == '@formId') e.defaultValue = data[rowKey] || '';
+		}
+		return templateJson;
+	},
+	getBatchParamList(templateJson, data) {
+		if (!templateJson?.length) return [];
+		for (let i = 0; i < templateJson.length; i++) {
+			const e = templateJson[i];
+			if (e.sourceType == 1 && data.items?.length) {
+				e.defaultValue = data.items.map(o => (data.webType == '4' ? o[e.relationField] : o[e
+					.relationField + '_jnpfId']));
+			}
+			if (e.sourceType == 4 && e.relationField == '@formId') e.defaultValue = data.items.map(o => o.id);
+		}
+		return templateJson;
+		// if (!templateJson || !templateJson.length) return [];
+		// for (let i = 0; i < templateJson.length; i++) {
+		// 	const e = templateJson[i];
+		// 	let defaultValue = [];
+		// 	if (e.sourceType === 1 && data.length) {
+		// 		data.forEach(o => {
+		// 			if (type != 1 && o.hasOwnProperty(e.relationField + '_jnpfId')) {
+		// 				defaultValue.push(o[e.relationField + '_jnpfId']);
+		// 			} else {
+		// 				defaultValue.push(o[e.relationField]);
+		// 			}
+		// 		});
+		// 	}
+		// 	e.defaultValue = defaultValue;
+		// 	if (e.sourceType === 4 && e.relationField === '@formId' && data.id !== undefined) {
+		// 		e.defaultValue = [data.id];
+		// 	} else if (e.sourceType !== 1) {
+		// 		e.defaultValue = [];
+		// 	}
+		// }
+		// return templateJson;
+	},
+	getLaunchFlowParamList(transferList, data, rowKey = 'id') {
+		transferList = JSON.parse(JSON.stringify(transferList))
+		if (!transferList?.length) return [];
+		for (let i = 0; i < transferList.length; i++) {
+			const e = transferList[i];
+			if (e.sourceType == 1) {
+				if (e.sourceValue == '@formId') {
+					e.sourceValue = data[rowKey] || '';
+				} else {
+					e.sourceValue = data[e.sourceValue] || data[e.sourceValue] == 0 || data[e.sourceValue] ==
+						false ? data[e.sourceValue] : '';
+				}
+			}
+		}
+		return transferList;
+	}
+}
+export default jnpf
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第十组-UniApp移动端/12-utils-define.js
+------------------------------------------------------------
+/* process.env.NODE_ENV设置生产环境模式 */
+// #ifdef H5
+// H5 模式 baseURL 留空，通过同域代理转发到后端
+const baseURL = ''
+// WebSocket 走同域代理：开发环境 Vite proxy / 生产环境 Nginx proxy
+const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+const webSocketUrl = `${wsProtocol}//${location.host}/api/message/websocket`
+const report = 'http://localhost:8200'
+const flow = 'http://localhost:3100'
+// #endif
+
+// #ifdef APP-PLUS
+const baseURL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000'
+const webSocketUrl = process.env.NODE_ENV === 'production' ? '/websocket' :
+	'ws://localhost:5000/api/message/websocket'
+const report = process.env.NODE_ENV === 'production' ? '/Report' : 'http://localhost:8200'
+const flow = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3100'
+// #endif
+
+// #ifdef MP
+const baseURL = 'http://localhost:5000'
+const webSocketUrl = 'ws://localhost:5000/api/message/websocket'
+const report = 'http://localhost:8200'
+const flow = 'http://localhost:3100'
+// #endif
+
+const define = {
+	copyright: 'Copyright @ 2026 面包树科技有限公司版权所有',
+	sysVersion: 'V5.2',
+	baseURL, // 接口前缀
+	report,
+	flow,
+	webSocketUrl,
+	comUploadUrl: baseURL + '/api/file/Uploader/',
+	timeout: 1000000,
+	aMapWebKey: '09485f01587712b3c04e5a9abf324237',
+	cipherKey: 'EY8WePvjM5GGwQzn', // 加密key
+}
+export default define
+
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第十组-UniApp移动端/13-libs-permission.js
+------------------------------------------------------------
+import {
+	i18n
+} from '../locale/setupI18n';
+
+let permission = {
+	permissionList: uni.getStorageSync('permissionList') || [],
+	hasP(enCode, menuIds) {
+		if (!menuIds) return false
+		const list = permission.permissionList.filter(o => o.modelId === menuIds)
+		if (!list.length) return false
+		const columnList = list[0] && list[0].column ? list[0].column : []
+		if (!columnList.length) return false
+		const hasPermission = columnList.some(column => column.enCode === enCode)
+		if (hasPermission) return true
+		return false
+	},
+	hasFormP(enCode, menuIds) {
+		if (!menuIds) return false
+		const list = permission.permissionList.filter(o => o.modelId === menuIds)
+		if (!list.length) return false
+		const formList = list[0] && list[0].form ? list[0].form : []
+		if (!formList.length) return false
+		const hasPermission = formList.some(form => form.enCode === enCode)
+		if (hasPermission) return true
+		return false
+	},
+	hasBtnP(enCode, menuIds) {
+		if (!menuIds) return false
+		const list = permission.permissionList.filter(o => o.modelId === menuIds)
+		if (!list.length) return false
+		const btnList = list[0] && list[0].button ? list[0].button : []
+		if (!btnList.length) return false
+		const hasPermission = btnList.some(btn => btn.enCode === enCode)
+		if (hasPermission) return true
+		return false
+	},
+	getPermission(columnData, menuId, getScriptFunc) {
+		let btnsList = columnData.btnsList
+		let customBtnsList = columnData.customBtnsList
+		let columnBtnsList = columnData.columnBtnsList.filter(o => o.show)
+		const useBtnPermission = columnData.useBtnPermission
+		const useColumnPermission = columnData.useColumnPermission
+		const useFormPermission = columnData.useFormPermission
+		const useBtnPermissionList = [...btnsList, ...columnBtnsList]
+		let btnPermission = [];
+		let customBtnsPermission = [];
+		let columnPermission = [];
+		let formList = [];
+		let currentMenu = {}
+		let btn_list = ['detail', 'edit', 'add', 'remove', 'batchRemove']
+		let labelS = {}
+		let enableFunc = {}
+		useBtnPermissionList.map((o) => {
+			if (btn_list.includes(o.value) && o.show) {
+				labelS['btn_' + o.value] = o.labelI18nCode ? i18n.global.t(o.labelI18nCode, o.label) : o
+					.label
+			}
+		})
+		let isMenu = permission.permissionList.filter((o) => {
+			if (o.modelId === menuId) return currentMenu = o
+		})
+		//按钮
+		if (useBtnPermission) {
+			if (customBtnsList && customBtnsList.length) {
+				for (let i = 0; i < customBtnsList.length; i++) {
+					inner: for (let j = 0; j < currentMenu.button.length; j++) {
+						if (customBtnsList[i].value === currentMenu.button[j].enCode) {
+							customBtnsPermission.push(customBtnsList[i])
+							break inner
+						}
+					}
+				}
+			}
+			if (!!isMenu.length) {
+				for (let i = 0; i < useBtnPermissionList.length; i++) {
+					inner: for (let j = 0; j < currentMenu.button.length; j++) {
+						if ('btn_' + useBtnPermissionList[i].value === currentMenu.button[j].enCode) {
+							btnPermission.push(currentMenu.button[j].enCode)
+							break inner
+						}
+					}
+				}
+			}
+		} else {
+			for (let i = 0; i < useBtnPermissionList.length; i++) {
+				inner: for (let j = 0; j < btn_list.length; j++) {
+					if (useBtnPermissionList[i].show && useBtnPermissionList[i].value === btn_list[j]) {
+						btnPermission.push('btn_' + useBtnPermissionList[i].value)
+						break inner
+					}
+				}
+			}
+			customBtnsPermission = customBtnsList
+		}
+		// 启用规则
+		columnBtnsList.map((o) => {
+			enableFunc[o.value] = () => {
+				return true
+			}
+			if (o.event && o.event.enableFunc) {
+				const func = getScriptFunc(o.event.enableFunc)
+				enableFunc[o.value] = func
+			}
+		})
+		// 启用规则自定义
+		customBtnsList.map((o) => {
+			enableFunc[o.value] = () => {
+				return true
+			}
+			if (o.event && o.event.enableFunc) {
+				const func = getScriptFunc(o.event.enableFunc)
+				enableFunc[o.value] = func
+			}
+		})
+		if (useColumnPermission) {
+			if (!!isMenu.length) {
+				columnData.columnList.forEach((o, i) => {
+					currentMenu.column.forEach((m, j) => {
+						if (o.prop === m.enCode) {
+							columnPermission.push(o)
+						}
+					})
+				})
+			}
+		} else {
+			columnPermission = columnData.columnList
+		}
+
+		if (useFormPermission && !!isMenu.length) formList = currentMenu.form
+		return {
+			labelS,
+			btnPermission,
+			customBtnsPermission,
+			columnPermission,
+			formPermission: {
+				formList,
+				useFormPermission,
+				menuId
+			},
+			enableFunc,
+			useBtnPermission
+		}
+	},
+	updatePermissionList() {
+		permission.permissionList = uni.getStorageSync('permissionList') || []
+	}
+}
+export default permission
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第十组-UniApp移动端/14-libs-chat.js
+------------------------------------------------------------
+import define from '@/utils/define'
+import jnpf from '@/utils/jnpf'
+import {
+	useChatStoreWithOut
+} from '@/store/modules/chat'
+import {
+	useUserStore
+} from '@/store/modules/user'
+
+const chatStore = useChatStoreWithOut()
+const userStore = useUserStore()
+let socketTask = false
+const Socket = {
+	conTime: 0,
+	initSocket() {
+		try {
+			const token = uni.getStorageSync('token') || ''
+			const sys = uni.getStorageSync('systemInfo') || ''
+			const userInfo = uni.getStorageSync('userInfo') || {}
+			socketTask = uni.connectSocket({
+				url: define.webSocketUrl + '/' + encodeURIComponent(token),
+				// #ifdef APP
+				header: {
+					'User-Agent': sys
+				},
+				// #endif
+				success() {
+					setTimeout(() => chatStore.setSocket(socketTask), 0)
+				},
+			});
+			socketTask.onMessage((res) => {
+				let dataStr = res.data;
+				const data = JSON.parse(dataStr)
+				let options = {
+					cover: false,
+					sound: 'system',
+					title: data.title
+				};
+				switch (data.method) {
+					case "initMessage": //初始化
+						const msgInfo = {
+							messageText: data.messageDefaultText || '暂无数据',
+							messageCount: data.unreadMessageCount + data.unreadSystemMessageCount < 0 ?
+								0 : data.unreadMessageCount + data.unreadSystemMessageCount + data
+								.unreadScheduleCount,
+							messageDate: data.messageDefaultTime || 0,
+						}
+						let badgeNum = data.unreadTotalCount
+						for (let i = 0; i < data.unreadNums.length; i++) {
+							badgeNum = badgeNum + data.unreadNums[i].unreadNum
+						}
+						chatStore.setBadgeNum(badgeNum)
+						chatStore.setMsgInfo(msgInfo)
+						break;
+					case "Online": //在线用户
+
+						break;
+					case "Offline": //离线用户
+
+						break;
+					case "sendMessage": //发送消息
+						chatStore.sendMessage(data)
+						break;
+					case "receiveMessage": //接收消息
+						// #ifdef APP
+						plus.push.createMessage('你有一条聊天消息', {
+							...data,
+							messageType: 100
+						}, options);
+						// #endif
+						chatStore.receiveMessage(data)
+						break;
+					case "messageList": //消息列表
+						chatStore.getMessageList(data)
+						break;
+					case "messagePush": //消息推送
+						// #ifdef APP
+						let content = "公告"
+						if (data.messageType == 2) content = '流程'
+						if (data.messageType == 3) content = '系统'
+						if (data.messageType == 4) content = '日程'
+						plus.push.createMessage(`你有一条${content}消息`, data, options);
+						// #endif
+						chatStore.messagePush(data)
+						break;
+					case "closeSocket": //断开websocket连接
+						Socket.close()
+						break;
+					case "logout":
+						uni.showToast({
+							title: data.msg || '登录已过期',
+							icon: 'none',
+							complete: () => {
+								setTimeout(() => {
+									userStore.resetToken()
+									setTimeout(() => {
+										Socket.close()
+										uni.reLaunch({
+											url: '/pages/login/index'
+										})
+									}, 500)
+								}, 1000)
+							}
+						})
+						break;
+					default:
+						break;
+				}
+			})
+
+			socketTask.onOpen((data) => {
+				Socket.conTime = 0
+				const msg = JSON.stringify({
+					method: "OnConnection",
+					token,
+					mobileDevice: true,
+					systemId: userInfo.appSystemId
+				});
+				Socket.sendMsg(msg)
+			})
+
+			socketTask.onClose((data) => {
+				socketTask = false
+				chatStore.setSocket(null)
+			})
+
+			socketTask.onError((data) => {
+				chatStore.setSocket(null)
+				setTimeout(() => {
+					Socket.conTime += 1
+					if (Socket.conTime <= 10) {
+						if (Socket.conTime >= 3) {
+							uni.showToast({
+								title: 'IM通讯正在连接:' + '连接第' + Socket.conTime + '次！稍后...',
+								icon: 'none'
+							})
+						}
+						Socket.reConnect();
+					} else {
+						uni.showToast({
+							title: 'IM通讯连接失败，联系服务器管理员',
+							icon: 'none'
+						})
+					}
+				}, 10)
+			})
+		} catch (e) {}
+	},
+	sendMsg(data) {
+		if (socketTask === false) return Socket.reConnect()
+		let content = data;
+		socketTask.send({
+			data: content,
+			complete(e) {}
+		})
+	},
+	//重连
+	reConnect() {
+		Socket.initSocket()
+	},
+	close() {
+		socketTask.close({
+			complete(e) {
+				socketTask = false
+				chatStore.setSocket(null)
+			}
+		})
+	}
+};
+
+export default Socket
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第十组-UniApp移动端/15-store-index.js
+------------------------------------------------------------
+import {
+	createPinia
+} from 'pinia';
+
+const store = createPinia();
+
+export default store
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第十组-UniApp移动端/16-index.html
+------------------------------------------------------------
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport"
+			content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+		<link rel="icon" href="/static/favicon.ico">
+		<script>
+			var coverSupport = 'CSS' in window && typeof CSS.supports === 'function' && (CSS.supports('top: env(a)') ||
+				CSS.supports('top: constant(a)'))
+			document.write(
+				'<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0' +
+				(coverSupport ? ', viewport-fit=cover' : '') + '" />')
+		</script>
+		<!-- 	<title>
+			<%= htmlWebpackPlugin.options.title %>
+		</title> -->
+		<!--preload-links-->
+		<!--app-context-->
+		<script src="/static/demo-h5-api-shim.js"></script>
+		<script src="/static/image-resize-3.0.1.min.js"></script>
+		<script src="/pages/portal/static/quill-1.3.7.min.js"></script>
+	</head>
+	<body>
+		<div id="app"><!--app-html--></div>
+		<script type="module" src="/main.js"></script>
+	</body>
+</html>
+------------------------------------------------------------
+文件：docs/architecture/V53/appendix/第十组-UniApp移动端/17-components-index.js
+------------------------------------------------------------
+/* eslint-disable no-nested-ternary */
+/* eslint-disable no-restricted-syntax */
+/* eslint-disable guard-for-in */
+/**
+ * num 小于0，左缩进num*2个空格； 大于0，右缩进num*2个空格。
+ * @param {string} str 代码
+ * @param {number} num 缩进次数
+ * @param {number} len 【可选】缩进单位，空格数
+ */
+export function indent(str, num, len = 2) {
+	if (num === 0) return str
+	const isLeft = num < 0;
+	const result = [];
+	let reg;
+	let
+		spaces = ''
+	if (isLeft) {
+		num *= -1
+		reg = new RegExp(`(^\\s{0,${num * len}})`, 'g')
+	} else {
+		for (let i = 0; i < num * len; i++) spaces += ' '
+	}
+
+	str.split('\n').forEach(line => {
+		line = isLeft ? line.replace(reg, '') : spaces + line
+		result.push(line)
+	})
+	return result.join('\n')
+}
+
+// 首字母大小
+export function titleCase(str) {
+	return str.replace(/( |^)[a-z]/g, L => L.toUpperCase())
+}
+
+// 下划转驼峰
+export function camelCase(str) {
+	return str.replace(/-[a-z]/g, str1 => str1.substr(-1).toUpperCase())
+}
+
+export function isNumberStr(str) {
+	return /^[+-]?(0|([1-9]\d*))(\.\d+)?$/g.test(str)
+}
+
+export const exportDefault = 'export default '
+
+export const beautifierConf = {
+	html: {
+		indent_size: '2',
+		indent_char: ' ',
+		max_preserve_newlines: '-1',
+		preserve_newlines: false,
+		keep_array_indentation: false,
+		break_chained_methods: false,
+		indent_scripts: 'separate',
+		brace_style: 'end-expand',
+		space_before_conditional: true,
+		unescape_strings: false,
+		jslint_happy: false,
+		end_with_newline: true,
+		wrap_line_length: '110',
+		indent_inner_html: true,
+		comma_first: false,
+		e4x: true,
+		indent_empty_lines: true
+	},
+	js: {
+		indent_size: '2',
+		indent_char: ' ',
+		max_preserve_newlines: '-1',
+		preserve_newlines: false,
+		keep_array_indentation: false,
+		break_chained_methods: false,
+		indent_scripts: 'normal',
+		brace_style: 'end-expand',
+		space_before_conditional: true,
+		unescape_strings: false,
+		jslint_happy: true,
+		end_with_newline: true,
+		wrap_line_length: '110',
+		indent_inner_html: true,
+		comma_first: false,
+		e4x: true,
+		indent_empty_lines: true
+	}
+}
+
+function stringify(obj) {
+	return JSON.stringify(obj, (key, val) => {
+		if (typeof val === 'function') {
+			return `${val}`
+		}
+		return val
+	})
+}
+
+function parse(str) {
+	JSON.parse(str, (k, v) => {
+		if (v.indexOf && v.indexOf('function') > -1) {
+			return eval(`(${v})`)
+		}
+		return v
+	})
+}
+
+export function jsonClone(obj) {
+	return parse(stringify(obj))
+}
+
+// 深拷贝对象
+export function deepClone(obj) {
+	const _toString = Object.prototype.toString
+
+	// null, undefined, non-object, function
+	if (!obj || typeof obj !== 'object') {
+		return obj
+	}
+
+	// DOM Node
+	if (obj.nodeType && 'cloneNode' in obj) {
+		return obj.cloneNode(true)
+	}
+
+	// Date
+	if (_toString.call(obj) === '[object Date]') {
+		return new Date(obj.getTime())
+	}
+
+	// RegExp
+	if (_toString.call(obj) === '[object RegExp]') {
+		const flags = []
+		if (obj.global) {
+			flags.push('g')
+		}
+		if (obj.multiline) {
+			flags.push('m')
+		}
+		if (obj.ignoreCase) {
+			flags.push('i')
+		}
+
+		return new RegExp(obj.source, flags.join(''))
+	}
+
+	const result = Array.isArray(obj) ? [] : obj.constructor ? new obj.constructor() : {}
+
+	for (const key in obj) {
+		result[key] = deepClone(obj[key])
+	}
+
+	return result
+}
+/**
+ * 将用户输入的连续单个数字合并为一个数
+ * @param {Array} expressions - 记录计算表达式的数组
+ * @returns {Array} 新的数组
+ */
+export const mergeNumberOfExps = expressions => {
+	const res = []
+	const isNumChar = n => /^[\d|\.]$/.test(n)
+	for (let i = 0; i < expressions.length; i++) {
+		if (i > 0 && isNumChar(expressions[i - 1]) && isNumChar(expressions[i])) {
+			res[res.length - 1] += expressions[i]
+			continue
+		}
+		res.push(expressions[i])
+	}
+	return res
+}
+/**
+ * 校验表达式是否符合计算法则
+ * @param {Array} expressions - 合并数字后的表达式数组
+ * @returns {Boolean}
+ */
+export const validExp = (expressions, mergeNum = true) => {
+	const temp = mergeNum ? mergeNumberOfExps(expressions) : expressions
+	const arr = temp.filter(t => !'()'.includes(t))
+	// 去括号后 length应该为奇数  并且第一个字符和最后一个字符应该为数字而非计算符号
+	if (temp.length % 2 === 0 || arr.length % 2 === 0 || Number.isNaN(+arr[0]) || Number.isNaN(+arr[arr.length -
+			1])) {
+		return false
+	}
+	for (let i = 0; i < arr.length - 1; i += 2) {
+		if (typeof(+arr[i]) !== 'number' || !Number.isNaN(+arr[i + 1])) return false
+	}
+	return true
+}
+/**
+ * 中缀转后缀（逆波兰 Reverse Polish Notation）
+ * @param {Array} exps - 中缀表达式数组
+ */
+export const toRPN = exps => {
+	const s1 = [] // 符号栈
+	const s2 = [] // 输出栈
+	const getTopVal = (stack) => stack.length > 0 ? stack[stack.length - 1] : null
+	const levelCompare = (c1, c2) => {
+		const getIndex = c => ['+-', '×÷', '()'].findIndex(t => t.includes(c))
+		return getIndex(c1) - getIndex(c2)
+	}
+	exps.forEach(t => {
+		if (typeof t === 'string' && Number.isNaN(Number(t))) { // 是符号
+			if (t === '(') {
+				s1.push(t)
+			} else if (t === ')') {
+				let popVal
+				do {
+					popVal = s1.pop()
+					popVal !== '(' && s2.push(popVal)
+				} while (s1.length && popVal !== '(')
+			} else {
+				let topVal = getTopVal(s1)
+				if (!topVal) { // s1 为空 直接push
+					s1.push(t)
+				} else {
+					while (topVal && topVal !== '(' && levelCompare(topVal, t) >= 0) { // 优先级 >= t 弹出到s2
+						s2.push(s1.pop())
+						topVal = getTopVal(s1)
+					}
+					s1.push(t)
+				}
+			}
+			return
+		}
+		s2.push(t) // 数字直接入栈
+	})
+	while (s1.length) {
+		s2.push(s1.pop())
+	}
+	return s2
+}
+/**
+ * 计算后缀表达式的值
+ * @param {Array} rpnExps - 后缀表达式
+ */
+export const calcRPN = rpnExps => {
+	rpnExps = rpnExps.concat()
+	const calc = (x, y, type) => {
+		let a1 = Number(x),
+			a2 = Number(y)
+		switch (type) {
+			case '+':
+				return a1 + a2;
+			case '-':
+				return a1 - a2;
+			case '×':
+				return a1 * a2;
+			case '÷':
+				return a1 / a2;
+		}
+	}
+	for (let i = 2; i < rpnExps.length; i++) {
+		if ('+-×÷'.includes(rpnExps[i])) {
+			let val = calc(rpnExps[i - 2], rpnExps[i - 1], rpnExps[i])
+			rpnExps.splice(i - 2, 3, val)
+			i = i - 2
+		}
+	}
+	return rpnExps[0]
+}
+/**
+ * 简易防抖函数
+ * @param {Function} func -防抖目标函数
+ * @param {Number} gap - 防抖时间间隔
+ */
+export const debounce = (func, gap) => {
+	let timer
+	return function() {
+		timer && clearTimeout(timer)
+		timer = setTimeout(() => {
+			func.apply(this, arguments)
+		}, gap)
+	}
+}
+
+
+
+
+//计算年或者月
+export function getDateDay(Target, type, monthNum) {
+	let date = new Date()
+	let year = date.getFullYear() //获取当前日期的年份
+	let month = (date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) //获取当前日期的月份
+	let day = date.getDate() //获取当前日期的日
+	let hours = date.getHours() < 10 ? '0' + date.getHours() : date.getHours()
+	let minutes = date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()
+	let seconds = date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getSeconds()
+	let days = new Date(year, month, 0)
+	days = days.getDate(); //获取当前日期中的月的天数
+	let year2 = year;
+	let month2;
+	if (Target == 2) {
+		if (type == 5) {
+			month2 = parseInt(month) + parseInt(monthNum)
+			if (month2 > 12) {
+				year2 = parseInt(year2) + parseInt((parseInt(month2) / 12 == 0 ? 1 : parseInt(month2) / 12));
+				month2 = parseInt(month2) % 12;
+			}
+		} else if (type == 4) {
+			month2 = parseInt(month) - monthNum;
+			if (month2 <= 0) {
+				let absM = Math.abs(month2);
+				year2 = parseInt(year2) - Math.ceil(absM / 12 == 0 ? 1 : parseInt(absM) / 12);
+				month2 = 12 - (absM % 12);
+			}
+		}
+	} else if (Target == 1) {
+		month2 = parseInt(month)
+		if (type == 5) {
+			year2 = parseInt(year) + parseInt(monthNum)
+		} else if (type == 4) {
+			year2 = parseInt(year) - parseInt(monthNum)
+		}
+	}
+	let day2 = day;
+	let days2 = new Date(year2, month2, 0);
+	days2 = days2.getDate();
+	if (day2 > days2) {
+		day2 = days2;
+	}
+	if (month2 < 10) {
+		month2 = '0' + month2;
+	}
+	let t2 = year2 + '-' + month2 + '-' + day2 + ' ' + hours + ':' + minutes + ':' + seconds;
+	return t2;
+}
+
+//计算日
+export function getLaterData(days) {
+	let date = new Date();
+	date.setDate(date.getDate() + days);
+	let month = date.getMonth() + 1;
+	let day = date.getDate();
+	let hours = date.getHours() < 10 ? '0' + date.getHours() : date.getHours()
+	let minutes = date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()
+	let seconds = date.getSeconds() < 10 ? '0' + date.getSeconds() : date.getSeconds()
+	return date.getFullYear() + '-' + ('0' + month).slice(-2) + '-' + ('0' + day).slice(-2) + ' ' + hours + ':' +
+		minutes + ':' + seconds;
+}
+export function getBeforeData(num) {
+	let dateArray = []
+	//获取今天日期
+	let myDate = new Date()
+	let hours = myDate.getHours() < 10 ? '0' + myDate.getHours() : myDate.getHours()
+	let minutes = myDate.getMinutes() < 10 ? '0' + myDate.getMinutes() : myDate.getMinutes()
+	let seconds = myDate.getSeconds() < 10 ? '0' + myDate.getSeconds() : myDate.getSeconds()
+	let today = myDate.getFullYear() + '-' + (myDate.getMonth() + 1) + "-" + myDate.getDate();
+	myDate.setDate(myDate.getDate() - num)
+	let dateTemp; // 临时日期数据
+	let flag = 1;
+	for (let i = 0; i < num; i++) {
+		dateTemp = myDate.getFullYear() + '-' + (myDate.getMonth() + 1) + "-" + myDate.getDate()
+		dateArray.push({
+			date: dateTemp
+		})
+		myDate.setDate(myDate.getDate() + flag);
+	}
+	dateArray.push({
+		date: today
+	})
+	let arr = []
+	let newArr = []
+	dateArray.forEach(item => {
+		arr.push(item.date.split('-'))
+	})
+	for (let i = 0; i < arr.length; i++) {
+		if (arr[i][1] < 10) {
+			arr[i][1] = "0" + arr[i][1]
+		}
+		if (arr[i][2] < 10) {
+			arr[i][2] = "0" + arr[i][2]
+		}
+	}
+	for (let j = 0; j < arr.length; j++) {
+		newArr.push(arr[j].join("-"))
+	}
+	return newArr[0] + ' ' + hours + ':' + minutes + ':' + seconds
+}
+
+export function getBeforeTime(type, val) {
+	let date = new Date()
+	if (type == 4 || type == 1) {
+		date.setHours((Number(date.getHours()) - Number(val)))
+	} else if (type == 5 || type == 2) {
+		date.setMinutes((Number(date.getMinutes()) - Number(val)))
+	} else if (type == 6 || type == 3) {
+		date.setSeconds((Number(date.getSeconds()) - Number(val)))
+	}
+	return date
+}
+export function getLaterTime(type, val) {
+	let date = new Date()
+	if (type == 4 || type == 1) {
+		date.setHours((Number(date.getHours()) + Number(val)))
+	} else if (type == 5 || type == 2) {
+		date.setMinutes((Number(date.getMinutes()) + Number(val)))
+	} else if (type == 6 || type == 3) {
+		date.setSeconds((Number(date.getSeconds()) + Number(val)))
+	}
+	return date
+}
+
+

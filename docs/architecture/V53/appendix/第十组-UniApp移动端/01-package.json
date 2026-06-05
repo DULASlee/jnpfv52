@@ -5,5 +5,19 @@
   "dependencies": {
     "crypto-js": "^4.2.0",
     "sass": "^1.77.2"
-  }
+  },
+  "_comment": "UniApp 项目大量依赖通过 uni_modules 管理，不在此文件声明。以下为 uni_modules 清单（51个）：",
+  "_uni_modules": [
+    "jnpf-exitApp", "lsj-upload", "mescroll-uni", "mp-html", "qiun-data-charts",
+    "uni-badge", "uni-calendar", "uni-card", "uni-collapse", "uni-combox",
+    "uni-countdown", "uni-data-checkbox", "uni-data-picker", "uni-data-select",
+    "uni-dateformat", "uni-datetime-picker", "uni-drawer", "uni-easyinput",
+    "uni-fab", "uni-fav", "uni-file-picker", "uni-forms", "uni-goods-nav",
+    "uni-grid", "uni-group", "uni-icons", "uni-indexed-list", "uni-link",
+    "uni-list", "uni-load-more", "uni-nav-bar", "uni-notice-bar", "uni-number-box",
+    "uni-pagination", "uni-popup", "uni-rate", "uni-row", "uni-scss",
+    "uni-search-bar", "uni-section", "uni-segmented-control", "uni-steps",
+    "uni-swipe-action", "uni-swiper-dot", "uni-table", "uni-tag", "uni-title",
+    "uni-tooltip", "uni-transition", "uni-ui", "vk-uview-ui"
+  ]
 }
