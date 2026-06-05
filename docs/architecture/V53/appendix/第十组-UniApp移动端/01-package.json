@@ -1,0 +1,9 @@
+{
+  "name": "jnpf-app-vue3",
+  "version": "5.2.0",
+  "private": true,
+  "dependencies": {
+    "crypto-js": "^4.2.0",
+    "sass": "^1.77.2"
+  }
+}
