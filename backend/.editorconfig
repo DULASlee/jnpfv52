@@ -161,3 +161,16 @@ indent_size = 2
 
 [*.{xml,csproj,props,targets,ruleset}]
 indent_size = 2
+
+# ── JNPF 自定义分析器（阶段 7） ─────────────────────────
+# 当前设置为 suggestion 级别（存量代码不阻塞编译），
+# 逐步修复后提升为 warning/error。
+# 新代码违反这些规则会在 IDE 中显示为建议。
+
+[*.cs]
+dotnet_diagnostic.JNPF001.severity = suggestion  # App.GetService 改为构造函数注入
+dotnet_diagnostic.JNPF002.severity = suggestion  # DataExecuting 统一配置
+dotnet_diagnostic.JNPF003.severity = suggestion  # CreateScope 改为 DI 管理
+dotnet_diagnostic.JNPF004.severity = suggestion  # BypassOutbox 需注释理由
+dotnet_diagnostic.JNPF005.severity = suggestion  # ISqlSugarClient 改为 Repository
+dotnet_diagnostic.JNPF006.severity = suggestion  # async void 改为 async Task

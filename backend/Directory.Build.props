@@ -33,6 +33,14 @@
         <AdditionalFiles Include="$(MSBuildThisFileDirectory).editorconfig" Link="Properties\.editorconfig" />
     </ItemGroup>
 
+    <!-- JNPF 自定义分析器 — 排除自身项目和测试项目 -->
+    <ItemGroup Condition="'$(MSBuildProjectName)' != 'JNPF.Analyzers' And '$(MSBuildProjectName)' != 'JNPF.Analyzers.Tests'">
+        <ProjectReference Include="$(MSBuildThisFileDirectory)tools\JNPF.Analyzers\JNPF.Analyzers\JNPF.Analyzers.csproj"
+                          ReferenceOutputAssembly="false"
+                          OutputItemType="Analyzer" />
+    </ItemGroup>
+
+
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
 		<DocumentationFile>bin\Debug\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
 	</PropertyGroup>
