@@ -44,9 +44,16 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Restore dependencies
+        run: dotnet restore backend/JNPF.sln
+
+      - name: Analyzer quality gate
+        run: |
+          echo "=== JNPF Analyzer Gate ==="
+          dotnet build backend/JNPF.sln --configuration Release --no-restore /p:CI_BUILD=true 2>&1 | grep -E "error JNPF" && exit 1 || exit 0
+
       - name: Run backend tests
         run: |
-          dotnet restore backend/JNPF.sln
           dotnet test backend/JNPF.sln --configuration Release --verbosity normal
 
   # ---------------------------------------------------------------------------
@@ -147,12 +154,19 @@ jobs:
             # Deploy with zero downtime
             docker compose -f docker-compose.staging.yml up -d --remove-orphans
 
-            # Wait for health checks
-            sleep 30
-
-            # Verify deployment
+            # Health check with retry (up to 60s)
+            echo "Waiting for healthy..."
+            for i in $(seq 1 12); do
+              if curl -sf http://localhost:5000/health; then
+                echo "Health check passed (attempt $i)"
+                exit 0
+              fi
+              echo "Attempt $i/12 failed, waiting 5s..."
+              sleep 5
+            done
+            echo "::error::Health check failed after 12 attempts"
             docker compose -f docker-compose.staging.yml ps
-            curl -f http://localhost:5000/health || exit 1
+            exit 1
 
       - name: Notify deployment success
         if: success()

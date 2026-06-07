@@ -47,12 +47,50 @@ jobs:
           fi
 
   # ---------------------------------------------------------------------------
+  # Quality Gate
+  # ---------------------------------------------------------------------------
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [validate]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore backend/JNPF.sln
+
+      - name: Analyzer quality gate
+        run: |
+          echo "=== JNPF Analyzer Gate ==="
+          dotnet build backend/JNPF.sln --configuration Release --no-restore /p:CI_BUILD=true 2>&1 | grep -E "error JNPF" && exit 1 || exit 0
+
+      - name: Security vulnerability scan
+        run: |
+          dotnet list backend/JNPF.sln package --vulnerable --include-transitive 2>&1 | tee vulnerability-report.txt
+          CRITICAL=$(grep -c "Critical" vulnerability-report.txt || true)
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "::error::Found $CRITICAL critical vulnerabilities - deploy blocked"
+            exit 1
+          fi
+          echo "No critical vulnerabilities found"
+
+      - name: Run tests
+        run: dotnet test backend/JNPF.sln --configuration Release --verbosity normal
+
+  # ---------------------------------------------------------------------------
   # Build Docker Images
   # ---------------------------------------------------------------------------
   build:
     name: Build Production Images
     runs-on: ubuntu-latest
-    needs: [validate]
+    needs: [quality-gate]
 
     strategy:
       matrix:
@@ -171,12 +209,19 @@ jobs:
             # Rolling update
             docker compose -f docker-compose.production.yml up -d --remove-orphans
 
-            # Wait for health checks
-            sleep 45
-
-            # Verify deployment
+            # Health check with retry (up to 90s)
+            echo "Waiting for healthy..."
+            for i in $(seq 1 18); do
+              if curl -sf http://localhost:5000/health; then
+                echo "Health check passed (attempt $i)"
+                exit 0
+              fi
+              echo "Attempt $i/18 failed, waiting 5s..."
+              sleep 5
+            done
+            echo "::error::Health check failed after 18 attempts"
             docker compose -f docker-compose.production.yml ps
-            curl -f http://localhost:5000/health || exit 1
+            exit 1
 
       - name: Verify production health
         uses: appleboy/ssh-action@v1

@@ -38,10 +38,34 @@ jobs:
         run: dotnet restore backend/JNPF.sln
 
       - name: Build backend
-        run: dotnet build backend/JNPF.sln --configuration Release --no-restore
+        run: dotnet build backend/JNPF.sln --configuration Release --no-restore /p:CI_BUILD=true
+
+      - name: Analyzer check
+        run: |
+          echo "=== JNPF Analyzer Results ==="
+          dotnet build backend/JNPF.sln --configuration Release --no-restore /p:CI_BUILD=true 2>&1 | grep -E "error JNPF" && exit 1 || exit 0
+        continue-on-error: false
 
       - name: Run tests
         run: dotnet test backend/JNPF.sln --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+
+      - name: Security vulnerability scan
+        run: |
+          echo "=== Package Vulnerability Scan ==="
+          dotnet list backend/JNPF.sln package --vulnerable --include-transitive 2>&1 | tee vulnerability-report.txt
+          VULN_COUNT=$(grep -c "Critical\|High\|Moderate\|Low" vulnerability-report.txt || true)
+          echo "Vulnerabilities found: $VULN_COUNT"
+          if [ "$VULN_COUNT" -gt 0 ]; then
+            echo "::warning::Found $VULN_COUNT package vulnerabilities. Review vulnerability-report.txt"
+          fi
+        continue-on-error: true
+
+      - name: Build warning statistics
+        run: |
+          WARNING_COUNT=$(dotnet build backend/JNPF.sln --configuration Release --no-restore 2>&1 | grep -c "warning" || true)
+          echo "Build warnings: $WARNING_COUNT"
+          echo "warnings=$WARNING_COUNT" >> $GITHUB_ENV
+        continue-on-error: true
 
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
