@@ -19,6 +19,11 @@
 	<ItemGroup>
 		<PackageReference Include="IGeekFan.AspNetCore.Knife4jUI" Version="0.0.13" />
 		<PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
+		<PackageReference Include="Serilog.Sinks.Seq" Version="7.0.0" />
+		<PackageReference Include="AspNetCore.HealthChecks.SqlServer" Version="8.0.2" />
+		<PackageReference Include="AspNetCore.HealthChecks.Redis" Version="8.0.1" />
+		<PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
+		<PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.9.2" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -337,6 +342,7 @@
 		<ProjectReference Include="..\..\modularity\visualdev\JNPF.VisualDev\JNPF.VisualDev.csproj" />
 		<ProjectReference Include="..\..\modularity\workflow\JNPF.WorkFlow\JNPF.WorkFlow.csproj" />
 		<ProjectReference Include="..\..\modularity\zxdev\JNPF.ZxDev\JNPF.ZxDev.csproj" />
+		<ProjectReference Include="..\..\infrastructure\JNPF.Extras.EventBus.Outbox\JNPF.Extras.EventBus.Outbox.csproj" />
 	</ItemGroup>
 
 	<ProjectExtensions><VisualStudio><UserProperties properties_4launchsettings_1json__JsonSchema="" /></VisualStudio></ProjectExtensions>
