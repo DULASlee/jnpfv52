@@ -1,0 +1,8 @@
+{
+  "Database": {
+    // 慢查询阈值（毫秒），超过此值的 SQL 会被记录到 Warning 日志
+    "SlowQueryThreshold": 1000,
+    // 是否启用 DiffLog 数据变更审计（阶段 1-4 关闭，阶段 5 开启）
+    "EnableDiffLog": false
+  }
+}

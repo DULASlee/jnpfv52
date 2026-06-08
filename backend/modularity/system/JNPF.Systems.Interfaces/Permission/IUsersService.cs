@@ -1,6 +1,7 @@
 ﻿using JNPF.Common.Models.User;
 using JNPF.Systems.Entitys.Permission;
 using System.Linq.Expressions;
+using System.Threading;
 
 namespace JNPF.Systems.Interfaces.Permission;
 
@@ -21,14 +22,14 @@ public interface IUsersService
     /// </summary>
     /// <param name="userId">用户ID.</param>
     /// <returns></returns>
-    Task<UserEntity> GetInfoByUserIdAsync(string userId);
+    Task<UserEntity> GetInfoByUserIdAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 根据用户账户.
     /// </summary>
     /// <param name="account">用户账户.</param>
     /// <returns></returns>
-    Task<UserEntity> GetInfoByAccount(string account);
+    Task<UserEntity> GetInfoByAccount(string account, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 获取用户信息 根据登录信息.
@@ -36,14 +37,14 @@ public interface IUsersService
     /// <param name="account">用户账户.</param>
     /// <param name="password">用户密码.</param>
     /// <returns></returns>
-    Task<UserEntity> GetInfoByLogin(string account, string password);
+    Task<UserEntity> GetInfoByLogin(string account, string password, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 根据用户姓名获取用户ID.
     /// </summary>
     /// <param name="realName">用户姓名.</param>
     /// <returns></returns>
-    Task<string> GetUserIdByRealName(string realName);
+    Task<string> GetUserIdByRealName(string realName, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 获取用户名.
@@ -51,33 +52,33 @@ public interface IUsersService
     /// <param name="userId">用户id.</param>
     /// <param name="isAccount">是否显示账号.</param>
     /// <returns></returns>
-    Task<string> GetUserName(string userId, bool isAccount = true);
+    Task<string> GetUserName(string userId, bool isAccount = true, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 获取用户列表.
     /// </summary>
-    Task<List<UserEntity>> GetList();
+    Task<List<UserEntity>> GetList(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 用户岗位.
     /// </summary>
     /// <param name="organizeId"></param>
     /// <returns></returns>
-    Task<List<PositionInfoModel>> GetPosition(string organizeId);
+    Task<List<PositionInfoModel>> GetPosition(string organizeId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 表达式获取用户.
     /// </summary>
     /// <param name="expression">where 条件表达式.</param>
     /// <returns></returns>
-    Task<UserEntity> GetUserByExp(Expression<Func<UserEntity, bool>> expression);
+    Task<UserEntity> GetUserByExp(Expression<Func<UserEntity, bool>> expression, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 表达式获取用户列表.
     /// </summary>
     /// <param name="expression">where 条件表达式.</param>
     /// <returns></returns>
-    Task<List<UserEntity>> GetUserListByExp(Expression<Func<UserEntity, bool>> expression);
+    Task<List<UserEntity>> GetUserListByExp(Expression<Func<UserEntity, bool>> expression, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 表达式获取指定字段的用户列表.
@@ -85,5 +86,5 @@ public interface IUsersService
     /// <param name="expression">where 条件表达式.</param>
     /// <param name="select">select 选择字段表达式.</param>
     /// <returns></returns>
-    Task<List<UserEntity>> GetUserListByExp(Expression<Func<UserEntity, bool>> expression, Expression<Func<UserEntity, UserEntity>> select);
+    Task<List<UserEntity>> GetUserListByExp(Expression<Func<UserEntity, bool>> expression, Expression<Func<UserEntity, UserEntity>> select, CancellationToken cancellationToken = default);
 }

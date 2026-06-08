@@ -51,7 +51,16 @@ public class WebSocketMiddleware
 
         WebSocket? socket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
 
-        var token = new JsonWebToken(context.Request.Path.ToString().TrimStart('/').Replace("Bearer%20", string.Empty).Replace("bearer%20", string.Empty));
+        var pathValue = context.Request.Path.ToString().TrimStart('/');
+        // 提取路径中最后一段作为 token（处理 /api/message/websocket/{token} 格式）
+        var tokenPart = pathValue.Contains('/') ? pathValue.Substring(pathValue.LastIndexOf('/') + 1) : pathValue;
+        // URL 解码并移除可能的 Bearer 前缀和多余空格
+        tokenPart = HttpUtility.UrlDecode(tokenPart, Encoding.UTF8).Trim();
+        if (tokenPart.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            tokenPart = tokenPart.Substring(7).Trim();
+        }
+        var token = new JsonWebToken(tokenPart);
         var httpContext = (DefaultHttpContext)context;
         httpContext.Request.Headers["Authorization"] = HttpUtility.UrlDecode(context.Request.Path.ToString().TrimStart('/'), Encoding.UTF8);
         UserAgent userAgent = new UserAgent(httpContext);

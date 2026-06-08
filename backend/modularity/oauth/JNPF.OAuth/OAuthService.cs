@@ -206,7 +206,7 @@ public class OAuthService : IDynamicApiController, ITransient
     [AllowAnonymous]
     [LogPolicy(LogPolicy.IgnoreAll)]
     [NonUnify]
-    public async Task<IActionResult> GetCode(int codeLength, string timestamp)
+    public async Task<IActionResult> GetCode(int codeLength, string timestamp, CancellationToken cancellationToken = default)
     {
         return new FileContentResult(await _captchaHandler.CreateCaptchaImage(timestamp, 120, 40, codeLength > 0 ? codeLength : 4), "image/jpeg");
     }
@@ -218,7 +218,7 @@ public class OAuthService : IDynamicApiController, ITransient
     [HttpGet("getConfig/{account}")]
     [AllowAnonymous]
     [LogPolicy(LogPolicy.IgnoreAll)]
-    public async Task<dynamic> GetConfigCode(string account)
+    public async Task<dynamic> GetConfigCode(string account, CancellationToken cancellationToken = default)
     {
         ConnectionConfigOptions options = new ConnectionConfigOptions();
         var defaultConnection = _connectionStrings.DefaultConnectionConfig;
@@ -321,7 +321,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <param name="systemCode">系统编码（应用独立URL）.</param>
     /// <returns></returns>
     [HttpGet("CurrentUser")]
-    public async Task<dynamic> GetCurrentUser(string type, string systemCode)
+    public async Task<dynamic> GetCurrentUser(string type, string systemCode, CancellationToken cancellationToken = default)
     {
         var __sw = Stopwatch.StartNew();
         if (type.IsNullOrEmpty()) type = "Web"; // 默认为Web端菜单目录
@@ -606,7 +606,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpGet("Logout")]
-    public async Task Logout([FromQuery] string ticket)
+    public async Task Logout([FromQuery] string ticket, CancellationToken cancellationToken = default)
     {
         var tenantId = _userManager.TenantId ?? "default";
         var userId = _userManager.UserId ?? "admim";
@@ -649,7 +649,7 @@ public class OAuthService : IDynamicApiController, ITransient
     [HttpGet("resetOfficialPassword/{mobile}/{smsCode}")]
     [AllowAnonymous]
     [LogPolicy(LogPolicy.IgnoreAll)]
-    public async Task ResetOfficialPassword(string mobile, string smsCode)
+    public async Task ResetOfficialPassword(string mobile, string smsCode, CancellationToken cancellationToken = default)
     {
         var apiUrl = string.Format("{0}/Tenant/ResetPasswordSmsCodeCheck/{1}/{2}", _tenant.MultiTenancyDBInterFace.Split("/Tenant").First(), mobile, smsCode);
 
@@ -690,7 +690,7 @@ public class OAuthService : IDynamicApiController, ITransient
     [HttpGet("GetTenantInfo")]
     [AllowAnonymous]
     [LogPolicy(LogPolicy.IgnoreRequest)]
-    public async Task<dynamic> GetTenantInfo()
+    public async Task<dynamic> GetTenantInfo(CancellationToken cancellationToken = default)
     {
         string domain = _httpContextAccessor.HttpContext.Request.Host.Value.ToString();
 
@@ -726,7 +726,7 @@ public class OAuthService : IDynamicApiController, ITransient
     [Consumes("application/x-www-form-urlencoded")]
     [AllowAnonymous]
     [LogPolicy(LogPolicy.IgnoreRequest)]
-    public async Task<dynamic> Login([FromForm] LoginInput input)
+    public async Task<dynamic> Login([FromForm] LoginInput input, CancellationToken cancellationToken = default)
     {
         // 普通登录 密码 AES 解密.
         if (!input.isSocialsLoginCallBack && (input.grant_type.IsNullOrEmpty() || !input.grant_type.Equals("official")))
@@ -1041,6 +1041,7 @@ public class OAuthService : IDynamicApiController, ITransient
             return new {
                 theme = user.Theme == null ? "classic" : user.Theme,
                 token = string.Format("Bearer {0}", accessToken),
+                refreshToken = JWTEncryption.GenerateRefreshToken(accessToken, 30 * 24 * 60),
                 wl_qrcode = tenantInterFaceOutput.wl_qrcode
             };
         }
@@ -1058,7 +1059,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <param name="input">登录输入参数.</param>
     /// <returns></returns>
     [HttpPost("LockScreen")]
-    public async Task LockScreen([FromBody] LockScreenInput input)
+    public async Task LockScreen([FromBody] LockScreenInput input, CancellationToken cancellationToken = default)
     {
         // 根据用户账号获取用户秘钥
         var secretkey = (await _userRepository.GetFirstAsync(u => u.Account == input.account && u.DeleteMark == null)).Secretkey;
@@ -1076,7 +1077,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("logoutCurrentUser")]
     [NonUnify]
-    public async Task<dynamic> LogoutCurrentUser()
+    public async Task<dynamic> LogoutCurrentUser(CancellationToken cancellationToken = default)
     {
         var userInfo = _userManager.User;
         if (userInfo.IsAdministrator.Equals(1)) throw Oops.Oh(ErrorCode.D1034);
@@ -1093,7 +1094,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("Logout/auth2")]
     [AllowAnonymous]
-    public async Task OnlineLogout()
+    public async Task OnlineLogout(CancellationToken cancellationToken = default)
     {
         var ticket = _httpContextAccessor.HttpContext.Request.Form["ticket"];
         var tenantId = await _cacheManager.GetAsync("OnlineTicket_" + ticket);
@@ -1130,7 +1131,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpPost("updatePasswordMessage")]
-    public async Task PwdMessage()
+    public async Task PwdMessage(CancellationToken cancellationToken = default)
     {
         var sysConfigInfo = await _sysConfigService.GetInfo();
         // 密码修改时间.
@@ -1460,7 +1461,7 @@ public class OAuthService : IDynamicApiController, ITransient
     [AllowAnonymous]
     [LogPolicy(LogPolicy.IgnoreRequest)]
     [NonUnify]
-    public async Task<dynamic> SocialsLoginCallBack([FromQuery] SocialsUserInputModel req)
+    public async Task<dynamic> SocialsLoginCallBack([FromQuery] SocialsUserInputModel req, CancellationToken cancellationToken = default)
     {
         ConnectionConfigOptions options = null;
         var defaultConnection = _connectionStrings.DefaultConnectionConfig;
@@ -1659,7 +1660,7 @@ public class OAuthService : IDynamicApiController, ITransient
     [Consumes("application/x-www-form-urlencoded")]
     [AllowAnonymous]
     [LogPolicy(LogPolicy.IgnoreRequest)]
-    public async Task<dynamic> SocialsLogin([FromForm] SocialsUserCallBackModel req)
+    public async Task<dynamic> SocialsLogin([FromForm] SocialsUserCallBackModel req, CancellationToken cancellationToken = default)
     {
         if (req.tenantLogin)
         {
@@ -1752,7 +1753,7 @@ public class OAuthService : IDynamicApiController, ITransient
     [AllowAnonymous]
     [LogPolicy(LogPolicy.IgnoreRequest)]
     [NonUnify]
-    public async Task<dynamic> LoginByType(string type, [FromQuery] Dictionary<string, string> input)
+    public async Task<dynamic> LoginByType(string type, [FromQuery] Dictionary<string, string> input, CancellationToken cancellationToken = default)
     {
         #region Cas
         //if (type.ToLower().Equals("cas"))
@@ -2057,7 +2058,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <param name="ticket"></param>
     /// <returns></returns>
     [HttpGet("ConfirmLogin/{ticket}")]
-    public async Task<dynamic> ConfirmLogin(string ticket)
+    public async Task<dynamic> ConfirmLogin(string ticket, CancellationToken cancellationToken = default)
     {
         var ticketModel = _cacheManager.Get<ScanCodeLoginConfigModel>(ticket);
         if (ticketModel == null || !ticketModel.status.Equals((int)ScanCodeLoginTicketStatus.ScanCode)) return new ScanCodeLoginConfigModel() { status = (int)ScanCodeLoginTicketStatus.Invalid };

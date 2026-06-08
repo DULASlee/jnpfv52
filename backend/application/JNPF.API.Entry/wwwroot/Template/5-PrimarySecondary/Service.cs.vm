@@ -455,7 +455,14 @@ case "remove":
 @:
 @*删除主表数据*@
         @:var entity = await @(Model.DbLinkId != "0" ? "_sqlSugarClient.Queryable<" + @Model.ClassName + "Entity>()." : "_repository.Get")FirstAsync(it => it.@(Model.PrimaryKey).Equals(id)@(Model.IsLogicalDelete ? "  && it.DeleteMark == null" : ""));
-        @:await @(Model.DbLinkId != "0" ? "_sqlSugarClient.Deleteable<" + Model.ClassName + "Entity>()" : "_repository.AsDeleteable()").Where(it => it.@(Model.PrimaryKey).Equals(id))@(Model.IsLogicalDelete ? ".IsLogic()" : "").ExecuteCommandAsync(@(Model.IsLogicalDelete ? "\"F_Delete_Mark\",1, \"F_DELETE_TIME\", \"F_DELETE_USER_ID\", _userManager.UserId" : ""));
+@if(Model.DbLinkId != "0")
+{
+        @:await _sqlSugarClient.Deleteable<@(Model.ClassName)Entity>().Where(it => it.@(Model.PrimaryKey).Equals(id))@(Model.IsLogicalDelete ? ".IsLogic()" : "").ExecuteCommandAsync(@(Model.IsLogicalDelete ? "\"F_Delete_Mark\",1, \"F_DELETE_TIME\", \"F_DELETE_USER_ID\", _userManager.UserId" : ""));
+}else if(Model.IsLogicalDelete){
+        @:await _repository.AsDeleteable().Where(it => it.@(Model.PrimaryKey).Equals(id)).IsLogic().ExecuteCommandAsync("F_Delete_Mark",1, "F_DELETE_TIME", "F_DELETE_USER_ID", _userManager.UserId);
+}else{
+        @:await _repository.SafeDeleteByIdAsync(id);
+}
 @if(!Model.IsLogicalDelete)
 {
 @*删除副表数据*@
@@ -2046,9 +2053,23 @@ case "batchRemove":
             @:// 批量删除@(Model.BusName)
 @if(Model.EnableFlow)
 {
-            @:await @(Model.DbLinkId != "0" ? "_sqlSugarClient.Deleteable<" + Model.ClassName + "Entity>()" : "_repository.AsDeleteable()").In(it => it.@(Model.PrimaryKey), entitys.Select(s => s.@(Model.PrimaryKey)).ToList())@(Model.IsLogicalDelete ? ".IsLogic()" : "").ExecuteCommandAsync(@(Model.IsLogicalDelete ? "\"F_Delete_Mark\",1, \"F_DELETE_TIME\", \"F_DELETE_USER_ID\", _userManager.UserId" : ""));
+@if(Model.DbLinkId != "0")
+{
+            @:await _sqlSugarClient.Deleteable<@(Model.ClassName)Entity>().In(it => it.@(Model.PrimaryKey), entitys.Select(s => s.@(Model.PrimaryKey)).ToList())@(Model.IsLogicalDelete ? ".IsLogic()" : "").ExecuteCommandAsync(@(Model.IsLogicalDelete ? "\"F_Delete_Mark\",1, \"F_DELETE_TIME\", \"F_DELETE_USER_ID\", _userManager.UserId" : ""));
+}else if(Model.IsLogicalDelete){
+            @:await _repository.AsDeleteable().In(it => it.@(Model.PrimaryKey), entitys.Select(s => s.@(Model.PrimaryKey)).ToList()).IsLogic().ExecuteCommandAsync("F_Delete_Mark",1, "F_DELETE_TIME", "F_DELETE_USER_ID", _userManager.UserId);
 }else{
-            @:await @(Model.DbLinkId != "0" ? "_sqlSugarClient.Deleteable<" + @Model.ClassName + "Entity>()" : "_repository.AsDeleteable()").In(it => it.@(Model.PrimaryKey), ids)@(Model.IsLogicalDelete ? ".IsLogic()" : "").ExecuteCommandAsync(@(Model.IsLogicalDelete ? "\"F_Delete_Mark\",1, \"F_DELETE_TIME\", \"F_DELETE_USER_ID\", _userManager.UserId" : ""));
+            @:await _repository.SafeDeleteByIdsAsync(entitys.Select(s => (object)s.@(Model.PrimaryKey)).ToList());
+}
+}else{
+@if(Model.DbLinkId != "0")
+{
+            @:await _sqlSugarClient.Deleteable<@(Model.ClassName)Entity>().In(it => it.@(Model.PrimaryKey), ids)@(Model.IsLogicalDelete ? ".IsLogic()" : "").ExecuteCommandAsync(@(Model.IsLogicalDelete ? "\"F_Delete_Mark\",1, \"F_DELETE_TIME\", \"F_DELETE_USER_ID\", _userManager.UserId" : ""));
+}else if(Model.IsLogicalDelete){
+            @:await _repository.AsDeleteable().In(it => it.@(Model.PrimaryKey), ids).IsLogic().ExecuteCommandAsync("F_Delete_Mark",1, "F_DELETE_TIME", "F_DELETE_USER_ID", _userManager.UserId);
+}else{
+            @:await _repository.SafeDeleteByIdsAsync(ids.Select(it => (object)it).ToList());
+}
 }
 @if(!Model.IsLogicalDelete)
 {

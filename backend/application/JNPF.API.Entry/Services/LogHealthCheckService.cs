@@ -40,6 +40,7 @@ public class LogHealthCheckService : IDynamicApiController, ITransient
             status = isDiskCritical ? "degraded" : "healthy",
             timestamp = DateTime.UtcNow,
             logDirectory = logDir,
+            apiVersion = "1",
             diskGuard = new
             {
                 isDiskCritical,
@@ -68,6 +69,25 @@ public class LogHealthCheckService : IDynamicApiController, ITransient
 
         if (isDiskCritical)
             return new ObjectResult(result) { StatusCode = 503 };
+
+        return new OkObjectResult(result);
+    }
+
+    /// <summary>
+    /// 健康检查 v2（演示 API 版本控制）.
+    /// </summary>
+    /// <remarks>通过 [ApiDescriptionSettings(Version = "2")] 生成路由 /api/system/LogHealthCheck/v2/Get</remarks>
+    [HttpGet("")]
+    [ApiDescriptionSettings(Version = "2", Tag = "v2")]
+    public IActionResult GetV2()
+    {
+        var result = new
+        {
+            status = "healthy",
+            timestamp = DateTime.UtcNow,
+            apiVersion = "2",
+            description = "API v2 版本演示端点"
+        };
 
         return new OkObjectResult(result);
     }

@@ -16,6 +16,7 @@ using JNPF.Systems.Interfaces.Permission;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using SqlSugar;
+using System.Threading;
 
 namespace JNPF.Systems;
 
@@ -76,7 +77,7 @@ public class RoleService : IRoleService, IDynamicApiController, ITransient
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpGet("")]
-    public async Task<dynamic> GetList([FromQuery] RoleListInput input)
+    public async Task<dynamic> GetList([FromQuery] RoleListInput input, CancellationToken cancellationToken = default)
     {
         // 获取分级管理组织
         var dataScope = _userManager.DataScope.Where(x => x.Select).Select(x => x.organizeId).Distinct().ToList();
@@ -166,7 +167,7 @@ public class RoleService : IRoleService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpGet("Selector")]
-    public async Task<dynamic> GetSelector()
+    public async Task<dynamic> GetSelector(CancellationToken cancellationToken = default)
     {
         var orgInfoList = _organizeService.GetOrgListTreeName();
 
@@ -253,7 +254,7 @@ public class RoleService : IRoleService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpGet("SelectorByPermission")]
-    public async Task<dynamic> GetSelectorByPermission()
+    public async Task<dynamic> GetSelectorByPermission(CancellationToken cancellationToken = default)
     {
         // 获取分级管理组织
         var dataScope = _userManager.DataScope.Where(x => x.Edit).Select(x => x.organizeId).Distinct().ToList();
@@ -358,7 +359,7 @@ public class RoleService : IRoleService, IDynamicApiController, ITransient
     /// <param name="id">主键.</param>
     /// <returns></returns>
     [HttpGet("{id}")]
-    public async Task<dynamic> GetInfo(string id)
+    public async Task<dynamic> GetInfo(string id, CancellationToken cancellationToken = default)
     {
         RoleEntity? entity = await _repository.GetFirstAsync(r => r.Id == id);
         RoleInfoOutput? output = entity.Adapt<RoleInfoOutput>();
@@ -387,7 +388,7 @@ public class RoleService : IRoleService, IDynamicApiController, ITransient
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpPost("getListByOrgIds")]
-    public async Task<dynamic> GetListByOrgIds([FromBody] RoleListInput input)
+    public async Task<dynamic> GetListByOrgIds([FromBody] RoleListInput input, CancellationToken cancellationToken = default)
     {
         // 获取所有组织 对应 的 角色id集合
         var ridList = await _repository.AsSugarClient().Queryable<OrganizeRelationEntity>()
@@ -459,7 +460,7 @@ public class RoleService : IRoleService, IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("")]
     [UnitOfWork]
-    public async Task Create([FromBody] RoleCrInput input)
+    public async Task Create([FromBody] RoleCrInput input, CancellationToken cancellationToken = default)
     {
         // 全局角色 只能超管才能变更
         if (input.globalMark == 1 && !_userManager.IsAdministrator)
@@ -517,7 +518,7 @@ public class RoleService : IRoleService, IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpDelete("{id}")]
     [UnitOfWork]
-    public async Task Delete(string id)
+    public async Task Delete(string id, CancellationToken cancellationToken = default)
     {
         RoleEntity? entity = await _repository.GetFirstAsync(r => r.Id == id && r.DeleteMark == null);
         _ = entity ?? throw Oops.Oh(ErrorCode.D1608);
@@ -581,7 +582,7 @@ public class RoleService : IRoleService, IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPut("{id}")]
     [UnitOfWork]
-    public async Task Update(string id, [FromBody] RoleUpInput input)
+    public async Task Update(string id, [FromBody] RoleUpInput input, CancellationToken cancellationToken = default)
     {
         RoleEntity? oldRole = await _repository.AsQueryable().InSingleAsync(input.id);
 
@@ -686,7 +687,7 @@ public class RoleService : IRoleService, IDynamicApiController, ITransient
     /// <param name="id">主键.</param>
     /// <returns></returns>
     [HttpPut("{id}/Actions/State")]
-    public async Task UpdateState(string id)
+    public async Task UpdateState(string id, CancellationToken cancellationToken = default)
     {
         if (!await _repository.IsAnyAsync(r => r.Id == id && r.DeleteMark == null)) throw Oops.Oh(ErrorCode.D1608);
 
@@ -711,7 +712,7 @@ public class RoleService : IRoleService, IDynamicApiController, ITransient
     /// <param name="input"></param>
     /// <returns></returns>
     [HttpPost("RoleCondition")]
-    public async Task<dynamic> RoleCondition([FromBody] RoleConditionInput input)
+    public async Task<dynamic> RoleCondition([FromBody] RoleConditionInput input, CancellationToken cancellationToken = default)
     {
         // 获取所有组织
         List<OrganizeEntity>? allOrgList = _organizeService.GetOrgListTreeName();
@@ -873,7 +874,7 @@ public class RoleService : IRoleService, IDynamicApiController, ITransient
     /// </summary>
     /// <param name="roleId">角色Id.</param>
     /// <returns></returns>
-    public async Task ForcedOffline(string roleId)
+    public async Task ForcedOffline(string roleId, CancellationToken cancellationToken = default)
     {
         // 查找该角色下的所有成员id
         var roleUserIds = await _repository.AsSugarClient().Queryable<UserRelationEntity>().Where(x => x.ObjectType == "Role" && x.ObjectId == roleId).Select(x => x.UserId).ToListAsync();

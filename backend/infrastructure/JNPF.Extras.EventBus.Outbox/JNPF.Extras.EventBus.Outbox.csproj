@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<Description>JNPF 事件 Outbox 管道 — 可靠事件投递、幂等处理、Polly 重试、死信管理。</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="SqlSugarCore" Version="5.1.4.140" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\framework\JNPF\JNPF.csproj" />
+		<ProjectReference Include="..\..\framework\JNPF.Extras.DatabaseAccessor.SqlSugar\JNPF.Extras.DatabaseAccessor.SqlSugar.csproj" />
+	</ItemGroup>
+
+</Project>

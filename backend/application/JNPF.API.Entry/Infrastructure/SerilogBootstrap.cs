@@ -24,7 +24,7 @@ public static class SerilogBootstrap
         var logDir = cfg["Logging:File:LogDir"] ?? "logs";
         var fileFormatter = new JsonFormatter(renderMessage: true);
 
-        Log.Logger = new LoggerConfiguration()
+        var loggerConfig = new LoggerConfiguration()
             .MinimumLevel.ControlledBy(LevelSwitch)
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("System", LogEventLevel.Warning)
@@ -50,8 +50,16 @@ public static class SerilogBootstrap
                 fileSizeLimitBytes: 50 * 1024 * 1024)
 
             // Console
-            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
 
-            .CreateLogger();
+        // Seq Sink — 条件启用（默认关闭，不影响现有日志输出）
+        var seqEnabled = cfg.GetValue<bool>("Logging:Seq:Enabled");
+        var seqUrl = cfg["Logging:Seq:ServerUrl"];
+        if (seqEnabled && !string.IsNullOrEmpty(seqUrl))
+        {
+            loggerConfig = loggerConfig.WriteTo.Seq(seqUrl);
+        }
+
+        Log.Logger = loggerConfig.CreateLogger();
     }
 }

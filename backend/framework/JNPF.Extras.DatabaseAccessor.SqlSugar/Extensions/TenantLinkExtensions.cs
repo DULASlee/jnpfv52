@@ -206,8 +206,8 @@ public class JNPFTenantExtensions
             case DbType.SqlServer:
                 // 命名实例（如 (local)\SQLEXPRESS）不需要端口号
                 if (dBConnectionConfig.Host.Contains('\\'))
-                    return string.Format("Data Source={0};Initial Catalog={1};User ID={2};Password={3};Connection Timeout=5;MultipleActiveResultSets=true;", dBConnectionConfig.Host, dBConnectionConfig.DBName, dBConnectionConfig.UserName, dBConnectionConfig.Password);
-                return string.Format("Data Source={0},{4};Initial Catalog={1};User ID={2};Password={3};Connection Timeout=5;MultipleActiveResultSets=true;", dBConnectionConfig.Host, dBConnectionConfig.DBName, dBConnectionConfig.UserName, dBConnectionConfig.Password, dBConnectionConfig.Port);
+                    return string.Format("Data Source={0};Initial Catalog={1};User ID={2};Password={3};Connection Timeout=5;MultipleActiveResultSets=true;TrustServerCertificate=True;", dBConnectionConfig.Host, dBConnectionConfig.DBName, dBConnectionConfig.UserName, dBConnectionConfig.Password);
+                return string.Format("Data Source={0},{4};Initial Catalog={1};User ID={2};Password={3};Connection Timeout=5;MultipleActiveResultSets=true;TrustServerCertificate=True;", dBConnectionConfig.Host, dBConnectionConfig.DBName, dBConnectionConfig.UserName, dBConnectionConfig.Password, dBConnectionConfig.Port);
             case DbType.Oracle:
                 return string.Format("Data Source={0}:{1}/{2};User ID={3};Password={4};", dBConnectionConfig.Host, dBConnectionConfig.Port, dBConnectionConfig.DBSchema, dBConnectionConfig.UserName, dBConnectionConfig.Password);
             case DbType.MySql:

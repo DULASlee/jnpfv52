@@ -9,9 +9,23 @@
 | JNPF.Analyzers.Tests | PASS | 0 |
 | JNPF.Database.Migrations | PASS | 0 |
 
-## L2-L4: Runtime (Requires Database)
+## L2-L4: Runtime Verification (2026-06-08)
 
-L2-L4 (service startup, /health, browser login) require a database connection and cannot be verified in the coding environment. These must be validated in the target environment (staging/production).
+### L2: Service Startup
+- [x] Service started successfully on http://0.0.0.0:5000
+- [x] All JnpfModules initialized (Validation, Observability, Database, Authentication, EventBus)
+- [x] Database connection established: ZXAF_V1_DevTest1 on (local)\SQLEXPRESS (SQL Server 2022)
+- [x] Swagger warmup completed (non-blocking warning about conflicting route resolved)
+
+### L3: Health Checks
+- [x] `/health` → `{"status":"Healthy","checks":[{"name":"sqlserver","status":"Healthy"}],...}` HTTP 200
+- [x] `/health/live` → `Healthy` HTTP 200
+- [x] `/health/ready` → `{"status":"Healthy","checks":[{"name":"sqlserver","status":"Healthy"}],...}` HTTP 200
+
+### L4: Browser Login
+- [ ] Manual: navigate to http://localhost:5000 and verify login page loads
+- [ ] Manual: login with admin/123456 and verify dashboard renders
+- [ ] Manual: verify Knife4jUI API docs at /api/doc.html
 
 ## Task Verification Summary
 
@@ -44,7 +58,8 @@ L2-L4 (service startup, /health, browser login) require a database connection an
 - [x] 2 idempotent migration scripts (Outbox + ProcessedEvent)
 - [x] DbUp executor with CLI args and env var support
 - [x] L1: 0 compilation errors
-- [ ] Manual: run against a test database and verify tables created
+- [x] Executed against ZXAF_V1_DevTest1 — 3 tables created (SYS_EVENT_OUTBOX_MESSAGE, PROCESSED_EVENT, SchemaVersions)
+- [x] Idempotency verified: re-run → "No new scripts to execute"
 
 ### 7.6 Roslyn Analyzer
 - [x] 6 diagnostic analyzers (JNPF001-JNPF006)
@@ -74,3 +89,24 @@ ab5a3ca feat(validation): add FluentValidation module with 5 core validators
 ac5c0d8 docs: add CI/CD pipeline guide covering all 3 workflows and quality gates
 bb37f28 feat(ci-cd): extend pipelines with quality gates and health check retry loops
 ```
+
+## Day 1 Verification Results (2026-06-08)
+
+| Item | Result | Evidence |
+|---|---|---|
+| L1 Compilation (4 projects) | PASS | 0 errors across all projects |
+| Analyzer Unit Tests (11/11) | PASS | `dotnet test` 11 passed, 0 failed |
+| L2 Service Startup | PASS | Service started, all modules loaded |
+| L3 /health | PASS | HTTP 200, sqlserver=Healthy |
+| L3 /health/live | PASS | HTTP 200, Healthy |
+| L3 /health/ready | PASS | HTTP 200, sqlserver=Healthy |
+| DbUp Migration | PASS | 2 scripts executed, 3 tables created |
+| DbUp Idempotency | PASS | Re-run: "No new scripts to execute" |
+
+**Environment:** SQL Server 2022 (16.0.1180.1), Database: ZXAF_V1_DevTest1, Host: (local)\SQLEXPRESS
+
+**Remaining (Days 2-5):**
+- Day 2: Jaeger deployment + IDE analyzer suggestions
+- Day 3: CI pipeline trigger + L4 browser smoke testing
+- Day 4: Full regression + performance baseline
+- Day 5: Architecture docs update + ADR compilation + final sign-off

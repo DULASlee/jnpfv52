@@ -9,7 +9,7 @@
   import { Image as AImage } from 'ant-design-vue';
   import { useAppStore } from '/@/store/modules/app';
   import { useGlobSetting } from '/@/hooks/setting';
-  import loginLogo from '/@/assets/images/login_logo.png';
+  import loginLogo from '/@/assets/images/login-company-logo.svg';
 
   const appStore = useAppStore();
   const globSetting = useGlobSetting();

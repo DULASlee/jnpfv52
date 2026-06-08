@@ -4,6 +4,7 @@
 		<Description>JNPF 公共拓展库。</Description>
 		<AllowUnsafeBlocks>False</AllowUnsafeBlocks>
 		<AcceptNPOIOSMFLicense>true</AcceptNPOIOSMFLicense>
+		<UseImageSharp>enable</UseImageSharp>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -21,7 +22,7 @@
 		<PackageReference Include="Aspose.Words" Version="23.11.0" />
 		<PackageReference Include="FreeSpire.Office" Version="8.2.0" />
 		<PackageReference Include="IPTools.China" Version="1.6.0" />
-		<PackageReference Include="SixLabors.ImageSharp" Version="3.0.2" />
+		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
 		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
 		<PackageReference Include="System.Management" Version="8.0.0" />
 		<PackageReference Include="NPOI" Version="2.8.0" />

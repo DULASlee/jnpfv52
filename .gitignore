@@ -14,6 +14,7 @@ unpackage/
 # Secrets
 **/Configurations/ConnectionStrings.json
 **/Configurations/JWT.json
+**/Configurations/EventBus.json
 docs/token.txt
 **/token.txt
 *.key

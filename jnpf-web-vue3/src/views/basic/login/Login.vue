@@ -3,21 +3,14 @@
     <div class="flex items-center absolute right-4 top-4">
       <AppDarkModeToggle class="enter-x mr-2" v-if="!sessionTimeout" />
     </div>
-    <div class="login-header">
-      <div class="login-company-logo">
-        <a class="login-company-logo-link" target="_blank" href="https://www.baobab.com">
-          <img class="login-company-logo-img -enter-x" src="../../../assets/images/login-company-logo.png" alt="" />
-          <span class="login-company-name -enter-x">面包树科技有限公司</span>
-        </a>
-      </div>
-    </div>
     <div class="login-content">
       <div class="login-left hidden xl:block">
-        <LoginFormTitle class="-enter-x" />
-        <img class="login-banner -enter-x" src="../../../assets/images/login-banner.png" alt="" />
+        <div class="login-company-logo">
+          <span class="login-company-name -enter-x">{{ getSysConfig.sysName }}</span>
+        </div>
+        <img class="login-banner -enter-x" src="/@/assets/images/login-banner.png" alt="" />
       </div>
       <div :class="`${prefixCls}-form`" class="enter-x h-630px xl:h-full">
-        <LoginFormTitle class="-enter-x xl:hidden" />
         <LoginForm />
       </div>
     </div>
@@ -27,7 +20,6 @@
 <script lang="ts" setup>
   import { computed } from 'vue';
   import { AppDarkModeToggle } from '/@/components/Application';
-  import LoginFormTitle from './LoginFormTitle.vue';
   import LoginForm from './LoginForm.vue';
   import { useDesign } from '/@/hooks/web/useDesign';
   import { useAppStore } from '/@/store/modules/app';

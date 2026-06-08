@@ -15,6 +15,7 @@ using JNPF.Systems.Interfaces.System;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using SqlSugar;
+using System.Threading;
 
 namespace JNPF.Systems;
 
@@ -76,7 +77,7 @@ public class DepartmentService : IDepartmentService, IDynamicApiController, ITra
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpGet("{companyId}/Department")]
-    public async Task<dynamic> GetList(string companyId, [FromQuery] KeywordInput input)
+    public async Task<dynamic> GetList(string companyId, [FromQuery] KeywordInput input, CancellationToken cancellationToken = default)
     {
         List<DepartmentListOutput>? data = new List<DepartmentListOutput>();
 
@@ -116,7 +117,7 @@ public class DepartmentService : IDepartmentService, IDynamicApiController, ITra
     /// </summary>
     /// <returns></returns>
     [HttpGet("Department/Selector/{id}")]
-    public async Task<dynamic> GetSelector(string id)
+    public async Task<dynamic> GetSelector(string id, CancellationToken cancellationToken = default)
     {
         // 获取组织树
         var orgTree = _organizeService.GetOrgListTreeName();
@@ -139,7 +140,7 @@ public class DepartmentService : IDepartmentService, IDynamicApiController, ITra
     /// </summary>
     /// <returns></returns>
     [HttpGet("Department/SelectorByAuth/{id}")]
-    public async Task<dynamic> GetSelectorByAuth(string id)
+    public async Task<dynamic> GetSelectorByAuth(string id, CancellationToken cancellationToken = default)
     {
         // 获取组织树
         var orgTree = _organizeService.GetOrgListTreeName();
@@ -213,7 +214,7 @@ public class DepartmentService : IDepartmentService, IDynamicApiController, ITra
     /// <param name="id">主键.</param>
     /// <returns></returns>
     [HttpGet("Department/{id}")]
-    public async Task<dynamic> GetInfo(string id)
+    public async Task<dynamic> GetInfo(string id, CancellationToken cancellationToken = default)
     {
         OrganizeEntity? entity = await _repository.GetSingleAsync(d => d.Id == id);
         var res = entity.Adapt<DepartmentInfoOutput>();
@@ -232,7 +233,7 @@ public class DepartmentService : IDepartmentService, IDynamicApiController, ITra
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpPost("Department")]
-    public async Task Create([FromBody] DepartmentCrInput input)
+    public async Task Create([FromBody] DepartmentCrInput input, CancellationToken cancellationToken = default)
     {
         if (!_userManager.DataScope.Any(it => it.organizeId == input.parentId && it.Add) && !_userManager.IsAdministrator)
             throw Oops.Oh(ErrorCode.D1013);
@@ -329,7 +330,7 @@ public class DepartmentService : IDepartmentService, IDynamicApiController, ITra
     /// <param name="id">主键.</param>
     /// <returns></returns>
     [HttpDelete("Department/{id}")]
-    public async Task Delete(string id)
+    public async Task Delete(string id, CancellationToken cancellationToken = default)
     {
         if (!_userManager.DataScope.Any(it => it.organizeId == id && it.Delete == true) && !_userManager.IsAdministrator)
             throw Oops.Oh(ErrorCode.D1013);
@@ -383,7 +384,7 @@ public class DepartmentService : IDepartmentService, IDynamicApiController, ITra
     /// <param name="input"></param>
     /// <returns></returns>
     [HttpPut("Department/{id}")]
-    public async Task Update(string id, [FromBody] DepartmentUpInput input)
+    public async Task Update(string id, [FromBody] DepartmentUpInput input, CancellationToken cancellationToken = default)
     {
         OrganizeEntity? oldEntity = await _repository.GetSingleAsync(it => it.Id == id);
         if (oldEntity.ParentId != input.parentId && !_userManager.DataScope.Any(it => it.organizeId == oldEntity.ParentId && it.Edit) && !_userManager.IsAdministrator)
@@ -467,7 +468,7 @@ public class DepartmentService : IDepartmentService, IDynamicApiController, ITra
     /// <param name="id">主键.</param>
     /// <returns></returns>
     [HttpPut("Department/{id}/Actions/State")]
-    public async Task UpdateState(string id)
+    public async Task UpdateState(string id, CancellationToken cancellationToken = default)
     {
         if (!_userManager.DataScope.Any(it => it.organizeId == id && it.Edit == true) && !_userManager.IsAdministrator)
             throw Oops.Oh(ErrorCode.D1013);
@@ -489,7 +490,7 @@ public class DepartmentService : IDepartmentService, IDynamicApiController, ITra
     /// </summary>
     /// <returns></returns>
     [NonAction]
-    public async Task<List<OrganizeEntity>> GetListAsync()
+    public async Task<List<OrganizeEntity>> GetListAsync(CancellationToken cancellationToken = default)
     {
         return await _repository.AsQueryable().Where(t => t.Category.Equals("department") && t.EnabledMark == 1 && t.DeleteMark == null).OrderBy(o => o.SortCode).ToListAsync();
     }
@@ -584,7 +585,7 @@ public class DepartmentService : IDepartmentService, IDynamicApiController, ITra
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
-    public async Task<List<OrganizeEntity>> GetCompanyAllDep(string id)
+    public async Task<List<OrganizeEntity>> GetCompanyAllDep(string id, CancellationToken cancellationToken = default)
     {
         return await _repository.GetListAsync(x => x.OrganizeIdTree.Contains(id) && x.Category == "department" && x.EnabledMark == 1 && x.DeleteMark == null);
     }

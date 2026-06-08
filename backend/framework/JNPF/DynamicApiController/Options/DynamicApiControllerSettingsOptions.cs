@@ -51,6 +51,11 @@ public sealed class DynamicApiControllerSettingsOptions : IConfigurableOptions<D
     public string CamelCaseSeparator { get; set; }
 
     /// <summary>
+    /// 默认版本号（全局 fallback，为 null 时不生成版本路由段）
+    /// </summary>
+    public string DefaultVersion { get; set; }
+
+    /// <summary>
     /// 版本号分隔符
     /// </summary>
     [Required]

@@ -11,6 +11,7 @@
 	
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\framework\JNPF.Extras.Authentication.JwtBearer\JNPF.Extras.Authentication.JwtBearer.csproj" />
+		<ProjectReference Include="..\..\..\framework\JNPF.Extras.DatabaseAccessor.SqlSugar\JNPF.Extras.DatabaseAccessor.SqlSugar.csproj" />
 		<ProjectReference Include="..\..\..\infrastructure\JNPF.Extras.EventBus.RabbitMQ\JNPF.Extras.EventBus.RabbitMQ.csproj" />
 		<ProjectReference Include="..\..\..\infrastructure\JNPF.Extras.WebSockets\JNPF.Extras.WebSockets.csproj" />
 		<ProjectReference Include="..\..\engine\JNPF.Engine.Entity\JNPF.Engine.Entity.csproj" />

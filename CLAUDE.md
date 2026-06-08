@@ -24,7 +24,50 @@ When encountering bugs, failures, or anomalies — regardless of whether they fa
 NEVER use "out of scope", "existing issue", "open a new issue", "should work in theory", "fix later", "edge case can wait" or any similar excuse.
 
 ### Law 2: Verification is Completion
-ALWAYS run tests/build/service after changes and confirm they pass. No test run = not done. NEVER assume or claim tests passed when output shows failures. NEVER say "I can't test" or "requires manual testing."
+
+```
+NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+```
+
+**Gate Function — 声称任何状态之前，MUST 完成这 5 步：**
+
+1. **IDENTIFY** — 什么命令能证明这个声称？
+2. **RUN** — 执行完整命令（本次、实时，不是上次的结果）
+3. **READ** — 读完整输出，检查 exit code，数失败数
+4. **VERIFY** — 输出是否确认了你的声称？
+   - 否 → 用证据说明实际状态
+   - 是 → 带着证据做出声称
+5. **CLAIM** — 带证据声称结果
+
+**跳过任何一步 = 说谎，不是验证。**
+
+**按声称类型验证要求：**
+
+| 声称 | 需要的证据 | 不够的证据 |
+|---|---|---|
+| 测试通过 | 测试命令输出：0 failures | 上次跑过、"应该通过" |
+| 构建成功 | build 命令：exit 0 | linter 通过、日志看起来正常 |
+| Bug 已修 | 复现原始症状：通过 | 改了代码就假设修好了 |
+| 代码审查通过 | code-reviewer 子代理报告：0 严重 | 自己觉得没问题 |
+| 子代理完成 | 检查 VCS diff + 验证变更 | 信任子代理的"成功"报告 |
+| 需求已满足 | 逐项对照计划清单 | "测试通过，阶段完成" |
+
+**红旗词 — 说出这些词就说明你没有证据：**
+- "should" / "probably" / "seems to" / "looks like"
+- "应该可以通过" / "看起来没问题"
+- 在验证之前表达满意（"Great!" / "Done!" / "完美!"）
+
+**合理化借口 → 真相：**
+
+| 借口 | 真相 |
+|---|---|
+| "应该没问题了" | 跑命令，别猜 |
+| "我有信心" | 信心 ≠ 证据 |
+| "就这一次" | 没有例外 |
+| "linter 通过了" | linter ≠ 编译器 |
+| "子代理说成功了" | 独立验证 |
+| "部分检查够了" | 部分证明不了任何事 |
+| "我累了" | 疲惫 ≠ 免检 |
 
 ### Law 3: Honest Reporting
 If uncertain, say so — don't fabricate. NEVER make up content to appear thorough. Proactively report issues found in adjacent code.
@@ -36,17 +79,182 @@ NEVER write TODOs, pseudo-implementations, try-catch blocks that swallow excepti
 
 ## Debugging Discipline
 
-1. Reproduce → 2. Locate root cause (don't patch symptoms) → 3. Fix root cause → 4. Verify with actual execution → 5. Reflect on similar issues
-JNPF debugging tools: Serilog logs / SqlSugar SQL logs / Knife4jUI / DevTools / Vue DevTools
-JNPF checklist: API not generated? → IDynamicApiController + public method? | Query wrong? → ITenantFilter? | Generated code? → Fix .vm | Event? → EventBus config | Workflow? → FlowEngine logs | SignalR? → [MapHub] registration?
-NEVER: Claim fix without verification / Swallow exceptions with try-catch / Commit code containing TODO / Try random changes without root cause analysis
-Rollback first: If a fix causes the service to fail to start, ALWAYS rollback to the last stable commit first, then analyze. NEVER keep debugging on a broken service.
+### 铁律：没有根因调查，禁止动手修
+
+```
+NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
+```
+
+### 强制执行协议
+
+**开始调试前，MUST 向用户输出以下声明（不可跳过）：**
+
+```
+🔍 Debugging Protocol 启动
+- 当前问题：[一句话描述]
+- 已读取的错误信息：[具体行号/文件/错误码]
+- 复现状态：[可稳定复现 / 不可复现 / 未尝试]
+- 当前阶段：Phase 1 根因调查
+```
+
+**每次切换阶段时，MUST 输出：**
+```
+→ 进入 Phase N: [阶段名]
+```
+
+**提出修复方案前，MUST 输出自检清单：**
+```
+✅ 调试自检：
+- [ ] 我能解释根因（不只是症状）
+- [ ] 我只改一个变量
+- [ ] 我没有在修第 4+ 个尝试
+- [ ] 我检查了红旗清单，没有命中
+```
+
+**如果发现自己在修第 3 次，MUST 停止并输出：**
+```
+⚠️ 已尝试 3 次修复仍未解决。这可能是架构问题，需要与你讨论后再继续。
+```
+
+### 四阶段流程（必须按顺序完成）
+
+**Phase 1: 根因调查** — 在提出任何修复之前：
+1. **认真读错误信息** — 不跳过 error/warning，读完整 stack trace，记下行号、文件路径、错误码
+2. **稳定复现** — 能可靠触发吗？精确步骤是什么？每次都有吗？不可复现 → 继续收集数据，不猜
+3. **检查近期变更** — git diff、最近提交、新依赖、配置变更、环境差异
+4. **多层系统诊断** — 组件边界处加日志（进入数据 / 退出数据 / 环境配置），定位是哪一层断的
+5. **追踪数据流** — 坏值从哪来？谁传进来的？一直追到源头，在源头修，不在症状处修
+
+**Phase 2: 模式分析** — 修之前先找规律：
+1. 找到同代码库中类似的**正常工作的**代码
+2. 完整阅读参考实现（不跳读），理解每一行
+3. 逐项对比 working 和 broken 的差异，不要假设"这个应该不影响"
+4. 检查依赖项：需要哪些组件、配置、环境？做了什么假设？
+
+**Phase 3: 假设与测试** — 科学方法：
+1. 形成**单一假设**："我认为 X 是根因，因为 Y"，写下来，要具体
+2. **最小变更测试** — 一次只改一个变量，不要"顺手改多个"
+3. 验证后继续：成功 → Phase 4 / 失败 → 形成新假设，不要在错误修复上叠加更多修改
+4. 不知道就说"我不懂 X"，不要装懂
+
+**Phase 4: 实现修复**：
+1. 先写失败的测试用例（能自动化就自动化，不能就写一次性测试脚本）
+2. 实现**单一修复** — 只修根因，不做"顺手重构"
+3. 验证：测试通过？其他测试没坏？问题确实解决了？
+4. **3 次修复失败 → 停下来质疑架构**：每次修完都冒出新问题、需要"大规模重构"、修复在别处产生新症状 → 这不是假设错了，是架构有问题，与人类讨论后再继续
+
+### 红旗清单 — 脑子里冒出这些想法，立即停手回 Phase 1
+
+- "先试一下改改看"
+- "先快速修一下，后面再查"
+- "一次改多个地方，跑测试看哪个生效"
+- "跳过测试，我手动验证"
+- "应该是 X，先修了再说"
+- "我不完全理解但这样应该能行"
+- "参考实现太长了，我按大概意思来"
+- "我看到问题了，直接修"（看到症状 ≠ 理解根因）
+- "再试最后一次"（已经试了 2+ 次）
+- 每次修完都在不同地方冒出新问题
+
+### 合理化借口 → 真相
+
+| 借口 | 真相 |
+|---|---|
+| "问题简单，不需要流程" | 简单问题也有根因，流程对简单 bug 也很快 |
+| "紧急，没时间走流程" | 系统化调试比瞎试**更快** |
+| "先试一下再调查" | 第一次修复定下模式，从一开始就做对 |
+| "修完再写测试" | 没测试的修复不会持久，先写测试证明问题存在 |
+| "一次修多个节省时间" | 无法隔离哪个生效，还会引入新 bug |
+| "我看到问题了" | 看到症状 ≠ 理解根因 |
+
+### JNPF 专项
+
+**调试工具：** Serilog logs / SqlSugar SQL logs / Knife4jUI / DevTools / Vue DevTools
+
+**JNPF 快速检查清单：**
+- API 没生成？→ IDynamicApiController + public method？
+- 查询不对？→ ITenantFilter？
+- 生成代码有 bug？→ 修 .vm 模板
+- 事件不触发？→ EventBus 配置
+- 工作流异常？→ FlowEngine 日志
+- SignalR 不通？→ [MapHub] 注册？
+
+**NEVER：** 声称修复但未验证 / try-catch 吞异常 / 提交含 TODO 的代码 / 无根因分析就随机改动
+
+**回滚优先：** 修复导致服务启动失败 → ALWAYS 先回滚到上一个稳定提交，再分析。NEVER 在挂掉的服务上继续调试。
 
 ---
 
 ## Testing Discipline
 
-Logic code: write failing test → implement → green. CRUD: must pass end-to-end main flow. NEVER mock away failures. Run full test suite. Red test? Fix code or fix test — NEVER skip. Prefer real service (dotnet run / pnpm run dev) over assumptions.
+### 铁律：没有跑过测试，不准说"完成"
+
+```
+NO TASK IS COMPLETE WITHOUT RUNNING THE ACTUAL TEST COMMAND
+```
+
+### Gate Function — 宣布任务完成前，MUST 逐项打勾
+
+```
+✅ 测试自检清单：
+- [ ] 我跑了 dotnet build（后端）或 vue-tsc --noEmit（前端），输出 0 errors
+- [ ] 我跑了实际服务（dotnet run / pnpm run dev）或相关测试命令
+- [ ] 我读了完整输出，不是扫一眼就信
+- [ ] 如果是 bug 修复，我复现了原始症状并确认消失
+- [ ] 我没有用"应该通过"代替实际运行
+```
+
+**全部打勾才能声称完成。任何一项空白 = 任务未完成。**
+
+### 强制执行协议
+
+**开始测试验证前，MUST 输出：**
+```
+🧪 Testing Protocol 启动
+- 验证目标：[本次变更要验证什么]
+- 验证命令：[具体命令]
+- 预期结果：[0 errors / 测试全部通过 / 症状消失]
+```
+
+**验证完成后，MUST 输出：**
+```
+🧪 验证结果：
+- 命令：[实际执行的命令]
+- 输出摘要：[关键行，含 exit code]
+- 结论：PASS / FAIL
+```
+
+### 测试流程
+
+**逻辑代码：** 写测试 → 实现 → 跑测试 → 通过
+**CRUD 业务：** 必须跑通端到端主流程
+**Bug 修复：** 必须复现原始症状 → 修复 → 确认症状消失
+**绝不 mock 掉失败。** 测试红了？修代码或修测试，NEVER 跳过。
+**优先实际服务：** dotnet run / pnpm run dev > 假设"应该能跑"。
+
+### 子代理验证
+
+子代理报告"成功"后，MUST 独立检查 VCS diff + 实际验证变更，不信任报告本身。
+
+### 红旗清单 — 出现这些想法就说明你没在测试
+
+- "应该能通过，不需要跑"
+- "改动很小，不需要测试"
+- "上次跑过了，这次应该一样"
+- "我改了代码就假设修好了"
+- "测试环境搭不了，先跳过"
+- "先提交，CI 会跑的"
+
+### 合理化借口 → 真相
+
+| 借口 | 真相 |
+|---|---|
+| "改动很小" | 小改动也会引入 bug |
+| "上次跑过了" | 代码变了，上次的结果无效 |
+| "linter 通过了" | linter ≠ 编译器 ≠ 运行时 |
+| "CI 会跑的" | CI 失败时你已经推了，修起来更慢 |
+| "环境搭不了" | 至少跑 dotnet build，零环境依赖 |
+| "先提交再说" | 未验证的提交是定时炸弹 |
 
 ---
 
@@ -122,7 +330,145 @@ Prefer Serena for cross-file symbol rename/find-references. Use superpowers for 
 
 ## Default Workflow
 
-1. Understand (restate & confirm) → 2. Scout (Grep/Read to map impact surface) → 3. Plan (confirm before implementing) → 4. Implement (small steps, frequent verification) → 5. Test (run tests + run service) → 6. Self-review (git status + code review) → 7. Report (what done / changed / results / remaining)
+### 任务分级
+
+| 级别 | 条件 | 流程 |
+|---|---|---|
+| **S 级（复杂）** | 3+ 文件 / 50+ 行 / 架构决策 / 新模块 | 完整 7 步 + 头脑风暴 + 子代理 |
+| **A 级（标准）** | 2 文件 / 10-50 行 / 功能增强 | 7 步，可选子代理 |
+| **B 级（简单）** | 单文件 ≤10 行 / bug fix / 样式 / 文档 | 跳过头脑风暴，直接 Step 4→5→6→7 |
+
+**简单任务不等于不需要流程。** B 级跳过头脑风暴，但绝不跳过测试和验证。
+
+### 强制声明 — 开始任何任务前，MUST 输出：
+
+```
+🔄 Workflow 启动
+- 任务分级：S / A / B
+- 理由：[为什么是这个级别]
+- 预计步骤：[哪些 Step]
+```
+
+---
+
+### Step 1: Understand（理解）
+
+- 重述任务，确认理解正确
+- 评估任务分级（S / A / B）
+- 与用户确认范围和预期结果
+- **不确定就问，不要猜**
+
+### Step 2: Scout（侦察）
+
+- Grep/Read 扫描影响面：哪些文件、哪些方法会被影响
+- 找到同代码库中类似的**正常工作的**代码作为参考
+- 检查近期 git 变更，了解上下文
+
+### Step 3: Plan（设计 + 计划）
+
+**S 级任务 — 头脑风暴（硬性要求）：**
+
+1. 探索项目上下文（文件、文档、近期提交）
+2. 逐个提问澄清需求（一次一个问题，优先多选）
+3. 提出 2-3 种实现路径 + 推荐方案
+4. 分段展示设计，每段获得用户确认
+5. 写设计文档 → `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
+6. 自检：占位符扫描、内部一致性、范围检查、歧义检查
+7. 用户审核设计文档后，进入计划编写
+
+**S 级和 A 级任务 — 编写实施计划：**
+
+1. 文件结构映射：哪些文件创建、哪些修改、各自职责
+2. 任务分解为可独立执行的小步骤（每步 2-5 分钟）
+3. 每步包含：精确文件路径、完整代码、精确命令、预期输出
+4. 计划写入 → `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
+5. 自检：需求覆盖、占位符扫描、类型一致性
+6. 与用户确认后进入实施
+
+**B 级任务：** 跳过设计文档和实施计划，在脑中形成方案后直接进入 Step 4。
+
+### Step 4: Implement（实施）
+
+**选择执行方式：**
+
+```
+S 级任务（3+ tasks）→ 子代理驱动（推荐）
+  - 每个 Task 派一个子代理
+  - 两阶段审查：spec 合规 → 代码质量
+  - 连续执行，不暂停确认
+
+S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
+  - 按计划步骤逐个执行
+  - 每个 Task 标记 in_progress → 完成 → completed
+
+3+ 个独立任务 → 并行子代理
+  - 每个子代理独立上下文
+  - 完成后检查冲突，运行全量测试
+```
+
+**执行铁律：**
+- 标记 `in_progress` 后再开始，完成后立即标记 `completed`
+- 严格按计划步骤执行，不"顺手"改计划外的东西
+- 子代理不信任报告：完成后必须独立检查 VCS diff + 验证变更
+- 子代理 BLOCKED → 分析原因（缺上下文？能力不足？计划有误？），不盲目重试
+
+### Step 5: Test（测试）
+
+- 输出 `🧪 Testing Protocol 启动` 声明
+- 运行 `dotnet build`（后端）或 `vue-tsc --noEmit`（前端）
+- 运行实际服务或测试命令
+- 读完整输出，确认 0 errors
+- Bug 修复：复现原始症状 → 确认消失
+- **S 级任务：自动触发 test-runner 子代理**
+- Gate Function 全部打勾后才能声称通过
+
+> 详细测试规则见上方 Testing Discipline
+> 子代理编排规则见 `.claude/rules/review-workflow.md`
+
+### Step 6: Self-review（自查）
+
+- `git status` + `git diff` 审查变更
+- 对照需求/计划逐项检查完成度
+- 架构合规性检查（R1-R5）
+- **S 级任务：自动触发 code-reviewer 子代理**
+- FAIL → 修复 → 重审（最多 3 轮）
+- 3 轮后仍有 FAIL → 报告给用户，请求介入
+
+### Step 7: Report（报告）
+
+```
+## 完成报告
+
+**变更摘要：** [一句话]
+
+**文件变更：**
+| 文件 | 操作 | 行数 |
+|---|---|---|
+
+**测试结果：** PASS / FAIL（含证据）
+
+**已知问题：** 无 / [列出]
+
+**剩余工作：** 无 / [列出]
+```
+
+重要变更写入 `.claude/memory/decisions.md`。
+
+---
+
+### 执行路径速查
+
+```
+收到任务
+  │
+  ├─ 简单？(B级) → Step 4 → 5 → 6 → 7
+  │
+  ├─ 标准？(A级) → Step 1 → 2 → 3(计划) → 4 → 5 → 6 → 7
+  │
+  └─ 复杂？(S级) → Step 1 → 2 → 3(头脑风暴+计划) → 4(子代理) → 5(test-runner) → 6(code-reviewer) → 7
+```
+
+> 手动触发完整审查：使用 `/full-review` slash command
 
 ---
 
@@ -132,7 +478,13 @@ The following files MUST be read before coding when the trigger condition is met
 
 WHEN writing backend C# code => Read `.claude/rules/jnpf-expert-traps.md`
 WHEN writing frontend Vue3 code => Read `.claude/rules/jnpf-frontend-rules.md`
+WHEN modifying custom page visual styles (non-generated) => Read `.claude/skills/jnpf-ui-enhance/SKILL.md`
 WHEN writing architecture docs => Read `docs/architecture/ARCHITECTURE_DOC_RULES.md`
+WHEN 完成涉及 3+ 文件或 50+ 行代码的变更 => Read `.claude/rules/review-workflow.md` 并执行三阶段审查
+WHEN 用户要求 "review" / "审查" / "跑测试" => 执行 `.claude/rules/review-workflow.md` 中的完整流程
+WHEN 遇到 bug / 测试失败 / 异常行为 / 编译错误 => 回到上方 Debugging Discipline，从 Phase 1 开始，输出 Debugging Protocol 声明后再动手
+WHEN 准备声称"完成"/"通过"/"修复" => 回到上方 Law 2 Gate Function，执行 5 步验证协议，带证据声称
+WHEN 代码修改完成准备提交 => 回到上方 Testing Discipline，输出 Testing Protocol 声明，跑完 Gate Function 全部打勾后才能声称完成
 
 Other conventions: docs/conventions/ (naming, error-response, logging, git-workflow).
 Git iron law: Working tree clean / committed / pushed before any operation. Stash is not long-term storage.
@@ -157,15 +509,6 @@ Prefer reusing existing code — don't reinvent. Simple solution > over-engineer
   - 未解决的问题 → `pending-issues.md`
   - 踩坑记录 → `lessons-learned.md`
 
-### 复杂任务规划增强
-> 补充现有 Default Workflow 中 Plan 步骤的细节，不替换现有流程。
-
-当 Plan 步骤判定为复杂任务（涉及 3+ 文件或 50+ 行逻辑）时：
-- MUST 调用 superpowers 技能集的头脑风暴模式，输出至少 2 种实现路径
-- MUST 在计划中包含影响面分析和测试策略
-- MUST 将计划写入 `.claude/memory/decisions.md` 留档
-- 简单任务（单文件 ≤10 行 bug 修复、纯样式调整、文档更新）可跳过，但出现意外错误时 MUST 转入完整规划
-
 ### 禁止推脱补充
 > 补充现有 Law 1 中未覆盖的具体行为规范。
 
@@ -189,8 +532,14 @@ Prefer reusing existing code — don't reinvent. Simple solution > over-engineer
 - 处理安全相关任务时，MUST 先查阅 `.claude/knowledge/` 下的相关文件
 - 不确定时明确说"我不确定，请安全团队审核"
 
-### MCP 技能主动调用
-- 面对复杂编程任务，MUST 主动调用 superpowers 技能集，不要等到人类提醒
-- 需要架构设计时 → 调用头脑风暴技能
-- 需要制定开发计划时 → 调用开发计划技能
-- 如果不确定是否需要，宁可调用
+### 前端 UI 品味提升规范
+> 已安装 5 个前端设计技能（frontend-design / ui-ux-pro-max / taste-skill / frontend-design-pro / bencium-controlled-ux-designer），通过 `jnpf-ui-enhance` 桥接技能在框架内使用。
+
+WHEN 修改自定义页面（非 .vm 生成页面）的视觉样式 => Read `.claude/skills/jnpf-ui-enhance/SKILL.md`
+
+**使用原则：**
+- **组件骨架不动**：BasicTable / BasicForm / BasicPopup / jnpf-content-wrapper 的用法不可更改
+- **皮肤层可提升**：颜色、间距、阴影、字体层级、hover 效果、加载动画
+- **生成页面禁止改**：.vm 模板输出的页面不属于增强范围
+- **渐进式增强**：默认用 Level 1（微调），用户明确要求时再用 Level 2/3
+- **设计技能仅提供方向**：具体实现必须符合 `jnpf-frontend-rules.md` 的组件选择表和 `jnpf-taste-blueprint.md` 的骨架决策树

@@ -1,6 +1,10 @@
-﻿using JNPF;
+using JNPF;
+using JNPF.Common.Core.Manager;
 using JNPF.Common.Security;
 using JNPF.DatabaseAccessor;
+using JNPF.Extras.DatabaseAccessor.SqlSugar.DiffLog;
+using JNPF.Extras.DatabaseAccessor.SqlSugar.Models;
+using JNPF.Extras.DatabaseAccessor.SqlSugar.TenantContext;
 using JNPF.Logging;
 using Mapster;
 using SqlSugar;
@@ -20,7 +24,7 @@ public static class SqlSugarConfigureExtensions
         var dbOptions = App.GetOptions<ConnectionStringsOptions>();
         //add by harry  域名模式，只保留一个，现模式会自动取第一个
         var defaulConnection = dbOptions.DefaultConnectionConfig;
-        if(defaulConnection!.ConnectionString == null) 
+        if(defaulConnection!.ConnectionString == null)
         {
             var existConn = dbOptions.ConnectionConfigs.FirstOrDefault(aa => aa.ConfigId == defaulConnection.ConfigId);
             dbOptions.ConnectionConfigs.Remove(existConn);
@@ -45,6 +49,9 @@ public static class SqlSugarConfigureExtensions
         services.AddScoped(typeof(ISqlSugarRepository<>), typeof(SqlSugarRepository<>));      // 仓储注册
         services.AddUnitOfWork<SqlSugarUnitOfWork>();                                          // 事务与工作单元注册
 
+        // DiffLog 收集器基础设施（阶段 1 新增）
+        services.AddScoped<IDiffLogCollector, DiffLogCollector>();
+        services.AddScoped<IDiffLogPublisher, NoOpDiffLogPublisher>();
     }
 
     /// <summary>
@@ -99,12 +106,15 @@ public static class SqlSugarConfigureExtensions
             App.PrintToMiniProfiler("SqlSugar", "Info", sql + "\r\n" + db.Utilities.SerializeObject(pars.ToDictionary(it => it.ParameterName, it => it.Value)));
         };
 
+        // 慢查询阈值从配置读取，默认 1000ms
+        var slowQueryThreshold = App.GetConfig<int?>("Database:SlowQueryThreshold") ?? 1000;
+
         db.Aop.OnLogExecuted = (sql, pars) =>
         {
             sqlStopwatch.Stop();
             var elapsed = sqlStopwatch.ElapsedMilliseconds;
 
-            if (elapsed > 1000) // Slow query threshold: 1 second
+            if (elapsed > slowQueryThreshold)
             {
                 Serilog.Log.ForContext("Sql", sql)
                    .ForContext("Elapsed", elapsed)
@@ -121,6 +131,105 @@ public static class SqlSugarConfigureExtensions
                .Error(ex, "SQL Error: {Sql}", ex.Sql);
 
             App.PrintToMiniProfiler("SqlSugar", "Error", $"{ex.Message}{Environment.NewLine}{ex.Sql}{pars}{Environment.NewLine}");
+        };
+
+        // Oracle 特殊 SQL 转换（从 Repository 迁移）
+        if (config.DbType == SqlSugar.DbType.Oracle)
+        {
+            db.Aop.OnExecutingChangeSql = (sql, pars) =>
+            {
+                // Oracle 的布尔值处理
+                return new KeyValuePair<string, SugarParameter[]>(sql, pars);
+            };
+        }
+
+        // DiffLog — 数据变更审计（收集器模式，ADR-011）
+        var enableDiffLog = App.GetConfig<bool?>("Database:EnableDiffLog") ?? false;
+        if (enableDiffLog)
+        {
+            db.Aop.OnDiffLogEvent = (diff) =>
+            {
+                try
+                {
+                    // 通过 IHttpContextAccessor 获取 Scoped 的 IDiffLogCollector
+                    var httpContextAccessor = App.GetService<IHttpContextAccessor>();
+                    var collector = httpContextAccessor?.HttpContext?.RequestServices?
+                        .GetService<IDiffLogCollector>();
+
+                    if (collector != null)
+                    {
+                        collector.Collect(new DiffLogData
+                        {
+                            TableName = diff.GetType().GetProperty("TableName")?.GetValue(diff)?.ToString()
+                                ?? diff.AfterData?.FirstOrDefault()?.GetType().GetProperty("TableName")?.GetValue(diff.AfterData?.FirstOrDefault())?.ToString()
+                                ?? "Unknown",
+                            OperationType = diff.DiffType.ToString(),
+                            BeforeData = diff.BeforeData?.ToDictionary(
+                                d => d.GetType().GetProperty("TableName")?.GetValue(d)?.ToString() ?? "Unknown",
+                                d => (object)d),
+                            AfterData = diff.AfterData?.ToDictionary(
+                                d => d.GetType().GetProperty("TableName")?.GetValue(d)?.ToString() ?? "Unknown",
+                                d => (object)d),
+                            TenantId = App.GetService<IUserManager>()?.TenantId,
+                            TraceId = Activity.Current?.Id,
+                            Timestamp = DateTime.UtcNow
+                        });
+                    }
+                }
+                catch
+                {
+                    // DiffLog 收集失败不应影响业务操作
+                }
+            };
+        }
+
+        // ConfigureGlobalDataExecuting — ADR-002 情况 B：统一委托模式
+        ConfigureGlobalDataExecuting(db);
+    }
+
+    /// <summary>
+    /// 启动时一次性组装统一的 DataExecuting 回调。
+    /// ADR-002 情况 B：= 覆盖模式，CopyNew 继承 AOP。
+    /// 运行时通过静态访问点读取当前请求的租户/系统信息。
+    /// </summary>
+    private static void ConfigureGlobalDataExecuting(SqlSugarScopeProvider db)
+    {
+        db.Aop.DataExecuting = (oldValue, entityColumnInfo) =>
+        {
+            var propertyName = entityColumnInfo.PropertyName;
+            var entityType = entityColumnInfo.EntityValue.GetType();
+
+            // 仅在 Insert / Update 操作时处理
+            var isWriteOperation =
+                entityColumnInfo.OperationType == DataFilterType.InsertByObject ||
+                entityColumnInfo.OperationType == DataFilterType.UpdateByObject;
+
+            if (!isWriteOperation) return;
+
+            // 租户字段自动填充
+            // 优先从 HTTP Claims 读取，降级到 TenantContextImpl.AsyncLocal（非 HTTP 场景：EventBus/Schedule）
+            if (propertyName == "TenantId"
+                && typeof(ITenantFilter).IsAssignableFrom(entityType))
+            {
+                var tenantId = App.GetService<IHttpContextAccessor>()?.HttpContext?.User?.FindFirst("TenantId")?.Value
+                    ?? TenantContextImpl.Current?.TenantId;
+                if (!string.IsNullOrEmpty(tenantId))
+                {
+                    entityColumnInfo.SetValue(tenantId);
+                }
+            }
+
+            // 系统字段自动填充
+            if (propertyName == "ZxSystemId"
+                && typeof(IZxSystemFilter).IsAssignableFrom(entityType))
+            {
+                var systemId = App.GetService<IHttpContextAccessor>()?.HttpContext?.User?.FindFirst("ZxSystemId")?.Value
+                    ?? TenantContextImpl.Current?.SystemId;
+                if (!string.IsNullOrEmpty(systemId))
+                {
+                    entityColumnInfo.SetValue(systemId);
+                }
+            }
         };
     }
 }

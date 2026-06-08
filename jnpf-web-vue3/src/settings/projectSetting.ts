@@ -178,12 +178,12 @@ const setting: ProjectConfig = {
   // 系统配置
   sysConfigInfo: {
     sysVersion: '',
-    copyright: 'Copyright @ 2026 面包树科技有限公司版权所有',
+    copyright: 'Copyright @ 2026 面包树信息科技版权所有',
     navigationIcon: '',
     workLogoIcon: '',
     logoIcon: '',
     loginIcon: '',
-    sysName: '面包树科技快速开发平台',
+    sysName: '面包树信息科技快速开发平台',
     title: '',
   },
 };

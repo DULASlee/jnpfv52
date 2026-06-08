@@ -1,5 +1,8 @@
 ﻿using JNPF;
+using JNPF.Modules;
 using JNPF.UnifyResult;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using System.Reflection;
 using System.Text;
@@ -209,10 +212,56 @@ public static class AppServiceCollectionExtensions
     }
 
     /// <summary>
+    /// 添加 JnpfModule 模块系统（拓扑排序 + 依赖注入）.
+    /// </summary>
+    /// <param name="services">服务集合</param>
+    /// <returns>模块实例列表（供 UseJnpfModules 使用）</returns>
+    public static IReadOnlyList<JnpfModule> AddJnpfModules(this IServiceCollection services)
+    {
+        // 扫描所有 JnpfModule 子类
+        var moduleTypes = App.EffectiveTypes
+            .Where(t => typeof(JnpfModule).IsAssignableFrom(t)
+                && t.IsClass && !t.IsAbstract && !t.IsGenericType)
+            .ToList();
+
+        // 拓扑排序
+        var sortedTypes = ModuleGraphBuilder.Build(moduleTypes);
+
+        // 实例化并注册服务
+        var modules = new List<JnpfModule>();
+        var configuration = App.Configuration;
+
+        foreach (var type in sortedTypes)
+        {
+            var module = Activator.CreateInstance(type) as JnpfModule;
+            if (module == null) continue;
+
+            modules.Add(module);
+            module.ConfigureServices(services, configuration);
+        }
+
+        return modules;
+    }
+
+    /// <summary>
+    /// 使用 JnpfModule 模块中间件（按拓扑顺序调用 OnApplicationInitialization）.
+    /// </summary>
+    /// <param name="app">应用构建器</param>
+    /// <param name="modules">AddJnpfModules 返回的模块实例列表</param>
+    public static void UseJnpfModules(this IApplicationBuilder app, IReadOnlyList<JnpfModule> modules)
+    {
+        foreach (var module in modules)
+        {
+            module.OnApplicationInitialization(app);
+        }
+    }
+
+    /// <summary>
     /// 添加 Startup 自动扫描
     /// </summary>
     /// <param name="services">服务集合</param>
     /// <returns>服务集合</returns>
+    [Obsolete("Use AddJnpfModules() instead. This method will be removed in v6.0.")]
     internal static IServiceCollection AddStartups(this IServiceCollection services)
     {
         // 扫描所有继承 AppStartup 的类

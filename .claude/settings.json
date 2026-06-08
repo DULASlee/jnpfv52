@@ -1,11 +1,11 @@
 {
   "env": {
-    "ANTHROPIC_BASE_URL": "https://token-plan-cn.xiaomimimo.com/anthropic",
-    "ANTHROPIC_AUTH_TOKEN": "tp-cu5unlnpxecv11b9h9pcln9tnscsih5irvko2fszyvo3rtg5",
-    "ANTHROPIC_MODEL": "mimo-v2.5-pro",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "mimo-v2.5-pro",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "mimo-v2.5-pro",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "mimo-v2.5-pro"
+    "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
+    "ANTHROPIC_AUTH_TOKEN": "sk-a8d6ed17982d4c88bfacb4099ed2fcfc",
+    "ANTHROPIC_MODEL": "deepseek-v4-pro",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-v4-pro",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-v4-pro",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-v4-pro" 
   },
   "permissions": {
     "allow": [
@@ -17,7 +17,6 @@
       "mcp__context7__*",
       "mcp__playwright__*",
       "mcp__fetch__*",
-      "mcp__serena__*",
       "mcp__plugin_episodic-memory_episodic-memory__search",
       "mcp__plugin_episodic-memory_episodic-memory__read",
       "mcp__plugin_superpowers-chrome_chrome__use_browser"
@@ -42,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/guard-write.mjs",
+            "command": "node D:/JNPF-v52/.claude/hooks/guard-write.mjs",
             "timeout": 5
           }
         ]
@@ -52,12 +51,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/guard-bash.mjs",
+            "command": "node D:/JNPF-v52/.claude/hooks/guard-bash.mjs",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "node .claude/hooks/guard-deps.mjs",
+            "command": "node D:/JNPF-v52/.claude/hooks/guard-deps.mjs",
             "timeout": 10
           }
         ]
@@ -69,7 +68,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/format-and-lint.mjs",
+            "command": "node D:/JNPF-v52/.claude/hooks/format-and-lint.mjs",
             "timeout": 10
           }
         ]
@@ -81,12 +80,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/guard-finish.mjs",
+            "command": "node D:/JNPF-v52/.claude/hooks/guard-finish.mjs",
             "timeout": 120
           },
           {
             "type": "command",
-            "command": "node .claude/hooks/collect-summary.mjs",
+            "command": "node D:/JNPF-v52/.claude/hooks/collect-summary.mjs",
             "timeout": 10
           }
         ]

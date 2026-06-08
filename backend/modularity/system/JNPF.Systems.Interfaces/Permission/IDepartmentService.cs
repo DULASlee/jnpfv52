@@ -11,7 +11,7 @@ public interface IDepartmentService
     /// 获取部门列表.
     /// </summary>
     /// <returns></returns>
-    Task<List<OrganizeEntity>> GetListAsync();
+    Task<List<OrganizeEntity>> GetListAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 部门名称.
@@ -46,5 +46,5 @@ public interface IDepartmentService
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
-    Task<List<OrganizeEntity>> GetCompanyAllDep(string id);
+    Task<List<OrganizeEntity>> GetCompanyAllDep(string id, CancellationToken cancellationToken = default);
 }

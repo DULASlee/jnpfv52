@@ -40,6 +40,7 @@ using Microsoft.Extensions.Options;
 using SqlSugar;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace JNPF.Systems;
 
@@ -155,7 +156,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpGet("")]
-    public async Task<PageResult<UserListOutput>> GetList([FromQuery] UserListQuery input)
+    public async Task<PageResult<UserListOutput>> GetList([FromQuery] UserListQuery input, CancellationToken cancellationToken = default)
     {
         // 获取分级管理组织
         var dataScope = _userManager.DataScope.Where(x => x.Select).Select(x => x.organizeId).Distinct().ToList();
@@ -231,7 +232,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpGet("All")]
-    public async Task<dynamic> GetUserAllList()
+    public async Task<dynamic> GetUserAllList(CancellationToken cancellationToken = default)
     {
         return await _repository.AsSugarClient().Queryable<UserEntity, OrganizeEntity>((a, b) => new JoinQueryInfos(JoinType.Left, b.Id == a.OrganizeId))
             .Where(p => p.EnabledMark == 1 && p.DeleteMark == null).OrderBy(p => p.SortCode)
@@ -253,7 +254,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpGet("getUsersByRoleId")]
-    public async Task<dynamic> GetUsersByRoleId([FromQuery] RoleListInput input)
+    public async Task<dynamic> GetUsersByRoleId([FromQuery] RoleListInput input, CancellationToken cancellationToken = default)
     {
         RoleEntity? roleInfo = await _repository.AsSugarClient().Queryable<RoleEntity>().Where(x => x.Id == input.roleId).FirstAsync();
 
@@ -307,7 +308,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpGet("GetUsersByRoleOrgId")]
-    public async Task<dynamic> GetUsersByRoleOrgId([FromQuery] RoleListInput input)
+    public async Task<dynamic> GetUsersByRoleOrgId([FromQuery] RoleListInput input, CancellationToken cancellationToken = default)
     {
         RoleEntity? roleInfo = await _repository.AsSugarClient().Queryable<RoleEntity>().Where(x => x.Id == input.roleId).FirstAsync();
         input.organizeId = input.organizeId == null ? "0" : input.organizeId;
@@ -434,7 +435,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpGet("ImUser")]
-    public async Task<dynamic> GetImUserList([FromQuery] PageInputBase input)
+    public async Task<dynamic> GetImUserList([FromQuery] PageInputBase input, CancellationToken cancellationToken = default)
     {
         SqlSugarPagedList<IMUserListOutput>? list = await _repository.AsSugarClient().Queryable<UserEntity, OrganizeEntity>((a, b) => new JoinQueryInfos(JoinType.Left, b.Id == a.OrganizeId))
             .WhereIF(!input.keyword.IsNullOrEmpty(), a => a.Account.Contains(input.keyword) || a.RealName.Contains(input.keyword))
@@ -455,7 +456,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpGet("Selector")]
-    public async Task<dynamic> GetSelector()
+    public async Task<dynamic> GetSelector(CancellationToken cancellationToken = default)
     {
         List<OrganizeEntity>? organizeList = await _organizeService.GetListAsync();
         List<UserEntity>? userList = await _repository.AsQueryable().Where(t => t.EnabledMark == 1 && t.DeleteMark == null).OrderBy(u => u.SortCode).OrderBy(a => a.CreatorTime, OrderByType.Desc).ToListAsync();
@@ -471,7 +472,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="id">主键.</param>
     /// <returns></returns>
     [HttpGet("{id}")]
-    public async Task<dynamic> GetInfo(string id)
+    public async Task<dynamic> GetInfo(string id, CancellationToken cancellationToken = default)
     {
         UserEntity? entity = await _repository.GetFirstAsync(u => u.Id == id);
         SysConfigEntity? config = await _repository.AsSugarClient().Queryable<SysConfigEntity>().Where(x => x.Key.Equals("lockType") && x.Category.Equals("SysConfig")).FirstAsync();
@@ -502,7 +503,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpGet("getOrganization")]
-    public async Task<dynamic> GetOrganizeMember([FromQuery] UserListQuery input)
+    public async Task<dynamic> GetOrganizeMember([FromQuery] UserListQuery input, CancellationToken cancellationToken = default)
     {
         if (input.organizeId.IsNotEmptyOrNull() && input.organizeId != "0") input.organizeId = input.organizeId.Split(",").LastOrDefault();
         else input.organizeId = _userManager.User.OrganizeId;
@@ -548,7 +549,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="fromId">移交人Id.</param>
     /// <returns></returns>
     [HttpGet("getWorkByUser")]
-    public async Task<dynamic> GetWorkByUser([FromQuery] string fromId)
+    public async Task<dynamic> GetWorkByUser([FromQuery] string fromId, CancellationToken cancellationToken = default)
     {
         var res = new UserWorkHandoverModel();
         res.permission = await _repository.AsSugarClient().Queryable<PermissionGroupEntity>().Where(x => x.PermissionMember.Contains(fromId) && x.DeleteMark == null)
@@ -569,7 +570,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpPost("getDefaultCurrentValueUserId")]
-    public async Task<dynamic> GetDefaultCurrentValueUserId([FromBody] GetDefaultCurrentValueInput input)
+    public async Task<dynamic> GetDefaultCurrentValueUserId([FromBody] GetDefaultCurrentValueInput input, CancellationToken cancellationToken = default)
     {
         if ((input.UserIds == null || !input.UserIds.Any()) && (input.DepartIds == null || !input.DepartIds.Any()) && (input.PositionIds == null || !input.PositionIds.Any())
             && (input.RoleIds == null || !input.RoleIds.Any()) && (input.GroupIds == null || !input.GroupIds.Any())) return new { userId = _userManager.UserId };
@@ -587,7 +588,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpPost("GetUserList")]
-    public async Task<dynamic> GetUserList([FromBody] UserRelationInput input)
+    public async Task<dynamic> GetUserList([FromBody] UserRelationInput input, CancellationToken cancellationToken = default)
     {
         var data = await _repository.AsQueryable().Where(it => it.EnabledMark > 0 && it.DeleteMark == null)
             .Where(it => input.ids.Contains(it.Id))
@@ -628,7 +629,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpPost("ImUser/Selector/{organizeId}")]
-    public async Task<dynamic> GetOrganizeMemberList(string organizeId, [FromBody] PageInputBase input)
+    public async Task<dynamic> GetOrganizeMemberList(string organizeId, [FromBody] PageInputBase input, CancellationToken cancellationToken = default)
     {
         List<OrganizeMemberListOutput>? output = new List<OrganizeMemberListOutput>();
         var orgList = _organizeService.GetOrgListTreeName();
@@ -698,7 +699,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpPost("GetListByAuthorize/{organizeId}")]
-    public async Task<dynamic> GetListByAuthorize(string organizeId, [FromBody] KeywordInput input)
+    public async Task<dynamic> GetListByAuthorize(string organizeId, [FromBody] KeywordInput input, CancellationToken cancellationToken = default)
     {
         List<OrganizeMemberListOutput>? output = new List<OrganizeMemberListOutput>();
         if (!input.keyword.IsNullOrEmpty())
@@ -752,7 +753,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpPost("getSubordinates")]
-    public async Task<dynamic> GetSubordinate([FromBody] KeywordInput input)
+    public async Task<dynamic> GetSubordinate([FromBody] KeywordInput input, CancellationToken cancellationToken = default)
     {
         var res = await _repository.AsQueryable()
                    .WhereIF(!input.keyword.IsNullOrEmpty(), u => u.Account.Contains(input.keyword) || u.RealName.Contains(input.keyword))
@@ -795,7 +796,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpGet("GetUsersByPositionId")]
-    public async Task<dynamic> GetUsersByPositionId([FromQuery] UserListQuery input)
+    public async Task<dynamic> GetUsersByPositionId([FromQuery] UserListQuery input, CancellationToken cancellationToken = default)
     {
         List<OrganizeMemberListOutput>? outData = new List<OrganizeMemberListOutput>();
         UserEntity? user = _userManager.User;
@@ -865,7 +866,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpPost("UserCondition")]
-    public async Task<dynamic> UserCondition([FromBody] UserConditionInput input)
+    public async Task<dynamic> UserCondition([FromBody] UserConditionInput input, CancellationToken cancellationToken = default)
     {
         SqlSugarPagedList<UserListOutput>? data = new SqlSugarPagedList<UserListOutput>();
 
@@ -917,7 +918,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpPost("GetSelectedList")]
-    public async Task<dynamic> GetSelectedList([FromBody] UserSelectedInput input)
+    public async Task<dynamic> GetSelectedList([FromBody] UserSelectedInput input, CancellationToken cancellationToken = default)
     {
         if (input.ids == null) return new { list = new List<UserSelectedOutput>() };
 
@@ -1048,7 +1049,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpPost("GetSelectedUserList")]
-    public async Task<dynamic> GetSelectedUserList([FromBody] UserSelectedInput input)
+    public async Task<dynamic> GetSelectedUserList([FromBody] UserSelectedInput input, CancellationToken cancellationToken = default)
     {
         var userId = new List<string>();
         input.ids.ForEach(item => userId.Add(item.Split("--").First()));
@@ -1114,7 +1115,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("")]
     [AllowAnonymous]
-    public async Task Create([FromBody] UserCrInput input)
+    public async Task Create([FromBody] UserCrInput input, CancellationToken cancellationToken = default)
     {
         if (_tenant.MultiTenancy)
         {
@@ -1220,7 +1221,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="id">主键.</param>
     /// <returns></returns>
     [HttpDelete("{id}")]
-    public async Task Delete(string id)
+    public async Task Delete(string id, CancellationToken cancellationToken = default)
     {
         UserEntity? entity = await _repository.GetFirstAsync(u => u.Id == id && u.DeleteMark == null);
 
@@ -1273,7 +1274,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpPut("{id}")]
-    public async Task Update(string id, [FromBody] UserUpInput input)
+    public async Task Update(string id, [FromBody] UserUpInput input, CancellationToken cancellationToken = default)
     {
         UserEntity? oldUserEntity = await _repository.GetFirstAsync(it => it.Id == id);
         input.roleId = input.roleId == null ? string.Empty : input.roleId;
@@ -1460,7 +1461,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="id">主键.</param>
     /// <returns></returns>
     [HttpPut("{id}/Actions/State")]
-    public async Task UpdateState(string id)
+    public async Task UpdateState(string id, CancellationToken cancellationToken = default)
     {
         UserEntity? entity = await _repository.GetFirstAsync(it => it.Id == id);
         if (!_userManager.DataScope.Any(it => it.organizeId == entity.OrganizeId && it.Edit == true) && !_userManager.IsAdministrator)
@@ -1484,7 +1485,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="input">参数.</param>
     /// <returns></returns>
     [HttpPost("{id}/Actions/ResetPassword")]
-    public async Task ResetPassword(string id, [FromBody] UserResetPasswordInput input)
+    public async Task ResetPassword(string id, [FromBody] UserResetPasswordInput input, CancellationToken cancellationToken = default)
     {
         UserEntity? entity = await _repository.GetFirstAsync(u => u.Id == id && u.DeleteMark == null);
 
@@ -1540,7 +1541,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="id">主键.</param>
     /// <returns></returns>
     [HttpPut("{id}/Actions/Unlock")]
-    public async Task Unlock(string id)
+    public async Task Unlock(string id, CancellationToken cancellationToken = default)
     {
         UserEntity? entity = await _repository.GetFirstAsync(u => u.Id == id && u.DeleteMark == null);
         if (!_userManager.DataScope.Any(it => it.organizeId == entity.OrganizeId && it.Edit) && !_userManager.IsAdministrator)
@@ -1564,7 +1565,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="input"></param>
     /// <returns></returns>
     [HttpGet("ExportData")]
-    public async Task<dynamic> ExportData([FromQuery] UserExportDataInput input)
+    public async Task<dynamic> ExportData([FromQuery] UserExportDataInput input, CancellationToken cancellationToken = default)
     {
         // 获取分级管理组织
         var dataScope = _userManager.DataScope.Where(x => x.Select).Select(x => x.organizeId).Distinct().ToList();
@@ -1719,7 +1720,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpGet("TemplateDownload")]
-    public async Task<dynamic> TemplateDownload()
+    public async Task<dynamic> TemplateDownload(CancellationToken cancellationToken = default)
     {
         // 初始化 一条空数据 
         List<UserListImportDataInput>? dataList = new List<UserListImportDataInput>() { new UserListImportDataInput() { } };
@@ -1755,7 +1756,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="file"></param>
     /// <returns></returns>
     [HttpPost("Uploader")]
-    public async Task<dynamic> Uploader(IFormFile file)
+    public async Task<dynamic> Uploader(IFormFile file, CancellationToken cancellationToken = default)
     {
         var _filePath = _fileManager.GetPathByType(string.Empty);
         var _fileName = DateTime.Now.ToString("yyyyMMdd") + "_" + SnowflakeIdHelper.NextId() + Path.GetExtension(file.FileName);
@@ -1769,7 +1770,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [HttpGet("ImportPreview")]
-    public async Task<dynamic> ImportPreview(string fileName)
+    public async Task<dynamic> ImportPreview(string fileName, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -1804,7 +1805,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("ExportExceptionData")]
     [UnitOfWork]
-    public async Task<dynamic> ExportExceptionData([FromBody] UserImportDataInput list)
+    public async Task<dynamic> ExportExceptionData([FromBody] UserImportDataInput list, CancellationToken cancellationToken = default)
     {
         list.list.ForEach(it => it.errorsInfo = string.Empty);
         object[]? res = await ImportUserData(list.list);
@@ -1839,7 +1840,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <returns></returns>
     [HttpPost("ImportData")]
     [UnitOfWork]
-    public async Task<dynamic> ImportData([FromBody] UserImportDataInput list)
+    public async Task<dynamic> ImportData([FromBody] UserImportDataInput list, CancellationToken cancellationToken = default)
     {
         list.list.ForEach(x => x.errorsInfo = string.Empty);
         object[]? res = await ImportUserData(list.list);
@@ -1854,7 +1855,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="input">主键.</param>
     /// <returns></returns>
     [HttpPost("workHandover")]
-    public async Task SaveWorkHandover([FromBody] UserWorkHandoverInput input)
+    public async Task SaveWorkHandover([FromBody] UserWorkHandoverInput input, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -1918,7 +1919,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="userId">用户ID.</param>
     /// <returns></returns>
     [NonAction]
-    public async Task<UserEntity> GetInfoByUserIdAsync(string userId)
+    public async Task<UserEntity> GetInfoByUserIdAsync(string userId, CancellationToken cancellationToken = default)
     {
         return await _repository.GetFirstAsync(u => u.Id == userId && u.DeleteMark == null);
     }
@@ -1928,7 +1929,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// </summary>
     /// <returns></returns>
     [NonAction]
-    public async Task<List<UserEntity>> GetList()
+    public async Task<List<UserEntity>> GetList(CancellationToken cancellationToken = default)
     {
         return await _repository.AsQueryable().Where(u => u.DeleteMark == null).ToListAsync();
     }
@@ -1939,7 +1940,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="account">用户账户.</param>
     /// <returns></returns>
     [NonAction]
-    public async Task<UserEntity> GetInfoByAccount(string account)
+    public async Task<UserEntity> GetInfoByAccount(string account, CancellationToken cancellationToken = default)
     {
         return await _repository.GetFirstAsync(u => u.Account == account && u.DeleteMark == null);
     }
@@ -1951,7 +1952,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="password">用户密码.</param>
     /// <returns></returns>
     [NonAction]
-    public async Task<UserEntity> GetInfoByLogin(string account, string password)
+    public async Task<UserEntity> GetInfoByLogin(string account, string password, CancellationToken cancellationToken = default)
     {
         return await _repository.GetFirstAsync(u => u.Account == account && u.Password == password && u.DeleteMark == null);
     }
@@ -1962,7 +1963,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="realName">用户姓名.</param>
     /// <returns></returns>
     [NonAction]
-    public async Task<string> GetUserIdByRealName(string realName)
+    public async Task<string> GetUserIdByRealName(string realName, CancellationToken cancellationToken = default)
     {
         return (await _repository.GetFirstAsync(u => u.RealName == realName && u.DeleteMark == null)).Id;
     }
@@ -1974,7 +1975,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="isAccount">是否显示账号.</param>
     /// <returns></returns>
     [NonAction]
-    public async Task<string> GetUserName(string userId, bool isAccount = true)
+    public async Task<string> GetUserName(string userId, bool isAccount = true, CancellationToken cancellationToken = default)
     {
         UserEntity? entity = await _repository.GetFirstAsync(x => x.Id == userId && x.DeleteMark == null);
         if (entity.IsNullOrEmpty()) return string.Empty;
@@ -1987,7 +1988,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="PositionIds"></param>
     /// <returns></returns>
     [NonAction]
-    public async Task<List<PositionInfoModel>> GetPosition(string organizeId)
+    public async Task<List<PositionInfoModel>> GetPosition(string organizeId, CancellationToken cancellationToken = default)
     {
         return await _repository.AsSugarClient().Queryable<PositionEntity, UserRelationEntity>((a, b) => new JoinQueryInfos(JoinType.Left, a.Id.Equals(b.ObjectId) && b.ObjectType.Equals("Position"))).Where((a, b) => a.OrganizeId.Equals(organizeId) && b.UserId.Equals(_userManager.UserId)).Select(a => new PositionInfoModel { id = a.Id, name = a.FullName }).ToListAsync();
     }
@@ -1998,7 +1999,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="expression"></param>
     /// <returns></returns>
     [NonAction]
-    public async Task<UserEntity> GetUserByExp(Expression<Func<UserEntity, bool>> expression)
+    public async Task<UserEntity> GetUserByExp(Expression<Func<UserEntity, bool>> expression, CancellationToken cancellationToken = default)
     {
         return await _repository.GetFirstAsync(expression);
     }
@@ -2009,7 +2010,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="expression"></param>
     /// <returns></returns>
     [NonAction]
-    public async Task<List<UserEntity>> GetUserListByExp(Expression<Func<UserEntity, bool>> expression)
+    public async Task<List<UserEntity>> GetUserListByExp(Expression<Func<UserEntity, bool>> expression, CancellationToken cancellationToken = default)
     {
         return await _repository.AsQueryable().Where(expression).ToListAsync();
     }
@@ -2021,7 +2022,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="select">select 选择字段表达式.</param>
     /// <returns></returns>
     [NonAction]
-    public async Task<List<UserEntity>> GetUserListByExp(Expression<Func<UserEntity, bool>> expression, Expression<Func<UserEntity, UserEntity>> select)
+    public async Task<List<UserEntity>> GetUserListByExp(Expression<Func<UserEntity, bool>> expression, Expression<Func<UserEntity, UserEntity>> select, CancellationToken cancellationToken = default)
     {
         return await _repository.AsQueryable().Where(expression).Select(select).ToListAsync();
     }
@@ -2421,7 +2422,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="organizeId">机构ID.</param>
     /// <returns></returns>
     [NonAction]
-    public async Task<List<OrganizeMemberListOutput>> GetOrganizeMemberList(string organizeId)
+    public async Task<List<OrganizeMemberListOutput>> GetOrganizeMemberList(string organizeId, CancellationToken cancellationToken = default)
     {
         // 获取分级管理组织
         var dataScope = _repository.AsSugarClient().Queryable<OrganizeAdministratorEntity>()
@@ -2567,7 +2568,7 @@ public class UsersService : IUsersService, IDynamicApiController, ITransient
     /// <param name="userEntity"></param>
     /// <param name="method"></param>
     /// <param name="tenantId"></param>
-    public async Task syncUserInfo(UserEntity userEntity, string method, string tenantId)
+    public async Task syncUserInfo(UserEntity userEntity, string method, string tenantId, CancellationToken cancellationToken = default)
     {
         try
         {

@@ -1193,8 +1193,19 @@ case "remove":
         @:_sqlSugarClient = _dataBaseManager.ChangeDataBase(dbLink);
 @:
 }
-        @:var isOk = await @(Model.DbLinkId != "0" ? "_sqlSugarClient.Deleteable<" + Model.ClassName + "Entity>()" : "_repository.AsDeleteable()").Where(it => it.@(Model.PrimaryKey).Equals(id))@(Model.IsLogicalDelete ? ".IsLogic()" : "").ExecuteCommandAsync(@(Model.IsLogicalDelete ? "\"F_Delete_Mark\",1, \"F_DELETE_TIME\", \"F_DELETE_USER_ID\", _userManager.UserId" : ""));   
+@if(Model.DbLinkId != "0")
+{
+        @:var isOk = await _sqlSugarClient.Deleteable<@(Model.ClassName)Entity>().Where(it => it.@(Model.PrimaryKey).Equals(id))@(Model.IsLogicalDelete ? ".IsLogic()" : "").ExecuteCommandAsync(@(Model.IsLogicalDelete ? "\"F_Delete_Mark\",1, \"F_DELETE_TIME\", \"F_DELETE_USER_ID\", _userManager.UserId" : ""));
         @:if (!(isOk > 0)) throw Oops.Oh(ErrorCode.COM1002);
+}else{
+    @if(Model.IsLogicalDelete){
+        @:var isOk = await _repository.AsDeleteable().Where(it => it.@(Model.PrimaryKey).Equals(id)).IsLogic().ExecuteCommandAsync("F_Delete_Mark",1, "F_DELETE_TIME", "F_DELETE_USER_ID", _userManager.UserId);
+        @:if (!(isOk > 0)) throw Oops.Oh(ErrorCode.COM1002);
+    }else{
+        @:var isOk = await _repository.SafeDeleteByIdAsync(id);
+        @:if (!isOk) throw Oops.Oh(ErrorCode.COM1002);
+    }
+}
     @:}
 break;
 @*编辑*@
@@ -1257,9 +1268,23 @@ case "batchRemove":
             @:// 批量删除@(Model.BusName)
 @if(Model.EnableFlow)
 {
-            @:await @(Model.DbLinkId != "0" ? "_sqlSugarClient.Deleteable<" + Model.ClassName + "Entity>()" : "_repository.AsDeleteable()").In(it => it.@(Model.PrimaryKey), entitys.Select(s => s.@(Model.PrimaryKey)).ToList())@(Model.IsLogicalDelete ? ".Where(it => it.DeleteMark == null)" : "")@(Model.IsLogicalDelete ? ".IsLogic()" : "").ExecuteCommandAsync(@(Model.IsLogicalDelete ? "\"F_Delete_Mark\",1, \"F_DELETE_TIME\", \"F_DELETE_USER_ID\", _userManager.UserId" : ""));
+@if(Model.DbLinkId != "0")
+{
+            @:await _sqlSugarClient.Deleteable<@(Model.ClassName)Entity>().In(it => it.@(Model.PrimaryKey), entitys.Select(s => s.@(Model.PrimaryKey)).ToList())@(Model.IsLogicalDelete ? ".Where(it => it.DeleteMark == null)" : "")@(Model.IsLogicalDelete ? ".IsLogic()" : "").ExecuteCommandAsync(@(Model.IsLogicalDelete ? "\"F_Delete_Mark\",1, \"F_DELETE_TIME\", \"F_DELETE_USER_ID\", _userManager.UserId" : ""));
+}else if(Model.IsLogicalDelete){
+            @:await _repository.AsDeleteable().In(it => it.@(Model.PrimaryKey), entitys.Select(s => s.@(Model.PrimaryKey)).ToList()).Where(it => it.DeleteMark == null).IsLogic().ExecuteCommandAsync("F_Delete_Mark",1, "F_DELETE_TIME", "F_DELETE_USER_ID", _userManager.UserId);
 }else{
-            @:await @(Model.DbLinkId != "0" ? "_sqlSugarClient.Deleteable<" + Model.ClassName + "Entity>()" : "_repository.AsDeleteable()").In(it => it.@(Model.PrimaryKey),ids)@(Model.IsLogicalDelete ? ".Where(it => it.DeleteMark == null)" : "")@(Model.IsLogicalDelete ? ".IsLogic()" : "").ExecuteCommandAsync(@(Model.IsLogicalDelete ? "\"F_Delete_Mark\",1, \"F_DELETE_TIME\", \"F_DELETE_USER_ID\", _userManager.UserId" : ""));
+            @:await _repository.SafeDeleteByIdsAsync(entitys.Select(s => (object)s.@(Model.PrimaryKey)).ToList());
+}
+}else{
+@if(Model.DbLinkId != "0")
+{
+            @:await _sqlSugarClient.Deleteable<@(Model.ClassName)Entity>().In(it => it.@(Model.PrimaryKey), ids)@(Model.IsLogicalDelete ? ".Where(it => it.DeleteMark == null)" : "")@(Model.IsLogicalDelete ? ".IsLogic()" : "").ExecuteCommandAsync(@(Model.IsLogicalDelete ? "\"F_Delete_Mark\",1, \"F_DELETE_TIME\", \"F_DELETE_USER_ID\", _userManager.UserId" : ""));
+}else if(Model.IsLogicalDelete){
+            @:await _repository.AsDeleteable().In(it => it.@(Model.PrimaryKey), ids).Where(it => it.DeleteMark == null).IsLogic().ExecuteCommandAsync("F_Delete_Mark",1, "F_DELETE_TIME", "F_DELETE_USER_ID", _userManager.UserId);
+}else{
+            @:await _repository.SafeDeleteByIdsAsync(ids.Select(it => (object)it).ToList());
+}
 }
 @if(Model.EnableFlow)
 {
@@ -2210,7 +2235,12 @@ break;
 }
 }
 }
-        @:var isOk = await @(Model.DbLinkId != "0" ? "_sqlSugarClient." : "_repository.As")Insertable(entity).IgnoreColumns(ignoreNullColumn: true).ExecuteCommandAsync();
+@if(Model.DbLinkId != "0")
+{
+        @:var isOk = await _sqlSugarClient.Insertable(entity).IgnoreColumns(ignoreNullColumn: true).ExecuteCommandAsync();
+}else{
+        @:var isOk = await _repository.SafeInsertAsync(entity);
+}
     }
     void GetAndModifyDataMethodTemplate()
     {

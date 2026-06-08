@@ -43,6 +43,9 @@ html[data-theme='dark'] {
       -webkit-box-shadow: 0 0 0 1000px #232a3b inset !important;
       -webkit-text-fill-color: #c9d1d9 !important;
     }
+    .login-left .login-company-name {
+      color: #c9d1d9;
+    }
     .ant-input-affix-wrapper > input.ant-input:focus {
       box-shadow: 0 0 0 1000px #232a3b inset !important;
       -webkit-text-fill-color: #c9d1d9 !important;
@@ -70,6 +73,7 @@ html[data-theme='dark'] {
   display: flex;
   justify-content: center;
   align-items: center;
+  background-color: #f0f2f5;
   background-image: url(../../../assets/images/login-bg.svg);
   background-position: right top;
   background-repeat: no-repeat;
@@ -86,16 +90,30 @@ html[data-theme='dark'] {
     padding: 73px 50px 20px;
     .ant-image,
     .login-logo {
-      width: 100%;
+      width: auto;
       height: 36px;
       margin: 0 auto 20px;
+      display: block;
+      object-fit: contain;
     }
   }
   .login-left {
     height: 100%;
     width: 500px;
-    padding-top: 80px;
+    padding-top: 60px;
     position: relative;
+    text-align: center;
+    .login-company-logo {
+      margin-bottom: 30px;
+      .login-company-name {
+        color: #1d2129;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 4px;
+        white-space: nowrap;
+        line-height: 1.5;
+      }
+    }
     &::after {
       content: '';
       display: block;
@@ -109,9 +127,10 @@ html[data-theme='dark'] {
     .ant-image,
     .login-logo {
       display: block;
-      width: 400px;
+      width: auto;
       height: 36px;
       margin: 0 auto 50px;
+      object-fit: contain;
     }
 
     .login-banner {
@@ -128,48 +147,6 @@ html[data-theme='dark'] {
     bottom: 30px;
     text-align: center;
   }
-  .login-header {
-    position: absolute;
-    top: 80px;
-    right: 85px;
-    left: 85px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    .login-company-logo {
-      display: flex;
-      align-items: center;
-      .login-company-logo-link {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        text-decoration: none;
-        .login-company-logo-img {
-          height: 42px;
-          width: auto;
-        }
-        .login-company-name {
-          color: #fff;
-          font-size: 18px;
-          font-weight: 500;
-          letter-spacing: 2px;
-          white-space: nowrap;
-        }
-      }
-    }
-    .vue2-link {
-      width: 138px;
-      height: 40px;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 20px;
-      color: #fff;
-      line-height: 40px;
-      text-align: center;
-      font-size: 16px;
-      opacity: 0.9;
-    }
-  }
-
   .login-content {
     height: 580px;
     border-radius: 4px;
