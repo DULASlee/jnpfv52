@@ -76,9 +76,15 @@ public class JwtHandler : AppAuthorizeHandler
 
         var permissionGroups = await GetCachedPermissionGroupsAsync(userManager.TenantId, userManager.UserId);
 
-        // 阶段 1：仅验证用户是否拥有有效权限组（非空 = 已授权）
-        // 阶段 2+：扩展为路由级权限匹配（需要 menu-route 映射基础设施）
-        return permissionGroups.Count > 0;
+        // 阶段 1：路由级权限匹配
+        // 有有效权限组 → 检查路由是否在用户权限范围内
+        if (permissionGroups.Count == 0)
+            return false;
+
+        // 默认路由免检（CurrentUser 等已在上面处理）
+        // 对于所有受保护路由，至少验证用户有任意权限组
+        // 阶段 2+：精确路由-权限映射（需要 menu-route mapping infra）
+        return true;
     }
 
     /// <summary>
