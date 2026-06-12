@@ -43,14 +43,20 @@ describe('DashboardCompiler', () => {
   const compiler = new DashboardCompiler(mockDashboard);
   const result = compiler.compile();
 
-  it('generates correct file count', () => {
-    expect(result.project.size).toBe(10);
+  it('generates correct file count (10 base + 3 widget components)', () => {
+    expect(result.project.size).toBe(13);
   });
 
-  it('generates package.json with echarts + vue-echarts', () => {
+  it('generates package.json with echarts + vue-echarts + @jiaminghi/data-view', () => {
     const pkg = result.project.get('package.json')!;
     expect(pkg).toContain('echarts');
     expect(pkg).toContain('vue-echarts');
+    expect(pkg).toContain('@jiaminghi/data-view');
+  });
+
+  it('vite dev server port is 3200', () => {
+    const viteCfg = result.project.get('vite.config.ts')!;
+    expect(viteCfg).toContain('3200');
   });
 
   it('generates main page with position absolute layout', () => {
@@ -89,5 +95,30 @@ describe('DashboardCompiler', () => {
     const parsed = JSON.parse(cfg.replace(/^\/\/.*\n/, ''));
     expect(parsed.type).toBe('dashboard');
     expect(parsed.widgets.length).toBe(3);
+  });
+
+  it('generates per-widget component for each unique widget type', () => {
+    // 3 unique widget types: ECharts:Bar, ECharts:Pie, Border:Box1
+    expect(result.project.has('src/components/ECharts/Bar.vue')).toBe(true);
+    expect(result.project.has('src/components/ECharts/Pie.vue')).toBe(true);
+    expect(result.project.has('src/components/Border/Box1.vue')).toBe(true);
+  });
+
+  it('3D widget component contains placeholder', () => {
+    const dash3D: DashboardIR = {
+      type: 'dashboard',
+      id: 'test3d',
+      name: '3D Test',
+      size: { width: 1920, height: 1080 },
+      background: { type: 'color', value: '#000' },
+      theme: 'dark',
+      widgets: [{ id: 's1', type: '3D:Scene', position: { x: 0, y: 0, w: 1920, h: 1080 }, props: {} }],
+      dataSources: [],
+    };
+    const c = new DashboardCompiler(dash3D);
+    const r = c.compile();
+    const comp = r.project.get('src/components/3D/Scene.vue')!;
+    expect(comp).toContain('3d-scene');
+    expect(comp).toContain('@jnpf-generated');
   });
 });

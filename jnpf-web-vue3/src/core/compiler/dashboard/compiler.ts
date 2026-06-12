@@ -30,6 +30,15 @@ export class DashboardCompiler {
     project.set('src/styles/theme.css', this.genTheme());
     project.set(`src/config/${entity}.config.json`, `// ${MARKER} dashboard=${this.ir.id}\n` + JSON.stringify(this.ir, null, 2));
 
+    // F-6a.3: 每个 widget 生成独立组件文件
+    const seenTypes = new Set<string>();
+    for (const w of this.ir.widgets) {
+      if (!seenTypes.has(w.type)) {
+        seenTypes.add(w.type);
+        project.set(`src/components/${w.type.replace(/[:]/g, '/')}.vue`, this.genWidgetComponent(w.type));
+      }
+    }
+
     return { project, warnings: [], complexExpressions: [] };
   }
 
@@ -42,7 +51,7 @@ export class DashboardCompiler {
   "version": "1.0.0",
   "private": true,
   "scripts": { "dev": "vite", "build": "vite build", "preview": "vite preview" },
-  "dependencies": { "vue": "^3.4.0", "echarts": "^5.5.0", "vue-echarts": "^6.7.0", "axios": "^1.7.0" },
+  "dependencies": { "vue": "^3.4.0", "echarts": "^5.5.0", "vue-echarts": "^6.7.0", "@jiaminghi/data-view": "^2.10.0", "axios": "^1.7.0" },
   "devDependencies": { "vite": "^5.4.0", "@vitejs/plugin-vue": "^5.1.0", "typescript": "^5.5.0" }
 }`;
   }
@@ -51,7 +60,7 @@ export class DashboardCompiler {
     return `// ${MARKER}
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-export default defineConfig({ plugins: [vue()], server: { port: 8100 } })`;
+export default defineConfig({ plugins: [vue()], server: { port: 3200 } })`;
   }
 
   private genHtml(): string {
@@ -186,5 +195,55 @@ function computedString(sx: ReturnType<typeof ref<number>>, sy: ReturnType<typeo
   private genTheme(): string {
     return `/* ${MARKER} dashboard=${this.ir.id} */
 :root { --bg-primary: #0a0a2e; --bg-panel: rgba(6,30,93,0.5); --text-primary: #fff; --accent: #00d4ff; }`;
+  }
+
+  // ── F-6a.3: per-widget component generation ──
+
+  private genWidgetComponent(type: string): string {
+    const tag = type.replace(/[:]/g, '-').toLowerCase();
+    const is3D = type.startsWith('3D:');
+    const isECharts = type.startsWith('ECharts:');
+
+    return `<!-- ${MARKER} widget=${type} -->
+<template>
+  <div class="widget-${tag}" ref="widgetRef">
+${isECharts ? this.genEChartsTemplate(tag) : ''}
+${is3D ? this.gen3DPlaceholder(tag) : ''}
+${!isECharts && !is3D ? this.genGenericTemplate(tag) : ''}
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, watch } from 'vue'
+${isECharts ? "import VChart from 'vue-echarts'" : ''}
+
+const props = defineProps<{ data?: unknown }>()
+const widgetRef = ref<HTMLElement>()
+
+onMounted(() => {
+  // ${MARKER} widget mounted: ${type}
+})
+</script>
+
+<style scoped>
+.widget-${tag} { width: 100%; height: 100%; overflow: hidden; }
+</style>`;
+  }
+
+  private genEChartsTemplate(_tag: string): string {
+    return `    <v-chart ref="chartRef" :option="chartOption" autoresize />
+`;
+  }
+
+  private gen3DPlaceholder(tag: string): string {
+    return `    <!-- 3D 组件占位 (VIP, version 2.0.0) — Phase 2 Three.js 集成 -->
+    <div class="3d-placeholder">3D: ${tag} (Phase 2)</div>
+`;
+  }
+
+  private genGenericTemplate(tag: string): string {
+    return `    <!-- ${tag} component -->
+    <div class="generic-widget">{{ data }}</div>
+`;
   }
 }
