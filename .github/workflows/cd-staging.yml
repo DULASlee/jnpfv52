@@ -45,16 +45,16 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore backend/JNPF.sln
+        run: dotnet restore backend/zx_lowcode_netcore.sln
 
       - name: Analyzer quality gate
         run: |
           echo "=== JNPF Analyzer Gate ==="
-          dotnet build backend/JNPF.sln --configuration Release --no-restore /p:CI_BUILD=true 2>&1 | grep -E "error JNPF" && exit 1 || exit 0
+          dotnet build backend/zx_lowcode_netcore.sln --configuration Release --no-restore /p:CI_BUILD=true 2>&1 | grep -E "error JNPF" && exit 1 || exit 0
 
       - name: Run backend tests
         run: |
-          dotnet test backend/JNPF.sln --configuration Release --verbosity normal
+          dotnet test backend/zx_lowcode_netcore.sln --configuration Release --verbosity normal
 
   # ---------------------------------------------------------------------------
   # Build Docker Images
