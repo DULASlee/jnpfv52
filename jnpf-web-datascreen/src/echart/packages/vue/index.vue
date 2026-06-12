@@ -94,13 +94,22 @@ export default create({
         style.id = styleId
         style.innerHTML = styleCss;
         document.head.appendChild(style);
-        let obj = new Function(script)();
-        obj.template = template;
-        obj.props = {
-          dataChart: Object,
-          refList: [Array, Object]
-        }
-        this.dynamicComponent = shallowRef(obj);
+        // 安全降级：不再使用 new Function 执行用户脚本
+        // 自定义图表以静态模板模式渲染，保留原始脚本字段供未来沙箱方案迁移
+        const safeObj = {
+          template: template,
+          props: {
+            dataChart: Object,
+            refList: [Array, Object]
+          },
+          __degraded: true,
+          __originalScript: script
+        };
+        console.warn(
+          '[安全降级] 自定义图表脚本执行已禁用。' +
+          '图表 ' + (this.component || '') + ' 将以静态模板模式渲染。'
+        );
+        this.dynamicComponent = shallowRef(safeObj);
         this.loading = false
       })
     },

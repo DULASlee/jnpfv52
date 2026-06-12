@@ -8,6 +8,10 @@ import Avue from '@smallwei/avue';
 import '@smallwei/avue/lib/index.css';
 import App from './App.vue'
 import { registerConfig } from './index'
+import { initTokenListener } from '@/utils/auth';
+
+initTokenListener();
+
 const app = createApp(App)
 
 app.use(ElementPlus, { locale: zhCn })

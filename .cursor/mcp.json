@@ -7,7 +7,11 @@
         "--context",
         "ide",
         "--project",
-        "D:\\JNPF-v52"
+        "D:\\JNPF-v52",
+        "--enable-gui-log-window",
+        "false",
+        "--open-web-dashboard",
+        "false"
       ],
       "timeout": 600,
       "env": {}

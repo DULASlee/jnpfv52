@@ -84,6 +84,12 @@
   const getDataNodeRef = ref();
   const updateDataNodeRef = ref();
   const deleteDataNodeRef = ref();
+  const nodeRefMap: Record<string, any> = {
+    start: startNodeRef,
+    getData: getDataNodeRef,
+    updateData: updateDataNodeRef,
+    deleteData: deleteDataNodeRef,
+  };
 
   const integrateType = computed(() => props.formInfo?.type || 1);
   // 所有表单字段
@@ -127,7 +133,7 @@
     Object.assign(state[key + 'Form'], properties);
     nextTick(async () => {
       if (key === 'getData' || (['start', 'updateData', 'deleteData'].includes(key) && unref(integrateType) == 1)) {
-        unref(eval(key + 'NodeRef'))?.initCondition();
+        unref(nodeRefMap[key])?.initCondition();
       }
       if ((key === 'addData' || key === 'updateData') && state[key + 'Form'].enableFlow && state[key + 'Form'].formId) {
         getFlowOptions(state[key + 'Form'].formId);
@@ -279,7 +285,7 @@
       if (enableFlow == 1) getFlowOptions(flowId);
       if (form === 'addData') updateTransferList(form);
       if (form === 'getData' || (['start', 'updateData', 'deleteData'].includes(form) && unref(integrateType) == 1)) {
-        unref(eval(form + 'NodeRef'))?.initCondition();
+        unref(nodeRefMap[form])?.initCondition();
       }
     });
   }

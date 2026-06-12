@@ -20,6 +20,7 @@
 </template>
 <script>
 import { getObj } from '@/api/visual'
+import { getToken } from '@/utils/auth'
 import { uuid } from '@/utils/utils'
 export default {
   data() {
@@ -36,7 +37,7 @@ export default {
         "/DataV/view.html?id=" +
         this.value +
         "&token=" +
-        localStorage.getItem("token") +
+        getToken() +
         "&isDev=" +
         (process.env.NODE_ENV === "development" ? "1" : "")
       );
@@ -50,7 +51,7 @@ export default {
         "/DataV/swiper.html?id=" +
         this.value1 +
         "&token=" +
-        localStorage.getItem("token") +
+        getToken() +
         "&isDev=" +
         (process.env.NODE_ENV === "development" ? "1" : "")
       );

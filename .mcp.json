@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "graphify": {
+      "command": "graphify",
+      "args": [
+        "--mcp"
+      ],
+      "cwd": "D:\\JNPF-v52",
+      "timeout": 300,
+      "env": {}
+    }
+  }
+}

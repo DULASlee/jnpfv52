@@ -1,5 +1,6 @@
 // import { Loading } from 'element-ui';
 import { checkUrl } from '@/utils/utils'
+import { getToken } from '@/utils/auth';
 import axios from 'axios';
 import { ElMessage } from 'element-plus';
 import { url as configUrl } from "@/config";
@@ -69,7 +70,7 @@ axios.interceptors.request.use(config => {
     config.method = 'post';
     config.data = form
   }
-  const token = localStorage.getItem("token") || ''
+  const token = getToken();
   config.headers['Authorization'] = config.headers['Authorization'] ? config.headers['Authorization'] : token
   return config
 }, error => {

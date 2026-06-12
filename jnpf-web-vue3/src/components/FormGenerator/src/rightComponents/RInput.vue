@@ -56,7 +56,7 @@
   </a-form-item>
   <div v-for="(item, index) in activeData.__config__.regList" :key="index" class="reg-item">
     <span class="close-btn" @click="activeData.__config__.regList.splice(index, 1)">
-      <i class="icon-ym icon-ym-nav-close" />
+      <i class="icon-ym icon-ym-nav-close"></i>
     </span>
     <a-form-item label="表达式">
       <a-input v-model:value="item.pattern" placeholder="请输入" @change="onPatternChange" />
@@ -85,6 +85,7 @@
   import MaskConfigModal from './components/MaskConfigModal.vue';
   import { cloneDeep } from 'lodash-es';
   import { defaultMaskOptions } from '/@/hooks/web/useTextMask';
+  import { isValidRegex } from '/@/components/FormGenerator/src/helper/regexp';
 
   const ruleList = [
     {
@@ -141,7 +142,7 @@
   function onPatternChange(e) {
     try {
       const val = e.target.value;
-      const isRegExp = Object.prototype.toString.call(eval(val)) === '[object RegExp]';
+      const isRegExp = isValidRegex(val);
       if (!isRegExp) createMessage.error('请输入正确的正则表达式');
     } catch {
       createMessage.error('请输入正确的正则表达式');

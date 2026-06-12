@@ -47,3 +47,4 @@ stats.json
 # Tool artifacts
 .playwright-mcp/
 .serena/memories/
+DB/
