@@ -100,7 +100,14 @@ jobs:
       - name: Lint
         working-directory: jnpf-web-vue3
         run: pnpm lint
-        continue-on-error: true
+
+      - name: Type Check
+        working-directory: jnpf-web-vue3
+        run: pnpm type-check
+
+      - name: Unit Tests
+        working-directory: jnpf-web-vue3
+        run: pnpm test:unit
 
       - name: Build
         working-directory: jnpf-web-vue3
