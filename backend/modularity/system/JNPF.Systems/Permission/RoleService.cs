@@ -883,7 +883,7 @@ public class RoleService : IRoleService, IDynamicApiController, ITransient
             roleUserIds.ForEach(id =>
             {
                 var services = scope.ServiceProvider;
-                var _onlineuser = App.GetService<OnlineUserService>(services);
+                var _onlineuser = (OnlineUserService)services.GetService(typeof(OnlineUserService));
                 _onlineuser.ForcedOffline(id);
             });
         });

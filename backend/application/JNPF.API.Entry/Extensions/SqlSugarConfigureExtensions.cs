@@ -22,6 +22,9 @@ public static class SqlSugarConfigureExtensions
     {
         // 获取选项
         var dbOptions = App.GetOptions<ConnectionStringsOptions>();
+        // 提前解析 scoped 访问器，供 AOP lambda 闭包使用 (Sprint 1: App.GetService → DI)
+        var httpContextAccessor = services.BuildServiceProvider().GetRequiredService<IHttpContextAccessor>();
+        var userManager = services.BuildServiceProvider().GetRequiredService<IUserManager>();
         //add by harry  域名模式，只保留一个，现模式会自动取第一个
         var defaulConnection = dbOptions.DefaultConnectionConfig;
         if(defaulConnection!.ConnectionString == null)
@@ -40,7 +43,7 @@ public static class SqlSugarConfigureExtensions
             dbOptions.ConnectionConfigs.ForEach(config =>
             {
                 var dbProvider = db.GetConnectionScope(config.ConfigId);
-                SetDbAop(dbProvider);
+                SetDbAop(dbProvider, httpContextAccessor, userManager);
             });
         });
 
@@ -91,7 +94,7 @@ public static class SqlSugarConfigureExtensions
     /// 配置Aop.
     /// </summary>
     /// <param name="db"></param>
-    public static void SetDbAop(SqlSugarScopeProvider db)
+    public static void SetDbAop(SqlSugarScopeProvider db, IHttpContextAccessor httpContextAccessor, IUserManager userManager)
     {
         var config = db.CurrentConnectionConfig;
 
@@ -152,7 +155,6 @@ public static class SqlSugarConfigureExtensions
                 try
                 {
                     // 通过 IHttpContextAccessor 获取 Scoped 的 IDiffLogCollector
-                    var httpContextAccessor = App.GetService<IHttpContextAccessor>();
                     var collector = httpContextAccessor?.HttpContext?.RequestServices?
                         .GetService<IDiffLogCollector>();
 
@@ -170,7 +172,7 @@ public static class SqlSugarConfigureExtensions
                             AfterData = diff.AfterData?.ToDictionary(
                                 d => d.GetType().GetProperty("TableName")?.GetValue(d)?.ToString() ?? "Unknown",
                                 d => (object)d),
-                            TenantId = App.GetService<IUserManager>()?.TenantId,
+                            TenantId = userManager?.TenantId,
                             TraceId = Activity.Current?.Id,
                             Timestamp = DateTime.UtcNow
                         });
@@ -184,7 +186,7 @@ public static class SqlSugarConfigureExtensions
         }
 
         // ConfigureGlobalDataExecuting — ADR-002 情况 B：统一委托模式
-        ConfigureGlobalDataExecuting(db);
+        ConfigureGlobalDataExecuting(db, httpContextAccessor);
     }
 
     /// <summary>
@@ -192,7 +194,7 @@ public static class SqlSugarConfigureExtensions
     /// ADR-002 情况 B：= 覆盖模式，CopyNew 继承 AOP。
     /// 运行时通过静态访问点读取当前请求的租户/系统信息。
     /// </summary>
-    private static void ConfigureGlobalDataExecuting(SqlSugarScopeProvider db)
+    private static void ConfigureGlobalDataExecuting(SqlSugarScopeProvider db, IHttpContextAccessor httpContextAccessor)
     {
         db.Aop.DataExecuting = (oldValue, entityColumnInfo) =>
         {
@@ -211,7 +213,7 @@ public static class SqlSugarConfigureExtensions
             if (propertyName == "TenantId"
                 && typeof(ITenantFilter).IsAssignableFrom(entityType))
             {
-                var tenantId = App.GetService<IHttpContextAccessor>()?.HttpContext?.User?.FindFirst("TenantId")?.Value
+                var tenantId = httpContextAccessor?.HttpContext?.User?.FindFirst("TenantId")?.Value
                     ?? TenantContextImpl.Current?.TenantId;
                 if (!string.IsNullOrEmpty(tenantId))
                 {
@@ -223,7 +225,7 @@ public static class SqlSugarConfigureExtensions
             if (propertyName == "ZxSystemId"
                 && typeof(IZxSystemFilter).IsAssignableFrom(entityType))
             {
-                var systemId = App.GetService<IHttpContextAccessor>()?.HttpContext?.User?.FindFirst("ZxSystemId")?.Value
+                var systemId = httpContextAccessor?.HttpContext?.User?.FindFirst("ZxSystemId")?.Value
                     ?? TenantContextImpl.Current?.SystemId;
                 if (!string.IsNullOrEmpty(systemId))
                 {
