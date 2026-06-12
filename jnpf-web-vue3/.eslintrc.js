@@ -15,11 +15,7 @@ module.exports = {
       jsx: true,
     },
   },
-  extends: [
-    'plugin:vue/vue3-recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:prettier/recommended',
-  ],
+  extends: ['plugin:vue/vue3-recommended', 'plugin:@typescript-eslint/recommended', 'plugin:prettier/recommended'],
   rules: {
     'vue/script-setup-uses-vars': 'error',
     '@typescript-eslint/ban-ts-ignore': 'off',
@@ -72,5 +68,10 @@ module.exports = {
       },
     ],
     'vue/multi-word-component-names': 'off',
+
+    // JNPF 安全基线：eval/Function 零新增 (F-5)
+    'no-eval': 'error',
+    'no-new-func': 'error',
+    'no-implied-eval': 'error',
   },
 };
