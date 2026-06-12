@@ -8,6 +8,27 @@
       "cwd": "D:\\JNPF-v52",
       "timeout": 300,
       "env": {}
+    },
+    "serena": {
+      "command": "serena",
+      "args": [
+        "--mcp"
+      ],
+      "cwd": "D:\\JNPF-v52",
+      "timeout": 300,
+      "env": {},
+      "description": "LSP 符号级代码操作 (find-declaration, find-references, rename-symbol, replace-content)"
+    },
+    "episodic-memory": {
+      "command": "episodic-memory",
+      "args": [
+        "--mcp"
+      ],
+      "cwd": "D:\\JNPF-v52",
+      "timeout": 300,
+      "env": {},
+      "description": "跨会话记忆搜索与召回 (search-conversations, read-conversation)"
     }
-  }
+  },
+  "_note": "OpenSpec 为纯知识库（非 MCP），在 CLAUDE.md Agent Toolchain 节中注明。其他工具 (superpowers skill set) 通过 Codex/Skills 机制加载，不在此注册。"
 }
