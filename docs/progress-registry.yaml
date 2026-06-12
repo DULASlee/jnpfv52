@@ -1,19 +1,36 @@
-# JNPF-v52 推进登记（Superpowers 阶段完成时追加）
-version: 1
-project: JNPF-v52
-entries:
-  - id: knowledge-base-infra-20260531
-    date: 2026-05-31
-    phase: 知识库基础设施（施工包阶段0-5）
-    status: completed
-    deliverables:
-      - openspec/adr/ADR-001-reject-local-vector-rag.md
-      - .cursor/rules/knowledge-base.mdc
-      - scripts/update-openspec-index.mjs
-      - scripts/check-knowledge-freshness.mjs
-      - scripts/refresh-knowledge.mjs
-      - .githooks/post-commit
-      - openspec/changes/add-logging-audit-spec/
-    decisions:
-      - 驳回 ChromaDB 向量 RAG，改用原生工具链知识库
-    next: 启动切面1日志系统施工（executing-plans）
+# JNPF V5.2 Progress Registry
+# Canonical reference for all completed milestones and current state.
+
+version: "5.2"
+last_updated: "2026-06-12"
+current_sprint: "0-A"
+canonical_tests:
+  frontend_total: 139
+  frontend_files: 9
+  backend_total: 3
+  backend_files: 1
+
+milestones:
+  F-0: { status: completed, tag: null, description: "eval/Function 清零 (PC+DataV)" }
+  F-1: { status: completed, tag: v5.2-ai-ready-m1, description: "IR 类型系统 (6 files, 16 tests)" }
+  F-2: { status: completed, tag: v5.2-ai-ready-m2, description: "表达式引擎 (11 files, 35 tests)" }
+  F-3: { status: completed, tag: v5.2-ai-ready-m3, description: "组件注册表 (5 files, 9 tests)" }
+  F-4: { status: completed, tag: v5.2-ai-ready-m4, description: "Vue3 编译器 (8 files, 11 tests)" }
+  F-5: { status: completed, tag: v5.2-ai-ready-m5, description: "端到端验证 (4 tests)" }
+  F-6a: { status: completed, tag: v5.2-dashboard-m1, description: "大屏编译器 (4 files, 8 tests)" }
+  ADR-016: { status: completed, description: "模块化单体架构决策" }
+  ADR-017: { status: completed, description: "新旧代码生成器共存" }
+  ADR-018: { status: completed, description: "UniApp UI 库选型" }
+  knowledge-graph: { status: completed, description: "4 份 KG 文档" }
+
+sprint_0a:
+  status: completed
+  tag: v5.2-gate-p0-complete
+  day_1: { status: completed, desc: "scripts + vitest + CI" }
+  day_2: { status: completed, desc: "5 schema fixtures + regression + coverage + tenant roadmap" }
+  day_3: { status: completed, desc: "Outbox PoC + JwtHandler + security debt" }
+  day_4: { status: completed, desc: "ADR-017/018 + 3-layer mapping + diff + Alova" }
+  day_5: { status: completed, desc: "registry + baseline + husky + 10-gate verification" }
+
+next_sprint: "0-B"
+next_sprint_title: "AI 基础设施地桩"
