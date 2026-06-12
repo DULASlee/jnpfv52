@@ -111,6 +111,8 @@ export interface ComponentMapping {
   jnpfKey: string;
   pc: string;
   app: string;
+  /** legacy UniApp 映射 (uni_modules)，仅用于旧版兼容 */
+  legacyApp: string;
 }
 
 export interface FieldConfig {

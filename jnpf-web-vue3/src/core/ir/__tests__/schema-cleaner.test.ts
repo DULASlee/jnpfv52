@@ -53,7 +53,9 @@ describe('Schema Cleaner', () => {
     it('maps components correctly', () => {
       const ir = cleanSchema(minimalFormSchema);
       expect(ir.fields[0].component.pc).toBe('a-input');
-      expect(ir.fields[0].component.app).toBe('uni-easyinput');
+      expect(ir.fields[0].component.app).toBe('wd-input');
+      // legacy mapping preserved
+      expect(ir.fields[0].component.legacyApp).toBe('uni-easyinput');
       expect(ir.fields[0].component.jnpfKey).toBe('JnpfInput');
       expect(ir.fields[1].component.pc).toBe('a-input-number');
     });

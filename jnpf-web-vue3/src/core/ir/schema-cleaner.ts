@@ -183,6 +183,7 @@ function extractFields(rawFields: any[]): { fields: FieldIR[]; expressions: Expr
         jnpfKey,
         pc: mapping.pc,
         app: mapping.app,
+        legacyApp: mapping.legacyApp,
       },
       config: {
         required: cfg.required ?? false,
