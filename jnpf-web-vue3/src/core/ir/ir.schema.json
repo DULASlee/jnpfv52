@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jnpfsoft.com/schemas/ir/FormPageIR.schema.json",
+  "title": "FormPageIR",
+  "description": "JNPF 前端 IR (Intermediate Representation) — FormPageIR 的 JSON Schema 契约。由 types.ts 手工导出，供 C# NJsonSchema 生成强类型 + LLM json_mode 使用。",
+  "type": "object",
+  "required": ["type", "id", "name", "config", "fields", "databaseFields", "expressions"],
+  "properties": {
+    "type": { "const": "form" },
+    "id": { "type": "string", "description": "页面唯一标识" },
+    "name": { "type": "string", "description": "页面名称" },
+    "config": { "$ref": "#/$defs/FormConfig" },
+    "fields": {
+      "type": "array",
+      "description": "表单字段列表",
+      "items": { "$ref": "#/$defs/FieldIR" }
+    },
+    "databaseFields": {
+      "type": "array",
+      "description": "数据库字段列表",
+      "items": { "$ref": "#/$defs/DatabaseFieldIR" }
+    },
+    "expressions": {
+      "type": "array",
+      "description": "表达式列表（生命周期 + 字段事件）",
+      "items": { "$ref": "#/$defs/ExpressionIR" }
+    },
+    "listConfig": { "$ref": "#/$defs/ListConfigIR" },
+    "mobileConfig": { "$ref": "#/$defs/MobileConfigIR" },
+    "workflow": { "$ref": "#/$defs/WorkflowIR" },
+    "aiHints": {
+      "type": "object",
+      "properties": {
+        "domain": { "type": "string" },
+        "requirement": { "type": "string" },
+        "designRationale": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "FormConfig": {
+      "type": "object",
+      "required": ["labelPosition", "labelWidth", "size"],
+      "properties": {
+        "labelPosition": { "enum": ["left", "right", "top"] },
+        "labelWidth": { "type": "integer" },
+        "labelSuffix": { "type": "string" },
+        "size": { "enum": ["large", "default", "small"] },
+        "disabled": { "type": "boolean" },
+        "span": { "type": "integer" },
+        "gutter": { "type": "integer" },
+        "colon": { "type": "boolean" },
+        "popupType": { "enum": ["general", "fullScreen", "drawer"] },
+        "generalWidth": { "type": "string" },
+        "fullScreenWidth": { "type": "string" },
+        "drawerWidth": { "type": "string" },
+        "hasCancelBtn": { "type": "boolean" },
+        "cancelButtonText": { "type": "string" },
+        "hasConfirmBtn": { "type": "boolean" },
+        "confirmButtonText": { "type": "string" },
+        "hasConfirmAndAddBtn": { "type": "boolean" },
+        "hasPrintBtn": { "type": "boolean" },
+        "printButtonText": { "type": "string" },
+        "primaryKeyPolicy": { "type": "string" },
+        "tablePolicy": { "type": "string" },
+        "concurrencyLock": { "type": "boolean" },
+        "logicalDelete": { "type": "boolean" }
+      }
+    },
+    "FieldIR": {
+      "type": "object",
+      "required": ["id", "model", "label", "component", "config", "validation", "events"],
+      "properties": {
+        "id": { "type": "string" },
+        "model": { "type": "string", "description": "v-model 绑定字段名" },
+        "label": { "type": "string" },
+        "component": { "$ref": "#/$defs/ComponentMapping" },
+        "config": { "$ref": "#/$defs/FieldConfig" },
+        "validation": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ValidationRuleIR" }
+        },
+        "events": { "$ref": "#/$defs/FieldEvents" },
+        "aiHints": {
+          "type": "object",
+          "properties": {
+            "semantic": { "type": "string" },
+            "suggestedValidation": { "type": "string" },
+            "suggestedDefault": {}
+          }
+        }
+      }
+    },
+    "ComponentMapping": {
+      "type": "object",
+      "required": ["jnpfKey", "pc", "app", "legacyApp"],
+      "properties": {
+        "jnpfKey": { "type": "string", "description": "JNPF 组件键（如 JnpfInput、JnpfSelect）" },
+        "pc": { "type": "string", "description": "PC 端组件（a-input 等）" },
+        "app": { "type": "string", "description": "UniApp 新组件（wd-input 等）" },
+        "legacyApp": { "type": "string", "description": "UniApp 旧组件（uni-easyinput 等）" }
+      }
+    },
+    "FieldConfig": {
+      "type": "object",
+      "properties": {
+        "required": { "type": "boolean" },
+        "defaultValue": {},
+        "placeholder": { "type": "string" },
+        "disabled": { "type": "boolean" },
+        "readonly": { "type": "boolean" },
+        "hidden": { "type": "boolean" },
+        "span": { "type": "integer" },
+        "labelWidth": { "type": ["integer", "null"] },
+        "maxlength": { "type": ["integer", "null"] },
+        "showWordLimit": { "type": "boolean" },
+        "clearable": { "type": "boolean" },
+        "min": { "type": ["number", "null"] },
+        "max": { "type": ["number", "null"] },
+        "precision": { "type": ["integer", "null"] },
+        "step": { "type": ["number", "null"] },
+        "multiple": { "type": "boolean" },
+        "options": { "type": "array", "items": { "$ref": "#/$defs/OptionItemIR" } },
+        "dictType": { "type": ["string", "null"] },
+        "relationData": {
+          "type": ["object", "null"],
+          "properties": {
+            "url": { "type": ["string", "null"] },
+            "labelField": { "type": ["string", "null"] },
+            "valueField": { "type": ["string", "null"] }
+          }
+        },
+        "style": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "OptionItemIR": {
+      "type": "object",
+      "required": ["label", "value"],
+      "properties": {
+        "label": { "type": "string" },
+        "value": {},
+        "disabled": { "type": "boolean" }
+      }
+    },
+    "ValidationRuleIR": {
+      "type": "object",
+      "required": ["type", "message", "trigger"],
+      "properties": {
+        "type": {
+          "enum": ["required", "string", "number", "email", "phone", "idcard", "url", "pattern", "custom"]
+        },
+        "message": { "type": "string" },
+        "pattern": { "type": "string" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "trigger": { "enum": ["blur", "change"] }
+      }
+    },
+    "FieldEvents": {
+      "type": "object",
+      "properties": {
+        "change": { "type": "string" },
+        "blur": { "type": "string" },
+        "focus": { "type": "string" },
+        "click": { "type": "string" }
+      }
+    },
+    "ExpressionIR": {
+      "type": "object",
+      "required": ["id", "name", "type", "params", "body", "level", "isAsync", "originalCode"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "enum": ["form-lifecycle", "field-event", "computed", "validation"] },
+        "params": { "type": "array", "items": { "type": "string" } },
+        "body": { "type": "string" },
+        "level": { "enum": ["empty", "simple", "medium", "complex"] },
+        "isAsync": { "type": "boolean" },
+        "originalCode": { "type": "string" }
+      }
+    },
+    "DatabaseFieldIR": {
+      "type": "object",
+      "required": ["id", "name", "type", "nullable", "description"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "description": "数据库类型（varchar, int, datetime 等）" },
+        "length": { "type": ["integer", "null"] },
+        "nullable": { "type": "boolean" },
+        "defaultValue": {},
+        "description": { "type": "string" }
+      }
+    },
+    "ListConfigIR": {
+      "type": "object",
+      "required": ["searchFields", "columns", "ruleList"],
+      "properties": {
+        "searchFields": { "type": "array", "items": { "$ref": "#/$defs/SearchFieldIR" } },
+        "columns": { "type": "array", "items": { "$ref": "#/$defs/ColumnIR" } },
+        "ruleList": { "type": "array" }
+      }
+    },
+    "SearchFieldIR": {
+      "type": "object",
+      "required": ["field", "label", "component"],
+      "properties": {
+        "field": { "type": "string" },
+        "label": { "type": "string" },
+        "component": { "type": "string" },
+        "options": { "type": "array", "items": { "$ref": "#/$defs/OptionItemIR" } }
+      }
+    },
+    "ColumnIR": {
+      "type": "object",
+      "required": ["field", "label", "sortable"],
+      "properties": {
+        "field": { "type": "string" },
+        "label": { "type": "string" },
+        "width": { "type": ["integer", "null"] },
+        "fixed": { "enum": ["left", "right", null] },
+        "sortable": { "type": "boolean" },
+        "formatter": { "type": "string" }
+      }
+    },
+    "MobileConfigIR": {
+      "type": "object",
+      "required": ["formFields", "listColumns"],
+      "properties": {
+        "formFields": { "type": "array", "items": { "$ref": "#/$defs/FieldIR" } },
+        "listColumns": { "type": "array", "items": { "$ref": "#/$defs/ColumnIR" } }
+      }
+    },
+    "WorkflowIR": {
+      "type": "object",
+      "required": ["flowId", "flowType", "templateList"],
+      "properties": {
+        "flowId": { "type": "string" },
+        "flowType": { "type": "string" },
+        "templateList": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

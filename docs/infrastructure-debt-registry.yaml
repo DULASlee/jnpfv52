@@ -1,0 +1,236 @@
+# ============================================================
+# JNPF v5.2 — 基础设施债务登记簿
+# ============================================================
+# 创建日期: 2026-06-12
+# 关联里程碑: Sprint 0-B 终验 (v5.2-ai-infrastructure-m0)
+# 处置策略:
+#   CRITICAL → 阶段一启动前的闭合 Sprint 修复（预估 1 天）
+#   HIGH/MEDIUM/LOW → 排入阶段一技术债 backlog
+# ============================================================
+
+version: "1.0"
+project: JNPF v5.2
+milestone: Sprint 0-B Gate Complete
+
+debts:
+
+  # ─── CI / CD 构建链 ───
+  - id: INF-001
+    level: CRITICAL
+    category: ci-cd
+    title: "CI 引用不存在的 .sln 文件"
+    description: >
+      当前 CI 流水线引用 `backend/JNPF.sln`，但仓库中实际解决方案文件为
+      `backend/zx_lowcode_netcore.sln`。所有 staging / production CI 触发时
+      将 100% 失败。
+    impact:
+      - "staging CI: 失败（无法 restore/build）"
+      - "production CI: 失败（无法发布）"
+    affected_files:
+      - ".ci/*.yml (或等效 CI 配置)"
+      - "backend/zx_lowcode_netcore.sln (实际存在的 .sln)"
+      - "backend/JNPF.sln (不存在的文件)"
+    suggested_fix: |
+      方案 A: 重命名 zx_lowcode_netcore.sln → JNPF.sln (推荐)
+      方案 B: 更新 CI 配置中的 .sln 路径为 zx_lowcode_netcore.sln
+    resolution_sprint: "pre-phase-1-hotfix"
+
+  - id: INF-002
+    level: CRITICAL
+    category: ci-cd
+    title: "Dockerfile.staging / Dockerfile.production 缺失"
+    description: >
+      staging 和 production 环境无容器构建定义。
+      dotnet publish 产物无法打包为 Docker 镜像。
+    impact:
+      - "staging deploy: 失败"
+      - "production deploy: 失败"
+    affected_files:
+      - "backend/ (缺少 Dockerfile.staging)"
+      - "backend/ (缺少 Dockerfile.production)"
+    suggested_fix: |
+      从开发用 Dockerfile 派生 staging/production 变体，
+      主要差异: 基础镜像 (aspnet:8.0-alpine)、环境变量注入、
+      HealthCheck endpoint 配置。可参考 ABP 的 Docker 最佳实践。
+    resolution_sprint: "pre-phase-1-hotfix"
+
+  - id: INF-003
+    level: CRITICAL
+    category: ci-cd
+    title: "nginx.staging.conf / nginx.production.conf 缺失"
+    description: >
+      前端 jnpf-web-vue3 缺少 staging/production 的 nginx 配置。
+      pnpm build 产物无法通过反向代理对外服务。
+    impact:
+      - "web-vue3 staging deploy: 失败"
+      - "web-vue3 production deploy: 失败"
+    affected_files:
+      - "jnpf-web-vue3/ (缺少 nginx.staging.conf)"
+      - "jnpf-web-vue3/ (缺少 nginx.production.conf)"
+    suggested_fix: |
+      从开发用 nginx.conf 派生，staging 指向 staging 后端地址，
+      production 使用 DNS 服务发现。HTTPS 重定向 + gzip + 缓存策略。
+      SPA fallback (try_files $uri /index.html)。
+    resolution_sprint: "pre-phase-1-hotfix"
+
+  # ─── 配置错误 ───
+  - id: INF-004
+    level: HIGH
+    category: configuration
+    title: "PC dev proxy 端口不一致"
+    description: >
+      jnpf-web-vue3 的 Vite dev proxy 配置指向 `localhost:5000`，
+      但注释中写的是 `30000`。开发环境可能连到错误的后端端口。
+      正确端口应统一为后端 API Entry 实际监听端口（通常 5000）。
+    impact:
+      - "新开发者可能根据注释改为 30000 导致 API 不通"
+    affected_files:
+      - "jnpf-web-vue3/vite.config.ts (或 .env.development)"
+    suggested_fix: |
+      删除误导注释，确认 VITE_PROXY_TARGET 与实际端口一致。
+      在 README.md 或 CLAUDE.md 中明确文档化端口映射。
+    resolution_sprint: "phase-1-backlog"
+
+  # ─── 安全债务 ───
+  - id: INF-005
+    level: HIGH
+    category: security
+    title: "DataV .env.development AES 密钥明文提交"
+    description: >
+      jnpf-web-datascreen 项目的 .env.development 文件中包含明文 AES 密钥。
+      该密钥已被 git 跟踪，即使后续删除也可从 git history 恢复。
+      需要轮换密钥并清理 git 历史，或至少将密钥移入环境变量。
+    impact:
+      - "密钥泄露风险"
+      - "合规问题（OWASP A07:2021）"
+    affected_files:
+      - "jnpf-web-datascreen/.env.development"
+    suggested_fix: |
+      1. 生成新 AES 密钥
+      2. 将密钥移入 .env.local (gitignored)
+      3. .env.development 中写占位符 VITE_AES_KEY=__CHANGE_ME__
+      4. 如需彻底清理 git history: git filter-branch 或 BFG
+    resolution_sprint: "phase-1-backlog"
+    related_security_debts:
+      - "SD-007 (Day 5 登记)"
+
+  # ─── 文档 ───
+  - id: INF-006
+    level: MEDIUM
+    category: documentation
+    title: "CLAUDE.md 声明 .NET 6，实际为 .NET 8"
+    description: >
+      项目级 CLAUDE.md 及部分架构文档中写 ".NET 6"，但所有 .csproj
+      实际目标框架为 net8.0。新开发者按文档搭建环境会失败。
+    impact:
+      - "SDK 版本误导: 装错 SDK → 编译失败"
+      - "NuGet 包版本预期不一致"
+    affected_files:
+      - "CLAUDE.md"
+      - "docs/architecture/ 可能存在的旧文档"
+    suggested_fix: |
+      全局搜索 ".NET 6" → ".NET 8"，特别是 CLAUDE.md 中的 Build & Run 章节。
+      已确定目标框架: net8.0 (验证方式: grep '<TargetFramework>' **/*.csproj)
+    resolution_sprint: "phase-1-backlog"
+
+  # ─── 工具链 ───
+  - id: INF-007
+    level: LOW
+    category: tooling
+    title: ".mcp.json 未完整登记 MCP 服务"
+    description: >
+      项目 .mcp.json 仅包含 graphify 一个 MCP 服务器引用。
+      但 CLAUDE.md Agent Toolchain 节声明了 4 个工具:
+      superpowers skill set, Serena, OpenSpec, episodic-memory。
+      .mcp.json 缺少 Serena、episodic-memory 等 MCP 声明。
+    impact:
+      - "新开发者不知道需要配置哪些 MCP"
+      - "工具链不全导致部分子代理功能不可用"
+    affected_files:
+      - ".mcp.json"
+    suggested_fix: |
+      补充 Serena (LSP 符号级操作)、episodic-memory (跨会话记忆)
+      的 MCP 配置。OpenSpec 为纯知识库（非 MCP），在 CLAUDE.md 中注明即可。
+    resolution_sprint: "phase-1-backlog"
+
+# ============================================================
+# Sprint 0-B 交付物终检清单
+# ============================================================
+sprint_0b_deliverables:
+  - id: 1
+    item: "BASE_AI_CALL_LOG 表 + AiCallLogService (DynamicApi)"
+    stake: "#1"
+    day: 6
+    status: done
+  - id: 2
+    item: "BASE_AI_PIPELINE + BASE_AI_PIPELINE_MESSAGE 表"
+    stake: "#4"
+    day: 6
+    status: done
+  - id: 3
+    item: "LlmGatewayService (内部服务 + stub + healthCheck)"
+    stake: "#9"
+    day: 6
+    status: done
+  - id: 4
+    item: "BASE_AI_PROMPT_TEMPLATE 表 + AiPromptTemplateService (DynamicApi)"
+    stake: "#6"
+    day: 7
+    status: done
+  - id: 5
+    item: "ir-to-schema.ts + ir.schema.json (Draft 2020-12)"
+    stake: "#8"
+    day: 7-8
+    status: done
+  - id: 6
+    item: "BASE_KNOWLEDGE_NODE + BASE_KNOWLEDGE_EDGE + IKnowledgeGraphStore + Sql实现"
+    stake: "#3"
+    day: 8
+    status: done
+  - id: 7
+    item: "FounderAuthLogEntity + FounderGuardMiddleware (Phase 0 → 404)"
+    stake: "#5"
+    day: 8
+    status: done
+  - id: 8
+    item: "KnowledgeIncrementPackage + KnowledgePatchService (SHA256+HMAC)"
+    stake: "#10"
+    day: 8
+    status: done
+  - id: 9
+    item: "src/ai/gateway/types.ts + Studio 视图骨架"
+    stake: "#7"
+    day: 9
+    status: done
+  - id: 10
+    item: "docs/infrastructure-debt-registry.yaml (INF-001 ~ INF-007)"
+    stake: "巡检"
+    day: 10
+    status: done
+
+# ============================================================
+# 门禁终检 — 8 项全量通过
+# ============================================================
+gates:
+  - { id: 11, item: "BASE_AI_CALL_LOG 表存在", status: pass }
+  - { id: 12, item: "BASE_AI_PIPELINE 表存在", status: pass }
+  - { id: 13, item: "IKnowledgeGraphStore 接口 + Sql 实现", status: pass }
+  - { id: 14, item: "FounderGuard 已注册 (/api/founder → 404)", status: pass }
+  - { id: 15, item: "src/ai/gateway/types.ts 存在", status: pass }
+  - { id: 16, item: "LlmGatewayService healthCheck + 写日志", status: pass }
+  - { id: 17, item: "ir-to-schema 最小 round-trip 1 Schema (实际 10/10)", status: pass }
+  - { id: 18, item: "KnowledgeIncrementPackage 含 Signature 字段", status: pass }
+
+# ============================================================
+# 统计摘要
+# ============================================================
+summary:
+  total_debts: 7
+  critical: 3
+  high: 2
+  medium: 1
+  low: 1
+  sprint_0b_deliverables: 10
+  sprint_0b_gates: 8
+  gates_passed: 8
+  gates_failed: 0
