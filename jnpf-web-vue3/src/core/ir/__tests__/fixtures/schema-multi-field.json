@@ -1,0 +1,48 @@
+{
+  "data": {
+    "id": "multi-field-employee",
+    "fullName": "员工档案（14 种字段类型覆盖）",
+    "fields": [
+      { "__vModel__": "employeeName", "__config__": { "label": "姓名", "tag": "JnpfInput", "jnpfKey": "JnpfInput", "required": true } },
+      { "__vModel__": "gender", "__config__": { "label": "性别", "tag": "JnpfRadio", "jnpfKey": "JnpfRadio", "required": true }, "options": [{ "label": "男", "value": "male" }, { "label": "女", "value": "female" }] },
+      { "__vModel__": "birthDate", "__config__": { "label": "出生日期", "tag": "JnpfDatePicker", "jnpfKey": "JnpfDatePicker" } },
+      { "__vModel__": "email", "__config__": { "label": "邮箱", "tag": "JnpfInput", "jnpfKey": "JnpfInput", "regList": [{ "pattern": "/^[\\w.-]+@[\\w-]+\\.[\\w.]+$/", "message": "请输入正确的邮箱格式" }] } },
+      { "__vModel__": "phone", "__config__": { "label": "手机号", "tag": "JnpfInput", "jnpfKey": "JnpfInput", "regList": [{ "pattern": "/^1[3-9]\\d{9}$/", "message": "请输入正确的手机号" }] } },
+      { "__vModel__": "department", "__config__": { "label": "部门", "tag": "JnpfDepSelect", "jnpfKey": "JnpfDepSelect", "required": true } },
+      { "__vModel__": "position", "__config__": { "label": "岗位", "tag": "JnpfPosSelect", "jnpfKey": "JnpfPosSelect" } },
+      { "__vModel__": "manager", "__config__": { "label": "直属上级", "tag": "JnpfUserSelect", "jnpfKey": "JnpfUserSelect" } },
+      { "__vModel__": "entryDate", "__config__": { "label": "入职日期", "tag": "JnpfDatePicker", "jnpfKey": "JnpfDatePicker", "required": true } },
+      { "__vModel__": "salary", "__config__": { "label": "薪资", "tag": "JnpfInputNumber", "jnpfKey": "JnpfInputNumber" } },
+      { "__vModel__": "isProbation", "__config__": { "label": "是否试用期", "tag": "JnpfSwitch", "jnpfKey": "JnpfSwitch", "defaultValue": true } },
+      { "__vModel__": "skills", "__config__": { "label": "技能标签", "tag": "JnpfCheckbox", "jnpfKey": "JnpfCheckbox" }, "options": [{ "label": "Java", "value": "java" }, { "label": "Python", "value": "python" }, { "label": "Vue", "value": "vue" }, { "label": ".NET", "value": "dotnet" }] },
+      { "__vModel__": "avatar", "__config__": { "label": "头像", "tag": "JnpfUploadImg", "jnpfKey": "JnpfUploadImg" } },
+      { "__vModel__": "resume", "__config__": { "label": "简历附件", "tag": "JnpfUploadFile", "jnpfKey": "JnpfUploadFile" } }
+    ],
+    "funcs": {
+      "onLoad": "({ formData, setFormData, onlineUtils }) => {}",
+      "beforeSubmit": "({ formData, setFormData }) => { return new Promise((resolve) => { resolve() }) }"
+    },
+    "virtualFieldList": [
+      { "field": "employeeName", "type": "varchar", "length": 50 }, { "field": "gender", "type": "varchar", "length": 10 },
+      { "field": "birthDate", "type": "datetime" }, { "field": "email", "type": "varchar", "length": 100 },
+      { "field": "phone", "type": "varchar", "length": 20 }, { "field": "department", "type": "varchar", "length": 100 },
+      { "field": "position", "type": "varchar", "length": 50 }, { "field": "manager", "type": "varchar", "length": 50 },
+      { "field": "entryDate", "type": "datetime" }, { "field": "salary", "type": "decimal" },
+      { "field": "isProbation", "type": "bit" }, { "field": "skills", "type": "varchar", "length": 500 }
+    ],
+    "labelWidth": 120,
+    "popupType": "general",
+    "generalWidth": "800px",
+    "columnData": {
+      "columnList": [
+        { "prop": "employeeName", "label": "姓名", "width": 120 }, { "prop": "gender", "label": "性别", "width": 80 },
+        { "prop": "department", "label": "部门", "width": 150 }, { "prop": "position", "label": "岗位", "width": 120 },
+        { "prop": "entryDate", "label": "入职日期", "width": 120 }
+      ],
+      "searchList": [
+        { "__vModel__": "employeeName", "__config__": { "label": "姓名", "jnpfKey": "JnpfInput" } },
+        { "__vModel__": "department", "__config__": { "label": "部门", "jnpfKey": "JnpfDepSelect" } }
+      ]
+    }
+  }
+}

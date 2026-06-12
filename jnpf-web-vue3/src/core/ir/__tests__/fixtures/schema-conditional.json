@@ -1,0 +1,35 @@
+{
+  "data": {
+    "id": "conditional-project",
+    "fullName": "项目管理（条件显隐+动态选项）",
+    "fields": [
+      { "__vModel__": "projectName", "__config__": { "label": "项目名称", "tag": "JnpfInput", "jnpfKey": "JnpfInput", "required": true } },
+      { "__vModel__": "projectType", "__config__": { "label": "项目类型", "tag": "JnpfSelect", "jnpfKey": "JnpfSelect", "required": true }, "options": [{ "label": "内部项目", "value": "internal" }, { "label": "客户项目", "value": "customer" }] },
+      { "__vModel__": "customerName", "__config__": { "label": "客户名称", "tag": "JnpfInput", "jnpfKey": "JnpfInput", "hidden": true }, "on": { "change": "({ data, formData, setShowOrHide }) => { setShowOrHide('customerName', formData.projectType === 'customer') }" } },
+      { "__vModel__": "budget", "__config__": { "label": "预算（万元）", "tag": "JnpfInputNumber", "jnpfKey": "JnpfInputNumber", "required": true, "min": 1, "max": 99999, "precision": 2 } },
+      { "__vModel__": "priority", "__config__": { "label": "优先级", "tag": "JnpfRate", "jnpfKey": "JnpfRate", "defaultValue": 3, "max": 5 } },
+      { "__vModel__": "colorTag", "__config__": { "label": "项目标签色", "tag": "JnpfColorPicker", "jnpfKey": "JnpfColorPicker", "defaultValue": "#1890ff" } },
+      { "__vModel__": "description", "__config__": { "label": "项目描述", "tag": "JnpfEditor", "jnpfKey": "JnpfEditor" } },
+      { "__vModel__": "signOff", "__config__": { "label": "项目签收", "tag": "JnpfSign", "jnpfKey": "JnpfSign" } }
+    ],
+    "funcs": {
+      "onLoad": "({ formData, setFormData, setShowOrHide }) => {}",
+      "beforeSubmit": "({ formData, setFormData }) => { return new Promise((resolve) => { resolve() }) }"
+    },
+    "virtualFieldList": [
+      { "field": "projectName", "type": "varchar", "length": 100 }, { "field": "projectType", "type": "varchar", "length": 20 },
+      { "field": "customerName", "type": "varchar", "length": 100 }, { "field": "budget", "type": "decimal" },
+      { "field": "priority", "type": "int" }, { "field": "colorTag", "type": "varchar", "length": 20 },
+      { "field": "description", "type": "text" }, { "field": "signOff", "type": "text" }
+    ],
+    "labelWidth": 110,
+    "popupType": "drawer",
+    "drawerWidth": "60%",
+    "columnData": {
+      "columnList": [
+        { "prop": "projectName", "label": "项目名称", "width": 200 }, { "prop": "projectType", "label": "项目类型", "width": 100 },
+        { "prop": "budget", "label": "预算", "width": 120 }, { "prop": "priority", "label": "优先级", "width": 100 }
+      ]
+    }
+  }
+}
