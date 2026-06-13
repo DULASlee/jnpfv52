@@ -16,7 +16,7 @@
         <BasicTable @register="registerTable" :searchInfo="searchInfo" :tableSetting="tableSetting">
           <template #tableTitle>
             <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" @click="addOrUpdateHandle()">{{ t('common.addText') }}</a-button>
-            <jnpf-upload-btn url="/api/system/DataInterface/Actions/Import" accept=".bd" @on-success="reload"></jnpf-upload-btn>
+            <jnpf-upload-btn url="/api/system/DataInterface/Actions/Import" accept=".bd" @on-success="reload" />
           </template>
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'enabledMark'">
@@ -48,7 +48,7 @@
   import Preview from './Preview.vue';
   import Variable from './components/variable/index.vue';
 
-  defineOptions({ name: 'systemData-dataInterface' });
+  defineOptions({ name: 'SystemDataDataInterface' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

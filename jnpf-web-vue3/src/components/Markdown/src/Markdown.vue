@@ -3,16 +3,7 @@
 </template>
 <script lang="ts">
   import type { Ref } from 'vue';
-  import {
-    defineComponent,
-    ref,
-    unref,
-    nextTick,
-    computed,
-    watch,
-    onBeforeUnmount,
-    onDeactivated,
-  } from 'vue';
+  import { defineComponent, ref, unref, nextTick, computed, watch, onBeforeUnmount, onDeactivated } from 'vue';
   import Vditor from 'vditor';
   import 'vditor/dist/index.css';
   import { useLocale } from '/@/locales/useLocale';
@@ -47,9 +38,7 @@
           if (!inited) {
             return;
           }
-          instance
-            .getVditor()
-            ?.setTheme(getTheme(val) as any, getTheme(val, 'content'), getTheme(val, 'code'));
+          instance.getVditor()?.setTheme(getTheme(val) as any, getTheme(val, 'content'), getTheme(val, 'code'));
         },
         {
           immediate: true,
@@ -59,7 +48,7 @@
 
       watch(
         () => props.value,
-        (v) => {
+        v => {
           if (v !== valueRef.value) {
             instance.getVditor()?.setValue(v);
           }
@@ -107,7 +96,7 @@
             },
             actions: [],
           },
-          input: (v) => {
+          input: v => {
             valueRef.value = v;
             emit('update:value', v);
             emit('change', v);

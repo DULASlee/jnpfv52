@@ -10,7 +10,7 @@
       }"
       :src="href"
       scrolling="yes"
-      frameborder="0" />
+      frameborder="0"></iframe>
   </div>
 </template>
 <script lang="ts" setup>

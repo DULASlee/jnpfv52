@@ -11,7 +11,7 @@
             :sourceType="3"
             :allowClear="false"
             @change="onFormIdChange"
-            @fieldChange="onRelationFieldChange" />
+            @field-change="onRelationFieldChange" />
         </a-form-item>
       </a-form>
     </ScrollContainer>
@@ -21,7 +21,7 @@
   import { ScrollContainer } from '/@/components/Container';
   import { SelectInterface } from '/@/components/Interface';
 
-  defineOptions({ name: 'dataInterfaceNode', inheritAttrs: false });
+  defineOptions({ name: 'DataInterfaceNode', inheritAttrs: false });
   const props = defineProps(['formConf', 'integrateType', 'formFieldsOptions', 'getFormFieldList']);
 
   function onFormIdChange(id, item) {

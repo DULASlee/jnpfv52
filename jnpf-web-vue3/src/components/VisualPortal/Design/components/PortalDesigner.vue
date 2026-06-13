@@ -18,7 +18,7 @@
       </div>
       <ScrollContainer class="layout-area">
         <div v-if="showType == 'pc'">
-          <grid-layout :layout.sync="layout" :row-height="40" v-if="layout.length">
+          <grid-layout v-model:layout="layout" :row-height="40" v-if="layout.length">
             <grid-item
               v-for="item in layout"
               :x="item.x"
@@ -81,7 +81,7 @@
         </div>
       </ScrollContainer>
     </div>
-    <RightPanel :active-data="activeData" :refresh="refresh" :showType="showType" @relationChange="onRelationChange" />
+    <RightPanel :active-data="activeData" :refresh="refresh" :showType="showType" @relation-change="onRelationChange" />
     <PreviewModal @register="registerPreview" />
   </div>
 </template>
@@ -383,4 +383,3 @@
 
   onMounted(() => init());
 </script>
-

@@ -12,7 +12,7 @@
   import { checkInfo } from '/@/api/workFlow/flowBefore';
   import { useTabs } from '/@/hooks/web/useTabs';
 
-  defineOptions({ name: 'workFlowDetail' });
+  defineOptions({ name: 'WorkFlowDetail' });
 
   const route = useRoute();
   const { closeCurrent } = useTabs();

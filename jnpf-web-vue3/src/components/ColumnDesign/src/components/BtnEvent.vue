@@ -33,7 +33,7 @@
                 <a-select-option v-for="item in popupWidthOptions" :key="item" :value="item">{{ item }}</a-select-option>
               </a-select>
             </a-form-item>
-            <a-form-item label="赋值规则" style="margin-bottom: 0"></a-form-item>
+            <a-form-item label="赋值规则" style="margin-bottom: 0" />
             <a-table :data-source="dataForm.formOptions" :columns="formOptionsColumns" size="small" :pagination="false">
               <template #bodyCell="{ column, record, index }">
                 <template v-if="column.key === 'currentField'">
@@ -47,7 +47,7 @@
                 </template>
                 <template v-if="column.key === 'type'">赋值给</template>
                 <template v-if="column.key === 'field'">
-                  <jnpf-select v-model:value="record.field" placeholder="请选择" :options="fieldOptions" showSearch @dropdownVisibleChange="visibleChange" />
+                  <jnpf-select v-model:value="record.field" placeholder="请选择" :options="fieldOptions" showSearch @dropdown-visible-change="visibleChange" />
                 </template>
                 <template v-if="column.key === 'action'">
                   <a-button class="action-btn" type="link" color="error" @click="handleDelItem(index)" size="small">删除</a-button>
@@ -68,7 +68,7 @@
               <a-form-item label="数据接口" name="interfaceId">
                 <interface-modal :value="dataForm.interfaceId" :title="dataForm.interfaceName" :sourceType="3" @change="onInterfaceChange" />
               </a-form-item>
-              <a-form-item label="参数设置" style="margin-bottom: 0"></a-form-item>
+              <a-form-item label="参数设置" style="margin-bottom: 0" />
               <a-table :data-source="dataForm.templateJson" :columns="templateJsonColumns" size="small" :pagination="false" class="mb-20px">
                 <template #bodyCell="{ column, record }">
                   <template v-if="column.key === 'field'">
@@ -90,7 +90,7 @@
                       :options="fieldOptions"
                       allowClear
                       showSearch
-                      @dropdownVisibleChange="visibleChange"
+                      @dropdown-visible-change="visibleChange"
                       v-if="record.sourceType === 1" />
                     <template v-else-if="record.sourceType == 2">
                       <jnpf-input-number
@@ -131,7 +131,7 @@
             <a-form-item label="数据接口" name="interfaceId">
               <interface-modal :value="dataForm.interfaceId" :title="dataForm.interfaceName" :sourceType="3" @change="onInterfaceChange" />
             </a-form-item>
-            <a-form-item label="参数设置" style="margin-bottom: 0"></a-form-item>
+            <a-form-item label="参数设置" style="margin-bottom: 0" />
             <a-table :data-source="dataForm.templateJson" :columns="templateJsonColumns" size="small" :pagination="false" class="mb-20px">
               <template #bodyCell="{ column, record }">
                 <template v-if="column.key === 'field'">

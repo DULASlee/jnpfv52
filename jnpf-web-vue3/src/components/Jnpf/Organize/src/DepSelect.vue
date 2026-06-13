@@ -25,8 +25,8 @@
         </div>
         <div class="transfer-pane__body transfer-pane__body-tab">
           <a-tabs v-model:activeKey="activeKey" :tabBarGutter="10" size="small" class="pane-tabs" v-if="hasSys">
-            <a-tab-pane key="1" tab="全部数据"></a-tab-pane>
-            <a-tab-pane key="system" tab="动态参数"></a-tab-pane>
+            <a-tab-pane key="1" tab="全部数据" />
+            <a-tab-pane key="system" tab="动态参数" />
           </a-tabs>
           <BasicTree class="tree-main" :treeData="treeData" @select="handleSelect" ref="treeRef" defaultExpandAll :loading="loading" />
         </div>

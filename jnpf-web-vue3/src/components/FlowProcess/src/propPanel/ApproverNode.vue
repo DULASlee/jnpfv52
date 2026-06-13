@@ -1,12 +1,12 @@
 <template>
   <section class="common-pane">
     <a-tabs v-model:activeKey="activeKey" size="small" class="pane-tabs">
-      <a-tab-pane key="1" tab="基础设置"></a-tab-pane>
-      <a-tab-pane key="2" tab="高级设置"></a-tab-pane>
-      <a-tab-pane key="3" tab="表单权限"></a-tab-pane>
-      <a-tab-pane key="4" tab="节点事件"></a-tab-pane>
-      <a-tab-pane key="5" tab="节点通知"></a-tab-pane>
-      <a-tab-pane key="6" tab="超时处理"></a-tab-pane>
+      <a-tab-pane key="1" tab="基础设置" />
+      <a-tab-pane key="2" tab="高级设置" />
+      <a-tab-pane key="3" tab="表单权限" />
+      <a-tab-pane key="4" tab="节点事件" />
+      <a-tab-pane key="5" tab="节点通知" />
+      <a-tab-pane key="6" tab="超时处理" />
     </a-tabs>
     <ScrollContainer class="config-content" v-show="activeKey !== '3'">
       <a-form :colon="false" layout="vertical" :model="formConf" class="config-form" v-show="activeKey === '1'">
@@ -73,7 +73,7 @@
               isFlow
               showSystemFullLabel
               @change="(val, data) => onFuncChange(keyMap.interfaceConfig, val, data)"
-              @fieldChange="onRelationFieldChange" />
+              @field-change="onRelationFieldChange" />
           </a-form-item>
           <div v-if="formConf.assigneeType === 6 || formConf.assigneeType === 7">
             <jnpf-users-select
@@ -81,8 +81,8 @@
               buttonType="button"
               :modalTitle="formConf.assigneeType === 6 ? '添加审批人' : '添加候选人'"
               multiple
-              @Change="onApproversChange"
-              @labelChange="onLabelChange" />
+              @change="onApproversChange"
+              @label-change="onLabelChange" />
           </div>
           <a-form-item class="!mb-0 !mt-10px" v-if="formConf.assigneeType === 6">
             <template #label>审批人范围<BasicHelp text="指定成员增加人员选择范围附加条件" /></template>
@@ -275,7 +275,7 @@
               showSystemFullLabel
               isFlow
               @change="(val, data) => onFuncChange(keyMap.approveFuncConfig, val, data)"
-              @fieldChange="onRelationFieldChange" />
+              @field-change="onRelationFieldChange" />
           </a-form-item>
           <a-form-item label="退回事件" class="normal-item-content">
             <a-switch v-model:checked="formConf.rejectFuncConfig.on" />
@@ -291,7 +291,7 @@
               showSystemFullLabel
               isFlow
               @change="(val, data) => onFuncChange(keyMap.rejectFuncConfig, val, data)"
-              @fieldChange="onRelationFieldChange" />
+              @field-change="onRelationFieldChange" />
           </a-form-item>
           <a-form-item label="撤回事件" class="normal-item-content">
             <a-switch v-model:checked="formConf.recallFuncConfig.on" />
@@ -307,7 +307,7 @@
               showSystemFullLabel
               isFlow
               @change="(val, data) => onFuncChange(keyMap.recallFuncConfig, val, data)"
-              @fieldChange="onRelationFieldChange" />
+              @field-change="onRelationFieldChange" />
           </a-form-item>
           <a-form-item label="超时事件" class="normal-item-content">
             <a-switch v-model:checked="formConf.overTimeFuncConfig.on" />
@@ -323,7 +323,7 @@
               showSystemFullLabel
               isFlow
               @change="(val, data) => onFuncChange(keyMap.overTimeFuncConfig, val, data)"
-              @fieldChange="onRelationFieldChange" />
+              @field-change="onRelationFieldChange" />
           </a-form-item>
           <a-form-item label="提醒事件" class="normal-item-content">
             <a-switch v-model:checked="formConf.noticeFuncConfig.on" />
@@ -339,7 +339,7 @@
               showSystemFullLabel
               isFlow
               @change="(val, data) => onFuncChange(keyMap.noticeFuncConfig, val, data)"
-              @fieldChange="onRelationFieldChange" />
+              @field-change="onRelationFieldChange" />
           </a-form-item>
         </a-form>
       </div>
@@ -701,7 +701,7 @@
                 class="!w-full" />
             </a-col>
             <a-col :span="2" class="rule-cell">
-              <a-button type="danger" @click="delTransmitRule(i, cIndex)"><i class="icon-ym icon-ym-nav-close" /></a-button>
+              <a-button type="danger" @click="delTransmitRule(i, cIndex)"><i class="icon-ym icon-ym-nav-close"></i></a-button>
             </a-col>
           </a-row>
           <div class="table-add-action" @click="addTransmitRule(i)">
@@ -761,7 +761,7 @@
     'prevNodeList',
   ]);
   const emit = defineEmits(['updateFormFieldList']);
-  defineOptions({ name: 'approverNode', inheritAttrs: false });
+  defineOptions({ name: 'ApproverNode', inheritAttrs: false });
   defineExpose({ getContent, updateCheckStatus });
   const { createMessage } = useMessage();
   const [registerRuleModal, { openModal: openRuleModal, closeModal: closeRuleModal }] = useModal();

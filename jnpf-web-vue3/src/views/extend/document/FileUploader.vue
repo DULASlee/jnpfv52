@@ -12,7 +12,7 @@
       @complete="onComplete"
       :autoStart="false"
       :key="uploadKey">
-      <uploader-unsupport></uploader-unsupport>
+      <uploader-unsupport />
       <UploaderBtn id="file-uploader-btn" ref="uploaderBtnRef" :attrs="attrs">选择文件</UploaderBtn>
       <uploader-list v-show="panelShow">
         <template #default="{ fileList }">

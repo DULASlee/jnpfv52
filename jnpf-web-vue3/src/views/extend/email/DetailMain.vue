@@ -3,37 +3,37 @@
     <a-form-item name="subject">
       <h4 class="text">{{ dataForm.subject }}</h4>
     </a-form-item>
-    <a-divider></a-divider>
+    <a-divider />
     <a-form-item label="发件人">
       <p class="text recipient">{{ isSend ? dataForm.sender : dataForm.senderName + '&lt;' + dataForm.sender + '>' }} </p>
     </a-form-item>
-    <a-divider></a-divider>
+    <a-divider />
     <a-form-item label="时间">
       <p class="text" v-if="isSend">{{ formatToDateTime(dataForm.creatorTime) }}</p>
       <p class="text" v-if="!isSend">{{ formatToDateTime(dataForm.fdate) }}</p>
     </a-form-item>
-    <a-divider></a-divider>
+    <a-divider />
     <a-form-item label="收件人">
       <p class="text">{{ isSend ? dataForm.recipient : dataForm.mAccount }}</p>
     </a-form-item>
-    <a-divider></a-divider>
+    <a-divider />
     <template v-if="dataForm.cc">
       <a-form-item label="抄送人" name="cc">
         <p>{{ dataForm.cc }}</p>
       </a-form-item>
-      <a-divider></a-divider>
+      <a-divider />
     </template>
     <template v-if="dataForm.bcc">
       <a-form-item label="密送人" name="bcc">
         <p class="text">{{ dataForm.bcc }}</p>
       </a-form-item>
-      <a-divider></a-divider>
+      <a-divider />
     </template>
     <template v-if="getFileList.length">
       <a-form-item label="附件" name="attachment">
         <jnpf-upload-file v-model:value="getFileList" type="mail" detailed disabled />
       </a-form-item>
-      <a-divider></a-divider>
+      <a-divider />
     </template>
     <a-form-item name="bodyText">
       <p class="content" v-html="dataForm.bodyText"></p>

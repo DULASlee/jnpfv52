@@ -58,7 +58,7 @@
         <div></div>
       </template>
       <template v-if="webType != '1'">
-        <a-divider></a-divider>
+        <a-divider />
         <a-form-item label="公开查询" name="columnUse">
           <a-space :size="15">
             <JnpfSwitch v-model:value="dataForm.columnUse" />

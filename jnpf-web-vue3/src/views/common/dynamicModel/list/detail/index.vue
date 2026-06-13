@@ -4,21 +4,21 @@
       <a-button type="primary" @click="handlePrint" v-if="formConf.hasPrintBtn && formConf.printId">{{ formConf.printButtonText || '打印' }}</a-button>
     </template>
     <div class="p-10px" :style="{ margin: '0 auto', width: formConf.fullScreenWidth || '100%' }">
-      <Parser ref="parserRef" :formConf="formConf" :formData="formData" @toDetail="toDetail" :key="key" v-if="!loading" />
+      <Parser ref="parserRef" :formConf="formConf" :formData="formData" @to-detail="toDetail" :key="key" v-if="!loading" />
     </div>
   </BasicPopup>
   <BasicModal v-bind="$attrs" @register="registerModal" :title="title" :width="formConf.generalWidth" :minHeight="100" :showOkBtn="false" :closeFunc="onClose">
     <template #insertFooter>
       <a-button type="primary" @click="handlePrint" v-if="formConf.hasPrintBtn && formConf.printId">{{ formConf.printButtonText || '打印' }}</a-button>
     </template>
-    <Parser ref="parserRef" :formConf="formConf" :formData="formData" @toDetail="toDetail" :key="key" v-if="!loading" />
+    <Parser ref="parserRef" :formConf="formConf" :formData="formData" @to-detail="toDetail" :key="key" v-if="!loading" />
   </BasicModal>
   <BasicDrawer v-bind="$attrs" @register="registerDrawer" :title="title" :width="formConf.drawerWidth" showFooter :showOkBtn="false" :closeFunc="onClose">
     <template #insertFooter>
       <a-button type="primary" @click="handlePrint" v-if="formConf.hasPrintBtn && formConf.printId">{{ formConf.printButtonText || '打印' }}</a-button>
     </template>
     <div class="p-10px">
-      <Parser ref="parserRef" :formConf="formConf" :formData="formData" @toDetail="toDetail" :key="key" v-if="!loading" />
+      <Parser ref="parserRef" :formConf="formConf" :formData="formData" @to-detail="toDetail" :key="key" v-if="!loading" />
     </div>
   </BasicDrawer>
   <Detail v-if="detailVisible" ref="detailRef" @close="state.detailVisible = false" />

@@ -10,8 +10,8 @@
             <a-col v-for="(item, i) in emailList" :key="i" class="align-center" :class="{ 'mt-10px': i != 0 }">
               <jnpf-select v-model:value="item.email" :options="options" showSearch placeholder="选择邮箱" />
               <a-input v-model:value="item.emailText" placeholder="" />
-              <a-button type="danger" @click="handleDelete(i)" v-if="i != 0"><i class="icon-ym icon-ym-nav-close" /></a-button>
-              <a-button type="primary" @click="handleAdd" style="" v-if="i == 0"><i class="icon-ym icon-ym-btn-add" /></a-button>
+              <a-button type="danger" @click="handleDelete(i)" v-if="i != 0"><i class="icon-ym icon-ym-nav-close"></i></a-button>
+              <a-button type="primary" @click="handleAdd" style="" v-if="i == 0"><i class="icon-ym icon-ym-btn-add"></i></a-button>
             </a-col>
           </a-form-item>
           <a-form-item label="产品评价" class="align-center">
@@ -46,7 +46,7 @@
   import { useBaseStore } from '/@/store/modules/base';
   import { BasicTable, useTable, BasicColumn } from '/@/components/Table';
 
-  defineOptions({ name: 'extend-formDemo-verifyForm4' });
+  defineOptions({ name: 'ExtendFormDemoVerifyForm4' });
 
   const state = reactive({
     options: [],

@@ -22,7 +22,7 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
 
-  defineOptions({ name: 'permission-userOnline' });
+  defineOptions({ name: 'PermissionUserOnline' });
 
   const { createMessage, createConfirm } = useMessage();
   const { t } = useI18n();

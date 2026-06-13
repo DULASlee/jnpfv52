@@ -1,5 +1,5 @@
 // @jnpf-generated v1.0.0 entity=student type=search
-// 生成时间：2026-06-12T15:11:18.006Z
+// 生成时间：2026-06-13T02:04:04.625Z
 
 /* eslint-disable */
 export const searchFields = [

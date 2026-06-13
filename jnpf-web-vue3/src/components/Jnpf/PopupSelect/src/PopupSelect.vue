@@ -24,7 +24,7 @@
             <a-row :gutter="10">
               <a-col :span="8">
                 <a-form-item :label="t('common.keyword')" name="keyword">
-                  <a-input v-model:value="listQuery.keyword" :placeholder="t('common.enterKeyword')" allowClear @pressEnter="handleSearch" />
+                  <a-input v-model:value="listQuery.keyword" :placeholder="t('common.enterKeyword')" allowClear @press-enter="handleSearch" />
                 </a-form-item>
               </a-col>
               <a-col :span="8">
@@ -44,7 +44,7 @@
             </a-tooltip>
           </div>
         </div>
-        <a-table :data-source="list" v-bind="getTableBindValues" @change="handleTableChange" ref="tableElRef"></a-table>
+        <a-table :data-source="list" v-bind="getTableBindValues" @change="handleTableChange" ref="tableElRef" />
       </a-modal>
     </template>
     <template v-if="popupType === 'drawer'">
@@ -55,7 +55,7 @@
               <a-row :gutter="10">
                 <a-col :span="8">
                   <a-form-item :label="t('common.keyword')" name="keyword">
-                    <a-input v-model:value="listQuery.keyword" :placeholder="t('common.enterKeyword')" allowClear @pressEnter="handleSearch" />
+                    <a-input v-model:value="listQuery.keyword" :placeholder="t('common.enterKeyword')" allowClear @press-enter="handleSearch" />
                   </a-form-item>
                 </a-col>
                 <a-col :span="8">
@@ -75,7 +75,7 @@
               </a-tooltip>
             </div>
           </div>
-          <a-table :data-source="list" v-bind="getTableBindValues" @change="handleTableChange" ref="tableElRef"></a-table>
+          <a-table :data-source="list" v-bind="getTableBindValues" @change="handleTableChange" ref="tableElRef" />
         </div>
         <div :class="drawerFooterPrefixCls" :style="getDrawerFooterStyle">
           <a-button @click="handleCancel" class="mr-10px">{{ t('common.cancelText') }}</a-button>
@@ -90,7 +90,7 @@
             <a-row :gutter="10">
               <a-col :span="8">
                 <a-form-item :label="t('common.keyword')" name="keyword">
-                  <a-input v-model:value="listQuery.keyword" :placeholder="t('common.enterKeyword')" allowClear @pressEnter="handleSearch" />
+                  <a-input v-model:value="listQuery.keyword" :placeholder="t('common.enterKeyword')" allowClear @press-enter="handleSearch" />
                 </a-form-item>
               </a-col>
               <a-col :span="8">
@@ -110,7 +110,7 @@
             </a-tooltip>
           </div>
         </div>
-        <a-table :data-source="list" v-bind="getTableBindValues" @change="handleTableChange" ref="tableElRef"></a-table>
+        <a-table :data-source="list" v-bind="getTableBindValues" @change="handleTableChange" ref="tableElRef" />
         <a-space class="popover-bottom-btns" :size="10">
           <a-button @click="handleCancel">{{ t('common.cancelText') }}</a-button>
           <a-button type="primary" @click="handleSubmit">{{ t('common.okText') }}</a-button>

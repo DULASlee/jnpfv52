@@ -7,9 +7,9 @@
         </div>
         <div class="transfer-pane__body transfer-pane__body-tab">
           <a-tabs v-model:activeKey="state.activeKey" :tabBarGutter="10" size="small" class="pane-tabs" @change="onTabsChange">
-            <a-tab-pane key="1" tab="全部数据"></a-tab-pane>
-            <a-tab-pane key="2" tab="当前组织"></a-tab-pane>
-            <a-tab-pane key="3" tab="我的下属"></a-tab-pane>
+            <a-tab-pane key="1" tab="全部数据" />
+            <a-tab-pane key="2" tab="当前组织" />
+            <a-tab-pane key="3" tab="我的下属" />
           </a-tabs>
           <template v-if="state.activeKey === '1'">
             <BasicTree

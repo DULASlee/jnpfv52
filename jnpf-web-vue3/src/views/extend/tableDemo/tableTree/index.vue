@@ -12,7 +12,7 @@
   import { BasicTable, useTable, BasicColumn } from '/@/components/Table';
   import { useBaseStore } from '/@/store/modules/base';
 
-  defineOptions({ name: 'extend-tableDemo-tableTree' });
+  defineOptions({ name: 'ExtendTableDemoTableTree' });
 
   interface State {
     industryTypeList: any[];

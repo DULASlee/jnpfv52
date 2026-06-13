@@ -61,7 +61,7 @@
         if (!imageList) {
           return [];
         }
-        return imageList.map((item) => {
+        return imageList.map(item => {
           if (isString(item)) {
             return {
               src: item,

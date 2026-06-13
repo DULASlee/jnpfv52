@@ -11,7 +11,7 @@
       @search="debounceOnSearch(activeData.relationField)" />
   </a-form-item>
   <a-form-item label="参数设置" v-if="activeData.templateJson?.length">
-    <select-interface-btn :templateJson="activeData.templateJson" :fieldOptions="getFormFieldsOptions" :type="3" @fieldChange="onRelationFieldChange" />
+    <select-interface-btn :templateJson="activeData.templateJson" :fieldOptions="getFormFieldsOptions" :type="3" @field-change="onRelationFieldChange" />
   </a-form-item>
   <a-form-item>
     <template #label>显示条数<BasicHelp text="最大值只能设置为50" /></template>

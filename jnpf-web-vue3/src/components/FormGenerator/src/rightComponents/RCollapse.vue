@@ -8,11 +8,11 @@
       <template #item="{ element, index }">
         <div class="select-item">
           <div class="select-line-icon option-drag">
-            <i class="icon-ym icon-ym-darg" />
+            <i class="icon-ym icon-ym-darg"></i>
           </div>
           <a-input v-model:value="element.title" placeholder="面板名称" />
           <div class="close-btn select-line-icon" @click="delItem(index)">
-            <i class="icon-ym icon-ym-btn-clearn" />
+            <i class="icon-ym icon-ym-btn-clearn"></i>
           </div>
         </div>
       </template>

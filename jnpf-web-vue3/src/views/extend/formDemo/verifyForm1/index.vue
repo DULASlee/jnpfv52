@@ -116,7 +116,7 @@
   import { ScrollContainer } from '/@/components/Container';
   import type { FormInstance } from 'ant-design-vue';
 
-  defineOptions({ name: 'extend-formDemo-verifyForm1' });
+  defineOptions({ name: 'ExtendFormDemoVerifyForm1' });
 
   const validatePass = (_rule, value) => {
     if (value !== state.dataForm.password) {

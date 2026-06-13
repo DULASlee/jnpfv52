@@ -74,7 +74,7 @@
   import { Chart } from '/@/components/Chart';
   import { formatToDateTime } from '/@/utils/dateUtil';
 
-  defineOptions({ name: 'system-monitor' });
+  defineOptions({ name: 'SystemMonitor' });
 
   interface State {
     loading: boolean;

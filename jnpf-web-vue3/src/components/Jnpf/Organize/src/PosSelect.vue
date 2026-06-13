@@ -24,9 +24,9 @@
           <a-input-search :placeholder="t('common.enterKeyword')" allowClear v-model:value="keyword" @search="handleSearch" />
         </div>
         <div class="transfer-pane__body transfer-pane__body-tab">
-          <a-tabs v-model:activeKey="activeKey" :tabBarGutter="10" size="small" @tabClick="onTabClick" class="pane-tabs" v-if="hasSys">
-            <a-tab-pane key="1" tab="岗位"></a-tab-pane>
-            <a-tab-pane key="system" tab="动态参数"></a-tab-pane>
+          <a-tabs v-model:activeKey="activeKey" :tabBarGutter="10" size="small" @tab-click="onTabClick" class="pane-tabs" v-if="hasSys">
+            <a-tab-pane key="1" tab="岗位" />
+            <a-tab-pane key="system" tab="动态参数" />
           </a-tabs>
           <BasicTree class="tree-main" :treeData="treeData" @select="handleSelect" ref="treeRef" defaultExpandAll :loading="loading" />
         </div>

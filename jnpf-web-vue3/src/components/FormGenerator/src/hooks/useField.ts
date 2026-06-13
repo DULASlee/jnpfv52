@@ -32,7 +32,7 @@ export function useField(activeData) {
     const url = list.includes(jnpfKey) ? activeData.interfaceId : activeData.__config__.propsUrl;
     getDataInterfaceInfo(url).then(res => {
       const data = res.data;
-      let list = data.fieldJson ? JSON.parse(data.fieldJson) : [];
+      const list = data.fieldJson ? JSON.parse(data.fieldJson) : [];
       state.allOptions = list.map(o => ({ ...o, value: o.defaultValue }));
     });
   }

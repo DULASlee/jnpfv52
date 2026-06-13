@@ -55,7 +55,7 @@
   const [registerDrawer] = useDrawerInner(init);
 
   function init(data) {
-    getOperationLogInfo(data.id).then((res) => {
+    getOperationLogInfo(data.id).then(res => {
       state.dataForm = res.data;
     });
   }

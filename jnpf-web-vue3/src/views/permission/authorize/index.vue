@@ -36,7 +36,7 @@
   import PortalAuthorizePopup from './components/PortalAuthorizePopup.vue';
   import UsersSelectModal from './components/UsersSelectModal.vue';
 
-  defineOptions({ name: 'permission-authorize' });
+  defineOptions({ name: 'PermissionAuthorize' });
 
   const { t } = useI18n();
   const { createMessage } = useMessage();

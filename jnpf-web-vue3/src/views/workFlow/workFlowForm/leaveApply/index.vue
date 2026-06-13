@@ -54,7 +54,11 @@
         </a-col>
         <a-col :span="12" v-if="judgeShow('leaveEndTime')">
           <a-form-item label="结束时间" name="leaveEndTime">
-            <jnpf-date-picker v-model:value="dataForm.leaveEndTime" format="YYYY-MM-DD HH:mm:ss" placeholder="选择日期" :disabled="judgeWrite('leaveEndTime')" />
+            <jnpf-date-picker
+              v-model:value="dataForm.leaveEndTime"
+              format="YYYY-MM-DD HH:mm:ss"
+              placeholder="选择日期"
+              :disabled="judgeWrite('leaveEndTime')" />
           </a-form-item>
         </a-col>
         <a-col :span="12" v-if="judgeShow('leaveDayCount')">

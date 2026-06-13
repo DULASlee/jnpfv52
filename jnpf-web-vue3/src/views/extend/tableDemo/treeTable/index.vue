@@ -25,7 +25,7 @@
   import { useI18n } from '/@/hooks/web/useI18n';
   import { useBaseStore } from '/@/store/modules/base';
 
-  defineOptions({ name: 'extend-tableDemo-treeTable' });
+  defineOptions({ name: 'ExtendTableDemoTreeTable' });
 
   interface State {
     industryTypeList: any[];

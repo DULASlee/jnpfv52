@@ -40,7 +40,7 @@
   import Form from './Form.vue';
   import { useMessage } from '/@/hooks/web/useMessage';
 
-  defineOptions({ name: 'extend-saleOrder' });
+  defineOptions({ name: 'ExtendSaleOrder' });
 
   interface State {
     activeId: string;

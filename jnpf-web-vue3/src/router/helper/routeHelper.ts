@@ -98,7 +98,7 @@ function dynamicImport(dynamicViewsModules: Record<string, () => Promise<Recorda
 // 将背景对象变成路由对象
 export function transformObjToRoute<T = AppRouteModule>(routerList: BackMenu[]): T[] {
   const globSetting = useGlobSetting();
-  let routeList: AppRouteModule[] = [];
+  const routeList: AppRouteModule[] = [];
   function getRouteList(routerList: any) {
     for (let i = 0; i < routerList.length; i++) {
       const e = routerList[i];

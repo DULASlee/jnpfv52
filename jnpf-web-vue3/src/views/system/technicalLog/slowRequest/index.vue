@@ -22,7 +22,7 @@
   import { BasicTable, useTable, BasicColumn } from '/@/components/Table';
   import { getSlowRequestList } from '/@/api/system/technicalLog';
 
-  defineOptions({ name: 'system-slow-request-log' });
+  defineOptions({ name: 'SystemSlowRequestLog' });
 
   const router = useRouter();
 

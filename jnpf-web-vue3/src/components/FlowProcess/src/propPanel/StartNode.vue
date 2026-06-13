@@ -1,12 +1,12 @@
 <template>
   <section class="common-pane">
     <a-tabs v-model:activeKey="activeKey" size="small" class="pane-tabs">
-      <a-tab-pane key="1" tab="基础设置"></a-tab-pane>
-      <a-tab-pane key="2" tab="高级设置"></a-tab-pane>
-      <a-tab-pane key="3" tab="表单权限"></a-tab-pane>
-      <a-tab-pane key="4" tab="流程事件"></a-tab-pane>
-      <a-tab-pane key="5" tab="流程通知"></a-tab-pane>
-      <a-tab-pane key="6" tab="超时处理"></a-tab-pane>
+      <a-tab-pane key="1" tab="基础设置" />
+      <a-tab-pane key="2" tab="高级设置" />
+      <a-tab-pane key="3" tab="表单权限" />
+      <a-tab-pane key="4" tab="流程事件" />
+      <a-tab-pane key="5" tab="流程通知" />
+      <a-tab-pane key="6" tab="超时处理" />
     </a-tabs>
     <ScrollContainer class="config-content" v-show="activeKey !== '3'">
       <a-form :colon="false" layout="vertical" :model="formConf" class="config-form" v-show="activeKey === '1'">
@@ -23,7 +23,7 @@
         </a-form-item>
         <a-form-item v-if="flowType != 1">
           <template #label>发起设置<BasicHelp text="谁可以发起 默认所有人,需要设置请选择" /></template>
-          <jnpf-users-select v-model:value="formConf.initiator" buttonType="button" modalTitle="添加发起人" multiple @labelChange="onLabelChange" />
+          <jnpf-users-select v-model:value="formConf.initiator" buttonType="button" modalTitle="添加发起人" multiple @label-change="onLabelChange" />
         </a-form-item>
         <a-form-item label="抄送设置">
           <jnpf-users-select v-model:value="formConf.circulateUser" buttonType="button" modalTitle="添加抄送人" multiple />
@@ -166,7 +166,7 @@
               showSystemFullLabel
               isFlow
               @change="(val, data) => onFuncChange(keyMap.initFuncConfig, val, data)"
-              @fieldChange="onRelationFieldChange" />
+              @field-change="onRelationFieldChange" />
           </a-form-item>
           <a-form-item label="结束事件" class="normal-item-content">
             <a-switch v-model:checked="formConf.endFuncConfig.on" />
@@ -182,7 +182,7 @@
               showSystemFullLabel
               isFlow
               @change="(val, data) => onFuncChange(keyMap.endFuncConfig, val, data)"
-              @fieldChange="onRelationFieldChange" />
+              @field-change="onRelationFieldChange" />
           </a-form-item>
           <a-form-item label="撤回事件" class="normal-item-content">
             <a-switch v-model:checked="formConf.flowRecallFuncConfig.on" />
@@ -198,7 +198,7 @@
               showSystemFullLabel
               isFlow
               @change="(val, data) => onFuncChange(keyMap.flowRecallFuncConfig, val, data)"
-              @fieldChange="onRelationFieldChange" />
+              @field-change="onRelationFieldChange" />
           </a-form-item>
         </a-form>
       </div>
@@ -657,7 +657,7 @@
     'getFormFieldList',
   ]);
   const emit = defineEmits(['updateFormFieldList']);
-  defineOptions({ name: 'startNode', inheritAttrs: false });
+  defineOptions({ name: 'StartNode', inheritAttrs: false });
   defineExpose({ getContent, updateCheckStatus });
 
   const extraRuleOptions = [

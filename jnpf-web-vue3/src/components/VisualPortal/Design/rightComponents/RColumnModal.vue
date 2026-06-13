@@ -3,7 +3,7 @@
     <a-table :data-source="state.list" :columns="state.columns" size="small" :pagination="false" rowKey="id" class="carousel-table">
       <template #bodyCell="{ column, record, index }">
         <template v-if="column.key === 'drag'">
-          <i class="drag-handler icon-ym icon-ym-darg" title="点击拖动" />
+          <i class="drag-handler icon-ym icon-ym-darg" title="点击拖动"></i>
         </template>
         <template v-if="column.key === 'fullName'">
           <a-input v-model:value="record.fullName" placeholder="请输入" allowClear v-if="state.type === 1" />

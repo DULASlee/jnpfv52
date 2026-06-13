@@ -34,7 +34,7 @@
     <a-button block @click="handleTransferRules()">{{ activeData.__config__.transferList?.length ? '编辑填充规则' : '填充规则配置' }}</a-button>
   </a-form-item>
   <a-form-item label="参数设置" v-if="activeData.templateJson?.length">
-    <select-interface-btn :templateJson="activeData.templateJson" :fieldOptions="formFieldsOptions" :type="3" @fieldChange="onRelationFieldChange" />
+    <select-interface-btn :templateJson="activeData.templateJson" :fieldOptions="formFieldsOptions" :type="3" @field-change="onRelationFieldChange" />
   </a-form-item>
   <a-divider>列表字段</a-divider>
   <div class="options-list">
@@ -42,7 +42,7 @@
       <template #item="{ element, index }">
         <div class="select-item">
           <div class="select-line-icon option-drag">
-            <i class="icon-ym icon-ym-darg" />
+            <i class="icon-ym icon-ym-darg"></i>
           </div>
           <a-input v-model:value="element.label" placeholder="列名" />
           <a-auto-complete
@@ -52,7 +52,7 @@
             @focus="onFocus(element.value)"
             @search="debounceOnSearch(element.value)" />
           <div class="close-btn select-line-icon" @click="activeData.columnOptions.splice(index, 1)">
-            <i class="icon-ym icon-ym-btn-clearn" />
+            <i class="icon-ym icon-ym-btn-clearn"></i>
           </div>
         </div>
       </template>
@@ -68,7 +68,7 @@
   <a-form-item label="分页条数" v-if="activeData.hasPage">
     <jnpf-radio v-model:value="activeData.pageSize" :options="pageSizeOptions" optionType="button" button-style="solid" class="right-radio" />
   </a-form-item>
-  <a-divider></a-divider>
+  <a-divider />
   <a-form-item label="能否清空">
     <a-switch v-model:checked="activeData.clearable" />
   </a-form-item>

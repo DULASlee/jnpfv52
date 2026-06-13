@@ -27,7 +27,7 @@
   import { useBaseStore } from '/@/store/modules/base';
   import Form from './Form.vue';
 
-  defineOptions({ name: 'systemData-dataSource' });
+  defineOptions({ name: 'SystemDataDataSource' });
 
   const { t } = useI18n();
   const { createMessage } = useMessage();

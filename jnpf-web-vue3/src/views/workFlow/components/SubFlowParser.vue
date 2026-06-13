@@ -31,7 +31,7 @@
           :endTime="state.endTime"
           :flowId="config.flowId"
           :opType="config.opType"
-          @viewDetail="viewNodeDetail"
+          @view-detail="viewNodeDetail"
           v-if="state.activeKey == '3'" />
       </a-tab-pane>
       <a-tab-pane key="4" tab="审批汇总" forceRender v-if="config.opType != '-1' && state.isSummary">

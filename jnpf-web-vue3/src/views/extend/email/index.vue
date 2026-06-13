@@ -23,7 +23,7 @@
       </a-tabs>
       <div class="container">
         <div class="jnpf-common-search-box">
-          <BasicForm class="search-form" @register="registerSearchForm" @submit="handleSubmit" @reset="handleReset"></BasicForm>
+          <BasicForm class="search-form" @register="registerSearchForm" @submit="handleSubmit" @reset="handleReset" />
           <div class="jnpf-common-search-box-right">
             <a-button type="primary" preIcon="icon-ym icon-ym-btn-download" @click="receiveEmail" :loading="state.btnLoading">收邮件</a-button>
           </div>
@@ -88,7 +88,7 @@
     btnLoading: boolean;
   }
 
-  defineOptions({ name: 'extend-email' });
+  defineOptions({ name: 'ExtendEmail' });
   const { t } = useI18n();
   const { createMessage } = useMessage();
   const state = reactive<State>({

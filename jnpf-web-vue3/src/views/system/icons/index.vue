@@ -2,7 +2,7 @@
   <div class="jnpf-content-wrapper icons-wrapper">
     <div class="jnpf-content-wrapper-center">
       <div class="jnpf-content-wrapper-search-box">
-        <BasicForm class="search-form" @register="registerForm" @submit="handleSubmit" @reset="handleReset"></BasicForm>
+        <BasicForm class="search-form" @register="registerForm" @submit="handleSubmit" @reset="handleReset" />
       </div>
       <div class="jnpf-content-wrapper-content bg-white">
         <a-tabs v-model:activeKey="activeKey" type="card" class="jnpf-content-wrapper-tabs">
@@ -10,7 +10,7 @@
             <ScrollContainer>
               <a-row>
                 <a-col :span="6" v-for="item in ymIconList" :key="item" @click="handleCopy('icon-ym ' + item)" :title="item" class="icon-item">
-                  <i :class="'icon-ym ' + item" />
+                  <i :class="'icon-ym ' + item"></i>
                   <span>{{ item }}</span>
                 </a-col>
               </a-row>
@@ -20,7 +20,7 @@
             <ScrollContainer>
               <a-row>
                 <a-col :span="6" v-for="item in ymCustomList" :key="item" @click="handleCopy('ym-custom ' + item)" :title="item" class="icon-item">
-                  <i :class="'ym-custom ' + item" />
+                  <i :class="'ym-custom ' + item"></i>
                   <span>{{ item }}</span>
                 </a-col>
               </a-row>

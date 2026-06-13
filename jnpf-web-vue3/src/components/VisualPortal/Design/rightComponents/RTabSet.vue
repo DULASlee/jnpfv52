@@ -13,12 +13,12 @@
         <template #item="{ element, index }">
           <div class="select-item">
             <div class="select-line-icon option-drag">
-              <i class="icon-ym icon-ym-darg" />
+              <i class="icon-ym icon-ym-darg"></i>
             </div>
             <a-input class="flex-1" v-model:value="element.title" placeholder="标签名称" />
             <JnpfIconPicker class="!w-130px" v-model:value="element.icon" v-show="showType === 'pc'" />
             <div class="close-btn select-line-icon" @click="delItem(index, element)">
-              <i class="icon-ym icon-ym-btn-clearn" />
+              <i class="icon-ym icon-ym-btn-clearn"></i>
             </div>
           </div>
         </template>

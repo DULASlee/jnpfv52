@@ -7,8 +7,8 @@ import { RouteParams } from 'vue-router';
 import { toRaw } from 'vue';
 
 export function getAllParentPath<T = Recordable>(treeData: T[], path: string) {
-  const menuList = findPath(treeData, (n) => n.path === path) as Menu[];
-  return (menuList || []).map((item) => item.path);
+  const menuList = findPath(treeData, n => n.path === path) as Menu[];
+  return (menuList || []).map(item => item.path);
 }
 
 // 路径处理
@@ -48,7 +48,7 @@ export function transformRouteToMenu(routeModList: AppRouteModule[], routerMappi
   const routeList: AppRouteRecordRaw[] = [];
 
   // 对路由项进行修改
-  cloneRouteModList.forEach((item) => {
+  cloneRouteModList.forEach(item => {
     if (routerMapping && item.meta.hideChildrenInMenu && typeof item.redirect === 'string') {
       item.path = item.redirect;
     }
@@ -90,7 +90,7 @@ export function configureDynamicParamsMenu(menu: Menu, params: RouteParams) {
   let realPath = paramPath ? paramPath : path;
   const matchArr = realPath.match(menuParamRegex);
 
-  matchArr?.forEach((it) => {
+  matchArr?.forEach(it => {
     const realIt = it.substr(1);
     if (params[realIt]) {
       realPath = realPath.replace(`:${realIt}`, params[realIt] as string);
@@ -102,5 +102,5 @@ export function configureDynamicParamsMenu(menu: Menu, params: RouteParams) {
   }
   menu.path = realPath;
   // children
-  menu.children?.forEach((item) => configureDynamicParamsMenu(item, params));
+  menu.children?.forEach(item => configureDynamicParamsMenu(item, params));
 }

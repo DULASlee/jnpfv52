@@ -18,7 +18,7 @@
   import { useI18n } from '/@/hooks/web/useI18n';
   import { useBaseStore } from '/@/store/modules/base';
 
-  defineOptions({ name: 'extend-tableDemo-printTable' });
+  defineOptions({ name: 'ExtendTableDemoPrintTable' });
 
   interface State {
     industryTypeList: any[];

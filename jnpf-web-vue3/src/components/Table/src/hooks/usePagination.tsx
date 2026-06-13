@@ -29,7 +29,7 @@ export function usePagination(refProps: ComputedRef<BasicTableProps>) {
 
   watch(
     () => unref(refProps).pagination,
-    (pagination) => {
+    pagination => {
       if (!isBoolean(pagination) && pagination) {
         configRef.value = {
           ...unref(configRef),
@@ -51,7 +51,7 @@ export function usePagination(refProps: ComputedRef<BasicTableProps>) {
       pageSize: PAGE_SIZE,
       size: 'small',
       defaultPageSize: PAGE_SIZE,
-      showTotal: (total) => t('component.table.total', { total }),
+      showTotal: total => t('component.table.total', { total }),
       showSizeChanger: true,
       pageSizeOptions: PAGE_SIZE_OPTIONS,
       itemRender: itemRender,

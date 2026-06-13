@@ -1,5 +1,5 @@
 <!-- @jnpf-generated v1.0.0 entity=student type=list-page -->
-<!-- 生成时间：2026-06-12T15:11:18.006Z -->
+<!-- 生成时间：2026-06-13T02:04:04.624Z -->
 <!-- 此文件由 JNPF 代码生成器生成，可手动修改 -->
 
 <template>

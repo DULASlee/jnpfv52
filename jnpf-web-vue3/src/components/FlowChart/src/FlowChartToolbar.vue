@@ -4,10 +4,7 @@
       <Tooltip placement="bottom" v-bind="item.disabled ? { visible: false } : {}">
         <template #title>{{ item.tooltip }}</template>
         <span :class="`${prefixCls}-toolbar__icon`" v-if="item.icon" @click="onControl(item)">
-          <Icon
-            :icon="item.icon"
-            :class="item.disabled ? 'cursor-not-allowed disabeld' : 'cursor-pointer'"
-          />
+          <Icon :icon="item.icon" :class="item.disabled ? 'cursor-not-allowed disabeld' : 'cursor-pointer'" />
         </span>
       </Tooltip>
       <Divider v-if="item.separate" type="vertical" />
@@ -78,8 +75,8 @@
 
       function onHistoryChange({ data: { undoAble, redoAble } }) {
         const itemsList = unref(toolbarItemList);
-        const undoIndex = itemsList.findIndex((item) => item.type === ToolbarTypeEnum.UNDO);
-        const redoIndex = itemsList.findIndex((item) => item.type === ToolbarTypeEnum.REDO);
+        const undoIndex = itemsList.findIndex(item => item.type === ToolbarTypeEnum.UNDO);
+        const redoIndex = itemsList.findIndex(item => item.type === ToolbarTypeEnum.REDO);
         if (undoIndex !== -1) {
           unref(toolbarItemList)[undoIndex].disabled = !undoAble;
         }
@@ -88,7 +85,7 @@
         }
       }
 
-      const onControl = (item) => {
+      const onControl = item => {
         const lf = unref(logicFlow);
         if (!lf) {
           return;

@@ -18,7 +18,7 @@
               <template #item="{ element }">
                 <div class="components-item" :class="{ disabled: element.__config__.dragDisabled }" @click="addComponent(element)">
                   <div class="components-body">
-                    <i :class="element.__config__.tagIcon" />
+                    <i :class="element.__config__.tagIcon"></i>
                     {{ element.__config__.label }}
                   </div>
                 </div>
@@ -70,9 +70,9 @@
                     :index="index"
                     :active-id="activeId"
                     :form-conf="formConf"
-                    @activeItem="activeFormItem"
-                    @copyItem="drawingItemCopy"
-                    @deleteItem="drawingItemDelete"
+                    @active-item="activeFormItem"
+                    @copy-item="drawingItemCopy"
+                    @delete-item="drawingItemDelete"
                     :mergeLeftColDisabled="mergeLeftColDisabled"
                     :mergeRightColDisabled="mergeRightColDisabled"
                     :mergeWholeRowDisabled="mergeWholeRowDisabled"
@@ -83,10 +83,10 @@
                     :undoMergeColDisabled="undoMergeColDisabled"
                     :deleteWholeColDisabled="deleteWholeColDisabled"
                     :deleteWholeRowDisabled="deleteWholeRowDisabled"
-                    @addRow="handleTableAddRow"
-                    @addCol="handleTableAddCol"
-                    @handleTableSetting="handleTableSetting"
-                    @handleShowMenu="handleShowMenu"
+                    @add-row="handleTableAddRow"
+                    @add-col="handleTableAddCol"
+                    @handle-table-setting="handleTableSetting"
+                    @handle-show-menu="handleShowMenu"
                     :put="shouldClone"
                     :end="onTableEnd" />
                 </template>
@@ -117,9 +117,9 @@
                           :index="index"
                           :active-id="activeId"
                           :form-conf="formConf"
-                          @activeItem="activeFormItem"
-                          @copyItem="drawingItemCopy"
-                          @deleteItem="drawingItemDelete"
+                          @active-item="activeFormItem"
+                          @copy-item="drawingItemCopy"
+                          @delete-item="drawingItemDelete"
                           :put="debounceShouldClone"
                           :end="onTableEnd" />
                       </template>
@@ -135,7 +135,11 @@
         </div>
       </div>
     </div>
-    <RightPanel v-bind="getRightPanelBind" @relationChange="onRelationChange" @addTableComponent="handleAddTableComponent" @activeFormItem="activeFormItem" />
+    <RightPanel
+      v-bind="getRightPanelBind"
+      @relation-change="onRelationChange"
+      @add-table-component="handleAddTableComponent"
+      @active-form-item="activeFormItem" />
     <PreviewModal @register="registerPreviewModal" :formConf="formConf" />
   </div>
 </template>

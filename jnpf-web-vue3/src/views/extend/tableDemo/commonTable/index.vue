@@ -27,7 +27,7 @@
   import { useBaseStore } from '/@/store/modules/base';
   import Form from '../commonForm/index.vue';
 
-  defineOptions({ name: 'extend-tableDemo-commonTable' });
+  defineOptions({ name: 'ExtendTableDemoCommonTable' });
 
   interface State {
     industryTypeList: any[];

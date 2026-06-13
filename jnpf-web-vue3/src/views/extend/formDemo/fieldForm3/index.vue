@@ -21,7 +21,7 @@
   import { reactive, toRefs } from 'vue';
   import { ScrollContainer } from '/@/components/Container';
 
-  defineOptions({ name: 'extend-formDemo-verifyForm3' });
+  defineOptions({ name: 'ExtendFormDemoVerifyForm3' });
 
   interface State {
     fileList: any[];

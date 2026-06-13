@@ -7,7 +7,7 @@
           <template v-if="record.isRetry">
             <a-tag color="blue" class="!mx-8px">重试</a-tag>
             <BasicHelp :text="[`原实例ID：${record.parentId}`, `原实例执行时间：${dayjs(record.parentTime).format('YYYY-MM-DD HH:mm:ss')}`]">
-              <template #default><i class="icon-ym icon-ym-generator-link" /></template>
+              <template #default><i class="icon-ym icon-ym-generator-link"></i></template>
             </BasicHelp>
           </template>
         </template>
@@ -19,7 +19,7 @@
         </template>
       </template>
     </BasicTable>
-    <LogDetail @register="registerLogDetailModal" @updateNodes="updateNodes" />
+    <LogDetail @register="registerLogDetailModal" @update-nodes="updateNodes" />
   </BasicPopup>
 </template>
 <script lang="ts" setup>

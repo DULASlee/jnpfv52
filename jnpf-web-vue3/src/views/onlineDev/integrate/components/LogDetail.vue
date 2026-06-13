@@ -5,12 +5,12 @@
         <div class="item-box" :class="{ active: activeItem.id == item.id }" v-for="(item, index) in list" @click="handleClick(item, index)">
           <div class="top">
             <span class="fullName">{{ item.nodeName }}</span>
-            <i class="icon icon-ym icon-ym-success" v-if="item.resultType" />
-            <i class="icon icon-ym icon-ym-fail" v-else />
+            <i class="icon icon-ym icon-ym-success" v-if="item.resultType"></i>
+            <i class="icon icon-ym icon-ym-fail" v-else></i>
           </div>
           <div class="bottom">
-            <i class="icon-ym icon-ym-clock pr-4px" v-if="item.type == 1" />
-            <i class="icon-ym icon-ym-btn-refresh pr-4px" v-else />
+            <i class="icon-ym icon-ym-clock pr-4px" v-if="item.type == 1"></i>
+            <i class="icon-ym icon-ym-btn-refresh pr-4px" v-else></i>
             {{ dayjs(item.endTime).format('YYYY-MM-DD HH:mm:ss') }}
           </div>
         </div>

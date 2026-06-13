@@ -40,7 +40,7 @@ export const useGeneratorStore = defineStore({
     },
   },
   actions: {
-    setHasTable(hasTable: boolean = false) {
+    setHasTable(hasTable = false) {
       this.hasTable = hasTable;
     },
     setAllTable(val) {

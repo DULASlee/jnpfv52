@@ -3,11 +3,7 @@
     <template v-if="!getCollapse">
       <div :class="`${prefixCls}-submenu-title`" @click.stop="handleClick" :style="getItemStyle">
         <slot name="title"></slot>
-        <Icon
-          icon="eva:arrow-ios-downward-outline"
-          :size="14"
-          :class="`${prefixCls}-submenu-title-icon`"
-        />
+        <Icon icon="eva:arrow-ios-downward-outline" :size="14" :class="`${prefixCls}-submenu-title-icon`" />
       </div>
       <CollapseTransition>
         <ul :class="prefixCls" v-show="opened">
@@ -23,8 +19,7 @@
       :visible="getIsOpend"
       @visible-change="handleVisibleChange"
       :overlayStyle="getOverlayStyle"
-      :align="{ offset: [0, 0] }"
-    >
+      :align="{ offset: [0, 0] }">
       <div :class="getSubClass" v-bind="getEvents(false)">
         <div
           :class="[
@@ -32,16 +27,10 @@
               [`${prefixCls}-submenu-popup`]: !getParentSubMenu,
               [`${prefixCls}-submenu-collapsed-show-tit`]: collapsedShowTitle,
             },
-          ]"
-        >
+          ]">
           <slot name="title"></slot>
         </div>
-        <Icon
-          v-if="getParentSubMenu"
-          icon="eva:arrow-ios-downward-outline"
-          :size="14"
-          :class="`${prefixCls}-submenu-title-icon`"
-        />
+        <Icon v-if="getParentSubMenu" icon="eva:arrow-ios-downward-outline" :size="14" :class="`${prefixCls}-submenu-title-icon`" />
       </div>
       <!-- eslint-disable-next-line -->
       <template #content v-show="opened">
@@ -58,17 +47,7 @@
 <script lang="ts">
   import type { CSSProperties, PropType } from 'vue';
   import type { SubMenuProvider } from './types';
-  import {
-    defineComponent,
-    computed,
-    unref,
-    getCurrentInstance,
-    toRefs,
-    reactive,
-    provide,
-    onBeforeMount,
-    inject,
-  } from 'vue';
+  import { defineComponent, computed, unref, getCurrentInstance, toRefs, reactive, provide, onBeforeMount, inject } from 'vue';
   import { useDesign } from '/@/hooks/web/useDesign';
   import { propTypes } from '/@/utils/propTypes';
   import { useMenuItem } from './useMenu';
@@ -109,8 +88,7 @@
         isChild: false,
       });
 
-      const { getParentSubMenu, getItemStyle, getParentMenu, getParentList } =
-        useMenuItem(instance);
+      const { getParentSubMenu, getItemStyle, getParentMenu, getParentList } = useMenuItem(instance);
 
       const { prefixCls } = useDesign('menu');
 
@@ -210,7 +188,7 @@
 
         subMenuEmitter.emit('submenu:mouse-enter-child');
 
-        const index = parentGetOpenNames().findIndex((item) => item === props.name);
+        const index = parentGetOpenNames().findIndex(item => item === props.name);
 
         sliceIndex(index);
 
@@ -265,29 +243,26 @@
           clearTimeout(data.timeout!);
         });
 
-        rootMenuEmitter.on(
-          'on-update-opened',
-          (data: boolean | (string | number)[] | Recordable) => {
-            if (unref(getCollapse)) return;
-            if (isBoolean(data)) {
-              state.opened = data;
-              return;
+        rootMenuEmitter.on('on-update-opened', (data: boolean | (string | number)[] | Recordable) => {
+          if (unref(getCollapse)) return;
+          if (isBoolean(data)) {
+            state.opened = data;
+            return;
+          }
+          if (isObject(data) && rootProps.accordion) {
+            const { opend, parent, uidList } = data as Recordable;
+            if (parent === instance?.parent) {
+              state.opened = opend;
+            } else if (!uidList.includes(instance?.uid)) {
+              state.opened = false;
             }
-            if (isObject(data) && rootProps.accordion) {
-              const { opend, parent, uidList } = data as Recordable;
-              if (parent === instance?.parent) {
-                state.opened = opend;
-              } else if (!uidList.includes(instance?.uid)) {
-                state.opened = false;
-              }
-              return;
-            }
+            return;
+          }
 
-            if (props.name && Array.isArray(data)) {
-              state.opened = (data as (string | number)[]).includes(props.name);
-            }
-          },
-        );
+          if (props.name && Array.isArray(data)) {
+            state.opened = (data as (string | number)[]).includes(props.name);
+          }
+        });
 
         rootMenuEmitter.on('on-update-active-name:submenu', (data: number[]) => {
           if (instance?.uid) {

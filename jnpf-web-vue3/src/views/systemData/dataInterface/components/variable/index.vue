@@ -6,11 +6,11 @@
     <BasicTable @register="registerTable" :columns="menuTableColumns" :searchInfo="getSearchInfo">
       <template #tableTitle>
         <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" @click="addOrUpdateHandle()">{{ t('common.addText') }}</a-button>
-        <jnpf-upload-btn url="/api/system/DataInterfaceVariate/Actions/Import" accept=".ffa" @on-success="reload"></jnpf-upload-btn>
+        <jnpf-upload-btn url="/api/system/DataInterfaceVariate/Actions/Import" accept=".ffa" @on-success="reload" />
       </template>
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'icon'">
-          <i :class="record.icon + ' table-icon'" />
+          <i :class="record.icon + ' table-icon'"></i>
         </template>
         <template v-if="column.key === 'enabledMark'">
           <a-tag :color="record.enabledMark == 1 ? 'success' : 'error'">{{ record.enabledMark == 1 ? '启用' : '禁用' }}</a-tag>

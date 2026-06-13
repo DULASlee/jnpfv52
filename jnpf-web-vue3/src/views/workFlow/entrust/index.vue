@@ -2,10 +2,10 @@
   <div class="jnpf-content-wrapper">
     <div class="jnpf-content-wrapper-center">
       <div class="jnpf-content-wrapper-search-box">
-        <BasicForm class="search-form" @register="registerSearchForm" @submit="handleSubmit" @reset="handleReset"></BasicForm>
+        <BasicForm class="search-form" @register="registerSearchForm" @submit="handleSubmit" @reset="handleReset" />
       </div>
       <div class="jnpf-content-wrapper-content bg-white">
-        <a-tabs v-model:activeKey="activeKey" type="card" class="jnpf-content-wrapper-tabs" destroyInactiveTabPane @tabClick="onTabClick">
+        <a-tabs v-model:activeKey="activeKey" type="card" class="jnpf-content-wrapper-tabs" destroyInactiveTabPane @tab-click="onTabClick">
           <a-tab-pane key="0" tab="委托发起">
             <BasicTable @register="registerLaunchTable" :searchInfo="getSearchInfo">
               <template #tableTitle>
@@ -24,7 +24,7 @@
                 <template v-if="column.key === 'completion'">
                   <p v-if="record.status == 5 || record.completion == 0">----</p>
                   <p v-else-if="record.completion == 100">已完成</p>
-                  <a-progress :percent="record.completion" size="small" v-else></a-progress>
+                  <a-progress :percent="record.completion" size="small" v-else />
                 </template>
                 <template v-if="column.key === 'action'">
                   <TableAction :actions="getLaunchTableActions(record)" />
@@ -95,7 +95,7 @@
     keyword: string;
   }
 
-  defineOptions({ name: 'workFlow-entrust' });
+  defineOptions({ name: 'WorkFlowEntrust' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

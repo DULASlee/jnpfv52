@@ -25,10 +25,10 @@
         </div>
         <div class="transfer-pane__body transfer-pane__body-tab" v-if="selectType === 'all'">
           <a-tabs v-model:activeKey="activeKey" :tabBarGutter="10" size="small" class="pane-tabs">
-            <a-tab-pane key="1" tab="全部数据"></a-tab-pane>
-            <a-tab-pane key="2" tab="当前组织"></a-tab-pane>
-            <a-tab-pane key="3" tab="我的下属"></a-tab-pane>
-            <a-tab-pane key="4" tab="系统变量" v-if="hasSys"></a-tab-pane>
+            <a-tab-pane key="1" tab="全部数据" />
+            <a-tab-pane key="2" tab="当前组织" />
+            <a-tab-pane key="3" tab="我的下属" />
+            <a-tab-pane key="4" tab="系统变量" v-if="hasSys" />
           </a-tabs>
           <template v-if="activeKey === '1'">
             <BasicTree

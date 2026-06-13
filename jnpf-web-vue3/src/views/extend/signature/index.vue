@@ -25,7 +25,7 @@
           :lineWidth="lineWidth"
           :isCrop="isCrop"
           :lineColor="lineColor"
-          :bgColor.sync="bgColor"
+          v-model:bgColor="bgColor"
           v-if="showSig" />
         <img :src="resultImg" alt="" v-if="!showSig" class="sig-img" />
       </div>
@@ -38,7 +38,7 @@
   import vueEsign from '/@/components/Jnpf/Sign/src/esign.vue';
   import { useMessage } from '/@/hooks/web/useMessage';
 
-  defineOptions({ name: 'extend-signature' });
+  defineOptions({ name: 'ExtendSignature' });
 
   const state = reactive({
     lineWidth: 6,
@@ -248,4 +248,3 @@
     }
   }
 </style>
-

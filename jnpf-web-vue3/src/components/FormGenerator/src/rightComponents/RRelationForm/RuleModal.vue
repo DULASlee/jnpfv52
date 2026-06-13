@@ -3,7 +3,7 @@
     <div class="condition-main">
       <a-row :gutter="8">
         <a-col :span="9">{{ getTitle }}</a-col>
-        <a-col :span="4"></a-col>
+        <a-col :span="4" />
         <a-col :span="9">当前表单字段</a-col>
       </a-row>
       <a-row :gutter="8" v-for="(item, index) in transferList" :key="index" class="mt-10px">
@@ -36,7 +36,7 @@
             :fieldNames="{ options: 'options1' }" />
         </a-col>
         <a-col :span="1" class="text-center" v-if="!item.required">
-          <i class="icon-ym icon-ym-btn-clearn" @click="delTransferItem(index)" />
+          <i class="icon-ym icon-ym-btn-clearn" @click="delTransferItem(index)"></i>
         </a-col>
       </a-row>
       <span class="link-text my-10px inline-block" @click="addTransferItem()"><i class="icon-ym icon-ym-btn-add text-14px mr-4px"></i>添加字段</span>

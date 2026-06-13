@@ -1,6 +1,6 @@
 <template>
   <BasicModal v-bind="$attrs" @register="registerModal" title="数据选择" @ok="handleSubmit" :width="800" class="jnpf-list-modal">
-    <BasicTable :searchInfo="searchInfo" @register="registerTable" class="jnpf-sub-table"></BasicTable>
+    <BasicTable :searchInfo="searchInfo" @register="registerTable" class="jnpf-sub-table" />
   </BasicModal>
 </template>
 <script lang="ts" setup>

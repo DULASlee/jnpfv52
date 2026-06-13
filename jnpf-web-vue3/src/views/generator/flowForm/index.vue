@@ -31,7 +31,7 @@
   import DownloadModal from '../DownloadModal.vue';
   import PreviewModal from '../PreviewModal.vue';
 
-  defineOptions({ name: 'generator-flowForm' });
+  defineOptions({ name: 'GeneratorFlowForm' });
 
   const { createMessage } = useMessage();
   const baseStore = useBaseStore();

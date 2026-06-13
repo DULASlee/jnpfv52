@@ -117,7 +117,7 @@
   import { computed } from 'vue';
   import type { PropType } from 'vue';
 
-  defineOptions({ name: 'childTableColumn' });
+  defineOptions({ name: 'ChildTableColumn' });
   const props = defineProps({
     data: { type: Array as PropType<any[]>, default: () => [] },
     head: { type: Array as PropType<any[]>, default: () => [] },

@@ -92,7 +92,7 @@
 
       watch(
         () => unref(getFlowOptions),
-        (options) => {
+        options => {
           unref(lfInstance)?.updateEditConfig(options);
         },
       );

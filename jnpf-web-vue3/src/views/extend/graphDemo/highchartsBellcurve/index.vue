@@ -17,7 +17,7 @@
   import highchartsHistogramBellcurve from 'highcharts/modules/histogram-bellcurve';
   highchartsHistogramBellcurve(Highcharts);
 
-  defineOptions({ name: 'extend-graphDemo-highchartsBellcurve' });
+  defineOptions({ name: 'ExtendGraphDemoHighchartsBellcurve' });
 
   const options = reactive({
     accessibility: { enabled: false },
@@ -71,4 +71,3 @@
     ],
   });
 </script>
-

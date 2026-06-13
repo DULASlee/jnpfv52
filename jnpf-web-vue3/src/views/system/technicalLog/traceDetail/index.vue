@@ -15,10 +15,7 @@
         </div>
         <div class="jnpf-trace-timeline" v-if="traceData.length">
           <a-timeline>
-            <a-timeline-item
-              v-for="(item, index) in traceData"
-              :key="index"
-              :color="getTimelineColor(item.type)">
+            <a-timeline-item v-for="(item, index) in traceData" :key="index" :color="getTimelineColor(item.type)">
               <div class="jnpf-timeline-item">
                 <div class="flex items-center gap-2 mb-1">
                   <span class="text-xs text-gray-400">{{ formatTimestamp(item.timestamp) }}</span>
@@ -45,7 +42,7 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import { formatToDateTime } from '/@/utils/dateUtil';
 
-  defineOptions({ name: 'system-trace-detail' });
+  defineOptions({ name: 'SystemTraceDetail' });
 
   interface TraceEntry {
     timestamp: string;

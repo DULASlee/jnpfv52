@@ -47,7 +47,7 @@
   import { useBaseStore } from '/@/store/modules/base';
   import { getPositionSelector } from '/@/api/permission/position';
 
-  defineOptions({ name: 'extend-formDemo-verifyForm2' });
+  defineOptions({ name: 'ExtendFormDemoVerifyForm2' });
 
   interface State {
     dataForm: any;

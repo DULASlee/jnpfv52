@@ -48,7 +48,7 @@ export function useWebSocket() {
     function onMessage(res) {
       if (res.data) {
         try {
-          let dataStr = res.data;
+          const dataStr = res.data;
           const data = JSON.parse(dataStr);
           for (const callback of listeners.keys()) {
             try {
@@ -132,7 +132,7 @@ export function useWebSocket() {
     try {
       const msgObj = JSON.parse(msg);
       msgObj.token = token;
-      let content = JSON.stringify(msgObj);
+      const content = JSON.stringify(msgObj);
       ws.send(content);
     } catch (_) {}
     return;

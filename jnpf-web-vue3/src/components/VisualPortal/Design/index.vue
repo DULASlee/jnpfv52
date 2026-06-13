@@ -19,34 +19,34 @@
         <a-radio-group v-model:value="showType" button-style="solid">
           <a-radio-button value="pc" class="!px-10px">
             <a-tooltip placement="bottom" title="PC">
-              <i class="icon-ym icon-ym-pc" />
+              <i class="icon-ym icon-ym-pc"></i>
             </a-tooltip>
           </a-radio-button>
           <a-radio-button value="app" class="!px-10px">
             <a-tooltip placement="bottom" title="APP">
-              <i class="icon-ym icon-ym-mobile" />
+              <i class="icon-ym icon-ym-mobile"></i>
             </a-tooltip>
           </a-radio-button>
         </a-radio-group>
         <a-space class="options-box" :size="10">
           <a-tooltip placement="bottom" title="撤销">
             <a-button type="text" :disabled="!getCanUndo" @click="handleRedoAndUndo(1)" class="btnOptions">
-              <i class="icon-ym icon-ym-report-icon-undo" />
+              <i class="icon-ym icon-ym-report-icon-undo"></i>
             </a-button>
           </a-tooltip>
           <a-tooltip placement="bottom" title="重做">
             <a-button type="text" :disabled="!getCanRedo" @click="handleRedoAndUndo(2)" class="btnOptions">
-              <i class="icon-ym icon-ym-report-icon-restore" />
+              <i class="icon-ym icon-ym-report-icon-restore"></i>
             </a-button>
           </a-tooltip>
           <a-tooltip placement="bottom" title="清空">
             <a-button type="text" @click="handleEmpty" class="btnOptions">
-              <i class="icon-ym icon-ym-clean" />
+              <i class="icon-ym icon-ym-clean"></i>
             </a-button>
           </a-tooltip>
           <a-tooltip placement="bottom" title="预览">
             <a-button type="text" @click="handlePreview" class="btnOptions">
-              <i class="icon-ym icon-ym-video-play" />
+              <i class="icon-ym icon-ym-video-play"></i>
             </a-button>
           </a-tooltip>
           <a-divider type="vertical" class="divider" />
@@ -56,7 +56,7 @@
         </a-space>
       </div>
     </template>
-    <PortalDesigner ref="portalDesigner" :conf="formData" :showType="showType" @addRecord="handleAddRecord" v-if="!loading" />
+    <PortalDesigner ref="portalDesigner" :conf="formData" :showType="showType" @add-record="handleAddRecord" v-if="!loading" />
   </BasicModal>
   <ReleaseModal @register="registerReleaseModal" @reload="handleCloseModal" />
 </template>

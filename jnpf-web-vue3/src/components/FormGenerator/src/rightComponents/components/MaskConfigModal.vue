@@ -54,7 +54,7 @@
             @change="onNumberChange($event, 'unrealMaskLength')" />
         </a-form-item>
       </template>
-      <a-divider></a-divider>
+      <a-divider />
       <a-form-item label="效果测试" name="testText">
         <a-input v-model:value="testText" placeholder="请输入" allowClear :disabled="isMask">
           <template #addonAfter>

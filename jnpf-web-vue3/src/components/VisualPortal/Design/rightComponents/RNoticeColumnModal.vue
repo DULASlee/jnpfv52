@@ -3,7 +3,7 @@
     <a-table :data-source="state.list" :columns="state.columns" size="small" :pagination="false" rowKey="id" class="carousel-table">
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'drag'">
-          <i class="drag-handler icon-ym icon-ym-darg" title="点击拖动" />
+          <i class="drag-handler icon-ym icon-ym-darg" title="点击拖动"></i>
         </template>
         <template v-if="column.key === 'fullName'">
           <div class="flex">
@@ -52,11 +52,11 @@
           <span v-else></span>
         </template>
         <template v-if="column.key === 'width'">
-          <a-input-number v-model:value="record.width" :min="0" :max="9999" v-if="record.filedName !== 'classify'"  placeholder="请输入"/>
+          <a-input-number v-model:value="record.width" :min="0" :max="9999" v-if="record.filedName !== 'classify'" placeholder="请输入" />
           <span v-else></span>
         </template>
         <template v-if="column.key === 'fontSize'">
-          <a-input-number v-model:value="record.fontSize" :min="12" :max="25" v-if="record.filedName !== 'classify'"  placeholder="请输入"/>
+          <a-input-number v-model:value="record.fontSize" :min="12" :max="25" v-if="record.filedName !== 'classify'" placeholder="请输入" />
           <span v-else></span>
         </template>
         <template v-if="column.key === 'fontWeight'">

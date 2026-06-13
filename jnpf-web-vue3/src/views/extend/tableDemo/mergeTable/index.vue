@@ -27,7 +27,7 @@
   import { useBaseStore } from '/@/store/modules/base';
   import Form from '../commonForm/index.vue';
 
-  defineOptions({ name: 'extend-tableDemo-mergeTable' });
+  defineOptions({ name: 'ExtendTableDemoMergeTable' });
 
   interface State {
     industryTypeList: any[];

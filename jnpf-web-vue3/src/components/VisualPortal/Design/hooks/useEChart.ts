@@ -89,17 +89,17 @@ export function useEChart(activeData, chartRef) {
     const styleType = activeData.option.styleType;
     const option = activeData.option;
     const optionData = JSON.parse(JSON.stringify(state.chartData)) || [];
-    let typeArr = Array.from(new Set(optionData.map(item => item.type)));
-    let axisData = Array.from(new Set(optionData.map(item => item.name)));
-    let seriesData: any[] = [];
+    const typeArr = Array.from(new Set(optionData.map(item => item.type)));
+    const axisData = Array.from(new Set(optionData.map(item => item.name)));
+    const seriesData: any[] = [];
     typeArr.forEach((title, index) => {
       const type = getType(title);
-      let obj = {
+      const obj = {
         name: title,
         type: type,
         stack: styleType == 5 || styleType == 6 || styleType == 7 || (styleType != 4 && jnpfKey == 'lineChart') ? title : 'total',
       };
-      let chartArr = optionData.filter(item => title === item.type);
+      const chartArr = optionData.filter(item => title === item.type);
       if (jnpfKey == 'pieChart') {
         obj['data'] = chartArr.map(item => {
           return {
@@ -126,7 +126,7 @@ export function useEChart(activeData, chartRef) {
       }
       seriesData.push(obj);
     });
-    let xAxis: any = {
+    const xAxis: any = {
       type: option.category == 'category' ? 'category' : 'value',
       show: option.xAxisShow,
       inverse: option.xAxisInverse,
@@ -156,7 +156,7 @@ export function useEChart(activeData, chartRef) {
         },
       },
     };
-    let yAxis = [
+    const yAxis = [
       {
         type: option.category == 'category' ? 'value' : 'category',
         show: option.yAxisShow,
@@ -189,7 +189,7 @@ export function useEChart(activeData, chartRef) {
         },
       },
     ];
-    let newOption: any = {
+    const newOption: any = {
       //标题
       title: {
         show: option.titleText || option.titleSubtext,
@@ -238,7 +238,7 @@ export function useEChart(activeData, chartRef) {
       },
       series: (() => {
         const list: any[] = (seriesData || []).map((ele: any, index) => {
-          let label: any = {
+          const label: any = {
             show: option.seriesLabelShow,
             position: jnpfKey == 'pieChart' ? option.seriesLabelPosition : 'top',
             fontSize: option.seriesLabelFontSize,
@@ -246,7 +246,7 @@ export function useEChart(activeData, chartRef) {
             color: option.seriesLabelColor,
             backgroundColor: option.seriesLabelBgColor,
           };
-          let itemStyle: any = {
+          const itemStyle: any = {
             borderRadius: option.seriesItemStyleBarBorderRadius,
           };
           if (jnpfKey == 'barChart' || jnpfKey == 'lineChart' || jnpfKey == 'radarChart') itemStyle.color = getColor(index);
@@ -373,7 +373,7 @@ export function useEChart(activeData, chartRef) {
     for (let i = 0; i < list.length - 1; i++) {
       for (let j = 0; j < list.length - 1; j++) {
         if (list[j].value > list[j + 1].value) {
-          let t = list[j];
+          const t = list[j];
           list[j] = list[j + 1];
           list[j + 1] = t;
         }
@@ -406,7 +406,7 @@ export function useEChart(activeData, chartRef) {
     const optionData = state.chartData || [];
     if (!Array.isArray(optionData)) return;
     option.barType = [];
-    let typeArr = Array.from(new Set(optionData.map(item => item.type)));
+    const typeArr = Array.from(new Set(optionData.map(item => item.type)));
     typeArr.map((item, index) => {
       if (item) {
         option.barType.push({

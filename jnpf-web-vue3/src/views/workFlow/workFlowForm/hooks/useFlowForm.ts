@@ -90,7 +90,7 @@ export function useFlowForm(data: UseFlowFormContext) {
   // 更新校验规则
   function updateDataRule() {
     if (!config.formOperates || !config.formOperates.length) return (selfState.dataRule = {});
-    let newRules = {};
+    const newRules = {};
     for (let i = 0; i < config.formOperates.length; i++) {
       const item = config.formOperates[i];
       if (!item.id.includes('-')) {
@@ -112,9 +112,9 @@ export function useFlowForm(data: UseFlowFormContext) {
           if (withoutRequiredItem && item.required) selfState.dataRule[item.id].push(newRulesItem);
         }
       } else {
-        let key = item.id.split('-')[0];
-        let newId = item.id.split('-')[1];
-        let newItem = {
+        const key = item.id.split('-')[0];
+        const newId = item.id.split('-')[1];
+        const newItem = {
           ...item,
           id: newId,
         };
@@ -153,12 +153,12 @@ export function useFlowForm(data: UseFlowFormContext) {
   function exist() {
     let isOk = true;
     if (JSON.stringify(state.tableRequiredData) === '{}') return isOk;
-    for (let key in state.tableRequiredData) {
+    for (const key in state.tableRequiredData) {
       if (selfState.dataForm[key] && Array.isArray(selfState.dataForm[key])) {
         for (let i = 0; i < selfState.dataForm[key].length; i++) {
-          let item = selfState.dataForm[key][i];
-          inner: for (let id in item) {
-            let arr = state.tableRequiredData[key].filter(o => o.id === id) || [];
+          const item = selfState.dataForm[key][i];
+          inner: for (const id in item) {
+            const arr = state.tableRequiredData[key].filter(o => o.id === id) || [];
             if (!arr.length) continue inner;
             if (arr[0].required) {
               const msg = `${arr[0].name}不能为空`;
@@ -177,25 +177,25 @@ export function useFlowForm(data: UseFlowFormContext) {
   }
   function judgeRequired(id) {
     if (!config.formOperates || !config.formOperates.length) return false;
-    let arr = config.formOperates.filter(o => o.id === id) || [];
+    const arr = config.formOperates.filter(o => o.id === id) || [];
     if (!arr.length) return false;
-    let item = arr[0];
+    const item = arr[0];
     return item.required;
   }
   function judgeShow(id) {
     if (config.opType == 4) return true;
     if (!config.formOperates || !config.formOperates.length) return true;
-    let arr = config.formOperates.filter(o => o.id === id) || [];
+    const arr = config.formOperates.filter(o => o.id === id) || [];
     if (!arr.length) return true;
-    let item = arr[0];
+    const item = arr[0];
     return item.read;
   }
   function judgeWrite(id) {
     if (config.disabled) return true;
     if (!config.formOperates || !config.formOperates.length) return false;
-    let arr = config.formOperates.filter(o => o.id === id) || [];
+    const arr = config.formOperates.filter(o => o.id === id) || [];
     if (!arr.length) return true;
-    let item = arr[0];
+    const item = arr[0];
     return !item.write;
   }
 

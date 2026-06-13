@@ -29,8 +29,8 @@
       @change="handleChange"
       v-else>
       <div>
-        <loading-outlined v-if="loading"></loading-outlined>
-        <plus-outlined v-else></plus-outlined>
+        <loading-outlined v-if="loading" />
+        <plus-outlined v-else />
         <div class="ant-upload-text" v-if="tipText">{{ tipText }}</div>
         <div class="ant-upload-text ant-upload-sub-text" v-if="subTipText">{{ subTipText }}</div>
       </div>

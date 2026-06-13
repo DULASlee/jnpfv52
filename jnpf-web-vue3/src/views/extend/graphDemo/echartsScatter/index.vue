@@ -10,7 +10,7 @@
   import { Chart } from '/@/components/Chart';
   import ecStat from 'echarts-stat';
 
-  defineOptions({ name: 'extend-graphDemo-echartsScatter' });
+  defineOptions({ name: 'ExtendGraphDemoEchartsScatter' });
 
   const data = [
     [20, 60],

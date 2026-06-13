@@ -21,7 +21,7 @@
   import { reactive, toRefs } from 'vue';
   import { ScrollContainer } from '/@/components/Container';
 
-  defineOptions({ name: 'extend-formDemo-verifyForm4' });
+  defineOptions({ name: 'ExtendFormDemoVerifyForm4' });
 
   const state = reactive({
     dataForm: {

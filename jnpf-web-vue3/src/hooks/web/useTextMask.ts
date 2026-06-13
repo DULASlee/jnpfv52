@@ -116,12 +116,12 @@ export function useTextMask(options?: Nullable<Partial<MaskOptions>>) {
       suffixLength = 0;
     if (unref(config).prefixType === 2) prefixLength = unref(config).prefixLimit || 0;
     if ((unref(config).prefixType === 3 || unref(config).prefixType === 4) && unref(config).prefixSpecifyChar) {
-      let specifyCharIndex = str.indexOf(unref(config).prefixSpecifyChar);
+      const specifyCharIndex = str.indexOf(unref(config).prefixSpecifyChar);
       if (specifyCharIndex > -1) prefixLength = unref(config).prefixType === 3 ? specifyCharIndex : specifyCharIndex + unref(config).prefixSpecifyChar.length;
     }
     if (unref(config).suffixType === 2) suffixLength = unref(config).suffixLimit || 0;
     if ((unref(config).suffixType === 3 || unref(config).suffixType === 4) && unref(config).suffixSpecifyChar) {
-      let specifyCharIndex = str.indexOf(unref(config).suffixSpecifyChar);
+      const specifyCharIndex = str.indexOf(unref(config).suffixSpecifyChar);
       if (specifyCharIndex > -1)
         suffixLength = unref(config).suffixType === 3 ? str.length - specifyCharIndex - unref(config).suffixSpecifyChar.length : str.length - specifyCharIndex;
     }

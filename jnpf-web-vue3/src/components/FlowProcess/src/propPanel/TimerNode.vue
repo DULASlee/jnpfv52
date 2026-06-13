@@ -17,7 +17,7 @@
   import { ScrollContainer } from '/@/components/Container';
 
   const props = defineProps(['formConf']);
-  defineOptions({ name: 'timerNode', inheritAttrs: false });
+  defineOptions({ name: 'TimerNode', inheritAttrs: false });
   defineExpose({ getContent });
 
   function getContent() {

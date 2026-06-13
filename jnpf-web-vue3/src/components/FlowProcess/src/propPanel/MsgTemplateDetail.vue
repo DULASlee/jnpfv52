@@ -99,7 +99,7 @@
                     <p>{{ dataForm.templateCode }}</p>
                   </a-form-item>
                 </a-col>
-                <a-col :span="12" offset="12"></a-col>
+                <a-col :span="12" offset="12" />
                 <a-col :span="12" v-if="dataForm.messageType == 7">
                   <a-form-item label="跳转方式" name="wxSkip">
                     <p>{{ dataForm.wxSkip == 1 ? '小程序' : '页面' }}</p>

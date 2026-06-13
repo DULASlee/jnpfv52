@@ -14,7 +14,7 @@
       :pagination="false">
       <template #bodyCell="{ column, record, index }">
         <template v-if="column.key === 'drag'">
-          <i class="drag-handler icon-ym icon-ym-darg" title="点击拖动" />
+          <i class="drag-handler icon-ym icon-ym-darg" title="点击拖动"></i>
         </template>
         <template v-if="column.key === 'field'">
           <p @click="handleItemClick(record)" class="cursor-pointer">

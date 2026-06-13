@@ -50,7 +50,7 @@ export class NodeUtils {
    * @returns { Object } 节点数据
    */
   static createNode(type, previousNodeId?) {
-    let res = JSON.parse(JSON.stringify(nodeConfig[type]));
+    const res = JSON.parse(JSON.stringify(nodeConfig[type]));
     res.nodeId = buildBitUUID();
     // if (type !== 'start' && type !== 'timer') res.properties.title += res.nodeId;
     res.prevId = previousNodeId;
@@ -65,14 +65,14 @@ export class NodeUtils {
   static getPreviousNode(prevId, processData) {
     if (processData.nodeId === prevId) return processData;
     if (processData.childNode) {
-      let r1 = this.getPreviousNode(prevId, processData.childNode);
+      const r1 = this.getPreviousNode(prevId, processData.childNode);
       if (r1) {
         return r1;
       }
     }
     if (processData.conditionNodes) {
-      for (let c of processData.conditionNodes) {
-        let r2 = this.getPreviousNode(prevId, c);
+      for (const c of processData.conditionNodes) {
+        const r2 = this.getPreviousNode(prevId, c);
         if (r2) {
           return r2;
         }
@@ -86,7 +86,7 @@ export class NodeUtils {
    * @param { Object  } processData - 流程图的所有节点数据
    */
   static deleteNode(nodeData, processData, checkEmpty = true) {
-    let prevNode = this.getPreviousNode(nodeData.prevId, processData);
+    const prevNode = this.getPreviousNode(nodeData.prevId, processData);
     if (checkEmpty && prevNode.type === 'empty') {
       if (this.isConditionNode(nodeData) || this.isInterflowNode(nodeData) || this.isBranchFlowNode(nodeData)) {
         const willDelBranch = prevNode.conditionNodes.length === 2;
@@ -102,19 +102,19 @@ export class NodeUtils {
       // !this.isConditionNode(nodeData) && this.deleteNode(nodeData, processData)
       return;
     }
-    let concatChild = (prev, delNode) => {
+    const concatChild = (prev, delNode) => {
       prev.childNode = delNode.childNode;
       isEmptyArray(prev.conditionNodes) && (prev.conditionNodes = delNode.conditionNodes);
       prev.childNode && (prev.childNode.prevId = prev.nodeId);
       prev.conditionNodes && prev.conditionNodes.forEach(c => (c.prevId = prev.nodeId));
     };
     if (this.isConditionNode(nodeData) || this.isInterflowNode(nodeData) || this.isBranchFlowNode(nodeData)) {
-      let cons = prevNode.conditionNodes;
-      let index = cons.findIndex(c => c.nodeId === nodeData.nodeId);
+      const cons = prevNode.conditionNodes;
+      const index = cons.findIndex(c => c.nodeId === nodeData.nodeId);
       if (cons.length > 2) {
         cons.splice(index, 1);
       } else {
-        let anotherCon = cons[+!index];
+        const anotherCon = cons[+!index];
         delete prevNode.conditionNodes;
         delete prevNode.conditionType;
         if (prevNode.childNode) {
@@ -149,14 +149,14 @@ export class NodeUtils {
    * @param { Object } newChildNode - 传入的新的节点 用户操作均为空  删除操作/添加抄送人 会传入该参数 以模拟添加节点
    */
   static addApprovalNode(data, isBranchAction, newChildNode: any = undefined) {
-    let oldChildNode = data.childNode;
+    const oldChildNode = data.childNode;
     newChildNode = newChildNode || this.createNode('addData', data.nodeId);
     data.childNode = newChildNode;
     if (oldChildNode) {
       newChildNode.childNode = oldChildNode;
       oldChildNode.prevId = newChildNode.nodeId;
     }
-    let conditionNodes = data.conditionNodes;
+    const conditionNodes = data.conditionNodes;
     if (Array.isArray(conditionNodes) && !isBranchAction && conditionNodes.length) {
       newChildNode.conditionNodes = conditionNodes.map(c => {
         c.prevId = newChildNode.nodeId;
@@ -174,7 +174,7 @@ export class NodeUtils {
    * @return { Object } emptyNode - 空节点数据
    */
   static addEmptyNode(data, _isNew) {
-    let emptyNode = this.createNode('empty', data.nodeId);
+    const emptyNode = this.createNode('empty', data.nodeId);
     this.addApprovalNode(data, true, emptyNode);
     return emptyNode;
   }
@@ -203,8 +203,8 @@ export class NodeUtils {
    */
   static appendConditionNode(data) {
     const conditions = data.conditionNodes;
-    let node = this.createNode('condition', data.nodeId);
-    let defaultNodeIndex = conditions.findIndex(node => node.properties.isDefault);
+    const node = this.createNode('condition', data.nodeId);
+    const defaultNodeIndex = conditions.findIndex(node => node.properties.isDefault);
     node.properties.priority = conditions.length;
     if (defaultNodeIndex > -1) {
       conditions.splice(-1, 0, node); // 插在倒数第二个
@@ -219,8 +219,8 @@ export class NodeUtils {
   // 添加分流/合流 branch
   static appendInterflowNode(data) {
     const conditions = data.conditionNodes;
-    let node = this.createNode('interflow', data.nodeId);
-    let defaultNodeIndex = conditions.findIndex(node => node.properties.isDefault);
+    const node = this.createNode('interflow', data.nodeId);
+    const defaultNodeIndex = conditions.findIndex(node => node.properties.isDefault);
     node.properties.priority = conditions.length;
     if (defaultNodeIndex > -1) {
       conditions.splice(-1, 0, node); // 插在倒数第二个
@@ -234,8 +234,8 @@ export class NodeUtils {
   // 添加选择分支 branch
   static appendBranchFlowNode(data) {
     const conditions = data.conditionNodes;
-    let node = this.createNode('branchFlow', data.nodeId);
-    let defaultNodeIndex = conditions.findIndex(node => node.properties.isDefault);
+    const node = this.createNode('branchFlow', data.nodeId);
+    const defaultNodeIndex = conditions.findIndex(node => node.properties.isDefault);
     node.properties.priority = conditions.length;
     if (defaultNodeIndex > -1) {
       conditions.splice(-1, 0, node); // 插在倒数第二个
@@ -259,7 +259,7 @@ export class NodeUtils {
         // 添加一个模拟用的空白节点并返回这个节点，作为新分支的父节点
         nodeData = this.addEmptyNode(nodeData, true);
       } else {
-        let emptyNode = this.addEmptyNode(nodeData, true);
+        const emptyNode = this.addEmptyNode(nodeData, true);
         emptyNode.conditionNodes = nodeData.conditionNodes;
         emptyNode.conditionType = 'condition';
         emptyNode.conditionNodes.forEach(n => {
@@ -267,7 +267,7 @@ export class NodeUtils {
         });
       }
     }
-    let conditionNodes = [this.createNode('condition', nodeData.nodeId), this.createNode('condition', nodeData.nodeId)].map((c, i) => {
+    const conditionNodes = [this.createNode('condition', nodeData.nodeId), this.createNode('condition', nodeData.nodeId)].map((c, i) => {
       c.properties.priority = i;
       return c;
     });
@@ -283,7 +283,7 @@ export class NodeUtils {
         // 添加一个模拟用的空白节点并返回这个节点，作为新分支的父节点
         nodeData = this.addEmptyNode(nodeData, true);
       } else {
-        let emptyNode = this.addEmptyNode(nodeData, true);
+        const emptyNode = this.addEmptyNode(nodeData, true);
         emptyNode.conditionNodes = nodeData.conditionNodes;
         emptyNode.conditionType = 'interflow';
         emptyNode.conditionNodes.forEach(n => {
@@ -291,7 +291,7 @@ export class NodeUtils {
         });
       }
     }
-    let conditionNodes = [this.createNode('interflow', nodeData.nodeId), this.createNode('interflow', nodeData.nodeId)];
+    const conditionNodes = [this.createNode('interflow', nodeData.nodeId), this.createNode('interflow', nodeData.nodeId)];
     nodeData.conditionNodes = conditionNodes;
     nodeData.conditionType = 'interflow';
   }
@@ -305,7 +305,7 @@ export class NodeUtils {
         // 添加一个模拟用的空白节点并返回这个节点，作为新分支的父节点
         nodeData = this.addEmptyNode(nodeData, true);
       } else {
-        let emptyNode = this.addEmptyNode(nodeData, true);
+        const emptyNode = this.addEmptyNode(nodeData, true);
         emptyNode.conditionNodes = nodeData.conditionNodes;
         emptyNode.conditionType = 'branchFlow';
         emptyNode.conditionNodes.forEach(n => {
@@ -313,7 +313,7 @@ export class NodeUtils {
         });
       }
     }
-    let conditionNodes = [this.createNode('branchFlow', nodeData.nodeId), this.createNode('branchFlow', nodeData.nodeId)];
+    const conditionNodes = [this.createNode('branchFlow', nodeData.nodeId), this.createNode('branchFlow', nodeData.nodeId)];
     nodeData.conditionNodes = conditionNodes;
     nodeData.conditionType = 'branchFlow';
   }
@@ -329,14 +329,14 @@ export class NodeUtils {
       cNode.properties.priority = oldPriority;
       return;
     }
-    let prevNode = this.getPreviousNode(cNode.prevId, processData);
-    let newPriority = cNode.properties.priority;
+    const prevNode = this.getPreviousNode(cNode.prevId, processData);
+    const newPriority = cNode.properties.priority;
     // 替换节点为默认节点 取消修改优先级
     if (prevNode.conditionNodes[newPriority].properties.isDefault) {
       cNode.properties.priority = oldPriority;
       return;
     }
-    let delNode = prevNode.conditionNodes.splice(newPriority, 1, cNode)[0];
+    const delNode = prevNode.conditionNodes.splice(newPriority, 1, cNode)[0];
     delNode.properties.priority = oldPriority;
     prevNode.conditionNodes[oldPriority] = delNode;
   }
@@ -352,9 +352,9 @@ export class NodeUtils {
       return;
     }
     // 分支节点数据 包含该分支所有的条件节点
-    let prevNode = this.getPreviousNode(data.prevId, processData);
-    let branchData = prevNode.conditionNodes;
-    let index = branchData.findIndex(c => c === data);
+    const prevNode = this.getPreviousNode(data.prevId, processData);
+    const branchData = prevNode.conditionNodes;
+    const index = branchData.findIndex(c => c === data);
     if (index) {
       // 和前一个数组项交换位置 Array.prototype.splice会返回包含被删除的项的集合（数组）
       branchData[index - 1].properties.priority = index;
@@ -369,11 +369,11 @@ export class NodeUtils {
    */
   static decreasePriority(data, processData) {
     // 分支节点数据 包含该分支所有的条件节点
-    let prevNode = this.getPreviousNode(data.prevId, processData);
-    let branchData = prevNode.conditionNodes;
-    let index = branchData.findIndex(c => c.nodeId === data.nodeId);
+    const prevNode = this.getPreviousNode(data.prevId, processData);
+    const branchData = prevNode.conditionNodes;
+    const index = branchData.findIndex(c => c.nodeId === data.nodeId);
     if (index < branchData.length - 1) {
-      let lastNode = branchData[index + 1];
+      const lastNode = branchData[index + 1];
       if (lastNode.properties.isDefault) {
         // 默认节点不能修改优先级
         return;
@@ -453,7 +453,7 @@ export class NodeUtils {
  * 添模拟数据
  */
 export function getMockData(type = 1) {
-  let startNode = NodeUtils.createNode('start');
+  const startNode = NodeUtils.createNode('start');
   startNode.properties.integrateType = type;
   if (type == 2) {
     startNode.content = '请设置定时触发器';

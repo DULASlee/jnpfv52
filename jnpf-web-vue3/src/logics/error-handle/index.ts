@@ -23,7 +23,7 @@ function processStackMsg(error: Error) {
     .replace(/\bat\b/gi, '@') // At in chrome, @ in ff
     .split('@') // Split information with @
     .slice(0, 9) // The maximum stack length (Error.stackTraceLimit = 10), so only take the first 10
-    .map((v) => v.replace(/^\s*|\s*$/g, '')) // Remove extra spaces
+    .map(v => v.replace(/^\s*|\s*$/g, '')) // Remove extra spaces
     .join('~') // Manually add separators for later display
     .replace(/\?[^:]+/gi, ''); // Remove redundant parameters of js file links (?x=1 and the like)
   const msg = error.toString();
@@ -80,13 +80,7 @@ function vueErrorHandler(err: Error, vm: any, info: string) {
 /**
  * Configure script error handling function
  */
-export function scriptErrorHandler(
-  event: Event | string,
-  source?: string,
-  lineno?: number,
-  colno?: number,
-  error?: Error,
-) {
+export function scriptErrorHandler(event: Event | string, source?: string, lineno?: number, colno?: number, error?: Error) {
   if (event === 'Script error.' && !source) {
     return false;
   }

@@ -5,7 +5,7 @@
         <BasicTable @register="registerTable">
           <template #tableTitle>
             <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" @click="openAddModal()">{{ t('common.addText') }}</a-button>
-            <jnpf-upload-btn url="/api/flowForm/Form/Actions/Import" accept=".fff" @on-success="reload"></jnpf-upload-btn>
+            <jnpf-upload-btn url="/api/flowForm/Form/Actions/Import" accept=".fff" @on-success="reload" />
           </template>
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'isRelease'">
@@ -22,7 +22,7 @@
     </div>
     <Form @register="registerForm" @reload="reload" />
     <AddModal @register="registerAdd" @select="handleAdd" />
-    <PreviewModal @register="registerPreview" @previewPc="previewPc" />
+    <PreviewModal @register="registerPreview" @preview-pc="previewPc" />
     <Preview @register="registerPreviewPopup" />
   </div>
 </template>
@@ -40,7 +40,7 @@
   import { PreviewModal } from '/@/components/CommonModal';
   import { downloadByUrl } from '/@/utils/file/download';
 
-  defineOptions({ name: 'formDesign' });
+  defineOptions({ name: 'FormDesign' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

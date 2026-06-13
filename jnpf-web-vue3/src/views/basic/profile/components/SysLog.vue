@@ -13,7 +13,7 @@
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'loginType'">
               <div class="login-type-box">
-                <span class="circle-box" :class="record.loginType == 0 ? 'circle-box-primary' : 'circle-box-error'" />
+                <span class="circle-box" :class="record.loginType == 0 ? 'circle-box-primary' : 'circle-box-error'"></span>
                 {{ record.loginType == 0 ? '登录' : '退出' }}
               </div>
             </template>

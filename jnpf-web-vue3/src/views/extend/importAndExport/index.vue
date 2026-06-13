@@ -29,7 +29,7 @@
   import ExportModal from './ExportModal.vue';
   import ImportModal from './ImportModal.vue';
 
-  defineOptions({ name: 'extend-importAndExport' });
+  defineOptions({ name: 'ExtendImportAndExport' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

@@ -17,7 +17,7 @@
   import highchartsFunnel from 'highcharts/modules/funnel';
   highchartsFunnel(Highcharts);
 
-  defineOptions({ name: 'extend-graphDemo-highchartsFunnel' });
+  defineOptions({ name: 'ExtendGraphDemoHighchartsFunnel' });
 
   const options = reactive({
     accessibility: { enabled: false },
@@ -63,4 +63,3 @@
     ],
   });
 </script>
-

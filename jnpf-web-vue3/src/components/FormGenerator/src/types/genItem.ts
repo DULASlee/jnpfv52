@@ -155,7 +155,7 @@ export interface TreeSelectGenItem extends SelectGenItem {
   props: TreeProps;
 }
 // 级联选择
-export interface CascaderGenItem extends TreeSelectGenItem {}
+export type CascaderGenItem = TreeSelectGenItem;
 // 日期选择
 export interface DatePickerGenItem extends BasicGenItem {
   placeholder: string;
@@ -415,7 +415,7 @@ export interface CardGenItem extends BasicGenItem {
   shadow: string;
 }
 // 表格容器
-export interface TableGridGenItem extends BasicGenItem {}
+export type TableGridGenItem = BasicGenItem;
 
 // export interface GenItem {
 //   __config__: ItemCfg;

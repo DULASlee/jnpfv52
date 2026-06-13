@@ -1,7 +1,7 @@
 <template>
   <ScrollContainer class="layout-area !p-0" :class="`${prefixCls}`">
     <template v-if="layout.length">
-      <grid-layout :layout.sync="layout" :row-height="40">
+      <grid-layout v-model:layout="layout" :row-height="40">
         <grid-item
           v-for="item in layout"
           :x="item.x"

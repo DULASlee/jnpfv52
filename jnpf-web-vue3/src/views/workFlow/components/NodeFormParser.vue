@@ -4,7 +4,7 @@
       <div class="header-title">{{ config.title }}</div>
     </template>
     <div class="p-10px h-full overflow-auto">
-      <component :is="state.currentView" ref="formRef" :config="config" @setPageLoad="setPageLoad" />
+      <component :is="state.currentView" ref="formRef" :config="config" @set-page-load="setPageLoad" />
     </div>
   </BasicPopup>
 </template>

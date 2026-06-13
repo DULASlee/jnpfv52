@@ -48,7 +48,7 @@ export function useTableExpand(propsRef: ComputedRef<BasicTableProps>, tableData
   function getAllKeys(data?: Recordable[]) {
     const keys: string[] = [];
     const { childrenColumnName } = unref(propsRef);
-    toRaw(data || unref(tableData)).forEach((item) => {
+    toRaw(data || unref(tableData)).forEach(item => {
       keys.push(item[unref(getRowKey) as string]);
       const children = item[childrenColumnName || 'children'];
       if (children?.length) {

@@ -49,7 +49,7 @@
   import PermissionPopup from '../organize/Permission.vue';
   import { useBaseStore } from '/@/store/modules/base';
 
-  defineOptions({ name: 'permission-position' });
+  defineOptions({ name: 'PermissionPosition' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

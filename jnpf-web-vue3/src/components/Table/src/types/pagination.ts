@@ -7,13 +7,7 @@ interface PaginationRenderProps {
   originalElement: any;
 }
 
-type PaginationPosition =
-  | 'topLeft'
-  | 'topCenter'
-  | 'topRight'
-  | 'bottomLeft'
-  | 'bottomCenter'
-  | 'bottomRight';
+type PaginationPosition = 'topLeft' | 'topCenter' | 'topRight' | 'bottomLeft' | 'bottomCenter' | 'bottomRight';
 
 export declare class PaginationConfig extends Pagination {
   position?: PaginationPosition[];

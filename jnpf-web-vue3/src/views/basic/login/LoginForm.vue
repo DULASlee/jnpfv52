@@ -41,7 +41,7 @@
       <a-divider>{{ t('sys.login.otherLogin') }}</a-divider>
       <div class="socials-list">
         <a-tooltip :title="item.name + '登录'" v-for="(item, i) in socialsList" :key="i">
-          <div class="socials-item" @click="handleOtherLogin(item.enname)"><i :class="item.icon" /></div>
+          <div class="socials-item" @click="handleOtherLogin(item.enname)"><i :class="item.icon"></i></div>
         </a-tooltip>
       </div>
     </div>
@@ -54,7 +54,7 @@
   <BasicModal v-bind="$attrs" @register="registerTenantSocialModal" :closable="false" :footer="null" :width="700" class="jnpf-tenant-social-modal">
     <div class="other-main">
       <div class="other-title">
-        <div class="other-icon"><i class="icon-ym icon-ym-user" /></div>
+        <div class="other-icon"><i class="icon-ym icon-ym-user"></i></div>
         <div class="other-text">请选择登录账号</div>
       </div>
       <div class="other-body">

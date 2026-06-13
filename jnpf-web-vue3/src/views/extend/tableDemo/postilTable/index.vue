@@ -23,7 +23,7 @@
   import { useModal } from '/@/components/Modal';
   import Form from './Form.vue';
 
-  defineOptions({ name: 'extend-tableDemo-postilTable' });
+  defineOptions({ name: 'ExtendTableDemoPostilTable' });
 
   interface State {
     industryTypeList: any[];

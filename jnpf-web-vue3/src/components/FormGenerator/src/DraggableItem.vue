@@ -15,13 +15,13 @@
   }
 
   export default defineComponent({
-    inheritAttrs: false,
     components: {
       CopyOutlined,
       DeleteOutlined,
       draggable,
       render,
     },
+    inheritAttrs: false,
     props: ['element', 'index', 'drawingList', 'activeId', 'formConf', 'showType'],
 
     setup(props, { attrs }) {

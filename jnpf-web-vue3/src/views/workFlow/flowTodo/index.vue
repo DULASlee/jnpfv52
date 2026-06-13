@@ -21,7 +21,7 @@
             <template v-if="column.key === 'completion'">
               <p v-if="record.status == 5 || record.completion == 0">----</p>
               <p v-else-if="record.completion == 100">已完成</p>
-              <a-progress :percent="record.completion" size="small" v-else></a-progress>
+              <a-progress :percent="record.completion" size="small" v-else />
             </template>
             <template v-if="column.key === 'action'">
               <TableAction :actions="getTableActions(record)" />
@@ -48,7 +48,7 @@
   import { useDefineSetting } from '/@/hooks/setting/useDefineSetting';
   import dayjs from 'dayjs';
 
-  defineOptions({ name: 'workFlow-flowTodo' });
+  defineOptions({ name: 'WorkFlowFlowTodo' });
 
   const { createMessage } = useMessage();
   const baseStore = useBaseStore();

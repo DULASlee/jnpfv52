@@ -20,7 +20,7 @@
               </template>
               <a-button type="primary" preIcon="icon-ym icon-ym-btn-add">{{ t('common.addText') }}<DownOutlined /></a-button>
             </a-dropdown>
-            <jnpf-upload-btn url="/api/visualdev/Integrate/Actions/Import" accept=".bi" @on-success="reload"></jnpf-upload-btn>
+            <jnpf-upload-btn url="/api/visualdev/Integrate/Actions/Import" accept=".bi" @on-success="reload" />
           </template>
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'type'">
@@ -39,7 +39,7 @@
     <Form @register="registerForm" @reload="reload" @design="handleDesign" />
     <IntegrateProcess @register="registerIntegrateProcess" @reload="reload" />
     <ExecutionQueue @register="registerDrawer" />
-    <Log @register="registerLogPopup" @updateNodes="updateNodes" />
+    <Log @register="registerLogPopup" @update-nodes="updateNodes" />
   </div>
 </template>
 <script lang="ts" setup>
@@ -57,7 +57,7 @@
   import ExecutionQueue from './components/ExecutionQueue.vue';
   import Log from './components/Log.vue';
 
-  defineOptions({ name: 'onlineDev-integrate' });
+  defineOptions({ name: 'OnlineDevIntegrate' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

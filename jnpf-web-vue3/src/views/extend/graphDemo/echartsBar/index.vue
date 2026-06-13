@@ -9,7 +9,7 @@
   import { reactive } from 'vue';
   import { Chart } from '/@/components/Chart';
 
-  defineOptions({ name: 'extend-graphDemo-echartsBar' });
+  defineOptions({ name: 'ExtendGraphDemoEchartsBar' });
 
   const options = reactive({
     title: {

@@ -64,7 +64,7 @@
   import { BasicForm, useForm } from '/@/components/Form';
   import Form from '../commonForm/index.vue';
 
-  defineOptions({ name: 'extend-tableDemo-signTable' });
+  defineOptions({ name: 'ExtendTableDemoSignTable' });
 
   interface State {
     industryTypeList: any[];

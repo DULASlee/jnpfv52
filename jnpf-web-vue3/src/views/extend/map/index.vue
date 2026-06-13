@@ -7,7 +7,7 @@
   import AMapLoader from '@amap/amap-jsapi-loader';
 
   export default defineComponent({
-    name: 'extend-map',
+    name: 'ExtendMap',
     props: {
       width: {
         type: String,

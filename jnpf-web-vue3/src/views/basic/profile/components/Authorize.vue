@@ -1,12 +1,12 @@
 <template>
   <div class="authorize">
     <a-tabs v-model:activeKey="activeKey" class="auth-tabs">
-      <a-tab-pane tab="菜单权限" key="module"></a-tab-pane>
-      <a-tab-pane tab="按钮权限" key="button"></a-tab-pane>
-      <a-tab-pane tab="列表权限" key="column"></a-tab-pane>
-      <a-tab-pane tab="表单权限" key="form"></a-tab-pane>
-      <a-tab-pane tab="数据权限" key="resource"></a-tab-pane>
-      <a-tab-pane tab="门户权限" key="portal"></a-tab-pane>
+      <a-tab-pane tab="菜单权限" key="module" />
+      <a-tab-pane tab="按钮权限" key="button" />
+      <a-tab-pane tab="列表权限" key="column" />
+      <a-tab-pane tab="表单权限" key="form" />
+      <a-tab-pane tab="数据权限" key="resource" />
+      <a-tab-pane tab="门户权限" key="portal" />
     </a-tabs>
     <div class="auth-tree">
       <BasicTree :treeData="state.treeData" :loading="loading" defaultExpandAll :key="key" />

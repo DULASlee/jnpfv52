@@ -5,11 +5,10 @@
     :bordered="false"
     :pagination="false"
     :dataSource="getDataSource"
-    :rowKey="(r) => r[rowKey]"
+    :rowKey="r => r[rowKey]"
     :columns="getColumns"
     tableLayout="fixed"
-    :scroll="scroll"
-  />
+    :scroll="scroll" />
 </template>
 <script lang="ts">
   import type { PropType } from 'vue';
@@ -62,9 +61,9 @@
       const getColumns = computed(() => {
         const dataSource = unref(getDataSource);
         const columns: BasicColumn[] = cloneDeep(table.getColumns());
-        const index = columns.findIndex((item) => item.flag === INDEX_COLUMN_FLAG);
-        const hasRowSummary = dataSource.some((item) => Reflect.has(item, SUMMARY_ROW_KEY));
-        const hasIndexSummary = dataSource.some((item) => Reflect.has(item, SUMMARY_INDEX_KEY));
+        const index = columns.findIndex(item => item.flag === INDEX_COLUMN_FLAG);
+        const hasRowSummary = dataSource.some(item => Reflect.has(item, SUMMARY_ROW_KEY));
+        const hasIndexSummary = dataSource.some(item => Reflect.has(item, SUMMARY_INDEX_KEY));
 
         if (index !== -1) {
           if (hasIndexSummary) {
@@ -76,7 +75,7 @@
         }
 
         if (table.getRowSelection() && hasRowSummary) {
-          const isFixed = columns.some((col) => col.fixed === 'left');
+          const isFixed = columns.some(col => col.fixed === 'left');
           columns.unshift({
             width: 60,
             title: 'selection',

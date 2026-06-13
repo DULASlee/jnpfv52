@@ -38,7 +38,7 @@
                     <a-textarea v-model:value="item.sql" placeholder="请输入SQL查询语句&存储过程语句" type="textarea" :autoSize="{ minRows: 3, maxRows: 10 }" />
                   </a-col>
                   <a-col :span="2" :offset="1" class="delBtn">
-                    <a-button type="danger" preIcon="icon-ym icon-ym-nav-close" @click="handleDelSql(i)"> </a-button>
+                    <a-button type="danger" preIcon="icon-ym icon-ym-nav-close" @click="handleDelSql(i)" />
                   </a-col>
                 </a-row>
               </a-form-item-rest>
@@ -92,7 +92,7 @@
         :treeData="treeData"
         v-model:value="dataForm.printTemplate"
         :pageParam="pageParam"
-        @pageParamChange="pageParamChange"
+        @page-param-change="pageParamChange"
         @input="onDesignChange"
         :type="dataForm.type" />
     </div>

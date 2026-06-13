@@ -6,12 +6,16 @@
       </div>
       <div class="jnpf-content-wrapper-content bg-white">
         <a-tabs v-model:activeKey="activeKey" type="card" class="jnpf-content-wrapper-tabs" destroyInactiveTabPane>
-          <a-tab-pane key="localPreview" tab="本地预览"></a-tab-pane>
-          <a-tab-pane key="yozoOnlinePreview" tab="在线预览"></a-tab-pane>
+          <a-tab-pane key="localPreview" tab="本地预览" />
+          <a-tab-pane key="yozoOnlinePreview" tab="在线预览" />
         </a-tabs>
         <div class="p-10px">
           <a-alert message="本地预览支持doc/docx/xls/xlsx/ppt/pptx/pdf等办公文档。" type="warning" show-icon v-if="activeKey === 'localPreview'" />
-          <a-alert message="免责声明：永中文档预览组件不属于面包树科技产品，只用于介绍第三方组件如何在《面包树科技快速开发平台》中使用。" type="warning" show-icon v-else />
+          <a-alert
+            message="免责声明：永中文档预览组件不属于面包树科技产品，只用于介绍第三方组件如何在《面包树科技快速开发平台》中使用。"
+            type="warning"
+            show-icon
+            v-else />
         </div>
         <BasicTable @register="registerTable" :searchInfo="getSearchInfo">
           <template #bodyCell="{ column, record }">
@@ -33,7 +37,7 @@
   import { BasicTable, useTable } from '/@/components/Table';
   import Preview from './Preview.vue';
 
-  defineOptions({ name: 'extend-documentPreview' });
+  defineOptions({ name: 'ExtendDocumentPreview' });
 
   interface State {
     activeKey: string;
@@ -110,4 +114,3 @@
     }
   }
 </style>
-

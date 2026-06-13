@@ -72,7 +72,7 @@
   import { SelectFlowModal } from '/@/components/CommonModal';
   import dayjs from 'dayjs';
 
-  defineOptions({ name: 'extend-order' });
+  defineOptions({ name: 'ExtendOrder' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

@@ -13,7 +13,7 @@ export function useTableStyle(propsRef: ComputedRef<BasicTableProps>, prefixCls:
     if (rowClassName && isFunction(rowClassName)) {
       classNames.push(rowClassName(record, index));
     }
-    return classNames.filter((cls) => !!cls).join(' ');
+    return classNames.filter(cls => !!cls).join(' ');
   }
 
   return { getRowClassName };

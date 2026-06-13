@@ -6,7 +6,7 @@
         <a-button type="text" :disabled="loading" @click="handleExpandAll(false)">折叠全部</a-button>
         <a-button type="text" :disabled="loading" @click="handleCheckAll(true)">全部勾选</a-button>
         <a-button type="text" :disabled="loading" @click="handleCheckAll(false)">取消全选</a-button>
-        <a-divider type="vertical" class="!h-7"></a-divider>
+        <a-divider type="vertical" class="!h-7" />
         <a-button type="primary" @click="handleSubmit()" :disabled="loading" :loading="btnLoading">{{ t('common.saveText') }}</a-button>
       </a-space>
     </template>

@@ -48,7 +48,7 @@
   import { useModal } from '/@/components/Modal';
   import Form from './Form.vue';
 
-  defineOptions({ name: 'systemData-dataSync' });
+  defineOptions({ name: 'SystemDataDataSync' });
 
   interface State {
     dataRule: any;

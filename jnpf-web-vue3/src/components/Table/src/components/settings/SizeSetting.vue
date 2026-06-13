@@ -9,13 +9,13 @@
       <template #overlay>
         <Menu @click="handleTitleClick" selectable v-model:selectedKeys="selectedKeysRef">
           <MenuItem key="default">
-          <span>{{ t('component.table.settingDensDefault') }}</span>
+            <span>{{ t('component.table.settingDensDefault') }}</span>
           </MenuItem>
           <MenuItem key="middle">
-          <span>{{ t('component.table.settingDensMiddle') }}</span>
+            <span>{{ t('component.table.settingDensMiddle') }}</span>
           </MenuItem>
           <MenuItem key="small">
-          <span>{{ t('component.table.settingDensSmall') }}</span>
+            <span>{{ t('component.table.settingDensSmall') }}</span>
           </MenuItem>
         </Menu>
       </template>

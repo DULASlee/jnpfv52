@@ -19,10 +19,10 @@
     <div class="location-scope-item" v-for="(item, index) in activeData.locationScope">
       <span class="name">{{ item.name }}</span>
       <div class="edit-btn" @click="addOrUpdateHandle(item)">
-        <i class="icon-ym icon-ym-btn-edit" />
+        <i class="icon-ym icon-ym-btn-edit"></i>
       </div>
       <div class="close-btn" @click="activeData.locationScope.splice(index, 1)">
-        <i class="icon-ym icon-ym-btn-clearn" />
+        <i class="icon-ym icon-ym-btn-clearn"></i>
       </div>
     </div>
     <a-button type="link" preIcon="icon-ym icon-ym-btn-add" @click="addOrUpdateHandle()" class="!px-0 mb-10px">新增定位中心</a-button>

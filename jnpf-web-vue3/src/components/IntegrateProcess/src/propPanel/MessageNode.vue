@@ -51,7 +51,7 @@
   import MsgModal from '/@/components/FlowProcess/src/propPanel/MsgModal.vue';
   import MsgTemplateDetail from '/@/components/FlowProcess/src/propPanel/MsgTemplateDetail.vue';
 
-  defineOptions({ name: 'messageNode', inheritAttrs: false });
+  defineOptions({ name: 'MessageNode', inheritAttrs: false });
   const props = defineProps(['formConf', 'integrateType', 'formFieldsOptions', 'getFormFieldList']);
   const [registerDetail, { openModal: openDetailModal }] = useModal();
   const msgTemplateJsonColumns = [

@@ -1,6 +1,6 @@
 <template>
   <div class="jnpf-content-wrapper bg-white">
-    <iframe :src="state.url" width="100%" height="100%" frameborder="0" />
+    <iframe :src="state.url" width="100%" height="100%" frameborder="0"></iframe>
   </div>
 </template>
 <script lang="ts" setup>
@@ -14,7 +14,7 @@
     url: string;
   }
 
-  defineOptions({ name: 'dynamicDataReport' });
+  defineOptions({ name: 'DynamicDataReport' });
   defineEmits(['register']);
   const { report } = useGlobSetting();
   const state = reactive<State>({

@@ -668,8 +668,8 @@ export const calendar = {
    * @return Cn string
    */
   toGanZhiYear: function (lYear) {
-    var ganKey = (lYear - 3) % 10;
-    var zhiKey = (lYear - 3) % 12;
+    let ganKey = (lYear - 3) % 10;
+    let zhiKey = (lYear - 3) % 12;
     if (ganKey === 0) ganKey = 10; //如果余数为0则为最后一个天干
     if (zhiKey === 0) zhiKey = 12; //如果余数为0则为最后一个地支
     return this.Gan[ganKey - 1] + this.Zhi[zhiKey - 1];

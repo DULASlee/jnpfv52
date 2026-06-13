@@ -3,7 +3,7 @@
     <template #addonAfter>
       <CountButton :size="size" :count="count" :value="state" :beforeStartFunc="sendCodeApi" />
     </template>
-    <template #[item]="data" v-for="item in Object.keys($slots).filter((k) => k !== 'addonAfter')">
+    <template #[item]="data" v-for="item in Object.keys($slots).filter(k => k !== 'addonAfter')">
       <slot :name="item" v-bind="data || {}"></slot>
     </template>
   </a-input>
@@ -16,7 +16,7 @@
 
   const props = {
     value: { type: String },
-    size: { type: String, validator: (v) => ['default', 'large', 'small'].includes(v) },
+    size: { type: String, validator: v => ['default', 'large', 'small'].includes(v) },
     count: { type: Number, default: 60 },
     sendCodeApi: {
       type: Function as PropType<() => Promise<boolean>>,

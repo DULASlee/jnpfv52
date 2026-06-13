@@ -52,7 +52,7 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import dayjs from 'dayjs';
 
-  defineOptions({ name: 'extend-tableDemo-redactTable' });
+  defineOptions({ name: 'ExtendTableDemoRedactTable' });
 
   interface State {
     industryTypeList: any[];

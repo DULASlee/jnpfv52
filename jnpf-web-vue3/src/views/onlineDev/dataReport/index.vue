@@ -5,7 +5,7 @@
         <BasicTable @register="registerTable">
           <template #tableTitle>
             <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" @click="addOrUpdateHandle()">{{ t('common.addText') }}</a-button>
-            <jnpf-upload-btn :url="reportServer + '/Data/Actions/Import'" accept=".json" @on-success="reload"></jnpf-upload-btn>
+            <jnpf-upload-btn :url="reportServer + '/Data/Actions/Import'" accept=".json" @on-success="reload" />
           </template>
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'enabledMark'">
@@ -18,7 +18,7 @@
         </BasicTable>
       </div>
     </div>
-    <PreviewModal @register="registerPreview" type="flow" @previewPc="previewPc" />
+    <PreviewModal @register="registerPreview" type="flow" @preview-pc="previewPc" />
     <Form @register="registerForm" @reload="reload" />
     <PreviewPopup @register="registerPreviewPopup" />
   </div>
@@ -39,7 +39,7 @@
   import Form from './Form.vue';
   import PreviewPopup from './PreviewPopup.vue';
 
-  defineOptions({ name: 'onlineDev-webDesign' });
+  defineOptions({ name: 'OnlineDevWebDesign' });
 
   const { createMessage } = useMessage();
   const baseStore = useBaseStore();

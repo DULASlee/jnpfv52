@@ -19,7 +19,7 @@
   import highchartsBullet from 'highcharts/modules/bullet';
   highchartsBullet(Highcharts);
 
-  defineOptions({ name: 'extend-graphDemo-highchartsBullet' });
+  defineOptions({ name: 'ExtendGraphDemoHighchartsBullet' });
   const options = reactive({
     accessibility: { enabled: false },
     chart: {
@@ -183,4 +183,3 @@
     },
   });
 </script>
-

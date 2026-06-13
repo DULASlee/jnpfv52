@@ -43,7 +43,7 @@
   import { DownOutlined } from '@ant-design/icons-vue';
   import PermissionPopup from '../organize/Permission.vue';
 
-  defineOptions({ name: 'permission-organize' });
+  defineOptions({ name: 'PermissionOrganize' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

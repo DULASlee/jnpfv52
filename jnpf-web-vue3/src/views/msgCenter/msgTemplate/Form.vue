@@ -119,7 +119,7 @@
                     <a-input v-model:value="dataForm.templateCode" placeholder="请输入" />
                   </a-form-item>
                 </a-col>
-                <a-col :span="12" offset="12"></a-col>
+                <a-col :span="12" offset="12" />
                 <a-col :span="12" v-if="dataForm.messageType == 7">
                   <a-form-item label="跳转方式" name="wxSkip">
                     <jnpf-select v-model:value="dataForm.wxSkip" placeholder="请选择" :options="wxSkipList" />

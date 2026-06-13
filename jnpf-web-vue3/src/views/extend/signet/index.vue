@@ -72,7 +72,7 @@
   import printStyle from '../printData/components/printStyle';
   import Vue3DraggableResizable from 'vue3-draggable-resizable';
 
-  defineOptions({ name: 'extend-signet' });
+  defineOptions({ name: 'ExtendSignet' });
 
   const state = reactive({
     showBtn: true,
@@ -269,4 +269,3 @@
     }
   }
 </style>
-

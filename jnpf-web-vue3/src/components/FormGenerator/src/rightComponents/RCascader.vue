@@ -9,7 +9,7 @@
       allowClear
       showSearch />
   </a-form-item>
-  <data-properties :activeData="activeData" :dicOptions="dicOptions" @propsChildrenChange="onChange" />
+  <data-properties :activeData="activeData" :dicOptions="dicOptions" @props-children-change="onChange" />
   <a-form-item label="能否清空">
     <a-switch v-model:checked="activeData.clearable" />
   </a-form-item>

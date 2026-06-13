@@ -19,7 +19,7 @@
   import { useBaseStore } from '/@/store/modules/base';
   import printJS from 'print-js';
 
-  defineOptions({ name: 'extend-tableDemo-printTable' });
+  defineOptions({ name: 'ExtendTableDemoPrintTable' });
 
   interface State {
     industryTypeList: any[];

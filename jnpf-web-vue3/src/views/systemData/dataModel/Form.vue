@@ -17,7 +17,7 @@
     <a-table :data-source="fieldList" :columns="getColumns" size="small" :pagination="false" rowKey="index" class="drag-table">
       <template #bodyCell="{ column, record, index }">
         <template v-if="column.key === 'drag'">
-          <i class="drag-handler icon-ym icon-ym-darg" title="点击拖动" />
+          <i class="drag-handler icon-ym icon-ym-darg" title="点击拖动"></i>
         </template>
         <template v-if="record.disabled">
           <a-checkbox :checked="record[column.key]" v-if="['primaryKey', 'allowNull'].includes(column.key)" />

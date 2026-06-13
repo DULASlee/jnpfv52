@@ -1,8 +1,8 @@
 <template>
   <section class="common-pane">
     <a-tabs v-model:activeKey="activeKey" size="small" class="pane-tabs">
-      <a-tab-pane key="1" tab="基础设置"></a-tab-pane>
-      <a-tab-pane key="2" tab="节点通知"></a-tab-pane>
+      <a-tab-pane key="1" tab="基础设置" />
+      <a-tab-pane key="2" tab="节点通知" />
     </a-tabs>
     <ScrollContainer class="config-content">
       <a-form :colon="false" layout="vertical" :model="formConf" class="config-form" v-show="activeKey === '1'">
@@ -69,7 +69,7 @@
               showSystemFullLabel
               isFlow
               @change="(val, data) => onFuncChange(keyMap.interfaceConfig, val, data)"
-              @fieldChange="onRelationFieldChange" />
+              @field-change="onRelationFieldChange" />
           </a-form-item>
           <div v-if="formConf.initiateType === 6 || formConf.initiateType === 7">
             <jnpf-users-select
@@ -77,7 +77,7 @@
               buttonType="button"
               :modalTitle="formConf.initiateType === 6 ? '添加发起人' : '添加候选人'"
               multiple
-              @labelChange="onLabelChange" />
+              @label-change="onLabelChange" />
           </div>
         </a-form-item>
         <a-form-item>
@@ -170,7 +170,7 @@
                 class="!w-full" />
             </a-col>
             <a-col :span="2" class="rule-cell">
-              <a-button type="danger" @click="delTransmitRule(i, cIndex)"><i class="icon-ym icon-ym-nav-close" /></a-button>
+              <a-button type="danger" @click="delTransmitRule(i, cIndex)"><i class="icon-ym icon-ym-nav-close"></i></a-button>
             </a-col>
           </a-row>
           <div class="table-add-action" @click="addTransmitRule(i)">
@@ -225,7 +225,7 @@
     'beforeNodeOptions',
     'prevNodeList',
   ]);
-  defineOptions({ name: 'subFlowNode', inheritAttrs: false });
+  defineOptions({ name: 'SubFlowNode', inheritAttrs: false });
   defineExpose({ getContent });
   const { createMessage } = useMessage();
   const [registerRuleModal, { openModal: openRuleModal, closeModal: closeRuleModal }] = useModal();

@@ -1,6 +1,6 @@
 <template>
   <BasicPopup v-bind="$attrs" @register="registerPopup" class="full-popup report-popup">
-    <iframe :src="state.url" width="100%" height="100%" frameborder="0" />
+    <iframe :src="state.url" width="100%" height="100%" frameborder="0"></iframe>
   </BasicPopup>
 </template>
 <script lang="ts" setup>

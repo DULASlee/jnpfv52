@@ -63,7 +63,7 @@
   import PermissionPopup from '../organize/Permission.vue';
   import { useBaseStore } from '/@/store/modules/base';
 
-  defineOptions({ name: 'permission-user' });
+  defineOptions({ name: 'PermissionUser' });
 
   const { createMessage } = useMessage();
   const baseStore = useBaseStore();

@@ -5,7 +5,7 @@
       <a-table :data-source="columnData.searchList" :columns="searchColumns" size="small" :pagination="false" rowKey="id" class="search-table-app">
         <template #bodyCell="{ column, record, index }">
           <template v-if="column.key === 'drag'">
-            <i class="drag-handler icon-ym icon-ym-darg" title="点击拖动" />
+            <i class="drag-handler icon-ym icon-ym-darg" title="点击拖动"></i>
           </template>
           <template v-if="column.key === 'label'">
             <a-input v-model:value="record.label" placeholder="请输入" allowClear />
@@ -18,7 +18,7 @@
               class="!w-160px"
               @change="onJnpfKeyChange($event, record, index)" />
             <template v-if="canSetAttrs.includes(record.jnpfKey) && !record.__config__.isFromParam">
-              <i class="icon-ym icon-ym-shezhi cursor-pointer ml-8px leading-30px" title="组件属性设置" @click="openExtraConfig(record, index)" />
+              <i class="icon-ym icon-ym-shezhi cursor-pointer ml-8px leading-30px" title="组件属性设置" @click="openExtraConfig(record, index)"></i>
             </template>
           </template>
           <template v-if="column.key === 'searchType'">
@@ -151,7 +151,7 @@
       <a-table :data-source="columnData.columnList" :columns="columnColumns" size="small" :pagination="false" rowKey="id" class="column-table-app">
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'drag'">
-            <i class="drag-handler icon-ym icon-ym-darg" title="点击拖动" />
+            <i class="drag-handler icon-ym icon-ym-darg" title="点击拖动"></i>
           </template>
           <template v-if="column.key === 'label' && webType == 4">
             <a-input v-model:value="record.label" placeholder="请输入" allowClear />
@@ -168,9 +168,9 @@
     </div>
     <div class="right-board">
       <a-tabs v-model:activeKey="activeKey" :tabBarGutter="10" class="average-tabs">
-        <a-tab-pane key="search" tab="查询字段"></a-tab-pane>
-        <a-tab-pane key="field" tab="列表字段"></a-tab-pane>
-        <a-tab-pane key="column" tab="列表属性"></a-tab-pane>
+        <a-tab-pane key="search" tab="查询字段" />
+        <a-tab-pane key="field" tab="列表字段" />
+        <a-tab-pane key="column" tab="列表属性" />
       </a-tabs>
       <div class="right-main">
         <div class="h-full" v-show="activeKey === 'search'">
@@ -236,7 +236,7 @@
                   <template #item="{ element, index }">
                     <div class="custom-item">
                       <div class="custom-line-icon option-drag">
-                        <i class="icon-ym icon-ym-darg" />
+                        <i class="icon-ym icon-ym-darg"></i>
                       </div>
                       <p class="custom-line-value">{{ element.value }}</p>
                       <a-input v-model:value="element.label" placeholder="按钮名称">
@@ -245,7 +245,7 @@
                         </template>
                       </a-input>
                       <div class="close-btn custom-line-icon" @click="columnData.customBtnsList.splice(index, 1)">
-                        <i class="icon-ym icon-ym-btn-clearn" />
+                        <i class="icon-ym icon-ym-btn-clearn"></i>
                       </div>
                     </div>
                   </template>

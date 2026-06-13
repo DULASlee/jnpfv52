@@ -282,7 +282,7 @@
         return res;
       }
       function addEndNode() {
-        let className: string = 'end-node';
+        let className = 'end-node';
         if (props.isPreview && props.isEnd) className += ' state-past';
         return <section class={className}>流程结束</section>;
       }

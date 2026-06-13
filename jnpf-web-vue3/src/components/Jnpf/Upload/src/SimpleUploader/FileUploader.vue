@@ -10,7 +10,7 @@
     @file-progress="onFileProgress"
     @file-error="onFileError"
     :autoStart="false">
-    <uploader-unsupport></uploader-unsupport>
+    <uploader-unsupport />
     <UploaderBtn id="file-uploader-btn" ref="uploaderBtnRef" :attrs="attrs">选择文件</UploaderBtn>
     <uploader-list>
       <template #default="{ fileList }">

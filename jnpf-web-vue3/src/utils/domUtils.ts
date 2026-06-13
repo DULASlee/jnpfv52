@@ -123,7 +123,7 @@ export function hackCss(attr: string, value: string) {
   const prefix: string[] = ['webkit', 'Moz', 'ms', 'OT'];
 
   const styleObj: any = {};
-  prefix.forEach((item) => {
+  prefix.forEach(item => {
     styleObj[`${item}${upperFirst(attr)}`] = value;
   });
   return {
@@ -133,22 +133,14 @@ export function hackCss(attr: string, value: string) {
 }
 
 /* istanbul ignore next */
-export function on(
-  element: Element | HTMLElement | Document | Window,
-  event: string,
-  handler: EventListenerOrEventListenerObject,
-): void {
+export function on(element: Element | HTMLElement | Document | Window, event: string, handler: EventListenerOrEventListenerObject): void {
   if (element && event && handler) {
     element.addEventListener(event, handler, false);
   }
 }
 
 /* istanbul ignore next */
-export function off(
-  element: Element | HTMLElement | Document | Window,
-  event: string,
-  handler: Fn,
-): void {
+export function off(element: Element | HTMLElement | Document | Window, event: string, handler: Fn): void {
   if (element && event && handler) {
     element.removeEventListener(event, handler, false);
   }

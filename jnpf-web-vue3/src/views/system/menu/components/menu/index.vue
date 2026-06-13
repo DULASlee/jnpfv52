@@ -17,7 +17,7 @@
           </template>
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'icon'">
-              <i :class="record.icon + ' table-icon'" />
+              <i :class="record.icon + ' table-icon'"></i>
             </template>
             <template v-if="column.key === 'enabledMark'">
               <a-tag :color="record.enabledMark == 1 ? 'success' : 'error'">{{ record.enabledMark == 1 ? '启用' : '禁用' }}</a-tag>
@@ -41,7 +41,7 @@
           </template>
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'icon'">
-              <i :class="record.icon + ' table-icon'" />
+              <i :class="record.icon + ' table-icon'"></i>
             </template>
             <template v-if="column.key === 'enabledMark'">
               <a-tag :color="record.enabledMark == 1 ? 'success' : 'error'">{{ record.enabledMark == 1 ? '启用' : '禁用' }}</a-tag>

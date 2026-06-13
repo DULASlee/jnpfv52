@@ -27,7 +27,7 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
 
-  defineOptions({ name: 'extend-formDemo' });
+  defineOptions({ name: 'ExtendFormDemo' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

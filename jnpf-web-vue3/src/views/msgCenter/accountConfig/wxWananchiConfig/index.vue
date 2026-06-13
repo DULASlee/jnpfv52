@@ -29,7 +29,7 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import Form from './Form.vue';
 
-  defineOptions({ name: 'msgCenter-accountConfig-mp' });
+  defineOptions({ name: 'MsgCenterAccountConfigMp' });
 
   const { t } = useI18n();
   const { createMessage } = useMessage();

@@ -18,7 +18,7 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
 
-  defineOptions({ name: 'extend-bigData' });
+  defineOptions({ name: 'ExtendBigData' });
 
   const { createMessage, createConfirm } = useMessage();
   const { t } = useI18n();

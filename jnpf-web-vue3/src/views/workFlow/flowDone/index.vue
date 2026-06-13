@@ -37,7 +37,7 @@
   import { useDefineSetting } from '/@/hooks/setting/useDefineSetting';
   import dayjs from 'dayjs';
 
-  defineOptions({ name: 'workFlow-flowDone' });
+  defineOptions({ name: 'WorkFlowFlowDone' });
 
   const { createMessage } = useMessage();
   const baseStore = useBaseStore();

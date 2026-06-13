@@ -50,10 +50,7 @@ export function useContentHeight(
     });
   }
 
-  function calcSubtractSpace(
-    element: Element | null | undefined,
-    direction: 'all' | 'top' | 'bottom' = 'all',
-  ): number {
+  function calcSubtractSpace(element: Element | null | undefined, direction: 'all' | 'top' | 'bottom' = 'all'): number {
     function numberPx(px: string) {
       return Number(px.replace(/[^\d]/g, ''));
     }
@@ -103,13 +100,13 @@ export function useContentHeight(
 
     // substract elements height
     let substractHeight = 0;
-    subtractHeightRefs.forEach((item) => {
+    subtractHeightRefs.forEach(item => {
       substractHeight += getEl(unref(item))?.offsetHeight ?? 0;
     });
 
     // subtract margins / paddings
     let substractSpaceHeight = calcSubtractSpace(anchorEl) ?? 0;
-    substractSpaceRefs.forEach((item) => {
+    substractSpaceRefs.forEach(item => {
       substractSpaceHeight += calcSubtractSpace(getEl(unref(item)));
     });
 
@@ -141,17 +138,11 @@ export function useContentHeight(
       upward(anchorEl, upwardSpace);
     }
 
-    let height =
-      bottomIncludeBody -
-      unref(layoutFooterHeightRef) -
-      unref(offsetHeightRef) -
-      substractHeight -
-      substractSpaceHeight -
-      upwardSpaceHeight;
+    let height = bottomIncludeBody - unref(layoutFooterHeightRef) - unref(offsetHeightRef) - substractHeight - substractSpaceHeight - upwardSpaceHeight;
 
     // compensation height
     const calcCompensationHeight = () => {
-      compensationHeight.elements?.forEach((item) => {
+      compensationHeight.elements?.forEach(item => {
         height += getEl(unref(item))?.offsetHeight ?? 0;
       });
     };

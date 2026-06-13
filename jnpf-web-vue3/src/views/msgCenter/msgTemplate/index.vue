@@ -32,7 +32,7 @@
   import Form from './Form.vue';
   import Detail from './Detail.vue';
 
-  defineOptions({ name: 'msgCenter-msgTemplate' });
+  defineOptions({ name: 'MsgCenterMsgTemplate' });
   interface State {
     messageTypeList: any[];
   }

@@ -32,7 +32,7 @@
       :data="getUploadData"
       v-if="!detailed">
       <div>
-        <plus-outlined></plus-outlined>
+        <plus-outlined />
         <div class="ant-upload-text" v-if="buttonText">{{ props.buttonText }}</div>
       </div>
     </a-upload>

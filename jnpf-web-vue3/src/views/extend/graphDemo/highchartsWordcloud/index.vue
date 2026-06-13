@@ -17,7 +17,7 @@
   import highchartsWordcloud from 'highcharts/modules/wordcloud';
   highchartsWordcloud(Highcharts);
 
-  defineOptions({ name: 'extend-graphDemo-highchartsWordcloud' });
+  defineOptions({ name: 'ExtendGraphDemoHighchartsWordcloud' });
   const text =
     'Mountain no ling, river water is exhausted, winter thunder bursts, summer rain and snow, heaven and earth together, is dare and you must.At the same time, it is better to forget the leighton river than to help each other at the same time.';
   const data = text.split(/[,\. ]+/g).reduce(function (arr: any, word) {
@@ -52,4 +52,3 @@
     },
   });
 </script>
-

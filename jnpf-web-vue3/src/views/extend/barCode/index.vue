@@ -50,7 +50,7 @@
   import JsBarcode from 'jsbarcode';
   import { toCanvas } from 'qrcode';
 
-  defineOptions({ name: 'extend-barCode' });
+  defineOptions({ name: 'ExtendBarCode' });
 
   const state = reactive({
     activeKey: '1',

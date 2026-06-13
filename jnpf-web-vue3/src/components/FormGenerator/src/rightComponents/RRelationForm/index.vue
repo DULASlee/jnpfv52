@@ -14,7 +14,7 @@
     <JnpfTreeSelect v-model:value="activeData.modelId" :options="treeData" placeholder="请选择" lastLevel allowClear @change="onModeIdChange" />
   </a-form-item>
   <a-form-item label="显示字段">
-    <jnpf-select v-model:value="activeData.relationField" placeholder="请选择" :options="fieldOptions" showSearch @dropdownVisibleChange="visibleChange" />
+    <jnpf-select v-model:value="activeData.relationField" placeholder="请选择" :options="fieldOptions" showSearch @dropdown-visible-change="visibleChange" />
   </a-form-item>
   <a-form-item v-if="modelType == 1 || modelType == 6">
     <template #label> 填充字段<BasicHelp text="选择数据后，将关联表单的字段值填充到当前表单字段。" /> </template>
@@ -26,17 +26,17 @@
       <template #item="{ element, index }">
         <div class="select-item">
           <div class="select-line-icon option-drag">
-            <i class="icon-ym icon-ym-darg" />
+            <i class="icon-ym icon-ym-darg"></i>
           </div>
           <jnpf-select
             v-model:value="element.value"
             placeholder="请选择"
             :options="fieldOptions"
             showSearch
-            @dropdownVisibleChange="visibleChange"
+            @dropdown-visible-change="visibleChange"
             @change="onChange($event, element)" />
           <div class="close-btn select-line-icon" @click="activeData.columnOptions.splice(index, 1)">
-            <i class="icon-ym icon-ym-btn-clearn" />
+            <i class="icon-ym icon-ym-btn-clearn"></i>
           </div>
         </div>
       </template>
@@ -52,7 +52,7 @@
   <a-form-item label="分页条数" v-if="activeData.hasPage">
     <jnpf-radio v-model:value="activeData.pageSize" :options="pageSizeOptions" optionType="button" button-style="solid" class="right-radio" />
   </a-form-item>
-  <a-divider></a-divider>
+  <a-divider />
   <a-form-item label="能否清空">
     <a-switch v-model:checked="activeData.clearable" />
   </a-form-item>

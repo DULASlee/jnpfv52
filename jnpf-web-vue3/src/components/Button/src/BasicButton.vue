@@ -17,8 +17,8 @@
   import { Button } from 'ant-design-vue';
   export default defineComponent({
     name: 'AButton',
-    inheritAttrs: false,
     extends: Button,
+    inheritAttrs: false,
   });
 </script>
 <script lang="ts" setup>

@@ -58,7 +58,7 @@
   import Form from './Form.vue';
   import Task from './Task.vue';
 
-  defineOptions({ name: 'extend-tableDemo-projectGantt' });
+  defineOptions({ name: 'ExtendTableDemoProjectGantt' });
 
   const { t } = useI18n();
   const { createMessage } = useMessage();

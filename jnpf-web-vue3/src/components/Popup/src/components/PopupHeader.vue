@@ -48,8 +48,8 @@
   import { headerProps } from '../props';
   export default defineComponent({
     name: 'BasicPopupHeader',
-    inheritAttrs: false,
     components: { BasicTitle, ArrowLeftOutlined },
+    inheritAttrs: false,
     props: {
       ...headerProps,
     },

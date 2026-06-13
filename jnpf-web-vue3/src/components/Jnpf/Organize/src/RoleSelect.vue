@@ -24,10 +24,10 @@
           <a-input-search :placeholder="t('common.enterKeyword')" allowClear v-model:value="keyword" @search="handleSearch" />
         </div>
         <div class="transfer-pane__body transfer-pane__body-tab">
-          <a-tabs v-model:activeKey="activeKey" :tabBarGutter="10" size="small" @tabClick="onTabClick" class="pane-tabs" v-if="selectType === 'all'">
-            <a-tab-pane key="1" tab="组织角色"></a-tab-pane>
-            <a-tab-pane key="2" tab="全局角色"></a-tab-pane>
-            <a-tab-pane key="system" tab="动态参数" v-if="hasSys"></a-tab-pane>
+          <a-tabs v-model:activeKey="activeKey" :tabBarGutter="10" size="small" @tab-click="onTabClick" class="pane-tabs" v-if="selectType === 'all'">
+            <a-tab-pane key="1" tab="组织角色" />
+            <a-tab-pane key="2" tab="全局角色" />
+            <a-tab-pane key="system" tab="动态参数" v-if="hasSys" />
           </a-tabs>
           <BasicTree class="tree-main" :treeData="treeData" :fieldNames="fieldNames" @select="handleSelect" ref="treeRef" defaultExpandAll :loading="loading" />
         </div>

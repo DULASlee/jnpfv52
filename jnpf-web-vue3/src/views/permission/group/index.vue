@@ -36,7 +36,7 @@
   import { onMounted } from 'vue';
   import { useBaseStore } from '/@/store/modules/base';
 
-  defineOptions({ name: 'permission-group' });
+  defineOptions({ name: 'PermissionGroup' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

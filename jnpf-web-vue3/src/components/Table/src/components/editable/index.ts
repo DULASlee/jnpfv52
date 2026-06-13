@@ -15,9 +15,9 @@ export function renderEditCell(column: BasicColumn) {
   return ({ text: value, record, index }: Params) => {
     record.onValid = async () => {
       if (isArray(record?.validCbs)) {
-        const validFns = (record?.validCbs || []).map((fn) => fn());
+        const validFns = (record?.validCbs || []).map(fn => fn());
         const res = await Promise.all(validFns);
-        return res.every((item) => !!item);
+        return res.every(item => !!item);
       } else {
         return false;
       }

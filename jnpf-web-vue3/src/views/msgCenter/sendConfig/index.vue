@@ -39,7 +39,7 @@
   import TestSend from './components/TestSend.vue';
   import { useBaseStore } from '/@/store/modules/base';
 
-  defineOptions({ name: 'msgCenter-sendConfig' });
+  defineOptions({ name: 'MsgCenterSendConfig' });
 
   const { t } = useI18n();
   const baseStore = useBaseStore();

@@ -71,9 +71,9 @@ const regularList = {
  * 2、{ validator: this.formValidate('/^([w-]+|[u4e00-u9fa5]+)$/', '用户名由字母、数字、下划线以及短横线组成。'), trigger: 'blur' }
  */
 
-const formValidate = (type: string, msg: string = '') => {
+const formValidate = (type: string, msg = '') => {
   return (_rule, value) => {
-    let reg = regularList[type] && regularList[type].rule ? regularList[type].rule : type;
+    const reg = regularList[type] && regularList[type].rule ? regularList[type].rule : type;
     msg = msg ? msg : regularList[type] && regularList[type].msg ? regularList[type].msg : '';
     if (!value) return Promise.resolve();
     if (!reg.test(value)) {

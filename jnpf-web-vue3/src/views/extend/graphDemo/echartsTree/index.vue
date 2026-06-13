@@ -9,7 +9,7 @@
   import { reactive } from 'vue';
   import { Chart } from '/@/components/Chart';
 
-  defineOptions({ name: 'extend-graphDemo-echartsTree' });
+  defineOptions({ name: 'ExtendGraphDemoEchartsTree' });
 
   const data1 = {
     name: '植物界',

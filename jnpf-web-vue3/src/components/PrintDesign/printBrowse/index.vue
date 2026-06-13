@@ -28,7 +28,7 @@
       </div>
     </template>
     <div class="basic-content" ref="tsPrint">
-      <div class="print-content" v-html="item" v-for="(item, index) in batchData" :key="index" />
+      <div class="print-content" v-html="item" v-for="(item, index) in batchData" :key="index"></div>
     </div>
   </BasicModal>
 </template>
@@ -721,4 +721,3 @@
     }
   }
 </style>
-

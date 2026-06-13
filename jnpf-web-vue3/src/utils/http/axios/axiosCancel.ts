@@ -17,7 +17,7 @@ export class AxiosCanceler {
     const url = getPendingUrl(config);
     config.cancelToken =
       config.cancelToken ||
-      new axios.CancelToken((cancel) => {
+      new axios.CancelToken(cancel => {
         if (!pendingMap.has(url)) {
           // If there is no current request in pending, add it
           pendingMap.set(url, cancel);
@@ -29,7 +29,7 @@ export class AxiosCanceler {
    * @description: Clear all pending
    */
   removeAllPending() {
-    pendingMap.forEach((cancel) => {
+    pendingMap.forEach(cancel => {
       cancel && isFunction(cancel) && cancel();
     });
     pendingMap.clear();

@@ -15,7 +15,7 @@
       <preDefine v-if="predefine.length" ref="predefine" :color="color" :colors="predefine" />
       <div class="ant-color-dropdown__btns">
         <span class="ant-color-dropdown__value">
-          <a-input v-model:value="customInput" size="small" @pressEnter="handleConfirm" @blur="handleConfirm" />
+          <a-input v-model:value="customInput" size="small" @press-enter="handleConfirm" @blur="handleConfirm" />
         </span>
         <div class="ant-dropdown__btns">
           <a-button type="link" size="small" class="ant-cancel-button" @click="clear">清空</a-button>
@@ -60,7 +60,6 @@
 
   export default defineComponent({
     name: 'JnpfColorPicker',
-    inheritAttrs: false,
     components: {
       HueSlider,
       SvPanel,
@@ -69,6 +68,7 @@
       DownOutlined,
       CloseOutlined,
     },
+    inheritAttrs: false,
     props: {
       value: {
         type: String,

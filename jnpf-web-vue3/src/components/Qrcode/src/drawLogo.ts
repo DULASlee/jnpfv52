@@ -2,19 +2,12 @@ import { isString } from '/@/utils/is';
 import { RenderQrCodeParams, LogoType } from './typing';
 export const drawLogo = ({ canvas, logo }: RenderQrCodeParams) => {
   if (!logo) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       resolve((canvas as HTMLCanvasElement).toDataURL());
     });
   }
   const canvasWidth = (canvas as HTMLCanvasElement).width;
-  const {
-    logoSize = 0.15,
-    bgColor = '#ffffff',
-    borderSize = 0.05,
-    crossOrigin,
-    borderRadius = 8,
-    logoRadius = 0,
-  } = logo as LogoType;
+  const { logoSize = 0.15, bgColor = '#ffffff', borderSize = 0.05, crossOrigin, borderRadius = 8, logoRadius = 0 } = logo as LogoType;
 
   const logoSrc: string = isString(logo) ? logo : logo.src;
   const logoWidth = canvasWidth * logoSize;
@@ -61,7 +54,7 @@ export const drawLogo = ({ canvas, logo }: RenderQrCodeParams) => {
   };
 
   // 将 logo绘制到 canvas上
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     image.onload = () => {
       logoRadius ? drawLogoWithCanvas(image) : drawLogoWithImage(image);
       resolve((canvas as HTMLCanvasElement).toDataURL());

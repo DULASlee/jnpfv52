@@ -30,7 +30,7 @@
   import Form from './Form.vue';
   import { useBaseStore } from '/@/store/modules/base';
 
-  defineOptions({ name: 'msgCenter-accountConfig-webhook' });
+  defineOptions({ name: 'MsgCenterAccountConfigWebhook' });
 
   const { t } = useI18n();
   const baseStore = useBaseStore();

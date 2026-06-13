@@ -15,7 +15,7 @@
       :options="fieldOptions"
       clearable
       showSearch
-      @dropdownVisibleChange="visibleChange" />
+      @dropdown-visible-change="visibleChange" />
   </a-form-item>
 </template>
 <script lang="ts" setup>
