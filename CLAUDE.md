@@ -6,9 +6,10 @@
 EVERY session MUST start with these 4 actions. Skip none. Re-check after long idle periods.
 
 1. MCP: Run ListMcpResourcesTool → verify graphify + serena + episodic-memory + chrome are connected
-2. SKILL: Before ANY response (including clarifying questions), check if a skill applies → invoke Skill tool
-3. TEST: After EVERY code change (3+ files or 50+ lines) → spawn test-runner subagent
-4. VERIFY: Before claiming "done"/"fixed"/"passing" → run build/type-check, read output, confirm 0 errors
+2. GIT: Check working tree status (git status) → confirm clean before starting work
+3. SKILL: Before ANY response (including clarifying questions), check if a skill applies → invoke Skill tool
+4. TEST: After EVERY code change (3+ files or 50+ lines) → spawn test-runner subagent
+5. VERIFY: Before claiming "done"/"fixed"/"passing" → run build/type-check, read output, confirm 0 errors
 
 Red flag: saying "should work" / "looks good" without running the command = lying. See Law 2.
 ```
@@ -30,6 +31,8 @@ R3. Codegen Boundary: Generated code has a bug → fix the .vm template source. 
 R4. Multi-tenant: For new SqlSugar queries, ALWAYS verify ITenantFilter is active. Missing filter = cross-tenant data leak.
 R5. Module Boundary: OA is disabled — NEVER modify without explicit instruction. IoT/MES are not created — NEVER scaffold unless asked.
 
+**Git 铁律**: Working tree clean / committed / pushed before any operation. Stash is not long-term storage. 代码搜索优先级：Grep first，C# 精确符号用 Serena MCP。
+
 ---
 
 ## Engineering Iron Laws
@@ -49,14 +52,16 @@ R5. Module Boundary: OA is disabled — NEVER modify without explicit instructio
 
 ## Proactive Behavior
 
-| Trigger | Action |
-|---|---|
-| Missing test coverage | Add tests immediately |
-| Inconsistent code style | Flag and fix |
-| Potential bug / boundary issue | Fix immediately and annotate |
-| Task complete | Run full test suite + lint + type check |
-| Changed Service method signature | Check all callers |
-| Complex task | Plan first, confirm, then implement |
+以下行为按紧迫度排序，前者优先于后者：
+
+| Trigger | Action | Priority |
+|---|---|---|
+| Potential bug / boundary issue | Fix immediately and annotate | 🔴 P0 |
+| Missing test coverage | Add tests immediately | 🔴 P0 |
+| Inconsistent code style | Flag and fix | 🟡 P1 |
+| Changed Service method signature | Check all callers | 🟡 P1 |
+| Task complete | Run full test suite + lint + type check | 🟢 P2 |
+| Complex task | Plan first, confirm, then implement | 🟢 P2 |
 
 ---
 
@@ -135,7 +140,7 @@ Prefer Serena for cross-file symbol rename/find-references. Use superpowers for 
 | 2 | **Scout** | Grep/Read 扫描影响面，找参考实现，检查近期 git 变更 |
 | 3 | **Plan** | S级→头脑风暴+设计文档；A级→编写实施计划；B级→跳过 |
 | 4 | **Implement** | S级(3+ tasks)→子代理驱动；A级→本会话执行；严格按计划 |
-| 5 | **Test** | S级→test-runner子代理；A级→test-runner强制；B级→build check |
+| 5 | **Test** | S级→test-runner子代理；A级→test-runner强制；B级→`dotnet build` 或 `vue-tsc --noEmit`（手动执行，确认 0 errors） |
 | 6 | **Self-review** | git diff审查 + 架构合规R1-R5 + S级→code-reviewer子代理 |
 | 7 | **Report** | 变更摘要 + 文件变更 + 测试结果 + 已知问题 |
 
@@ -179,8 +184,6 @@ Prefer Serena for cross-file symbol rename/find-references. Use superpowers for 
 | 工作流详情 | `.claude/rules/default-workflow.md` | 执行到具体Step时按需加载 |
 | 增量开发 | `.claude/rules/incremental-rules.md` | 模块迭代/版本升级/安全任务/会话结束 |
 
-**Git 铁律**: Working tree clean / committed / pushed before any operation. Stash is not long-term storage.
-**代码搜索**: Grep first. C# precise symbols: Serena MCP.
 
 ---
 
@@ -194,7 +197,7 @@ Prefer reusing existing code — don't reinvent. Simple solution > over-engineer
 
 - **跨会话记忆**: 会话开始读 `.claude/memory/`，结束前写入 `decisions.md` / `pending-issues.md` / `lessons-learned.md`
 - **禁止推脱**: 发现错误但≥15分钟无法修复 → 告知用户 + 给出修复方案 + 写入 pending-issues.md
-- **项目健康**: 每次代码修改后，被修改项目 MUST 编译通过（dotnet build / vue-tsc --noEmit）
+- **项目健康**: 每次代码修改后，被修改子项目 MUST 编译通过。后端：`dotnet build <changed-project>`。前端：`cd jnpf-web-vue3 && pnpm type-check`（或 jnpf-web-datascreen / jnpf-app-vue3 对应路径）
 - **安全**: 安全任务前查阅 `.claude/knowledge/`，不确定时声明
 - **前端UI**: 改自定义页面样式 → Read `.claude/skills/jnpf-ui-enhance/SKILL.md`；生成页面禁止改；组件骨架不动
 
