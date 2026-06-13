@@ -30,8 +30,9 @@ using JNPF.WorkFlow.Entitys.Entity;
 using JNPF.WorkFlow.Interfaces.Repository;
 using Mapster;
 using Mapster.Models;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SqlSugar;
 using System.Data;
@@ -48,7 +49,7 @@ public class RunService : IRunService, ITransient, IDisposable
     /// <summary>
     /// 服务提供器.
     /// </summary>
-    private readonly IServiceScope _serviceScope;
+    private readonly IServer _server;
 
     /// <summary>
     /// 服务基础仓储.
@@ -119,7 +120,7 @@ public class RunService : IRunService, ITransient, IDisposable
     /// 构造.
     /// </summary>
     public RunService(
-        IServiceScopeFactory serviceScopeFactory,
+        IServer server,
         ISqlSugarRepository<VisualDevEntity> visualDevRepository,
         ISqlSugarClient sqlSugarClient,
         FormDataParsing formDataParsing,
@@ -134,7 +135,7 @@ public class RunService : IRunService, ITransient, IDisposable
         IEventPublisher eventPublisher,
         ICacheManager cacheManager)
     {
-        _serviceScope = serviceScopeFactory.CreateScope();
+        _server = server;
         _visualDevRepository = visualDevRepository;
         _sqlSugarClient = (SqlSugarScope)sqlSugarClient;
         _dataInterfaceService = dataInterfaceService;
@@ -1751,8 +1752,7 @@ public class RunService : IRunService, ITransient, IDisposable
 
     private string GetLocalAddress()
     {
-        var server = _serviceScope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>();
-        var addressesFeature = server.Features.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>();
+        var addressesFeature = _server.Features.Get<IServerAddressesFeature>();
         var addresses = addressesFeature?.Addresses;
         return addresses.FirstOrDefault().Replace("[::]", "localhost");
     }
@@ -5118,7 +5118,6 @@ public class RunService : IRunService, ITransient, IDisposable
 
     public void Dispose()
     {
-        _serviceScope.Dispose();
     }
 
     #endregion

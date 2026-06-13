@@ -18,7 +18,6 @@ using JNPF.Systems.Entitys.Permission;
 using JNPF.UnifyResult;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.Extensions.DependencyInjection;
 using SqlSugar;
 
 namespace JNPF.EventHandler;
@@ -26,7 +25,7 @@ namespace JNPF.EventHandler;
 /// <summary>
 /// 集成事件订阅.
 /// </summary>
-public class IntegreateEventSubscriber : IEventSubscriber, ISingleton, IDisposable
+public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
 {
     /// <summary>
     /// 初始化客户端.
@@ -34,9 +33,14 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton, IDisposab
     private ISqlSugarClient _sqlSugarClient;
 
     /// <summary>
-    /// 服务提供器.
+    /// 缓存管理.
     /// </summary>
-    private readonly IServiceScope _serviceScope;
+    private readonly ICacheManager _cacheManager;
+
+    /// <summary>
+    /// 服务器.
+    /// </summary>
+    private readonly IServer _server;
 
     /// <summary>
     /// 作业计划工厂服务.
@@ -57,14 +61,16 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton, IDisposab
     /// 构造函数.
     /// </summary>
     public IntegreateEventSubscriber(
-        IServiceScopeFactory serviceScopeFactory,
         ISqlSugarClient sqlSugarClient,
+        ICacheManager cacheManager,
+        IServer server,
         IJobManager jobManager,
         ITenantManager tenantManager,
         ISchedulerFactory schedulerFactory)
     {
-        _serviceScope = serviceScopeFactory.CreateScope();
         _sqlSugarClient = sqlSugarClient;
+        _cacheManager = cacheManager;
+        _server = server;
         _jobManager = jobManager;
         _schedulerFactory = schedulerFactory;
         _tenantManager = tenantManager;
@@ -81,7 +87,7 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton, IDisposab
         var inte = (InteEventSource)context.Source;
         string cacheKey = string.Empty;
 
-        var _cacheManager = _serviceScope.ServiceProvider.GetService<ICacheManager>();
+        var cacheManager = _cacheManager;
 
         var db = _sqlSugarClient.CopyNew();
         if (KeyVariable.MultiTenancy && !string.IsNullOrEmpty(inte.TenantId) && !db.AsTenant().IsAnyConnection(inte.TenantId))
@@ -272,11 +278,6 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton, IDisposab
         }
     }
 
-    public void Dispose()
-    {
-        _serviceScope.Dispose();
-    }
-
     /// <summary>
     /// 获取新增集成助手队列信息.
     /// </summary>
@@ -308,8 +309,7 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton, IDisposab
     /// <returns></returns>
     private string GetLocalAddress()
     {
-        var server = _serviceScope.ServiceProvider.GetRequiredService<IServer>();
-        var addressesFeature = server.Features.Get<IServerAddressesFeature>();
+        var addressesFeature = _server.Features.Get<IServerAddressesFeature>();
         var addresses = addressesFeature?.Addresses;
         return addresses?.FirstOrDefault()?.Replace("[::]", "localhost");
     }

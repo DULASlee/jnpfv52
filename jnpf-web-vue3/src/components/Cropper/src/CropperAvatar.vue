@@ -29,7 +29,7 @@
     showBtn: { type: Boolean, default: true },
     btnProps: { type: Object as PropType<ButtonProps> },
     btnText: { type: String, default: '' },
-    uploadApi: { type: Function as PropType<({ file: Blob, name: string }) => Promise<void>> },
+    uploadApi: { type: Function as PropType<(params: { file: Blob; name: string }) => Promise<void>> },
   };
 
   export default defineComponent({

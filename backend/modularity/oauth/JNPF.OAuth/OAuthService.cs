@@ -37,10 +37,11 @@ using JNPF.UnifyResult;
 using JNPF.VisualDev.Entitys;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SqlSugar;
 using System.Diagnostics;
@@ -138,7 +139,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <summary>
     /// 解析服务作用域工厂服务.
     /// </summary>
-    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly IServer _server;
 
     /// <summary>
     /// SqlSugarClient客户端.
@@ -153,7 +154,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// 初始化一个<see cref="OAuthService"/>类型的新实例.
     /// </summary>
     public OAuthService(
-        IServiceScopeFactory serviceScopeFactory,
+        IServer server,
         IGeneralCaptcha captchaHandler,
         ISqlSugarRepository<UserEntity> userRepository,
         IModuleService moduleService,
@@ -173,7 +174,7 @@ public class OAuthService : IDynamicApiController, ITransient
         ITenantManager tenantManager,
         IEventPublisher eventPublisher)
     {
-        _serviceScopeFactory = serviceScopeFactory;
+        _server = server;
         _captchaHandler = captchaHandler;
         _userRepository = userRepository;
         _moduleService = moduleService;
@@ -1442,9 +1443,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <returns></returns>
     private string GetLocalAddress()
     {
-        using var scope = _serviceScopeFactory.CreateScope();
-        var server = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>();
-        var addressesFeature = server.Features.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>();
+        var addressesFeature = _server.Features.Get<IServerAddressesFeature>();
         var addresses = addressesFeature?.Addresses;
         return addresses.FirstOrDefault().Replace("[::]", "localhost");
     }

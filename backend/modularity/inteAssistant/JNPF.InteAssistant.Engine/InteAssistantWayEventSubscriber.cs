@@ -11,7 +11,6 @@ using JNPF.EventHandler;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.Schedule;
 using Mapster;
-using Microsoft.Extensions.DependencyInjection;
 using SqlSugar;
 
 namespace JNPF.InteAssistant.Engine;
@@ -19,7 +18,7 @@ namespace JNPF.InteAssistant.Engine;
 /// <summary>
 /// 集成助手方法订阅.
 /// </summary>
-public class InteAssistantWayEventSubscriber : IEventSubscriber, ISingleton, IDisposable
+public class InteAssistantWayEventSubscriber : IEventSubscriber, ISingleton
 {
     /// <summary>
     /// 初始化客户端.
@@ -27,9 +26,9 @@ public class InteAssistantWayEventSubscriber : IEventSubscriber, ISingleton, IDi
     private readonly ISqlSugarClient _sqlSugarClient;
 
     /// <summary>
-    /// 服务提供器.
+    /// 缓存管理.
     /// </summary>
-    private readonly IServiceScope _serviceScope;
+    private readonly ICacheManager _cacheManager;
 
     /// <summary>
     /// 作业计划工厂服务.
@@ -50,14 +49,14 @@ public class InteAssistantWayEventSubscriber : IEventSubscriber, ISingleton, IDi
     /// 构造函数.
     /// </summary>
     public InteAssistantWayEventSubscriber(
-        IServiceScopeFactory serviceScopeFactory,
         ISqlSugarClient sqlSugarClient,
+        ICacheManager cacheManager,
         InteAssistantRun runService,
         ISchedulerFactory schedulerFactory,
         ITenantManager tenantManager)
     {
-        _serviceScope = serviceScopeFactory.CreateScope();
         _sqlSugarClient = sqlSugarClient;
+        _cacheManager = cacheManager;
         _schedulerFactory = schedulerFactory;
         _runService = runService;
         _tenantManager = tenantManager;
@@ -73,8 +72,6 @@ public class InteAssistantWayEventSubscriber : IEventSubscriber, ISingleton, IDi
     {
         var inte = (InteAssistantWayEventSource)context.Source;
         string cacheKey = string.Empty;
-
-        var _cacheManager = _serviceScope.ServiceProvider.GetService<ICacheManager>();
 
         // CopyNew() MUST be called BEFORE ChangTenant to isolate tenant state.
         // ChangTenant mutates the SqlSugarScope's internal connections/filters;
@@ -170,8 +167,4 @@ public class InteAssistantWayEventSubscriber : IEventSubscriber, ISingleton, IDi
         }
     }
 
-    public void Dispose()
-    {
-        _serviceScope.Dispose();
-    }
 }

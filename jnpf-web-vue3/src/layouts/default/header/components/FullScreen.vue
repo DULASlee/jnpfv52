@@ -22,7 +22,12 @@
       const { toggle, isFullscreen } = useFullscreen();
 
       // 重新检查全屏状态
-      isFullscreen.value = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+      isFullscreen.value = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
 
       const getTitle = computed(() => {
         return unref(isFullscreen) ? t('layout.header.tooltipExitFull') : t('layout.header.tooltipEntryFull');

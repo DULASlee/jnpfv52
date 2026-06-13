@@ -207,6 +207,7 @@ export function generateColumns(ir: FormPageIR, config: CompilerConfig): string 
     dataIndex: 'action',
     width: 200,
     fixed: 'right' as const,
+    sorter: false,
   });
 
   return `// @jnpf-generated v${config.generatorVersion} entity=${config.entity} type=columns

@@ -19,7 +19,9 @@ export class DashboardCompiler {
     const project: GeneratedProject = new Map();
     const entity = this.ir.id;
 
-    project.set('package.json', this.genPackage());
+    const has3D = this.ir.widgets.some(w => w.type.startsWith('3D:'));
+
+    project.set('package.json', this.genPackage(has3D));
     project.set('vite.config.ts', this.genViteConfig());
     project.set('index.html', this.genHtml());
     project.set('src/main.ts', this.genMain());
@@ -44,14 +46,15 @@ export class DashboardCompiler {
 
   // ── generators ──
 
-  private genPackage(): string {
+  private genPackage(has3D = false): string {
+    const threeDep = has3D ? ', "three": "^0.170.0"' : '';
     return `// ${MARKER} v${VERSION} dashboard=${this.ir.id}
 {
   "name": "jnpf-dashboard-${this.ir.id}",
   "version": "1.0.0",
   "private": true,
   "scripts": { "dev": "vite", "build": "vite build", "preview": "vite preview" },
-  "dependencies": { "vue": "^3.4.0", "echarts": "^5.5.0", "vue-echarts": "^6.7.0", "@jiaminghi/data-view": "^2.10.0", "axios": "^1.7.0" },
+  "dependencies": { "vue": "^3.4.0", "echarts": "^5.5.0", "vue-echarts": "^6.7.0", "@jiaminghi/data-view": "^2.10.0", "axios": "^1.7.0"${threeDep} },
   "devDependencies": { "vite": "^5.4.0", "@vitejs/plugin-vue": "^5.1.0", "typescript": "^5.5.0" }
 }`;
   }
@@ -208,17 +211,20 @@ function computedString(sx: ReturnType<typeof ref<number>>, sy: ReturnType<typeo
 <template>
   <div class="widget-${tag}" ref="widgetRef">
 ${isECharts ? this.genEChartsTemplate(tag) : ''}
-${is3D ? this.gen3DPlaceholder(tag) : ''}
+${is3D ? this.gen3DTemplate(tag, type) : ''}
 ${!isECharts && !is3D ? this.genGenericTemplate(tag) : ''}
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 ${isECharts ? "import VChart from 'vue-echarts'" : ''}
+${is3D ? this.gen3DImports() : ''}
 
 const props = defineProps<{ data?: unknown }>()
 const widgetRef = ref<HTMLElement>()
+
+${is3D ? this.gen3DScriptBody(type) : ''}
 
 onMounted(() => {
   // ${MARKER} widget mounted: ${type}
@@ -230,14 +236,124 @@ onMounted(() => {
 </style>`;
   }
 
-  private genEChartsTemplate(_tag: string): string {
-    return `    <v-chart ref="chartRef" :option="chartOption" autoresize />
+  // ── F-6b.9: 3D component generation ──
+
+  private gen3DImports(): string {
+    return `import * as THREE from 'three'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js'`;
+  }
+
+  private gen3DTemplate(_tag: string, _type: string): string {
+    return `    <div ref="threeContainer" class="three-viewport"></div>
+    <div ref="labelRenderer" class="css2d-overlay"></div>`;
+  }
+
+  private gen3DScriptBody(type: string): string {
+    const widgetId = type;
+    return `
+let scene: THREE.Scene
+let camera: THREE.PerspectiveCamera
+let renderer: THREE.WebGLRenderer
+let labelRenderer: CSS2DRenderer
+let controls: OrbitControls
+let animationId = 0
+const threeContainer = ref<HTMLElement>()
+const labelOverlay = ref<HTMLElement>()
+
+function init3DScene(): void {
+  if (!threeContainer.value) return
+
+  // Scene
+  scene = new THREE.Scene()
+  scene.background = new THREE.Color('#0a0a2e')
+
+  // Camera
+  const aspect = threeContainer.value.clientWidth / (threeContainer.value.clientHeight || 1)
+  camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 10000)
+  camera.position.set(10, 10, 10)
+  camera.lookAt(0, 0, 0)
+
+  // Renderer
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+  renderer.setSize(threeContainer.value.clientWidth, threeContainer.value.clientHeight)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.shadowMap.enabled = true
+  threeContainer.value.appendChild(renderer.domElement)
+
+  // CSS2D Renderer for labels
+  labelRenderer = new CSS2DRenderer()
+  labelRenderer.setSize(threeContainer.value.clientWidth, threeContainer.value.clientHeight)
+  labelRenderer.domElement.style.position = 'absolute'
+  labelRenderer.domElement.style.top = '0'
+  labelRenderer.domElement.style.pointerEvents = 'none'
+  threeContainer.value.appendChild(labelRenderer.domElement)
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0x888888, 0.6))
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8)
+  dirLight.position.set(50, 50, 50)
+  dirLight.castShadow = true
+  scene.add(dirLight)
+
+  // Controls
+  controls = new OrbitControls(camera, renderer.domElement)
+  controls.enableDamping = true
+  controls.dampingFactor = 0.05
+
+  // Grid
+  scene.add(new THREE.GridHelper(100, 50, 0x1e3a5f, 0x1e3a5f))
+
+  // Resize
+  window.addEventListener('resize', handle3DResize)
+
+  // Ready — load 3D elements
+  on3DSceneReady()
+
+  // Start loop
+  animate3D()
+}
+
+function handle3DResize(): void {
+  if (!threeContainer.value) return
+  const w = threeContainer.value.clientWidth
+  const h = threeContainer.value.clientHeight
+  if (w === 0 || h === 0) return
+  camera.aspect = w / h
+  camera.updateProjectionMatrix()
+  renderer.setSize(w, h)
+  labelRenderer.setSize(w, h)
+}
+
+function animate3D(): void {
+  animationId = requestAnimationFrame(animate3D)
+  controls.update()
+  renderer.render(scene, camera)
+  labelRenderer.render(scene, camera)
+}
+
+function on3DSceneReady(): void {
+  // 3D widget "${widgetId}" — load models/POI/fences/heatmaps per widget.props
+  // Generated from widget.props configuration:
+  // props.models → loadModel(), props.pois → createPOIGroup(), etc.
+}
+
+onMounted(() => {
+  init3DScene()
+})
+
+onUnmounted(() => {
+  if (animationId) cancelAnimationFrame(animationId)
+  window.removeEventListener('resize', handle3DResize)
+  controls?.dispose()
+  renderer?.dispose()
+  labelRenderer?.domElement?.remove()
+})
 `;
   }
 
-  private gen3DPlaceholder(tag: string): string {
-    return `    <!-- 3D 组件占位 (VIP, version 2.0.0) — Phase 2 Three.js 集成 -->
-    <div class="3d-placeholder">3D: ${tag} (Phase 2)</div>
+  private genEChartsTemplate(_tag: string): string {
+    return `    <v-chart ref="chartRef" :option="chartOption" autoresize />
 `;
   }
 

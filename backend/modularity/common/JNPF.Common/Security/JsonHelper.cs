@@ -1,5 +1,4 @@
-﻿using JNPF.JsonSerialization;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace JNPF.Common.Security;
@@ -12,11 +11,6 @@ namespace JNPF.Common.Security;
 /// </summary>
 public static class JsonHelper
 {
-    /// <summary>
-    /// 序列化提供器.
-    /// </summary>
-    public static IJsonSerializerProvider _jsonSerializer = App.GetService(typeof(NewtonsoftJsonSerializerProvider), App.RootServices) as IJsonSerializerProvider;
-
     /// <summary>
     /// Object 转 JSON字符串.
     /// </summary>
