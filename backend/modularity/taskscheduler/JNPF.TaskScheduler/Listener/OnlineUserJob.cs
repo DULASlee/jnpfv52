@@ -13,16 +13,16 @@ namespace JNPF.TaskScheduler.Listener;
 [PeriodSeconds(1, TriggerId = "trigger_onlineUser", Description = "清理在线用户", MaxNumberOfRuns = 1, RunOnStart = true)]
 public class OnlineUserJob : IJob
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
 
-    public OnlineUserJob(IServiceProvider serviceProvider)
+    public OnlineUserJob(IServiceScopeFactory serviceScopeFactory)
     {
-        _serviceProvider = serviceProvider;
+        _serviceScopeFactory = serviceScopeFactory;
     }
 
     public async Task ExecuteAsync(JobExecutingContext context, CancellationToken stoppingToken)
     {
-        using var serviceScope = _serviceProvider.CreateScope();
+        using var serviceScope = _serviceScopeFactory.CreateScope();
 
         var _cacheManager = serviceScope.ServiceProvider.GetService<ICacheManager>();
         var _imHandler = serviceScope.ServiceProvider.GetService<IMHandler>();

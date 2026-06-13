@@ -17,14 +17,14 @@ namespace JNPF.Common.Core;
 /// </summary>
 public class DbJobPersistence : IJobPersistence, IDisposable
 {
-    private readonly IServiceScope _serviceScope;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
 
     private readonly ITenantManager _tenantManager;
 
     public DbJobPersistence(
         IServiceScopeFactory serviceScopeFactory, ITenantManager tenantManager)
     {
-        _serviceScope = serviceScopeFactory.CreateScope();
+        _serviceScopeFactory = serviceScopeFactory;
         _tenantManager = tenantManager;
     }
 
@@ -34,13 +34,14 @@ public class DbJobPersistence : IJobPersistence, IDisposable
     /// <returns></returns>
     public IEnumerable<SchedulerBuilder> Preload()
     {
-        var sqlSugarClient = _serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
+        using var scope = _serviceScopeFactory.CreateScope();
+        var sqlSugarClient = scope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
 
         sqlSugarClient = sqlSugarClient.CopyNew();
 
         // 获取到对应库连接
         var sqlSugarScope = sqlSugarClient.AsTenant().GetConnectionScopeWithAttr<JobDetails>();
-        var dynamicJobCompiler = _serviceScope.ServiceProvider.GetRequiredService<DynamicJobCompiler>();
+        var dynamicJobCompiler = scope.ServiceProvider.GetRequiredService<DynamicJobCompiler>();
 
         // 获取所有定义的作业
         var allJobs = App.EffectiveTypes.ScanToBuilders().ToList();
@@ -142,7 +143,8 @@ public class DbJobPersistence : IJobPersistence, IDisposable
     {
         try
         {
-            var sqlSugarClient = _serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
+            using var scope = _serviceScopeFactory.CreateScope();
+            var sqlSugarClient = scope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
 
             sqlSugarClient = sqlSugarClient.CopyNew();
 
@@ -183,7 +185,8 @@ public class DbJobPersistence : IJobPersistence, IDisposable
     {
         try
         {
-            var sqlSugarClient = _serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
+            using var scope = _serviceScopeFactory.CreateScope();
+            var sqlSugarClient = scope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
 
             sqlSugarClient = sqlSugarClient.CopyNew();
 
@@ -224,7 +227,8 @@ public class DbJobPersistence : IJobPersistence, IDisposable
     {
         try
         {
-            var sqlSugarClient = _serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
+            using var scope = _serviceScopeFactory.CreateScope();
+            var sqlSugarClient = scope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
 
             var timeTask = timeline.Adapt<TimeTaskEntity>();
 
@@ -276,6 +280,6 @@ public class DbJobPersistence : IJobPersistence, IDisposable
     /// </summary>
     public void Dispose()
     {
-        _serviceScope.Dispose();
+        // Scope 改为按需创建（各方法内 using），不再持有长生命周期 Scope
     }
 }

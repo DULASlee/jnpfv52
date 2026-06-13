@@ -1,0 +1,91 @@
+<!-- @jnpf-generated v<%= version %> entity=<%= entity %> type=detail-page platform=<%= platform %> -->
+<!-- 生成时间：<%= timestamp %> -->
+<!-- 此文件由 JNPF UniApp 代码生成器生成，可手动修改 -->
+
+<template>
+  <view class="page-detail">
+    <!-- ============================================================ -->
+    <!-- 详情展示 -->
+    <!-- ============================================================ -->
+    <wd-cell-group title="<%= entityLabel %> 详情">
+<% for (const field of fields) { %>
+      <wd-cell
+        title="<%= field.label %>"
+        :value="String(data.<%= field.model %> ?? '')"
+      />
+<% } %>
+    </wd-cell-group>
+
+    <!-- @jnpf-gen:insert-point=custom-detail-fields -->
+    <!-- @jnpf-gen:end-insert-point=custom-detail-fields -->
+
+    <!-- ============================================================ -->
+    <!-- 操作按钮 -->
+    <!-- ============================================================ -->
+    <view class="detail-actions">
+      <wd-button type="primary" block @click="handleEdit">编辑</wd-button>
+    </view>
+  </view>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { api as <%= entityLower %>Api } from '@/api/<%= entityLower %>'
+<% for (const imp of customImports || []) { %>
+<%- imp %>
+<% } %>
+
+// ================================================================
+// 状态
+// ================================================================
+
+const data = ref<Record<string, unknown>>({})
+
+// ================================================================
+// 初始化 — 根据 URL 参数 id 加载详情
+// ================================================================
+
+onMounted(async () => {
+  const pages = getCurrentPages()
+  const page = pages[pages.length - 1]
+  const id = (page as Record<string, unknown>)?.options?.id as string | undefined
+
+  if (!id) {
+    uni.showToast({ title: '缺少参数', icon: 'none' })
+    setTimeout(() => uni.navigateBack(), 1500)
+    return
+  }
+
+  try {
+    const detail = await <%= entityLower %>Api.detail(id).send()
+    if (detail) {
+      data.value = detail as Record<string, unknown>
+    }
+  } catch {
+    uni.showToast({ title: '加载数据失败', icon: 'none' })
+  }
+})
+
+// ================================================================
+// 操作函数
+// ================================================================
+
+function handleEdit() {
+  const id = data.value.id as string
+  if (!id) return
+  uni.navigateTo({ url: '/pages/<%= entityLower %>/form?id=' + id })
+}
+
+// @jnpf-gen:insert-point=custom-detail-logic
+// @jnpf-gen:end-insert-point=custom-detail-logic
+</script>
+
+<style scoped lang="scss">
+.page-detail {
+  padding: 24rpx;
+}
+
+.detail-actions {
+  margin-top: 48rpx;
+}
+</style>

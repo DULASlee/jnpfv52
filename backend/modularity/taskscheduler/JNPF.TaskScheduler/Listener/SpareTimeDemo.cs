@@ -17,7 +17,7 @@ public class SpareTimeDemo : IJob, IDisposable
     /// <summary>
     /// 服务提供器.
     /// </summary>
-    private readonly IServiceScope _serviceScope;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
 
     private readonly ILogger<SpareTimeDemo> _logger;
 
@@ -34,14 +34,15 @@ public class SpareTimeDemo : IJob, IDisposable
         ILogger<SpareTimeDemo> logger,
         ITenantManager tenantManager)
     {
-        _serviceScope = serviceScopeFactory.CreateScope();
+        _serviceScopeFactory = serviceScopeFactory;
         _logger = logger;
         _tenantManager = tenantManager;
     }
 
     public async Task ExecuteAsync(JobExecutingContext context, CancellationToken stoppingToken)
     {
-        var sqlSugarClient = _serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
+        using var scope = _serviceScopeFactory.CreateScope();
+        var sqlSugarClient = scope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
 
         // 多租户场景 需要获取到 租户ID
         var tenantId = context.TriggerId.Match("(.+(?=_trigger_schedule_))");
@@ -67,6 +68,6 @@ public class SpareTimeDemo : IJob, IDisposable
 
     public void Dispose()
     {
-        _serviceScope.Dispose();
+        // Scope 改为按需创建（ExecuteAsync 内 using），不再持有长生命周期 Scope
     }
 }
