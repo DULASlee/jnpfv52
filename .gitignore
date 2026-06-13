@@ -48,3 +48,6 @@ stats.json
 .playwright-mcp/
 .serena/memories/
 DB/
+
+# Claude Code session data (accidentally committed in Sprint 1)
+backend/.claude/
