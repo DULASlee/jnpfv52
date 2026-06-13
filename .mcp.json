@@ -1,34 +1,27 @@
 {
   "mcpServers": {
     "graphify": {
-      "command": "graphify",
+      "command": "graphify-mcp",
       "args": [
-        "--mcp"
+        "D:\\JNPF-v52\\graphify-out\\graph.json"
       ],
       "cwd": "D:\\JNPF-v52",
       "timeout": 300,
-      "env": {}
+      "env": {},
+      "description": "知识图谱 MCP 查询 (query_graph, get_node, shortest_path)"
     },
     "serena": {
-      "command": "serena",
+      "command": "C:\\Users\\admin\\.local\\bin\\serena.exe",
       "args": [
-        "--mcp"
+        "start-mcp-server",
+        "--transport", "stdio",
+        "--project-from-cwd"
       ],
       "cwd": "D:\\JNPF-v52",
       "timeout": 300,
       "env": {},
-      "description": "LSP 符号级代码操作 (find-declaration, find-references, rename-symbol, replace-content)"
-    },
-    "episodic-memory": {
-      "command": "episodic-memory",
-      "args": [
-        "--mcp"
-      ],
-      "cwd": "D:\\JNPF-v52",
-      "timeout": 300,
-      "env": {},
-      "description": "跨会话记忆搜索与召回 (search-conversations, read-conversation)"
+      "description": "LSP 符号级代码操作 (find_symbol, find_referencing_symbols, replace_symbol_body)"
     }
   },
-  "_note": "OpenSpec 为纯知识库（非 MCP），在 CLAUDE.md Agent Toolchain 节中注明。其他工具 (superpowers skill set) 通过 Codex/Skills 机制加载，不在此注册。"
+  "_note": "graphify: graphify-mcp (Python package graphifyy); serena: uv-installed serena-agent; episodic-memory: provided by Claude Code plugin (episodic-memory@superpowers-marketplace) — not registered here to avoid name conflict. OpenSpec 为纯知识库（非 MCP），不在此注册。"
 }

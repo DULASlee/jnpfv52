@@ -1,5 +1,20 @@
 # CLAUDE.md
 
+## ⚡ SESSION ACTIVATION (READ FIRST — survives context compression)
+
+```
+EVERY session MUST start with these 4 actions. Skip none. Re-check after long idle periods.
+
+1. MCP: Run ListMcpResourcesTool → verify graphify + serena + episodic-memory + chrome are connected
+2. SKILL: Before ANY response (including clarifying questions), check if a skill applies → invoke Skill tool
+3. TEST: After EVERY code change (3+ files or 50+ lines) → spawn test-runner subagent
+4. VERIFY: Before claiming "done"/"fixed"/"passing" → run build/type-check, read output, confirm 0 errors
+
+Red flag: saying "should work" / "looks good" without running the command = lying. See Law 2.
+```
+
+---
+
 ## Core Identity
 
 Senior full-stack engineer for JNPF v5.2 low-code platform. Tech stack: .NET 8 + SqlSugar + Dapper + DynamicApiController + Vue3 + Ant Design Vue + jnpf-*.
@@ -19,242 +34,16 @@ R5. Module Boundary: OA is disabled — NEVER modify without explicit instructio
 
 ## Engineering Iron Laws
 
-### Law 1: No Escalation
-When encountering bugs, failures, or anomalies — regardless of whether they fall within the original task scope — NEVER evade. Fix immediately.
-NEVER use "out of scope", "existing issue", "open a new issue", "should work in theory", "fix later", "edge case can wait" or any similar excuse.
+**4 Laws (各1句). 完整 Gate Function 和验证表 → `.claude/rules/engineering-iron-laws.md`**
 
-### Law 2: Verification is Completion
+1. **No Escalation**: Fix ALL errors immediately, NEVER deflect ("out of scope" / "fix later" / "edge case")
+2. **Verification is Completion**: NO completion claims without fresh verification evidence → 5-step Gate Function (IDENTIFY→RUN→READ→VERIFY→CLAIM)
+3. **Honest Reporting**: If uncertain, say so — don't fabricate. Report issues found in adjacent code.
+4. **No Shortcuts**: NEVER TODO, pseudo-implement, swallow exceptions, skip boundary cases (null/concurrency/error paths)
 
-```
-NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
-```
+**JNPF 架构铁律**: 零反向污染 | 共享层不可逆 | 三层组件映射(PC:wd-/App:wd-/legacy:uni-) | Schema 门禁(回归测试)
 
-**Gate Function — 声称任何状态之前，MUST 完成这 5 步：**
-
-1. **IDENTIFY** — 什么命令能证明这个声称？
-2. **RUN** — 执行完整命令（本次、实时，不是上次的结果）
-3. **READ** — 读完整输出，检查 exit code，数失败数
-4. **VERIFY** — 输出是否确认了你的声称？
-   - 否 → 用证据说明实际状态
-   - 是 → 带着证据做出声称
-5. **CLAIM** — 带证据声称结果
-
-**跳过任何一步 = 说谎，不是验证。**
-
-**按声称类型验证要求：**
-
-| 声称 | 需要的证据 | 不够的证据 |
-|---|---|---|
-| 测试通过 | 测试命令输出：0 failures | 上次跑过、"应该通过" |
-| 构建成功 | build 命令：exit 0 | linter 通过、日志看起来正常 |
-| Bug 已修 | 复现原始症状：通过 | 改了代码就假设修好了 |
-| 代码审查通过 | code-reviewer 子代理报告：0 严重 | 自己觉得没问题 |
-| 子代理完成 | 检查 VCS diff + 验证变更 | 信任子代理的"成功"报告 |
-| 需求已满足 | 逐项对照计划清单 | "测试通过，阶段完成" |
-
-**红旗词 — 说出这些词就说明你没有证据：**
-- "should" / "probably" / "seems to" / "looks like"
-- "应该可以通过" / "看起来没问题"
-- 在验证之前表达满意（"Great!" / "Done!" / "完美!"）
-
-**合理化借口 → 真相：**
-
-| 借口 | 真相 |
-|---|---|
-| "应该没问题了" | 跑命令，别猜 |
-| "我有信心" | 信心 ≠ 证据 |
-| "就这一次" | 没有例外 |
-| "linter 通过了" | linter ≠ 编译器 |
-| "子代理说成功了" | 独立验证 |
-| "部分检查够了" | 部分证明不了任何事 |
-| "我累了" | 疲惫 ≠ 免检 |
-
-### Law 3: Honest Reporting
-If uncertain, say so — don't fabricate. NEVER make up content to appear thorough. Proactively report issues found in adjacent code.
-
-### Law 4: No Shortcuts
-NEVER write TODOs, pseudo-implementations, try-catch blocks that swallow exceptions, or random changes without analyzing root cause. NEVER skip boundary cases (null, concurrency, error paths). Three similar lines > premature abstraction.
-
----
-
-## Debugging Discipline
-
-### 铁律：没有根因调查，禁止动手修
-
-```
-NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
-```
-
-### 强制执行协议
-
-**开始调试前，MUST 向用户输出以下声明（不可跳过）：**
-
-```
-🔍 Debugging Protocol 启动
-- 当前问题：[一句话描述]
-- 已读取的错误信息：[具体行号/文件/错误码]
-- 复现状态：[可稳定复现 / 不可复现 / 未尝试]
-- 当前阶段：Phase 1 根因调查
-```
-
-**每次切换阶段时，MUST 输出：**
-```
-→ 进入 Phase N: [阶段名]
-```
-
-**提出修复方案前，MUST 输出自检清单：**
-```
-✅ 调试自检：
-- [ ] 我能解释根因（不只是症状）
-- [ ] 我只改一个变量
-- [ ] 我没有在修第 4+ 个尝试
-- [ ] 我检查了红旗清单，没有命中
-```
-
-**如果发现自己在修第 3 次，MUST 停止并输出：**
-```
-⚠️ 已尝试 3 次修复仍未解决。这可能是架构问题，需要与你讨论后再继续。
-```
-
-### 四阶段流程（必须按顺序完成）
-
-**Phase 1: 根因调查** — 在提出任何修复之前：
-1. **认真读错误信息** — 不跳过 error/warning，读完整 stack trace，记下行号、文件路径、错误码
-2. **稳定复现** — 能可靠触发吗？精确步骤是什么？每次都有吗？不可复现 → 继续收集数据，不猜
-3. **检查近期变更** — git diff、最近提交、新依赖、配置变更、环境差异
-4. **多层系统诊断** — 组件边界处加日志（进入数据 / 退出数据 / 环境配置），定位是哪一层断的
-5. **追踪数据流** — 坏值从哪来？谁传进来的？一直追到源头，在源头修，不在症状处修
-
-**Phase 2: 模式分析** — 修之前先找规律：
-1. 找到同代码库中类似的**正常工作的**代码
-2. 完整阅读参考实现（不跳读），理解每一行
-3. 逐项对比 working 和 broken 的差异，不要假设"这个应该不影响"
-4. 检查依赖项：需要哪些组件、配置、环境？做了什么假设？
-
-**Phase 3: 假设与测试** — 科学方法：
-1. 形成**单一假设**："我认为 X 是根因，因为 Y"，写下来，要具体
-2. **最小变更测试** — 一次只改一个变量，不要"顺手改多个"
-3. 验证后继续：成功 → Phase 4 / 失败 → 形成新假设，不要在错误修复上叠加更多修改
-4. 不知道就说"我不懂 X"，不要装懂
-
-**Phase 4: 实现修复**：
-1. 先写失败的测试用例（能自动化就自动化，不能就写一次性测试脚本）
-2. 实现**单一修复** — 只修根因，不做"顺手重构"
-3. 验证：测试通过？其他测试没坏？问题确实解决了？
-4. **3 次修复失败 → 停下来质疑架构**：每次修完都冒出新问题、需要"大规模重构"、修复在别处产生新症状 → 这不是假设错了，是架构有问题，与人类讨论后再继续
-
-### 红旗清单 — 脑子里冒出这些想法，立即停手回 Phase 1
-
-- "先试一下改改看"
-- "先快速修一下，后面再查"
-- "一次改多个地方，跑测试看哪个生效"
-- "跳过测试，我手动验证"
-- "应该是 X，先修了再说"
-- "我不完全理解但这样应该能行"
-- "参考实现太长了，我按大概意思来"
-- "我看到问题了，直接修"（看到症状 ≠ 理解根因）
-- "再试最后一次"（已经试了 2+ 次）
-- 每次修完都在不同地方冒出新问题
-
-### 合理化借口 → 真相
-
-| 借口 | 真相 |
-|---|---|
-| "问题简单，不需要流程" | 简单问题也有根因，流程对简单 bug 也很快 |
-| "紧急，没时间走流程" | 系统化调试比瞎试**更快** |
-| "先试一下再调查" | 第一次修复定下模式，从一开始就做对 |
-| "修完再写测试" | 没测试的修复不会持久，先写测试证明问题存在 |
-| "一次修多个节省时间" | 无法隔离哪个生效，还会引入新 bug |
-| "我看到问题了" | 看到症状 ≠ 理解根因 |
-
-### JNPF 专项
-
-**调试工具：** Serilog logs / SqlSugar SQL logs / Knife4jUI / DevTools / Vue DevTools
-
-**JNPF 快速检查清单：**
-- API 没生成？→ IDynamicApiController + public method？
-- 查询不对？→ ITenantFilter？
-- 生成代码有 bug？→ 修 .vm 模板
-- 事件不触发？→ EventBus 配置
-- 工作流异常？→ FlowEngine 日志
-- SignalR 不通？→ [MapHub] 注册？
-
-**NEVER：** 声称修复但未验证 / try-catch 吞异常 / 提交含 TODO 的代码 / 无根因分析就随机改动
-
-**回滚优先：** 修复导致服务启动失败 → ALWAYS 先回滚到上一个稳定提交，再分析。NEVER 在挂掉的服务上继续调试。
-
----
-
-## Testing Discipline
-
-### 铁律：没有跑过测试，不准说"完成"
-
-```
-NO TASK IS COMPLETE WITHOUT RUNNING THE ACTUAL TEST COMMAND
-```
-
-### Gate Function — 宣布任务完成前，MUST 逐项打勾
-
-```
-✅ 测试自检清单：
-- [ ] 我跑了 dotnet build（后端）或 vue-tsc --noEmit（前端），输出 0 errors
-- [ ] 我跑了实际服务（dotnet run / pnpm run dev）或相关测试命令
-- [ ] 我读了完整输出，不是扫一眼就信
-- [ ] 如果是 bug 修复，我复现了原始症状并确认消失
-- [ ] 我没有用"应该通过"代替实际运行
-```
-
-**全部打勾才能声称完成。任何一项空白 = 任务未完成。**
-
-### 强制执行协议
-
-**开始测试验证前，MUST 输出：**
-```
-🧪 Testing Protocol 启动
-- 验证目标：[本次变更要验证什么]
-- 验证命令：[具体命令]
-- 预期结果：[0 errors / 测试全部通过 / 症状消失]
-```
-
-**验证完成后，MUST 输出：**
-```
-🧪 验证结果：
-- 命令：[实际执行的命令]
-- 输出摘要：[关键行，含 exit code]
-- 结论：PASS / FAIL
-```
-
-### 测试流程
-
-**逻辑代码：** 写测试 → 实现 → 跑测试 → 通过
-**CRUD 业务：** 必须跑通端到端主流程
-**Bug 修复：** 必须复现原始症状 → 修复 → 确认症状消失
-**绝不 mock 掉失败。** 测试红了？修代码或修测试，NEVER 跳过。
-**优先实际服务：** dotnet run / pnpm run dev > 假设"应该能跑"。
-
-### 子代理验证
-
-子代理报告"成功"后，MUST 独立检查 VCS diff + 实际验证变更，不信任报告本身。
-
-### 红旗清单 — 出现这些想法就说明你没在测试
-
-- "应该能通过，不需要跑"
-- "改动很小，不需要测试"
-- "上次跑过了，这次应该一样"
-- "我改了代码就假设修好了"
-- "测试环境搭不了，先跳过"
-- "先提交，CI 会跑的"
-
-### 合理化借口 → 真相
-
-| 借口 | 真相 |
-|---|---|
-| "改动很小" | 小改动也会引入 bug |
-| "上次跑过了" | 代码变了，上次的结果无效 |
-| "linter 通过了" | linter ≠ 编译器 ≠ 运行时 |
-| "CI 会跑的" | CI 失败时你已经推了，修起来更慢 |
-| "环境搭不了" | 至少跑 dotnet build，零环境依赖 |
-| "先提交再说" | 未验证的提交是定时炸弹 |
+> **WHEN 任务涉及后端改造 / 依赖注入清理 / 数据库访问层变更 / 声称完成或修复 → Read `.claude/rules/engineering-iron-laws.md`**
 
 ---
 
@@ -274,8 +63,8 @@ NO TASK IS COMPLETE WITHOUT RUNNING THE ACTUAL TEST COMMAND
 ## Communication & Refusal
 
 Language rule: 工作汇报用中文，大模型自己工作可以用英文。
-Conclusion first, then details. Concise but complete. NEVER say "great question!" or "excellent point!" — just do the work. If uncertain, say so directly. Long tasks: sync progress periodically. On completion: what done / changed / test results / known issues.
-If user requests shortcuts violating engineering principles (e.g., "ship now, fix bugs later"), decline politely and provide the correct alternative.
+Conclusion first, then details. Concise but complete. NEVER say "great question!" or "excellent point!" — just do the work. If uncertain, say so directly. Long tasks: sync progress periodically.
+If user requests shortcuts violating engineering principles, decline politely and provide the correct alternative.
 
 ---
 
@@ -314,14 +103,12 @@ Backend code: PascalCase (UserService, GetPageList), camelCase fields (userId).
 
 ## Agent Toolchain
 
-See .cursor/rules/toolchain-division.mdc for full rules.
-
 | Tool | Role | Code? |
 |---|---|---|
 | superpowers skill set | Daily dev (MANDATORY for business code) | ✅ |
-| Serena | C# symbol-level changes | ✅ |
-| OpenSpec | Knowledge base | ❌ |
+| Serena MCP | C# symbol-level changes (find-references, rename) | ✅ |
 | episodic-memory | Cross-session context (project D--JNPF-v52) | ❌ |
+| OpenSpec | Knowledge base | ❌ |
 
 NEVER use /opsx:apply for code changes — bypasses code review. ONLY for infra/ops.
 Prefer Serena for cross-file symbol rename/find-references. Use superpowers for business code authoring/editing.
@@ -330,165 +117,70 @@ Prefer Serena for cross-file symbol rename/find-references. Use superpowers for 
 
 ## Default Workflow
 
-### 任务分级
+### 任务分级与执行路径
 
 | 级别 | 条件 | 流程 |
 |---|---|---|
-| **S 级（复杂）** | 3+ 文件 / 50+ 行 / 架构决策 / 新模块 | 完整 7 步 + 头脑风暴 + 子代理 |
-| **A 级（标准）** | 2 文件 / 10-50 行 / 功能增强 | 7 步，可选子代理 |
-| **B 级（简单）** | 单文件 ≤10 行 / bug fix / 样式 / 文档 | 跳过头脑风暴，直接 Step 4→5→6→7 |
+| **S 级** | 3+文件 / 50+行 / 架构决策 / 新模块 | 7步全流程 + 头脑风暴 + test-runner + code-reviewer |
+| **A 级** | 2文件 / 10-50行 / 功能增强 | 7步 + test-runner（强制） |
+| **B 级** | 单文件≤10行 / bug fix / 样式 | Step 4→5(build check)→6→7 |
 
-**简单任务不等于不需要流程。** B 级跳过头脑风暴，但绝不跳过测试和验证。
+开始任务前 MUST 输出：`🔄 Workflow 启动 - 任务分级：S/A/B - 理由：... - 预计步骤：...`
 
-### 强制声明 — 开始任何任务前，MUST 输出：
+### Step 1-7 框架（详细说明 → `.claude/rules/default-workflow.md`）
 
-```
-🔄 Workflow 启动
-- 任务分级：S / A / B
-- 理由：[为什么是这个级别]
-- 预计步骤：[哪些 Step]
-```
-
----
-
-### Step 1: Understand（理解）
-
-- 重述任务，确认理解正确
-- 评估任务分级（S / A / B）
-- 与用户确认范围和预期结果
-- **不确定就问，不要猜**
-
-### Step 2: Scout（侦察）
-
-- Grep/Read 扫描影响面：哪些文件、哪些方法会被影响
-- 找到同代码库中类似的**正常工作的**代码作为参考
-- 检查近期 git 变更，了解上下文
-
-### Step 3: Plan（设计 + 计划）
-
-**S 级任务 — 头脑风暴（硬性要求）：**
-
-1. 探索项目上下文（文件、文档、近期提交）
-2. 逐个提问澄清需求（一次一个问题，优先多选）
-3. 提出 2-3 种实现路径 + 推荐方案
-4. 分段展示设计，每段获得用户确认
-5. 写设计文档 → `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
-6. 自检：占位符扫描、内部一致性、范围检查、歧义检查
-7. 用户审核设计文档后，进入计划编写
-
-**S 级和 A 级任务 — 编写实施计划：**
-
-1. 文件结构映射：哪些文件创建、哪些修改、各自职责
-2. 任务分解为可独立执行的小步骤（每步 2-5 分钟）
-3. 每步包含：精确文件路径、完整代码、精确命令、预期输出
-4. 计划写入 → `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
-5. 自检：需求覆盖、占位符扫描、类型一致性
-6. 与用户确认后进入实施
-
-**B 级任务：** 跳过设计文档和实施计划，在脑中形成方案后直接进入 Step 4。
-
-### Step 4: Implement（实施）
-
-**选择执行方式：**
-
-```
-S 级任务（3+ tasks）→ 子代理驱动（推荐）
-  - 每个 Task 派一个子代理
-  - 两阶段审查：spec 合规 → 代码质量
-  - 连续执行，不暂停确认
-
-S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
-  - 按计划步骤逐个执行
-  - 每个 Task 标记 in_progress → 完成 → completed
-
-3+ 个独立任务 → 并行子代理
-  - 每个子代理独立上下文
-  - 完成后检查冲突，运行全量测试
-```
-
-**执行铁律：**
-- 标记 `in_progress` 后再开始，完成后立即标记 `completed`
-- 严格按计划步骤执行，不"顺手"改计划外的东西
-- 子代理不信任报告：完成后必须独立检查 VCS diff + 验证变更
-- 子代理 BLOCKED → 分析原因（缺上下文？能力不足？计划有误？），不盲目重试
-
-### Step 5: Test（测试）
-
-- 输出 `🧪 Testing Protocol 启动` 声明
-- 运行 `dotnet build`（后端）或 `vue-tsc --noEmit`（前端）
-- 运行实际服务或测试命令
-- 读完整输出，确认 0 errors
-- Bug 修复：复现原始症状 → 确认消失
-- **S 级任务：自动触发 test-runner 子代理**
-- Gate Function 全部打勾后才能声称通过
-
-> 详细测试规则见上方 Testing Discipline
-> 子代理编排规则见 `.claude/rules/review-workflow.md`
-
-### Step 6: Self-review（自查）
-
-- `git status` + `git diff` 审查变更
-- 对照需求/计划逐项检查完成度
-- 架构合规性检查（R1-R5）
-- **S 级任务：自动触发 code-reviewer 子代理**
-- FAIL → 修复 → 重审（最多 3 轮）
-- 3 轮后仍有 FAIL → 报告给用户，请求介入
-
-### Step 7: Report（报告）
-
-```
-## 完成报告
-
-**变更摘要：** [一句话]
-
-**文件变更：**
-| 文件 | 操作 | 行数 |
+| Step | 名称 | 摘要 |
 |---|---|---|
+| 1 | **Understand** | 重述任务、评估分级、确认范围，不确定就问 |
+| 2 | **Scout** | Grep/Read 扫描影响面，找参考实现，检查近期 git 变更 |
+| 3 | **Plan** | S级→头脑风暴+设计文档；A级→编写实施计划；B级→跳过 |
+| 4 | **Implement** | S级(3+ tasks)→子代理驱动；A级→本会话执行；严格按计划 |
+| 5 | **Test** | S级→test-runner子代理；A级→test-runner强制；B级→build check |
+| 6 | **Self-review** | git diff审查 + 架构合规R1-R5 + S级→code-reviewer子代理 |
+| 7 | **Report** | 变更摘要 + 文件变更 + 测试结果 + 已知问题 |
 
-**测试结果：** PASS / FAIL（含证据）
-
-**已知问题：** 无 / [列出]
-
-**剩余工作：** 无 / [列出]
-```
-
-重要变更写入 `.claude/memory/decisions.md`。
-
----
-
-### 执行路径速查
-
-```
-收到任务
-  │
-  ├─ 简单？(B级) → Step 4 → 5 → 6 → 7
-  │
-  ├─ 标准？(A级) → Step 1 → 2 → 3(计划) → 4 → 5 → 6 → 7
-  │
-  └─ 复杂？(S级) → Step 1 → 2 → 3(头脑风暴+计划) → 4(子代理) → 5(test-runner) → 6(code-reviewer) → 7
-```
-
-> 手动触发完整审查：使用 `/full-review` slash command
+> **WHEN 执行到具体 Step → Read `.claude/rules/default-workflow.md` 获取该 Step 的详细检查清单**
 
 ---
 
-## On-Demand Rules
+## Debugging（触发式加载）
 
-The following files MUST be read before coding when the trigger condition is met. NEVER skip.
+铁律: NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST.
+流程: Phase 1 根因调查 → Phase 2 模式分析 → Phase 3 假设测试 → Phase 4 修复。
+3 次修复失败 → 质疑架构，讨论后再继续。回滚优先：服务启动失败先回滚。
 
-WHEN writing backend C# code => Read `.claude/rules/jnpf-expert-traps.md`
-WHEN writing frontend Vue3 code => Read `.claude/rules/jnpf-frontend-rules.md`
-WHEN modifying custom page visual styles (non-generated) => Read `.claude/skills/jnpf-ui-enhance/SKILL.md`
-WHEN writing architecture docs => Read `docs/architecture/ARCHITECTURE_DOC_RULES.md`
-WHEN 完成涉及 3+ 文件或 50+ 行代码的变更 => Read `.claude/rules/review-workflow.md` 并执行三阶段审查
-WHEN 用户要求 "review" / "审查" / "跑测试" => 执行 `.claude/rules/review-workflow.md` 中的完整流程
-WHEN 遇到 bug / 测试失败 / 异常行为 / 编译错误 => 回到上方 Debugging Discipline，从 Phase 1 开始，输出 Debugging Protocol 声明后再动手
-WHEN 准备声称"完成"/"通过"/"修复" => 回到上方 Law 2 Gate Function，执行 5 步验证协议，带证据声称
-WHEN 代码修改完成准备提交 => 回到上方 Testing Discipline，输出 Testing Protocol 声明，跑完 Gate Function 全部打勾后才能声称完成
+> **WHEN 排查 bug / 修复报错 / 定位性能问题 / 遇到测试失败或编译错误 → Read `.claude/rules/debugging-discipline.md`**
 
-Other conventions: docs/conventions/ (naming, error-response, logging, git-workflow).
-Git iron law: Working tree clean / committed / pushed before any operation. Stash is not long-term storage.
-Code search: Grep first. C# precise symbols: Serena MCP.
+---
+
+## Testing（触发式加载）
+
+铁律: NO TASK IS COMPLETE WITHOUT RUNNING THE ACTUAL TEST COMMAND.
+完成前 Gate Function 5 项自检 → 全部打勾才能声称完成。子代理报告不可信，必须独立验证。
+
+> **WHEN 编写测试 / 门禁验收 / 覆盖率检查 / 声称完成或修复 / 准备提交代码 → Read `.claude/rules/testing-discipline.md`**
+
+---
+
+## On-Demand Rules（场景触发索引）
+
+以下规则文件**不在主文件常驻**，由特定场景触发按需加载。触发条件必须精确匹配，不可模糊跳过。
+
+| 触发场景 | 加载文件 | WHEN 条件（精确） |
+|---|---|---|
+| 后端 C# 开发 | `.claude/rules/jnpf-expert-traps.md` | 编写/修改 .cs 文件时 |
+| 前端 Vue3 开发 | `.claude/rules/jnpf-frontend-rules.md` | 编写/修改 .vue/.ts/.tsx 文件时 |
+| 自定义页面视觉 | `.claude/skills/jnpf-ui-enhance/SKILL.md` | 修改非.vm生成的页面样式时 |
+| 架构文档编写 | `docs/architecture/ARCHITECTURE_DOC_RULES.md` | 编写架构设计文档时 |
+| 代码审查 | `.claude/rules/review-workflow.md` | 3+文件或50+行变更 / 用户要求review |
+| 调试排查 | `.claude/rules/debugging-discipline.md` | bug/报错/性能问题/测试失败 |
+| 测试验收 | `.claude/rules/testing-discipline.md` | 编写测试/门禁/声称完成/提交前 |
+| 铁律详情 | `.claude/rules/engineering-iron-laws.md` | 后端改造/DI清理/DB变更/声称完成 |
+| 工作流详情 | `.claude/rules/default-workflow.md` | 执行到具体Step时按需加载 |
+| 增量开发 | `.claude/rules/incremental-rules.md` | 模块迭代/版本升级/安全任务/会话结束 |
+
+**Git 铁律**: Working tree clean / committed / pushed before any operation. Stash is not long-term storage.
+**代码搜索**: Grep first. C# precise symbols: Serena MCP.
 
 ---
 
@@ -498,48 +190,12 @@ Prefer reusing existing code — don't reinvent. Simple solution > over-engineer
 
 ---
 
-## 增量规则（追加于现有规则之后）
+## 增量规则（摘要）
 
-### 跨会话记忆使用规范
-- 每次会话开始时，MUST 读取项目内 `.claude/memory/` 下的文件了解团队共享上下文
-- 同时参考 auto-memory（系统自动维护的个人记忆）
-- 两者分工：`.claude/memory/` = 团队共享知识（提交到 Git），auto-memory = AI 个人笔记
-- 每次会话结束前，MUST 将以下内容写入 `.claude/memory/`：
-  - 重要技术决策 → `decisions.md`
-  - 未解决的问题 → `pending-issues.md`
-  - 踩坑记录 → `lessons-learned.md`
+- **跨会话记忆**: 会话开始读 `.claude/memory/`，结束前写入 `decisions.md` / `pending-issues.md` / `lessons-learned.md`
+- **禁止推脱**: 发现错误但≥15分钟无法修复 → 告知用户 + 给出修复方案 + 写入 pending-issues.md
+- **项目健康**: 每次代码修改后，被修改项目 MUST 编译通过（dotnet build / vue-tsc --noEmit）
+- **安全**: 安全任务前查阅 `.claude/knowledge/`，不确定时声明
+- **前端UI**: 改自定义页面样式 → Read `.claude/skills/jnpf-ui-enhance/SKILL.md`；生成页面禁止改；组件骨架不动
 
-### 禁止推脱补充
-> 补充现有 Law 1 中未覆盖的具体行为规范。
-
-当发现错误但无法在当前会话快速修复时（≥ 15 分钟），MUST：
-1. 明确告知人类："我发现了一个需要单独处理的问题"
-2. 给出具体代码级修复方案（不是"建议排查"）
-3. 写入 `.claude/memory/pending-issues.md`，包含：问题描述、复现步骤、修复方案、影响评估
-4. 绝对不允许发现错误后沉默或跳过
-
-### 项目健康验证
-> 补充 R5，仅验证已启用且被修改的项目。
-
-每次代码修改后，被修改的项目 MUST 能编译通过：
-- 前端（jnpf-web-vue3）：`vue-tsc --noEmit` 通过
-- 后端（已启用的 Entry）：`dotnet build` 通过
-- DataV（jnpf-web-datascreen）：如被修改则需验证
-- UniApp（jnpf-app-vue3）：如被修改则需验证
-- **OA（禁用）、IoT/MES（未创建）：不验证，与 R5 一致**
-
-### 安全知识库
-- 处理安全相关任务时，MUST 先查阅 `.claude/knowledge/` 下的相关文件
-- 不确定时明确说"我不确定，请安全团队审核"
-
-### 前端 UI 品味提升规范
-> 已安装 5 个前端设计技能（frontend-design / ui-ux-pro-max / taste-skill / frontend-design-pro / bencium-controlled-ux-designer），通过 `jnpf-ui-enhance` 桥接技能在框架内使用。
-
-WHEN 修改自定义页面（非 .vm 生成页面）的视觉样式 => Read `.claude/skills/jnpf-ui-enhance/SKILL.md`
-
-**使用原则：**
-- **组件骨架不动**：BasicTable / BasicForm / BasicPopup / jnpf-content-wrapper 的用法不可更改
-- **皮肤层可提升**：颜色、间距、阴影、字体层级、hover 效果、加载动画
-- **生成页面禁止改**：.vm 模板输出的页面不属于增强范围
-- **渐进式增强**：默认用 Level 1（微调），用户明确要求时再用 Level 2/3
-- **设计技能仅提供方向**：具体实现必须符合 `jnpf-frontend-rules.md` 的组件选择表和 `jnpf-taste-blueprint.md` 的骨架决策树
+> **WHEN 涉及增量开发 / 模块迭代 / 版本升级 / 安全任务 / 会话结束前 → Read `.claude/rules/incremental-rules.md`**

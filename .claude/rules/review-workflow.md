@@ -4,6 +4,23 @@
 
 ---
 
+## ⚡ 强制触发（AI 每次代码变更后 MUST 自检）
+
+```
+写完代码 ≠ 完成。以下任一条件命中，MUST spawn test-runner subagent:
+
+[ ] 修改了 3+ 个文件
+[ ] 新增/修改了 50+ 行逻辑代码
+[ ] 修改了 .cs 文件（后端）
+[ ] 修改了 .vue/.ts/.tsx 文件（前端）
+[ ] 创建/删除了文件
+
+命中 → 立即 spawn test-runner, 不等用户指示。
+全部未命中 → 至少执行 dotnet build + vue-tsc --noEmit。
+```
+
+---
+
 ## 触发条件
 
 当以下任一条件满足时，MUST 执行完整的三阶段 Review Workflow：
