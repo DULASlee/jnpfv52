@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { cleanSchema } from '../ir/schema-cleaner';
-import { validateIR, hasErrors } from '../ir/validator';
+import { validateIR } from '../ir/validator';
 import { Vue3Compiler } from '../compiler/vue3/compiler';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
