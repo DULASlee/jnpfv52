@@ -114,6 +114,20 @@ export async function compileGateway(request: CompileRequest): Promise<CompileRe
         break;
       }
 
+      case 'workflow': {
+        const { FlowCompiler } = await import('./flow/compiler');
+        const compiler = new FlowCompiler();
+        const flowResult = compiler.compile(ir as unknown as import('../ir/flow-types').FlowIR);
+        result = {
+          project: {
+            name: request.config.entity ?? 'workflow',
+            files: [{ path: 'workflow-config.json', content: flowResult.config }],
+          },
+          warnings: flowResult.warnings,
+        };
+        break;
+      }
+
       default:
         return {
           success: false,

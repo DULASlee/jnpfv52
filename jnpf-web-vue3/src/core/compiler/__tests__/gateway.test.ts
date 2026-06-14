@@ -143,8 +143,8 @@ describe('compileMultiTarget — 批量编译', () => {
 // ============================================================
 
 describe('getAvailableTargets', () => {
-  it('返回 8 个目标', () => {
-    expect(getAvailableTargets().length).toBe(8);
+  it('返回 9 个目标（含 workflow）', () => {
+    expect(getAvailableTargets().length).toBe(9);
   });
 
   it('按 form IR 类型过滤', () => {

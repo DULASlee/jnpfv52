@@ -9,7 +9,16 @@
 
 // ─── 编译目标枚举 ───
 
-export type CompileTarget = 'vue3-web' | 'dashboard' | 'dashboard-3d' | 'uniapp-weixin' | 'uniapp-alipay' | 'uniapp-douyin' | 'uniapp-h5' | 'uniapp-x-app';
+export type CompileTarget =
+  | 'vue3-web'
+  | 'dashboard'
+  | 'dashboard-3d'
+  | 'uniapp-weixin'
+  | 'uniapp-alipay'
+  | 'uniapp-douyin'
+  | 'uniapp-h5'
+  | 'uniapp-x-app'
+  | 'workflow';
 
 // ─── 目标元数据 ───
 
@@ -98,5 +107,14 @@ export const COMPILE_TARGETS: Record<CompileTarget, CompileTargetMeta> = {
     vip: true,
     irType: 'form',
     outputExtensions: ['.vue', '.uts', '.ts', '.json'],
+  },
+  workflow: {
+    id: 'workflow',
+    name: '工作流',
+    description: 'FlowIR → 可部署工作流配置',
+    icon: 'workflow',
+    vip: false,
+    irType: 'form',
+    outputExtensions: ['.json'],
   },
 };

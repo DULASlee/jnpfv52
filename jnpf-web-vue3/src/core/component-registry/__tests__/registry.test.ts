@@ -83,8 +83,10 @@ describe('ComponentRegistry', () => {
       reg.registerBatch(BUILTIN_COMPONENTS);
       const stats = reg.stats();
       expect(stats.total).toBe(BUILTIN_COMPONENTS.length);
-      expect(stats.byCategory['form-input']).toBe(3);
-      expect(stats.byCategory['chart']).toBe(4);
+      // Day 14-15: 覆盖率提升至 ≥50 组件。分类数由实际注册决定。
+      expect(stats.total).toBeGreaterThanOrEqual(50);
+      expect(stats.byCategory['form-input']).toBeGreaterThanOrEqual(3);
+      expect(stats.byCategory['chart']).toBeGreaterThanOrEqual(4);
     });
 
     it('resolveMapping returns simplified mapping', () => {

@@ -307,4 +307,186 @@ export const BUILTIN_COMPONENTS: ComponentEntry[] = [
     app: 'echarts-map',
     version: '1.0.0',
   },
+
+  // ============================================================
+  // P0 高优先级补充 (Day 14-15 覆盖率提升)
+  // ============================================================
+
+  // ─── 组织/区域选择 (2) ───
+  {
+    type: 'JnpfOrganize',
+    name: '组织选择',
+    category: 'form-select',
+    pc: 'a-tree-select',
+    app: 'uni-data-picker',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfAreaSelect',
+    name: '区域选择',
+    category: 'form-select',
+    pc: 'a-cascader',
+    app: 'uni-data-picker',
+    version: '1.0.0',
+  },
+
+  // ─── 弹窗选择/属性 (3) ───
+  {
+    type: 'JnpfPopupSelect',
+    name: '弹窗选择',
+    category: 'form-select',
+    pc: 'a-select',
+    app: 'uni-data-select',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfPopupAttr',
+    name: '弹窗属性',
+    category: 'popup',
+    pc: 'a-input',
+    app: 'uni-easyinput',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfRelationFormAttr',
+    name: '关联表单属性',
+    category: 'popup',
+    pc: 'a-input',
+    app: 'uni-easyinput',
+    version: '1.0.0',
+  },
+
+  // ─── 特殊输入 (6) ───
+  {
+    type: 'JnpfAutoComplete',
+    name: '自动补全',
+    category: 'form-input',
+    pc: 'a-auto-complete',
+    app: 'uni-easyinput',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfCron',
+    name: 'Cron 表达式',
+    category: 'form-special',
+    pc: 'a-input',
+    app: 'uni-easyinput',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfCalculate',
+    name: '计算器',
+    category: 'form-input',
+    pc: 'a-input-number',
+    app: 'uni-number-box',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfNumberRange',
+    name: '数字范围',
+    category: 'form-input',
+    pc: 'a-input-number',
+    app: 'uni-number-box',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfInputTable',
+    name: '表格输入',
+    category: 'form-special',
+    pc: 'a-table',
+    app: 'uni-table',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfLocation',
+    name: '地理位置',
+    category: 'form-special',
+    pc: 'a-input',
+    app: 'uni-easyinput',
+    version: '1.0.0',
+  },
+
+  // ─── 媒体/展示 (6) ───
+  {
+    type: 'JnpfBarcode',
+    name: '条形码',
+    category: 'data-display',
+    pc: 'img',
+    app: 'img',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfQrcode',
+    name: '二维码',
+    category: 'data-display',
+    pc: 'img',
+    app: 'img',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfIconPicker',
+    name: '图标选择器',
+    category: 'form-select',
+    pc: 'a-input',
+    app: 'uni-easyinput',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfText',
+    name: '文本展示',
+    category: 'data-display',
+    pc: 'span',
+    app: 'text',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfLink',
+    name: '链接',
+    category: 'layout',
+    pc: 'a',
+    app: 'navigator',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfIframe',
+    name: '内嵌页面',
+    category: 'data-display',
+    pc: 'iframe',
+    app: 'web-view',
+    version: '1.0.0',
+  },
+
+  // ─── 其他 (4) ───
+  {
+    type: 'JnpfButton',
+    name: '按钮',
+    category: 'layout',
+    pc: 'a-button',
+    app: 'button',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfEmpty',
+    name: '空状态',
+    category: 'data-display',
+    pc: 'a-empty',
+    app: 'view',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfOpenData',
+    name: '开放数据',
+    category: 'data-display',
+    pc: 'span',
+    app: 'text',
+    version: '1.0.0',
+  },
+  {
+    type: 'JnpfRelationForm',
+    name: '关联表单',
+    category: 'popup',
+    pc: 'a-form',
+    app: 'view',
+    version: '1.0.0',
+  },
 ];
