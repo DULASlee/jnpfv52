@@ -85,14 +85,14 @@
       if (vModel.indexOf('.') > -1) {
         let [tableVModel, cmpVModel] = vModel.split('.');
         if (typeof props.rowIndex === 'number') {
-          if (!Array.isArray(props.formData[tableVModel]) || props.formData[tableVModel].length < props.rowIndex + 1) return 0;
+          if (!props.formData || !Array.isArray(props.formData[tableVModel]) || props.formData[tableVModel].length < props.rowIndex + 1) return 0;
           return props.formData[tableVModel][props.rowIndex][cmpVModel] || 0;
         } else {
-          if (!props.formData[tableVModel].length) return 0;
+          if (!props.formData || !props.formData[tableVModel].length) return 0;
           return props.formData[tableVModel].reduce((sum, c) => (c[cmpVModel] ? Number(c[cmpVModel]) : 0) + sum, 0);
         }
       }
-      return props.formData[vModel] || 0;
+      return props.formData?.[vModel] || 0;
     } catch (error) {
       console.warn('计算公式出错, 可能包含无效的组件值', error);
       return 0;
@@ -106,7 +106,7 @@
     innerValue.value = Number.parseFloat(calcRPN(temp));
     if (isNaN(innerValue.value as unknown as number)) (innerValue.value as unknown as number) = 0;
     innerValue.value = Number.parseFloat(innerValue.value.toFixed(props.precision || 0));
-    if (props.rowIndex >= 0 && props.componentVModel && props.tableVModel) {
+    if (props.rowIndex != null && props.rowIndex >= 0 && props.formData && props.componentVModel && props.tableVModel) {
       if (props.formData[props.tableVModel][props.rowIndex] && props.formData[props.tableVModel][props.rowIndex][props.componentVModel] !== innerValue.value) {
         if (props.isStorage) {
           emit('update:value', innerValue.value);
