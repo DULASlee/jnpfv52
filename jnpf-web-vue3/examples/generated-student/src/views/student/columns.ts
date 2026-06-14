@@ -1,5 +1,5 @@
 // @jnpf-generated v1.0.0 entity=student type=columns
-// 生成时间：2026-06-13T02:04:04.625Z
+// 生成时间：2026-06-14T15:50:16.210Z
 
 /* eslint-disable */
 import type { TableColumn } from './types';
@@ -39,6 +39,7 @@ export const columns: TableColumn[] = [
     "title": "操作",
     "dataIndex": "action",
     "width": 200,
-    "fixed": "right"
+    "fixed": "right",
+    "sorter": false
   }
 ];
