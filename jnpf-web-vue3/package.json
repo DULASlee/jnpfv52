@@ -97,6 +97,7 @@
     "highcharts-vue": "^1.4.1",
     "intro.js": "^7.0.1",
     "jsbarcode": "^3.11.5",
+    "jszip": "^3.10.1",
     "lodash-es": "^4.17.21",
     "monaco-editor": "^0.38.0",
     "nprogress": "^0.2.0",

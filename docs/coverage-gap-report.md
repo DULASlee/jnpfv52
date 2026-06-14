@@ -266,3 +266,14 @@ Decoration:2, Border:Box3, ECharts:Tree, ECharts:Graph
 | `src/core/ir/component-mapping.ts` | 33 个三层映射 (pc/app/legacyApp) |
 | `src/components/Form/src/componentMap.ts` | 58 个 Jnpf* 表单组件全集 |
 | `src/components/registerGlobComp.ts` | 53 个全局 Vue 组件注册 |
+
+---
+
+## 9. Phase 4 更新 (2026-06-14)
+
+**编译器侧类型映射已覆盖 12 种 jnpfKey → TS 类型：**
+JnpfInput/Textarea/InputNumber/Switch/Select/DatePicker/TimePicker/Radio/Checkbox/Rate/Slider/UploadImg/UploadFile/Editor
+
+**UniApp wd 组件映射覆盖率：** 9/12 = 75%（Rate/Slider/UploadImg/UploadFile/Editor 待实现 wd 对应组件）
+
+**编译器注册表（uniapp/compiler.ts mapFieldToTSType）：** 14 种 jnpfKey 已映射
