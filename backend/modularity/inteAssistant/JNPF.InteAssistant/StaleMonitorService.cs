@@ -131,6 +131,9 @@ public class StaleMonitorService : IJob, ITransient
 
             // I-13-C3: 30天无响应自动abandoned + 资源回收
             await AutoAbandonLongStalePipelinesAsync(now, ct);
+
+            // 知识图谱备份清理（玛维思 #7 · 2026-06-20）
+            await CleanupKnowledgeBackupsAsync(now, ct);
         }
         finally
         {
@@ -164,6 +167,63 @@ public class StaleMonitorService : IJob, ITransient
         await _db.Updateable(autoAbandonList).ExecuteCommandAsync(ct);
 
         _logger.LogInformation("StaleMonitor 自动放弃: {Count} 条超过30天的stale流水线", autoAbandonList.Count);
+    }
+
+    /// <summary>
+    /// 清理知识图谱备份表中超过 30 天的记录（玛维思 #7 · DB-20）。
+    /// 分批执行，每批最多 1000 条，防止长事务锁表。
+    /// </summary>
+    private async Task CleanupKnowledgeBackupsAsync(DateTime now, CancellationToken ct)
+    {
+        const int batchSize = 1000;
+        const int retentionDays = 30;
+        var cutoff = now.AddDays(-retentionDays);
+        var totalDeleted = 0;
+
+        try
+        {
+            // 清理 BASE_KNOWLEDGE_NODE_BACKUP
+            totalDeleted += await BatchDeleteAsync(
+                "BASE_KNOWLEDGE_NODE_BACKUP", "F_BACKUP_AT", cutoff, batchSize, ct);
+
+            // 清理 BASE_KNOWLEDGE_EDGE_BACKUP
+            totalDeleted += await BatchDeleteAsync(
+                "BASE_KNOWLEDGE_EDGE_BACKUP", "F_BACKUP_AT", cutoff, batchSize, ct);
+
+            if (totalDeleted > 0)
+            {
+                _logger.LogInformation(
+                    "KnowledgeBackup 清理完成: 删除 {Count} 条超过 {Days} 天的备份记录",
+                    totalDeleted, retentionDays);
+            }
+        }
+        catch (Exception ex)
+        {
+            // 备份清理失败不阻塞主流程
+            _logger.LogWarning(ex, "KnowledgeBackup 清理异常（不阻塞 StaleMonitor 主流程）");
+        }
+    }
+
+    /// <summary>
+    /// 分批删除过期备份记录，返回删除总数。
+    /// </summary>
+    private async Task<int> BatchDeleteAsync(
+        string tableName, string dateColumn, DateTime cutoff, int batchSize, CancellationToken ct)
+    {
+        var totalDeleted = 0;
+
+        while (!ct.IsCancellationRequested)
+        {
+            var sql = $"DELETE TOP({batchSize}) FROM {tableName} WHERE {dateColumn} < @cutoff";
+            var affected = await _db.Ado.ExecuteCommandAsync(sql, new { cutoff });
+
+            if (affected <= 0) break;
+
+            totalDeleted += affected;
+            _logger.LogDebug("KnowledgeBackup 分批清理: {Table} 本批删除 {Count} 条", tableName, affected);
+        }
+
+        return totalDeleted;
     }
 
     /// <summary>

@@ -37,4 +37,11 @@ public class FounderAuthLogEntity : TenantCLDSEntityBase
     /// </summary>
     [SugarColumn(ColumnName = "F_USER_AGENT")]
     public string UserAgent { get; set; }
+
+    /// <summary>
+    /// 设备指纹（SHA256(IP + UA + Salt)）
+    /// 用于跨 Session 识别创始人设备，异常设备告警
+    /// </summary>
+    [SugarColumn(ColumnName = "F_DEVICE_FINGERPRINT")]
+    public string DeviceFingerprint { get; set; }
 }
