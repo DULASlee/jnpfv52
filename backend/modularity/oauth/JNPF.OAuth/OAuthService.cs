@@ -1052,7 +1052,7 @@ public class OAuthService : IDynamicApiController, ITransient
         {
             sw.Stop();
             await AddLoginLog(tenantId, user, logUserName, input.grant_type, userAgent, (int)sw.ElapsedMilliseconds, loginType, 0, ex.Message);
-            throw Oops.Bah(ex.Message);
+            throw;
         }
         }
         catch (Exception ex)
