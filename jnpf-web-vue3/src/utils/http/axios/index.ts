@@ -32,6 +32,10 @@ const transform: AxiosTransform = {
    * @description: 处理响应数据。如果数据不是预期格式，可直接抛出错误
    */
   transformResponseHook: (res: AxiosResponse<Result>, options: RequestOptions) => {
+    // 防御：res 为 null/undefined/非对象（后端返回 .NET 异常文本、502 网关错误等）
+    if (!res || typeof res !== 'object') {
+      throw new Error(typeof res === 'string' ? res : '服务器响应异常，请稍后重试');
+    }
     const { t } = useI18n();
     const { isTransformResponse, isReturnNativeResponse } = options;
     // 是否返回原生响应头 比如：需要获取响应头时使用该属性
