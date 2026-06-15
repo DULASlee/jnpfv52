@@ -46,11 +46,12 @@ const transform: AxiosTransform = {
     // 错误的时候返回
 
     if (!res.data) {
-      // return '[HTTP] Request has no return value';
       throw new Error(t('sys.api.apiRequestFailed'));
     }
-    //  这里 code,data,msg为 后台统一的字段，需要在 types.ts内修改为项目自己的接口返回格式
-    const { code, msg } = res.data;
+    // 这里 code,data,msg为 后台统一的字段，需要在 types.ts内修改为项目自己的接口返回格式
+    // 防御：res.data 可能不是标准 RESTfulResult 格式（如后端异常直接透传）
+    const code = (res.data as any)?.code;
+    const msg = (res.data as any)?.msg ?? (res.data as any)?.message;
 
     // 这里逻辑可以根据项目进行修改
     const hasSuccess = res.data && isObject(res.data) && Reflect.has(res.data, 'code') && code === ResultEnum.SUCCESS;
