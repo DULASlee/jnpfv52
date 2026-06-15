@@ -1,0 +1,29 @@
+{
+  "id": "GOLDEN-03",
+  "domain": "通用",
+  "difficulty": 9,
+  "requirement": "我需要一个中小企业综合ERP系统。包含以下模块：1) 客户关系管理（CRM）：客户信息、跟进记录、商机管理 2) 项目管理：项目立项、任务分配、进度跟踪、工时统计 3) 财务管理：应收应付、费用报销、利润分析 4) 人力资源：员工档案、考勤、薪资计算 5) 报表中心：综合经营仪表盘（营收趋势、项目进度、人效分析）。所有模块之间需要数据互通，例如项目关联客户、费用关联项目。",
+  "expectedIR": {
+    "modules": [
+      { "nodeType": "ModuleDefinition", "minCount": 5, "names": ["CRM", "项目管理", "财务管理", "人力资源", "报表中心"] }
+    ],
+    "tables": { "nodeType": "TableDefinition", "minCount": 15 },
+    "workflows": [
+      { "nodeType": "WorkflowStep", "name": "商机审批" },
+      { "nodeType": "WorkflowStep", "name": "项目立项审批" },
+      { "nodeType": "WorkflowStep", "name": "费用报销审批" }
+    ],
+    "rules": [
+      { "nodeType": "RuleNode", "description": "项目关联客户" },
+      { "nodeType": "RuleNode", "description": "费用关联项目" },
+      { "nodeType": "RuleNode", "description": "薪资自动计算" }
+    ],
+    "pages": { "nodeType": "Component", "minCount": 12 },
+    "dashboard": { "nodeType": "DashboardConfig", "requiredCharts": ["营收趋势折线图", "项目甘特图", "人效分析"] },
+    "api": [{ "nodeType": "APIEndpoint", "description": "模块间数据互通接口" }]
+  },
+  "evalDimensions": ["schema_compliance", "semantic_accuracy", "ux_score"],
+  "minPassScore": 0.80,
+  "created": "2026-06-20",
+  "author": "高级架构师（代玛维思）"
+}

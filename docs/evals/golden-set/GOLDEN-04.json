@@ -1,0 +1,38 @@
+{
+  "id": "GOLDEN-04",
+  "domain": "制造",
+  "difficulty": 6,
+  "requirement": "我需要一个MES生产排程系统。包含：1) 工单管理：工单号、产品、数量、交期 2) 产线排程：根据产能和交期自动排程，支持手动调整 3) 物料齐套检查：排程前自动检查BOM物料是否充足 4) 生产进度跟踪：实时更新工序完成百分比 5) 异常报警：设备故障或进度延迟自动通知车间主任。需要一个车间看板，显示各产线当前任务和进度。",
+  "expectedIR": {
+    "modules": [
+      { "nodeType": "ModuleDefinition", "moduleName": "工单管理" },
+      { "nodeType": "ModuleDefinition", "moduleName": "产线排程" },
+      { "nodeType": "ModuleDefinition", "moduleName": "物料管理" },
+      { "nodeType": "ModuleDefinition", "moduleName": "生产跟踪" },
+      { "nodeType": "ModuleDefinition", "moduleName": "异常管理" }
+    ],
+    "tables": [
+      { "nodeType": "TableDefinition", "tableName": "WorkOrder" },
+      { "nodeType": "TableDefinition", "tableName": "ProductionLine" },
+      { "nodeType": "TableDefinition", "tableName": "BOM" },
+      { "nodeType": "TableDefinition", "tableName": "WorkProcess" },
+      { "nodeType": "TableDefinition", "tableName": "Alarm" }
+    ],
+    "workflows": [
+      { "nodeType": "WorkflowStep", "name": "工单审批" },
+      { "nodeType": "WorkflowStep", "name": "排程确认" },
+      { "nodeType": "WorkflowStep", "name": "异常处理流程" }
+    ],
+    "rules": [
+      { "nodeType": "RuleNode", "description": "物料齐套检查" },
+      { "nodeType": "RuleNode", "description": "自动排程算法" },
+      { "nodeType": "RuleNode", "description": "延迟预警" }
+    ],
+    "pages": { "nodeType": "Component", "minCount": 8 },
+    "dashboard": { "nodeType": "DashboardConfig", "requiredCharts": ["产线甘特图", "生产进度仪表盘", "异常统计"] }
+  },
+  "evalDimensions": ["schema_compliance", "semantic_accuracy", "ux_score"],
+  "minPassScore": 0.80,
+  "created": "2026-06-20",
+  "author": "高级架构师（代玛维思）"
+}

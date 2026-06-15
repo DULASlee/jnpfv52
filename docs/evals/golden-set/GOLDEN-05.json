@@ -1,0 +1,20 @@
+{
+  "id": "GOLDEN-05",
+  "domain": "通用",
+  "difficulty": 1,
+  "requirement": "我需要一个简单的待办事项应用。支持创建待办（标题、描述、截止日期、优先级）、标记完成、按状态筛选（全部/进行中/已完成）、按优先级排序。需要一个统计面板，显示本周完成数和待办趋势。",
+  "expectedIR": {
+    "modules": [
+      { "nodeType": "ModuleDefinition", "moduleName": "待办管理" }
+    ],
+    "tables": [
+      { "nodeType": "TableDefinition", "tableName": "Todo", "requiredFields": ["title", "description", "due_date", "priority", "status"] }
+    ],
+    "pages": { "nodeType": "Component", "minCount": 2, "descriptions": ["待办列表", "统计面板"] },
+    "dashboard": { "nodeType": "DashboardConfig", "requiredCharts": ["本周完成数", "待办趋势折线图"] }
+  },
+  "evalDimensions": ["schema_compliance", "semantic_accuracy", "ux_score"],
+  "minPassScore": 0.80,
+  "created": "2026-06-20",
+  "author": "高级架构师（代玛维思）"
+}
