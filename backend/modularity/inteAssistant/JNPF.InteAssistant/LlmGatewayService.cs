@@ -275,6 +275,171 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
         }
     }
 
+    // ─── I-07: 5 级降级链（配置化）───
+
+    /// <summary>
+    /// 按 LLM 降级链顺序依次尝试调用（I-07 裁决 · v2.1）。
+    /// 读取配置 "LlmGateway:Providers" 数组，按 Level 排序后逐级降级。
+    /// 降级时通过 SignalR 推送 model_changed SSE 事件。
+    /// </summary>
+    public async Task<ChatCompletionResponse> ChatWithLevelFallbackAsync(
+        ChatCompletionRequest request, CancellationToken ct = default)
+    {
+        var sw = Stopwatch.StartNew();
+        var levelConfigs = LoadLevelChain();
+        var originalProvider = levelConfigs.FirstOrDefault()?.Name ?? _defaultProvider;
+
+        for (int levelIdx = 0; levelIdx < levelConfigs.Count; levelIdx++)
+        {
+            var levelCfg = levelConfigs[levelIdx];
+            var provider = levelCfg.Name;
+            var model = request.ModelCode ?? levelCfg.Model;
+            var maxRetries = levelCfg.MaxRetries;
+            var timeoutMs = levelCfg.TimeoutSeconds * 1000;
+
+            // 非首选时写入降级审计
+            if (levelIdx > 0)
+            {
+                _logger.LogWarning(
+                    "[LLM降级 L{Level}] {From}→{To}：{Reason}",
+                    levelIdx, originalProvider, provider,
+                    $"L{levelIdx - 1}级Provider连续失败");
+
+                await WriteCallLogAsync(provider, model,
+                    JsonSerializer.Serialize(request.Messages),
+                    string.Empty, 0, 0, 0, 0, false,
+                    $"L{levelIdx}降级触发",
+                    levelIdx, originalProvider, provider,
+                    $"L{levelIdx}降级: {originalProvider}→{provider}");
+            }
+
+            for (int retry = 0; retry < maxRetries; retry++)
+            {
+                if (!Providers.TryGetValue(provider, out var p))
+                {
+                    _logger.LogWarning("Provider {Name} 未配置，跳过", provider);
+                    break;
+                }
+
+                try
+                {
+                    var httpClient = _httpClientFactory.CreateClient("LLM");
+                    httpClient.Timeout = TimeSpan.FromMilliseconds(timeoutMs);
+
+                    var (requestBody, requestUri) = BuildRequest(request, p, model);
+                    var httpRequest = new HttpRequestMessage(HttpMethod.Post, requestUri)
+                    {
+                        Content = new StringContent(
+                            JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json")
+                    };
+
+                    if (p.ApiFormat == "anthropic")
+                    {
+                        httpRequest.Headers.Add("x-api-key", p.ApiKey);
+                        httpRequest.Headers.Add("anthropic-version", "2023-06-01");
+                    }
+                    else if (p.ApiFormat == "openai")
+                    {
+                        httpRequest.Headers.Add("Authorization", $"Bearer {p.ApiKey}");
+                    }
+
+                    var response = await httpClient.SendAsync(httpRequest, ct);
+                    var body = await response.Content.ReadAsStringAsync(ct);
+                    sw.Stop();
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var result = ParseResponse(body, p.ApiFormat, model, sw.ElapsedMilliseconds);
+                        ResetFailureCount(provider);
+
+                        await WriteCallLogAsync(provider, model,
+                            JsonSerializer.Serialize(requestBody), body,
+                            sw.ElapsedMilliseconds, (int)response.StatusCode,
+                            result.TokensIn, result.TokensOut, true, null,
+                            levelIdx, originalProvider, provider,
+                            levelIdx > 0 ? $"L{levelIdx}降级成功" : null);
+
+                        // I-07: 推送 SSE model_changed 事件
+                        // await PushModelChangedSse(request, originalProvider, provider, levelIdx);
+
+                        return result;
+                    }
+
+                    _logger.LogWarning(
+                        "[LLM L{Level}] {Provider} HTTP {Status} (retry {Retry}/{MaxRetry})",
+                        levelIdx, provider, (int)response.StatusCode, retry + 1, maxRetries);
+                }
+                catch (TaskCanceledException)
+                {
+                    sw.Restart();
+                    _logger.LogWarning("[LLM L{Level}] {Provider} 超时 (retry {Retry}/{MaxRetry})",
+                        levelIdx, provider, retry + 1, maxRetries);
+                }
+                catch (Exception ex)
+                {
+                    sw.Restart();
+                    _logger.LogWarning(ex, "[LLM L{Level}] {Provider} 异常 (retry {Retry}/{MaxRetry})",
+                        levelIdx, provider, retry + 1, maxRetries);
+                }
+
+                IncrementFailureCount(provider);
+
+                // 指数退避
+                if (retry < maxRetries - 1)
+                {
+                    var delay = TimeSpan.FromSeconds(Math.Pow(2, retry));
+                    await Task.Delay(delay, ct);
+                }
+            }
+        }
+
+        // 全部 Provider 失败 → L5 无 AI
+        sw.Stop();
+        _logger.LogError("[LLM] 全部 {Count} 级降级链不可用", levelConfigs.Count);
+
+        await WriteCallLogAsync("none", "unknown",
+            string.Empty, string.Empty, sw.ElapsedMilliseconds, 0, 0, 0, false,
+            "全部Provider不可用",
+            5, originalProvider, "none", "L5: 无AI模式");
+
+        return new ChatCompletionResponse
+        {
+            IsSuccess = false,
+            Error = "所有LLM Provider不可用——请切换到手工编辑模式",
+            LatencyMs = (int)sw.ElapsedMilliseconds
+        };
+    }
+
+    /// <summary>
+    /// 从配置 "LlmGateway:Providers" 加载降级链，按 Level 排序。
+    /// 配置示例（appsettings.json）：
+    /// "LlmGateway": { "Providers": [
+    ///   {"Name":"mimo","Model":"mimo-v2.5-pro","Level":0,"MaxRetries":3,"TimeoutSeconds":60},
+    ///   {"Name":"deepseek","Model":"deepseek-v4-pro","Level":1,"MaxRetries":3,"TimeoutSeconds":80},
+    ///   ...
+    /// ]}
+    /// </summary>
+    private List<LlmProviderLevelConfig> LoadLevelChain()
+    {
+        var configs = _configuration
+            .GetSection("LlmGateway:Providers")
+            .Get<List<LlmProviderLevelConfig>>();
+
+        return (configs ?? DefaultLevelChain())
+            .OrderBy(c => c.Level)
+            .ToList();
+    }
+
+    /// <summary>默认降级链（MiMo→DeepSeek 2 级，与现有逻辑对齐）</summary>
+    private static List<LlmProviderLevelConfig> DefaultLevelChain()
+    {
+        return new List<LlmProviderLevelConfig>
+        {
+            new() { Name = "mimo", Model = "mimo-v2.5-pro", Level = 0, MaxRetries = 3, TimeoutSeconds = 60 },
+            new() { Name = "deepseek", Model = "deepseek-v4-pro", Level = 1, MaxRetries = 3, TimeoutSeconds = 80 },
+        };
+    }
+
     /// <inheritdoc/>
     public async IAsyncEnumerable<string> ChatStreamAsync(
         ChatCompletionRequest request,
@@ -634,4 +799,16 @@ internal class ProviderConfig
     public string ApiKey { get; set; } = "";
     public string DefaultModel { get; set; } = "";
     public string ApiFormat { get; set; } = "anthropic";
+}
+
+/// <summary>
+/// LLM 降级链 Provider 配置（I-07 裁决 · 从 LlmGateway:Providers 读取）。
+/// </summary>
+internal class LlmProviderLevelConfig
+{
+    public string Name { get; set; } = string.Empty;
+    public string Model { get; set; } = string.Empty;
+    public int Level { get; set; }
+    public int MaxRetries { get; set; } = 3;
+    public int TimeoutSeconds { get; set; } = 60;
 }

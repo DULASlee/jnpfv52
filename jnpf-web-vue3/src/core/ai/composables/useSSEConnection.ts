@@ -114,6 +114,28 @@ export function useSSEConnection(opts: SSEOptions) {
       opts.onEvent?.({ ...data, type: 'timeout_hard' });
     });
 
+    // I-07: 模型降级事件
+    eventSource.addEventListener('model_changed', (e: any) => {
+      const data = JSON.parse(e.data) as ModelChangedEvent;
+      const config = MODEL_CHANGED_MESSAGES[data.level] as { message: string; type: 'warning' | 'error' } | undefined;
+      if (config) {
+        opts.onEvent?.({ type: 'model_changed', ...data, notification: { message: config.message, type: config.type } });
+      }
+    });
+
+    // I-07: 无AI模式事件
+    eventSource.addEventListener('no_ai_mode', (e: any) => {
+      const data = JSON.parse(e.data);
+      opts.onEvent?.({
+        type: 'no_ai_mode',
+        ...data,
+        notification: {
+          message: '所有 AI 模型不可用，请切换到手工编辑模式',
+          type: 'error',
+        },
+      });
+    });
+
     eventSource.onerror = () => {
       if (retryCount.value < maxRetries) {
         const delay = backoffDelays[retryCount.value] || 16000;
@@ -168,3 +190,20 @@ function tryParse(text: string): Record<string, any> {
     return {};
   }
 }
+
+// I-07: 模型降级通知配置
+interface ModelChangedEvent {
+  from: string;
+  to: string;
+  level: number;
+  reason: string;
+  fallback_count: number;
+  timestamp: string;
+}
+const MODEL_CHANGED_MESSAGES: Record<number, { message: string; type: 'warning' | 'error' }> = {
+  1: { message: '已切换备用模型', type: 'warning' },
+  2: { message: '使用高级模型，成本增加', type: 'warning' },
+  3: { message: '模型稳定性下降，建议稍后重试', type: 'warning' },
+  4: { message: '已切换到本地模型', type: 'error' },
+  5: { message: '所有 AI 模型不可用', type: 'error' },
+};
