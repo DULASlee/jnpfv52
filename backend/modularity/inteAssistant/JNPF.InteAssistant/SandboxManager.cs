@@ -30,9 +30,9 @@ public sealed class SandboxManager : ISandboxManager, ISingleton
     }
 
     /// <inheritdoc/>
-    public async Task<SandboxInstance> CreateAsync(SandboxConfig config)
+    public async Task<SandboxInstance> CreateAsync(SandboxConfig config, CancellationToken ct = default)
     {
-        await _semaphore.WaitAsync();
+        await _semaphore.WaitAsync(ct);
         try
         {
             var instance = new SandboxInstance
@@ -132,7 +132,7 @@ public sealed class SandboxManager : ISandboxManager, ISingleton
     }
 
     /// <inheritdoc/>
-    public async Task DestroyAsync(string sandboxId)
+    public async Task DestroyAsync(string sandboxId, CancellationToken ct = default)
     {
         if (!_instances.TryGetValue(sandboxId, out var instance))
         {
@@ -161,27 +161,152 @@ public sealed class SandboxManager : ISandboxManager, ISingleton
     }
 
     /// <inheritdoc/>
-    public Task<SandboxInstance?> GetStatusAsync(string sandboxId)
+    public Task<SandboxInstance?> GetStatusAsync(string sandboxId, CancellationToken ct = default)
     {
         _instances.TryGetValue(sandboxId, out var instance);
         return Task.FromResult(instance);
     }
 
     /// <inheritdoc/>
-    public Task<IReadOnlyList<SandboxInstance>> GetAllAsync()
+    public Task<IReadOnlyList<SandboxInstance>> GetAllAsync(CancellationToken ct = default)
     {
         return Task.FromResult<IReadOnlyList<SandboxInstance>>(
             _instances.Values.ToList());
     }
 
     /// <inheritdoc/>
-    public async Task DestroyAllAsync()
+    public async Task DestroyAllAsync(CancellationToken ct = default)
     {
         var ids = _instances.Keys.ToList();
         foreach (var id in ids)
         {
-            await DestroyAsync(id);
+            await DestroyAsync(id, ct);
         }
+    }
+
+    // ─── 新增方法（P0-3 修复）───
+
+    /// <inheritdoc/>
+    public async Task UploadFilesAsync(
+        string sandboxId, List<GeneratedFile> files, CancellationToken ct = default)
+    {
+        if (!_instances.TryGetValue(sandboxId, out var instance) || instance.ContainerId == null)
+            throw new InvalidOperationException($"沙箱 {sandboxId} 不存在或未就绪");
+
+        // 创建临时目录结构
+        var tempDir = Path.Combine(Path.GetTempPath(), $"sandbox-upload-{sandboxId}-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            foreach (var file in files)
+            {
+                var filePath = Path.Combine(tempDir, file.FilePath.Replace('/', Path.DirectorySeparatorChar));
+                var dir = Path.GetDirectoryName(filePath);
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
+                await File.WriteAllTextAsync(filePath, file.Content, ct);
+            }
+
+            // docker cp 到容器
+            var result = await RunDockerAsync($"cp {tempDir}/. {instance.ContainerId}:/app/");
+            if (result.ExitCode != 0)
+                throw new InvalidOperationException($"docker cp 失败: {result.Stderr}");
+
+            _logger.LogInformation("沙箱 {SandboxId} 上传 {Count} 个文件成功", sandboxId, files.Count);
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, true); } catch { /* ignore */ }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<CommandResult> ExecuteCommandAsync(
+        string sandboxId, string command, CancellationToken ct = default)
+    {
+        if (!_instances.TryGetValue(sandboxId, out var instance) || instance.ContainerId == null)
+            throw new InvalidOperationException($"沙箱 {sandboxId} 不存在或未就绪");
+
+        var sw = Stopwatch.StartNew();
+        // 转义单引号，避免 shell 注入
+        var escapedCommand = command.Replace("'", "'\\''");
+        var result = await RunDockerAsync($"exec {instance.ContainerId} sh -c '{escapedCommand}'");
+        sw.Stop();
+
+        return new CommandResult
+        {
+            ExitCode = result.ExitCode,
+            Output = result.Stdout,
+            Error = result.Stderr,
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<CommandResult> ExecuteScriptAsync(
+        string sandboxId, string scriptType, string scriptContent, CancellationToken ct = default)
+    {
+        if (!_instances.TryGetValue(sandboxId, out var instance) || instance.ContainerId == null)
+            throw new InvalidOperationException($"沙箱 {sandboxId} 不存在或未就绪");
+
+        // 创建临时脚本文件
+        var ext = scriptType == "sql" ? ".sql" : ".sh";
+        var tempScript = Path.GetTempFileName() + ext;
+        await File.WriteAllTextAsync(tempScript, scriptContent, ct);
+
+        try
+        {
+            // 上传脚本
+            var copyResult = await RunDockerAsync($"cp \"{tempScript}\" {instance.ContainerId}:/tmp/sandbox-script{ext}");
+            if (copyResult.ExitCode != 0)
+                throw new InvalidOperationException($"脚本上传失败: {copyResult.Stderr}");
+
+            // 执行脚本
+            var sw = Stopwatch.StartNew();
+            var execCmd = scriptType == "sql"
+                ? $"exec {instance.ContainerId} sh -c \"mysql -u sa -p -e 'source /tmp/sandbox-script.sql'\""
+                : $"exec {instance.ContainerId} sh /tmp/sandbox-script.sh";
+            var result = await RunDockerAsync(execCmd);
+            sw.Stop();
+
+            return new CommandResult
+            {
+                ExitCode = result.ExitCode,
+                Output = result.Stdout,
+                Error = result.Stderr,
+                ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+            };
+        }
+        finally
+        {
+            try { File.Delete(tempScript); } catch { /* ignore */ }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<SandboxInfo> GetSandboxInfoAsync(
+        string sandboxId, CancellationToken ct = default)
+    {
+        if (!_instances.TryGetValue(sandboxId, out var instance))
+            throw new InvalidOperationException($"沙箱 {sandboxId} 不存在");
+
+        // docker inspect 获取容器 IP 和端口映射
+        var result = await RunDockerAsync(
+            $"inspect --format '{{{{.NetworkSettings.IPAddress}}}}' {instance.ContainerId}");
+        var host = result.ExitCode == 0 ? result.Stdout.Trim() : "localhost";
+
+        var port = instance.Config?.Port ?? 8080;
+
+        return new SandboxInfo
+        {
+            SandboxId = sandboxId,
+            Host = host,
+            Port = port,
+            ApiUrl = $"http://{host}:5000",
+            FrontendUrl = $"http://{host}:3000",
+            DbConnectionString = instance.DbConnectionString ?? ""
+        };
     }
 
     // ─── Private helpers ───

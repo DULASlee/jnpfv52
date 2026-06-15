@@ -1,5 +1,5 @@
 // @jnpf-generated v1.0.0 entity=student type=api
-// 生成时间：2026-06-14T15:50:16.209Z
+// 生成时间：2026-06-15T15:19:48.999Z
 // 此文件由 JNPF 代码生成器生成，可手动修改
 
 /* eslint-disable */

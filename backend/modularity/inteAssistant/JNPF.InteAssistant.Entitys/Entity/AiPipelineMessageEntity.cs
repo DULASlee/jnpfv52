@@ -34,6 +34,8 @@ public class AiPipelineMessageEntity : TenantCLDSEntityBase
 
     /// <summary>
     /// 所属阶段
+    /// requirement / architecture / design / development / delivery
+    /// 对齐 PipelineStage 常量
     /// </summary>
     [SugarColumn(ColumnName = "F_STAGE")]
     public string Stage { get; set; }

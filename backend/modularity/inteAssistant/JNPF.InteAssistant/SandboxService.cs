@@ -95,6 +95,42 @@ public class SandboxService : IDynamicApiController, ITransient
         var instances = await _sandboxManager.GetAllAsync();
         return new { list = instances, total = instances.Count };
     }
+
+    // ─── 新增端点（P0-3 修复）───
+
+    /// <summary>
+    /// 上传文件到沙箱.
+    /// </summary>
+    [HttpPost("{id}/upload")]
+    public async Task<dynamic> UploadFiles(string id, [FromBody] List<GeneratedFile> files)
+    {
+        if (files == null || files.Count == 0)
+            throw Oops.Bah("文件列表不能为空");
+
+        await _sandboxManager.UploadFilesAsync(id, files);
+        return new { success = true, message = $"已上传 {files.Count} 个文件到沙箱 {id}" };
+    }
+
+    /// <summary>
+    /// 在沙箱中执行命令.
+    /// </summary>
+    [HttpPost("{id}/exec")]
+    public async Task<CommandResult> ExecuteCommand(string id, [FromBody] SandboxExecInput input)
+    {
+        if (string.IsNullOrWhiteSpace(input.Command))
+            throw Oops.Bah("命令不能为空");
+
+        return await _sandboxManager.ExecuteCommandAsync(id, input.Command);
+    }
+
+    /// <summary>
+    /// 获取沙箱访问信息.
+    /// </summary>
+    [HttpGet("{id}/info")]
+    public async Task<SandboxInfo> GetInfo(string id)
+    {
+        return await _sandboxManager.GetSandboxInfoAsync(id);
+    }
 }
 
 /// <summary>
@@ -107,4 +143,12 @@ public class SandboxCreateInput
     public string? MemoryLimit { get; set; }
     public int TimeoutSeconds { get; set; } = 300;
     public string? Image { get; set; }
+}
+
+/// <summary>
+/// 沙箱命令执行请求.
+/// </summary>
+public class SandboxExecInput
+{
+    public string Command { get; set; } = string.Empty;
 }

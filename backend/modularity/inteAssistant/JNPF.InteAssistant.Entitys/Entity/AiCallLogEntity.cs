@@ -54,4 +54,28 @@ public class AiCallLogEntity : TenantCLDSEntityBase
     /// </summary>
     [SugarColumn(ColumnName = "F_RESPONSE_BODY")]
     public string ResponseBody { get; set; }
+
+    /// <summary>
+    /// 是否为降级调用 (0=正常, 1=降级, 2=全部失败)
+    /// </summary>
+    [SugarColumn(ColumnName = "F_FALLBACK")]
+    public int? Fallback { get; set; }
+
+    /// <summary>
+    /// 原始目标模型
+    /// </summary>
+    [SugarColumn(ColumnName = "F_ORIGINAL_MODEL")]
+    public string? OriginalModel { get; set; }
+
+    /// <summary>
+    /// 实际调用模型
+    /// </summary>
+    [SugarColumn(ColumnName = "F_ACTUAL_MODEL")]
+    public string? ActualModel { get; set; }
+
+    /// <summary>
+    /// 降级原因（如 "MiMo连续3次失败"）
+    /// </summary>
+    [SugarColumn(ColumnName = "F_FALLBACK_REASON")]
+    public string? FallbackReason { get; set; }
 }
