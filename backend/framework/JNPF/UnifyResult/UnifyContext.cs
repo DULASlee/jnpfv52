@@ -78,11 +78,6 @@ public static class UnifyContext
             errors = friendlyException.ErrorMessage;
             data = friendlyException.Data;
         }
-        else if (exception != null)
-        {
-            // 非友好异常（NPE等）：用通用消息替代原始异常文本，保护内部信息
-            errors = "Internal server error. The error has been logged";
-        }
 
         // 处理验证失败异常
         if (!isValidationException)
