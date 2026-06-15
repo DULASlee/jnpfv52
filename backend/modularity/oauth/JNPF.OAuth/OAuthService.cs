@@ -729,6 +729,8 @@ public class OAuthService : IDynamicApiController, ITransient
     [LogPolicy(LogPolicy.IgnoreRequest)]
     public async Task<dynamic> Login([FromForm] LoginInput input, CancellationToken cancellationToken = default)
     {
+        try
+        {
         // 普通登录 密码 AES 解密.
         if (!input.isSocialsLoginCallBack && (input.grant_type.IsNullOrEmpty() || !input.grant_type.Equals("official")))
             input.password = AESEncryption.AesDecrypt(input.password, App.GetConfig<AppOptions>("JNPF_App", true).AesKey);
@@ -1051,6 +1053,11 @@ public class OAuthService : IDynamicApiController, ITransient
             sw.Stop();
             await AddLoginLog(tenantId, user, logUserName, input.grant_type, userAgent, (int)sw.ElapsedMilliseconds, loginType, 0, ex.Message);
             throw Oops.Bah(ex.Message);
+        }
+        }
+        catch (Exception ex)
+        {
+            throw Oops.Oh("Login service temporarily unavailable. Please try again later.");
         }
     }
 
