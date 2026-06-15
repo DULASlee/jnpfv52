@@ -202,3 +202,47 @@ Prefer reusing existing code — don't reinvent. Simple solution > over-engineer
 - **前端UI**: 改自定义页面样式 → Read `.claude/skills/jnpf-ui-enhance/SKILL.md`；生成页面禁止改；组件骨架不动
 
 > **WHEN 涉及增量开发 / 模块迭代 / 版本升级 / 安全任务 / 会话结束前 → Read `.claude/rules/incremental-rules.md`**
+
+---
+
+## 代码交付验证协议（强制执行）
+
+每轮代码重构/裁决书实现完成后，汇报前必须通过以下 6 层验证。任何一层失败，不得提交汇报。
+
+### 验证清单
+
+| 层级 | 命令 | 通过标准 | 阻塞级 |
+|------|------|----------|--------|
+| L1 | `dotnet build` | 0 errors | 🔴 P0 |
+| L2 | `vue-tsc --noEmit && eslint src/` | 0 errors | 🔴 P0 |
+| L3 | `npx vitest run src/core/` | 全部通过（预存 flaky 除外） | 🔴 P0 |
+| L4 | `dotnet run --project JNPF.API.Entry` | 服务启动成功，控制台无异常 | 🔴 P0 |
+| L5 | `curl -s http://localhost:5000/health` | 返回 200 OK | 🔴 P0 |
+| L6 | Swagger 调用至少 1 个接口 | 正确响应（200/202 + 数据） | 🟡 P1 |
+
+### 执行规则
+
+1. L1-L3 必须全绿才允许提交代码
+2. L4-L5 必须通过才允许汇报"后端完成"
+3. L6 至少验证 1 个核心接口才允许汇报"接口就绪"
+4. L4 失败时：立即排查 DI/配置/数据库连接，不得跳过
+5. 任何层级失败：在汇报中明确标注失败层级 + 错误信息 + 修复计划
+
+### 快速验证脚本
+
+```bash
+# 一键执行 L1-L5（L6 需手动 Swagger 测试）
+dotnet build && \
+vue-tsc --noEmit && \
+npx vitest run src/core/ && \
+dotnet run --project JNPF.API.Entry &
+sleep 30 && \
+curl -s http://localhost:5000/health && \
+echo "=== L1-L5 ALL PASSED ===" || echo "=== FAILED ==="
+```
+
+### 历史教训
+
+2026-06-20：后端 DI 错误（SqlSugarConfigureExtensions.cs:27 过早调用
+BuildServiceProvider）未被发现，因为验证协议只执行到 L1（编译）。
+如果执行了 L4（dotnet run），问题会在 60 秒内暴露。

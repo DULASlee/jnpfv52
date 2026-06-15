@@ -24,7 +24,8 @@ public static class SqlSugarConfigureExtensions
         var dbOptions = App.GetOptions<ConnectionStringsOptions>();
         // 提前解析 scoped 访问器，供 AOP lambda 闭包使用 (Sprint 1: App.GetService → DI)
         var httpContextAccessor = services.BuildServiceProvider().GetRequiredService<IHttpContextAccessor>();
-        var userManager = services.BuildServiceProvider().GetRequiredService<IUserManager>();
+        // IUserManager 改为延迟解析——在 AOP 回调中通过 RequestServices 获取，
+        // 避免 BuildServiceProvider() 快照不包含后续注册的 ISqlSugarRepository<>
         //add by harry  域名模式，只保留一个，现模式会自动取第一个
         var defaulConnection = dbOptions.DefaultConnectionConfig;
         if(defaulConnection!.ConnectionString == null)
@@ -43,7 +44,7 @@ public static class SqlSugarConfigureExtensions
             dbOptions.ConnectionConfigs.ForEach(config =>
             {
                 var dbProvider = db.GetConnectionScope(config.ConfigId);
-                SetDbAop(dbProvider, httpContextAccessor, userManager);
+                SetDbAop(dbProvider, httpContextAccessor);
             });
         });
 
@@ -94,7 +95,7 @@ public static class SqlSugarConfigureExtensions
     /// 配置Aop.
     /// </summary>
     /// <param name="db"></param>
-    public static void SetDbAop(SqlSugarScopeProvider db, IHttpContextAccessor httpContextAccessor, IUserManager userManager)
+    public static void SetDbAop(SqlSugarScopeProvider db, IHttpContextAccessor httpContextAccessor)
     {
         var config = db.CurrentConnectionConfig;
 
@@ -172,7 +173,7 @@ public static class SqlSugarConfigureExtensions
                             AfterData = diff.AfterData?.ToDictionary(
                                 d => d.GetType().GetProperty("TableName")?.GetValue(d)?.ToString() ?? "Unknown",
                                 d => (object)d),
-                            TenantId = userManager?.TenantId,
+                            TenantId = httpContextAccessor?.HttpContext?.RequestServices?.GetService<IUserManager>()?.TenantId,
                             TraceId = Activity.Current?.Id,
                             Timestamp = DateTime.UtcNow
                         });
