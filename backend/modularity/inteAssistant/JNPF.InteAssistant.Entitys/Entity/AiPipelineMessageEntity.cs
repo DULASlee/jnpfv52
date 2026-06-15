@@ -45,4 +45,10 @@ public class AiPipelineMessageEntity : TenantCLDSEntityBase
     /// </summary>
     [SugarColumn(ColumnName = "F_SEQUENCE")]
     public int Sequence { get; set; }
+
+    /// <summary>
+    /// 通知对象JSON。格式：["admin","expert"] 或 [{"role":"admin","userId":"123"}]
+    /// </summary>
+    [SugarColumn(ColumnName = "F_NOTIFY_TARGETS")]
+    public string? NotifyTargets { get; set; }
 }

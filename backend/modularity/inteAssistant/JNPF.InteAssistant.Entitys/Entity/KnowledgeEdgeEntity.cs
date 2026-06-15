@@ -36,4 +36,10 @@ public class KnowledgeEdgeEntity : TenantCLDSEntityBase
     /// </summary>
     [SugarColumn(ColumnName = "F_PROPERTIES")]
     public string Properties { get; set; }
+
+    /// <summary>
+    /// 乐观锁版本号（UPSERT冲突时用于指数退避重试）
+    /// </summary>
+    [SugarColumn(ColumnName = "F_VERSION")]
+    public int Version { get; set; }
 }
