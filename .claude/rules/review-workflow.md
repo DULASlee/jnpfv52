@@ -40,12 +40,12 @@ run_in_background: false  （需要结果才能继续）
 **验证步骤（按顺序执行）：**
 
 1. 后端编译验证
-   cd D:/JNPF-v52/backend && dotnet build application/JNPF.API.Entry/JNPF.API.Entry.csproj
+   cd backend && dotnet build application/JNPF.API.Entry/JNPF.API.Entry.csproj
    预期：0 errors
    如果失败：报告具体编译错误，不要继续
 
 2. 前端类型检查（如有前端变更）
-   cd D:/JNPF-v52/jnpf-web-vue3 && npx vue-tsc --noEmit
+   cd jnpf-web-vue3 && npx vue-tsc --noEmit
    预期：0 errors
    如果失败：报告类型错误
 

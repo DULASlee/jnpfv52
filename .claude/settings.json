@@ -41,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node D:/JNPF-v52/.claude/hooks/guard-write.mjs",
+            "command": "node .claude/hooks/guard-write.mjs",
             "timeout": 5
           }
         ]
@@ -51,12 +51,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node D:/JNPF-v52/.claude/hooks/guard-bash.mjs",
+            "command": "node .claude/hooks/guard-bash.mjs",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "node D:/JNPF-v52/.claude/hooks/guard-deps.mjs",
+            "command": "node .claude/hooks/guard-deps.mjs",
             "timeout": 10
           }
         ]
@@ -68,7 +68,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node D:/JNPF-v52/.claude/hooks/format-and-lint.mjs",
+            "command": "node .claude/hooks/format-and-lint.mjs",
             "timeout": 10
           }
         ]
@@ -80,12 +80,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node D:/JNPF-v52/.claude/hooks/guard-finish.mjs",
+            "command": "node .claude/hooks/guard-finish.mjs",
             "timeout": 120
           },
           {
             "type": "command",
-            "command": "node D:/JNPF-v52/.claude/hooks/collect-summary.mjs",
+            "command": "node .claude/hooks/collect-summary.mjs",
             "timeout": 10
           }
         ]
