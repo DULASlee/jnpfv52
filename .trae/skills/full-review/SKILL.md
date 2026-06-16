@@ -1,9 +1,14 @@
-# /full-review — 完整三阶段代码审查
+---
+name: "full-review"
+description: "Executes 3-stage code review (test-runner → code-reviewer → fix loop). Invoke when user asks for code review, before merging, after significant changes, or mentions reviewing code quality."
+---
+
+# Full Code Review
 
 执行完整的 Review Workflow：验证 → 审查 → 修复循环。
 
 > **子代理 Prompt 模板、审查维度、循环终止条件：** 见 `.claude/rules/review-workflow.md`
-> 本 command 只定义执行流程编排，不重复 Prompt 内容。
+> 本 skill 只定义执行流程编排，不重复 Prompt 内容。
 
 ## 执行步骤
 

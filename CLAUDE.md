@@ -96,21 +96,35 @@ cd jnpf-app-vue3 && python scripts/proxy_server.py   # Mobile H5
 | 修改自定义页面视觉样式（非生成） | `.claude/skills/jnpf-ui-enhance/SKILL.md` |
 | 写架构文档 | `docs/architecture/ARCHITECTURE_DOC_RULES.md` |
 | 收到任何编码任务 | `.claude/rules/workflow.md`（任务分级 + 7 步流程） |
-| 遇到 bug / 测试失败 / 异常 / 编译错误 | `.claude/rules/debugging.md`（四阶段调试） |
+| 遇到 bug / 测试失败 / 异常 / 编译错误 | `.claude/rules/debugging.md`（四阶段调试）+ 执行 `/trace-bug` |
 | 代码修改完成 / 准备声称"完成" | `.claude/rules/testing.md`（测试 Gate Function） |
 | 任何编码任务（工程铁律） | `.claude/rules/engineering-laws.md`（Law 1-4） |
-| 涉及 3+ 文件或 50+ 行变更 | `.claude/rules/review-workflow.md`（三阶段审查） |
-| 用户要求 "review" / "审查" / "跑测试" | `.claude/rules/review-workflow.md` + `/full-review` command |
+| 涉及 3+ 文件或 50+ 行变更 | `.claude/rules/review-workflow.md`（三阶段审查）+ 执行 `/full-review` |
+| 用户要求 "review" / "审查" / "跑测试" | `.claude/rules/review-workflow.md` + 执行 `/full-review` |
+| 用户要启动开发环境 / "跑起来" / "start" | 执行 `/start-dev` |
+| 用户要提交代码 / "commit" / "push" 前 | 执行 `/pre-commit` |
+| 用户问架构决策 / 能力边界 / "为什么这样设计" | 执行 `/spec` |
+| 新人入职 / "怎么学" / "从哪开始" | 执行 `/learn` |
 | 会话开始 / 结束 | `.claude/rules/memory.md`（跨会话记忆） |
 | 所有任务（沟通规范） | `.claude/rules/communication.md` |
 
 ---
 
-## Slash Commands
+## Slash Commands（双环境兼容）
 
-| 命令 | 用途 |
-|---|---|
-| `/full-review` | 完整三阶段代码审查（验证 → 审查 → 修复循环） |
+以下命令在两个环境都能用，触发方式不同：
+
+| 命令 | 用途 | Claude Code 触发 | Trae 触发 |
+|---|---|---|---|
+| `/start-dev` | 一键启动开发环境 | 用户输入 `/start-dev` 或 AI 按 On-Demand Rules 自动执行 | AI 识别 `.trae/skills/start-dev/` 自动触发 |
+| `/pre-commit` | 提交前检查 | 用户输入 `/pre-commit` 或 AI 在 commit 前自动执行 | AI 识别 `.trae/skills/pre-commit/` 自动触发 |
+| `/full-review` | 三阶段代码审查 | 用户输入 `/full-review` 或 AI 按 On-Demand Rules 自动执行 | AI 识别 `.trae/skills/full-review/` 自动触发 |
+| `/trace-bug` | 结构化调试 | 用户输入 `/trace-bug` 或 AI 遇到 bug 自动执行 | AI 识别 `.trae/skills/trace-bug/` 自动触发 |
+| `/spec` | 查询 OpenSpec 知识库 | 用户输入 `/spec` 或 AI 按问题意图自动执行 | AI 识别 `.trae/skills/spec/` 自动触发 |
+| `/learn` | 学习手册导航 | 用户输入 `/learn` 或 AI 识别新人场景自动执行 | AI 识别 `.trae/skills/learn/` 自动触发 |
+
+> **Claude Code 自动触发原理：** On-Demand Rules 表已映射触发条件 → command，AI 读取 CLAUDE.md 后会在场景出现时主动执行对应 command。
+> **Trae 自动触发原理：** 每个 `.trae/skills/<name>/SKILL.md` 的 description 字段包含 "Invoke when..." 触发条件，AI 自动识别场景。
 
 ---
 
@@ -118,14 +132,16 @@ cd jnpf-app-vue3 && python scripts/proxy_server.py   # Mobile H5
 
 以下 hook 由 `.claude/settings.json` 配置，自动在对应时机执行：
 
-| 时机 | Hook | 作用 |
-|---|---|---|
-| PreToolUse (Write/Edit) | `guard-write.mjs` | 写入守卫 |
-| PreToolUse (Bash) | `guard-bash.mjs` | Bash 命令守卫 |
-| PreToolUse (Bash) | `guard-deps.mjs` | 依赖变更守卫 |
-| PostToolUse (Write/Edit) | `format-and-lint.mjs` | 自动格式化 + lint |
-| Stop | `guard-finish.mjs` | 完成前冒烟测试（≤30s） |
-| Stop | `collect-summary.mjs` | 收集会话摘要 |
+| 时机 | Hook | 作用 | 必要性 |
+|---|---|---|---|
+| PreToolUse (Write/Edit) | `guard-write.mjs` | 写入守卫（阻止写 .env/密钥，阻止清空源文件） | ⭐ 必要 |
+| PreToolUse (Bash) | `guard-bash.mjs` | 危险命令拦截（rm -rf / DROP DATABASE / git push --force 等） | ⭐ 必要 |
+| PostToolUse (Write/Edit) | `format-and-lint.mjs` | 自动 Prettier + ESLint（仅阻断 error，warning 放行） | ⚠️ 辅助 |
+| Stop | `guard-finish.mjs` | 完成前冒烟测试（dotnet build，≤30s） | ⭐ 必要 |
+| Stop | `collect-summary.mjs` | 收集会话变更摘要到 `.claude/memory/session-summaries/` | ⭐ 必要 |
+
+> **已移除的 hook（用更优方案替代）：**
+> - `guard-deps.mjs`（依赖镜像注入）→ 改用根目录 `.npmrc` + `backend/nuget.config` 配置文件，一次配置永久生效
 
 ---
 

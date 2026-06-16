@@ -49,7 +49,9 @@ const rules = [
   { pattern: /\bgit\s+push\b.*--force\b/, label: 'git push --force' },
   { pattern: /\bgit\s+reset\b.*--hard\b/, label: 'git reset --hard' },
   { pattern: /\bgit\s+clean\b.*-[a-zA-Z]*f/, label: 'git clean -f（强制清理未跟踪文件）' },
-  { pattern: /\bgit\s+checkout\b.*--\s*\.\s*/, label: 'git checkout -- .（丢弃所有修改）' },
+  { pattern: /\bgit\s+checkout\b.*--\s*\.\s*$/, label: 'git checkout -- .（丢弃所有修改）' },
+  { pattern: /\bgit\s+checkout\s+\.(\s|$)/, label: 'git checkout .（丢弃所有修改）' },
+  { pattern: /\bgit\s+restore\s+\.(\s|$)/, label: 'git restore .（丢弃所有修改）' },
 
   // 安全
   { pattern: /\beval\s*\(/, label: 'eval()（代码注入风险）' },

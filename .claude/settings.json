@@ -53,11 +53,6 @@
             "type": "command",
             "command": "node .claude/hooks/guard-bash.mjs",
             "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "node .claude/hooks/guard-deps.mjs",
-            "timeout": 10
           }
         ]
       }

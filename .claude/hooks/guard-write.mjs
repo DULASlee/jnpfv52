@@ -26,13 +26,11 @@ const content = toolInput.content || toolInput.new_string || '';
 
 if (!filePath) process.exit(0);
 
-// 绝对禁止写入的路径
+// 绝对禁止写入的路径（密钥 + 凭证，不含部署文件）
 const FORBIDDEN = [
   /\.env(\.[a-zA-Z0-9]+)?$/,
   /\.pem$/, /\.key$/, /\.p12$/, /\.pfx$/, /\.crt$/, /\.cer$/,
   /id_rsa/, /id_ecdsa/, /id_ed25519/,
-  /docker-compose\.ya?ml$/i,
-  /Dockerfile$/i,
   /\.github\/workflows\//,
 ];
 

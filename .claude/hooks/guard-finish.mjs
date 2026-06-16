@@ -48,11 +48,26 @@ let hasBackendChanges = false;
 let hasFrontendChanges = false;
 
 try {
-  const diffOutput = execSync('git diff --name-only HEAD~1 HEAD', {
-    encoding: 'utf-8',
-    stdio: 'pipe',
-    timeout: 5000,
-  }).trim();
+  // 收集已提交变更（HEAD~1 可能不存在，如首次提交，需容错）
+  let committedDiff = '';
+  try {
+    committedDiff = execSync('git diff --name-only HEAD~1 HEAD', {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+      timeout: 5000,
+    }).trim();
+  } catch {
+    // HEAD~1 不存在（首次提交或浅克隆），改用 git show 获取本次提交的文件
+    try {
+      committedDiff = execSync('git show --name-only --format=', {
+        encoding: 'utf-8',
+        stdio: 'pipe',
+        timeout: 5000,
+      }).trim();
+    } catch {
+      committedDiff = '';
+    }
+  }
 
   const unstaged = execSync('git diff --name-only', {
     encoding: 'utf-8',
@@ -60,7 +75,7 @@ try {
     timeout: 5000,
   }).trim();
 
-  const allFiles = diffOutput + '\n' + unstaged;
+  const allFiles = committedDiff + '\n' + unstaged;
 
   hasBackendChanges = /\.(cs|csproj|sln)$/.test(allFiles);
   hasFrontendChanges = /\.(vue|ts|tsx|js|jsx|less|scss)$/.test(allFiles);
@@ -90,12 +105,12 @@ if (hasBackendChanges) {
       }
     }
 
-    // 如果已知路径找不到，尝试 Windows 兼容的查找
+    // 如果已知路径找不到，尝试跨平台查找
     if (!csprojPath) {
       try {
         const findCmd = isWindows
           ? 'dir /s /b *.csproj 2>nul | findstr /i "Entry"'
-          : 'find . -name "*Entry*.csproj" -maxdepth 5 | head -1';
+          : 'find . -maxdepth 5 -name "*Entry*.csproj" 2>/dev/null | head -1';
         csprojPath = execSync(findCmd, {
           encoding: 'utf-8',
           stdio: 'pipe',
