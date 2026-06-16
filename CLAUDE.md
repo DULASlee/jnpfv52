@@ -119,6 +119,7 @@ cd jnpf-app-vue3 && python scripts/proxy_server.py   # Mobile H5
 | `/start-dev` | 一键启动开发环境 | 用户输入 `/start-dev` 或 AI 按 On-Demand Rules 自动执行 | AI 识别 `.trae/skills/start-dev/` 自动触发 |
 | `/pre-commit` | 提交前检查 | 用户输入 `/pre-commit` 或 AI 在 commit 前自动执行 | AI 识别 `.trae/skills/pre-commit/` 自动触发 |
 | `/full-review` | 三阶段代码审查 | 用户输入 `/full-review` 或 AI 按 On-Demand Rules 自动执行 | AI 识别 `.trae/skills/full-review/` 自动触发 |
+| `/security-review` | 安全审查（SQL注入/XSS/越权/敏感信息） | 用户输入 `/security-review` 或 AI 在合并敏感模块前自动执行 | AI 识别 `.trae/skills/security-review/` 自动触发 |
 | `/trace-bug` | 结构化调试 | 用户输入 `/trace-bug` 或 AI 遇到 bug 自动执行 | AI 识别 `.trae/skills/trace-bug/` 自动触发 |
 | `/spec` | 查询 OpenSpec 知识库 | 用户输入 `/spec` 或 AI 按问题意图自动执行 | AI 识别 `.trae/skills/spec/` 自动触发 |
 | `/learn` | 学习手册导航 | 用户输入 `/learn` 或 AI 识别新人场景自动执行 | AI 识别 `.trae/skills/learn/` 自动触发 |
@@ -155,8 +156,6 @@ cd jnpf-app-vue3 && python scripts/proxy_server.py   # Mobile H5
 
 ## 前端 UI 品味提升规范
 
-> 已安装 5 个前端设计技能（frontend-design / ui-ux-pro-max / taste-skill / frontend-design-pro / bencium-controlled-ux-designer），通过 `jnpf-ui-enhance` 桥接技能在框架内使用。
-
 WHEN 修改自定义页面（非 .vm 生成页面）的视觉样式 => Read `.claude/skills/jnpf-ui-enhance/SKILL.md`
 
 **使用原则：**
@@ -164,4 +163,5 @@ WHEN 修改自定义页面（非 .vm 生成页面）的视觉样式 => Read `.cl
 - **皮肤层可提升**：颜色、间距、阴影、字体层级、hover 效果、加载动画
 - **生成页面禁止改**：.vm 模板输出的页面不属于增强范围
 - **渐进式增强**：默认用 Level 1（微调），用户明确要求时再用 Level 2/3
-- **设计技能仅提供方向**：具体实现必须符合 `jnpf-frontend-rules.md` 的组件选择表和 `jnpf-taste-blueprint.md` 的骨架决策树
+- **技术栈锁定**：Vue 3 + Ant Design Vue + WindiCSS + jnpf-* 组件，禁止引入 React/shadcn/Tailwind/外部字体 CDN
+- **美学灵感**：如需参考前沿设计方向，临时 WebSearch 即可，不常驻通用 UI/UX skills
