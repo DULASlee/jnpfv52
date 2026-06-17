@@ -11,10 +11,11 @@ import {
 } from '@/locale/setupI18n';
 
 // #ifdef H5
-// 演示联调：强制 API 走 5000，避免旧发行包 baseURL 为空导致请求落在 3800 并被当成页面路由
-define.baseURL = 'http://localhost:5000'
-define.comUploadUrl = define.baseURL + '/api/file/Uploader/'
-define.webSocketUrl = 'ws://localhost:5000/api/message/websocket'
+// H5 走同源 + Vite proxy（vite.config.js 的 /api、/websocket 代理到后端 5002）
+// 避免硬编码 5000（本机被 AirPlay 占用，后端实际在 5002）
+define.baseURL = ''
+define.comUploadUrl = '/api/file/Uploader/'
+define.webSocketUrl = '/api/message/websocket'
 // #endif
 
 // #ifndef VUE3
