@@ -54,3 +54,6 @@ DB/
 
 # Claude Code session data (accidentally committed in Sprint 1)
 backend/.claude/
+
+# CodeBuddy (AI agent project data — local only)
+.codebuddy/
