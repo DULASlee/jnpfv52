@@ -1,9 +1,9 @@
-﻿{
+{
   "version": 1,
   "display_name": "JNPF v5.2 clean workspace",
   "project_slug": "JNPF-v52",
-  "episodic_project_id": "D--JNPF-v52",
-  "workspace_path_hint": "d:\\JNPF-v52",
+  "episodic_project_id": "jnpf-v52",
+  "workspace_path_hint": ".",
   "toolchain": {
     "superpowers": true,
     "openspec": true,

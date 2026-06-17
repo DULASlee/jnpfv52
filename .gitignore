@@ -28,7 +28,8 @@ docs/token.txt
 .cursor/episodic/sync-status.json
 .cursor/edge-debug-profile/
 .env.toolchain
-# Claude Code — track team-shared, ignore local
+# Claude Code — ignore all settings (contains tokens / local paths)
+.claude/settings.json
 .claude/settings.local.json
 .claude/projects/
 .claude/*.log
@@ -37,6 +38,8 @@ docs/token.txt
 # Local / temp
 .specstory/
 *.log
+*.bak
+h5-*.png
 backend-run.*
 pc-dev.*
 ds-dev.*

@@ -17,7 +17,6 @@
 
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
-import { platform } from 'os';
 
 // ─── 读取 stdin ──────────────────────────────────────────────
 let input = {};
@@ -36,8 +35,6 @@ if (input.stop_reason === 'user_interrupt') {
   process.exit(0);
 }
 
-const isWindows = platform() === 'win32';
-
 console.error('🛑 AI 请求停止。正在执行极速冒烟测试...');
 
 let hasError = false;
@@ -48,11 +45,26 @@ let hasBackendChanges = false;
 let hasFrontendChanges = false;
 
 try {
-  const diffOutput = execSync('git diff --name-only HEAD~1 HEAD', {
-    encoding: 'utf-8',
-    stdio: 'pipe',
-    timeout: 5000,
-  }).trim();
+  // 收集已提交变更（HEAD~1 可能不存在，如首次提交，需容错）
+  let committedDiff = '';
+  try {
+    committedDiff = execSync('git diff --name-only HEAD~1 HEAD', {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+      timeout: 5000,
+    }).trim();
+  } catch {
+    // HEAD~1 不存在（首次提交或浅克隆），改用 git show 获取本次提交的文件
+    try {
+      committedDiff = execSync('git show --name-only --format=', {
+        encoding: 'utf-8',
+        stdio: 'pipe',
+        timeout: 5000,
+      }).trim();
+    } catch {
+      committedDiff = '';
+    }
+  }
 
   const unstaged = execSync('git diff --name-only', {
     encoding: 'utf-8',
@@ -60,7 +72,7 @@ try {
     timeout: 5000,
   }).trim();
 
-  const allFiles = diffOutput + '\n' + unstaged;
+  const allFiles = committedDiff + '\n' + unstaged;
 
   hasBackendChanges = /\.(cs|csproj|sln)$/.test(allFiles);
   hasFrontendChanges = /\.(vue|ts|tsx|js|jsx|less|scss)$/.test(allFiles);
@@ -75,7 +87,8 @@ if (hasBackendChanges) {
   try {
     console.error('▸ [1/2] 后端核心项目增量编译...');
 
-    // Windows 兼容：不用 find 命令，直接检查已知路径
+    // Windows 兼容：不用 find/dir 命令，直接检查已知路径
+    // JNPF 项目结构固定，已知路径足以覆盖
     const csprojCandidates = [
       'backend/application/JNPF.API.Entry/JNPF.API.Entry.csproj',
       'application/JNPF.API.Entry/JNPF.API.Entry.csproj',
@@ -87,22 +100,6 @@ if (hasBackendChanges) {
       if (existsSync(candidate)) {
         csprojPath = candidate;
         break;
-      }
-    }
-
-    // 如果已知路径找不到，尝试 Windows 兼容的查找
-    if (!csprojPath) {
-      try {
-        const findCmd = isWindows
-          ? 'dir /s /b *.csproj 2>nul | findstr /i "Entry"'
-          : 'find . -name "*Entry*.csproj" -maxdepth 5 | head -1';
-        csprojPath = execSync(findCmd, {
-          encoding: 'utf-8',
-          stdio: 'pipe',
-          timeout: 10000,
-        }).trim().split('\n')[0];
-      } catch {
-        // 查找失败，跳过后端验证
       }
     }
 

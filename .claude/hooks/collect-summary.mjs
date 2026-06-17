@@ -61,14 +61,20 @@ try {
 
   const files = [...new Set(allFiles.split('\n').filter(Boolean))];
 
-  // ─── 分类文件 ─────────────────────────────────────────────
+  // ─── 分类文件（修复 TDZ bug：提取为独立函数，避免对象字面量内自引用）─────────
+  const isBackend = f => /\.(cs|csproj|sln|json)$/.test(f) && f.includes('backend');
+  const isFrontend = f => /\.(vue|ts|tsx|js|jsx|less|scss)$/.test(f);
+  const isConfig = f => /\.(json|yml|yaml|toml|env)/.test(f) && !f.includes('backend');
+  const isHooks = f => f.includes('.claude/');
+  const isDocs = f => /\.(md|txt)$/.test(f);
+
   const categories = {
-    backend: files.filter(f => /\.(cs|csproj|sln|json)$/.test(f) && f.includes('backend')),
-    frontend: files.filter(f => /\.(vue|ts|tsx|js|jsx|less|scss)$/.test(f)),
-    config: files.filter(f => /\.(json|yml|yaml|toml|env)/.test(f) && !f.includes('backend')),
-    hooks: files.filter(f => f.includes('.claude/')),
-    docs: files.filter(f => /\.(md|txt)$/.test(f)),
-    other: files.filter(f => !categories.backend.includes(f) && !categories.frontend.includes(f) && !categories.config.includes(f) && !categories.hooks.includes(f) && !categories.docs.includes(f)),
+    backend: files.filter(isBackend),
+    frontend: files.filter(isFrontend),
+    config: files.filter(isConfig),
+    hooks: files.filter(isHooks),
+    docs: files.filter(isDocs),
+    other: files.filter(f => !isBackend(f) && !isFrontend(f) && !isConfig(f) && !isHooks(f) && !isDocs(f)),
   };
 
   // ─── 生成摘要 ─────────────────────────────────────────────

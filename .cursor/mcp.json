@@ -1,17 +1,14 @@
 {
   "mcpServers": {
     "serena": {
-      "command": "C:\\Users\\admin\\.local\\bin\\serena.exe",
+      "command": "uvx",
       "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
         "start-mcp-server",
         "--context",
-        "ide",
-        "--project",
-        "D:\\JNPF-v52",
-        "--enable-gui-log-window",
-        "false",
-        "--open-web-dashboard",
-        "false"
+        "ide"
       ],
       "timeout": 600,
       "env": {}

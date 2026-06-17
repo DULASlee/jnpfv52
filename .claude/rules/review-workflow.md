@@ -51,24 +51,33 @@ run_in_background: false  （需要结果才能继续）
 
 **Prompt 模板：**
 
+> **占位符（由调用方注入）：**
+> - `[文件列表]`：本次变更的文件清单（来自 git diff --name-only）
+> - `[diff stat]`：本次变更的统计信息（来自 git diff --stat）
+
 ```
 你是 JNPF 项目的测试验证代理。你的任务是验证当前代码变更不会引入回归。
+
+**本次变更文件列表：**
+[文件列表]
+
+**变更统计：**
+[diff stat]
 
 **验证步骤（按顺序执行）：**
 
 1. 后端编译验证
-   cd D:/JNPF-v52/backend && dotnet build application/JNPF.API.Entry/JNPF.API.Entry.csproj
+   cd backend && dotnet build application/JNPF.API.Entry/JNPF.API.Entry.csproj
    预期：0 errors
    如果失败：报告具体编译错误，不要继续
 
 2. 前端类型检查（如有前端变更）
-   cd D:/JNPF-v52/jnpf-web-vue3 && npx vue-tsc --noEmit
+   cd jnpf-web-vue3 && npx vue-tsc --noEmit
    预期：0 errors
    如果失败：报告类型错误
 
 3. 变更影响面检查
-   运行 git diff --name-only 查看变更文件
-   对每个变更的 .cs 文件，grep 检查是否有其他文件引用了被修改的方法名
+   对 [文件列表] 中每个 .cs 文件，grep 检查是否有其他文件引用了被修改的方法名
    报告潜在的调用方影响
 
 **输出格式（严格遵守）：**
@@ -100,8 +109,18 @@ run_in_background: false
 
 **Prompt 模板：**
 
+> **占位符（由调用方注入）：**
+> - `[文件列表]`：本次变更的文件清单
+> - `[diff 内容]`：每个变更文件的 diff（用 git diff 获取）
+
 ```
 你是 JNPF 项目的代码审查代理。你的任务是对当前代码变更进行严格审查。
+
+**本次变更文件列表：**
+[文件列表]
+
+**变更内容：**
+[diff 内容]
 
 **审查维度：**
 

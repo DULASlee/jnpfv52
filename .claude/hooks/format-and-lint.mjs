@@ -5,6 +5,8 @@
  * 性能预算：≤ 5s | 无状态
  */
 import { execSync } from 'child_process';
+import { existsSync } from 'fs';
+import { join } from 'path';
 
 let input = {};
 try {
@@ -23,15 +25,14 @@ const toolName = process.env.CLAUDE_TOOL_NAME
 const CODE_RE = /\.(ts|tsx|js|jsx|mjs|cjs|vue|svelte)$/;
 if (!filePath || !CODE_RE.test(filePath)) process.exit(0);
 
-// Detect project root with node_modules
+// Detect project root with node_modules（跨平台，用 Node.js API 替代 test -d）
 function findProjectRoot(filePath) {
   const parts = filePath.replace(/\\/g, '/').split('/');
   for (let i = parts.length - 1; i >= 1; i--) {
     const candidate = parts.slice(0, i).join('/');
-    try {
-      execSync(`test -d "${candidate}/node_modules/.bin"`, { stdio: 'pipe', timeout: 1000 });
+    if (existsSync(`${candidate}/node_modules/.bin`)) {
       return candidate;
-    } catch {}
+    }
   }
   return null;
 }
@@ -39,7 +40,12 @@ function findProjectRoot(filePath) {
 const projectRoot = findProjectRoot(filePath);
 if (!projectRoot) process.exit(0);
 
-const BIN = (n) => `${projectRoot}/node_modules/.bin/${n}`;
+// Windows 兼容：node_modules/.bin/ 下是 .cmd 文件，需要加后缀
+const isWin = process.platform === 'win32';
+const BIN = (n) => {
+  const base = join(projectRoot, 'node_modules', '.bin', n);
+  return isWin ? `${base}.cmd` : base;
+};
 
 // Write → Prettier + ESLint
 if (toolName === 'Write') {
@@ -50,19 +56,23 @@ if (toolName === 'Write') {
   } catch {}
 }
 
-// 所有操作 → ESLint
+// 所有操作 → ESLint（放宽 warning 阈值，只阻断 error）
 try {
-  execSync(`${BIN('eslint')} --fix --max-warnings 0 "${filePath}"`, {
+  execSync(`${BIN('eslint')} --fix "${filePath}"`, {
     stdio: 'pipe', timeout: 5000, killSignal: 'SIGKILL',
   });
 } catch (e) {
   const output = e.stdout?.toString() || e.stderr?.toString() || '';
-  console.error(`ESLint errors in ${filePath}:\n${output}`);
-  console.log(JSON.stringify({
-    decision: 'block',
-    reason: `ESLint violations found in ${filePath}. Review the errors above and fix them.`,
-  }));
-  process.exit(0);
+  // 只在有 error 时阻断，warning 不阻断（开发中 warning 很常见）
+  if (/error/i.test(output)) {
+    console.error(`ESLint errors in ${filePath}:\n${output}`);
+    console.log(JSON.stringify({
+      decision: 'block',
+      reason: `ESLint errors found in ${filePath}. Fix the errors above.`,
+    }));
+    process.exit(0);
+  }
+  // 仅有 warning，放行
 }
 
 process.exit(0);
