@@ -2,17 +2,95 @@
 
 ## ⚡ SESSION ACTIVATION (READ FIRST — survives context compression)
 
-```
-EVERY session MUST start with these 4 actions. Skip none. Re-check after long idle periods.
+Execute in order. Skip none.
 
-1. MCP: Run ListMcpResourcesTool → verify graphify + serena + episodic-memory + chrome are connected
-2. GIT: Check working tree status (git status) → confirm clean before starting work
-3. SKILL: Before ANY response (including clarifying questions), check if a skill applies → invoke Skill tool
-4. TEST: After EVERY code change (3+ files or 50+ lines) → spawn test-runner subagent
-5. VERIFY: Before claiming "done"/"fixed"/"passing" → run build/type-check, read output, confirm 0 errors
+1. MCP: `ListMcpResourcesTool` → verify graphify + serena + episodic-memory + chrome
+2. GIT: `git status` → confirm clean working tree
+3. HEALTH: Invoke `health-check` skill → confirm project healthy
+4. MATRIX: Read [Skill Trigger Matrix](#-skill-trigger-matrix-) below → invoke EVERY matching entry NOW
+5. GRADE: If user gave a task → output `🔄 Workflow 启动 - 任务分级：S/A/B - 理由：...` BEFORE doing anything else
 
-Red flag: saying "should work" / "looks good" without running the command = lying. See Law 2.
-```
+**After EVERY Write/Edit to .cs/.vue/.ts/.csproj:**
+→ Re-check Skill Trigger Matrix → execute ALL matching "After Code Changes" rows BEFORE next user response
+
+**Red flag:** saying "should work" / "looks good" without running the verification command = lying. See Law 2.
+
+---
+
+## 🎯 Skill Trigger Matrix (MATCH → INVOKE — no thinking, no skipping)
+
+> **How to use:** Find your current situation in the left column → invoke the exact skill/subagent in the right column. DO NOT judge "是否适用." If it matches, invoke it. NO EXCEPTIONS.
+
+### ⚡ After Code Changes（每次代码修改后立即执行）
+
+| You just did | MUST Execute | Tool |
+|-------------|-------------|------|
+| Edited any `.cs` / `.csproj` file | `dotnet build -p:IsPackable=false` on the changed project | Bash |
+| Edited any `.vue` / `.ts` file | `vue-tsc --noEmit` in the changed frontend | Bash |
+| `dotnet build` returned **0 errors** + backend changed | **L4**: 杀掉旧 `JNPF.API.Entry` 进程 → `dotnet run` → 轮询 `:5000/health`（max 150s） | Bash |
+| Service running on `:5000` | **L5**: `curl -s http://localhost:5000/health` → expect 200 | Bash |
+| L5 health returns 200 | **L6**: `curl -X POST /api/oauth/Login -d "account=admin&password=123456&grant_type=official"` → expect 200 + token（NOT 403） | Bash |
+| Edited **3+ files** OR **50+ lines** total | Spawn **`test-runner`** subagent | `Agent(subagent_type="test-runner")` |
+| `test-runner` returned **PASS** + 3+ files changed | Spawn **`code-reviewer`** subagent | `Agent(subagent_type="code-reviewer")` |
+| Implementing S-level task (3+ files / 50+ lines) | Invoke **`full-review`** (includes security-scanner) | `Skill("full-review")` |
+
+### 🔄 Task Phase Transitions（任务阶段切换时）
+
+| When | MUST Invoke | Tool |
+|------|------------|------|
+| Starting ANY task involving code changes | **`superpowers:brainstorming`** | `Skill` tool |
+| About to say "done" / "fixed" / "passing" / "complete" | **`superpowers:verification-before-completion`** | `Skill` tool |
+| Session started / after long idle (>30 min) | **`health-check`** | `Skill` tool |
+| Multi-step task, need design before coding | **`superpowers:writing-plans`** | `Skill` tool |
+
+### 🎨 Frontend Development Chain（前端开发完整链条）
+
+> **Iron Law:** 写 `.vue/.ts/.less` 前 MUST 先执行 Phase 1 全部步骤。NEVER 跳过直接写代码。
+
+#### Phase 1: Scout & Reference（写代码前 — 强制执行）
+
+| Step | Action | Tool |
+|------|--------|------|
+| 1 | Read **`.claude/rules/jnpf-frontend-rules.md`**（组件选择决策表） | Read |
+| 2 | Read **`docs/frontend/jnpf-taste-blueprint.md`**（golden page index + skeleton decision tree） | Read |
+| 3 | Find similar mature page under `jnpf-web-vue3/src/views/` → Read as reference | Glob + Read |
+| 4 | Select correct skeleton pattern per blueprint decision tree | N/A |
+
+#### Phase 2: Design（自定义页面视觉 — 非 .vm 生成页面）
+
+| Page Type | Action | Tool |
+|-----------|--------|------|
+| Standard CRUD list / form | 微调（间距、hover、配色）via **`jnpf-ui-enhance`** | `Skill("jnpf-ui-enhance")` |
+| Dashboard / 工作台 / 落地页 / 报告 | Full design via **`jnpf-ui-enhance`** → bridges to `frontend-design` / `ui-ux-pro-max` / `taste-skill` / `frontend-design-pro` / `bencium-controlled-ux-designer` | `Skill("jnpf-ui-enhance")` |
+| .vm 生成页面 | ❌ **NEVER** modify styling | N/A |
+
+> **Design principle:** 组件骨架不动（BasicTable/BasicForm/BasicPopup/jnpf-content-wrapper），皮肤层可提升（颜色、间距、阴影、字体层级、hover、动画）
+
+#### Phase 3: Visual Verification（修改 .vue/.less/.css 后）
+
+| Step | Action | Tool |
+|------|--------|------|
+| 1 | 确保 `pnpm run dev` 运行在 `http://localhost:3100` | Bash |
+| 2 | Invoke **`superpowers-chrome:browsing`** → navigate → screenshot | `Skill` + `use_browser` |
+| 3 | Visual checklist: no white screen, no double scrollbar, no overflow, clear button hierarchy | Manual |
+| 4 | Re-screenshot if issues found | `Skill` + `use_browser` |
+
+### 🐛 Problems（遇到问题时）
+
+| When | MUST Invoke | Tool |
+|------|------------|------|
+| Bug / error / crash / unexpected behavior | **`superpowers:systematic-debugging`** | `Skill` tool |
+| Received code review feedback | **`superpowers:receiving-code-review`** | `Skill` tool |
+
+### 🚫 Skill Overrides（技能覆盖）
+
+| Skill | Status | Reason |
+|-------|--------|--------|
+| `superpowers:test-driven-development` | ❌ **DISABLED** — NEVER invoke | JNPF 低代码平台：大量 .vm 生成代码 + DynamicApiController 自动路由。项目使用自己的验证协议（见 [代码交付验证协议](#代码交付验证协议强制执行)）替代 TDD |
+
+> **铁律：匹配到 → 立即调用。先调用，再回复用户。不调用 = 违规。**
+>
+> **唯一例外：** 用户消息以 `!` 开头时（直接执行 shell 命令），先执行命令，再重新检查矩阵。
 
 ---
 
@@ -207,38 +285,73 @@ Prefer reusing existing code — don't reinvent. Simple solution > over-engineer
 
 ## 代码交付验证协议（强制执行）
 
-每轮代码重构/裁决书实现完成后，汇报前必须通过以下 6 层验证。任何一层失败，不得提交汇报。
+每轮代码重构/裁决书实现完成后，汇报前必须通过以下 7 层验证。任何一层失败，不得提交汇报。
 
 ### 验证清单
 
 | 层级 | 命令 | 通过标准 | 阻塞级 |
 |------|------|----------|--------|
-| L1 | `dotnet build` | 0 errors | 🔴 P0 |
+| L1 | `dotnet build -p:IsPackable=false` | 0 real errors（warning 不算） | 🔴 P0 |
 | L2 | `vue-tsc --noEmit && eslint src/` | 0 errors | 🔴 P0 |
 | L3 | `npx vitest run src/core/` | 全部通过（预存 flaky 除外） | 🔴 P0 |
-| L4 | `dotnet run --project JNPF.API.Entry` | 服务启动成功，控制台无异常 | 🔴 P0 |
+| L4 | 停止旧进程 → `dotnet run` → 等待 90s | 控制台无异常 + 端口监听 :5000 | 🔴 P0 |
 | L5 | `curl -s http://localhost:5000/health` | 返回 200 OK | 🔴 P0 |
-| L6 | Swagger 调用至少 1 个接口 | 正确响应（200/202 + 数据） | 🟡 P1 |
+| L6 | `curl -X POST /api/oauth/Login` 带正确凭证 | code=200 + token（不是 403） | 🔴 P0 |
+| L7 | 浏览器访问 Swagger + 一级菜单 | 能登录 + 菜单能打开 | 🟡 P1 |
 
 ### 执行规则
 
 1. L1-L3 必须全绿才允许提交代码
-2. L4-L5 必须通过才允许汇报"后端完成"
-3. L6 至少验证 1 个核心接口才允许汇报"接口就绪"
-4. L4 失败时：立即排查 DI/配置/数据库连接，不得跳过
-5. 任何层级失败：在汇报中明确标注失败层级 + 错误信息 + 修复计划
+2. L4 **必须重启服务**（不可复用旧进程），确保新代码能启动
+3. L4-L6 必须通过才允许汇报"后端完成"
+4. L6 必须带凭证登录，返回 200 + token——403 = FAIL
+5. L7 手动验证，确认登录+菜单可用
+6. L4 失败时：立即排查 DI/配置/数据库连接，不得跳过
+7. 任何层级失败：在汇报中明确标注失败层级 + 错误信息 + 修复计划
 
-### 快速验证脚本
+### 架构红线
+
+- **Tenant.json 不可直接修改**：开发环境覆盖使用 `Tenant.Development.json`
+- **ConnectionStrings.json 不可提交**：已在 .gitignore 中
+
+### L4 执行脚本
 
 ```bash
-# 一键执行 L1-L5（L6 需手动 Swagger 测试）
-dotnet build && \
-vue-tsc --noEmit && \
-npx vitest run src/core/ && \
-dotnet run --project JNPF.API.Entry &
-sleep 30 && \
-curl -s http://localhost:5000/health && \
-echo "=== L1-L5 ALL PASSED ===" || echo "=== FAILED ==="
+# 杀死旧进程
+pkill -f "JNPF.API.Entry" 2>/dev/null || true
+sleep 3
+
+# 启动
+cd backend
+dotnet run --project application/JNPF.API.Entry/JNPF.API.Entry.csproj -p:IsPackable=false > /tmp/backend.log 2>&1 &
+BACKEND_PID=$!
+
+# 等待（最多 90 秒）
+for i in $(seq 1 18); do
+    sleep 5
+    if curl -s http://localhost:5000/health >/dev/null 2>&1; then
+        echo "✅ L4 后端启动成功（${i}x5s）"
+        break
+    fi
+    echo "⏳ 等待启动... ($((i*5))s)"
+done
+curl -s http://localhost:5000/health
+```
+
+### L6 执行脚本
+
+```bash
+# 带正确凭证登录
+RESPONSE=$(curl -s -X POST http://localhost:5000/api/oauth/Login \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "account=admin&password=123456&grant_type=official")
+
+if echo "$RESPONSE" | grep -q "accessToken\|access_token"; then
+    echo "✅ L6 登录成功，返回 token"
+else
+    echo "❌ L6 登录失败: $RESPONSE"
+    exit 1
+fi
 ```
 
 ### 历史教训

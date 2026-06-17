@@ -34,6 +34,9 @@ public sealed class FounderGuardMiddleware
     {
         "/api/founder/auth/setup-totp",
         "/api/founder/auth/verify-totp",
+        "/api/founder/ai/pipeline",
+        "/api/founder/ai/test",
+        "/api/founder/ai/health",
     };
 
     public FounderGuardMiddleware(RequestDelegate next, IConfiguration configuration)

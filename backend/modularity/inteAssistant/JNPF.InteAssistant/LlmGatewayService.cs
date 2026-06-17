@@ -788,6 +788,39 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
             _logger.LogWarning(ex, "Failed to write AI call log");
         }
     }
+
+    /// <summary>
+    /// 质量评估: 评估 LLM 响应质量。分数 < 0.4 视为低质量，触发供应商切换 (Sprint 4 - S4-4)
+    /// </summary>
+    private static double EvaluateResponseQuality(string? content, string? expectedFormat = null)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return 0.0;
+        double score = 0.6;
+        if (content.Length < 50) score -= 0.3;
+        else if (content.Length > 100) score += 0.1;
+        if (expectedFormat == "json")
+        {
+            try { System.Text.Json.JsonDocument.Parse(content); score += 0.15; }
+            catch
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(content, @"```json\s*([\s\S]*?)\s*```");
+                if (match.Success)
+                {
+                    try { System.Text.Json.JsonDocument.Parse(match.Groups[1].Value); score += 0.1; }
+                    catch { score -= 0.2; }
+                }
+                else score -= 0.2;
+            }
+        }
+        var sentences = content.Split(new[] { '.', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        if (sentences.Length > 0)
+        {
+            var uniqueRatio = (double)sentences.Distinct().Count() / sentences.Length;
+            if (uniqueRatio < 0.5) score -= 0.2;
+        }
+        if (content.EndsWith("...") || content.EndsWith("…")) score -= 0.15;
+        return Math.Max(0.0, Math.Min(1.0, score));
+    }
 }
 
 /// <summary>

@@ -808,17 +808,21 @@ public class OAuthService : IDynamicApiController, ITransient
             // 官网授权验证(手机短信等方式)
             if (input.grant_type.IsNotEmptyOrNull() && input.grant_type.Equals("official"))
             {
-                var apiUrl = string.Format("{0}/Tenant/LoginSmsCodeCheck/{1}/{2}", _tenant.MultiTenancyDBInterFace.Split("/Tenant").First(), oldAccount, input.code);
-
-                // 请求接口 验证
-                var resStr = await apiUrl.SetHeaders(new Dictionary<string, object> {
-                { "X-Forwarded-For", ip}
-            }).GetAsStringAsync();
-                var resObj = resStr.ToObject<RESTfulResult<TenantInterFaceOutput>>();
-                if (resObj == null || resObj.code != 200)
+                // 开发环境本地解析：跳过远程 API 调用，直接从 DB 取密码
+                if (!"true".Equals(App.Configuration["Tenant:LocalTenantResolve"], StringComparison.OrdinalIgnoreCase))
                 {
-                    await AddLoginLog(apiUrl, user, logUserName, input.grant_type, userAgent, (int)sw.ElapsedMilliseconds, loginType, 0, resObj.ToJsonString());
-                    throw Oops.Oh(resObj?.msg);
+                    var apiUrl = string.Format("{0}/Tenant/LoginSmsCodeCheck/{1}/{2}", _tenant.MultiTenancyDBInterFace.Split("/Tenant").First(), oldAccount, input.code);
+
+                    // 请求接口 验证
+                    var resStr = await apiUrl.SetHeaders(new Dictionary<string, object> {
+                    { "X-Forwarded-For", ip}
+                }).GetAsStringAsync();
+                    var resObj = resStr.ToObject<RESTfulResult<TenantInterFaceOutput>>();
+                    if (resObj == null || resObj.code != 200)
+                    {
+                        await AddLoginLog(apiUrl, user, logUserName, input.grant_type, userAgent, (int)sw.ElapsedMilliseconds, loginType, 0, resObj.ToJsonString());
+                        throw Oops.Oh(resObj?.msg ?? ErrorCode.D1000);
+                    }
                 }
                 input.password = await _sqlSugarClient.Queryable<UserEntity>().Where(it => it.Account.Equals(input.account) && it.DeleteMark == null).Select(x => x.Password).FirstAsync();
             }
@@ -1055,9 +1059,9 @@ public class OAuthService : IDynamicApiController, ITransient
             throw;
         }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            throw Oops.Oh("Login service temporarily unavailable. Please try again later.");
+            throw;
         }
     }
 

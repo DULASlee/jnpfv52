@@ -9,6 +9,7 @@ import { useErrorLogStoreWithOut } from '/@/store/modules/errorLog';
 import { ErrorTypeEnum } from '/@/enums/exceptionEnum';
 import { App } from 'vue';
 import projectSetting from '/@/settings/projectSetting';
+import { errorReporter } from '/@/utils/error-reporter';
 
 /**
  * Handling error stack information
@@ -75,6 +76,12 @@ function vueErrorHandler(err: Error, vm: any, info: string) {
     detail: info,
     url: window.location.href,
   });
+  // 上报到后端 Serilog（错误追踪闭环）
+  errorReporter.report({
+    message: err.message,
+    stack: err.stack,
+    source: 'vue',
+  });
 }
 
 /**
@@ -102,6 +109,12 @@ export function scriptErrorHandler(event: Event | string, source?: string, linen
     url: window.location.href,
     ...(errorInfo as Pick<ErrorLogInfo, 'message' | 'stack'>),
   });
+  // 上报到后端 Serilog
+  errorReporter.report({
+    message: event as string,
+    stack: error?.stack,
+    source: 'uncaught',
+  });
   return true;
 }
 
@@ -121,6 +134,12 @@ function registerPromiseErrorHandler() {
         url: window.location.href,
         stack: 'promise error!',
         message: event.reason,
+      });
+      // 上报到后端 Serilog
+      errorReporter.report({
+        message: event.reason?.message || String(event.reason),
+        stack: event.reason?.stack,
+        source: 'unhandledrejection',
       });
     },
     true,

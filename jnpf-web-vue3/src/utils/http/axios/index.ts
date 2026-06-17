@@ -36,6 +36,8 @@ const transform: AxiosTransform = {
     if (!res || typeof res !== 'object') {
       throw new Error(typeof res === 'string' ? res : '服务器响应异常，请稍后重试');
     }
+    // 从响应头提取 TraceId（后端 TraceIdMiddleware 写入 X-Trace-Id）
+    const traceId = res.headers?.['x-trace-id'] as string | undefined;
     const { t } = useI18n();
     const { isTransformResponse, isReturnNativeResponse } = options;
     // 是否返回原生响应头 比如：需要获取响应头时使用该属性
@@ -60,6 +62,10 @@ const transform: AxiosTransform = {
     // 这里逻辑可以根据项目进行修改
     const hasSuccess = res.data && isObject(res.data) && Reflect.has(res.data, 'code') && code === ResultEnum.SUCCESS;
     if (hasSuccess) {
+      // 将 TraceId 注入返回数据，前端错误弹窗/日志可携带定位
+      if (traceId) {
+        (res.data as any)._traceId = traceId;
+      }
       return res.data;
     }
 
@@ -87,7 +93,10 @@ const transform: AxiosTransform = {
       createMessage.error(errorMsg);
     }
 
-    throw new Error(errorMsg);
+    // 业务错误也注入 TraceId，前端错误提示可携带定位
+    const bizError = new Error(errorMsg) as any;
+    bizError.traceId = traceId;
+    throw bizError;
   },
 
   // 请求之前处理config
@@ -169,6 +178,8 @@ const transform: AxiosTransform = {
     const errorMessageMode = config?.requestOptions?.errorMessageMode || 'none';
     const msg: string = response?.data?.error?.message ?? '';
     const err: string = error?.toString?.() ?? '';
+    // 从错误响应头提取 TraceId（后端 TraceIdMiddleware 写入）
+    const errorTraceId = response?.headers?.['x-trace-id'] as string | undefined;
     let errMessage = '';
 
     if (axios.isCancel(error)) {
@@ -204,6 +215,11 @@ const transform: AxiosTransform = {
       isOpenRetry &&
       // @ts-ignore
       retryRequest.retry(axiosInstance, error);
+
+    // 注入 TraceId 到拒绝的 Promise，调用方可读取 .traceId
+    if (errorTraceId) {
+      (error as any).traceId = errorTraceId;
+    }
     return Promise.reject(error);
   },
 };

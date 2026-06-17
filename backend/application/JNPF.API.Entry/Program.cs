@@ -1,8 +1,26 @@
 using JNPF.API.Entry.Infrastructure;
 using Serilog;
 
-Serve.Run(RunOptions.Default
-    .AddWebComponent<WebComponent>().WithArgs(args));
+// Bootstrap logger: 捕获 Serilog 正式配置之前的启动阶段异常
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("logs/startup.log", rollingInterval: RollingInterval.Day)
+    .CreateBootstrapLogger();
+
+try
+{
+    Serve.Run(RunOptions.Default
+        .AddWebComponent<WebComponent>().WithArgs(args));
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly during startup");
+    throw;
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 public class WebComponent : IWebComponent
 {

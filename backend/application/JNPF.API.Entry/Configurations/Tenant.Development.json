@@ -1,0 +1,9 @@
+{
+  "Tenant": {
+    "MultiTenancy": false,
+    "MultiTenancyType": "COLUMN",
+    "MultiTenancyDBInterFace": "",
+    "MultiSystem": true,
+    "LocalTenantResolve": true
+  }
+}

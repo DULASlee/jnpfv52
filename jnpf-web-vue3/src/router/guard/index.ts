@@ -11,6 +11,7 @@ import { createPermissionGuard } from './permissionGuard';
 import { createStateGuard } from './stateGuard';
 import nProgress from 'nprogress';
 import projectSetting from '/@/settings/projectSetting';
+import { errorReporter } from '/@/utils/error-reporter';
 // import { createParamMenuGuard } from './paramMenuGuard';
 
 // Don't change the order of creation
@@ -24,6 +25,20 @@ export function setupRouterGuard(router: Router) {
   createPermissionGuard(router);
   // createParamMenuGuard(router); // must after createPermissionGuard (menu has been built.)
   createStateGuard(router);
+
+  // 路由级错误捕获：异步组件加载失败、chunk 加载失败等
+  router.onError(error => {
+    errorReporter.report({
+      message: `路由加载失败: ${error.message}`,
+      stack: error.stack,
+      source: 'vue',
+    });
+
+    // chunk 加载失败自动刷新（通常是版本更新后旧 chunk 被删除）
+    if (/Loading chunk \d+ failed/.test(error.message) || /Failed to fetch dynamically imported module/.test(error.message)) {
+      window.location.reload();
+    }
+  });
 }
 
 /**

@@ -1,5 +1,6 @@
 using Hangfire;
 using Hangfire.MemoryStorage;
+using JNPF.InteAssistant.Job;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
@@ -37,6 +38,12 @@ public static class PipelineModuleInitializer
             options.WorkerCount = Math.Min(Environment.ProcessorCount * 2, 10);
             options.Queues = new[] { "default", "pipeline_validation" };
         });
+
+        // ─── Hangfire 全局过滤器 ───
+        // TraceContextJobFilter: W3C TraceContext 传播（分布式追踪）
+        GlobalJobFilters.Filters.Add(new TraceContextJobFilter());
+        // HangfireExceptionFilter: 异常捕获 + Serilog 日志（错误追踪闭环）
+        GlobalJobFilters.Filters.Add(new HangfireExceptionFilter());
 
         // ─── Quartz.NET 注册 ───
         services.AddQuartz(q =>

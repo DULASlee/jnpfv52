@@ -113,7 +113,7 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
         var ignoreUrls = _userManager.TenantIgnoreUrlAddressList;
 
         var authorIds = new List<string>();
-        if (_repository.AsSugarClient().Queryable<OrganizeAdministratorEntity>().Any(x => x.UserId.Equals(_userManager.UserId)) && _userManager.UserOrigin.Equals("pc") && _userManager.DataScope.Any(x => x.organizeType.IsNotEmptyOrNull()))
+        if (_repository.AsSugarClient().Queryable<OrganizeAdministratorEntity>().Any(x => x.UserId.Equals(_userManager.UserId)) && (_userManager.UserOrigin ?? "pc").Equals("pc") && (_userManager.DataScope?.Any(x => x.organizeType.IsNotEmptyOrNull()) == true))
             authorIds = _userManager.DataScope.Where(x => x.organizeType.IsNotEmptyOrNull()).Select(x => x.organizeId).ToList();
         else
             authorIds = await _repository.AsSugarClient().Queryable<AuthorizeEntity>().Where(x => x.ItemType.Equals("module") && x.ObjectType.Equals("Role") && _userManager.PermissionGroup.Contains(x.ObjectId)).Select(x => x.ItemId).ToListAsync();

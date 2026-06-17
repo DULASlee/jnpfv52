@@ -1,9 +1,11 @@
 using JNPF.DependencyInjection;
 using JNPF.DynamicApiController;
 using JNPF.InteAssistant.Entitys.Common;
+using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using SqlSugar;
 
 namespace JNPF.InteAssistant;
 
@@ -18,16 +20,19 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     private readonly DetailedDesignOrchestrator _designOrchestrator;
     private readonly ILogger<AIDevelopmentPipelineService> _logger;
     private readonly ISandboxManager _sandbox;
+    private readonly ISqlSugarClient _db;
 
     public AIDevelopmentPipelineService(
         IPipelineEngine pipelineEngine,
         DetailedDesignOrchestrator designOrchestrator,
         ISandboxManager sandbox,
+        ISqlSugarClient sqlSugarClient,
         ILogger<AIDevelopmentPipelineService> logger)
     {
         _pipelineEngine = pipelineEngine;
         _designOrchestrator = designOrchestrator;
         _sandbox = sandbox;
+        _db = sqlSugarClient;
         _logger = logger;
     }
 
@@ -109,6 +114,62 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         };
 
         return await _designOrchestrator.ExecuteAsync(context, null, ct);
+    }
+
+    /// <summary>
+    /// SSE 事件流 — 推送流水线状态变更（与前端 useSSEConnection 对接）
+    /// </summary>
+    [HttpGet("{pipelineId:long}/events")]
+    public async Task GetPipelineEvents(long pipelineId, CancellationToken ct)
+    {
+        var response = App.HttpContext!.Response;
+        response.ContentType = "text/event-stream";
+        response.Headers["Cache-Control"] = "no-cache";
+        response.Headers["X-Accel-Buffering"] = "no";
+
+        while (!ct.IsCancellationRequested)
+        {
+            PipelineDetail? detail = null;
+            try { detail = await _pipelineEngine.GetDetailAsync(pipelineId); } catch { detail = null; }
+
+            var json = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                stage = detail?.CurrentStage?.ToString(),
+                status = detail?.Status?.ToString(),
+                timestamp = DateTime.UtcNow
+            });
+            var data = $"data: {json}\n\n";
+            await response.Body.WriteAsync(System.Text.Encoding.UTF8.GetBytes(data), ct);
+            await response.Body.FlushAsync(ct);
+            await Task.Delay(3000, ct);
+        }
+    }
+
+    /// <summary>
+    /// 获取流水线 IR 版本快照
+    /// </summary>
+    [HttpGet("{pipelineId:long}/ir")]
+    public async Task<object> GetPipelineIRAsync(long pipelineId)
+    {
+        var pid = pipelineId.ToString();
+        var dt = await _db.Ado.GetDataTableAsync(
+            "SELECT TOP 1 F_IR_SNAPSHOT, F_VERSION, F_DIFF, F_CHANGE_SUMMARY, F_VALIDATION_RESULT, F_SNAPSHOT_AT FROM BASE_IR_VERSION WHERE F_PIPELINE_ID = @pid ORDER BY F_VERSION DESC",
+            new SugarParameter("@pid", pid));
+
+        if (dt.Rows.Count == 0)
+            return new { pipelineId = pid, irSnapshot = (string?)null, irVersion = 0 };
+
+        var row = dt.Rows[0];
+        return new
+        {
+            pipelineId = pid,
+            irSnapshot = row["F_IR_SNAPSHOT"] as string,
+            irVersion = Convert.ToInt32(row["F_VERSION"]),
+            diff = row["F_DIFF"] as string,
+            changeSummary = row["F_CHANGE_SUMMARY"] as string,
+            validationResult = row["F_VALIDATION_RESULT"] as string,
+            snapshotAt = row["F_SNAPSHOT_AT"] as DateTime?
+        };
     }
 
     private long GetTenantId()

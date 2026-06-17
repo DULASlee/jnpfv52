@@ -14,7 +14,7 @@ namespace JNPF.InteAssistant;
 /// 提供 TOTP 设置/验证、模型配置、Prompt 配置、自博弈开关等端点.
 /// </summary>
 [ApiDescriptionSettings(Tag = "Founder", Name = "Founder", Order = 180)]
-[Route("api/founder/[controller]")]
+[Route("api/founder")]
 public class FounderService : IDynamicApiController, ITransient
 {
     private readonly FounderAuthService _authService;

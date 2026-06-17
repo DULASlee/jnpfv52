@@ -1,0 +1,9 @@
+{
+  "Tenant": {
+    "MultiTenancy": true,
+    "MultiTenancyType": "COLUMN",
+    "MultiSystem": true,
+    "LocalTenantResolve": true,
+    "DefaultTenantId": "default"
+  }
+}
