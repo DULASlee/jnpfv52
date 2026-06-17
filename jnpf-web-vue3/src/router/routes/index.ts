@@ -116,6 +116,7 @@ export const StudioPipelineRoute: AppRouteRecordRaw = {
       meta: { title: '模型路由策略' },
     },
     { path: 'stages', name: 'PipelineStages', component: () => import('/@/views/studio/views/pipeline/stages.vue'), meta: { title: '流水线阶段设置' } },
+    { path: 'providers', name: 'ModelProviders', component: () => import('/@/views/studio/views/pipeline/providers.vue'), meta: { title: '模型供应商配置' } },
   ],
 };
 
