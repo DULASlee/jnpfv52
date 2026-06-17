@@ -152,8 +152,11 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     public async Task<object> GetPipelineIRAsync(long pipelineId)
     {
         var pid = pipelineId.ToString();
+        var sql = _db.CurrentConnectionConfig.DbType == SqlSugar.DbType.PostgreSQL
+            ? "SELECT F_IR_SNAPSHOT, F_VERSION, F_DIFF, F_CHANGE_SUMMARY, F_VALIDATION_RESULT, F_SNAPSHOT_AT FROM BASE_IR_VERSION WHERE F_PIPELINE_ID = @pid ORDER BY F_VERSION DESC LIMIT 1"
+            : "SELECT TOP 1 F_IR_SNAPSHOT, F_VERSION, F_DIFF, F_CHANGE_SUMMARY, F_VALIDATION_RESULT, F_SNAPSHOT_AT FROM BASE_IR_VERSION WHERE F_PIPELINE_ID = @pid ORDER BY F_VERSION DESC";
         var dt = await _db.Ado.GetDataTableAsync(
-            "SELECT TOP 1 F_IR_SNAPSHOT, F_VERSION, F_DIFF, F_CHANGE_SUMMARY, F_VALIDATION_RESULT, F_SNAPSHOT_AT FROM BASE_IR_VERSION WHERE F_PIPELINE_ID = @pid ORDER BY F_VERSION DESC",
+            sql,
             new SugarParameter("@pid", pid));
 
         if (dt.Rows.Count == 0)

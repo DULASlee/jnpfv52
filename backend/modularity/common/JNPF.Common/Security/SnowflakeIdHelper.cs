@@ -44,10 +44,20 @@ public class SnowflakeIdHelper
         // 这个if判断在高并发的情况下可能会有问题
         if (YitIdHelper.IdGenInstance == null)
         {
-            UnRegister();
+            ushort workerId;
+            try
+            {
+                UnRegister();
 
-            // 如果不用自动注册WorkerId的话，直接传一个数值就可以了
-            var workerId = RegisterOne(_cacheOptions.ip, _cacheOptions.port, _cacheOptions.password, 63);
+                // 如果不用自动注册WorkerId的话，直接传一个数值就可以了
+                workerId = RegisterOne(_cacheOptions.ip, _cacheOptions.port, _cacheOptions.password, 63);
+            }
+            catch (DllNotFoundException)
+            {
+                // 原生库(yitidgengo)在当前平台不可用时（如 macOS ARM64 无对应版本），
+                // 回退到固定 WorkerId，单机部署足够使用。
+                workerId = 1;
+            }
 
             // 创建 IdGeneratorOptions 对象，可在构造函数中输入 WorkerId：
             var options = new IdGeneratorOptions(workerId);

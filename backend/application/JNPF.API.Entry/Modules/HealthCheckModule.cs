@@ -16,12 +16,9 @@ public class HealthCheckModule : JnpfModule
     public override void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
         // Health Check 注册（从 DatabaseModule 移入）
+        // 使用基于 SqlSugar 的通用数据库健康检查，兼容 PostgreSQL 等多数据库
         services.AddHealthChecks()
-            .AddSqlServer(
-                connectionString: JNPFTenantExtensions.ToConnectionString(
-                    App.GetOptions<ConnectionStringsOptions>().DefaultConnectionConfig),
-                name: "sqlserver",
-                tags: new[] { "db" });
+            .AddCheck<SqlSugarDbHealthCheck>("database", tags: new[] { "db" });
     }
 
     public override void OnApplicationInitialization(IApplicationBuilder app)
@@ -67,5 +64,32 @@ public class HealthCheckModule : JnpfModule
             totalDuration = report.TotalDuration
         };
         await context.Response.WriteAsync(JsonConvert.SerializeObject(result));
+    }
+}
+
+/// <summary>
+/// 基于 SqlSugar 的通用数据库健康检查，兼容 PostgreSQL / SQL Server / MySQL 等多数据库。
+/// </summary>
+public class SqlSugarDbHealthCheck : IHealthCheck
+{
+    private readonly ISqlSugarClient _db;
+
+    public SqlSugarDbHealthCheck(ISqlSugarClient db)
+    {
+        _db = db;
+    }
+
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _db.Ado.ExecuteCommandAsync("SELECT 1");
+            var cfg = _db.CurrentConnectionConfig;
+            return HealthCheckResult.Healthy($"{cfg.DbType} ({cfg.ConfigId})");
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Unhealthy(ex.Message);
+        }
     }
 }

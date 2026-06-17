@@ -33,11 +33,24 @@ public class SqlSugarEventOutboxStore : IEventOutboxStore
     /// </summary>
     public async Task<IList<EventOutboxMessage>> GetPendingAsync(int batchSize)
     {
-        // 使用 Ado 实现 UPDLOCK+READPAST 行锁
-        var sql = @"SELECT TOP(@batchSize) * FROM SYS_EVENT_OUTBOX_MESSAGE
+        string sql;
+        if (_db.CurrentConnectionConfig.DbType == SqlSugar.DbType.PostgreSQL)
+        {
+            // PostgreSQL: LIMIT + FOR UPDATE SKIP LOCKED 等价于 SQL Server 的 TOP + UPDLOCK/READPAST
+            sql = @"SELECT * FROM SYS_EVENT_OUTBOX_MESSAGE
+                     WHERE F_STATUS IN (0, 3) AND F_RETRY_COUNT < F_MAX_RETRY_COUNT
+                     ORDER BY F_CREATED_AT
+                     LIMIT @batchSize
+                     FOR UPDATE SKIP LOCKED";
+        }
+        else
+        {
+            // SQL Server: 使用 UPDLOCK+READPAST 行锁确保并发安全
+            sql = @"SELECT TOP(@batchSize) * FROM SYS_EVENT_OUTBOX_MESSAGE
                      WITH (UPDLOCK, READPAST)
                      WHERE F_STATUS IN (0, 3) AND F_RETRY_COUNT < F_MAX_RETRY_COUNT
                      ORDER BY F_CREATED_AT";
+        }
 
         return await _db.Ado.SqlQueryAsync<EventOutboxMessage>(sql, new { batchSize });
     }
