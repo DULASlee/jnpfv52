@@ -224,6 +224,15 @@
 
   // SSE 清理
   let sseDisconnect: (() => void) | null = null;
+  let errorTimer: ReturnType<typeof setTimeout> | null = null;
+  const FIRST_CHUNK_TIMEOUT_MS = 30000;
+
+  function clearErrorTimer() {
+    if (errorTimer) {
+      clearTimeout(errorTimer);
+      errorTimer = null;
+    }
+  }
 
   // ── 生命周期 ──
   onMounted(async () => {
@@ -238,6 +247,7 @@
 
   onUnmounted(() => {
     if (sseDisconnect) sseDisconnect();
+    clearErrorTimer();
     if (thinkingTimer) clearInterval(thinkingTimer);
   });
 
@@ -334,6 +344,7 @@
   // ── SSE 流式连接 ──
   function connectSSE(aiMsgId: number) {
     if (sseDisconnect) sseDisconnect();
+    clearErrorTimer();
     streamText.value = '';
     streaming.value = true;
 
@@ -348,6 +359,8 @@
         const aiMsg = messages.value.find(m => m.id === aiMsgId);
 
         if (msg.type === 'chunk') {
+          // 收到首个 chunk 即视为连接健康，取消“首包超时”计时。
+          clearErrorTimer();
           streamText.value += msg.data;
           if (aiMsg) aiMsg.content = streamText.value;
           scrollToBottom();
@@ -361,6 +374,7 @@
           const idx = pipelineStages.findIndex(s => s.key === (msg.stage || 'requirement'));
           if (idx >= 0) updateStageUI(idx);
         } else if (msg.type === 'done') {
+          clearErrorTimer();
           if (aiMsg && streamText.value) {
             aiMsg.content = streamText.value;
             streamText.value = '';
@@ -371,25 +385,28 @@
           disconnect();
           scrollToBottom();
         } else if (msg.type === 'error') {
-          if (aiMsg && !aiMsg.content) aiMsg.content = '⚠️ 请求失败，请重试';
+          clearErrorTimer();
+          if (aiMsg && !aiMsg.content) aiMsg.content = msg.data || '⚠️ 请求失败，请重试';
           streaming.value = false;
           loading.value = false;
           disconnect();
         }
       },
       onError: () => {
-        setTimeout(() => {
-          if (streaming.value && !streamText.value) {
-            const aiMsg = messages.value.find(m => m.id === aiMsgId);
-            if (aiMsg && !aiMsg.content) aiMsg.content = '⚠️ 连接超时，请重试';
-            streaming.value = false;
-            loading.value = false;
-          }
-        }, 8000);
+        // useSSE 内部会自动重连；首包超时由统一计时器处理，避免把瞬时 onerror 误判为失败。
       },
     });
 
     sseDisconnect = disconnect;
+    errorTimer = setTimeout(() => {
+      errorTimer = null;
+      if (!streaming.value || streamText.value) return;
+      const aiMsg = messages.value.find(m => m.id === aiMsgId);
+      if (aiMsg && !aiMsg.content) aiMsg.content = '⚠️ 连接超时，请重试';
+      streaming.value = false;
+      loading.value = false;
+      disconnect();
+    }, FIRST_CHUNK_TIMEOUT_MS);
     connect();
   }
 
@@ -557,9 +574,11 @@
   .ai-chat-panel {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
     background: #fff;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
   }
 
   /* ====== 顶部 ====== */

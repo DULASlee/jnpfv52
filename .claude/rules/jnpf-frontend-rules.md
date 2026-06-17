@@ -77,6 +77,18 @@ Use `formState` or `setFieldsValue` to populate forms. NEVER manually bind each 
 
 ---
 
+## SSE / EventSource 开发环境铁律
+
+> 完整决策见 `openspec/adr/ADR-002-sse-dev-proxy-prefix.md`
+
+| 错误做法 | 正确做法 |
+|---|---|
+| `new EventSource('/api/...')` | `buildEventSourceUrl('/api/...')` from `/@/utils/http/sseUrl` |
+| 怀疑 `PipelineEngineService` 路由 | 查 `AIDevelopmentPipelineService` + Network 面板 EventSource URL |
+| 后端有 LLM 日志就改 Furion 路由 | 先确认 SSE 是否带 `/dev` 前缀 |
+
+---
+
 ## Visual Self-Check
 
 1. Use Playwright MCP to take screenshot while local dev server is running

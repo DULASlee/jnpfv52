@@ -29,6 +29,11 @@ templates:
     query: ["IoT", "设备接入", "MES", "工单"]
     limit: 5
 
+  - id: pipeline-sse
+    when: SSE/EventSource/流水线连接超时/AI聊天流式
+    query: ["SSE", "EventSource", "/dev", "apiUrl", "连接超时", "PipelineEngineService", "AIDevelopmentPipelineService"]
+    limit: 5
+
   - id: conventions
     when: 命名约定/代码规范/Git 工作流
     query: ["命名约定", "editorconfig", "git工作流"]

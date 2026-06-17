@@ -37,3 +37,12 @@ Read `docs/frontend/jnpf-taste-blueprint.md`，了解：
 - 弹窗表单优先 BasicPopup 或 BasicModal + BasicForm
 - 操作列使用 TableAction + #bodyCell slot
 - 字典通过 baseStore.getDictionaryData 加载，jnpf-select 用 :options 传入
+
+## SSE / EventSource（开发环境陷阱）
+
+> ADR-002 · 规则 `sse-dev-proxy.mdc`
+
+- axios/defHttp 自动加 `VITE_GLOB_API_URL`（开发环境 `/dev`），Vite 才代理到 `:5000`
+- **EventSource 不会自动加前缀** — 必须用 `buildEventSourceUrl()`（`/@/utils/http/sseUrl.ts`）
+- 后端 LLM 有输出但前端超时 → 先查 Network 里 EventSource URL 是否含 `/dev`，**不要**改 `PipelineEngineService` 路由
+- HTTP API 在 `AIDevelopmentPipelineService`（`api/founder/ai/pipeline`），非 `PipelineEngineService`

@@ -7,6 +7,7 @@
 | frontend-align-dist-v1 | [`frontend-align-dist-v1/spec.md`](frontend-align-dist-v1/spec.md) | Capability: frontend-align-dist-v1 | 2026-05-28 |
 | iot-capability-phase1 | [`iot-capability-phase1/spec.md`](iot-capability-phase1/spec.md) | Capability: iot-capability-phase1 | 2026-05-28 |
 | jnpf-v52-workspace | [`jnpf-v52-workspace/spec.md`](jnpf-v52-workspace/spec.md) | jnpf-v52-workspace | 2026-05-28 |
+| pipeline-sse-dev-proxy | [`pipeline-sse-dev-proxy/spec.md`](pipeline-sse-dev-proxy/spec.md) | pipeline-sse-dev-proxy Specification | 2026-06-17 |
 
 ## 维护规则
 
