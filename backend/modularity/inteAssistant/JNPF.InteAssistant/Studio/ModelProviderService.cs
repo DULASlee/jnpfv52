@@ -51,6 +51,7 @@ public class ModelProviderService : IDynamicApiController, ITransient
             baseUrl = x.F_BaseUrl,
             apiKeyMasked = MaskApiKey(x.F_ApiKey),
             defaultModel = x.F_DefaultModel,
+            apiFormat = x.F_ApiFormat,
             maxTokens = x.F_MaxTokens,
             temperature = x.F_Temperature,
             status = x.F_Status,
@@ -85,6 +86,7 @@ public class ModelProviderService : IDynamicApiController, ITransient
             baseUrl = entity.F_BaseUrl,
             apiKeyMasked = MaskApiKey(entity.F_ApiKey),
             defaultModel = entity.F_DefaultModel,
+            apiFormat = entity.F_ApiFormat,
             maxTokens = entity.F_MaxTokens,
             temperature = entity.F_Temperature,
             status = entity.F_Status,
@@ -189,7 +191,7 @@ public class ModelProviderService : IDynamicApiController, ITransient
     #region 测试连接
 
     /// <summary>
-    /// 测试供应商连接
+    /// 测试供应商连接 — 支持 OpenAI 和 Anthropic 两种 API 格式
     /// </summary>
     [HttpPost("providers/{id}/test")]
     public async Task<dynamic> TestConnection(long id)
@@ -205,49 +207,81 @@ public class ModelProviderService : IDynamicApiController, ITransient
 
         try
         {
-            var requestBody = new
+            HttpResponseMessage response;
+            string url;
+            string json;
+
+            if (entity.F_ApiFormat == "anthropic")
             {
-                model = entity.F_DefaultModel,
-                messages = new[] { new { role = "user", content = "ping" } },
-                max_tokens = 50,
-                temperature = 0.1
-            };
+                // Anthropic API 格式
+                url = $"{entity.F_BaseUrl}/v1/messages";
 
-            var json = JsonSerializer.Serialize(requestBody);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var requestBody = new
+                {
+                    model = entity.F_DefaultModel,
+                    max_tokens = 50,
+                    messages = new[] { new { role = "user", content = "请回复'连接成功'四个字" } }
+                };
 
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{entity.F_BaseUrl}/chat/completions");
-            request.Headers.Add("Authorization", $"Bearer {entity.F_ApiKey}");
-            request.Content = content;
+                json = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await client.SendAsync(request);
+                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Headers.Add("x-api-key", entity.F_ApiKey);
+                request.Headers.Add("anthropic-version", "2023-06-01");
+                request.Content = content;
+
+                response = await client.SendAsync(request);
+            }
+            else
+            {
+                // OpenAI 兼容格式
+                url = $"{entity.F_BaseUrl}/chat/completions";
+
+                var requestBody = new
+                {
+                    model = entity.F_DefaultModel,
+                    max_tokens = 50,
+                    messages = new[] { new { role = "user", content = "请回复'连接成功'四个字" } },
+                    temperature = 0.1
+                };
+
+                json = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Headers.Add("Authorization", $"Bearer {entity.F_ApiKey}");
+                request.Content = content;
+
+                response = await client.SendAsync(request);
+            }
+
             var latency = (DateTime.Now - start).TotalMilliseconds;
+            var responseBody = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
             {
                 entity.F_Status = "healthy";
                 entity.F_LastTestTime = DateTime.Now;
-                entity.F_LastTestResult = $"✅ 连接成功 | HTTP {(int)response.StatusCode} | 延迟 {latency:F0}ms";
+                entity.F_LastTestResult = $"✅ HTTP {(int)response.StatusCode} | {latency:F0}ms | {entity.F_DefaultModel}";
 
                 await _db.Updateable(entity)
                     .UpdateColumns(x => new { x.F_Status, x.F_LastTestTime, x.F_LastTestResult })
                     .ExecuteCommandAsync();
 
-                return new { success = true, message = entity.F_LastTestResult, latency, httpStatus = (int)response.StatusCode, model = entity.F_DefaultModel, provider = entity.F_ProviderCode };
+                return new { success = true, message = entity.F_LastTestResult, latency, httpStatus = (int)response.StatusCode, model = entity.F_DefaultModel, provider = entity.F_ProviderCode, apiFormat = entity.F_ApiFormat };
             }
             else
             {
-                var errorBody = await response.Content.ReadAsStringAsync();
-
                 entity.F_Status = "degraded";
                 entity.F_LastTestTime = DateTime.Now;
-                entity.F_LastTestResult = $"❌ 连接失败 | HTTP {(int)response.StatusCode}";
+                entity.F_LastTestResult = $"❌ HTTP {(int)response.StatusCode} | {latency:F0}ms";
 
                 await _db.Updateable(entity)
                     .UpdateColumns(x => new { x.F_Status, x.F_LastTestTime, x.F_LastTestResult })
                     .ExecuteCommandAsync();
 
-                return new { success = false, message = entity.F_LastTestResult, latency, httpStatus = (int)response.StatusCode };
+                return new { success = false, message = entity.F_LastTestResult, detail = responseBody.Substring(0, Math.Min(responseBody.Length, 500)), latency, httpStatus = (int)response.StatusCode };
             }
         }
         catch (TaskCanceledException)
@@ -266,7 +300,7 @@ public class ModelProviderService : IDynamicApiController, ITransient
         {
             entity.F_Status = "offline";
             entity.F_LastTestTime = DateTime.Now;
-            entity.F_LastTestResult = $"❌ 连接异常: {ex.Message}";
+            entity.F_LastTestResult = $"❌ {ex.Message}";
 
             await _db.Updateable(entity)
                 .UpdateColumns(x => new { x.F_Status, x.F_LastTestTime, x.F_LastTestResult })

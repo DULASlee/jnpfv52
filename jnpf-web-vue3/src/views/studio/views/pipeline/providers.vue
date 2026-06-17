@@ -67,6 +67,13 @@
         <a-form-item label="默认模型" required>
           <a-input v-model:value="formData.defaultModel" placeholder="如: deepseek-v4-pro" />
         </a-form-item>
+        <a-form-item label="API 格式" required>
+          <a-select v-model:value="formData.apiFormat">
+            <a-select-option value="anthropic">Anthropic (DeepSeek/MiMo)</a-select-option>
+            <a-select-option value="openai">OpenAI 兼容 (通义千问/OpenAI)</a-select-option>
+            <a-select-option value="ollama">Ollama 本地</a-select-option>
+          </a-select>
+        </a-form-item>
         <a-form-item label="上下文窗口">
           <a-select v-model:value="formData.maxTokens">
             <a-select-option :value="3000000">3M</a-select-option>
@@ -112,6 +119,7 @@
     baseUrl: '',
     apiKey: '',
     defaultModel: '',
+    apiFormat: 'anthropic',
     maxTokens: 1000000,
     temperature: 0.7,
     priority: 1,
@@ -124,6 +132,7 @@
     { title: 'API 地址', dataIndex: 'baseUrl', width: 200, ellipsis: true },
     { title: 'API Key', key: 'apiKeyMasked', width: 130 },
     { title: '默认模型', dataIndex: 'defaultModel', width: 140 },
+    { title: 'API 格式', dataIndex: 'apiFormat', width: 100 },
     { title: '上下文', key: 'maxTokens', width: 100 },
     { title: '优先级', key: 'priority', width: 100 },
     { title: '状态', key: 'status', width: 80 },
@@ -172,6 +181,7 @@
       baseUrl: record.baseUrl,
       apiKey: '',
       defaultModel: record.defaultModel,
+      apiFormat: record.apiFormat || 'anthropic',
       maxTokens: record.maxTokens,
       temperature: record.temperature,
       priority: record.priority,

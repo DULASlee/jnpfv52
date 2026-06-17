@@ -27,6 +27,12 @@ public class ModelProviderEntity
     [SugarColumn(Length = 100, IsNullable = true)]
     public string F_DefaultModel { get; set; }
 
+    /// <summary>
+    /// API 协议格式: openai / anthropic / ollama
+    /// </summary>
+    [SugarColumn(Length = 20, IsNullable = false)]
+    public string F_ApiFormat { get; set; } = "openai";
+
     public long F_MaxTokens { get; set; } = 1000000;
 
     [SugarColumn(Length = 38, IsNullable = false, DecimalDigits = 2)]
