@@ -11,43 +11,44 @@ function authHeaders(): Record<string, string> {
   return token ? { 'X-Founder-Token': token } : {};
 }
 
-const baseUrl = '/api/founder/ai/pipeline';
+/** 流水线执行 API（Studio 域，所有登录用户可访问） */
+const baseUrl = '/api/studio/pipeline/execute';
 
 // ─── 流水线 CRUD ───
 
 /** 创建流水线 */
 export function createPipeline(data: PipelineCreateRequest) {
-  return defHttp.post({ url: `${baseUrl}/create`, data, headers: authHeaders() });
+  return defHttp.post({ url: `${baseUrl}/create`, data });
 }
 
 /** 启动流水线 */
 export function startPipeline(id: number) {
-  return defHttp.post({ url: `${baseUrl}/${id}/start`, headers: authHeaders() });
+  return defHttp.post({ url: `${baseUrl}/${id}/start` });
 }
 
 /** 执行当前阶段 */
 export function executeNextStage(id: number) {
-  return defHttp.post({ url: `${baseUrl}/${id}/execute`, headers: authHeaders() });
+  return defHttp.post({ url: `${baseUrl}/${id}/execute` });
 }
 
 /** 确认阶段（人工审核） */
 export function confirmStage(stageId: number, data: StageConfirmation) {
-  return defHttp.post({ url: `${baseUrl}/stage/${stageId}/confirm`, data, headers: authHeaders() });
+  return defHttp.post({ url: `${baseUrl}/stage/${stageId}/confirm`, data });
 }
 
 /** 获取流水线详情 */
 export function getPipelineDetail(id: number) {
-  return defHttp.get({ url: `${baseUrl}/${id}`, headers: authHeaders() });
+  return defHttp.get({ url: `${baseUrl}/${id}` });
 }
 
 /** 分页查询流水线列表 */
 export function getPipelineList(pageIndex = 0, pageSize = 20) {
-  return defHttp.get({ url: `${baseUrl}/list`, params: { pageIndex, pageSize }, headers: authHeaders() });
+  return defHttp.get({ url: `${baseUrl}/list`, params: { pageIndex, pageSize } });
 }
 
 /** 下载源码 */
 export function downloadSourceCode(id: number) {
-  return defHttp.get({ url: `${baseUrl}/${id}/download-source`, responseType: 'blob', headers: authHeaders() }, { isReturnNativeResponse: true });
+  return defHttp.get({ url: `${baseUrl}/${id}/download-source`, responseType: 'blob' }, { isReturnNativeResponse: true });
 }
 
 // ─── 迭代开发 ───
@@ -109,6 +110,14 @@ export interface PipelineDetail {
   currentStage: string;
   status: string;
   stages: StageInfo[];
+  messages?: Array<{
+    id: string;
+    role: 'user' | 'assistant' | 'system' | 'tool';
+    content: string;
+    stage: string;
+    sequence: number;
+    createTime?: string;
+  }>;
   generatedSystem?: {
     sandboxId: string;
     accessUrl: string;

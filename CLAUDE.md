@@ -86,14 +86,14 @@ onUnmounted(() => {
 
 ```typescript
 // ❌ 禁止 — 开发环境无 /dev 前缀，SSE 不到后端
-new EventSource(`/api/founder/ai/pipeline/${id}/events`);
+new EventSource(`/api/studio/pipeline/execute/${id}/events`);
 
 // ✅ 必须 — 使用 buildEventSourceUrl（与 axios apiUrl 规则一致）
 import { buildEventSourceUrl } from '/@/utils/http/sseUrl';
-new EventSource(buildEventSourceUrl(`/api/founder/ai/pipeline/${id}/events`));
+new EventSource(buildEventSourceUrl(`/api/studio/pipeline/execute/${id}/events`));
 ```
 
-HTTP 入口是 **`AIDevelopmentPipelineService`**（`api/founder/ai/pipeline`），不是 `PipelineEngineService`。
+HTTP 入口是 **`AIDevelopmentPipelineService`**（`api/studio/pipeline/execute`），不是 `PipelineEngineService`。
 
 ---
 

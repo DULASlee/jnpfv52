@@ -267,7 +267,7 @@
   // ── 加载流水线状态 ──
   async function loadPipelineState() {
     try {
-      const res: any = await defHttp.get({ url: `/api/founder/ai/pipeline/${activePipelineId.value}` });
+      const res: any = await defHttp.get({ url: `/api/studio/pipeline/execute/${activePipelineId.value}` });
       const detail = res?.data || res;
       if (detail?.currentStage) {
         const idx = pipelineStages.findIndex(s => s.key === detail.currentStage);
@@ -327,7 +327,7 @@
 
     try {
       await defHttp.post({
-        url: `/api/founder/ai/pipeline/${activePipelineId.value}/execute`,
+        url: `/api/studio/pipeline/execute/${activePipelineId.value}/execute`,
         data: {
           message: content,
           stageName: pipelineStages[currentStageIdx.value]?.key || 'requirement',
@@ -349,7 +349,7 @@
     streaming.value = true;
 
     const { connect, disconnect } = useSSE({
-      url: `/api/founder/ai/pipeline/${activePipelineId.value}/events`,
+      url: `/api/studio/pipeline/execute/${activePipelineId.value}/events`,
       onMessage: (msg: any) => {
         if (abortFlag.value) {
           disconnect();
@@ -421,7 +421,7 @@
     if (!activePipelineId.value || activePipelineId.value === 0) {
       try {
         const res: any = await defHttp.post({
-          url: '/api/founder/ai/pipeline/create',
+          url: '/api/studio/pipeline/execute/create',
           data: { requirement: content },
         });
         activePipelineId.value = res?.data?.PipelineId || res?.data?.pipelineId || res?.PipelineId || res?.pipelineId || res?.id;
@@ -462,7 +462,7 @@
   async function handleConfirmStage() {
     try {
       await defHttp.post({
-        url: `/api/founder/ai/pipeline/stage/${activePipelineId.value}/confirm`,
+        url: `/api/studio/pipeline/execute/stage/${activePipelineId.value}/confirm`,
         data: { stage: currentStageIdx.value + 1, approved: true },
       });
 

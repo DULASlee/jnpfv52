@@ -265,7 +265,7 @@
   // ── 加载流水线状态 ──
   async function loadPipelineState() {
     try {
-      const res: any = await defHttp.get({ url: `/api/founder/ai/pipeline/${props.pipelineId}` });
+      const res: any = await defHttp.get({ url: `/api/studio/pipeline/execute/${props.pipelineId}` });
       const detail = res?.data || res;
       if (detail?.currentStage) {
         const idx = pipelineStages.findIndex(s => s.key === detail.currentStage);
@@ -326,7 +326,7 @@
     // 通过 /execute 触发流水线 → 连接 SSE 获取流式输出
     try {
       await defHttp.post({
-        url: `/api/founder/ai/pipeline/${props.pipelineId}/execute`,
+        url: `/api/studio/pipeline/execute/${props.pipelineId}/execute`,
         data: {
           message: content,
           stageName: pipelineStages[currentStageIdx.value]?.key || 'requirement',
@@ -350,7 +350,7 @@
     streaming.value = true;
 
     const { connect, disconnect } = useSSE({
-      url: `/api/founder/ai/pipeline/${props.pipelineId}/events`,
+      url: `/api/studio/pipeline/execute/${props.pipelineId}/events`,
       onMessage: (msg: any) => {
         if (abortFlag.value) {
           disconnect();
@@ -444,7 +444,7 @@
   async function handleConfirmStage() {
     try {
       await defHttp.post({
-        url: `/api/founder/ai/pipeline/stage/${props.pipelineId}/confirm`,
+        url: `/api/studio/pipeline/execute/stage/${props.pipelineId}/confirm`,
         data: { stage: currentStageIdx.value + 1, approved: true },
       });
 

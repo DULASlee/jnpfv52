@@ -1,7 +1,7 @@
 /**
  * usePipelineSSE — Pipeline SSE 事件订阅（P2）
  *
- * 连接到 GET /api/pipeline/{id}/events 的 SSE 流，
+ * 连接到 GET /api/studio/pipeline/execute/{id}/events 的 SSE 流，
  * 解析 PipelineSSEEvent 并暴露响应式状态。
  *
  * @module ai/composables/usePipelineSSE
@@ -40,7 +40,7 @@ export function usePipelineSSE(pipelineId: number): UsePipelineSSEReturn {
   const MAX_RETRIES = 5;
 
   function connect() {
-    const url = buildEventSourceUrl(`/api/pipeline/${pipelineId}/events`);
+    const url = buildEventSourceUrl(`/api/studio/pipeline/execute/${pipelineId}/events`);
     eventSource = new EventSource(url);
 
     eventSource.onopen = () => {

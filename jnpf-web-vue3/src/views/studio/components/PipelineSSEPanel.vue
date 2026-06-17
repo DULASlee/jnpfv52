@@ -44,6 +44,7 @@
 <script setup lang="ts">
   import { computed, reactive, ref, onUnmounted } from 'vue';
   import type { PipelineSSEEvent } from '../../../core/ai/services/pipeline-sse-types';
+  import { buildEventSourceUrl } from '/@/utils/http/sseUrl';
 
   const props = defineProps<{
     pipelineId: number;
@@ -58,6 +59,9 @@
   const error = ref<string | null>(null);
   const lastHeartbeat = ref('');
   let eventSource: EventSource | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let retryCount = 0;
+  const MAX_RETRIES = 5;
 
   // Agent 状态
   interface AgentState {
@@ -96,13 +100,14 @@
   let startTime = 0;
 
   function connect() {
-    const url = `/api/pipeline/${props.pipelineId}/events`;
+    const url = buildEventSourceUrl(`/api/studio/pipeline/execute/${props.pipelineId}/events`);
     eventSource = new EventSource(url);
     startTime = Date.now();
 
     eventSource.onopen = () => {
       connected.value = true;
       error.value = null;
+      retryCount = 0;
     };
 
     eventSource.onmessage = (e: MessageEvent<string>) => {
@@ -133,15 +138,28 @@
 
     eventSource.onerror = () => {
       connected.value = false;
-      error.value = '连接中断';
-      setTimeout(() => {
-        eventSource?.close();
+      eventSource?.close();
+      eventSource = null;
+
+      if (retryCount >= MAX_RETRIES) {
+        error.value = `重连失败（已达上限 ${MAX_RETRIES} 次）`;
+        return;
+      }
+
+      error.value = `连接中断，正在重连 (${retryCount + 1}/${MAX_RETRIES})...`;
+      retryCount++;
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
         connect();
       }, 5000);
     };
   }
 
   function disconnect() {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
     eventSource?.close();
     eventSource = null;
     connected.value = false;

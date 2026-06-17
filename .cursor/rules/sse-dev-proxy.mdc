@@ -20,7 +20,7 @@ alwaysApply: false
 | 后端 LLM 完成，前端「连接超时」 | 前后端 URL 不匹配 / PipelineEngineService 路由错 | **EventSource 未带 `/dev` 前缀**，请求打到 Vite 而非 :5000 |
 | execute 200，events 无数据 | 后端 SSE 没写 | Network 里 EventSource URL 缺少 `VITE_GLOB_API_URL` 前缀 |
 
-**禁止** 将 `PipelineEngineService`（`IPipelineEngine`，非 HTTP API）当作路由排查对象。HTTP 入口是 **`AIDevelopmentPipelineService`**（`api/founder/ai/pipeline`）。
+**禁止** 将 `PipelineEngineService`（`IPipelineEngine`，非 HTTP API）当作路由排查对象。HTTP 入口是 **`AIDevelopmentPipelineService`**（`api/studio/pipeline/execute`）。
 
 ## 强制规则
 
@@ -33,9 +33,9 @@ alwaysApply: false
 ```typescript
 import { buildEventSourceUrl } from '/@/utils/http/sseUrl';
 
-const url = buildEventSourceUrl(`/api/founder/ai/pipeline/${pipelineId}/events`);
+const url = buildEventSourceUrl(`/api/studio/pipeline/execute/${pipelineId}/events`);
 eventSource = new EventSource(url);
-// 开发环境实际请求: http://localhost:3100/dev/api/founder/ai/pipeline/{id}/events
+// 开发环境实际请求: http://localhost:3100/dev/api/studio/pipeline/execute/{id}/events
 ```
 
 ## 与 R6 的关系

@@ -2,7 +2,7 @@
 
 | 字段 | 内容 |
 |------|------|
-| 状态 | 已接受 |
+| 状态 | 已接受（路由部分已由 ADR-003 取代） |
 | 日期 | 2026-06-18 |
 | 决策者 | 架构评审（流水线 SSE 连接超时排查） |
 
@@ -63,16 +63,18 @@ execute 成功触发后端 LLM，SSE 连不到后端 → 收不到 chunk → 超
 | `jnpf-web-vue3/.env.development` | `VITE_GLOB_API_URL` / `VITE_PROXY` |
 | `backend/.../AIDevelopmentPipelineService.cs` | 流水线 HTTP API（非 PipelineEngineService） |
 
-## 前端 ↔ 后端 URL 映射（权威）
+## 前端 ↔ 后端 URL 映射（权威，2026-06-18 更新见 ADR-003）
 
 | 操作 | 路由 |
 |------|------|
-| 创建流水线 | `POST /api/founder/ai/pipeline/create` |
-| 执行阶段（触发 LLM） | `POST /api/founder/ai/pipeline/{pipelineId}/execute` |
-| SSE 事件流 | `GET /api/founder/ai/pipeline/{pipelineId}/events` |
-| 流水线详情 | `GET /api/founder/ai/pipeline/{pipelineId}` |
-| 列表 | `GET /api/founder/ai/pipeline/list` |
-| 确认阶段 | `POST /api/founder/ai/pipeline/stage/{stageId}/confirm` |
-| 回滚 | `POST /api/founder/ai/pipeline/{pipelineId}/rollback` |
+| 创建流水线 | `POST /api/studio/pipeline/execute/create` |
+| 执行阶段 | `POST /api/studio/pipeline/execute/{pipelineId}/execute` |
+| SSE 事件流 | `GET /api/studio/pipeline/execute/{pipelineId}/events` |
+| 流水线详情 | `GET /api/studio/pipeline/execute/{pipelineId}` |
+| 列表 | `GET /api/studio/pipeline/execute/list` |
+| 确认阶段 | `POST /api/studio/pipeline/execute/stage/{stageId}/confirm` |
+| 回滚 | `POST /api/studio/pipeline/execute/{pipelineId}/rollback` |
+
+> 废止：`api/founder/ai/pipeline/*`（见 ADR-003）
 
 开发环境实际请求路径 = **`/dev` + 上表路径**。

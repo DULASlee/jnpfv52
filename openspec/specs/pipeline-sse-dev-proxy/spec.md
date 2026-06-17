@@ -9,8 +9,8 @@ TBD - created by archiving change add-pipeline-sse-dev-proxy. Update Purpose aft
 
 #### Scenario: 开发环境 SSE 经 Vite 代理到达后端
 
-- **WHEN** 前端订阅 `GET /api/founder/ai/pipeline/{pipelineId}/events` 且 `VITE_GLOB_API_URL=/dev`
-- **THEN** 浏览器实际请求 URL MUST 为 `/dev/api/founder/ai/pipeline/{pipelineId}/events`
+- **WHEN** 前端订阅 `GET /api/studio/pipeline/execute/{pipelineId}/events` 且 `VITE_GLOB_API_URL=/dev`
+- **THEN** 浏览器实际请求 URL MUST 为 `/dev/api/studio/pipeline/execute/{pipelineId}/events`
 - **AND** Vite 代理 MUST 将请求转发至 `http://localhost:5000`
 
 #### Scenario: 禁止裸写 EventSource 路径
@@ -21,11 +21,13 @@ TBD - created by archiving change add-pipeline-sse-dev-proxy. Update Purpose aft
 
 ### Requirement: 流水线 HTTP API 入口 MUST 为 AIDevelopmentPipelineService
 
-排查 SSE 或流水线 API 路由时，MUST 以 `AIDevelopmentPipelineService`（`[Route("api/founder/ai/pipeline")]`）为 HTTP 入口。MUST NOT 将 `PipelineEngineService`（`IPipelineEngine, ISingleton`，非 `IDynamicApiController`）当作 HTTP 路由排查对象。
+排查 SSE 或流水线 API 路由时，MUST 以 `AIDevelopmentPipelineService`（`[Route("api/studio/pipeline/execute")]`）为 HTTP 入口。MUST NOT 将 `PipelineEngineService`（`IPipelineEngine, ISingleton`，非 `IDynamicApiController`）当作 HTTP 路由排查对象。路由迁移决策见 ADR-003。
 
 #### Scenario: 后端 LLM 完成但前端连接超时
 
 - **WHEN** 后端日志显示 LLM 流式完成，前端显示「连接超时」
 - **THEN** 排查 MUST 优先检查浏览器 Network 面板中 EventSource 请求 URL 是否含 apiUrl 前缀
-- **AND** MUST NOT 优先修改 `PipelineEngineService` 或假设 `/api/studio/pipeline/*` 路由
+- **AND** MUST NOT 优先修改 `PipelineEngineService` 或假设错误的 Furion 动态路由
+
+> **路由更新（ADR-003）**：流水线 API 已从 `api/founder/ai/pipeline` 迁移至 `api/studio/pipeline/execute`。
 

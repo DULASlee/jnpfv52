@@ -31,7 +31,7 @@ templates:
 
   - id: pipeline-sse
     when: SSE/EventSource/流水线连接超时/AI聊天流式
-    query: ["SSE", "EventSource", "/dev", "apiUrl", "连接超时", "PipelineEngineService", "AIDevelopmentPipelineService"]
+    query: ["SSE", "EventSource", "/dev", "apiUrl", "连接超时", "studio/pipeline/execute", "AIDevelopmentPipelineService"]
     limit: 5
 
   - id: conventions
