@@ -88,7 +88,7 @@
 <style scoped lang="less">
   .studio-sidebar {
     width: 240px;
-    height: 100%;
+    height: 100vh;
     display: flex;
     flex-direction: column;
     background: #fff;
@@ -131,6 +131,13 @@
     flex: 1;
     overflow-y: auto;
     padding: 8px 0;
+  }
+  .sub-menus::-webkit-scrollbar {
+    width: 4px;
+  }
+  .sub-menus::-webkit-scrollbar-thumb {
+    background: #d9d9d9;
+    border-radius: 2px;
   }
   .menu-group .group-title {
     display: flex;

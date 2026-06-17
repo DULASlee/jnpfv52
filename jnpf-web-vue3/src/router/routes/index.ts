@@ -116,6 +116,7 @@ export const StudioPipelineRoute: AppRouteRecordRaw = {
       meta: { title: '模型路由策略' },
     },
     { path: 'stages', name: 'PipelineStages', component: () => import('/@/views/studio/views/pipeline/stages.vue'), meta: { title: '流水线阶段设置' } },
+    { path: 'providers', name: 'ModelProviders', component: () => import('/@/views/studio/views/pipeline/providers.vue'), meta: { title: '模型供应商配置' } },
   ],
 };
 
@@ -152,7 +153,30 @@ export const StudioAgentRoute: AppRouteRecordRaw = {
   path: '/studio/agent',
   component: LAYOUT,
   name: 'StudioAgent',
-  children: [{ path: 'create', name: 'AgentConfig', component: () => import('/@/views/studio/views/agent/create.vue'), meta: { title: '智能体管理' } }],
+  meta: { title: '智能体管理' },
+  children: [
+    { path: 'create', name: 'AgentConfig', component: () => import('/@/views/studio/views/agent/create.vue'), meta: { title: '智能体管理' } },
+    { path: 'sub-agents', name: 'SubAgents', component: () => import('/@/views/studio/views/agent/sub-agents.vue'), meta: { title: '子智能体管理' } },
+    { path: 'skills', name: 'SkillsManagement', component: () => import('/@/views/studio/views/agent/skills.vue'), meta: { title: 'Skills 管理' } },
+    { path: 'mcp', name: 'McpConfig', component: () => import('/@/views/studio/views/agent/mcp.vue'), meta: { title: 'MCP 配置' } },
+  ],
+};
+
+// /studio/tenant
+export const StudioTenantRoute: AppRouteRecordRaw = {
+  path: '/studio/tenant',
+  component: LAYOUT,
+  name: 'StudioTenant',
+  meta: { title: '租户定制' },
+  children: [
+    {
+      path: 'industry-knowledge',
+      name: 'IndustryKnowledge',
+      component: () => import('/@/views/studio/views/tenant/industry-knowledge.vue'),
+      meta: { title: '行业知识设置' },
+    },
+    { path: 'glossary', name: 'Glossary', component: () => import('/@/views/studio/views/tenant/glossary.vue'), meta: { title: '业务术语表' } },
+  ],
 };
 
 // Basic routing without permission
@@ -168,6 +192,7 @@ export const basicRoutes = [
   StudioPipelineRoute,
   StudioKnowledgeRoute,
   StudioAgentRoute,
+  StudioTenantRoute,
   ...mainOutRoutes,
   REDIRECT_ROUTE,
   PAGE_NOT_FOUND_ROUTE,
