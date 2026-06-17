@@ -6,6 +6,7 @@
  */
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
+import { join } from 'path';
 
 let input = {};
 try {
@@ -39,7 +40,12 @@ function findProjectRoot(filePath) {
 const projectRoot = findProjectRoot(filePath);
 if (!projectRoot) process.exit(0);
 
-const BIN = (n) => `${projectRoot}/node_modules/.bin/${n}`;
+// Windows 兼容：node_modules/.bin/ 下是 .cmd 文件，需要加后缀
+const isWin = process.platform === 'win32';
+const BIN = (n) => {
+  const base = join(projectRoot, 'node_modules', '.bin', n);
+  return isWin ? `${base}.cmd` : base;
+};
 
 // Write → Prettier + ESLint
 if (toolName === 'Write') {
