@@ -38,6 +38,8 @@ docs/token.txt
 # Local / temp
 .specstory/
 *.log
+*.bak
+h5-*.png
 backend-run.*
 pc-dev.*
 ds-dev.*
