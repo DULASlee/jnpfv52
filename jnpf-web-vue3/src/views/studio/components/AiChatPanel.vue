@@ -591,6 +591,7 @@
   /* ====== 消息区 ====== */
   .messages-area {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 20px 16px;
   }
