@@ -1,6 +1,6 @@
 {
   "Tenant": {
-    "MultiTenancy": true,
+    "MultiTenancy": false,
     "MultiTenancyType": "SCHEMA", //COLUMN SCHEMA
     "MultiTenancyDBInterFace": "https://www.jnpfsoft.com/api/Saas/Tenant/DbContent/",
     "MultiSystem": true
