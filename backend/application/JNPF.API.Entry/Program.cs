@@ -26,7 +26,7 @@ public class WebComponent : IWebComponent
 {
     public void Load(WebApplicationBuilder builder, ComponentContext componentContext)
     {
-        // Configure Serilog
+        // Configure Serilog — 统一由 SerilogBootstrap 管理全部 Sink + 过滤
         SerilogBootstrap.Configure(builder.Configuration);
         builder.Host.UseSerilog();
 

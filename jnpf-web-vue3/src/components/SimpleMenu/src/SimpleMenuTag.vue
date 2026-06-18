@@ -27,7 +27,7 @@
 
         if (!item) return false;
 
-        const { tag } = item;
+        const { tag } = item as any;
         if (!tag) return false;
 
         const { dot, content } = tag;
@@ -38,14 +38,14 @@
       const getContent = computed(() => {
         if (!getShowTag.value) return '';
         const { item, collapseParent } = props;
-        const { tag } = item;
+        const { tag } = item as any;
         const { dot, content } = tag!;
         return dot || collapseParent ? '' : content;
       });
 
       const getTagClass = computed(() => {
         const { item, collapseParent } = props;
-        const { tag = {} } = item || {};
+        const { tag = {} } = (item || {}) as any;
         const { dot, type = 'error' } = tag;
         const tagCls = `${prefixCls}-tag`;
         return [

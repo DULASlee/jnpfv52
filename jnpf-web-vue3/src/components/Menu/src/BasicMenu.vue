@@ -36,6 +36,7 @@
   export default defineComponent({
     name: 'BasicMenu',
     components: {
+      // eslint-disable-next-line vue/no-reserved-component-names
       Menu,
       BasicSubMenuItem,
     },
@@ -108,7 +109,7 @@
           },
         );
 
-      async function handleMenuClick({ key }: { key: string; keyPath: string[] }) {
+      async function handleMenuClick({ key }: any) {
         let realKey = key;
         const menus = await getMenus();
         let list = menus.filter(o => o.path === key && o.type === 1);

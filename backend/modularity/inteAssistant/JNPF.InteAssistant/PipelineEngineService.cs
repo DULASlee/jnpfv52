@@ -1,5 +1,6 @@
 using JNPF.DependencyInjection;
 using JNPF.InteAssistant.Entitys.Common;
+using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -17,6 +18,7 @@ public class PipelineEngineService : IPipelineEngine, ISingleton
     private readonly SqlSugar.ISqlSugarClient _db;
     private readonly ConcurrentDictionary<long, PipelineState> _pipelines = new();
     private long _nextId = 1;
+    private int _idSeedLoaded;
 
     public PipelineEngineService(ILogger<PipelineEngineService> logger, SqlSugar.ISqlSugarClient db = null!)
     {
@@ -27,6 +29,7 @@ public class PipelineEngineService : IPipelineEngine, ISingleton
     public Task<PipelineResult> CreateAsync(
         PipelineCreateRequest request, long tenantId, long userId, CancellationToken ct = default)
     {
+        EnsureNextIdSeedLoaded();
         var id = Interlocked.Increment(ref _nextId);
         var state = new PipelineState
         {
@@ -55,29 +58,32 @@ public class PipelineEngineService : IPipelineEngine, ISingleton
         });
     }
 
-    public Task<PipelineResult> StartAsync(long pipelineId, CancellationToken ct = default)
+    public async Task<PipelineResult> StartAsync(long pipelineId, CancellationToken ct = default)
     {
-        if (!_pipelines.TryGetValue(pipelineId, out var state))
+        var state = await GetPipelineStateAsync(pipelineId, ct);
+        if (state == null)
             throw new InvalidOperationException($"流水线 {pipelineId} 不存在");
 
         state.Status = "running";
         state.StartedAt = DateTime.UtcNow;
+        await PersistPipelineSnapshotAsync(state, ct);
 
         _logger.LogInformation("流水线启动: ID={Id}", pipelineId);
 
-        return Task.FromResult(new PipelineResult
+        return new PipelineResult
         {
             PipelineId = pipelineId,
             Name = state.Name,
             CurrentStage = state.CurrentStage,
             Status = state.Status
-        });
+        };
     }
 
-    public Task<StageResult> ExecuteStageAsync(
+    public async Task<StageResult> ExecuteStageAsync(
         long pipelineId, string stageName, CancellationToken ct = default)
     {
-        if (!_pipelines.TryGetValue(pipelineId, out var state))
+        var state = await GetPipelineStateAsync(pipelineId, ct);
+        if (state == null)
             throw new InvalidOperationException($"流水线 {pipelineId} 不存在");
 
         if (!PipelineStage.Order.Contains(stageName))
@@ -85,37 +91,60 @@ public class PipelineEngineService : IPipelineEngine, ISingleton
 
         state.CurrentStage = stageName;
         state.Status = "running";
-
-        var stage = new StageRecord
+        var stageOrder = Array.IndexOf(PipelineStage.Order, stageName);
+        var stage = state.Stages.FirstOrDefault(s => s.StageName == stageName);
+        if (stage == null)
         {
-            Id = state.Stages.Count + 1,
-            StageName = stageName,
-            Status = "running",
-            StageOrder = Array.IndexOf(PipelineStage.Order, stageName),
-            StartedAt = DateTime.UtcNow
-        };
-        state.Stages.Add(stage);
+            stage = new StageRecord
+            {
+                Id = state.Stages.Count + 1,
+                StageName = stageName,
+                StageOrder = stageOrder,
+                StartedAt = DateTime.UtcNow
+            };
+            state.Stages.Add(stage);
+        }
+
+        stage.Status = "running";
+        if (stage.StartedAt == default) stage.StartedAt = DateTime.UtcNow;
+        await PersistPipelineSnapshotAsync(state, ct);
 
         _logger.LogInformation("流水线阶段执行: ID={Id}, Stage={Stage}", pipelineId, stageName);
 
-        return Task.FromResult(new StageResult
+        return new StageResult
         {
             StageId = stage.Id,
             StageName = stageName,
             Status = "running"
-        });
+        };
     }
 
-    public Task<StageResult> ConfirmStageAsync(
+    public async Task<StageResult> ConfirmStageAsync(
         long stageId, StageConfirmation confirmation, CancellationToken ct = default)
     {
-        var pipeline = _pipelines.Values
-            .FirstOrDefault(p => p.Stages.Any(s => s.Id == stageId))
-            ?? throw new InvalidOperationException($"阶段 {stageId} 不存在");
+        // 前端当前传的是 pipelineId；这里兼容「按 pipelineId」和「按 stageId」两种调用。
+        var pipeline = await GetPipelineStateAsync(stageId, ct);
+        StageRecord? stage = null;
 
-        var stage = pipeline.Stages.First(s => s.Id == stageId);
+        if (pipeline != null)
+        {
+            stage = pipeline.Stages.FirstOrDefault(s => s.StageName == pipeline.CurrentStage)
+                ?? pipeline.Stages.OrderByDescending(s => s.StageOrder).FirstOrDefault();
+        }
+        else
+        {
+            pipeline = _pipelines.Values.FirstOrDefault(p => p.Stages.Any(s => s.Id == stageId));
+            if (pipeline != null) stage = pipeline.Stages.FirstOrDefault(s => s.Id == stageId);
+        }
+
+        if (pipeline == null || stage == null)
+            throw new InvalidOperationException($"阶段 {stageId} 不存在");
+
         stage.Status = confirmation.Approved ? "approved" : "review";
         stage.CompletedAt = DateTime.UtcNow;
+        var systemText = confirmation.Approved
+            ? $"✅ 已确认「{stage.StageName}」阶段"
+            : $"🛠️ 已退回「{stage.StageName}」阶段，请根据意见继续完善";
 
         if (confirmation.Approved)
         {
@@ -123,30 +152,104 @@ public class PipelineEngineService : IPipelineEngine, ISingleton
             if (nextStage != null)
             {
                 pipeline.CurrentStage = nextStage;
+                var nextOrder = Array.IndexOf(PipelineStage.Order, nextStage);
+                if (!pipeline.Stages.Any(s => s.StageName == nextStage))
+                {
+                    pipeline.Stages.Add(new StageRecord
+                    {
+                        Id = pipeline.Stages.Count + 1,
+                        StageName = nextStage,
+                        StageOrder = nextOrder,
+                        Status = "pending",
+                        StartedAt = DateTime.UtcNow
+                    });
+                }
+                systemText = $"✅ 已进入阶段 {nextOrder + 1}：{nextStage}";
             }
             else
             {
                 pipeline.Status = "completed";
+                systemText = "🎉 已完成全部阶段";
             }
         }
+        else
+        {
+            pipeline.Status = "review";
+        }
+
+        await PersistPipelineSnapshotAsync(pipeline, ct);
+        await AppendSystemMessageAsync(pipeline.Id, pipeline.CurrentStage, systemText, ct);
 
         _logger.LogInformation("阶段确认: StageId={Id}, Approved={Approved}, Next={Next}",
             stageId, confirmation.Approved, pipeline.CurrentStage);
 
-        return Task.FromResult(new StageResult
+        return new StageResult
         {
             StageId = stage.Id,
             StageName = stage.StageName,
             Status = stage.Status
-        });
+        };
     }
 
-    public Task<PipelineDetail> GetDetailAsync(long pipelineId, CancellationToken ct = default)
+    public async Task<StageResult> RollbackAsync(
+        long pipelineId, string targetStage, string? reason = null, CancellationToken ct = default)
     {
-        if (!_pipelines.TryGetValue(pipelineId, out var state))
+        var pipeline = await GetPipelineStateAsync(pipelineId, ct);
+        if (pipeline == null)
+            throw new InvalidOperationException($"流水线 {pipelineId} 不存在");
+        if (!PipelineStage.Order.Contains(targetStage))
+            throw new ArgumentException($"未知阶段: {targetStage}");
+
+        var targetOrder = Array.IndexOf(PipelineStage.Order, targetStage);
+        pipeline.CurrentStage = targetStage;
+        pipeline.Status = "running";
+
+        pipeline.Stages.RemoveAll(s => s.StageOrder > targetOrder);
+        foreach (var stage in pipeline.Stages)
+        {
+            stage.Status = stage.StageOrder < targetOrder ? "completed" : "running";
+            if (stage.StageOrder == targetOrder) stage.CompletedAt = null;
+        }
+
+        if (!pipeline.Stages.Any(s => s.StageName == targetStage))
+        {
+            pipeline.Stages.Add(new StageRecord
+            {
+                Id = pipeline.Stages.Count + 1,
+                StageName = targetStage,
+                Status = "running",
+                StageOrder = targetOrder,
+                StartedAt = DateTime.UtcNow
+            });
+        }
+
+        await PersistPipelineSnapshotAsync(pipeline, ct);
+        var rollbackMessage = string.IsNullOrWhiteSpace(reason)
+            ? $"↩️ 已回退到阶段 {targetOrder + 1}：{targetStage}"
+            : $"↩️ 已回退到阶段 {targetOrder + 1}：{targetStage}，原因：{reason}";
+        await AppendSystemMessageAsync(pipeline.Id, targetStage, rollbackMessage, ct);
+
+        _logger.LogInformation("阶段回退: PipelineId={Id}, Target={Stage}, Reason={Reason}",
+            pipelineId, targetStage, reason ?? "-");
+
+        return new StageResult
+        {
+            StageId = targetOrder + 1,
+            StageName = targetStage,
+            Status = "running",
+            Output = rollbackMessage
+        };
+    }
+
+    public async Task<PipelineDetail> GetDetailAsync(long pipelineId, CancellationToken ct = default)
+    {
+        var state = await GetPipelineStateAsync(pipelineId, ct);
+        if (state == null)
             throw new InvalidOperationException($"流水线 {pipelineId} 不存在");
 
-        return Task.FromResult(new PipelineDetail
+        var messages = await GetPipelineMessagesAsync(pipelineId, ct);
+
+        return new PipelineDetail
         {
             Id = state.Id,
             Name = state.Name,
@@ -158,30 +261,43 @@ public class PipelineEngineService : IPipelineEngine, ISingleton
                 StageName = s.StageName,
                 Status = s.Status,
                 StageOrder = s.StageOrder
-            }).ToList()
-        });
+            }).ToList(),
+            Messages = messages
+        };
     }
 
-    public Task<List<PipelineSummary>> ListAsync(
+    public async Task<List<PipelineSummary>> ListAsync(
         long tenantId, int pageIndex, int pageSize, CancellationToken ct = default)
     {
-        var list = _pipelines.Values
-            .Where(p => p.TenantId == tenantId)
-            .OrderByDescending(p => p.CreatedAt)
-            .Skip(pageIndex * pageSize)
-            .Take(pageSize)
-            .Select(p => new PipelineSummary
+        if (_db == null) return new List<PipelineSummary>();
+        if (pageIndex < 0) pageIndex = 0;
+        if (pageSize <= 0) pageSize = 20;
+
+        var tenant = tenantId <= 0 ? null : tenantId.ToString();
+        var query = _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.DeleteMark == null || x.DeleteMark == 0);
+        if (!string.IsNullOrWhiteSpace(tenant))
+        {
+            query = query.Where(x => x.TenantId == tenant);
+        }
+
+        var entities = await query
+            .OrderBy(x => x.LastModifyTime, SqlSugar.OrderByType.Desc)
+            .OrderBy(x => x.CreatorTime, SqlSugar.OrderByType.Desc)
+            .ToPageListAsync(pageIndex + 1, pageSize);
+
+        var list = entities.Select(x => new PipelineSummary
             {
-                Id = p.Id,
-                Name = p.Name,
-                PipelineType = p.PipelineType,
-                CurrentStage = p.CurrentStage,
-                Status = p.Status,
-                UpdatedAt = p.CreatedAt
+                Id = long.TryParse(x.Id, out var parsedId) ? parsedId : 0,
+                Name = x.Name ?? "",
+                PipelineType = "full_app",
+                CurrentStage = x.CurrentStage ?? PipelineStage.Requirement,
+                Status = x.Status ?? "draft",
+                UpdatedAt = x.LastModifyTime ?? x.CreatorTime ?? DateTime.Now
             })
             .ToList();
 
-        return Task.FromResult(list);
+        return list;
     }
 
     private class PipelineState
@@ -197,6 +313,133 @@ public class PipelineEngineService : IPipelineEngine, ISingleton
         public DateTime CreatedAt { get; set; }
         public DateTime? StartedAt { get; set; }
         public List<StageRecord> Stages { get; set; } = new();
+    }
+
+    private void EnsureNextIdSeedLoaded()
+    {
+        if (Interlocked.CompareExchange(ref _idSeedLoaded, 1, 0) != 0) return;
+        if (_db == null) return;
+
+        try
+        {
+            var maxId = _db.Ado.GetLong("SELECT ISNULL(MAX(CAST(F_ID AS BIGINT)), 0) FROM BASE_AI_PIPELINE");
+            _nextId = Math.Max(_nextId, maxId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "加载流水线 ID 种子失败，继续使用内存自增");
+        }
+    }
+
+    private async Task<PipelineState?> GetPipelineStateAsync(long pipelineId, CancellationToken ct = default)
+    {
+        if (_pipelines.TryGetValue(pipelineId, out var memoryState)) return memoryState;
+        if (_db == null) return null;
+
+        var entity = await _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.Id == pipelineId.ToString() && (x.DeleteMark == null || x.DeleteMark == 0))
+            .FirstAsync();
+        if (entity == null) return null;
+
+        var stage = string.IsNullOrWhiteSpace(entity.CurrentStage) ? PipelineStage.Requirement : entity.CurrentStage;
+        if (!PipelineStage.Order.Contains(stage)) stage = PipelineStage.Requirement;
+
+        var hydrated = new PipelineState
+        {
+            Id = pipelineId,
+            Name = entity.Name ?? $"Pipeline-{pipelineId}",
+            CurrentStage = stage,
+            Status = string.IsNullOrWhiteSpace(entity.Status) ? "draft" : entity.Status,
+            CreatedAt = entity.CreatorTime ?? DateTime.UtcNow,
+            StartedAt = entity.StartedTime,
+            TenantId = long.TryParse(entity.TenantId, out var tenantId) ? tenantId : 0
+        };
+
+        var currentStageOrder = Array.IndexOf(PipelineStage.Order, stage);
+        if (currentStageOrder < 0) currentStageOrder = 0;
+
+        for (var i = 0; i <= currentStageOrder; i++)
+        {
+            hydrated.Stages.Add(new StageRecord
+            {
+                Id = i + 1,
+                StageName = PipelineStage.Order[i],
+                Status = i < currentStageOrder ? "completed" : "running",
+                StageOrder = i,
+                StartedAt = entity.StartedTime ?? hydrated.CreatedAt
+            });
+        }
+
+        _pipelines[pipelineId] = hydrated;
+        _logger.LogInformation("流水线状态回填: ID={Id}, Stage={Stage}, Status={Status}", pipelineId, stage, hydrated.Status);
+        return hydrated;
+    }
+
+    private async Task<List<PipelineMessageInfo>> GetPipelineMessagesAsync(long pipelineId, CancellationToken ct = default)
+    {
+        if (_db == null) return new List<PipelineMessageInfo>();
+        var rows = await _db.Queryable<AiPipelineMessageEntity>()
+            .Where(x => x.PipelineId == pipelineId.ToString() && (x.DeleteMark == null || x.DeleteMark == 0))
+            .OrderBy(x => x.CreatorTime, SqlSugar.OrderByType.Asc)
+            .OrderBy(x => x.Sequence, SqlSugar.OrderByType.Asc)
+            .ToListAsync();
+
+        return rows.Select(x => new PipelineMessageInfo
+        {
+            Id = x.Id,
+            Role = x.Role ?? "assistant",
+            Content = x.Content ?? "",
+            Stage = x.Stage ?? PipelineStage.Requirement,
+            Sequence = x.Sequence,
+            CreateTime = x.CreatorTime
+        }).ToList();
+    }
+
+    private async Task PersistPipelineSnapshotAsync(PipelineState state, CancellationToken ct = default)
+    {
+        if (_db == null) return;
+        var entity = await _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.Id == state.Id.ToString() && (x.DeleteMark == null || x.DeleteMark == 0))
+            .FirstAsync();
+        if (entity == null) return;
+
+        entity.CurrentStage = state.CurrentStage;
+        entity.Status = state.Status;
+        if (state.StartedAt.HasValue && !entity.StartedTime.HasValue) entity.StartedTime = state.StartedAt;
+        if (state.Status == "completed") entity.FinishedTime = DateTime.Now;
+        entity.LastModify();
+
+        await _db.Updateable(entity)
+            .UpdateColumns(x => new
+            {
+                x.CurrentStage,
+                x.Status,
+                x.StartedTime,
+                x.FinishedTime,
+                x.LastModifyTime,
+                x.LastModifyUserId
+            })
+            .ExecuteCommandAsync();
+    }
+
+    private async Task AppendSystemMessageAsync(long pipelineId, string stage, string content, CancellationToken ct = default)
+    {
+        if (_db == null || string.IsNullOrWhiteSpace(content)) return;
+        var maxSeq = await _db.Queryable<AiPipelineMessageEntity>()
+            .Where(x => x.PipelineId == pipelineId.ToString() && x.Stage == stage)
+            .MaxAsync(x => (int?)x.Sequence) ?? 0;
+
+        var msg = new AiPipelineMessageEntity
+        {
+            PipelineId = pipelineId.ToString(),
+            Stage = stage,
+            Role = "system",
+            Content = content,
+            Sequence = maxSeq + 1,
+            DeleteMark = 0
+        };
+        msg.Creator();
+        await _db.Insertable(msg).ExecuteCommandAsync();
     }
 
     #region I-12: 失败计数原子操作

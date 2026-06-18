@@ -3,7 +3,7 @@
     <template #closeIcon>
       <ModalClose :canFullscreen="false" @cancel="handleCancel" />
     </template>
-    <EasyCron v-bind="attrs" />
+    <EasyCron v-bind="attrs as any" />
   </a-modal>
 </template>
 

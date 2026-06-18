@@ -222,14 +222,24 @@
 
   // SSE 清理
   let sseDisconnect: (() => void) | null = null;
-  let errorTimer: ReturnType<typeof setTimeout> | null = null;
-  const FIRST_CHUNK_TIMEOUT_MS = 30000;
+  let connectTimer: ReturnType<typeof setTimeout> | null = null;
+  /** 仅用于 SSE HTTP 连接建立（onopen），不限制 LLM 首 token 等待（后端 TimeoutMs=120s） */
+  const SSE_CONNECT_TIMEOUT_MS = 15000;
 
-  function clearErrorTimer() {
-    if (errorTimer) {
-      clearTimeout(errorTimer);
-      errorTimer = null;
+  function clearConnectTimer() {
+    if (connectTimer) {
+      clearTimeout(connectTimer);
+      connectTimer = null;
     }
+  }
+
+  function failStream(aiMsgId: number, text: string, disconnect: () => void) {
+    clearConnectTimer();
+    const aiMsg = messages.value.find(m => m.id === aiMsgId);
+    if (aiMsg && !aiMsg.content) aiMsg.content = text;
+    streaming.value = false;
+    loading.value = false;
+    disconnect();
   }
 
   // ── 生命周期 ──
@@ -245,7 +255,7 @@
 
   onUnmounted(() => {
     if (sseDisconnect) sseDisconnect();
-    clearErrorTimer();
+    clearConnectTimer();
     if (thinkingTimer) clearInterval(thinkingTimer);
   });
 
@@ -323,8 +333,9 @@
       time: new Date().toLocaleTimeString(),
     });
 
-    // 通过 /execute 触发流水线 → 连接 SSE 获取流式输出
+    // 先连 SSE 再触发 execute，避免 channel 竞态；token 经 buildEventSourceUrl ?token= 传递
     try {
+      connectSSE(aiMsgId);
       await defHttp.post({
         url: `/api/studio/pipeline/execute/${props.pipelineId}/execute`,
         data: {
@@ -336,21 +347,24 @@
     } catch {
       /* 忽略 /execute 同步返回错误，直接读 SSE */
     }
-
-    // SSE 流式接收
-    connectSSE(aiMsgId);
   }
 
   // ── SSE 流式连接 ──
   function connectSSE(aiMsgId: number) {
     if (sseDisconnect) sseDisconnect();
-    clearErrorTimer();
+    clearConnectTimer();
 
     streamText.value = '';
     streaming.value = true;
 
+    let sseOpened = false;
+
     const { connect, disconnect } = useSSE({
       url: `/api/studio/pipeline/execute/${props.pipelineId}/events`,
+      onOpen: () => {
+        sseOpened = true;
+        clearConnectTimer();
+      },
       onMessage: (msg: any) => {
         if (abortFlag.value) {
           disconnect();
@@ -360,8 +374,6 @@
         const aiMsg = messages.value.find(m => m.id === aiMsgId);
 
         if (msg.type === 'chunk') {
-          // 收到首个 chunk 即视为连接健康，取消“首包超时”计时。
-          clearErrorTimer();
           streamText.value += msg.data;
           if (aiMsg) aiMsg.content = streamText.value;
           scrollToBottom();
@@ -375,7 +387,7 @@
           const idx = pipelineStages.findIndex(s => s.key === (msg.stage || 'requirement'));
           if (idx >= 0) updateStageUI(idx);
         } else if (msg.type === 'done') {
-          clearErrorTimer();
+          clearConnectTimer();
           if (aiMsg && streamText.value) {
             aiMsg.content = streamText.value;
             streamText.value = '';
@@ -386,28 +398,23 @@
           disconnect();
           scrollToBottom();
         } else if (msg.type === 'error') {
-          clearErrorTimer();
-          if (aiMsg && !aiMsg.content) aiMsg.content = msg.data || '⚠️ 请求失败，请重试';
-          streaming.value = false;
-          loading.value = false;
-          disconnect();
+          failStream(aiMsgId, msg.data || '⚠️ 请求失败，请重试', disconnect);
         }
       },
-      onError: () => {
-        // useSSE 内部会自动重连；首包超时由统一计时器处理，避免把瞬时 onerror 误判为失败。
+      onGiveUp: () => {
+        if (streaming.value) {
+          failStream(aiMsgId, '⚠️ 连接中断，请重试', disconnect);
+        }
       },
     });
 
     sseDisconnect = disconnect;
-    errorTimer = setTimeout(() => {
-      errorTimer = null;
-      if (!streaming.value || streamText.value) return;
-      const aiMsg = messages.value.find(m => m.id === aiMsgId);
-      if (aiMsg && !aiMsg.content) aiMsg.content = '⚠️ 连接超时，请重试';
-      streaming.value = false;
-      loading.value = false;
-      disconnect();
-    }, FIRST_CHUNK_TIMEOUT_MS);
+    connectTimer = setTimeout(() => {
+      connectTimer = null;
+      if (!sseOpened && streaming.value) {
+        failStream(aiMsgId, '⚠️ 无法连接流式服务，请重试', disconnect);
+      }
+    }, SSE_CONNECT_TIMEOUT_MS);
     connect();
   }
 

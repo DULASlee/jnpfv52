@@ -1,5 +1,5 @@
 <template>
-  <Table
+  <ATable
     v-if="summaryFunc || summaryData"
     :showHeader="false"
     :bordered="false"
@@ -13,7 +13,7 @@
 <script lang="ts">
   import type { PropType } from 'vue';
   import { defineComponent, unref, computed, toRaw } from 'vue';
-  import { Table } from 'ant-design-vue';
+  import { Table as ATable } from 'ant-design-vue';
   import { cloneDeep } from 'lodash-es';
   import { isFunction } from '/@/utils/is';
   import type { BasicColumn } from '../types/table';
@@ -25,7 +25,7 @@
   const SUMMARY_INDEX_KEY = '_index';
   export default defineComponent({
     name: 'BasicTableFooter',
-    components: { Table },
+    components: { ATable },
     props: {
       summaryFunc: {
         type: Function as PropType<Fn>,
@@ -58,7 +58,7 @@
         return dataSource;
       });
 
-      const getColumns = computed(() => {
+      const getColumns = computed((): any[] => {
         const dataSource = unref(getDataSource);
         const columns: BasicColumn[] = cloneDeep(table.getColumns());
         const index = columns.findIndex(item => item.flag === INDEX_COLUMN_FLAG);

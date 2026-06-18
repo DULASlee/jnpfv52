@@ -70,7 +70,7 @@
 
         const value = isCheckValue ? (isNumber(val) && isBoolean(val) ? val : !!val) : val;
 
-        let compProps = props.column?.editComponentProps ?? {};
+        let compProps: any = props.column?.editComponentProps ?? {};
         const { record, column, index } = props;
 
         if (isFunction(compProps)) {

@@ -25,7 +25,7 @@ alwaysApply: false
 ## 强制规则
 
 1. **禁止** 裸写 `new EventSource('/api/...')` 或 `new URL(path, window.location.origin)` 而不加 apiUrl。
-2. **必须** 使用 `buildEventSourceUrl()`（`/@/utils/http/sseUrl.ts`），与 axios 的 `useGlobSetting().apiUrl` 规则一致。
+2. **必须** 使用 `buildEventSourceUrl()`（`/@/utils/http/sseUrl.ts`），与 axios 的 `useGlobSetting().apiUrl` 规则一致，并自动附加 `?token=`（EventSource 无法带 Authorization 头）。
 3. **排查顺序**：浏览器 Network → EventSource URL 是否含 `/dev` → 再查后端 channel/推送逻辑。
 
 ## 正确示例

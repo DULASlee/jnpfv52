@@ -76,7 +76,7 @@ export function transformRouteToMenu(routeModList: AppRouteModule[], routerMappi
     },
   });
   // 路径处理
-  joinParentPath(list);
+  joinParentPath(list as unknown as Menu[]);
   return cloneDeep(list);
 }
 
@@ -86,7 +86,7 @@ export function transformRouteToMenu(routeModList: AppRouteModule[], routerMappi
 const menuParamRegex = /(?::)([\s\S]+?)((?=\/)|$)/g;
 
 export function configureDynamicParamsMenu(menu: Menu, params: RouteParams) {
-  const { path, paramPath } = toRaw(menu);
+  const { path, paramPath } = toRaw(menu) as any;
   let realPath = paramPath ? paramPath : path;
   const matchArr = realPath.match(menuParamRegex);
 
@@ -98,7 +98,7 @@ export function configureDynamicParamsMenu(menu: Menu, params: RouteParams) {
   });
   // save original param path.
   if (!paramPath && matchArr && matchArr.length > 0) {
-    menu.paramPath = path;
+    (menu as any).paramPath = path;
   }
   menu.path = realPath;
   // children

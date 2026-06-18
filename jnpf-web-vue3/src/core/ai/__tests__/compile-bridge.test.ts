@@ -141,13 +141,10 @@ describe('编译桥接层', () => {
       entity: 'test',
       response: {
         success: true,
-        project: {
-          name: 'test',
-          files: [
-            { path: 'a.vue', content: '' },
-            { path: 'b.ts', content: '' },
-          ],
-        },
+        project: new Map<string, string>([
+          ['a.vue', ''],
+          ['b.ts', ''],
+        ]),
         duration: 150,
       },
     });
@@ -188,7 +185,7 @@ describe('编译桥接层', () => {
           success: true,
           target: 'vue3-web',
           entity: 'test',
-          response: { success: true, project: { name: 't', files: [{ path: 'a.vue', content: 'x' }] }, duration: 100 },
+          response: { success: true, project: new Map<string, string>([['a.vue', 'x']]), duration: 100 },
         },
         { success: false, target: 'uniapp-h5', entity: 'test', response: { success: false, error: 'IR验证失败' } },
       ],

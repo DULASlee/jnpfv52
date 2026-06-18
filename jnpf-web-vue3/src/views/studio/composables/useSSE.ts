@@ -16,7 +16,10 @@ export interface SSEOptions {
   url: string;
   headers?: Record<string, string>;
   onMessage?: (msg: SSEMessage) => void;
+  onOpen?: () => void;
   onError?: (err: Event) => void;
+  /** 重连次数耗尽且连接仍未恢复 */
+  onGiveUp?: () => void;
   maxRetries?: number;
 }
 
@@ -47,6 +50,7 @@ export function useSSE(opts: SSEOptions) {
     eventSource.onopen = () => {
       connected.value = true;
       retryCount.value = 0;
+      opts.onOpen?.();
     };
 
     eventSource.onmessage = e => {
@@ -106,6 +110,8 @@ export function useSSE(opts: SSEOptions) {
         const delay = backoff[retryCount.value] || 16000;
         retryCount.value++;
         retryTimer = setTimeout(connect, delay);
+      } else {
+        opts.onGiveUp?.();
       }
     };
   }

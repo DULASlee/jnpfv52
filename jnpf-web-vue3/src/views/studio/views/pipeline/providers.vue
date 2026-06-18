@@ -164,6 +164,7 @@
       baseUrl: '',
       apiKey: '',
       defaultModel: '',
+      apiFormat: 'anthropic',
       maxTokens: 1000000,
       temperature: 0.7,
       priority: providers.value.length + 1,

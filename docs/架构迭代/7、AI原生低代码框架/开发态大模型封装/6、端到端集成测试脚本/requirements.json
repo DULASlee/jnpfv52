@@ -1,0 +1,43 @@
+{
+  "industry": "manufacturing",
+  "scenarios": [
+    {
+      "id": 1,
+      "name": "机加工车间 MES 报工系统",
+      "requirement": "我们要建一个 MES 报工系统,机加工车间,主要产品是汽车零部件。工人接到工单后,完成工序后提交报工(合格数量+报废数量)。班组长初核,质检员终核。物料消耗需要追溯到批次,支持替代料。要有完整的库存账。",
+      "expected_events": [
+        {"name": "工序报工录入", "complexity": "medium"},
+        {"name": "报工初核", "complexity": "simple"},
+        {"name": "报工终核", "complexity": "medium"},
+        {"name": "物料消耗校验", "complexity": "complex"},
+        {"name": "倒冲扣库存", "complexity": "complex"}
+      ],
+      "expected_decision_rules": [
+        {"condition": "报废率>5%", "action": "让步接收"},
+        {"condition": "报废率>20%", "action": "驳回"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "装配车间 MES 报工系统",
+      "requirement": "建一个装配车间 MES,工人装配汽车变速箱,完成后报工。多道工序(粗装→精装→质检),每道工序都报工。物料按 BOM 倒冲。报废要写明原因(材料缺陷/工艺缺陷/操作失误)。",
+      "expected_events": [
+        {"name": "工序报工录入", "complexity": "medium"},
+        {"name": "报工终核", "complexity": "medium"},
+        {"name": "物料倒冲", "complexity": "complex"},
+        {"name": "报废分析", "complexity": "medium"}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "电子元器件车间 MES",
+      "requirement": "电子元器件车间,SMT 贴片 + 后焊。工人按工单报工,需要追溯到具体设备(贴片机型号+序列号)。物料批次号必填,出质量问题能 1 小时内定位批次。",
+      "expected_events": [
+        {"name": "工序报工录入", "complexity": "medium"},
+        {"name": "设备关联", "complexity": "simple"},
+        {"name": "批次追溯", "complexity": "complex"},
+        {"name": "质量异常处理", "complexity": "complex"}
+      ]
+    }
+  ]
+}

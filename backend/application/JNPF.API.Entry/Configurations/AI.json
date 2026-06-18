@@ -9,7 +9,7 @@
             },
             "deepseek": {
                 "BaseUrl": "https://api.deepseek.com/anthropic",
-                "ApiKey": "sk-a8d6ed17982d4c88bfacb4099ed2fcfc",
+                "ApiKey": "sk-1141cc8a39824fbd91c40506aff12767",
                 "DefaultModel": "deepseek-v4-pro",
                 "ApiFormat": "anthropic"
             },

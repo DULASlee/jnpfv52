@@ -93,7 +93,16 @@ import { buildEventSourceUrl } from '/@/utils/http/sseUrl';
 new EventSource(buildEventSourceUrl(`/api/studio/pipeline/execute/${id}/events`));
 ```
 
-HTTP 入口是 **`AIDevelopmentPipelineService`**（`api/studio/pipeline/execute`），不是 `PipelineEngineService`。
+### 铁律 6：EventSource MUST 通过 `?token=` 传递 JWT
+
+`EventSource` 无法设置 `Authorization` 头。JNPF 后端 `AuthenticationModule` 支持 query `token`，`buildEventSourceUrl()` 已自动附加。
+
+```typescript
+// buildEventSourceUrl 内部：fullUrl.searchParams.set('token', getToken())
+new EventSource(buildEventSourceUrl(`/api/studio/pipeline/execute/${id}/events`));
+```
+
+**时序**：先 `connectSSE()`，再 `POST /execute`，避免 channel 竞态丢包。
 
 ---
 
@@ -193,15 +202,15 @@ powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1
 
 | 命令 | 用途 | Claude Code 触发 | Trae 触发 |
 |---|---|---|---|
-| `/start-dev` | 一键启动开发环境 | 用户输入 `/start-dev` 或 AI 按 On-Demand Rules 自动执行 | AI 识别 `.trae/skills/start-dev/` 自动触发 |
-| `/pre-commit` | 提交前检查 | 用户输入 `/pre-commit` 或 AI 在 commit 前自动执行 | AI 识别 `.trae/skills/pre-commit/` 自动触发 |
-| `/full-review` | 三阶段代码审查 | 用户输入 `/full-review` 或 AI 按 On-Demand Rules 自动执行 | AI 识别 `.trae/skills/full-review/` 自动触发 |
-| `/security-review` | 安全审查（SQL注入/XSS/越权/敏感信息） | 用户输入 `/security-review` 或 AI 在合并敏感模块前自动执行 | AI 识别 `.trae/skills/security-review/` 自动触发 |
-| `/trace-bug` | 结构化调试 | 用户输入 `/trace-bug` 或 AI 遇到 bug 自动执行 | AI 识别 `.trae/skills/trace-bug/` 自动触发 |
-| `/spec` | 查询 OpenSpec 知识库 | 用户输入 `/spec` 或 AI 按问题意图自动执行 | AI 识别 `.trae/skills/spec/` 自动触发 |
-| `/learn` | 学习手册导航 | 用户输入 `/learn` 或 AI 识别新人场景自动执行 | AI 识别 `.trae/skills/learn/` 自动触发 |
+| `/start-dev` | 一键启动开发环境 | Skill tool (`start-dev`) 或 AI 按 On-Demand Rules 自动执行 | AI 识别 `.trae/skills/start-dev/` 自动触发 |
+| `/pre-commit` | 提交前检查 | Skill tool (`pre-commit`) 或 AI 在 commit 前自动执行 | AI 识别 `.trae/skills/pre-commit/` 自动触发 |
+| `/full-review` | 三阶段代码审查 | Skill tool (`full-review`) 或 AI 按 On-Demand Rules 自动执行 | AI 识别 `.trae/skills/full-review/` 自动触发 |
+| `/security-review` | 安全审查（SQL注入/XSS/越权/敏感信息） | Skill tool (`security-review`) 或 AI 在合并敏感模块前自动执行 | AI 识别 `.trae/skills/security-review/` 自动触发 |
+| `/trace-bug` | 结构化调试 | Skill tool (`trace-bug`) 或 AI 遇到 bug 自动执行 | AI 识别 `.trae/skills/trace-bug/` 自动触发 |
+| `/spec` | 查询 OpenSpec 知识库 | Skill tool (`spec`) 或 AI 按问题意图自动执行 | AI 识别 `.trae/skills/spec/` 自动触发 |
+| `/learn` | 学习手册导航 | Skill tool (`learn`) 或 AI 识别新人场景自动执行 | AI 识别 `.trae/skills/learn/` 自动触发 |
 
-> **Claude Code 自动触发原理：** On-Demand Rules 表已映射触发条件 → command，AI 读取 CLAUDE.md 后会在场景出现时主动执行对应 command。
+> **Claude Code 双触发原理：** (1) 用户输入 `/命令名` → Skill tool 调用 `.claude/skills/<name>/SKILL.md`；(2) On-Demand Rules 表映射触发条件 → AI 自动执行对应 command。
 > **Trae 自动触发原理：** 每个 `.trae/skills/<name>/SKILL.md` 的 description 字段包含 "Invoke when..." 触发条件，AI 自动识别场景。
 
 ---

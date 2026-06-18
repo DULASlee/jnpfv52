@@ -16,7 +16,7 @@
  */
 
 import type { LLMGateway } from './llm/types';
-import type { FormPageIR, FieldIR, FormConfig, ComponentMapping } from '../ir/types';
+import type { FormPageIR, FieldIR, FormConfig } from '../ir/types';
 import type { ArchitectureDesign } from './agents/architect';
 import type { DatabaseDesign } from './agents/database';
 
@@ -145,7 +145,6 @@ export function createFieldIR(overrides: Partial<FieldIR> & { model: string; lab
     },
     validation: overrides.validation ?? [],
     events: overrides.events ?? {},
-    ...overrides,
   };
 }
 
@@ -211,7 +210,7 @@ export function domainModelToArchitecture(model: ManualDomainModel): Architectur
     overview: `手动创建的${model.entities.map(e => e.name).join('、')}管理系统`,
     architecture: {
       modules,
-      databaseDesign: { tables, indexes: [] },
+      databaseDesign: { tables },
       apiDesign: {
         endpoints: model.entities.flatMap(e => [
           { path: `/api/${e.name.toLowerCase().replace(/\s+/g, '-')}/list`, method: 'GET' as const, description: `${e.name}列表` },
@@ -237,24 +236,25 @@ export function domainModelToArchitecture(model: ManualDomainModel): Architectur
 /** 从人工领域模型生成数据库设计（与 AI 数据库设计师输出同构） */
 export function domainModelToDatabase(model: ManualDomainModel): DatabaseDesign {
   const arch = domainModelToArchitecture(model);
+  const mappedTables = arch.architecture.databaseDesign.tables.map(t => ({
+    name: t.name,
+    comment: t.comment,
+    columns: t.columns.map(c => ({
+      name: c.name,
+      type: c.type,
+      length: c.length ?? null,
+      nullable: c.nullable,
+      defaultValue: c.defaultValue ?? null,
+      comment: c.comment,
+      isAudit: (c as Record<string, unknown>).isAudit as boolean | undefined,
+      isTenant: (c as Record<string, unknown>).isTenant as boolean | undefined,
+    })),
+    indexes: [] as Array<{ name: string; columns: string[]; unique: boolean }>,
+  }));
   return {
     overview: arch.overview,
-    tables: arch.architecture.databaseDesign.tables.map(t => ({
-      name: t.name,
-      comment: t.comment,
-      columns: t.columns.map(c => ({
-        name: c.name,
-        type: c.type,
-        length: c.length ?? null,
-        nullable: c.nullable,
-        defaultValue: c.defaultValue ?? null,
-        comment: c.comment,
-        isAudit: (c as Record<string, unknown>).isAudit as boolean | undefined,
-        isTenant: (c as Record<string, unknown>).isTenant as boolean | undefined,
-      })),
-      indexes: [],
-    })),
-    migrationSql: generateMigrationSql(tables),
+    tables: mappedTables,
+    migrationSql: generateMigrationSql(mappedTables),
     apis: arch.architecture.apiDesign.endpoints.map(ep => ({
       path: ep.path,
       method: ep.method as 'GET' | 'POST' | 'PUT' | 'DELETE',

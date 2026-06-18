@@ -18,6 +18,9 @@ public class PipelineSchedulingModule : JnpfModule
 {
     public override void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
+        // SignalR（提供 IHubContext<PipelineHub>，供 Quartz/Hangfire 任务推送实时事件）
+        services.AddSignalR();
+
         // ─── Hangfire 注册 ───
         services.AddHangfire(config =>
         {
@@ -63,6 +66,13 @@ public class PipelineSchedulingModule : JnpfModule
         {
             DashboardTitle = "JNPF Pipeline 任务调度",
             DisplayStorageConnectionString = false
+        });
+
+        // 注册 Pipeline Hub 路由（/hubs/pipeline）
+        app.UseRouting();
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapHubs();
         });
     }
 }

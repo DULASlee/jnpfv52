@@ -35,6 +35,7 @@ export const StudioExpertRoute: AppRouteRecordRaw = {
   path: '/studio/expert',
   component: LAYOUT,
   name: 'StudioExpert',
+  meta: { title: '专家工作台' },
   children: [
     {
       path: 'quick-app-entry',
@@ -59,6 +60,7 @@ export const StudioFounderRoute: AppRouteRecordRaw = {
   path: '/studio/founder',
   component: LAYOUT,
   name: 'StudioFounder',
+  meta: { title: '创始人中心' },
   children: [
     {
       path: 'totp-verify',
@@ -74,6 +76,7 @@ export const StudioDevRoute: AppRouteRecordRaw = {
   path: '/studio/dev',
   component: LAYOUT,
   name: 'StudioDev',
+  meta: { title: '开发工具' },
   children: [
     { path: 'model-playground', name: 'ModelPlayground', component: () => import('/@/views/expert/ModelPlayground.vue'), meta: { title: '模型测试场' } },
     { path: 'ai-review', name: 'ArchitectReview', component: () => import('/@/views/expert/ArchitectReview.vue'), meta: { title: 'AI 架构评审' } },
@@ -85,6 +88,7 @@ export const StudioAiRoute: AppRouteRecordRaw = {
   path: '/studio/ai',
   component: LAYOUT,
   name: 'StudioAi',
+  meta: { title: 'AI 工作台' },
   children: [
     {
       path: 'submit-requirement',
@@ -108,6 +112,7 @@ export const StudioPipelineRoute: AppRouteRecordRaw = {
   path: '/studio/pipeline',
   component: LAYOUT,
   name: 'StudioPipeline',
+  meta: { title: '流水线管理' },
   children: [
     {
       path: 'model-routing',
@@ -125,6 +130,7 @@ export const StudioKnowledgeRoute: AppRouteRecordRaw = {
   path: '/studio/knowledge',
   component: LAYOUT,
   name: 'StudioKnowledge',
+  meta: { title: '知识库' },
   children: [
     {
       path: 'rule-editor',

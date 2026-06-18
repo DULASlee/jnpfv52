@@ -89,8 +89,8 @@ export async function compileGateway(request: CompileRequest): Promise<CompileRe
       case 'dashboard':
       case 'dashboard-3d': {
         const { DashboardCompiler } = await import('./dashboard/compiler');
-        const compiler = new DashboardCompiler(request.config);
-        result = compiler.compile(ir);
+        const compiler = new DashboardCompiler(ir as unknown as import('../ir/dashboard-types').DashboardIR);
+        result = compiler.compile();
         break;
       }
 
@@ -101,29 +101,25 @@ export async function compileGateway(request: CompileRequest): Promise<CompileRe
         const { UniAppCompiler } = await import('./uniapp/compiler');
         const platform = uniappTargetToPlatform(request.target);
         const compiler = new UniAppCompiler(request.config, platform);
-        result = compiler.compile(ir as FormPageIR);
+        result = compiler.compile(ir as unknown as import('./uniapp/types').FormPageIR);
         break;
       }
 
       case 'uniapp-x-app': {
-        const { UniAppXCompiler } = await import('./uniapp/compiler');
-        // UniApp X uses same compiler but with x-app flag
-        // v5.0 暂缓 — 抛异常
-        const compiler = new UniAppXCompiler(request.config);
-        result = compiler.compile(ir as FormPageIR);
-        break;
+        // UniApp X — v5.0 暂缓，暂未实现
+        throw new Error('uniapp-x-app 编译目标暂未实现 (v5.0 暂缓)');
       }
 
       case 'workflow': {
         const { FlowCompiler } = await import('./flow/compiler');
         const compiler = new FlowCompiler();
         const flowResult = compiler.compile(ir as unknown as import('../ir/flow-types').FlowIR);
+        const project: GeneratedProject = new Map();
+        project.set('workflow-config.json', flowResult.config);
         result = {
-          project: {
-            name: request.config.entity ?? 'workflow',
-            files: [{ path: 'workflow-config.json', content: flowResult.config }],
-          },
+          project,
           warnings: flowResult.warnings,
+          complexExpressions: [],
         };
         break;
       }

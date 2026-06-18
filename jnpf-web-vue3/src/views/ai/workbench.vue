@@ -19,8 +19,10 @@
           ><a-step v-for="s in ['需求', '架构', '设计', '生成', '交付']" :key="s" :title="s" /></a-steps
       ></div>
       <div class="wb-chat" ref="cr"
-        ><div v-for="(m, i) in msgs" :key="i" :class="['msg', m.r]"
-          ><div v-html="md(m.c)"></div><div class="t">{{ m.t }}</div></div
+        ><div v-for="(m, i) in msgs" :key="i" :class="['msg', m.r]">
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <div v-html="md(m.c)"></div>
+          <div class="t">{{ m.t }}</div></div
         >
         <div v-if="cres.length" class="cr-box"
           ><a-card size="small" title="编译结果"
@@ -43,6 +45,7 @@
   import { message } from 'ant-design-vue';
   import { useCompile } from '/@/core/ai/integration/use-compile';
   import type { CompileTarget } from '/@/core/compiler/targets';
+  import type { FormPageIR } from '/@/core/ir/types';
   const stage = ref(0);
   const aiMode = ref(true);
   const inp = ref('');
@@ -76,8 +79,8 @@
   async function compile() {
     cl.value = true;
     try {
-      const ir = {
-        type: 'form' as const,
+      const ir: FormPageIR = {
+        type: 'form',
         id: 'wb',
         name: 'Page',
         config: {
@@ -142,7 +145,7 @@
         aiHints: { domain: 'wb' },
       };
       const r = await compileMulti({ entity: 'wb_page', name: 'WB Page', ir }, targets.value);
-      cres.value = r.results.map(x => ({ n: x.target, ok: x.success, f: x.response.project?.files?.length ?? 0 }));
+      cres.value = r.results.map(x => ({ n: x.target, ok: x.success, f: x.response.project?.size ?? 0 }));
       msgs.value.push({ r: 'assistant', c: `**编译完成** ${r.successCount}/${r.totalTargets}成功`, t: now() });
       stage.value = 4;
     } catch (e) {

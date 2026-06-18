@@ -1,20 +1,20 @@
 <template>
   <div :class="prefixCls">
     <span> {{ title }}</span>
-    <Select v-bind="getBindValue" :class="`${prefixCls}-select`" @change="handleChange" :disabled="disabled" size="small" :options="options" />
+    <ASelect v-bind="getBindValue" :class="`${prefixCls}-select`" @change="handleChange" :disabled="disabled" size="small" :options="options" />
   </div>
 </template>
 <script lang="ts">
   import { defineComponent, PropType, computed } from 'vue';
 
-  import { Select } from 'ant-design-vue';
+  import { Select as ASelect } from 'ant-design-vue';
   import { useDesign } from '/@/hooks/web/useDesign';
   import { baseHandler } from '../handler';
   import { HandlerEnum } from '../enum';
 
   export default defineComponent({
     name: 'SelectItem',
-    components: { Select },
+    components: { ASelect: ASelect },
     props: {
       event: {
         type: Number as PropType<HandlerEnum>,
@@ -42,7 +42,7 @@
         return props.def ? { value: props.def, defaultValue: props.initValue || props.def } : {};
       });
 
-      function handleChange(e: ChangeEvent) {
+      function handleChange(e: any) {
         props.event && baseHandler(props.event, e);
       }
       return {

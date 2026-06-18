@@ -24,6 +24,9 @@ public static class PipelineModuleInitializer
     public static IServiceCollection AddPipelineScheduling(
         this IServiceCollection services, IConfiguration configuration)
     {
+        // SignalR（提供 IHubContext<PipelineHub>，供后台任务推送事件）
+        services.AddSignalR();
+
         // ─── Hangfire 注册 ───
         services.AddHangfire(config =>
         {

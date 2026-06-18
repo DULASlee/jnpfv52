@@ -375,8 +375,8 @@
           const title = get(item, titleField);
 
           const searchIdx = searchText ? title.indexOf(searchText) : -1;
-          const isHighlight = searchState.startSearch && !isEmpty(searchText) && highlight && searchIdx !== -1;
-          const highlightStyle = `color: ${isBoolean(highlight) ? '#f50' : highlight}`;
+          const _isHighlight = searchState.startSearch && !isEmpty(searchText) && highlight && searchIdx !== -1;
+          const _highlightStyle = `color: ${isBoolean(highlight) ? '#f50' : highlight}`;
 
           // const titleDom = isHighlight ? (
           //   <span class={unref(getBindValues)?.blockNode ? `${bem('content')}` : ''}>
@@ -394,7 +394,7 @@
                 getSlot(slots, 'title', item)
               ) : (
                 <>
-                  {icon && <TreeIcon icon={icon} />}
+                  {icon && <TreeIcon {...({ icon } as any)} />}
                   <span class={bem('name')}>{titleDom}</span>
                   <span class={bem('actions')}>{renderAction(item)}</span>
                 </>
@@ -423,7 +423,7 @@
                 search={search}
                 toolbar={toolbar}
                 helpMessage={helpMessage}
-                onStrictlyChange={onStrictlyChange}
+                onStrictly-change={onStrictlyChange}
                 onSearch={handleSearch}
                 searchText={searchState.searchText}>
                 {extendSlots(slots)}

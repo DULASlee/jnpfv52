@@ -2,7 +2,7 @@
  * 将字符串形式的正则表达式安全解析为 RegExp 对象
  * 支持 "/pattern/flags" 格式，避免使用 eval()
  */
-export function safeParseRegex(pattern: string): RegExp | null {
+export function safeParseRegex(pattern: string | RegExp): RegExp | null {
   if (pattern instanceof RegExp) return pattern;
   if (typeof pattern !== 'string') return null;
   const match = pattern.match(/^\/(.+)\/([gimsuyd]*)$/);

@@ -11,15 +11,21 @@ const simpleApprovalFlow: FlowIR = {
   name: '简单审批流',
   version: '1.0',
   nodes: [
-    { id: 'n1', type: 'start', name: '开始', position: { x: 0, y: 0 }, config: { type: 'start' } },
-    { id: 'n2', type: 'approval', name: '经理审批', position: { x: 100, y: 0 }, config: { type: 'approval', approverType: 'role', approverId: 'manager' } },
+    { id: 'n1', type: 'start', name: '开始', position: { x: 0, y: 0 }, config: { type: 'start', triggerType: 'manual' } },
+    {
+      id: 'n2',
+      type: 'approval',
+      name: '经理审批',
+      position: { x: 100, y: 0 },
+      config: { type: 'approval', approverType: 'role', approverIds: ['manager'], assignPolicy: 'all' },
+    },
     { id: 'n3', type: 'end', name: '结束', position: { x: 200, y: 0 }, config: { type: 'end' } },
   ],
   edges: [
-    { id: 'e1', from: 'n1', to: 'n2' },
-    { id: 'e2', from: 'n2', to: 'n3' },
+    { id: 'e1', sourceNodeId: 'n1', targetNodeId: 'n2' },
+    { id: 'e2', sourceNodeId: 'n2', targetNodeId: 'n3' },
   ],
-  variables: [{ key: 'amount', name: '金额', type: 'number', defaultValue: 0 }],
+  variables: [{ id: 'amount', name: '金额', type: 'number', defaultValue: 0, scope: 'global' }],
 };
 
 const invalidFlow: FlowIR = {
@@ -27,7 +33,15 @@ const invalidFlow: FlowIR = {
   id: 'bad',
   name: '无效流',
   version: '1',
-  nodes: [{ id: 'n1', type: 'approval', name: '审批', position: { x: 0, y: 0 }, config: { type: 'approval', approverType: 'user', approverId: 'u1' } }],
+  nodes: [
+    {
+      id: 'n1',
+      type: 'approval',
+      name: '审批',
+      position: { x: 0, y: 0 },
+      config: { type: 'approval', approverType: 'user', approverIds: ['u1'], assignPolicy: 'all' },
+    },
+  ],
   edges: [],
   variables: [],
 };
@@ -83,7 +97,13 @@ describe('FlowCompiler', () => {
       ...simpleApprovalFlow,
       nodes: [
         ...simpleApprovalFlow.nodes,
-        { id: 'orphan', type: 'notification', name: '孤岛', position: { x: 50, y: 50 }, config: { type: 'notification', template: 'test', channel: 'sms' } },
+        {
+          id: 'orphan',
+          type: 'notification',
+          name: '孤岛',
+          position: { x: 50, y: 50 },
+          config: { type: 'notification', templateId: 'test', channel: 'sms', recipients: [] },
+        },
       ],
     };
     const result = compiler.compile(flowWithOrphan);
@@ -97,19 +117,19 @@ describe('FlowCompiler', () => {
       name: '通知流',
       version: '1',
       nodes: [
-        { id: 's', type: 'start', name: 'S', position: { x: 0, y: 0 }, config: { type: 'start' } },
+        { id: 's', type: 'start', name: 'S', position: { x: 0, y: 0 }, config: { type: 'start', triggerType: 'manual' } },
         {
           id: 'n',
           type: 'notification',
           name: '通知',
           position: { x: 50, y: 0 },
-          config: { type: 'notification', template: 'approval_template', channel: 'email' },
+          config: { type: 'notification', templateId: 'approval_template', channel: 'email', recipients: [] },
         },
         { id: 'e', type: 'end', name: 'E', position: { x: 100, y: 0 }, config: { type: 'end' } },
       ],
       edges: [
-        { id: 'l1', from: 's', to: 'n' },
-        { id: 'l2', from: 'n', to: 'e' },
+        { id: 'l1', sourceNodeId: 's', targetNodeId: 'n' },
+        { id: 'l2', sourceNodeId: 'n', targetNodeId: 'e' },
       ],
       variables: [],
     };

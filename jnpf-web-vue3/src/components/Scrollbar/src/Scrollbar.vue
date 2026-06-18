@@ -1,6 +1,6 @@
 <template>
   <div class="scrollbar">
-    <div ref="wrap" :class="[wrapClass, 'scrollbar__wrap', native ? '' : 'scrollbar__wrap--hidden-default']" :style="style" @scroll="handleScroll">
+    <div ref="wrap" :class="[wrapClass, 'scrollbar__wrap', native ? '' : 'scrollbar__wrap--hidden-default']" :style="(style as any)" @scroll="handleScroll">
       <component :is="tag" ref="resize" :class="['scrollbar__view', viewClass]" :style="viewStyle">
         <slot></slot>
       </component>
