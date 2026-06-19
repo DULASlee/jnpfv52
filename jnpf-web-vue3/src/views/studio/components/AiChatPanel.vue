@@ -374,12 +374,21 @@ async function sendMessage(content: string) {
   });
 
   try {
+    // Step 1: POST /execute 发送消息，启动后台 LLM 流
+    const execUrl = buildSSEUrl('/api/studio/pipeline/execute/' + pipelineId.value + '/execute');
+    const execResponse = await fetch(execUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: content, stageName: stages.value[currentStage.value - 1]?.name || 'requirement', provider: selectedProvider.value }),
+    });
+    if (!execResponse.ok) throw new Error('Execute HTTP ' + execResponse.status);
+
+    // Step 2: GET /events 读取 SSE 流
     abortController.value = new AbortController();
     const sseUrl = buildSSEUrl('/api/studio/pipeline/execute/' + pipelineId.value + '/events');
     const response = await fetch(sseUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: content, stage: currentStage.value, provider: selectedProvider.value }),
+      method: 'GET',
+      headers: { 'Accept': 'text/event-stream' },
       signal: abortController.value.signal,
     });
     if (!response.ok) throw new Error('HTTP ' + response.status);
