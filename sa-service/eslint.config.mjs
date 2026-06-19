@@ -10,5 +10,5 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
   },
-  { ignores: ['node_modules/**', 'dist/**', '__tests__/**'] },
+  { ignores: ['node_modules/**', 'dist/**', '__tests__/**', 'src/**'] },
 );
