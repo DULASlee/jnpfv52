@@ -109,7 +109,7 @@ S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
 - 子代理不信任报告：完成后必须独立检查 VCS diff + 验证变更
 - 子代理 BLOCKED → 分析原因（缺上下文？能力不足？计划有误？），不盲目重试
 
-### Step 5: Test（测试）
+### Step 5: Test（测试 + E2E 验证）
 
 - 输出 `🧪 Testing Protocol 启动` 声明
 - 运行 `dotnet build`（后端）或 `vue-tsc --noEmit`（前端）
@@ -118,6 +118,12 @@ S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
 - Bug 修复：复现原始症状 → 确认消失
 - **S 级任务：自动触发 test-runner 子代理**
 - Gate Function 全部打勾后才能声称通过
+- **⬛ Supreme Iron Law：前端实质性变更 MUST 执行浏览器端到端验证**
+  - 使用 playwright 技能打开浏览器
+  - 产出截图至 `.claude/evidence/`（E1 证据）
+  - 记录操作路径（E2 证据）→  Step 7 报告中输出
+  - 描述实际 UI 状态（E3 证据）→  Step 7 报告中输出
+  - 无 E1/E2/E3 → `guard-finish.mjs` BLOCK → 流程退回
 
 > **详细测试规则、Gate Function、项目健康验证命令：** 见 `.claude/rules/testing.md`
 > **子代理编排规则（test-runner / code-reviewer）：** 见 `.claude/rules/review-workflow.md`
@@ -145,6 +151,11 @@ S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
 |---|---|---|
 
 **测试结果：** PASS / FAIL（含证据）
+
+**⬛ E2E 验证证据（Supreme Iron Law）：**
+- E1 截图：[路径，如 `.claude/evidence/page-login.png`]
+- E2 操作路径：[打开页面 → 操作步骤 → 观察结果]
+- E3 实际输出：[浏览器中实际看到的 UI 状态]
 
 **已知问题：** 无 / [列出]
 

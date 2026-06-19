@@ -16,7 +16,7 @@
  */
 
 import { execSync } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, readdirSync } from 'fs';
 
 // ─── 读取 stdin ──────────────────────────────────────────────
 let input = {};
@@ -85,7 +85,7 @@ try {
 // ─── 规则 1：后端增量编译 ────────────────────────────────────
 if (hasBackendChanges) {
   try {
-    console.error('▸ [1/2] 后端核心项目增量编译...');
+    console.error('▸ [1/3] 后端核心项目增量编译...');
 
     // Windows 兼容：不用 find/dir 命令，直接检查已知路径
     // JNPF 项目结构固定，已知路径足以覆盖
@@ -125,13 +125,13 @@ if (hasBackendChanges) {
     }
   }
 } else {
-  console.error('▸ [1/2] 无后端代码变更，跳过');
+  console.error('▸ [1/3] 无后端代码变更，跳过');
 }
 
 // ─── 规则 2：前端变更状态检查（不跑 vue-tsc）─────────────────
 if (hasFrontendChanges) {
   try {
-    console.error('▸ [2/2] 前端变更状态检查...');
+    console.error('▸ [2/3] 前端变更状态检查...');
 
     const status = execSync('git status --porcelain -- jnpf-web-vue3/', {
       encoding: 'utf-8',
@@ -149,7 +149,74 @@ if (hasFrontendChanges) {
     console.error('  ⚠️ Git 状态检查跳过');
   }
 } else {
-  console.error('▸ [2/2] 无前端代码变更，跳过');
+  console.error('▸ [2/3] 无前端代码变更，跳过');
+}
+
+// ─── 规则 3：E2E 验证证据检查（Supreme Iron Law 强制执行）─────
+// 检查是否有前端代码变更需要 E2E 验证
+let needsE2E = false;
+if (hasFrontendChanges) {
+  // 判断是否是实质性前端变更（排除纯样式/文案）
+  try {
+    const allFiles = execSync('git diff --name-only HEAD~1 HEAD 2>nul || git show --name-only --format= 2>nul || echo ""', {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+      timeout: 5000,
+    }).trim();
+    
+    const unstaged = execSync('git diff --name-only 2>nul || echo ""', {
+      encoding: 'utf-8',
+      stdio: 'pipe',
+      timeout: 5000,
+    }).trim();
+    
+    const combinedFiles = allFiles + '\n' + unstaged;
+    // 排除纯 .md / .json / .css 变更
+    const substantiveChanges = combinedFiles
+      .split('\n')
+      .filter(Boolean)
+      .filter(f => /\.(vue|ts|tsx|js|jsx)$/.test(f) && !/\.css$/.test(f));
+    
+    if (substantiveChanges.length > 0) {
+      needsE2E = true;
+    }
+  } catch {
+    needsE2E = hasFrontendChanges;
+  }
+}
+
+if (needsE2E) {
+  console.error('▸ [3/3] E2E 验证证据检查（Supreme Iron Law）...');
+  
+  try {
+    const evidenceDir = '.claude/evidence';
+    if (!existsSync(evidenceDir)) {
+      hasError = true;
+      errorDetails.push(
+        'E2E 验证证据缺失：.claude/evidence/ 目录不存在。' +
+        '前端变更 MUST 产出 Playwright 截图至该目录。使用 playwright 技能打开浏览器验证。'
+      );
+      console.error('  ❌ .claude/evidence/ 目录缺失');
+    } else {
+      const files = readdirSync(evidenceDir);
+      const screenshots = files.filter(f => /\.(png|jpg|jpeg)$/i.test(f));
+      
+      if (screenshots.length === 0) {
+        hasError = true;
+        errorDetails.push(
+          'E2E 验证证据缺失：.claude/evidence/ 中无截图文件。' +
+          '前端变更 MUST 使用 playwright 技能打开浏览器并截图。'
+        );
+        console.error('  ❌ 无截图证据（需 .png/.jpg）');
+      } else {
+        console.error(`  ✅ ${screenshots.length} 张截图证据: ${screenshots.join(', ')}`);
+      }
+    }
+  } catch (e) {
+    console.error(`  ⚠️ E2E 证据检查异常: ${e.message}`);
+  }
+} else {
+  console.error('▸ [3/3] 无前端实质性变更，跳过 E2E 证据检查');
 }
 
 // ─── 输出标准 JSON 响应（Claude Code 要求）───────────────────
