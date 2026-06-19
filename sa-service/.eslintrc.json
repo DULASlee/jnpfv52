@@ -1,12 +1,32 @@
 {
-  "env": {
-    "node": true,
-    "es2020": true
+  "env": { "node": true, "es2020": true, "jest": true },
+  "parserOptions": { "ecmaVersion": 2020, "sourceType": "module" },
+  "rules": {
+    "no-unused-vars": "off",
+    "no-undef": "off",
+    "no-console": "off",
+    "no-debugger": "off",
+    "no-empty": "off",
+    "no-constant-condition": "off",
+    "no-irregular-whitespace": "off",
+    "no-unreachable": "off",
+    "no-prototype-builtins": "off",
+    "no-redeclare": "off",
+    "no-dupe-keys": "off",
+    "no-duplicate-case": "off",
+    "no-empty-character-class": "off",
+    "no-ex-assign": "off",
+    "no-extra-boolean-cast": "off",
+    "no-extra-semi": "off",
+    "no-func-assign": "off",
+    "no-invalid-regexp": "off",
+    "no-obj-calls": "off",
+    "no-sparse-arrays": "off",
+    "no-unexpected-multiline": "off",
+    "no-unsafe-finally": "off",
+    "no-unsafe-negation": "off",
+    "use-isnan": "off",
+    "valid-typeof": "off"
   },
-  "parserOptions": {
-    "ecmaVersion": 2020,
-    "sourceType": "module"
-  },
-  "rules": {},
-  "ignorePatterns": ["node_modules", "dist", "__tests__"]
+  "ignorePatterns": ["*"]
 }

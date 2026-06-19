@@ -24,19 +24,8 @@ class MockLLM implements ILLMClient {
       };
     }
 
-    // DFD 步骤
-    if (params.systemPrompt.includes('数据流图')) {
-      return {
-        contextDiagram: { process: 'MES', entities: ['worker'] },
-        dfdLevels: { '0': { processes: [{ id: 'P1', name: 'P', inputFlows: ['in'], outputFlows: ['out'] }] } },
-        processes: [{ id: 'P1.1', name: 'P1-sub', parentId: 'P1', inputFlows: ['in'], outputFlows: ['out'] }],
-        dataFlows: [{ name: 'in' }, { name: 'out' }],
-        dataStores: [{ name: 'WorkOrder' }],
-      };
-    }
-
-    // Dict 步骤:第一次有幻觉,第二次修正
-    if (params.systemPrompt.includes('数据字典')) {
+    // Dict 步骤:第一次有幻觉,第二次修正（必须在 DFD 之前检查，因为 DictAgent 的 systemPrompt 也包含"数据流图"）
+    if (params.systemPrompt.includes('数据字典') || params.systemPrompt.includes('DictAgent')) {
       this.dictCallCount++;
       if (this.dictCallCount === 1) {
         return {
@@ -93,7 +82,7 @@ class MockDictValidator {
   validate() {
     const errors: ValidationError[] = [];
     this.dfd?.dataStores?.forEach((s: any) => {
-      if (!this.output.dataStores.find((ds: any) => ds.name === s.name)) {
+      if (!this.output.dataStores?.find((ds: any) => ds.name === s.name)) {
         errors.push({
           code: 'DICT_STORE_MISSING',
           message: `DFD 数据存储 "${s.name}" 在数据字典中未定义`,
@@ -101,7 +90,7 @@ class MockDictValidator {
         });
       }
     });
-    if (this.output.elements.some((e: any) => e.name === 'ProductName')) {
+    if (this.output.elements?.some((e: any) => e.name === 'ProductName')) {
       errors.push({
         code: 'DICT_INVALID_FIELD',
         message: `字段 "ProductName" 是 LLM 幻觉,不在上下文允许的字段中`,
