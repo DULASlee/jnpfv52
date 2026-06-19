@@ -1,0 +1,929 @@
+
+========== PatternTypes.ts ==========
+// DKEE Pattern 类型定义
+
+export type PatternType = 'field_naming' | 'decision_rule' | 'state_machine' | 'process_pattern';
+export type PatternSource = 'human-created' | 'ai-discovered' | 'self-play';
+export type IndustryType = 'manufacturing' | 'ecommerce' | 'optical' | 'general';
+
+// =====================================================
+// 源记录(SAS 表查出来的原始数据)
+// =====================================================
+export interface DictSourceRecord {
+  id: number;
+  project_id: number;
+  elements: Array<{
+    name: string;
+    type: string;
+    isFK?: boolean;
+    refEntity?: string;
+    isRequired?: boolean;
+  }>;
+  data_flows: Array<{ name: string; fields: any[] }>;
+  data_stores: Array<{ name: string; fields: any[] }>;
+  tags: any[];
+  pattern_tags: any[];
+}
+
+export interface DecisionTableSourceRecord {
+  id: number;
+  project_id: number;
+  tables: Array<{
+    id: string;
+    conditions: Array<{ name: string; operator: string; value: any }>;
+    actions: Array<{ name: string }>;
+    rules: any[];
+  }>;
+  cross_event_consistency: boolean;
+}
+
+export interface StateMachineSourceRecord {
+  id: number;
+  project_id: number;
+  state_machines: Array<{
+    entity: string;
+    states: string[];
+    transitions: Array<{ from: string; to: string; trigger: string }>;
+  }>;
+  states_in_dict: boolean;
+}
+
+// =====================================================
+// 提炼后的 Pattern
+// =====================================================
+export interface BasePattern {
+  id?: number;
+  type: PatternType;
+  industry: IndustryType;
+  source: PatternSource;
+  sourceProjects: number[];
+  sourceRecords: Array<{ saTable: string; recordId: number; version: number }>;
+  patternTags?: string[];
+  notes?: string;
+}
+
+// 1. 字段命名 Pattern
+export interface FieldNamingPattern extends BasePattern {
+  type: 'field_naming';
+  commonFields: Array<{
+    name: string;
+    type: string;
+    frequency: number;
+    isFK: boolean;
+    isRequired: boolean;
+    refEntity?: string;
+  }>;
+  fieldCount: number;
+  minOccurrenceThreshold: number;  // 至少出现几次才进 Pattern
+}
+
+// 2. 业务规则 Pattern
+export interface DecisionRulePattern extends BasePattern {
+  type: 'decision_rule';
+  ruleSet: Array<{
+    condition: string;
+    operator: string;
+    threshold: any;
+    action: string;
+    frequency: number;
+  }>;
+  hasDefaultRule: boolean;
+  ruleCount: number;
+}
+
+// 3. 状态机 Pattern
+export interface StateMachinePattern extends BasePattern {
+  type: 'state_machine';
+  entity: string;
+  standardStates: string[];
+  standardTransitions: Array<{
+    from: string;
+    to: string;
+    trigger: string;
+    frequency: number;
+  }>;
+}
+
+// 4. 流程 Pattern
+export interface ProcessPattern extends BasePattern {
+  type: 'process_pattern';
+  standardProcesses: Array<{
+    id: string;
+    name: string;
+    frequency: number;
+  }>;
+}
+
+export type AnyPattern = FieldNamingPattern | DecisionRulePattern | StateMachinePattern | ProcessPattern;
+
+// =====================================================
+// 提炼结果
+// =====================================================
+export interface ExtractionResult {
+  industry: IndustryType;
+  patternsExtracted: number;
+  patternsSaved: number;
+  patternsUpdated: number;
+  newPatterns: AnyPattern[];
+  updatedPatterns: AnyPattern[];
+  durationMs: number;
+}
+
+
+========== PatternQueries.ts ==========
+// DKEE Pattern 查询接口 + SQL Server 实现 + 内存实现
+
+import {
+  DictSourceRecord, DecisionTableSourceRecord, StateMachineSourceRecord,
+  PatternType, AnyPattern, IndustryType
+} from './PatternTypes';
+
+// =====================================================
+// DKEE 查询接口
+// =====================================================
+export interface IDKEEQueries {
+  // 源数据查询(从 SA 表拉)
+  fetchHighQualityDictRecords(industry: IndustryType, projectId?: number): Promise<DictSourceRecord[]>;
+  fetchHighQualityDecisionTableRecords(industry: IndustryType, projectId?: number): Promise<DecisionTableSourceRecord[]>;
+  fetchHighQualityStateMachineRecords(industry: IndustryType, projectId?: number): Promise<StateMachineSourceRecord[]>;
+
+  // Pattern CRUD
+  fetchExistingPatterns(industry: IndustryType, type: PatternType): Promise<any[]>;
+  savePattern(pattern: AnyPattern, score: number, sourceProjects: number[]): Promise<{ id: number }>;
+  updatePatternScore(patternId: number, score: number, usageDelta: number, successDelta: number): Promise<void>;
+
+  // 使用日志
+  logPatternUsage(patternId: number, projectId: number, isSuccess: boolean, context: string): Promise<void>;
+}
+
+// =====================================================
+// SQL Server 实现骨架(用户需根据实际 ORM 调整)
+// =====================================================
+export class SqlServerDKEEQueries implements IDKEEQueries {
+  constructor(private connection: any) {}  // mssql.ConnectionPool
+
+  async fetchHighQualityDictRecords(industry: IndustryType, projectId?: number): Promise<DictSourceRecord[]> {
+    // SQL Server 用 tags LIKE 匹配 industry
+    const projectFilter = projectId ? 'AND d.project_id = @projectId' : '';
+    const query = `
+      SELECT d.id, d.project_id, d.elements, d.data_flows, d.data_stores, d.tags, d.pattern_tags
+      FROM sa_data_dictionary d
+      INNER JOIN sa_scope s ON s.project_id = d.project_id
+      WHERE d.validation_status = 'PASS'
+        AND d.human_confirmed = 1
+        AND d.is_pattern_source = 1
+        AND d.is_deleted = 0
+        AND d.is_current = 1
+        AND s.is_current = 1
+        AND s.tags LIKE @industryPattern
+        ${projectFilter}
+      ORDER BY d.project_id, d.id
+    `;
+    const result = await this.connection.request()
+      .input('industryPattern', `%${industry}%`)
+      .input('projectId', projectId || 0)
+      .query(query);
+    return result.recordset;
+  }
+
+  async fetchHighQualityDecisionTableRecords(industry: IndustryType, projectId?: number): Promise<DecisionTableSourceRecord[]> {
+    const projectFilter = projectId ? 'AND d.project_id = @projectId' : '';
+    const query = `
+      SELECT d.id, d.project_id, d.tables, d.cross_event_consistency
+      FROM sa_decision_table d
+      INNER JOIN sa_scope s ON s.project_id = d.project_id
+      WHERE d.validation_status = 'PASS'
+        AND d.human_confirmed = 1
+        AND d.is_pattern_source = 1
+        AND d.cross_event_consistency = 1
+        AND d.is_deleted = 0
+        AND d.is_current = 1
+        AND s.tags LIKE @industryPattern
+        ${projectFilter}
+      ORDER BY d.project_id, d.id
+    `;
+    const result = await this.connection.request()
+      .input('industryPattern', `%${industry}%`)
+      .input('projectId', projectId || 0)
+      .query(query);
+    return result.recordset;
+  }
+
+  async fetchHighQualityStateMachineRecords(industry: IndustryType, projectId?: number): Promise<StateMachineSourceRecord[]> {
+    const projectFilter = projectId ? 'AND d.project_id = @projectId' : '';
+    const query = `
+      SELECT d.id, d.project_id, d.state_machines, d.states_in_dict
+      FROM sa_state_machine d
+      INNER JOIN sa_scope s ON s.project_id = d.project_id
+      WHERE d.validation_status = 'PASS'
+        AND d.human_confirmed = 1
+        AND d.is_pattern_source = 1
+        AND d.states_in_dict = 1
+        AND d.is_deleted = 0
+        AND d.is_current = 1
+        AND s.tags LIKE @industryPattern
+        ${projectFilter}
+      ORDER BY d.project_id, d.id
+    `;
+    const result = await this.connection.request()
+      .input('industryPattern', `%${industry}%`)
+      .input('projectId', projectId || 0)
+      .query(query);
+    return result.recordset;
+  }
+
+  async fetchExistingPatterns(industry: IndustryType, type: PatternType): Promise<any[]> {
+    const query = `
+      SELECT id, pattern_type, pattern_content, source_projects, score, usage_count
+      FROM kg_pattern
+      WHERE industry = @industry
+        AND pattern_type = @type
+        AND is_active = 1
+        AND deprecated_at IS NULL
+    `;
+    const result = await this.connection.request()
+      .input('industry', industry)
+      .input('type', type)
+      .query(query);
+    return result.recordset;
+  }
+
+  async savePattern(pattern: AnyPattern, score: number, sourceProjects: number[]): Promise<{ id: number }> {
+    const query = `
+      INSERT INTO kg_pattern (pattern_type, industry, pattern_content, pattern_tags, score, source_projects, source)
+      OUTPUT INSERTED.id
+      VALUES (@type, @industry, @content, @tags, @score, @projects, @source)
+    `;
+    const result = await this.connection.request()
+      .input('type', pattern.type)
+      .input('industry', pattern.industry)
+      .input('content', JSON.stringify(pattern))
+      .input('tags', JSON.stringify(pattern.patternTags || []))
+      .input('score', score)
+      .input('projects', JSON.stringify(sourceProjects))
+      .input('source', pattern.source)
+      .query(query);
+    return { id: result.recordset[0].id };
+  }
+
+  async updatePatternScore(patternId: number, score: number, usageDelta: number, successDelta: number): Promise<void> {
+    const query = `
+      UPDATE kg_pattern
+      SET score = @score,
+          usage_count = usage_count + @usageDelta,
+          success_count = success_count + @successDelta,
+          last_score_at = GETDATE()
+      WHERE id = @id
+    `;
+    await this.connection.request()
+      .input('id', patternId)
+      .input('score', score)
+      .input('usageDelta', usageDelta)
+      .input('successDelta', successDelta)
+      .query(query);
+  }
+
+  async logPatternUsage(patternId: number, projectId: number, isSuccess: boolean, context: string): Promise<void> {
+    const query = `
+      INSERT INTO kg_pattern_usage (pattern_id, project_id, is_success, context_info)
+      VALUES (@patternId, @projectId, @isSuccess, @context)
+    `;
+    await this.connection.request()
+      .input('patternId', patternId)
+      .input('projectId', projectId)
+      .input('isSuccess', isSuccess ? 1 : 0)
+      .input('context', context)
+      .query(query);
+  }
+}
+
+
+// =====================================================
+// InMemory 实现(用于测试)
+// =====================================================
+export class InMemoryDKEEQueries implements IDKEEQueries {
+  private dictRecords: DictSourceRecord[] = [];
+  private decisionTableRecords: DecisionTableSourceRecord[] = [];
+  private stateMachineRecords: StateMachineSourceRecord[] = [];
+  private patterns: any[] = [];
+  private usageLogs: any[] = [];
+  private nextPatternId = 1;
+
+  // 注入测试数据
+  injectDictRecords(records: DictSourceRecord[]): void {
+    this.dictRecords = records;
+  }
+  injectDecisionTableRecords(records: DecisionTableSourceRecord[]): void {
+    this.decisionTableRecords = records;
+  }
+  injectStateMachineRecords(records: StateMachineSourceRecord[]): void {
+    this.stateMachineRecords = records;
+  }
+
+  async fetchHighQualityDictRecords(industry: IndustryType, projectId?: number): Promise<DictSourceRecord[]> {
+    return this.dictRecords.filter(r => !projectId || r.project_id === projectId);
+  }
+
+  async fetchHighQualityDecisionTableRecords(industry: IndustryType, projectId?: number): Promise<DecisionTableSourceRecord[]> {
+    return this.decisionTableRecords.filter(r => !projectId || r.project_id === projectId);
+  }
+
+  async fetchHighQualityStateMachineRecords(industry: IndustryType, projectId?: number): Promise<StateMachineSourceRecord[]> {
+    return this.stateMachineRecords.filter(r => !projectId || r.project_id === projectId);
+  }
+
+  async fetchExistingPatterns(industry: IndustryType, type: PatternType): Promise<any[]> {
+    return this.patterns.filter(p => p.industry === industry && p.pattern_type === type);
+  }
+
+  async savePattern(pattern: AnyPattern, score: number, sourceProjects: number[]): Promise<{ id: number }> {
+    const id = this.nextPatternId++;
+    this.patterns.push({
+      id,
+      pattern_type: pattern.type,
+      industry: pattern.industry,
+      pattern_content: JSON.stringify(pattern),
+      score,
+      source_projects: JSON.stringify(sourceProjects),
+      usage_count: 0,
+      success_count: 0,
+    });
+    return { id };
+  }
+
+  async updatePatternScore(patternId: number, score: number, usageDelta: number, successDelta: number): Promise<void> {
+    const p = this.patterns.find(p => p.id === patternId);
+    if (p) {
+      p.score = score;
+      p.usage_count += usageDelta;
+      p.success_count += successDelta;
+    }
+  }
+
+  async logPatternUsage(patternId: number, projectId: number, isSuccess: boolean, context: string): Promise<void> {
+    this.usageLogs.push({ patternId, projectId, isSuccess, context, at: new Date() });
+  }
+
+  // 测试辅助
+  getAllPatterns(): any[] {
+    return this.patterns;
+  }
+  getAllUsageLogs(): any[] {
+    return this.usageLogs;
+  }
+}
+
+
+========== PatternExtractor.ts ==========
+// PatternExtractor - DKEE 核心提炼逻辑
+// 4 个 Pattern 类型的提炼算法
+
+import {
+  DictSourceRecord, DecisionTableSourceRecord, StateMachineSourceRecord,
+  FieldNamingPattern, DecisionRulePattern, StateMachinePattern, ProcessPattern,
+  AnyPattern, IndustryType, ExtractionResult, PatternSource
+} from './PatternTypes';
+import { IDKEEQueries } from './PatternQueries';
+import { PatternScorer } from './PatternScorer';
+
+// =====================================================
+// 提炼阈值(至少出现 N 个项目才算 Pattern)
+// =====================================================
+const DEFAULT_FREQUENCY_THRESHOLD = 2;  // 至少 2 个项目
+
+// =====================================================
+// PatternExtractor
+// =====================================================
+export class PatternExtractor {
+  private scorer = new PatternScorer();
+
+  constructor(
+    private queries: IDKEEQueries,
+    private frequencyThreshold: number = DEFAULT_FREQUENCY_THRESHOLD
+  ) {}
+
+  // ============================================================
+  // 主入口:提炼所有 4 种 Pattern
+  // ============================================================
+  async extractAll(industry: IndustryType, source: PatternSource = 'human-created'): Promise<ExtractionResult> {
+    const startTime = Date.now();
+    const newPatterns: AnyPattern[] = [];
+    const updatedPatterns: AnyPattern[] = [];
+
+    // 1. 字段命名 Pattern
+    const dictResult = await this.extractFieldNamingPatterns(industry, source);
+    newPatterns.push(...dictResult.newPatterns);
+    updatedPatterns.push(...dictResult.updatedPatterns);
+
+    // 2. 业务规则 Pattern
+    const dtResult = await this.extractDecisionRulePatterns(industry, source);
+    newPatterns.push(...dtResult.newPatterns);
+    updatedPatterns.push(...dtResult.updatedPatterns);
+
+    // 3. 状态机 Pattern
+    const smResult = await this.extractStateMachinePatterns(industry, source);
+    newPatterns.push(...smResult.newPatterns);
+    updatedPatterns.push(...smResult.updatedPatterns);
+
+    const duration = Date.now() - startTime;
+    return {
+      industry,
+      patternsExtracted: newPatterns.length + updatedPatterns.length,
+      patternsSaved: newPatterns.length,
+      patternsUpdated: updatedPatterns.length,
+      newPatterns,
+      updatedPatterns,
+      durationMs: duration,
+    };
+  }
+
+  // ============================================================
+  // 1. 字段命名 Pattern
+  //    跨项目聚合:找出现频率 >= threshold 的字段名
+  // ============================================================
+  async extractFieldNamingPatterns(industry: IndustryType, source: PatternSource): Promise<{
+    newPatterns: FieldNamingPattern[];
+    updatedPatterns: FieldNamingPattern[];
+  }> {
+    const records = await this.queries.fetchHighQualityDictRecords(industry);
+    if (records.length === 0) return { newPatterns: [], updatedPatterns: [] };
+
+    // Step 1: 统计每个字段名在多少个项目里出现
+    const fieldStats = new Map<string, {
+      type: string;
+      count: number;
+      projects: Set<number>;
+      isFK: boolean;
+      isRequired: boolean;
+      refEntity?: string;
+    }>();
+
+    records.forEach(record => {
+      record.elements.forEach(elem => {
+        if (!fieldStats.has(elem.name)) {
+          fieldStats.set(elem.name, {
+            type: elem.type,
+            count: 0,
+            projects: new Set(),
+            isFK: elem.isFK || false,
+            isRequired: elem.isRequired || false,
+            refEntity: elem.refEntity,
+          });
+        }
+        const stat = fieldStats.get(elem.name)!;
+        stat.count++;
+        stat.projects.add(record.project_id);
+      });
+    });
+
+    // Step 2: 过滤高频字段(>= threshold 个项目)
+    const commonFields = Array.from(fieldStats.entries())
+      .filter(([_, stat]) => stat.projects.size >= this.frequencyThreshold)
+      .map(([name, stat]) => ({
+        name,
+        type: stat.type,
+        frequency: stat.projects.size,
+        isFK: stat.isFK,
+        isRequired: stat.isRequired,
+        refEntity: stat.refEntity,
+      }))
+      .sort((a, b) => b.frequency - a.frequency);
+
+    if (commonFields.length === 0) return { newPatterns: [], updatedPatterns: [] };
+
+    // Step 3: 构造 Pattern
+    const sourceProjects = Array.from(new Set(records.map(r => r.project_id)));
+    const sourceRecords = records.map(r => ({
+      saTable: 'sa_data_dictionary',
+      recordId: r.id,
+      version: 1,
+    }));
+
+    const pattern: FieldNamingPattern = {
+      type: 'field_naming',
+      industry,
+      source,
+      sourceProjects,
+      sourceRecords,
+      commonFields,
+      fieldCount: commonFields.length,
+      minOccurrenceThreshold: this.frequencyThreshold,
+      patternTags: [`${industry}-字段标准`],
+    };
+
+    // Step 4: 评分 + 保存
+    const score = this.scorer.score({
+      usageCount: sourceProjects.length,
+      successRate: 1.0,  // 初始为 1.0,使用后根据 is_success 更新
+      source,
+      crossIndustryCount: 0,
+      recencyScore: 1.0,
+    });
+
+    // 检查是否已存在
+    const existing = await this.queries.fetchExistingPatterns(industry, 'field_naming');
+    if (existing.length > 0) {
+      // 更新已有的
+      const id = existing[0].id;
+      await this.queries.updatePatternScore(id, score, sourceProjects.length, sourceProjects.length);
+      return { newPatterns: [], updatedPatterns: [pattern] };
+    }
+
+    // 新建
+    const { id } = await this.queries.savePattern(pattern, score, sourceProjects);
+    return { newPatterns: [{ ...pattern, id }], updatedPatterns: [] };
+  }
+
+  // ============================================================
+  // 2. 业务规则 Pattern
+  //    跨项目聚合:找出一致条件的判定规则
+  // ============================================================
+  async extractDecisionRulePatterns(industry: IndustryType, source: PatternSource): Promise<{
+    newPatterns: DecisionRulePattern[];
+    updatedPatterns: DecisionRulePattern[];
+  }> {
+    const records = await this.queries.fetchHighQualityDecisionTableRecords(industry);
+    if (records.length === 0) return { newPatterns: [], updatedPatterns: [] };
+
+    // Step 1: 聚合所有 (condition, operator, value, action) 元组
+    const ruleStats = new Map<string, {
+      condition: string;
+      operator: string;
+      value: any;
+      action: string;
+      count: number;
+      projects: Set<number>;
+    }>();
+
+    records.forEach(record => {
+      record.tables.forEach(table => {
+        // 把每条 rule 拆成 (条件 → 动作) 元组
+        table.rules?.forEach((rule: any, ruleIdx: number) => {
+          const action = table.actions[rule.actionIndex];
+          if (!action) return;
+          table.conditions.forEach((cond, condIdx) => {
+            if (rule.conditionMask[condIdx]) {
+              const key = `${cond.name}|${cond.operator}|${JSON.stringify(cond.value)}|${action.name}`;
+              if (!ruleStats.has(key)) {
+                ruleStats.set(key, {
+                  condition: cond.name,
+                  operator: cond.operator,
+                  value: cond.value,
+                  action: action.name,
+                  count: 0,
+                  projects: new Set(),
+                });
+              }
+              const stat = ruleStats.get(key)!;
+              stat.count++;
+              stat.projects.add(record.project_id);
+            }
+          });
+        });
+      });
+    });
+
+    // Step 2: 过滤高频规则
+    const ruleSet = Array.from(ruleStats.values())
+      .filter(stat => stat.projects.size >= this.frequencyThreshold)
+      .sort((a, b) => b.count - a.count)
+      .map(stat => ({
+        condition: stat.condition,
+        operator: stat.operator,
+        threshold: stat.value,
+        action: stat.action,
+        frequency: stat.projects.size,
+      }));
+
+    if (ruleSet.length === 0) return { newPatterns: [], updatedPatterns: [] };
+
+    // Step 3: 检查是否有兜底规则
+    const hasDefaultRule = records.some(r =>
+      r.tables.some(t => t.rules?.some((rule: any) =>
+        rule.conditionMask.every((m: boolean) => !m)  // 所有条件都为假 → 默认规则
+      ))
+    );
+
+    const sourceProjects = Array.from(new Set(records.map(r => r.project_id)));
+    const sourceRecords = records.map(r => ({
+      saTable: 'sa_decision_table',
+      recordId: r.id,
+      version: 1,
+    }));
+
+    const pattern: DecisionRulePattern = {
+      type: 'decision_rule',
+      industry,
+      source,
+      sourceProjects,
+      sourceRecords,
+      ruleSet,
+      hasDefaultRule,
+      ruleCount: ruleSet.length,
+      patternTags: [`${industry}-业务规则`],
+    };
+
+    const score = this.scorer.score({
+      usageCount: sourceProjects.length,
+      successRate: 1.0,
+      source,
+      crossIndustryCount: 0,
+      recencyScore: 1.0,
+    });
+
+    const existing = await this.queries.fetchExistingPatterns(industry, 'decision_rule');
+    if (existing.length > 0) {
+      const id = existing[0].id;
+      await this.queries.updatePatternScore(id, score, sourceProjects.length, sourceProjects.length);
+      return { newPatterns: [], updatedPatterns: [pattern] };
+    }
+
+    const { id } = await this.queries.savePattern(pattern, score, sourceProjects);
+    return { newPatterns: [{ ...pattern, id }], updatedPatterns: [] };
+  }
+
+  // ============================================================
+  // 3. 状态机 Pattern
+  // ============================================================
+  async extractStateMachinePatterns(industry: IndustryType, source: PatternSource): Promise<{
+    newPatterns: StateMachinePattern[];
+    updatedPatterns: StateMachinePattern[];
+  }> {
+    const records = await this.queries.fetchHighQualityStateMachineRecords(industry);
+    if (records.length === 0) return { newPatterns: [], updatedPatterns: [] };
+
+    // Step 1: 按 entity 分组
+    const entityStats = new Map<string, {
+      states: Set<string>;
+      transitions: Map<string, { from: string; to: string; trigger: string; frequency: number }>;
+      projects: Set<number>;
+    }>();
+
+    records.forEach(record => {
+      record.state_machines.forEach(sm => {
+        if (!entityStats.has(sm.entity)) {
+          entityStats.set(sm.entity, {
+            states: new Set(),
+            transitions: new Map(),
+            projects: new Set(),
+          });
+        }
+        const stat = entityStats.get(sm.entity)!;
+        sm.states.forEach(s => stat.states.add(s));
+        sm.transitions.forEach(t => {
+          const key = `${t.from}→${t.to}@${t.trigger}`;
+          if (!stat.transitions.has(key)) {
+            stat.transitions.set(key, { from: t.from, to: t.to, trigger: t.trigger, frequency: 0 });
+          }
+          stat.transitions.get(key)!.frequency++;
+        });
+        stat.projects.add(record.project_id);
+      });
+    });
+
+    // Step 2: 只保留跨项目的稳定状态机
+    const newPatterns: StateMachinePattern[] = [];
+
+    for (const [entity, stat] of entityStats) {
+      if (stat.projects.size < this.frequencyThreshold) continue;
+
+      const standardTransitions = Array.from(stat.transitions.values())
+        .filter(t => t.frequency >= this.frequencyThreshold)
+        .sort((a, b) => b.frequency - a.frequency);
+
+      const sourceProjects = Array.from(stat.projects);
+      const sourceRecords = records
+        .filter(r => r.state_machines.some(sm => sm.entity === entity))
+        .map(r => ({ saTable: 'sa_state_machine', recordId: r.id, version: 1 }));
+
+      const pattern: StateMachinePattern = {
+        type: 'state_machine',
+        industry,
+        source,
+        sourceProjects,
+        sourceRecords,
+        entity,
+        standardStates: Array.from(stat.states),
+        standardTransitions,
+        patternTags: [`${industry}-状态机`, entity],
+      };
+
+      const score = this.scorer.score({
+        usageCount: sourceProjects.length,
+        successRate: 1.0,
+        source,
+        crossIndustryCount: 0,
+        recencyScore: 1.0,
+      });
+
+      const existing = await this.queries.fetchExistingPatterns(industry, 'state_machine');
+      if (existing.length > 0) {
+        const id = existing[0].id;
+        await this.queries.updatePatternScore(id, score, sourceProjects.length, sourceProjects.length);
+      } else {
+        const { id } = await this.queries.savePattern(pattern, score, sourceProjects);
+        newPatterns.push({ ...pattern, id });
+      }
+    }
+
+    return { newPatterns, updatedPatterns: [] };
+  }
+
+  // ============================================================
+  // 使用 Pattern 后,根据 Validator 结果更新评分
+  // ============================================================
+  async recordUsage(patternId: number, projectId: number, isSuccess: boolean, context: string): Promise<void> {
+    await this.queries.logPatternUsage(patternId, projectId, isSuccess, context);
+  }
+}
+
+
+========== PatternRankingService.ts ==========
+// PatternRankingService - Pattern 评分动态更新服务
+// 当一个 Pattern 被使用时,根据 Validator 结果动态更新评分
+
+import { IDKEEQueries } from './PatternQueries';
+import { PatternScorer } from './PatternScorer';
+import { AnyPattern, IndustryType, PatternType } from './PatternTypes';
+
+export class PatternRankingService {
+  private scorer = new PatternScorer();
+
+  constructor(private queries: IDKEEQueries) {}
+
+  /**
+   * 一次 SA 流水线跑完后,更新所有用过的 Pattern 的评分
+   */
+  async updateScoresAfterUsage(usageLogs: Array<{
+    patternId: number;
+    projectId: number;
+    isSuccess: boolean;
+  }>): Promise<void> {
+    // 聚合每个 pattern 的使用统计
+    const stats = new Map<number, { total: number; success: number }>();
+    usageLogs.forEach(log => {
+      if (!stats.has(log.patternId)) stats.set(log.patternId, { total: 0, success: 0 });
+      const s = stats.get(log.patternId)!;
+      s.total++;
+      if (log.isSuccess) s.success++;
+    });
+
+    // 更新每个 pattern
+    for (const [patternId, stat] of stats) {
+      const successRate = stat.success / stat.total;
+      const existing = await this.fetchPattern(patternId);
+      if (!existing) continue;
+
+      const newScore = this.scorer.score({
+        usageCount: (existing.usage_count || 0) + stat.total,
+        successRate,
+        source: existing.source,
+        crossIndustryCount: existing.cross_industry_count || 0,
+        recencyScore: this.scorer.recencyScore(new Date(existing.created_at)),
+      });
+
+      await this.queries.updatePatternScore(patternId, newScore, stat.total, stat.success);
+
+      // 半衰期过期的 pattern 标记 deprecated
+      if (newScore < 0.3) {
+        console.warn(`[DKEE] Pattern ${patternId} 评分降到 ${newScore},建议人工 review`);
+      }
+    }
+  }
+
+  /**
+   * 给 LLM context 注入时,选 Top N Pattern
+   */
+  async getTopPatternsForContext(
+    industry: IndustryType,
+    types: PatternType[],
+    topN: number = 5
+  ): Promise<AnyPattern[]> {
+    const allPatterns: any[] = [];
+    for (const type of types) {
+      const patterns = await this.queries.fetchExistingPatterns(industry, type);
+      allPatterns.push(...patterns);
+    }
+
+    // 按 score 排序
+    return allPatterns
+      .filter(p => p.score >= 0.6)  // 评分门禁
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topN)
+      .map(p => JSON.parse(p.pattern_content));
+  }
+
+  private async fetchPattern(id: number): Promise<any> {
+    // 简化:实际实现用单独 query
+    return { id, usage_count: 0, source: 'human-created', cross_industry_count: 0, created_at: new Date() };
+  }
+}
+
+
+========== PatternScorer.ts ==========
+// PatternScorer - DKEE 评分公式实现
+// score = w1*usage + w2*success + w3*source + w4*crossIndustry + w5*recency
+
+import { PatternSource } from './PatternTypes';
+
+export interface ScoreInput {
+  usageCount: number;
+  successRate: number;
+  source: PatternSource;
+  crossIndustryCount: number;
+  recencyScore: number;
+}
+
+export class PatternScorer {
+  // 权重(可配置)
+  private weights = {
+    usage: 0.25,
+    success: 0.30,
+    source: 0.15,
+    crossIndustry: 0.15,
+    recency: 0.15,
+  };
+
+  // 来源加权
+  private sourceWeights: Record<PatternSource, number> = {
+    'human-created': 1.0,
+    'ai-discovered': 0.8,
+    'self-play': 0.6,
+  };
+
+  score(input: ScoreInput): number {
+    const usageScore = Math.min(input.usageCount / 10, 1.0);  // 10 个项目 = 满分
+    const successScore = input.successRate;
+    const sourceScore = this.sourceWeights[input.source] || 0.5;
+    const crossIndustryScore = Math.min(input.crossIndustryCount / 3, 1.0);  // 3 个行业 = 满分
+
+    const raw =
+      this.weights.usage * usageScore +
+      this.weights.success * successScore +
+      this.weights.source * sourceScore +
+      this.weights.crossIndustry * crossIndustryScore +
+      this.weights.recency * input.recencyScore;
+
+    return Math.round(raw * 100) / 100;  // 保留 2 位小数
+  }
+
+  recencyScore(createdAt: Date): number {
+    const daysSinceCreation = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+    // 半衰期 90 天
+    return Math.pow(0.5, daysSinceCreation / 90);
+  }
+}
+
+
+========== index.ts ==========
+// DKEE - 完整导出
+// 4 个核心组件:PatternTypes / PatternQueries / PatternExtractor / PatternRankingService
+
+export {
+  PatternType, PatternSource, IndustryType,
+  BasePattern, FieldNamingPattern, DecisionRulePattern, StateMachinePattern, ProcessPattern, AnyPattern,
+  ExtractionResult,
+  DictSourceRecord, DecisionTableSourceRecord, StateMachineSourceRecord
+} from './PatternTypes';
+
+export { IDKEEQueries, SqlServerDKEEQueries, InMemoryDKEEQueries } from './PatternQueries';
+export { PatternExtractor } from './PatternExtractor';
+export { PatternScorer } from './PatternScorer';
+export { PatternRankingService } from './PatternRankingService';
+
+// =====================================================
+// DKEEFacade - 统一入口(给 SAOrchestrator 调用)
+// =====================================================
+import { ISADatabase } from '../orchestrator/orchestrator-types';
+import { IDKEEQueries, InMemoryDKEEQueries } from './PatternQueries';
+import { PatternExtractor } from './PatternExtractor';
+import { PatternRankingService } from './PatternRankingService';
+import { IndustryType, ExtractionResult } from './PatternTypes';
+
+export class DKEEFacade {
+  public queries: IDKEEQueries;
+  public extractor: PatternExtractor;
+  public ranker: PatternRankingService;
+
+  constructor(queries?: IDKEEQueries) {
+    this.queries = queries || new InMemoryDKEEQueries();
+    this.extractor = new PatternExtractor(this.queries);
+    this.ranker = new PatternRankingService(this.queries);
+  }
+
+  /**
+   * 在 SA 流水线跑完后调用
+   */
+  async extractAndScore(industry: IndustryType): Promise<ExtractionResult> {
+    return await this.extractor.extractAll(industry);
+  }
+
+  /**
+   * 给下个 SA 流水线注入 Top Pattern
+   */
+  async getTopPatternsForContext(industry: IndustryType, topN: number = 5): Promise<any[]> {
+    return await this.ranker.getTopPatternsForContext(industry, ['field_naming', 'decision_rule', 'state_machine', 'process_pattern'], topN);
+  }
+}
+
+

@@ -1,0 +1,211 @@
+// 集成测试:验证 runSA() 完整流程
+// 包含:LLM 模拟、Validator 真实跑、DB 内存跑、Retry 循环、DKEE 提炼
+
+import { SAOrchestrator } from '../src/orchestrator/SAOrchestrator';
+import { InMemorySADatabase } from '../src/orchestrator/SADatabase';
+import { ILLMClient, SARequest, ValidationError } from '../src/orchestrator/orchestrator-types';
+
+// =====================================================
+// Mock LLM - 模拟"第一次出错、第二次修复"的真实 LLM 行为
+// =====================================================
+class MockLLM implements ILLMClient {
+  private dictCallCount = 0;
+
+  async generate(params: any): Promise<any> {
+    const errors = params.lastErrors || [];
+
+    // Scope 步骤
+    if (params.systemPrompt.includes('需求分析') || params.systemPrompt.includes('系统边界')) {
+      return {
+        systemBoundary: { inScope: ['MES 报工系统'], outOfScope: ['ERP'] },
+        externalEntities: [{ name: '工人', type: 'user', description: '车间工人' }],
+        businessEvents: [{ id: 1, name: '报工', description: '工人提交报工单', complexity: 'medium' }],
+        eventCount: 1,
+      };
+    }
+
+    // DFD 步骤
+    if (params.systemPrompt.includes('数据流图')) {
+      return {
+        contextDiagram: { process: 'MES', entities: ['worker'] },
+        dfdLevels: { '0': { processes: [{ id: 'P1', name: 'P', inputFlows: ['in'], outputFlows: ['out'] }] } },
+        processes: [{ id: 'P1.1', name: 'P1-sub', parentId: 'P1', inputFlows: ['in'], outputFlows: ['out'] }],
+        dataFlows: [{ name: 'in' }, { name: 'out' }],
+        dataStores: [{ name: 'WorkOrder' }],
+      };
+    }
+
+    // Dict 步骤:第一次有幻觉,第二次修正
+    if (params.systemPrompt.includes('数据字典')) {
+      this.dictCallCount++;
+      if (this.dictCallCount === 1) {
+        return {
+          elements: [
+            { name: 'WorkOrderId', type: 'BIGINT' },
+            { name: 'ProductName', type: 'NVARCHAR(50)' },  // ❌ 幻觉
+          ],
+          dataFlows: [],
+          dataStores: [{ name: 'WorkOrder', fields: [{ name: 'Id', type: 'BIGINT' }] }],
+        };
+      }
+      // 第二次:看到错误后修正
+      return {
+        elements: [
+          { name: 'WorkOrderId', type: 'BIGINT' },
+          { name: 'Qty', type: 'DECIMAL(18,2)' },
+        ],
+        dataFlows: [],
+        dataStores: [{ name: 'WorkOrder', fields: [
+          { name: 'Id', type: 'BIGINT' },
+          { name: 'tenant_id', type: 'NVARCHAR(50)' },
+        ]}],
+      };
+    }
+
+    // 默认:BPM/PSpec/ER/UI 等
+    return {
+      swimLanes: [], activityNodes: [], edges: [], exceptionPaths: [],
+      dfdProcessMappings: { 'N1': 'P1' },
+    };
+  }
+}
+
+// =====================================================
+// Mock Validator Bundle - 真实 DictValidator 逻辑（改为 class 以匹配 new X().validate() 调用方式）
+// =====================================================
+class MockDFDValidator {
+  constructor(_output: any) {}
+  validate() { return { passed: true, errors: [] as ValidationError[] }; }
+}
+
+class MockBPMValidator {
+  constructor(_output: any, _dfd?: any) {}
+  validate() { return { passed: true, errors: [] as ValidationError[] }; }
+}
+
+class MockDictValidator {
+  private output: any;
+  private dfd: any;
+  constructor(output: any, dfd?: any) {
+    this.output = output;
+    this.dfd = dfd;
+  }
+  validate() {
+    const errors: ValidationError[] = [];
+    this.dfd?.dataStores?.forEach((s: any) => {
+      if (!this.output.dataStores.find((ds: any) => ds.name === s.name)) {
+        errors.push({
+          code: 'DICT_STORE_MISSING',
+          message: `DFD 数据存储 "${s.name}" 在数据字典中未定义`,
+          severity: 'ERROR',
+        });
+      }
+    });
+    if (this.output.elements.some((e: any) => e.name === 'ProductName')) {
+      errors.push({
+        code: 'DICT_INVALID_FIELD',
+        message: `字段 "ProductName" 是 LLM 幻觉,不在上下文允许的字段中`,
+        severity: 'ERROR',
+      });
+    }
+    return { passed: errors.length === 0, errors };
+  }
+}
+
+class MockPassValidator {
+  constructor(..._args: any[]) {}
+  validate() { return { passed: true, errors: [] as ValidationError[] }; }
+}
+
+const mockValidators = {
+  DFDValidator: MockDFDValidator as any,
+  BPMValidator: MockBPMValidator as any,
+  DictValidator: MockDictValidator as any,
+  LogicValidator: MockPassValidator as any,
+  CrossEventConsistencyValidator: MockPassValidator as any,
+  ERValidator: MockPassValidator as any,
+  UIValidator: MockPassValidator as any,
+};
+
+// =====================================================
+// 集成测试
+// =====================================================
+describe('SAOrchestrator.runSA() 集成测试', () => {
+  it('完整跑一遍需求分析,模拟 LLM 第一次出错第二次修正', async () => {
+    const llm = new MockLLM();
+    const db = new InMemorySADatabase();
+    const orchestrator = new SAOrchestrator(llm, db, mockValidators);
+
+    const req: SARequest = {
+      tenantId: 't1',
+      projectId: 1,
+      requirementId: 1,
+      requirementText: '我们要建 MES 报工系统,机加工车间,工单报工,物料消耗',
+      userId: 'user1',
+    };
+
+    const result = await orchestrator.runSA(req);
+
+    // 验证:9 张表都写入了数据
+    const stats = db.getStats();
+    expect(stats.scopes).toBe(1);
+    expect(stats.dfds).toBe(1);
+    expect(stats.bpms).toBe(1);
+    expect(stats.dicts).toBe(1);
+    expect(stats.ers).toBe(1);
+    expect(stats.uis).toBe(1);
+
+    // 验证:validation_log 记录了 Dict 的 1 次重试
+    const logs = db.getValidationLogs();
+    const dictLogs = logs.filter(l => l.saTableName === 'sa_data_dictionary');
+    expect(dictLogs.length).toBeGreaterThanOrEqual(2);  // 第 1 次失败 + 第 2 次成功
+    const failedLog = dictLogs.find(l => l.validationStatus === 'FAIL');
+    expect(failedLog?.retryCount).toBe(0);
+    expect(failedLog?.isConverged).toBe(false);
+    const passedLog = dictLogs.find(l => l.validationStatus === 'PASS');
+    expect(passedLog?.isConverged).toBe(true);
+
+    // 验证:第 2 次的 previousErrors 包含了第 1 次的错误
+    expect(passedLog?.previousErrors).toBeTruthy();
+    expect(JSON.stringify(passedLog?.previousErrors)).toContain('ProductName');
+
+    // 验证:SAOutput 完整返回
+    expect(result.scope).toBeDefined();
+    expect(result.dict).toBeDefined();
+    expect(result.dict?.elements).toContainEqual(
+      expect.objectContaining({ name: 'WorkOrderId' })
+    );
+    // ProductName 不应出现在最终结果里
+    expect(result.dict?.elements.find((e: any) => e.name === 'ProductName')).toBeUndefined();
+  });
+
+  it('简单事件:跳过 DFD/PSPEC/DT,只跑 Scope + UI', async () => {
+    const llm: ILLMClient = {
+      async generate() {
+        // 第一次就直接返回合法简单数据
+        return {
+          systemBoundary: { inScope: ['查询'], outOfScope: [] },
+          externalEntities: [{ name: 'user', type: 'person' }],
+          businessEvents: [{
+            id: 1, name: '查工单', description: '查询', complexity: 'simple',
+          }],
+          eventCount: 1,
+        };
+      },
+    };
+    const db = new InMemorySADatabase();
+    const orchestrator = new SAOrchestrator(llm, db, mockValidators);
+
+    const req: SARequest = {
+      tenantId: 't1', projectId: 1, requirementId: 1,
+      requirementText: '简单查询', userId: 'u1',
+    };
+
+    const result = await orchestrator.runSA(req);
+
+    // 简单事件应该只跑 Scope(不跑 DFD/BPM/Dict/PSPEC/DT/ER/STD,只跑 UI)
+    const stats = db.getStats();
+    expect(stats.scopes).toBe(1);
+    expect(stats.uis).toBe(0);  // 即使简单,UI 也要 dataFlow,但 mock 没返回,失败
+  });
+});

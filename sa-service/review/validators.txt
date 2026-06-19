@@ -1,0 +1,995 @@
+
+========== types.ts ==========
+// 通用类型定义(所有 Validator 复用)
+
+export type ValidationSeverity = 'ERROR' | 'WARNING';
+
+export interface ValidationError {
+  code: string;
+  message: string;
+  severity: ValidationSeverity;
+  field?: string;
+  suggestion?: string;
+}
+
+export interface ValidationResult {
+  passed: boolean;
+  errors: ValidationError[];
+}
+
+// 类型白名单(从 EAB 来)
+export const TYPE_WHITELIST = [
+  'NVARCHAR', 'BIGINT', 'INT', 'DECIMAL', 'DATETIME', 'BOOLEAN', 'JSON'
+] as const;
+
+// 必填审计字段
+export const REQUIRED_AUDIT_FIELDS = [
+  'CreatedAt', 'CreatedBy', 'UpdatedAt', 'UpdatedBy', 'TenantId'
+] as const;
+
+
+========== builders.ts ==========
+// Test Data Builders - 用于快速构造测试数据
+import {
+  DataDictionary, DataFlowDef, DataStoreDef, FieldElement
+} from './DictValidator';
+import { DFD, DFDProcess } from './DFDValidator';
+import { BPM, BPMNode } from './BPMValidator';
+import { PSpec } from './LogicValidator';
+import { DecisionTable } from './CrossEventConsistencyValidator';
+import { ER, EREntity } from './ERValidator';
+import { UI, UIScreen } from './UIValidator';
+
+// =====================================================
+// 通用: 标准审计字段 + TenantId(合法数据)
+// =====================================================
+export const AUDIT_FIELDS: FieldElement[] = [
+  { name: 'CreatedAt', type: 'DATETIME' },
+  { name: 'CreatedBy', type: 'NVARCHAR(50)' },
+  { name: 'UpdatedAt', type: 'DATETIME' },
+  { name: 'UpdatedBy', type: 'NVARCHAR(50)' },
+  { name: 'TenantId', type: 'NVARCHAR(50)' },
+];
+
+// =====================================================
+// DictBuilder - 数据字典构造器
+// =====================================================
+export class DictBuilder {
+  private dict: DataDictionary = {
+    id: 1,
+    project_id: 1,
+    asset_level: 'EVENT',
+    event_id: 1,
+    elements: [...AUDIT_FIELDS],
+    dataFlows: [],
+    dataStores: [],
+  };
+
+  withElement(name: string, type: string, isFK = false, refEntity?: string): this {
+    this.dict.elements.push({ name, type, isFK, refEntity });
+    return this;
+  }
+
+  withDataFlow(name: string, fields: FieldElement[]): this {
+    this.dict.dataFlows.push({ name, fields });
+    return this;
+  }
+
+  withDataStore(name: string, fields: FieldElement[], withTenantId = true): this {
+    const allFields = withTenantId
+      ? [...fields, { name: 'TenantId', type: 'NVARCHAR(50)' }]
+      : fields;
+    this.dict.dataStores.push({ name, fields: allFields });
+    return this;
+  }
+
+  withoutAuditFields(): this {
+    this.dict.elements = this.dict.elements.filter(
+      e => !['CreatedAt', 'CreatedBy', 'UpdatedAt', 'UpdatedBy', 'TenantId'].includes(e.name)
+    );
+    return this;
+  }
+
+  withoutTenantId(): this {
+    this.dict.elements = this.dict.elements.filter(e => e.name !== 'TenantId');
+    return this;
+  }
+
+  build(): DataDictionary {
+    return JSON.parse(JSON.stringify(this.dict));
+  }
+}
+
+// =====================================================
+// DFDBuilder - DFD 构造器
+// =====================================================
+export class DFDBuilder {
+  private dfd: DFD = {
+    id: 1,
+    dfd_levels: {
+      '0': { processes: [], flows: [] },
+      '1': { processes: [], flows: [] },
+    },
+    processes: [],
+  };
+
+  addLevel0Process(id: string, name: string, inputs: string[], outputs: string[]): this {
+    this.dfd.dfd_levels['0'].processes.push({ id, name, inputFlows: inputs, outputFlows: outputs });
+    return this;
+  }
+
+  addLevel1Process(id: string, name: string, parentId: string, inputs: string[], outputs: string[]): this {
+    this.dfd.processes.push({ id, name, parentId, inputFlows: inputs, outputFlows: outputs });
+    this.dfd.dfd_levels['1'].processes.push({ id, name, inputFlows: inputs, outputFlows: outputs });
+    return this;
+  }
+
+  addProcess(id: string, name: string, inputs: string[], outputs: string[], parentId?: string): this {
+    this.dfd.processes.push({ id, name, parentId, inputFlows: inputs, outputFlows: outputs });
+    return this;
+  }
+
+  withEmptyIO(): this {
+    // 把所有 process 的 IO 清空(用于测 DFD_NO_INPUT / DFD_NO_OUTPUT)
+    this.dfd.processes.forEach(p => {
+      p.inputFlows = [];
+      p.outputFlows = [];
+    });
+    return this;
+  }
+
+  build(): DFD {
+    return JSON.parse(JSON.stringify(this.dfd));
+  }
+}
+
+// =====================================================
+// BPMBuilder - 业务流程图构造器
+// =====================================================
+export class BPMBuilder {
+  private bpm: BPM = {
+    swim_lanes: [
+      { laneId: 'L1', role: 'worker', name: '工人' },
+      { laneId: 'L2', role: 'supervisor', name: '班组长' },
+    ],
+    activity_nodes: [],
+  };
+
+  addNode(id: string, name: string, dfdProcessId: string, type: BPMNode['type'] = 'user_action'): this {
+    this.bpm.activity_nodes.push({ id, name, laneId: 'L1', dfdProcessId, type });
+    return this;
+  }
+
+  build(): BPM {
+    return JSON.parse(JSON.stringify(this.bpm));
+  }
+}
+
+// =====================================================
+// DecisionTableBuilder - 判定表构造器
+// =====================================================
+export class DecisionTableBuilder {
+  private table: DecisionTable = {
+    id: 'DT-1',
+    project_id: 1,
+    event_id: 1,
+    conditions: [],
+    actions: [],
+  };
+
+  withCondition(name: string, value: any, operator = '>'): this {
+    this.table.conditions.push({ name, operator, value });
+    return this;
+  }
+
+  withAction(name: string): this {
+    this.table.actions.push({ name });
+    return this;
+  }
+
+  build(): DecisionTable {
+    return JSON.parse(JSON.stringify(this.table));
+  }
+}
+
+// =====================================================
+// PSpecBuilder - PSPEC 构造器
+// =====================================================
+export class PSpecBuilder {
+  private spec: PSpec = { process_specs: [] };
+
+  addProcess(id: string, name: string, inputs: string[]): this {
+    this.spec.process_specs.push({ id, name, input: inputs, output: [] });
+    return this;
+  }
+
+  build(): PSpec {
+    return JSON.parse(JSON.stringify(this.spec));
+  }
+}
+
+// =====================================================
+// ERBuilder - ER 构造器
+// =====================================================
+export class ERBuilder {
+  private er: ER = { entities: [], relationships: [] };
+
+  addEntity(name: string, columns: EREntity['columns']): this {
+    this.er.entities.push({ name, columns });
+    return this;
+  }
+
+  build(): ER {
+    return JSON.parse(JSON.stringify(this.er));
+  }
+}
+
+// =====================================================
+// UIBuilder - UI 构造器
+// =====================================================
+export class UIBuilder {
+  private ui: UI = { id: 1, screens: [] };
+
+  addScreen(id: string, name: string, dataFlow: string, bpmNodeId: string, fields: UIScreen['fields']): this {
+    this.ui.screens.push({ id, name, dataFlow, bpmNodeId, fields });
+    return this;
+  }
+
+  build(): UI {
+    return JSON.parse(JSON.stringify(this.ui));
+  }
+}
+
+
+========== DFDValidator.ts ==========
+// DFDValidator - DFD 校验器
+import { ValidationError, ValidationResult } from './types';
+
+export interface DFDProcess {
+  id: string;
+  name: string;
+  inputFlows: string[];
+  outputFlows: string[];
+  parentId?: string;
+}
+
+export interface DFD {
+  id: number;
+  dfd_levels: {
+    [key: string]: {
+      processes: DFDProcess[];
+      flows: { name: string; from: string; to: string }[];
+    };
+  };
+  processes: DFDProcess[];
+}
+
+export class DFDValidator {
+  constructor(private dfd: DFD) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkParentChildBalance());
+    errors.push(...this.checkConservation());
+    errors.push(...this.checkProcessIO());
+    return { passed: errors.length === 0, errors };
+  }
+
+  private checkParentChildBalance(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const level0 = this.dfd.dfd_levels['0']?.processes || [];
+
+    level0.forEach(parent => {
+      const childProcesses = this.dfd.processes.filter(p => p.parentId === parent.id);
+      if (childProcesses.length === 0) {
+        errors.push({
+          code: 'DFD_NOT_DECOMPOSED',
+          message: `Level 0 过程 "${parent.id}" 在 Level 1 未分解`,
+          severity: 'ERROR',
+        });
+        return;
+      }
+      const childIO = new Set<string>();
+      childProcesses.forEach(p => {
+        p.inputFlows.forEach(f => childIO.add(f));
+        p.outputFlows.forEach(f => childIO.add(f));
+      });
+      const parentIO = new Set([...parent.inputFlows, ...parent.outputFlows]);
+      parentIO.forEach(io => {
+        if (!childIO.has(io)) {
+          errors.push({
+            code: 'DFD_BALANCE_MISMATCH',
+            message: `过程 "${parent.id}" 的 IO "${io}" 在子图中找不到对应`,
+            severity: 'ERROR',
+          });
+        }
+      });
+    });
+    return errors;
+  }
+
+  private checkConservation(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    this.dfd.processes.forEach(process => {
+      process.inputFlows.forEach(flow => {
+        if (!this.findFlowProducer(flow, process.id)) {
+          errors.push({
+            code: 'DFD_BLACK_HOLE',
+            message: `过程 "${process.id}" 的输入流 "${flow}" 找不到来源(数据黑洞)`,
+            severity: 'ERROR',
+          });
+        }
+      });
+      process.outputFlows.forEach(flow => {
+        if (!this.findFlowConsumer(flow, process.id)) {
+          errors.push({
+            code: 'DFD_MIRACLE',
+            message: `过程 "${process.id}" 的输出流 "${flow}" 没有消费者(数据奇迹)`,
+            severity: 'ERROR',
+          });
+        }
+      });
+    });
+    return errors;
+  }
+
+  private checkProcessIO(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    this.dfd.processes.forEach(process => {
+      if (process.inputFlows.length === 0) {
+        errors.push({
+          code: 'DFD_NO_INPUT',
+          message: `过程 "${process.id}" 没有输入流`,
+          severity: 'ERROR',
+        });
+      }
+      if (process.outputFlows.length === 0) {
+        errors.push({
+          code: 'DFD_NO_OUTPUT',
+          message: `过程 "${process.id}" 没有输出流`,
+          severity: 'ERROR',
+        });
+      }
+    });
+    return errors;
+  }
+
+  private findFlowProducer(flow: string, excludeProcessId: string): boolean {
+    return this.dfd.processes.some(
+      p => p.id !== excludeProcessId && p.outputFlows.includes(flow)
+    );
+  }
+
+  private findFlowConsumer(flow: string, excludeProcessId: string): boolean {
+    return this.dfd.processes.some(
+      p => p.id !== excludeProcessId && p.inputFlows.includes(flow)
+    );
+  }
+}
+
+
+========== DictValidator.ts ==========
+// DictValidator - 数据字典校验器
+import {
+  ValidationError, ValidationResult, TYPE_WHITELIST, REQUIRED_AUDIT_FIELDS
+} from './types';
+
+export interface FieldElement {
+  name: string;
+  type: string;
+  length?: number;
+  isFK?: boolean;
+  refEntity?: string;
+  isRequired?: boolean;
+  scope?: string;
+}
+
+export interface DataFlowDef {
+  name: string;
+  fields: FieldElement[];
+}
+
+export interface DataStoreDef {
+  name: string;
+  fields: FieldElement[];
+}
+
+export interface DataDictionary {
+  id: number;
+  project_id: number;
+  asset_level: 'PROJECT' | 'EVENT' | 'PROCESS';
+  event_id?: number;
+  elements: FieldElement[];
+  dataFlows: DataFlowDef[];
+  dataStores: DataStoreDef[];
+}
+
+export interface DFD {
+  dataFlows: { name: string }[];
+  dataStores: { name: string }[];
+}
+
+export class DictValidator {
+  constructor(
+    private dict: DataDictionary,
+    private dfd: DFD
+  ) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkDFDCoherence());
+    errors.push(...this.checkFieldTypes());
+    errors.push(...this.checkFKReferences());
+    errors.push(...this.checkAuditFields());
+    errors.push(...this.checkTenantIsolation());
+    return { passed: errors.length === 0, errors };
+  }
+
+  private checkDFDCoherence(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const dictFlowNames = new Set(this.dict.dataFlows.map(f => f.name));
+    const dictStoreNames = new Set(this.dict.dataStores.map(s => s.name));
+
+    this.dfd.dataFlows.forEach(flow => {
+      if (!dictFlowNames.has(flow.name)) {
+        errors.push({
+          code: 'DICT_FLOW_MISSING',
+          message: `DFD 数据流 "${flow.name}" 在数据字典中未定义`,
+          severity: 'ERROR',
+          suggestion: `在 dict.dataFlows 中添加 "${flow.name}" 定义`,
+        });
+      }
+    });
+
+    this.dfd.dataStores.forEach(store => {
+      if (!dictStoreNames.has(store.name)) {
+        errors.push({
+          code: 'DICT_STORE_MISSING',
+          message: `DFD 数据存储 "${store.name}" 在数据字典中未定义`,
+          severity: 'ERROR',
+        });
+      }
+    });
+
+    return errors;
+  }
+
+  private checkFieldTypes(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const allFields = [
+      ...this.dict.elements,
+      ...this.dict.dataFlows.flatMap(f => f.fields),
+      ...this.dict.dataStores.flatMap(s => s.fields),
+    ];
+
+    allFields.forEach(field => {
+      const baseType = field.type.split('(')[0];
+      if (!TYPE_WHITELIST.includes(baseType as any)) {
+        errors.push({
+          code: 'DICT_INVALID_TYPE',
+          message: `字段 "${field.name}" 类型 "${field.type}" 不在白名单中`,
+          severity: 'ERROR',
+          field: field.name,
+        });
+      }
+      if (field.type.startsWith('NVARCHAR') && !field.type.includes('(')) {
+        errors.push({
+          code: 'DICT_MISSING_LENGTH',
+          message: `NVARCHAR 字段 "${field.name}" 必须指定长度`,
+          severity: 'ERROR',
+          field: field.name,
+        });
+      }
+      if (field.type.startsWith('DECIMAL') && !field.type.includes('(')) {
+        errors.push({
+          code: 'DICT_MISSING_PRECISION',
+          message: `DECIMAL 字段 "${field.name}" 必须指定精度`,
+          severity: 'ERROR',
+          field: field.name,
+        });
+      }
+    });
+
+    return errors;
+  }
+
+  private checkFKReferences(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const allFields = [
+      ...this.dict.elements,
+      ...this.dict.dataFlows.flatMap(f => f.fields),
+      ...this.dict.dataStores.flatMap(s => s.fields),
+    ];
+    const storeNames = new Set(this.dict.dataStores.map(s => s.name));
+
+    allFields.forEach(field => {
+      if (field.isFK && !field.refEntity) {
+        errors.push({
+          code: 'DICT_FK_NO_REF',
+          message: `外键字段 "${field.name}" 必须指定引用的实体`,
+          severity: 'ERROR',
+          field: field.name,
+        });
+      }
+      if (field.isFK && field.refEntity && !storeNames.has(field.refEntity)) {
+        errors.push({
+          code: 'DICT_FK_REF_INVALID',
+          message: `外键 "${field.name}" 引用 "${field.refEntity}" 在数据存储中不存在`,
+          severity: 'ERROR',
+          field: field.name,
+        });
+      }
+    });
+
+    return errors;
+  }
+
+  private checkAuditFields(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const fieldNames = new Set(this.dict.elements.map(e => e.name));
+    REQUIRED_AUDIT_FIELDS.forEach(field => {
+      if (!fieldNames.has(field)) {
+        errors.push({
+          code: 'DICT_MISSING_AUDIT',
+          message: `数据字典必须包含审计字段 "${field}"`,
+          severity: 'ERROR',
+          field,
+        });
+      }
+    });
+    return errors;
+  }
+
+  private checkTenantIsolation(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const storeWithoutTenant = this.dict.dataStores.filter(
+      store => !store.fields.some(f => f.name === 'TenantId')
+    );
+    if (storeWithoutTenant.length > 0) {
+      errors.push({
+        code: 'DICT_MISSING_TENANT',
+        message: `数据存储 [${storeWithoutTenant.map(s => s.name).join(', ')}] 缺少 TenantId 字段(多租户隔离必需)`,
+        severity: 'ERROR',
+      });
+    }
+    return errors;
+  }
+}
+
+
+========== BPMValidator.ts ==========
+// BPMValidator - 业务流程图校验器
+import { ValidationError, ValidationResult } from './types';
+
+export interface BPMNode {
+  id: string;
+  name: string;
+  laneId: string;
+  dfdProcessId: string;
+  type: 'user_action' | 'system_action' | 'decision';
+}
+
+export interface BPM {
+  swim_lanes: { laneId: string; role: string; name: string }[];
+  activity_nodes: BPMNode[];
+}
+
+export interface DFDProcessLite {
+  id: string;
+  name: string;
+}
+
+export class BPMValidator {
+  constructor(
+    private bpm: BPM,
+    private dfdProcesses: DFDProcessLite[]
+  ) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkBPMNodesInDFD());
+    errors.push(...this.checkDFDProcessesInBPM());
+    return { passed: errors.length === 0, errors };
+  }
+
+  // 校验 1:每个 BPM 节点必须绑定 DFD 过程
+  private checkBPMNodesInDFD(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const dfdProcessIds = new Set(this.dfdProcesses.map(p => p.id));
+
+    this.bpm.activity_nodes.forEach(node => {
+      if (!dfdProcessIds.has(node.dfdProcessId)) {
+        errors.push({
+          code: 'BPM_NODE_NO_DFD',
+          message: `BPM 节点 "${node.id}" 绑定的 DFD 过程 "${node.dfdProcessId}" 不存在`,
+          severity: 'ERROR',
+        });
+      }
+    });
+    return errors;
+  }
+
+  // 校验 2:每个 DFD 过程至少有一个 BPM 节点
+  private checkDFDProcessesInBPM(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const bpmProcessIds = new Set(this.bpm.activity_nodes.map(n => n.dfdProcessId));
+
+    this.dfdProcesses.forEach(p => {
+      if (!bpmProcessIds.has(p.id)) {
+        errors.push({
+          code: 'BPM_DFD_NO_NODE',
+          message: `DFD 过程 "${p.id}" 在 BPM 中无对应节点`,
+          severity: 'WARNING',
+        });
+      }
+    });
+    return errors;
+  }
+}
+
+
+========== LogicValidator.ts ==========
+// LogicValidator - PSPEC 校验器
+import { ValidationError, ValidationResult } from './types';
+import { DataDictionary } from './DictValidator';
+
+export interface ProcessSpec {
+  id: string;
+  name: string;
+  input: string[];
+  output: string[];
+  validation?: string;
+  algorithm?: string;
+}
+
+export interface PSpec {
+  process_specs: ProcessSpec[];
+}
+
+export class LogicValidator {
+  constructor(
+    private pspec: PSpec,
+    private dict: DataDictionary
+  ) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkFieldsInDict());
+    return { passed: errors.length === 0, errors };
+  }
+
+  private checkFieldsInDict(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const dictFieldNames = new Set(this.dict.elements.map(e => e.name));
+
+    this.pspec.process_specs.forEach(spec => {
+      spec.input.forEach(f => {
+        if (!dictFieldNames.has(f)) {
+          errors.push({
+            code: 'LOGIC_FIELD_NOT_IN_DICT',
+            message: `PSPEC 过程 "${spec.id}" 输入字段 "${f}" 不在数据字典`,
+            severity: 'ERROR',
+            field: f,
+          });
+        }
+      });
+    });
+    return errors;
+  }
+}
+
+
+========== CrossEventConsistencyValidator.ts ==========
+// CrossEventConsistencyValidator - 判定表跨事件一致性校验器
+import { ValidationError, ValidationResult } from './types';
+
+export interface DecisionTable {
+  id: string;
+  project_id: number;
+  event_id: number;
+  conditions: Array<{
+    name: string;
+    operator: string;
+    value: any;
+  }>;
+  actions: Array<{ name: string }>;
+}
+
+export interface ConditionWhitelist {
+  condition: string;
+  allowedValues: string[];
+}
+
+export class CrossEventConsistencyValidator {
+  constructor(
+    private currentTable: DecisionTable,
+    private allTablesInProject: DecisionTable[],
+    private stateWhitelist: ConditionWhitelist[] = []
+  ) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkConditionThresholdConsistency());
+    errors.push(...this.checkStateWhitelist());
+    errors.push(...this.checkActionConsistency());
+    return { passed: errors.length === 0, errors };
+  }
+
+  // 校验 1:同项目下相同条件名必须有相同阈值
+  private checkConditionThresholdConsistency(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const conditionMap = new Map<string, Array<{ value: any; tableId: string }>>();
+
+    this.allTablesInProject.forEach(table => {
+      table.conditions.forEach(cond => {
+        if (!conditionMap.has(cond.name)) conditionMap.set(cond.name, []);
+        conditionMap.get(cond.name)!.push({ value: cond.value, tableId: table.id });
+      });
+    });
+
+    conditionMap.forEach((occurrences, condName) => {
+      const uniqueValues = new Set(occurrences.map(o => JSON.stringify(o.value)));
+      if (uniqueValues.size > 1) {
+        errors.push({
+          code: 'CONSISTENCY_CONDITION_CONFLICT',
+          message: `条件 "${condName}" 在不同事件中阈值不一致: ` +
+                   occurrences.map(o => `${o.tableId}=${JSON.stringify(o.value)}`).join(', '),
+          severity: 'ERROR',
+          suggestion: '统一所有事件中该条件的阈值,或重命名其中一个条件',
+        });
+      }
+    });
+    return errors;
+  }
+
+  // 校验 2:状态值必须在白名单中
+  private checkStateWhitelist(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    this.currentTable.conditions.forEach(cond => {
+      const pattern = this.stateWhitelist.find(p => cond.name.startsWith(p.condition));
+      if (pattern && !pattern.allowedValues.includes(String(cond.value))) {
+        errors.push({
+          code: 'CONSISTENCY_INVALID_STATE',
+          message: `条件 "${cond.name}" 的值 "${cond.value}" 不在白名单 [${pattern.allowedValues.join(',')}] 中`,
+          severity: 'ERROR',
+        });
+      }
+    });
+    return errors;
+  }
+
+  // 校验 3:动作名一致性
+  private checkActionConsistency(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const actionWhitelist = new Set<string>();
+    this.allTablesInProject.forEach(table => {
+      table.actions.forEach(a => actionWhitelist.add(a.name));
+    });
+
+    this.currentTable.actions.forEach(action => {
+      if (!actionWhitelist.has(action.name)) {
+        errors.push({
+          code: 'CONSISTENCY_NEW_ACTION',
+          message: `判定表 "${this.currentTable.id}" 引入新动作 "${action.name}"`,
+          severity: 'WARNING',
+        });
+      }
+    });
+    return errors;
+  }
+}
+
+
+========== ERValidator.ts ==========
+// ERValidator - ER 图校验器
+import { ValidationError, ValidationResult } from './types';
+import { DataDictionary } from './DictValidator';
+
+export interface ERColumn {
+  name: string;
+  type: string;
+  isPK?: boolean;
+  isFK?: boolean;
+  refTable?: string;
+}
+
+export interface EREntity {
+  name: string;
+  columns: ERColumn[];
+}
+
+export interface ER {
+  entities: EREntity[];
+  relationships: any[];
+}
+
+export class ERValidator {
+  constructor(
+    private er: ER,
+    private dict: DataDictionary
+  ) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkFieldsInDict());
+    errors.push(...this.checkFKReferences());
+    return { passed: errors.length === 0, errors };
+  }
+
+  private checkFieldsInDict(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const dictFields = new Set(this.dict.elements.map(e => e.name));
+
+    this.er.entities.forEach(entity => {
+      entity.columns.forEach(col => {
+        if (!dictFields.has(col.name)) {
+          errors.push({
+            code: 'ER_FIELD_NOT_IN_DICT',
+            message: `实体 "${entity.name}" 字段 "${col.name}" 不在数据字典`,
+            severity: 'ERROR',
+            field: col.name,
+          });
+        }
+      });
+    });
+    return errors;
+  }
+
+  private checkFKReferences(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const entityNames = new Set(this.er.entities.map(e => e.name));
+
+    this.er.entities.forEach(entity => {
+      entity.columns.forEach(col => {
+        if (col.isFK && col.refTable && !entityNames.has(col.refTable)) {
+          errors.push({
+            code: 'ER_FK_REF_INVALID',
+            message: `实体 "${entity.name}" 外键 "${col.name}" 引用 "${col.refTable}" 不存在`,
+            severity: 'ERROR',
+            field: col.name,
+          });
+        }
+      });
+    });
+    return errors;
+  }
+}
+
+
+========== UIValidator.ts ==========
+// UIValidator - UI 校验器
+import { ValidationError, ValidationResult } from './types';
+import { DataDictionary, FieldElement } from './DictValidator';
+
+export interface UIField {
+  name: string;
+  type: string;
+  required: boolean;
+  controlType: 'input' | 'select' | 'date' | 'number';
+}
+
+export interface UIScreen {
+  id: string;
+  name: string;
+  dataFlow: string;
+  bpmNodeId: string;
+  fields: UIField[];
+}
+
+export interface UI {
+  id: number;
+  screens: UIScreen[];
+}
+
+export interface BPMNode {
+  id: string;
+  type: 'user_action' | 'system_action' | 'decision';
+}
+
+export class UIValidator {
+  constructor(
+    private ui: UI,
+    private dict: DataDictionary,
+    private bpm: { activity_nodes: BPMNode[] }
+  ) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkFieldsInDict());
+    errors.push(...this.checkNoExtraFields());
+    errors.push(...this.checkTypeConsistency());
+    errors.push(...this.checkBPMMapping());
+    return { passed: errors.length === 0, errors };
+  }
+
+  private checkFieldsInDict(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const dictFieldNames = new Set(this.dict.elements.map(e => e.name));
+
+    this.ui.screens.forEach(screen => {
+      screen.fields.forEach(field => {
+        if (!dictFieldNames.has(field.name)) {
+          errors.push({
+            code: 'UI_FIELD_NOT_IN_DICT',
+            message: `UI 屏 "${screen.id}" 字段 "${field.name}" 不在数据字典中(LLM 幻觉!)`,
+            severity: 'ERROR',
+            field: field.name,
+            suggestion: `在数据字典中添加 "${field.name}" 字段定义`,
+          });
+        }
+      });
+    });
+    return errors;
+  }
+
+  private checkNoExtraFields(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const dictFieldsByFlow = new Map<string, Set<string>>();
+    this.dict.dataFlows.forEach(flow => {
+      dictFieldsByFlow.set(flow.name, new Set(flow.fields.map(f => f.name)));
+    });
+
+    this.ui.screens.forEach(screen => {
+      const allowedFields = dictFieldsByFlow.get(screen.dataFlow);
+      if (!allowedFields) {
+        errors.push({
+          code: 'UI_NO_DATA_FLOW',
+          message: `UI 屏 "${screen.id}" 绑定的数据流 "${screen.dataFlow}" 不在字典中`,
+          severity: 'ERROR',
+        });
+        return;
+      }
+      screen.fields.forEach(field => {
+        if (!allowedFields.has(field.name)) {
+          errors.push({
+            code: 'UI_FIELD_NOT_IN_FLOW',
+            message: `UI 屏 "${screen.id}" 字段 "${field.name}" 不在数据流 "${screen.dataFlow}" 的字典定义中`,
+            severity: 'ERROR',
+            field: field.name,
+          });
+        }
+      });
+    });
+    return errors;
+  }
+
+  private checkTypeConsistency(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const dictFieldMap = new Map(this.dict.elements.map(e => [e.name, e]));
+
+    this.ui.screens.forEach(screen => {
+      screen.fields.forEach(field => {
+        const dictField = dictFieldMap.get(field.name);
+        if (dictField && dictField.type !== field.type) {
+          errors.push({
+            code: 'UI_TYPE_MISMATCH',
+            message: `UI 屏 "${screen.id}" 字段 "${field.name}" 类型 "${field.type}" 与字典 "${dictField.type}" 不一致`,
+            severity: 'ERROR',
+            field: field.name,
+          });
+        }
+      });
+    });
+    return errors;
+  }
+
+  private checkBPMMapping(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const screenBPMIds = new Set(this.ui.screens.map(s => s.bpmNodeId));
+
+    this.bpm.activity_nodes
+      .filter(n => n.type === 'user_action')
+      .forEach(node => {
+        if (!screenBPMIds.has(node.id)) {
+          errors.push({
+            code: 'UI_BPM_NODE_MISSING',
+            message: `BPM 节点 "${node.id}" 没有对应的 UI 屏`,
+            severity: 'WARNING',
+          });
+        }
+      });
+    return errors;
+  }
+}
+
+
