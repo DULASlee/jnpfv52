@@ -441,6 +441,23 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         return await _pipelineEngine.ListAsync(GetTenantId(), pageIndex, pageSize);
     }
 
+    // ─── Provider 列表（前端模型选择器）───
+
+    [HttpGet("providers")]
+    public object GetProviders()
+    {
+        var providers = _configuration.GetSection("LlmGateway:Providers").Get<List<ProviderEntry>>() ?? new();
+        var items = providers.Select(p => new { p.ProviderCode, p.Name, Enabled = true }).ToList();
+        return new { items };
+    }
+
+    private record ProviderEntry
+    {
+        public string ProviderCode { get; init; } = "";
+        public string Name { get; init; } = "";
+        public int Level { get; init; }
+    }
+
     // ─── 执行详细设计（6 SubAgent 并行）───
 
     [HttpPost("{pipelineId:long}/detailed-design")]

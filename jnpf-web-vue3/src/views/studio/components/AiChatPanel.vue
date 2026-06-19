@@ -317,7 +317,7 @@ onMounted(async () => {
 // ====== 方法 ======
 async function loadProviders() {
   try {
-    const res = await defHttp.get({ url: '/api/studio/pipeline/providers' });
+    const res = await defHttp.get({ url: '/api/studio/pipeline/execute/providers' });
     providers.value = (res?.items ?? []).filter((p: any) => p.enabled);
     if (providers.value.length > 0) selectedProvider.value = providers.value[0].providerCode;
   } catch {}
