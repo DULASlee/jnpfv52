@@ -152,6 +152,10 @@ export interface SAContext {
   stateMachineId?: number;
   uiId?: number;
 
+  // 3-Tier 架构：Project 级全局字典 + 当前事件 ID
+  projectDict?: DictOutput;              // Project 级全局字典（Phase 1 产出）
+  currentEventId?: number;               // 当前正在处理的事件 ID
+
   // 跨事件判定表注入
   allDecisionTables?: any[];
 

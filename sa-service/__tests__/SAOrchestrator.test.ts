@@ -193,9 +193,11 @@ describe('SAOrchestrator.runSA() 集成测试', () => {
 
     const result = await orchestrator.runSA(req);
 
-    // 简单事件应该只跑 Scope(不跑 DFD/BPM/Dict/PSPEC/DT/ER/STD,只跑 UI)
+    // 3-Tier 架构：简单事件也跑 Project 级（DFD/BPM/Dict/ER/STD）+ UI
     const stats = db.getStats();
     expect(stats.scopes).toBe(1);
-    expect(stats.uis).toBe(0);  // 即使简单,UI 也要 dataFlow,但 mock 没返回,失败
+    expect(stats.dfds).toBe(1);    // Project 级必跑
+    expect(stats.dicts).toBe(1);   // Project 级必跑
+    expect(stats.uis).toBe(1);     // 简单事件跑 UI
   });
 });

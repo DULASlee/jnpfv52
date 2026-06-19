@@ -12,7 +12,7 @@ import {
   DecisionTableAgent, ERAgent, StateMachineAgent, UIAgent
 } from '../agents';
 import { runWithRetry, RetryResult } from './RetryLoop';
-import { decideSteps, runScopeStep } from './StepRouter';
+import { decideSteps, runScopeStep, classifyEvent } from './StepRouter';
 import { DKEEFacade } from '../dkee';
 import { BaseAgent } from './BaseAgent';
 
@@ -59,7 +59,7 @@ export class SAOrchestrator {
   }
 
   // ============================================================
-  // 主入口:后端调用
+  // 主入口:后端调用（3-Tier 架构：Project → Event → Process）
   // ============================================================
   async runSA(req: SARequest): Promise<SAOutput> {
     const startTime = Date.now();
@@ -67,102 +67,94 @@ export class SAOrchestrator {
 
     console.log(`[SA] 开始需求分析: project=${req.projectId} tenant=${req.tenantId}`);
 
-    // 1. 解析 Context(注入 KG 模式 + 领域模型)
+    // 解析 Context(注入 KG 模式 + 领域模型)
     const ctx = await this.resolveContext(req);
 
-    // 2. Step 1: 跑 Scope(总是先跑,作为入口)
-    const scopeResult = await runScopeStep(this, ctx);
-    const scope: ScopeOutput = scopeResult;
+    // ═══════════════════════════════════════
+    // Phase 0: 边界提取（所有级别共享）
+    // ═══════════════════════════════════════
+    const scope = await runScopeStep(this, ctx);
+    ctx.previousSteps['scope'] = scope;
     validationStats.push({ step: 'Scope', attempts: 1, passed: true });
 
-    // 3. 根据事件复杂度决定后续步骤
-    // 默认:取 events 中最高复杂度(也可以传 single event)
-    const maxComplexity = this.getMaxComplexity(scope);
-    const decision = decideSteps(maxComplexity, this.hasStateChange(scope));
+    // ═══════════════════════════════════════
+    // Phase 1: PROJECT 级（跑一次）
+    // 产生全局 DFD / BPM / Dict / ER / STD
+    // ═══════════════════════════════════════
+    ctx.assetLevel = 'PROJECT';
 
-    console.log(`[SA] 复杂度=${maxComplexity}, 路由: ${decision.reason}`);
+    const dfd = await this.runStepWithValidation<DFDOutput>('DFDAgent', 'sa_dfd', ctx,
+      async (output) => { const { id } = await this.db.saveDFD(output, ctx, ctx.scopeId!); ctx.dfdId = id; });
+    ctx.previousSteps['dfd'] = dfd;
+    validationStats.push({ step: 'DFD', attempts: 1, passed: true });
 
-    // 4. 按顺序跑后续步骤
-    let dfd: DFDOutput | undefined, bpm: BPMOutput | undefined;
-    let dict: DictOutput | undefined, pspec: PSpecOutput | undefined;
+    const bpm = await this.runStepWithValidation<BPMOutput>('BPMAgent', 'sa_business_process', ctx,
+      async (output) => { const { id } = await this.db.saveBPM(output, ctx, ctx.dfdId!); ctx.bpmId = id; });
+    ctx.previousSteps['bpm'] = bpm;
+    validationStats.push({ step: 'BPM', attempts: 1, passed: true });
+
+    const dict = await this.runStepWithValidation<DictOutput>('DictAgent', 'sa_data_dictionary', ctx,
+      async (output) => { const { id } = await this.db.saveDict(output, ctx, ctx.dfdId!, ctx.bpmId!); ctx.dictId = id; });
+    ctx.previousSteps['dict'] = dict;
+    ctx.projectDict = dict;  // 保存为 Project 级全局字典
+    validationStats.push({ step: 'Dict', attempts: 1, passed: true });
+
+    const er = await this.runStepWithValidation<EROutput>('ERAgent', 'sa_er', ctx,
+      async (output) => { const { id } = await this.db.saveER(output, ctx, ctx.dictId!); ctx.erId = id; });
+    ctx.previousSteps['er'] = er;
+    validationStats.push({ step: 'ER', attempts: 1, passed: true });
+
+    const stateMachine = await this.runStepWithValidation<StateMachineOutput>('StateMachineAgent', 'sa_state_machine', ctx,
+      async (output) => { const { id } = await this.db.saveStateMachine(output, ctx, ctx.dictId!, ctx.bpmId!); ctx.stateMachineId = id; });
+    ctx.previousSteps['stateMachine'] = stateMachine;
+    validationStats.push({ step: 'StateMachine', attempts: 1, passed: true });
+
+    console.log(`[SA] Project 级完成: DFD/BPM/Dict/ER/STD 已生成`);
+
+    // ═══════════════════════════════════════
+    // Phase 2 & 3: EVENT / PROCESS 级（逐事件）
+    // ═══════════════════════════════════════
+    let pspec: PSpecOutput | undefined;
     let decisionTable: DecisionTableOutput | undefined;
-    let er: EROutput | undefined, stateMachine: StateMachineOutput | undefined;
     let ui: UIOutput | undefined;
 
-    // Step 2: DFD
-    if (decision.runDFD) {
-      const r = await this.runStepWithValidation<DFDOutput>('DFDAgent', 'sa_dfd', ctx,
-        async (output) => { const { id } = await this.db.saveDFD(output, ctx, ctx.scopeId!); ctx.dfdId = id; });
-      dfd = r;
-      ctx.previousSteps['dfd'] = r;
-      validationStats.push({ step: 'DFD', attempts: 1, passed: true });
+    for (const event of scope.businessEvents) {
+      const tierDecision = classifyEvent(event, ctx.projectDict);
+      ctx.assetLevel = tierDecision.assetLevel;
+      ctx.currentEventId = event.id;
+
+      console.log(`[SA] 事件 "${event.name}" → ${tierDecision.assetLevel}: ${tierDecision.reason}`);
+
+      // PROCESS 级：复杂事件深度推演
+      if (tierDecision.assetLevel === 'PROCESS') {
+        if (tierDecision.stepsToRun.includes('PSpecAgent')) {
+          pspec = await this.runStepWithValidation<PSpecOutput>('PSpecAgent', 'sa_pspec', ctx,
+            async (output) => { const { id } = await this.db.savePSpec(output, ctx, ctx.dictId!, ctx.bpmId!); ctx.pspecId = id; });
+          ctx.previousSteps['pspec'] = pspec;
+          validationStats.push({ step: 'PSpec', attempts: 1, passed: true });
+        }
+
+        if (tierDecision.stepsToRun.includes('DecisionTableAgent')) {
+          ctx.kgPatterns = await this.loadExistingDecisionTables(ctx);
+          decisionTable = await this.runStepWithValidation<DecisionTableOutput>('DecisionTableAgent', 'sa_decision_table', ctx,
+            async (output) => { const { id } = await this.db.saveDecisionTable(output, ctx, ctx.pspecId!, ctx.dictId!); ctx.decisionTableId = id; });
+          ctx.previousSteps['decisionTable'] = decisionTable;
+          validationStats.push({ step: 'DecisionTable', attempts: 1, passed: true });
+        }
+      }
+
+      // EVENT / PROCESS 级：都跑 UI
+      if (tierDecision.stepsToRun.includes('UIAgent')) {
+        ui = await this.runStepWithValidation<UIOutput>('UIAgent', 'sa_ui', ctx,
+          async (output) => { const { id } = await this.db.saveUI(output, ctx, ctx.bpmId!, ctx.dictId!); ctx.uiId = id; });
+        ctx.previousSteps['ui'] = ui;
+        validationStats.push({ step: 'UI', attempts: 1, passed: true });
+      }
     }
 
-    // Step 3: BPM
-    if (decision.runBPM && dfd) {
-      const r = await this.runStepWithValidation<BPMOutput>('BPMAgent', 'sa_business_process', ctx,
-        async (output) => { const { id } = await this.db.saveBPM(output, ctx, ctx.dfdId!); ctx.bpmId = id; });
-      bpm = r;
-      ctx.previousSteps['bpm'] = r;
-      validationStats.push({ step: 'BPM', attempts: 1, passed: true });
-    }
-
-    // Step 4: 数据字典(★ 关键)
-    if (decision.runDict && dfd) {
-      const r = await this.runStepWithValidation<DictOutput>('DictAgent', 'sa_data_dictionary', ctx,
-        async (output) => { const { id } = await this.db.saveDict(output, ctx, ctx.dfdId!, ctx.bpmId!); ctx.dictId = id; });
-      dict = r;
-      ctx.previousSteps['dict'] = r;
-      validationStats.push({ step: 'Dict', attempts: 1, passed: true });
-    }
-
-    // Step 5: PSPEC
-    if (decision.runPSpec && dict) {
-      const r = await this.runStepWithValidation<PSpecOutput>('PSpecAgent', 'sa_pspec', ctx,
-        async (output) => { const { id } = await this.db.savePSpec(output, ctx, ctx.dictId!, ctx.bpmId!); ctx.pspecId = id; });
-      pspec = r;
-      ctx.previousSteps['pspec'] = r;
-      validationStats.push({ step: 'PSpec', attempts: 1, passed: true });
-    }
-
-    // Step 6: 判定表(★★ 跨事件一致)
-    if (decision.runDecisionTable && dict) {
-      ctx.kgPatterns = await this.loadExistingDecisionTables(ctx);
-      const r = await this.runStepWithValidation<DecisionTableOutput>('DecisionTableAgent', 'sa_decision_table', ctx,
-        async (output) => { const { id } = await this.db.saveDecisionTable(output, ctx, ctx.pspecId!, ctx.dictId!); ctx.decisionTableId = id; });
-      decisionTable = r;
-      ctx.previousSteps['decisionTable'] = r;
-      validationStats.push({ step: 'DecisionTable', attempts: 1, passed: true });
-    }
-
-    // Step 7: ER
-    if (decision.runER && dict) {
-      const r = await this.runStepWithValidation<EROutput>('ERAgent', 'sa_er', ctx,
-        async (output) => { const { id } = await this.db.saveER(output, ctx, ctx.dictId!); ctx.erId = id; });
-      er = r;
-      ctx.previousSteps['er'] = r;
-      validationStats.push({ step: 'ER', attempts: 1, passed: true });
-    }
-
-    // Step 8: 状态机
-    if (decision.runStateMachine && dict) {
-      const r = await this.runStepWithValidation<StateMachineOutput>('StateMachineAgent', 'sa_state_machine', ctx,
-        async (output) => { const { id } = await this.db.saveStateMachine(output, ctx, ctx.dictId!, ctx.bpmId!); ctx.stateMachineId = id; });
-      stateMachine = r;
-      ctx.previousSteps['stateMachine'] = r;
-      validationStats.push({ step: 'StateMachine', attempts: 1, passed: true });
-    }
-
-    // Step 9: UI
-    if (decision.runUI && bpm && dict) {
-      const r = await this.runStepWithValidation<UIOutput>('UIAgent', 'sa_ui', ctx,
-        async (output) => { const { id } = await this.db.saveUI(output, ctx, ctx.bpmId!, ctx.dictId!); ctx.uiId = id; });
-      ui = r;
-      ctx.previousSteps['ui'] = r;
-      validationStats.push({ step: 'UI', attempts: 1, passed: true });
-    }
-
-    // 5. DKEE 提炼(从 9 张表抽取 Pattern)
+    // ═══════════════════════════════════════
+    // Phase 4: DKEE 提炼
+    // ═══════════════════════════════════════
     if (this.config.enableDKEE) {
       await this.dkee.extractAndScore('general');
     }
