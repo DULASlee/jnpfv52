@@ -16,7 +16,12 @@
  */
 
 import { execSync } from 'child_process';
-import { existsSync, readdirSync } from 'fs';
+import { existsSync, readdirSync, statSync } from 'fs';
+
+// ─── Supreme Iron Law 证据有效性阈值 ─────────────────────────
+// 防止 AI 用旧截图复用 / 用 0 字节假文件绕过 E1 证据要求
+const EVIDENCE_MAX_AGE_MIN = 30;   // 截图必须最近 30 分钟内产出
+const EVIDENCE_MIN_SIZE_BYTES = 5000; // 截图必须 >5KB（真实渲染产物）
 
 // ─── 读取 stdin ──────────────────────────────────────────────
 let input = {};
@@ -200,7 +205,7 @@ if (needsE2E) {
     } else {
       const files = readdirSync(evidenceDir);
       const screenshots = files.filter(f => /\.(png|jpg|jpeg)$/i.test(f));
-      
+
       if (screenshots.length === 0) {
         hasError = true;
         errorDetails.push(
@@ -209,7 +214,47 @@ if (needsE2E) {
         );
         console.error('  ❌ 无截图证据（需 .png/.jpg）');
       } else {
-        console.error(`  ✅ ${screenshots.length} 张截图证据: ${screenshots.join(', ')}`);
+        // ─── 新鲜度 + 尺寸双重验证（防复用旧截图 / 0字节假文件）───
+        // 排除 playwright-smoke.png（技能自检产物，不计为业务证据）
+        const now = Date.now();
+        const valid = [];
+        const invalidReasons = [];
+
+        for (const f of screenshots) {
+          const fp = `${evidenceDir}/${f}`;
+          try {
+            const st = statSync(fp);
+            const ageMin = (now - st.mtimeMs) / 60000;
+            if (f === 'playwright-smoke.png') {
+              // 技能自检产物，跳过（不算业务证据）
+              continue;
+            }
+            if (st.size < EVIDENCE_MIN_SIZE_BYTES) {
+              invalidReasons.push(`${f}: 文件仅 ${st.size} 字节（< ${EVIDENCE_MIN_SIZE_BYTES}，疑似 0 字节假文件）`);
+            } else if (ageMin > EVIDENCE_MAX_AGE_MIN) {
+              invalidReasons.push(`${f}: 产出于 ${ageMin.toFixed(0)} 分钟前（> ${EVIDENCE_MAX_AGE_MIN}，疑似复用旧截图）`);
+            } else {
+              valid.push(`${f} (${(st.size/1024).toFixed(1)}KB, ${ageMin.toFixed(0)}min ago)`);
+            }
+          } catch (e) {
+            invalidReasons.push(`${f}: stat 失败 ${e.message}`);
+          }
+        }
+
+        if (valid.length === 0) {
+          hasError = true;
+          const detail = invalidReasons.length > 0
+            ? `发现 ${screenshots.length} 张截图但全部无效：\n    - ${invalidReasons.join('\n    - ')}`
+            : '无有效截图（playwright-smoke.png 是技能自检产物，不计为业务证据）。';
+          errorDetails.push(
+            'E2E 验证证据无效：' + detail +
+            '\n  MUST 使用 playwright 技能在本次会话内重新产出截图（新鲜度 ≤ ' + EVIDENCE_MAX_AGE_MIN +
+            ' 分钟，文件 ≥ ' + (EVIDENCE_MIN_SIZE_BYTES/1024) + 'KB）。'
+          );
+          console.error(`  ❌ ${invalidReasons.length} 张截图全部无效`);
+        } else {
+          console.error(`  ✅ ${valid.length} 张有效截图: ${valid.join(', ')}`);
+        }
       }
     }
   } catch (e) {

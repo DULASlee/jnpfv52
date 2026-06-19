@@ -35,9 +35,14 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 | "肉眼确认"但无截图 | 无留存证据，不可审计 |
 | "已验证" / "已确认" / "测试通过" | 无具体操作路径描述，不可复现 |
 
-### 执行机制（自动化拦截）
+### 执行机制（自动化拦截 — 2026-06-19 升级为强证据验证）
 
-- `guard-finish.mjs` hook 扫描 `.claude/evidence/` 目录 → 无截图文件则 **BLOCK** 完成声明
+- `guard-finish.mjs` hook 扫描 `.claude/evidence/` 目录：
+  - 无截图文件 → **BLOCK**
+  - 截图 mtime > 30 分钟 → **BLOCK**（防复用旧截图）
+  - 截图 < 5KB → **BLOCK**（防 0 字节假文件）
+  - `playwright-smoke.png`（技能自检产物）不计为业务证据
+- **playwright 技能真实可用**（chromium 1.61.0，已 smoke test 验证）→ `.claude/skills/playwright/SKILL.md`
 - Step 7 报告中缺 E2E 证据段 → 退回 Step 5 补做
 - 严禁用 "已验证" / "已确认" / "测试通过" 等无证据措辞替代 E1/E2/E3
 
@@ -47,18 +52,25 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 
 ## Architecture Redlines (NEVER VIOLATE)
 
-| # | 红线 | 说明 |
-|---|---|---|
-| R1 | API Generation | Service 实现 IDynamicApiController 自动映射 API。NEVER 手写 Controller。 |
-| R2 | Unified Response | `RESTfulResult<T>` 自动包装。异常用 `Oops.Oh()`（系统）/ `Oops.Bah()`（业务）。NEVER throw raw Exception。code 600 = JWT 过期 |
-| R3 | Codegen Boundary | 生成代码有 bug → 修 `.vm` 模板源码。NEVER 直接改模板输出目录的文件 |
-| R4 | Multi-tenant | 新 SqlSugar 查询前 ALWAYS 验证 ITenantFilter 已激活。漏过滤 = 跨租户数据泄漏 |
-| R5 | Module Boundary | OA 已禁用 — NEVER 改。IoT/MES 未创建 — NEVER scaffold |
-| R6 | SSE/Timer 内存泄漏 | 前端 setTimeout / setInterval / EventSource / WebSocket MUST 遵循 6 条铁律 → 详见 `.claude/rules/frontend-memory-leak.md` |
-| R7 | SQL Injection Defense | 动态 SQL MUST 参数化（SqlSugarParameter / ConditionalModel）。NEVER 拼接用户输入到 SQL。Hook `guard-sql-injection.mjs` 强制拦截 → 详见 `.claude/rules/sql-safety.md` |
-| R8 | API Permission | 新增 API 端点 MUST 声明权限意图：`[AllowAnonymous]` 或 `[SecurityDefine]`。`JwtHandler` 当前 bypass 为临时状态，不可依赖 → Hook `guard-auth.mjs` 警告 |
-| R9 | Architect Fidelity | 任何编码前 MUST 输出"需求提取清单"（逐条编号）。编码完成后 MUST 逐条标注"✅已实现 / ⚠️偏离(附理由) / ❌未实现(附阻塞原因)"。偏离或未实现 MUST 在编码前申报获准。NEVER 静默简化架构师指令。 |
-| R10 | Bug Discovery Protocol | 在任何代码中发现的任何 BUG / 类型错误 / 硬编码魔法值 / SQL 注入风险 / 内存泄漏模式 MUST 立即执行结构化上报（见 Law 1 Bug Discovery Protocol）。NEVER 静默跳过或推说"旧代码问题"。P0 级不等审批先修复；P1 级暂停等审批。 |
+> **执行层级说明（决定 AI 能否绕过，2026-06-19 Phase 2 硬化后）：**
+> - **L0 硬阻断** — Hook `exit 2`，AI 无法绕过。真正的铁律。
+> - **L1 警告** — Hook `exit 1`，AI 可能忽略，需人工把关。
+> - **L2 约定** — 纯自然语言，长会话漂移率 ~50%，靠 AI 自觉。
+
+| # | 红线 | 说明 | 执行层 | 强制机制 |
+|---|---|---|---|---|
+| R1 | API Generation | Service 实现 IDynamicApiController 自动映射 API。NEVER 手写 Controller。 | L2 | 无 hook（建议未来加路径检测） |
+| R2 | Unified Response | `RESTfulResult<T>` 自动包装。异常用 `Oops.Oh()`/`Oops.Bah()`。NEVER raw Exception。code 600 = JWT 过期 | L2 | 无 hook |
+| R3 | Codegen Boundary | 生成代码 bug → 修 `.vm` 模板源码。NEVER 改模板输出文件 | L2 | 无 hook |
+| R4 | Multi-tenant | 新 SqlSugar 查询 MUST 验证 ITenantFilter 激活。漏过滤 = 跨租户泄漏 | **L0** | `guard-tenant-filter.mjs` 拦截原生SQL无WHERE/DisableGlobalFilter/Updateable无Where |
+| R5 | Module Boundary | OA 禁用 NEVER 改；IoT/MES 不存在 NEVER scaffold | **L0** | `guard-oa-module.mjs` 拦截 OA/IoT/MES 路径写入 |
+| R6 | SSE/Timer 泄漏 | 前端 setTimeout/setInterval/EventSource/WebSocket MUST 遵循 6 条铁律 → `.claude/rules/frontend-memory-leak.md` | **L0** | `guard-frontend-leak.mjs` 拦截无clear/无retry cap/onerror直连 |
+| R7 | SQL Injection | 动态 SQL MUST 参数化。NEVER 拼接用户输入 | **L0** | `guard-sql-injection.mjs` 拦截 `$"...SQL..."`/string.Format/Ado.SqlQuery |
+| R8 | API Permission | 新 API MUST 声明 `[AllowAnonymous]`/`[SecurityDefine]`。JwtHandler bypass 为临时态 | **L0** | `guard-auth.mjs` 拦截无权限属性的 IDynamicApiController |
+| R9 | Architect Fidelity | 编码前 MUST 输出需求提取清单；编码后逐条标注实现状态 | L2 | 无 hook（输出 gate，见 workflow.md Step 1.5） |
+| R10 | Bug Discovery | 发现任何 BUG MUST 结构化上报，NEVER 沉默跳过。详见 engineering-laws.md Law 1（**单一信源**） | L2 | 无 hook（输出 gate） |
+
+> **新增 hook 后的合规回归测试：** `node scripts/test-hooks.mjs`（20 用例覆盖 R4/R5/R6/R7/R8 + 基础守卫）
 
 ---
 
@@ -118,6 +130,7 @@ cd backend && dotnet build
 |---|---|
 | 写后端 C# 代码 | `.claude/rules/jnpf-expert-traps.md` + `.claude/rules/sql-safety.md` |
 | 写前端 Vue3 代码 | `.claude/rules/jnpf-frontend-rules.md` |
+| 前端实质性变更 / 需 E2E 验证 | `.claude/skills/playwright/SKILL.md`（产出 E1 截图证据） |
 | 写 SSE / EventSource / WebSocket / setTimeout | `.claude/rules/frontend-memory-leak.md` |
 | 修改自定义页面视觉样式（非生成） | `.claude/skills/jnpf-ui-enhance/SKILL.md` |
 | 写架构文档 | `docs/architecture/ARCHITECTURE_DOC_RULES.md` |
@@ -147,15 +160,20 @@ cd backend && dotnet build
 
 ## Hooks
 
-| 时机 | Hook | 作用 |
-|---|---|---|
-| PreToolUse (Write/Edit) | `guard-write.mjs` | 写入守卫（密钥/清空拦截） |
-| PreToolUse (Write/Edit) | `guard-sql-injection.mjs` | **SQL 注入拦截**（BLOCK $string + SQL） |
-| PreToolUse (Write/Edit) | `guard-auth.mjs` | **权限声明检查**（WARN 无授权属性） |
-| PreToolUse (Bash) | `guard-bash.mjs` | 危险命令拦截 |
-| PostToolUse (Write/Edit) | `format-and-lint.mjs` | 自动 Prettier + ESLint |
-| Stop | `guard-finish.mjs` | 完成前冒烟测试 (dotnet build) |
-| Stop | `collect-summary.mjs` | 收集会话摘要 |
+> **exit 2 = 硬阻断（L0，AI 无法绕过）；exit 1 = 警告（L1，AI 可忽略）**
+
+| 时机 | Hook | 作用 | 层级 |
+|---|---|---|---|
+| PreToolUse (Write\|Edit) | `guard-write.mjs` | 写入守卫（密钥/清空拦截） | L0 |
+| PreToolUse (Write\|Edit) | `guard-oa-module.mjs` | **R5 模块边界**拦截 OA/IoT/MES 写入 | L0 |
+| PreToolUse (Write\|Edit) | `guard-sql-injection.mjs` | **R7 SQL 注入**拦截（$string + SQL） | L0 |
+| PreToolUse (Write\|Edit) | `guard-auth.mjs` | **R8 权限声明**拦截无授权 API | L0 |
+| PreToolUse (Write\|Edit) | `guard-tenant-filter.mjs` | **R4 多租户**拦截原生SQL/无Where更新 | L0 |
+| PreToolUse (Write\|Edit) | `guard-frontend-leak.mjs` | **R6 前端泄漏**拦截无clear定时器/SSE | L0 |
+| PreToolUse (Bash) | `guard-bash.mjs` | 危险命令拦截 | L0 |
+| PostToolUse (Write\|Edit) | `format-and-lint.mjs` | 自动 Prettier + ESLint | — |
+| Stop | `guard-finish.mjs` | 冒烟测试 + **E2E 证据新鲜度验证**（mtime≤30min, size≥5KB） | L0 |
+| Stop | `collect-summary.mjs` | 收集会话摘要 | — |
 
 ---
 
