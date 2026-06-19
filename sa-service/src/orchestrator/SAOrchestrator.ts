@@ -27,6 +27,7 @@ export interface ValidatorBundle {
   LogicValidator: any;
   CrossEventConsistencyValidator: any;
   ERValidator: any;
+  STDValidator: any;
   UIValidator: any;
 }
 
@@ -239,9 +240,11 @@ export class SAOrchestrator {
           const v = new this.validators.ERValidator(output, dict);
           return v.validate();
         }
-        case 'StateMachineAgent':
-          // TODO: STDReachabilityValidator 尚未实现
-          return { passed: true, errors: [] };
+        case 'StateMachineAgent': {
+          const dict = ctx.previousSteps['dict'];
+          const v = new this.validators.STDValidator(output, dict);
+          return v.validate();
+        }
         case 'UIAgent': {
           const dict = ctx.previousSteps['dict'];
           const bpm = ctx.previousSteps['bpm'];

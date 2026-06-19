@@ -113,6 +113,7 @@ const mockValidators = {
   LogicValidator: MockPassValidator as any,
   CrossEventConsistencyValidator: MockPassValidator as any,
   ERValidator: MockPassValidator as any,
+  STDValidator: MockPassValidator as any,
   UIValidator: MockPassValidator as any,
 };
 
