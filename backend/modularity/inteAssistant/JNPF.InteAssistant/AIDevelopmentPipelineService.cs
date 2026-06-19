@@ -223,14 +223,23 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     var httpClient = _httpClientFactory.CreateClient();
                     httpClient.Timeout = TimeSpan.FromMinutes(5);
 
+                    // 从 pipeline 记录获取 tenantId
+                    var pipeline = await db.Queryable<AiPipelineEntity>()
+                        .FirstAsync(p => p.Id == pipelineId.ToString());
+                    var tenantId = pipeline?.TenantId ?? "default";
+
                     var saRequest = new
                     {
-                        tenantId = "default",
+                        tenantId = tenantId,
                         projectId = pipelineId,
                         requirementText = requirementText,
                         userId = "system",
                         industry = "manufacturing"
                     };
+
+                    // 同时通过 X-Tenant-Id 请求头传递租户信息
+                    httpClient.DefaultRequestHeaders.Remove("X-Tenant-Id");
+                    httpClient.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId);
 
                     await channel.Writer.WriteAsync(new SseEvent("thinking", "正在执行 3-Tier SA 流水线（Scope → DFD → BPM → Dict → ER → STD）..."));
 
