@@ -1,9 +1,10 @@
 // 集成测试:验证 runSA() 完整流程
-// 包含:LLM 模拟、Validator 真实跑、DB 内存跑、Retry 循环、DKEE 提炼
+// 包含:LLM 模拟、Validator 真实跑、DB 内存跑、Retry 循环、DKEE 提炼 + 3-Tier 路由
 
 import { SAOrchestrator } from '../src/orchestrator/SAOrchestrator';
 import { InMemorySADatabase } from '../src/orchestrator/SADatabase';
 import { ILLMClient, SARequest, ValidationError } from '../src/orchestrator/orchestrator-types';
+import { classifyEvent } from '../src/orchestrator/StepRouter';
 
 // =====================================================
 // Mock LLM - 模拟"第一次出错、第二次修复"的真实 LLM 行为
@@ -199,5 +200,91 @@ describe('SAOrchestrator.runSA() 集成测试', () => {
     expect(stats.dfds).toBe(1);    // Project 级必跑
     expect(stats.dicts).toBe(1);   // Project 级必跑
     expect(stats.uis).toBe(1);     // 简单事件跑 UI
+  });
+});
+
+// =====================================================
+// 3-Tier 路由专项测试
+// =====================================================
+describe('3-Tier 路由 classifyEvent()', () => {
+  it('simple 事件 → EVENT 级 + 只跑 UIAgent', () => {
+    const decision = classifyEvent(
+      { id: 1, name: '查工单', description: '查询', complexity: 'simple' },
+    );
+    expect(decision.assetLevel).toBe('EVENT');
+    expect(decision.stepsToRun).toEqual(['UIAgent']);
+    expect(decision.eventId).toBe(1);
+  });
+
+  it('medium 事件 → EVENT 级 + 跑 StateMachineAgent + UIAgent', () => {
+    const decision = classifyEvent(
+      { id: 2, name: '报工', description: '工人提交报工单', complexity: 'medium' },
+    );
+    expect(decision.assetLevel).toBe('EVENT');
+    expect(decision.stepsToRun).toContain('StateMachineAgent');
+    expect(decision.stepsToRun).toContain('UIAgent');
+  });
+
+  it('complex 事件 → PROCESS 级 + 跑 PSpec + DT + STD + UI', () => {
+    const decision = classifyEvent(
+      { id: 3, name: '倒冲', description: '复杂状态扭转', complexity: 'complex' },
+    );
+    expect(decision.assetLevel).toBe('PROCESS');
+    expect(decision.stepsToRun).toContain('PSpecAgent');
+    expect(decision.stepsToRun).toContain('DecisionTableAgent');
+    expect(decision.stepsToRun).toContain('StateMachineAgent');
+    expect(decision.stepsToRun).toContain('UIAgent');
+  });
+});
+
+describe('3-Tier 混合事件分流', () => {
+  it('3 simple + 1 complex → simple 只出 UI，complex 走 PSPEC+DT', async () => {
+    const llm: ILLMClient = {
+      async generate(params: any) {
+        if (params.systemPrompt.includes('需求分析') || params.systemPrompt.includes('系统边界')) {
+          return {
+            systemBoundary: { inScope: ['MES'], outOfScope: [] },
+            externalEntities: [{ name: '工人', type: 'user' }],
+            businessEvents: [
+              { id: 1, name: '查工单', description: '查询', complexity: 'simple' },
+              { id: 2, name: '查库存', description: '查询', complexity: 'simple' },
+              { id: 3, name: '查报表', description: '查询', complexity: 'simple' },
+              { id: 4, name: '倒冲', description: '复杂状态扭转', complexity: 'complex' },
+            ],
+            eventCount: 4,
+          };
+        }
+        // 默认返回合法数据
+        return {
+          swimLanes: [], activityNodes: [], edges: [], exceptionPaths: [],
+          dfdProcessMappings: {},
+        };
+      },
+    };
+    const db = new InMemorySADatabase();
+    const orchestrator = new SAOrchestrator(llm, db, mockValidators);
+
+    const req: SARequest = {
+      tenantId: 't1', projectId: 1, requirementId: 1,
+      requirementText: 'MES 报工系统', userId: 'u1',
+    };
+
+    const result = await orchestrator.runSA(req);
+
+    // Project 级：DFD/BPM/Dict/ER/STD 各跑一次
+    const stats = db.getStats();
+    expect(stats.scopes).toBe(1);
+    expect(stats.dfds).toBe(1);
+    expect(stats.bpms).toBe(1);
+    expect(stats.dicts).toBe(1);
+    expect(stats.ers).toBe(1);
+    expect(stats.stateMachines).toBe(1);
+
+    // UI：4 个事件各跑一次
+    expect(stats.uis).toBe(4);
+
+    // PSPEC + DecisionTable：只有 complex 事件跑
+    expect(stats.pspecs).toBe(1);
+    expect(stats.decisionTables).toBe(1);
   });
 });
