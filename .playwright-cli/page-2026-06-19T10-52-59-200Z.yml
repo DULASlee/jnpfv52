@@ -1,0 +1,150 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - complementary [ref=e6]:
+      - generic [ref=e7]:
+        - img [ref=e9] [cursor=pointer]
+        - list [ref=e13]:
+          - listitem [ref=e14]:
+            - generic [ref=e15] [cursor=pointer]:
+              - generic [ref=e16]: 
+              - text: 在线开发
+              - img [ref=e18]
+            - text:     
+          - listitem [ref=e20]:
+            - generic [ref=e21] [cursor=pointer]:
+              - generic [ref=e22]: 
+              - text: 代码生成
+              - img [ref=e24]
+            - text:  
+          - listitem [ref=e26]:
+            - generic [ref=e27] [cursor=pointer]:
+              - generic [ref=e28]: 
+              - text: 系统管理
+              - img [ref=e30]
+            - text:                             
+          - listitem [ref=e32]:
+            - generic [ref=e33] [cursor=pointer]:
+              - generic [ref=e34]: 
+              - text: 组织权限
+              - img [ref=e36]
+            - text:        
+          - listitem [ref=e38]:
+            - generic [ref=e39] [cursor=pointer]:
+              - generic [ref=e40]: 
+              - text: 流程引擎
+              - img [ref=e42]
+            - text:   
+          - listitem [ref=e44]:
+            - generic [ref=e45] [cursor=pointer]:
+              - generic [ref=e46]: 
+              - text: 开发示例
+              - img [ref=e48]
+            - text:                                                          
+          - listitem [ref=e50]:
+            - generic [ref=e51] [cursor=pointer]:
+              - generic [ref=e52]: 
+              - text: AI 原生开发平台
+              - img [ref=e54]
+            - list [ref=e56]:
+              - listitem [ref=e57] [cursor=pointer]:
+                - generic [ref=e58]: 
+                - generic [ref=e59]: 提交需求
+              - listitem [ref=e60] [cursor=pointer]:
+                - generic [ref=e61]: 
+                - generic [ref=e62]: 已生成系统
+              - listitem [ref=e63] [cursor=pointer]:
+                - generic [ref=e64]: 
+                - generic [ref=e65]: UI 模板库
+              - listitem [ref=e66] [cursor=pointer]:
+                - generic [ref=e67]: 
+                - generic [ref=e68]: 用量与计费
+          - listitem [ref=e69]:
+            - generic [ref=e70] [cursor=pointer]:
+              - generic [ref=e71]: 
+              - text: 智能体与流水线配置
+              - img [ref=e73]
+            - text:                
+          - listitem [ref=e75]:
+            - generic [ref=e76] [cursor=pointer]:
+              - generic [ref=e77]: 
+              - text: JNPF 开发工具箱
+              - img [ref=e79]
+            - text:      
+          - listitem [ref=e81]:
+            - generic [ref=e82] [cursor=pointer]:
+              - generic [ref=e83]: 
+              - text: 自博弈训练引擎
+              - img [ref=e85]
+            - text:                       
+    - generic [ref=e90]:
+      - generic [ref=e92]:
+        - generic [ref=e93]:
+          - img "menu-fold" [ref=e96] [cursor=pointer]:
+            - img [ref=e97]
+          - generic [ref=e99]:
+            - img "search" [ref=e101] [cursor=pointer]:
+              - img [ref=e102]
+            - img "message" [ref=e105] [cursor=pointer]:
+              - img [ref=e106]
+            - img "bell" [ref=e110] [cursor=pointer]:
+              - img [ref=e111]
+            - generic [ref=e114] [cursor=pointer]: 
+            - img "fullscreen" [ref=e116] [cursor=pointer]:
+              - img [ref=e117]
+            - img [ref=e122] [cursor=pointer]
+            - generic [ref=e126] [cursor=pointer]: 管理员
+            - img [ref=e129] [cursor=pointer]
+        - generic [ref=e132]:
+          - tablist [ref=e133]:
+            - generic [ref=e135]:
+              - tab "" [ref=e137] [cursor=pointer]:
+                - generic [ref=e140]: 
+              - generic [ref=e141] [cursor=pointer]:
+                - tab "提交需求" [selected] [ref=e142]:
+                  - generic [ref=e144]: 提交需求
+                - button "remove" [ref=e145]:
+                  - img "close" [ref=e146]:
+                    - img [ref=e147]
+            - generic [ref=e149]:
+              - img "redo" [ref=e151] [cursor=pointer]:
+                - img [ref=e152]
+              - img [ref=e157] [cursor=pointer]
+          - generic:
+            - generic:
+              - tabpanel "提交需求"
+      - generic [ref=e159]:
+        - text: Copyright @ 2026 面包树科技有限公司版权所有
+        - generic [ref=e162]:
+          - generic [ref=e163]:
+            - generic [ref=e165] [cursor=pointer]:
+              - generic [ref=e166]:
+                - combobox [ref=e168]
+                - generic "deepseek" [ref=e169]
+              - generic:
+                - img:
+                  - img
+            - generic [ref=e170]:
+              - generic [ref=e171]: "阶段 1/5: 需求分析"
+              - button "阶段详情 ▾" [ref=e172] [cursor=pointer]:
+                - generic [ref=e173]: 阶段详情 ▾
+            - button "plus 新对话" [ref=e175] [cursor=pointer]:
+              - img "plus" [ref=e176]:
+                - img [ref=e177]
+              - generic [ref=e180]: 新对话
+          - generic [ref=e181]:
+            - generic [ref=e208]:
+              - generic [ref=e209]: 🧑
+              - paragraph [ref=e211]: 我需要一个设备巡检系统
+            - generic [ref=e212]:
+              - generic [ref=e213]: 🤖
+              - paragraph [ref=e216]: ⚠️ Execute HTTP 404
+          - generic [ref=e193]:
+            - button "plus" [ref=e196] [cursor=pointer]:
+              - button "plus" [ref=e197]:
+                - img "plus" [ref=e198]:
+                  - img [ref=e199]
+            - textbox "描述你的业务需求，或回答 AI 的追问..." [ref=e203]
+            - button "send" [active] [ref=e204] [cursor=pointer]:
+              - img "send" [ref=e217]:
+                - img [ref=e218]
+  - img

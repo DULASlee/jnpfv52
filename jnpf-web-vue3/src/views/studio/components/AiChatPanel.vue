@@ -359,7 +359,7 @@ async function sendMessage(content: string) {
   if (!pipelineId.value) {
     try {
       const res = await defHttp.post({ url: '/api/studio/pipeline/execute/create', data: { requirement: content } });
-      pipelineId.value = res.pipelineId || res.id;
+      pipelineId.value = res.pipelineId || res.PipelineId || res.id || pipelineId.value;
     } catch (e: any) {
       antMessage.error('创建失败: ' + (e?.message || '未知错误'));
       loading.value = false;

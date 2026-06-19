@@ -1,0 +1,32 @@
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e5] [cursor=pointer]:
+      - img [ref=e7]
+      - img [ref=e9]
+    - generic [ref=e12]:
+      - generic [ref=e13]: 欢迎使用
+      - generic [ref=e14]: 通过账号密码登录，或者切换为扫码登录
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - textbox "请输入账号" [ref=e21]: admin
+          - generic [ref=e26]:
+            - textbox "请输入密码" [ref=e27]: admin123
+            - img "eye-invisible" [ref=e29] [cursor=pointer]:
+              - img [ref=e30]
+          - button "登 录" [active] [ref=e38] [cursor=pointer]:
+            - generic [ref=e39]: 登 录
+        - generic [ref=e40]:
+          - separator [ref=e41]:
+            - generic [ref=e42]: 其他登录方式
+          - generic [ref=e43]:
+            - generic [ref=e45] [cursor=pointer]: 
+            - generic [ref=e47] [cursor=pointer]: 
+            - generic [ref=e49] [cursor=pointer]: 
+            - generic [ref=e51] [cursor=pointer]: 
+            - generic [ref=e53] [cursor=pointer]: 
+    - generic [ref=e54]: Copyright @ 2026 面包树信息科技版权所有
+  - img
+  - generic [ref=e56]:
+    - img "close-circle" [ref=e57]:
+      - img [ref=e58]
+    - text: "[D1000] 账号或密码错误"
