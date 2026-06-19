@@ -2,9 +2,24 @@
 
 Compact instruction file for automated coding agents working in this repository.
 
+## Multi-Agent Environment
+
+This repo is used by **multiple AI coding agents**. Each has its own instruction system — they must coexist without conflict:
+
+| Agent | Instructions | Auto-loaded by |
+|-------|-------------|----------------|
+| **Claude Code** | `.claude/rules/*.md`, `.claude/skills/*/SKILL.md`, [CLAUDE.md](./CLAUDE.md) | Claude Code session start |
+| **Cursor** | `.cursor/rules/*.mdc` (alwaysApply), `.cursor/skills/*/SKILL.md` | Cursor IDE |
+| **Any agent** | This file (`AGENTS.md`) | OpenCode / other agents |
+
+**Rules of coexistence:**
+- This file is a **subset** of [CLAUDE.md](./CLAUDE.md) — it repeats only what an agent would guess wrong. CLAUDE.md remains the single source of truth.
+- **Never delete or alter** `.claude/` or `.cursor/` content from this agent — those are managed by their respective environments.
+- **On-Demand Rules** (`.claude/rules/`) and **Cursor rules** (`.cursor/rules/`) contain deeper context. When available, prefer reading them over this summary.
+
 ## Project
 
-JNPF v5.2 low-code platform — .NET 8 backend + Vue 3 frontends. Full architecture/rules in [CLAUDE.md](./CLAUDE.md); this file covers what an agent would otherwise guess wrong.
+JNPF v5.2 low-code platform — .NET 8 backend + Vue 3 frontends. Full architecture/rules in [CLAUDE.md](./CLAUDE.md).
 
 ## Dev Environment Startup
 

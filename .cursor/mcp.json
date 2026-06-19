@@ -1,17 +1,8 @@
 {
   "mcpServers": {
     "serena": {
-      "command": "uvx",
-      "args": [
-        "--from",
-        "git+https://github.com/oraios/serena",
-        "serena",
-        "start-mcp-server",
-        "--context",
-        "ide"
-      ],
-      "timeout": 600,
-      "env": {}
+      "url": "http://127.0.0.1:9900/sse",
+      "timeout": 600
     }
   }
 }
