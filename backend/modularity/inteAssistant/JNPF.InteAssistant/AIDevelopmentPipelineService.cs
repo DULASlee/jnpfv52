@@ -168,7 +168,11 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         _sseChannels[pipelineId] = channel;
 
         // 4. 启动后台 LLM 流式任务（不等待，立即返回）
-        _ = Task.Run(() => StreamLlmResponseAsync(pipelineId, stageName, provider, authHeader, channel, request.Attachments));
+        var user = _httpContextAccessor.HttpContext?.User;
+        var userId = user?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "system";
+        var userName = user?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "系统";
+
+        _ = Task.Run(() => StreamLlmResponseAsync(pipelineId, stageName, provider, authHeader, channel, request.Attachments, userId, userName));
 
         _logger.LogInformation("流水线阶段执行启动: PipelineId={Id}, Stage={Stage}", pipelineId, stageName);
         return stageResult;
@@ -178,7 +182,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     /// 后台执行 LLM 流式调用，token 写入 Channel 供 /events 读取。
     /// 从根 ServiceProvider 创建独立 scope，避免请求结束后 DI 服务被释放。
     /// </summary>
-    private async Task StreamLlmResponseAsync(long pipelineId, string stageName, string provider, string authHeader, Channel<SseEvent> channel, List<AttachmentPayload>? requestAttachments)
+    private async Task StreamLlmResponseAsync(long pipelineId, string stageName, string provider, string authHeader, Channel<SseEvent> channel, List<AttachmentPayload>? requestAttachments, string userId, string userName)
     {
         // 创建独立 DI scope，确保 _db/_llmGateway 在请求结束后仍可用
         using var scope = App.RootServices.CreateScope();
@@ -389,9 +393,13 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                                 FileUrl = att.Url,
                                 FileSize = 0,
                                 FileType = Path.GetExtension(att.Name)?.TrimStart('.') ?? "",
+                                FileHash = null, // 下载后计算
                                 ProcessStatus = 0,
+                                CreatorUserId = userId,
+                                CreatorUserName = userName,
                                 TenantId = tenantId,
-                                CreateTime = DateTime.Now
+                                CreateTime = DateTime.Now,
+                                DeleteMark = false
                             };
 
                             await db.Insertable(entity).ExecuteCommandAsync();
@@ -416,6 +424,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                         {
                             await db.Updateable<InteAssistantAttachment>()
                                 .SetColumns(a => a.ProcessStatus == 1)
+                                .SetColumns(a => a.LastModifyTime == DateTime.Now)
                                 .Where(a => a.F_Id == att.F_Id)
                                 .ExecuteCommandAsync();
 
@@ -425,6 +434,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                                 fileUrl = $"{App.HttpContext!.Request.Scheme}://{App.HttpContext.Request.Host}{fileUrl}";
                             }
                             var bytes = await http.GetByteArrayAsync(fileUrl, CancellationToken.None);
+                            var fileHash = ComputeSha256(bytes);
 
                             var extracted = await attachmentProcessor.ProcessAttachmentsAsync(
                                 new List<AttachmentFile> { new() { FileName = att.FileName, Content = bytes } });
@@ -432,6 +442,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                             await db.Updateable<InteAssistantAttachment>()
                                 .SetColumns(a => a.ProcessStatus == 2)
                                 .SetColumns(a => a.ExtractedText == extracted)
+                                .SetColumns(a => a.FileHash == fileHash)
+                                .SetColumns(a => a.LastModifyTime == DateTime.Now)
                                 .Where(a => a.F_Id == att.F_Id)
                                 .ExecuteCommandAsync();
 
@@ -446,10 +458,11 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                         catch (Exception ex)
                         {
                             logger.LogError(ex, "附件处理失败: {Name}", att.FileName);
-                            var errMsg = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
+                            var errMsg = ex.Message.Length > 2000 ? ex.Message[..2000] : ex.Message;
                             await db.Updateable<InteAssistantAttachment>()
                                 .SetColumns(a => a.ProcessStatus == 3)
                                 .SetColumns(a => a.ProcessError == errMsg)
+                                .SetColumns(a => a.LastModifyTime == DateTime.Now)
                                 .Where(a => a.F_Id == att.F_Id)
                                 .ExecuteCommandAsync();
                         }
@@ -1066,6 +1079,15 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     {
         if (json.Length <= maxLen) return json;
         return json[..maxLen] + "\n... (已截断，完整数据见 IR 字段)";
+    }
+
+    /// <summary>
+    /// 计算文件内容的 SHA256 哈希（用于附件去重）
+    /// </summary>
+    private static string ComputeSha256(byte[] data)
+    {
+        var hash = System.Security.Cryptography.SHA256.HashData(data);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     // ═══════════════════════════════════════════════════
