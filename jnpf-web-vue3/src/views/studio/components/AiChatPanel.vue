@@ -343,7 +343,7 @@
 
   // ====== SSE 流式消息 ======
   async function sendMessage(content: string, uploadedFiles?: Array<{ name: string; url: string }>) {
-    if (!content.trim()) return;
+    if (!content.trim() && (!uploadedFiles || uploadedFiles.length === 0)) return;
     loading.value = true;
     autoScroll.value = true;
 
@@ -473,7 +473,8 @@
 
   function handleSend() {
     const content = inputText.value.trim();
-    if (!content || loading.value) return;
+    // 允许纯附件发送（无文字）—— 门控会根据附件内容分析
+    if ((!content && attachments.value.length === 0) || loading.value) return;
     inputText.value = '';
 
     // ═══ 上传附件到 JNPF 文件服务 ═══
