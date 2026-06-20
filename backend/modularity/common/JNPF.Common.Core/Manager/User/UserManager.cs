@@ -293,7 +293,11 @@ public class UserManager : IUserManager, IScoped
     /// </summary>
     public string UserOrigin
     {
-        get => _httpContext?.Request.Headers["jnpf-origin"] ?? "pc";
+        get
+        {
+            var val = _httpContext?.Request.Headers["jnpf-origin"];
+            return string.IsNullOrEmpty(val) ? "pc" : val;
+        }
     }
 
     /// <summary>
@@ -377,11 +381,12 @@ public class UserManager : IUserManager, IScoped
             var organizeName = await _repository.AsSugarClient().Queryable<OrganizeEntity>().Where(x => orgIdTree.Contains(x.Id)).OrderBy(x => x.SortCode).OrderBy(x => x.CreatorTime).Select(x => x.FullName).ToListAsync();
             data.organizeName = string.Join("/", organizeName);
         }
-        else
+        else if (data != null)
         {
             data.organizeName = data.departmentName;
         }
-        data.prevLogin = (await _repository.AsSugarClient().Queryable<SysConfigEntity>().FirstAsync(x => x.Category.Equals("SysConfig") && x.Key.ToLower().Equals("lastlogintimeswitch"))).Value.ParseToInt();
+        var prevLoginConfig = await _repository.AsSugarClient().Queryable<SysConfigEntity>().FirstAsync(x => x.Category.Equals("SysConfig") && x.Key.ToLower().Equals("lastlogintimeswitch"));
+        data.prevLogin = prevLoginConfig?.Value?.ParseToInt() ?? 0;
         data.loginIPAddress = ipAddress;
         data.loginIPAddressName = ipAddressName;
         data.prevLoginIPAddressName = await NetHelper.GetLocation(data.prevLoginIPAddress);
@@ -414,15 +419,17 @@ public class UserManager : IUserManager, IScoped
         data.roleIds = roleList.ToArray();
         data.groupIds = await _repository.AsSugarClient().Queryable<GroupEntity, UserRelationEntity>((a, b) => new JoinQueryInfos(JoinType.Left, a.Id.Equals(b.ObjectId) && b.ObjectType.Equals("Group"))).Where((a, b) => a.EnabledMark == 1 && a.DeleteMark == null && b.UserId.Equals(data.userId)).Select((a, b) => b.ObjectId).ToListAsync();
         data.groupNames = await _repository.AsSugarClient().Queryable<GroupEntity>().Where(it => data.groupIds.Contains(it.Id)).Select(x => x.FullName).ToListAsync();
-        data.overdueTime = TimeSpan.FromMinutes(sysConfigInfo.Value.ParseToDouble());
+        data.overdueTime = TimeSpan.FromMinutes((sysConfigInfo?.Value ?? "1440").ParseToDouble());
         data.dataScope = userDataScope;
         data.tenantId = TenantId;
 
-        var currSysId = UserOrigin.Equals("pc") ? User.SystemId : User.AppSystemId;
-        data.workflowEnabled = await _repository.AsSugarClient().Queryable<SystemEntity>().Where(it => it.Id.Equals(currSysId) && it.DeleteMark == null).Select(it => it.WorkflowEnabled).FirstAsync();
+        var currSysId = UserOrigin.Equals("pc") ? User?.SystemId : User?.AppSystemId;
+        data.workflowEnabled = currSysId.IsNotEmptyOrNull()
+            ? await _repository.AsSugarClient().Queryable<SystemEntity>().Where(it => it.Id.Equals(currSysId) && it.DeleteMark == null).Select(it => it.WorkflowEnabled).FirstAsync()
+            : 0;
 
         // 根据系统配置过期时间自动过期
-        await SetUserInfo(userCache, data, TimeSpan.FromMinutes(sysConfigInfo.Value.ParseToDouble()));
+        await SetUserInfo(userCache, data, TimeSpan.FromMinutes((sysConfigInfo?.Value ?? "1440").ParseToDouble()));
 
         __swTotal.Stop();
         Console.WriteLine($"[P0-1-TIMING] GetUserInfo total: {__swTotal.ElapsedMilliseconds}ms");
