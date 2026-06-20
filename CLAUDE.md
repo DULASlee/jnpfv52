@@ -155,6 +155,8 @@ cd backend && dotnet build
 | 写架构文档 | `docs/architecture/ARCHITECTURE_DOC_RULES.md` |
 | 收到任何编码任务 | `.claude/rules/workflow.md`（任务分级 + 7 步流程） |
 | 遇到 bug / 测试失败 / 异常 / 编译错误 | `.claude/rules/debugging.md` + 执行 `/trace-bug` |
+| **犯错误后** | **MUST 追加到 `.claude/memory/mistake-log.md` 错题本**（格式：日期/类别/症状/根因/修复/关键词）|
+| **编码前** | Grep `.claude/memory/mistake-log.md` 搜索当前任务关键词，避免重复错误 |
 | 代码修改完成 / 准备声称"完成" | `.claude/rules/testing.md`（测试 Gate Function） |
 | 任何编码任务（工程铁律） | `.claude/rules/engineering-laws.md`（Law 1-4） |
 | 涉及 2+ 文件或 20+ 行变更 | `.claude/rules/review-workflow.md` + 执行 `/full-review` |
@@ -184,6 +186,7 @@ cd backend && dotnet build
 | 时机 | Hook | 作用 | 层级 |
 |---|---|---|---|
 | SessionStart | `superpowers-check.mjs` | **Superpowers 强制激活验证** + 技能可用性检查 + AI 强制性指令 | — |
+| SessionStart | `load-mistakes.mjs` | **错题本自动加载** — 注入最近 30 天错误到上下文 | — |
 | PreToolUse (Write\|Edit\|MultiEdit) | `guard-write.mjs` | **三层守卫** — L1 密钥/凭证文件拦截 / L2 空文件拦截 / L3 安全扫描 | L0 |
 | PreToolUse (Write\|Edit\|MultiEdit) | `guard-oa-module.mjs` | **R5 模块边界**拦截 OA/IoT/MES 写入 | L0 |
 | PreToolUse (Write\|Edit\|MultiEdit) | `guard-sql-injection.mjs` | **R7 SQL 注入**拦截 | L0 |

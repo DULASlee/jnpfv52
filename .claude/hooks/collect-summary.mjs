@@ -5,12 +5,17 @@
  * 职责：AI 会话结束时，收集未提交的变更摘要，保存为 Markdown。
  * 输出：.claude/memory/session-summaries/{date}-{shortId}.md
  *
+ * v2 增强：
+ *   - 读取 .claude/memory/session-key-points.md（AI 在 Step 7 写入的决策/根因）
+ *   - 合并到会话摘要中，记录"为什么改"而不只是"改了什么"
+ *   - 读取后自动清空 key-points 文件
+ *
  * 分类：后端 / 前端 / 配置 / 基础设施 / Hooks / 文档 / 其他
  * 预算：≤ 5 秒，失败静默跳过（不阻断会话退出）。
  */
 
 import { execSync } from 'child_process';
-import { mkdirSync, writeFileSync } from 'fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
 // ─── 读取 stdin ──────────────────────────────────────────────────
@@ -39,12 +44,24 @@ try {
     .filter(Boolean)
     .join('\n');
 
-  if (!allFiles) {
+  // ─── 读取 AI 写入的决策/根因 ──────────────────────────────────
+  const keyPointsPath = join('.claude', 'memory', 'session-key-points.md');
+  let keyPointsContent = '';
+  if (existsSync(keyPointsPath)) {
+    try {
+      keyPointsContent = readFileSync(keyPointsPath, 'utf-8').trim();
+      // 读取后清空（下个会话重新写入）
+      unlinkSync(keyPointsPath);
+    } catch { /* skip */ }
+  }
+
+  // 无文件变更且无关键决策 → 跳过
+  if (!allFiles && !keyPointsContent) {
     console.log(JSON.stringify({ decision: 'approve', reason: 'No uncommitted changes' }));
     process.exit(0);
   }
 
-  const files = [...new Set(allFiles.split('\n').filter(Boolean))];
+  const files = allFiles ? [...new Set(allFiles.split('\n').filter(Boolean))] : [];
 
   // ─── 分类函数 ──────────────────────────────────────────────────
   const isBackend = f =>
@@ -73,6 +90,14 @@ try {
     ),
   };
 
+  // ─── 读取最近 commit 信息 ──────────────────────────────────────
+  let recentCommit = '';
+  try {
+    recentCommit = execSync('git log -1 --format="%s%n%b"', {
+      encoding: 'utf-8', stdio: 'pipe', timeout: 3000,
+    }).trim();
+  } catch { /* skip */ }
+
   // ─── 生成摘要 ──────────────────────────────────────────────────
   const now = new Date();
   const dateStr = now.toISOString().slice(0, 10);
@@ -83,23 +108,38 @@ try {
   summary += `**时间**: ${dateStr} ${timeStr}\n`;
   summary += `**变更文件数**: ${files.length}\n\n`;
 
-  const sectionMap = {
-    backend: '后端代码',
-    frontend: '前端代码',
-    config: '配置文件',
-    infra: '基础设施',
-    hooks: 'Hooks/规则',
-    docs: '文档',
-    other: '其他',
-  };
+  // ── 决策与根因（AI 在 Step 7 写入）──
+  if (keyPointsContent) {
+    summary += '## 🔑 关键决策与根因\n\n';
+    summary += keyPointsContent + '\n\n';
+  }
 
-  for (const [key, label] of Object.entries(sectionMap)) {
-    if (categories[key].length > 0) {
-      summary += `## ${label} (${categories[key].length})\n\n`;
-      for (const f of categories[key]) {
-        summary += `- \`${f}\`\n`;
+  // ── 最近提交 ──
+  if (recentCommit) {
+    summary += '## 📝 最近提交\n\n';
+    summary += '```\n' + recentCommit + '\n```\n\n';
+  }
+
+  // ── 文件分类 ──
+  if (files.length > 0) {
+    const sectionMap = {
+      backend: '后端代码',
+      frontend: '前端代码',
+      config: '配置文件',
+      infra: '基础设施',
+      hooks: 'Hooks/规则',
+      docs: '文档',
+      other: '其他',
+    };
+
+    for (const [key, label] of Object.entries(sectionMap)) {
+      if (categories[key].length > 0) {
+        summary += `## ${label} (${categories[key].length})\n\n`;
+        for (const f of categories[key]) {
+          summary += `- \`${f}\`\n`;
+        }
+        summary += '\n';
       }
-      summary += '\n';
     }
   }
 
@@ -110,10 +150,12 @@ try {
   const filename = `${dateStr}-${shortId}.md`;
   writeFileSync(join(summariesDir, filename), summary, 'utf-8');
 
-  console.error(`📝 会话摘要已保存: ${summariesDir}/${filename} (${files.length} 个文件)`);
-} catch {
+  const kbSize = (Buffer.byteLength(summary, 'utf-8') / 1024).toFixed(1);
+  console.error(`📝 会话摘要已保存: ${summariesDir}/${filename} (${files.length} 个文件, ${kbSize}KB)`);
+  if (keyPointsContent) console.error('   ✅ 已收录 AI 决策/根因');
+} catch (e) {
   // 静默跳过，不阻断停止流程
-  console.error('⚠️ 会话摘要收集跳过');
+  console.error('⚠️ 会话摘要收集跳过: ' + (e.message || ''));
 }
 
 console.log(JSON.stringify({
