@@ -171,6 +171,7 @@ cd backend && dotnet build
 | 写架构文档 | `docs/architecture/ARCHITECTURE_DOC_RULES.md` |
 | 收到任何编码任务 | `.claude/rules/workflow.md`（任务分级 + 7 步流程） |
 | 遇到 bug / 测试失败 / 异常 / 编译错误 | `.claude/rules/debugging.md` + 执行 `/trace-bug` |
+| **问题 10 分钟无进展 / 3 次修复仍无效** | **`/data-driven-debug`：停止改代码，抓运行时数据定位** |
 | **前端无响应 / SSE 无数据 / 页面空白** | **Evidence Over Assumption：用 Playwright 抓网络响应体，禁止看源码猜测（详见 Core Principle）** |
 | **犯错误后** | **MUST 追加到 `.claude/memory/mistake-log.md` 错题本**（格式：日期/类别/症状/根因/修复/关键词）|
 | **编码前** | Grep `.claude/memory/mistake-log.md` 搜索当前任务关键词，避免重复错误 |
