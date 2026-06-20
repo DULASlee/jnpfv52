@@ -10,14 +10,18 @@ using System.Text.RegularExpressions;
 namespace JNPF.InteAssistant.Gates;
 
 /// <summary>
-/// 需求门控服务
+/// 需求门控服务（企业级最终版）
 ///
-/// 修复项（相对清言版本）：
-///   ✅ ExtractJson 中 JsonDocument 加 using（修复内存泄漏 #3）
-///   ✅ ExtractFromImages 中 StringContent 加 using（修复内存泄漏 #4）
-///   ✅ HttpClient 认证改为 per-request HttpRequestMessage（修复最佳实践 #8）
-///   ✅ ExtractFromImages 包含 model 参数（修复编译错误 #1）
-///   ✅ API Key 从配置读取，不硬编码（修复配置风险 #6）
+/// 职责分离：
+///   硬规则 → 纯格式检查（长度、垃圾、附件数量）→ 零误杀
+///   LLM   → 语义分析（行业、实体、流程、约束）→ 泛行业
+///
+/// 执行顺序（调用方保证）：
+///   1. 附件提取（提取文本，不校验）
+///   2. 合并用户文字 + 附件文本
+///   3. 硬规则校验（格式检查，用合并后的完整文本）
+///   4. LLM 成熟度评估（语义分析）
+///   5. 三模式 Prompt 生成
 /// </summary>
 public class RequirementGateService : ITransient
 {
@@ -39,30 +43,6 @@ public class RequirementGateService : ITransient
         @"^(.)\1{4,}$"
     };
 
-    private static readonly Dictionary<string, string[]> DimensionKeywords = new()
-    {
-        ["系统概述"] = new[] { "系统", "平台", "管理系统", "业务领域", "行业", "目标", "用户群", "建设", "项目" },
-        ["业务实体"] = new[] { "管理", "信息", "数据", "记录", "档案", "清单", "台账", "物料", "商品", "订单", "客户", "供应商", "仓库", "员工", "设备", "项目", "凭证" },
-        ["角色权限"] = new[] { "角色", "权限", "用户", "管理员", "操作员", "审批人", "岗位", "职责", "负责人", "仓管", "采购员", "销售员", "财务", "人事" },
-        ["业务流程"] = new[] { "流程", "步骤", "审批", "下单", "入库", "出库", "首先", "然后", "接着", "最后", "→", "->", "流转", "状态" },
-        ["数据报表"] = new[] { "报表", "统计", "分析", "导出", "图表", "数据量", "每天", "每月", "条记录", "万条", "Excel" },
-        ["系统集成"] = new[] { "对接", "集成", "接口", "API", "ERP", "财务系统", "电商平台", "第三方", "外部系统", "同步", "数据交换" },
-        ["非功能需求"] = new[] { "性能", "安全", "部署", "并发", "响应时间", "等保", "加密", "公有云", "私有化", "高可用", "容灾" },
-        ["附件材料"] = new[] { "截图", "附件", "原型", "图片", "文档", "模板" }
-    };
-
-    private static readonly string[] EntityKeywords =
-    {
-        "管理", "信息", "数据", "记录", "档案", "清单", "台账",
-        "物料", "工单", "设备", "生产线", "BOM", "工艺", "质检", "配方", "排产", "工序",
-        "商品", "SKU", "订单", "客户", "供应商", "仓库", "库存", "采购", "销售", "入库", "出库",
-        "员工", "考勤", "薪资", "绩效", "招聘", "培训", "社保", "请假",
-        "项目", "任务", "里程碑", "预算", "合同", "分包",
-        "凭证", "科目", "应收", "应付", "发票", "报销",
-        "巡检", "保养", "维修", "备件", "故障", "点检",
-        "审批", "会签", "或签", "退回", "转办", "催办"
-    };
-
     public RequirementGateService(
         ILlmGatewayService llmGateway,
         ILogger<RequirementGateService> logger,
@@ -74,115 +54,44 @@ public class RequirementGateService : ITransient
     }
 
     // ═══════════════════════════════════════════════════
-    // 硬规则校验
+    // 硬规则校验 — 纯格式检查，零语义判断
     // ═══════════════════════════════════════════════════
 
     public HardRuleResult ValidateHardRules(string text, int attachmentCount)
     {
         var content = (text ?? "").Trim();
 
-        // 规则1：最低门槛
-        if (content.Length < 500 && attachmentCount == 0)
+        // 规则1：文字或附件至少有一个
+        if (content.Length < 10 && attachmentCount == 0)
         {
-            return Fail("输入内容不足",
-                "企业级需求分析需要足够的业务信息（至少500字）。\n\n" +
-                "请提供以下信息：\n" +
-                "1. 系统名称和所属行业\n" +
-                "2. 核心业务对象（如商品、订单、仓库）\n" +
-                "3. 使用角色及职责\n" +
-                "4. 核心业务流程\n" +
-                "5. 截图或文档附件");
+            return Fail("请输入需求描述",
+                "请描述您要构建的系统，或上传需求文档/截图。");
         }
 
-        // 规则2：垃圾内容
-        if (content.Length > 0 && GarbagePatterns.Any(p =>
-            Regex.IsMatch(content, p, RegexOptions.IgnoreCase)))
+        // 规则2：垃圾内容过滤（仅短文本触发）
+        if (content.Length > 0 && content.Length < 50 &&
+            GarbagePatterns.Any(p => Regex.IsMatch(content, p, RegexOptions.IgnoreCase)))
         {
             return Fail("检测到无效输入", "请输入真实的业务需求描述。");
         }
 
         // 规则3：长度上限
-        if (content.Length > 100000)
+        if (content.Length > 200000)
         {
-            return Fail("需求文本过长", "请精简到10万字以内。");
+            return Fail("输入内容过长", "请精简到20万字以内。");
         }
 
-        // 规则4：附件数量
+        // 规则4：附件数量上限
         if (attachmentCount > 10)
         {
             return Fail("附件数量超限", "最多上传10个附件。");
         }
 
-        // 规则5：文字过短时必须有附件
-        if (content.Length < 2000 && attachmentCount == 0)
-        {
-            return Fail("文字描述较少",
-                "您的描述不足2000字且无附件。请补充业务细节，或上传需求文档/系统截图。");
-        }
-
-        // 规则6：维度覆盖率
-        var dimensions = DetectDimensions(content, attachmentCount);
-        if (dimensions.Covered.Count < 2)
-        {
-            return Fail("需求信息覆盖维度不足",
-                $"当前仅覆盖{dimensions.Covered.Count}个维度（至少需要2个）。\n" +
-                $"已覆盖：{string.Join("、", dimensions.Covered)}\n" +
-                $"未覆盖：{string.Join("、", dimensions.Missing)}");
-        }
-
-        // 规则7：业务实体
-        var entityCount = CountEntities(content);
-        if (entityCount < 1)
-        {
-            return Fail("未识别到业务实体",
-                "未识别到具体的业务对象。请描述系统涉及的核心业务对象。");
-        }
-
         return new HardRuleResult
         {
             Passed = true,
-            Reason = $"硬规则通过（{dimensions.Covered.Count}/8维度，{entityCount}个实体）",
-            DimensionCount = dimensions.Covered.Count,
-            EntityCount = entityCount,
-            CoveredDimensions = dimensions.Covered,
-            MissingDimensions = dimensions.Missing
+            Reason = $"硬规则通过（文字{content.Length}字，{attachmentCount}个附件）"
         };
-    }
-
-    // ═══════════════════════════════════════════════════
-    // 维度检测 + 实体计数
-    // ═══════════════════════════════════════════════════
-
-    private DimensionDetection DetectDimensions(string text, int attachmentCount)
-    {
-        var covered = new List<string>();
-        var missing = new List<string>();
-
-        foreach (var (dim, keywords) in DimensionKeywords)
-        {
-            if (dim == "附件材料")
-            {
-                if (attachmentCount > 0 || keywords.Any(k => text.Contains(k)))
-                    covered.Add(dim);
-                else
-                    missing.Add(dim);
-            }
-            else if (keywords.Count(k => text.Contains(k)) >= 2)
-            {
-                covered.Add(dim);
-            }
-            else
-            {
-                missing.Add(dim);
-            }
-        }
-
-        return new DimensionDetection { Covered = covered, Missing = missing };
-    }
-
-    private int CountEntities(string text)
-    {
-        return EntityKeywords.Count(k => text.Contains(k));
     }
 
     // ═══════════════════════════════════════════════════
@@ -192,8 +101,7 @@ public class RequirementGateService : ITransient
     public bool IsForceRefine(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return false;
-        return ForceRefineKeywords.Any(k =>
-            text.Contains(k, StringComparison.OrdinalIgnoreCase));
+        return ForceRefineKeywords.Any(k => text.Contains(k, StringComparison.OrdinalIgnoreCase));
     }
 
     public bool IsMaxRoundsReached(int roundCount, int maxRounds = 20)
@@ -202,7 +110,7 @@ public class RequirementGateService : ITransient
     }
 
     // ═══════════════════════════════════════════════════
-    // LLM 成熟度评估
+    // LLM 成熟度评估 — 泛行业语义分析
     // ═══════════════════════════════════════════════════
 
     public async Task<MaturityResult> EvaluateMaturity(
@@ -211,16 +119,39 @@ public class RequirementGateService : ITransient
         var systemPrompt = """
             你是企业级需求成熟度评估器。根据对话历史判断需求信息的完整度。
 
+            你必须理解任何行业的业务描述，不限于特定行业。
+
             评估维度（总分0-100）：
-            1. 业务领域清晰度 (0-30)：是否明确了系统类型/行业？
-            2. 核心实体识别 (0-30)：提到了几个业务实体？系统名隐含的也算
-            3. 业务流程暗示 (0-20)：是否有流程描述？暗示也算
-            4. 约束/规模信息 (0-20)：是否有数量/规则/角色约束？
+
+            1. 业务领域清晰度 (0-30)
+               - 30分：明确系统名称+行业+目标
+               - 25分：提到系统类型（"进销存""HR""CRM""OA"等词隐含行业知识）
+               - 10分：模糊描述
+               - 0分：无法判断
+
+            2. 核心实体识别 (0-30)
+               - 不同行业有不同实体，根据用户描述的领域自行识别
+               - 例如：进销存→商品/订单/仓库、医院→患者/处方/科室、学校→学生/课程/教师
+               - 25分：5+个实体
+               - 15分：2-4个
+               - 5分：1个
+               - 0分：无法识别
+
+            3. 业务流程暗示 (0-20)
+               - 暗示也算（"采购要审批"=采购流程+审批节点）
+               - 20分：完整流程描述
+               - 15分：隐含流程
+               - 0分：无
+
+            4. 约束/规模信息 (0-20)
+               - 20分：具体约束（并发数、数据量、部署方式）
+               - 10分：模糊约束
+               - 0分：无
 
             mode判定：score < 25 → "explore", score 25-49 → "confirm", score >= 50 → "refine"
 
             只输出JSON：
-            {"score":数字,"mode":"explore|confirm|refine","missing":["缺1"],"strengths":["有1"],"nextQuestion":"下一个该问的问题"}
+            {"score":数字,"mode":"explore|confirm|refine","domain":"行业/领域","entities":["实体1","实体2"],"missing":["缺1"],"strengths":["有1"],"nextQuestion":"下一个该问的问题"}
             """;
 
         var request = new ChatCompletionRequest
@@ -267,22 +198,40 @@ public class RequirementGateService : ITransient
         {
             "explore" => $"""
                 你是AI架构顾问。用户的需求信息较少，需要帮用户梳理。
-                已识别：{string.Join("、", maturity.Strengths)}
-                缺失：{string.Join("、", maturity.Missing)}
-                任务：1. 生成合理业务假设清单(□前缀) 2. 一次最多追问3个问题(❓前缀) 3. 提醒补充完可说"开始分析"
+
+                已识别的行业/领域：{maturity.Domain ?? "未知"}
+                已识别的业务实体：{string.Join("、", maturity.Entities ?? new List<string>())}
+                已识别：{string.Join("、", maturity.Strengths ?? new List<string>())}
+                缺失：{string.Join("、", maturity.Missing ?? new List<string>())}
+
+                任务：
+                1. 根据用户描述的领域，生成该行业的合理业务假设清单
+                2. 每个假设给出选项（□ 前缀）
+                3. 一次最多追问3个问题（❓ 前缀）
+                4. 最后提醒用户：补充完可以说"开始分析"
+
                 用中文，Markdown格式。
                 """,
 
             "confirm" => $"""
                 你是AI架构顾问。用户已提供部分信息，需确认和补充。
-                已确认：{string.Join("、", maturity.Strengths)}
-                待确认：{string.Join("、", maturity.Missing)}
-                任务：1. 整理已确认信息(✅标记) 2. 针对待确认点追问(❓标记) 3. 提醒确认后可说"开始分析"
+
+                已识别的行业/领域：{maturity.Domain ?? "未知"}
+                已识别的业务实体：{string.Join("、", maturity.Entities ?? new List<string>())}
+                已确认：{string.Join("、", maturity.Strengths ?? new List<string>())}
+                待确认：{string.Join("、", maturity.Missing ?? new List<string>())}
+
+                任务：
+                1. 整理已确认信息，给出结构化总结（✅ 标记）
+                2. 针对待确认点追问（❓ 标记）
+                3. 提醒确认后可说"开始分析"
+
                 用中文，Markdown格式。
                 """,
 
             "refine" => """
                 你是AI架构顾问。需求信息已充分，做全面需求分析。
+
                 按以下结构输出：
                 ## 系统概述
                 ## 核心业务实体（含属性和关系）
@@ -290,6 +239,7 @@ public class RequirementGateService : ITransient
                 ## 业务规则
                 ## 待确认事项
                 ## 架构建议
+
                 用中文，Markdown格式，条理清晰，内容详实。
                 """,
 
@@ -298,11 +248,7 @@ public class RequirementGateService : ITransient
     }
 
     // ═══════════════════════════════════════════════════
-    // 多模态图片提取（真实现：直接调 Vision API）
-    //
-    // 修复 #4：StringContent 加 using
-    // 修复 #8：认证改为 per-request HttpRequestMessage
-    // 修复 #1：包含 model 参数（清言版本漏了，编译错误）
+    // 多模态图片提取
     // ═══════════════════════════════════════════════════
 
     public async Task<string> ExtractFromImages(
@@ -339,10 +285,6 @@ public class RequirementGateService : ITransient
         return string.Join("\n\n", results);
     }
 
-    /// <summary>
-    /// 处理单张图片：构建 Vision API 请求 → 发送 → 解析响应
-    /// API 格式假设：OpenAI-compatible multimodal endpoint
-    /// </summary>
     private async Task<string> ProcessSingleImageAsync(
         HttpClient client, AttachmentFile image,
         string apiUrl, string apiKey, string model,
@@ -361,24 +303,14 @@ public class RequirementGateService : ITransient
                     role = "user",
                     content = new object[]
                     {
-                        new
-                        {
-                            type = "text",
-                            text = "请从图片中提取所有与软件需求相关的业务信息：界面元素、表格字段、业务流程、系统截图中的数据。用结构化中文列出。"
-                        },
-                        new
-                        {
-                            type = "image_url",
-                            image_url = new { url = $"data:{mimeType};base64,{base64}" }
-                        }
+                        new { type = "text", text = "请从图片中提取所有与软件需求相关的业务信息：界面元素、表格字段、业务流程、系统截图中的数据。用结构化中文列出。" },
+                        new { type = "image_url", image_url = new { url = $"data:{mimeType};base64,{base64}" } }
                     }
                 }
             },
             max_tokens = 2000
         };
 
-        // 修复 #8：用 HttpRequestMessage 设置 per-request 认证
-        // 修复 #4：StringContent 在 using 块中创建，块结束自动释放
         using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
@@ -391,7 +323,6 @@ public class RequirementGateService : ITransient
         if (response.IsSuccessStatusCode)
         {
             var responseStr = await response.Content.ReadAsStringAsync(ct);
-            // 修复 #3：using 保护 JsonDocument
             using var doc = JsonDocument.Parse(responseStr);
             var extractedText = doc.RootElement
                 .GetProperty("choices")[0]
@@ -417,27 +348,19 @@ public class RequirementGateService : ITransient
     private static HardRuleResult Fail(string reason, string hint) =>
         new() { Passed = false, Reason = reason, Hint = hint };
 
-    // 修复 #3：JsonDocument 必须 using，否则底层缓冲区不释放
     private static string ExtractJson(string text)
     {
         var start = text.IndexOf('{');
         var end = text.LastIndexOf('}');
         if (start < 0 || end <= start) return text;
-
         var candidate = text[start..(end + 1)];
         try
         {
             using var doc = JsonDocument.Parse(candidate);
             return candidate;
         }
-        catch (JsonException)
-        {
-            return text;
-        }
-        catch (ArgumentException)
-        {
-            return text;
-        }
+        catch (JsonException) { return text; }
+        catch (ArgumentException) { return text; }
     }
 
     private static string GetMimeType(string fileName) =>
@@ -452,7 +375,7 @@ public class RequirementGateService : ITransient
 }
 
 // ═══════════════════════════════════════════════════
-// DTO
+// DTO（精简版）
 // ═══════════════════════════════════════════════════
 
 public class HardRuleResult
@@ -460,23 +383,15 @@ public class HardRuleResult
     public bool Passed { get; set; }
     public string Reason { get; set; } = "";
     public string Hint { get; set; } = "";
-    public int DimensionCount { get; set; }
-    public int EntityCount { get; set; }
-    public List<string> CoveredDimensions { get; set; } = new();
-    public List<string> MissingDimensions { get; set; } = new();
 }
 
 public class MaturityResult
 {
     public int Score { get; set; }
     public string Mode { get; set; } = "explore";
+    public string? Domain { get; set; }
+    public List<string>? Entities { get; set; }
     public List<string> Missing { get; set; } = new();
     public List<string> Strengths { get; set; } = new();
     public string NextQuestion { get; set; } = "";
-}
-
-internal class DimensionDetection
-{
-    public List<string> Covered { get; set; } = new();
-    public List<string> Missing { get; set; } = new();
 }
