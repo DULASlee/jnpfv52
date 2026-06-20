@@ -450,6 +450,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     // ── 第2步：处理附件（下载 + 解析，已解析的取缓存）──
                     var attachmentTexts = new List<string>();
                     int processedCount = 0;
+                    var downloadedBytes = new Dictionary<string, byte[]>(); // 缓存已下载文件
 
                     foreach (var att in existingAttachments)
                     {
@@ -475,6 +476,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                             }
                             var bytes = await http.GetByteArrayAsync(fileUrl, ct);
                             var fileHash = ComputeSha256(bytes);
+                            downloadedBytes[att.FileUrl] = bytes; // 缓存，避免图片二次下载
 
                             var extracted = await attachmentProcessor.ProcessAttachmentsAsync(
                                 new List<AttachmentFile> { new() { FileName = att.FileName, Content = bytes } });
@@ -591,11 +593,19 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                             var imageFiles = new List<AttachmentFile>();
                             foreach (var att in existingAttachments.Where(a => GateConstants.IsImageFile(a.FileName)))
                             {
-                                var imgUrl = att.FileUrl;
-                                if (!imgUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                                    imgUrl = $"{capturedScheme}://{capturedHost}{imgUrl}";
-                                var imgBytes = await http.GetByteArrayAsync(imgUrl, ct);
-                                imageFiles.Add(new AttachmentFile { FileName = att.FileName, Content = imgBytes });
+                                // 优先取缓存（步骤2已下载），避免二次下载
+                                if (downloadedBytes.TryGetValue(att.FileUrl, out var cachedBytes))
+                                {
+                                    imageFiles.Add(new AttachmentFile { FileName = att.FileName, Content = cachedBytes });
+                                }
+                                else
+                                {
+                                    var imgUrl = att.FileUrl;
+                                    if (!imgUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                                        imgUrl = $"{capturedScheme}://{capturedHost}{imgUrl}";
+                                    var imgBytes = await http.GetByteArrayAsync(imgUrl, ct);
+                                    imageFiles.Add(new AttachmentFile { FileName = att.FileName, Content = imgBytes });
+                                }
                             }
 
                             if (imageFiles.Count > 0)
