@@ -6,7 +6,7 @@ import { ref, onUnmounted } from 'vue';
 import { buildEventSourceUrl } from '/@/utils/http/sseUrl';
 
 export interface SSEMessage {
-  type: 'chunk' | 'ir_update' | 'stage_change' | 'error' | 'done';
+  type: 'chunk' | 'token' | 'thinking' | 'info' | 'ir_update' | 'stage_change' | 'error' | 'done';
   data: string;
   stage?: string;
   agent?: string;

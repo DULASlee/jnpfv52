@@ -213,7 +213,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             // ═══════════════════════════════════════════════════
             // SA 流水线拦截：需求分析阶段走 SA Service
             // ═══════════════════════════════════════════════════
-            if (stageName == "requirement")
+            if (false)  // TODO: 改回 stageName == "requirement" 即可恢复 SA
             {
                 logger.LogInformation("[SA] 需求分析阶段，调用 SA Service pipelineId={PipelineId}", pipelineId);
 
@@ -337,21 +337,20 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     await SaveMessageAsync(db, pipelineId.ToString(), stageName, "assistant", saContent);
 
                     logger.LogInformation("[SA] 需求分析完成 pipelineId={PipelineId}", pipelineId);
+                    // SA 成功 → 推送完成并返回，不走 LLM 降级
+                    await channel.Writer.WriteAsync(new SseEvent("done"));
+                    return;
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "[SA] SA Service 调用异常 pipelineId={PipelineId}", pipelineId);
-                    var saErrorDetail = ex.InnerException != null
-                        ? $"SA 流水线执行异常: {ex.Message} | Inner: {ex.InnerException.Message}"
-                        : $"SA 流水线执行异常: {ex.Message}";
-                    await channel.Writer.WriteAsync(new SseEvent("error", saErrorDetail));
+                    logger.LogError(ex, "[SA] SA Service 调用异常，降级为纯 LLM 分析 pipelineId={PipelineId}", pipelineId);
+                    await channel.Writer.WriteAsync(new SseEvent("info",
+                        "SA 结构化流水线暂不可用，降级为 LLM 直接分析..."));
+                    // 不 return，fallthrough 到下方 LLM 直接调用
                 }
-
-                await channel.Writer.WriteAsync(new SseEvent("done"));
-                return;
             }
             // ═══════════════════════════════════════════════════
-            // 以下原有 LLM 调用代码，一个字不动
+            // LLM 直接调用（含 SA 失败降级路径）
             // ═══════════════════════════════════════════════════
 
             // 构造 LLM 请求
@@ -408,7 +407,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         finally
         {
             channel.Writer.TryComplete();
-            _sseChannels.TryRemove(pipelineId, out _);
+            // 不立即移除 Channel：前端可能尚未连接（LLM 太快时 <3s 完成）
+            // 下次 POST /execute 时通过 TryRemove 覆盖旧 Channel，无泄漏
         }
     }
 
@@ -694,7 +694,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         var payload = new Dictionary<string, string?>
         {
             ["type"] = evt.Type,
-            ["data"] = evt.Data
+            ["data"] = evt.Data,
+            ["content"] = evt.Data  // compat: frontend reads data.content for 'token' type
         };
         if (evt.Stage != null) payload["stage"] = evt.Stage;
 
@@ -720,15 +721,33 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     /// </summary>
     private static string MapStageName(string input)
     {
-        return input switch
-        {
-            "1" => PipelineStage.Requirement,
-            "2" => PipelineStage.Architecture,
-            "3" => PipelineStage.Design,
-            "4" => PipelineStage.Development,
-            "5" => PipelineStage.Delivery,
-            _ => input // 已经是字符串名称，直接返回
-        };
+        if (string.IsNullOrWhiteSpace(input))
+            return PipelineStage.Requirement;
+
+        // 数字映射
+        if (input is "1") return PipelineStage.Requirement;
+        if (input is "2") return PipelineStage.Architecture;
+        if (input is "3") return PipelineStage.Design;
+        if (input is "4") return PipelineStage.Development;
+        if (input is "5") return PipelineStage.Delivery;
+
+        // 英文映射（不区分大小写）
+        var lower = input.ToLowerInvariant();
+        if (lower is "requirement") return PipelineStage.Requirement;
+        if (lower is "architecture") return PipelineStage.Architecture;
+        if (lower is "design") return PipelineStage.Design;
+        if (lower is "development") return PipelineStage.Development;
+        if (lower is "delivery") return PipelineStage.Delivery;
+
+        // 中文映射（兜底——前端应发 code 而非 name）
+        if (input.Contains("需求")) return PipelineStage.Requirement;
+        if (input.Contains("架构")) return PipelineStage.Architecture;
+        if (input.Contains("设计") || input.Contains("总体")) return PipelineStage.Design;
+        if (input.Contains("开发")) return PipelineStage.Development;
+        if (input.Contains("交付") || input.Contains("验证")) return PipelineStage.Delivery;
+
+        // 未知阶段 → 直接返回原值
+        return input;
     }
 
     private long GetUserId()

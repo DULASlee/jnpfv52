@@ -155,6 +155,7 @@ cd backend && dotnet build
 | 写架构文档 | `docs/architecture/ARCHITECTURE_DOC_RULES.md` |
 | 收到任何编码任务 | `.claude/rules/workflow.md`（任务分级 + 7 步流程） |
 | 遇到 bug / 测试失败 / 异常 / 编译错误 | `.claude/rules/debugging.md` + 执行 `/trace-bug` |
+| **前端无响应 / SSE 无数据 / 页面空白** | **MUST 用 Playwright `page.on('response')` 抓网络包看实际响应体，禁止只看源码猜测** |
 | **犯错误后** | **MUST 追加到 `.claude/memory/mistake-log.md` 错题本**（格式：日期/类别/症状/根因/修复/关键词）|
 | **编码前** | Grep `.claude/memory/mistake-log.md` 搜索当前任务关键词，避免重复错误 |
 | 代码修改完成 / 准备声称"完成" | `.claude/rules/testing.md`（测试 Gate Function） |

@@ -253,11 +253,11 @@
   const autoScroll = ref(true);
 
   const stages = ref([
-    { stage: 1, name: '需求分析', status: 'active' },
-    { stage: 2, name: '架构设计', status: 'pending' },
-    { stage: 3, name: '总体设计', status: 'pending' },
-    { stage: 4, name: '自动开发', status: 'pending' },
-    { stage: 5, name: '交付验证', status: 'pending' },
+    { stage: 1, name: '需求分析', code: 'requirement', status: 'active' },
+    { stage: 2, name: '架构设计', code: 'architecture', status: 'pending' },
+    { stage: 3, name: '总体设计', code: 'design', status: 'pending' },
+    { stage: 4, name: '自动开发', code: 'development', status: 'pending' },
+    { stage: 5, name: '交付验证', code: 'delivery', status: 'pending' },
   ]);
 
   const quickPrompts = ['我需要一个进销存管理系统', '帮我做一个审批工作流平台', '设计一个设备巡检系统', '我想要一个客户管理 CRM'];
@@ -388,17 +388,17 @@
         url: '/api/studio/pipeline/execute/' + pipelineId.value + '/execute',
         data: {
           message: content,
-          stageName: stages.value[currentStage.value - 1]?.name || 'requirement',
+          stageName: stages.value[currentStage.value - 1]?.code || 'requirement',
           provider: selectedProvider.value,
         },
       });
 
-      // Step 2: GET /events 读取 SSE 流（fetch 走 ReadableStream）
+      // Step 2: GET /events 读取 SSE 流
       abortController.value = new AbortController();
       const sseUrl = buildFetchSseUrl('/api/studio/pipeline/execute/' + pipelineId.value + '/events');
       const sseHeaders: Record<string, string> = { Accept: 'text/event-stream' };
       const token = getToken();
-      if (token) sseHeaders['Authorization'] = `Bearer ${token}`;
+      if (token) sseHeaders['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
 
       const response = await fetch(sseUrl, {
         method: 'GET',
@@ -425,21 +425,22 @@
               if (!msg) continue;
               switch (data.type) {
                 case 'thinking':
-                  msg.thinking += data.content || '';
+                case 'info':
+                  msg.thinking += (data.data || data.content || '') + '\n';
                   break;
                 case 'token':
                 case 'delta':
-                  msg.content += data.content || data.delta?.content || '';
+                  msg.content += data.data || data.content || data.delta?.content || '';
                   if (autoScroll.value) scrollToBottom();
                   break;
                 case 'strategy':
-                  msg.strategies = data.strategies || [];
+                  msg.strategies = data.data || data.strategies || [];
                   break;
                 case 'document':
-                  msg.document = data.document;
+                  msg.document = data.data || data.document;
                   break;
                 case 'ir':
-                  msg.ir = data.ir;
+                  msg.ir = data.data || data.ir;
                   break;
                 case 'stage_complete':
                   msg.stageConfirmable = true;
@@ -447,7 +448,7 @@
                 case 'done':
                   break;
                 case 'error':
-                  msg.content += '\n\n⚠️ ' + (data.content || 'AI 响应异常');
+                  msg.content += '\n\n⚠️ ' + (data.data || data.content || 'AI 响应异常');
                   break;
               }
             } catch {}

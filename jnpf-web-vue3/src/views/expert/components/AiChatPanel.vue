@@ -373,8 +373,8 @@
 
         const aiMsg = messages.value.find(m => m.id === aiMsgId);
 
-        if (msg.type === 'chunk') {
-          streamText.value += msg.data;
+        if (msg.type === 'chunk' || msg.type === 'token') {
+          streamText.value += msg.data || msg.content || '';
           if (aiMsg) aiMsg.content = streamText.value;
           scrollToBottom();
         } else if (msg.type === 'ir_update' && aiMsg) {

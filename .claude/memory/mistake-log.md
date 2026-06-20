@@ -5,6 +5,34 @@
 
 ---
 
+## 2026-06-21
+
+### M011 | 方法论 | 源码分析替代不了网络包抓取
+- **症状**：SSE 源码看起来正确（`data.data \|\| data.content`），编译通过，但前端始终无 AI 回复。花了 4 小时反复改代码、清缓存、重启服务，全无效
+- **根因**：一直在看源码猜测，从未抓取网络响应体。最终用 Playwright `page.on('response')` 抓包，发现 `/events` 返回 `{"code":600,"msg":"登录过期"}`——HTTP 层认证就失败了，后面所有 SSE 解析代码再正确也无用
+- **修复**：**前端调试铁律——先抓包看网络响应体，再分析源码**。Playwright: `page.on('response', async r => { if (r.url().includes('/events')) console.log(await r.text()); })`
+- **关键词**：`网络抓包`, `page.on('response')`, `Playwright`, `SSE`, `调试方法`, `600`
+
+### M012 | 前端 | `getToken()` 自带 "Bearer " 前缀，不能重复拼接
+- **症状**：SSE `/events` 请求返回 code 600（JWT 过期），但 token 刚登录是新的
+- **根因**：JNPF `getToken()` 返回 `"Bearer eyJ..."`（已含 Bearer 前缀），代码又拼接 `` `Bearer ${token}` `` → 实际发送 `"Bearer Bearer eyJ..."` → JWT 中间件解析失败
+- **修复**：`token.startsWith('Bearer ') ? token : \`Bearer ${token}\``
+- **关键词**：`getToken`, `Bearer`, `Authorization`, `双重前缀`, `600`, `JWT`
+
+## 2026-06-21 (earlier)
+
+### M009 | 流程 | 跳过 brainstorming 直接编码
+- **症状**：pipelineId 修复、stageName 修复均未走 S1 头脑风暴，直接 Edit→Build→Claim 完成
+- **根因**：多次小修复产生"太简单不需要设计"的错觉，违反 Superpowers S1 铁律（任何功能/组件/逻辑的新增或修改 MUST brainstorming）
+- **修复**：无论任务多小，编码前 MUST 调用 `superpowers:brainstorming`（即使输出只有 3 行也算）
+- **关键词**：`brainstorming`, `S1`, `superpowers`, `流程`, `跳过`
+
+### M010 | 流程 | 声称完成但未执行 Gate Function 验证
+- **症状**：多次声称"✅ 完成"/"✅ 验证通过"，但未执行 5 步 Gate Function（IDENTIFY→RUN→READ→VERIFY→CLAIM）
+- **根因**：把"编译 0 error"和"API 返回 200"当作完整验证，但缺少端到端浏览器截图 + 操作路径 + 实际输出确认（E1/E2/E3）
+- **修复**：声称完成前 MUST 调用 `superpowers:verification-before-completion`，执行 Gate Function 全部 5 步
+- **关键词**：`verification-before-completion`, `Gate Function`, `S2`, `E2E`, `验证`
+
 ## 2026-06-20
 
 ### M001 | 后端 | C# `volatile long` 编译错误 CS0677
