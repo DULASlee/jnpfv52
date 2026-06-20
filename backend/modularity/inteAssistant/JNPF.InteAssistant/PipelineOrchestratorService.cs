@@ -1,5 +1,6 @@
 using Hangfire;
 using JNPF.DependencyInjection;
+using JNPF.Common.Core.MultiTenancy;
 using JNPF.DynamicApiController;
 using JNPF.FriendlyException;
 using JNPF.InteAssistant.Entitys.Common;
@@ -179,7 +180,7 @@ public class PipelineOrchestratorService : IDynamicApiController, ITransient
         // 4e. 3 轮否决→升级
         if (pipeline.RejectCount >= 3)
         {
-            var tenantId = GetTenantId();
+            var tenantId = TenantResolver.Resolve();
             await _hub.Clients.Group($"tenant_{tenantId}").SendAsync("PipelineEvent", new PipelineEventPayload
             {
                 EventType = "pipeline_escalated",
@@ -278,7 +279,7 @@ public class PipelineOrchestratorService : IDynamicApiController, ITransient
             "流水线已恢复", "system");
 
         // SignalR 推送
-        var tenantId = GetTenantId();
+        var tenantId = TenantResolver.Resolve();
         await _hub.Clients.Group($"tenant_{tenantId}").SendAsync("PipelineEvent", new PipelineEventPayload
         {
             EventType = "pipeline_resumed",
@@ -580,17 +581,6 @@ public class PipelineOrchestratorService : IDynamicApiController, ITransient
         {
             _logger.LogWarning(ex, "销毁沙箱失败: PipelineId={PipelineId}", pipelineId);
         }
-    }
-
-    private long GetTenantId()
-    {
-        var claim = App.HttpContext?.User?.FindFirst("TenantId")?.Value
-                 ?? App.HttpContext?.User?.FindFirst("tenant_id")?.Value;
-
-        if (string.IsNullOrWhiteSpace(claim) || claim == "default" || claim == "0")
-            return 1;
-
-        return long.TryParse(claim, out var id) && id > 0 ? id : 1;
     }
 
     private long GetUserId()

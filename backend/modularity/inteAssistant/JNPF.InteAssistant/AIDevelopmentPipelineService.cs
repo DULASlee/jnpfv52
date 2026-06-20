@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using JNPF.DependencyInjection;
+using JNPF.Common.Core.MultiTenancy;
 using JNPF.DynamicApiController;
 using JNPF.InteAssistant.Entitys.Common;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
@@ -70,7 +71,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     [HttpPost("create")]
     public async Task<PipelineResult> CreateAsync([FromBody] CreatePipelineInput input)
     {
-        var tenantId = GetTenantId();
+        var tenantId = TenantResolver.Resolve();
         var userId = GetUserId();
 
         var requirement = input.Requirement ?? input.UserRequirement ?? "";
@@ -94,7 +95,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             Name = name,
             CurrentStage = PipelineStage.Requirement,
             Status = "draft",
-            StartedTime = DateTime.Now
+            StartedTime = DateTime.Now,
+            TenantId = tenantId.ToString()
         };
         entity.Create();
         await _db.Insertable(entity).ExecuteCommandAsync();
@@ -423,6 +425,30 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         response.Headers["Cache-Control"] = "no-cache";
         response.Headers["X-Accel-Buffering"] = "no";
 
+        // 租户隔离校验（铁律 R2.2）：校验 pipelineId 归属当前租户
+        var currentTenantId = TenantResolver.Resolve();
+        if (currentTenantId >= 0)
+        {
+            var pipeline = await _db.Queryable<AiPipelineEntity>()
+                .Where(p => p.Id == pipelineId.ToString() && (p.DeleteMark == null || p.DeleteMark == 0))
+                .Select(p => new { p.TenantId })
+                .FirstAsync(ct);
+            if (pipeline == null)
+            {
+                await WriteSseAsync(response, new SseEvent("error", "流水线不存在"));
+                return;
+            }
+            // 平台租户（超级管理员）上帝视角，跳过校验
+            if (!TenantResolver.IsSuperTenant()
+                && !string.Equals(pipeline.TenantId, currentTenantId.ToString(), StringComparison.Ordinal))
+            {
+                _logger.LogWarning("跨租户 SSE 访问被拒: PipelineId={PipelineId}, ClaimTenant={ClaimTenant}, PipelineTenant={PipelineTenant}",
+                    pipelineId, currentTenantId, pipeline.TenantId);
+                await WriteSseAsync(response, new SseEvent("error", "无权访问该流水线"));
+                return;
+            }
+        }
+
         Channel<SseEvent>? channel = null;
         // 最长等待 10 秒（100 × 100ms），覆盖慢 DB 查询
         for (int i = 0; i < 100 && channel == null && !ct.IsCancellationRequested; i++)
@@ -479,7 +505,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     public async Task<List<PipelineSummary>> ListAsync(
         [FromQuery] int pageIndex = 0, [FromQuery] int pageSize = 20)
     {
-        return await _pipelineEngine.ListAsync(GetTenantId(), pageIndex, pageSize);
+        return await _pipelineEngine.ListAsync(TenantResolver.Resolve(), pageIndex, pageSize);
     }
 
     // ─── Provider 列表（前端模型选择器）───
@@ -513,7 +539,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         {
             ProjectName = pipeline.Name,
             Requirements = "从流水线获取的需求",
-            TenantId = GetTenantId()
+            TenantId = TenantResolver.Resolve()
         };
 
         return await _designOrchestrator.ExecuteAsync(context, null, ct);
@@ -676,22 +702,6 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         var bytes = Encoding.UTF8.GetBytes($"data: {json}\n\n");
         await response.Body.WriteAsync(bytes);
         await response.Body.FlushAsync();
-    }
-
-    /// <summary>
-    /// 从 JWT 或请求头获取租户 ID。对齐 JNPF 框架 ClaimTenantResolver（"TenantId" 声明）。
-    /// 回退链：JWT.TenantId → JWT.tenant_id → X-Tenant-Id header → 401
-    /// </summary>
-    private long GetTenantId()
-    {
-        var claim = App.HttpContext?.User?.FindFirst("TenantId")?.Value
-                 ?? App.HttpContext?.User?.FindFirst("tenant_id")?.Value;
-
-        // Development 模式：JWT TenantId = "default"（字符串，非数字）
-        if (string.IsNullOrWhiteSpace(claim) || claim == "default" || claim == "0")
-            return 1;
-
-        return long.TryParse(claim, out var id) && id > 0 ? id : 1;
     }
 
     /// <summary>

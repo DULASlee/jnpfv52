@@ -3,6 +3,7 @@ using JNPF.Common.Captcha.General;
 using JNPF.Common.Const;
 using JNPF.Common.Core.Manager;
 using JNPF.Common.Core.Manager.Tenant;
+using JNPF.Common.Core.MultiTenancy;
 using JNPF.Common.Dtos.OAuth;
 using JNPF.Common.Enums;
 using JNPF.Common.Extension;
@@ -42,6 +43,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using SqlSugar;
 using System.Diagnostics;
@@ -924,7 +926,7 @@ public class OAuthService : IDynamicApiController, ITransient
                     { ClaimConst.CLAINMACCOUNT, userAnyPwd.Account },
                     { ClaimConst.CLAINMREALNAME, userAnyPwd.RealName },
                     { ClaimConst.CLAINMADMINISTRATOR, userAnyPwd.IsAdministrator },
-                    { ClaimConst.TENANTID, tenantId},
+                    { ClaimConst.TENANTID, ResolveLoginTenantId(userAnyPwd, tenantId) },
                     { ClaimConst.OnlineTicket, input.online_ticket },
                     { ClaimConst.ZXSYSTEMID, userAnyPwd.BizSystemId }
                     }, tokenTimeout);
@@ -2084,4 +2086,30 @@ public class OAuthService : IDynamicApiController, ITransient
     }
 
     #endregion
+
+    /// <summary>
+    /// 解析登录时的租户 ID（铁律 R1）
+    /// 管理员 → 平台租户（上帝视角），普通用户 → 必须持有有效租户
+    /// </summary>
+    private string ResolveLoginTenantId(UserEntity user, string rawTenantId)
+    {
+        var platformTenantId = TenantResolver.PlatformTenantId;
+
+        // 超级管理员 → 平台租户（上帝视角）
+        if (user.IsAdministrator == 1)
+            return platformTenantId.ToString();
+
+        // 普通用户 → 必须有有效租户
+        if (long.TryParse(rawTenantId, out var id) && id > 0)
+            return rawTenantId;
+
+        // 尝试从用户记录取
+        if (!string.IsNullOrWhiteSpace(user.TenantId)
+            && long.TryParse(user.TenantId, out var userTenant)
+            && userTenant > 0)
+            return user.TenantId;
+
+        // 普通用户无租户 → 拒绝登录
+        throw Oops.Bah("您的账号尚未分配租户，请联系管理员");
+    }
 }
