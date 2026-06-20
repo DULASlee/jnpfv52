@@ -53,14 +53,12 @@
       "eps",
       "tga"
     ],
-    //允许上传文件类型（全格式 — 文档分析系统不应限制文件类型）
+    //允许上传文件类型
     "AllowUploadFileType": [
       "jpg", "jpeg", "png", "gif", "bmp", "svg", "webp", "ico", "tiff", "tif",
       "doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf",
       "txt", "md", "csv", "json", "xml", "yaml", "yml", "html", "htm",
-      "rtf", "odt", "ott", "log", "ini", "cfg", "conf", "toml", "sql",
-      "wav", "mp3", "flac", "aac", "ogg", "wma", "m4a",
-      "mp4", "avi", "mov", "wmv", "webm", "mkv", "flv", "mpeg", "mpg", "m4v",
+      "rtf", "odt", "ott", "log", "sql",
       "zip", "rar", "7z", "gz", "tar", "bz2", "xz",
       "eml", "msg"
     ],
