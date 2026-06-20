@@ -34,8 +34,11 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 | S2 | 声称完成前验证 | 任何 "完成/已修复/已验证/通过" 的声称 | `superpowers:verification-before-completion` |
 | S3 | Bug/异常强制调试协议 | 任何编译错误/运行时异常/测试失败 | `superpowers:systematic-debugging` |
 | S4 | 响应前检查技能 | 每条用户消息到达时 | `superpowers:using-superpowers` |
+| S5 | **数据驱动调试——禁止看源码猜测** | 同一问题修改 ≥3 次仍无效 / 耗时超 10 分钟无进展 / 编译通过但与预期行为不一致 | `/data-driven-debug` |
 
 **违反任一 = Supreme Iron Law 验收不通过。无例外。**
+
+> S5 自检：每当你准备"再改一下试试"、脑中出现"可能是 X 的问题，先改了再说"、或已经为同一个 bug 改了 2 次——STOP。调用 `/data-driven-debug`，抓运行时数据，让数据告诉你根因。
 
 > 插件已由项目 `settings.json` 强制启用（`superpowers@superpowers-marketplace`）。
 > SessionStart hook `superpowers-check.mjs` 验证插件激活状态。
