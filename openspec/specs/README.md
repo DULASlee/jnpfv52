@@ -4,9 +4,9 @@
 
 | Capability | Spec | 标题 | 文件 mtime |
 |------------|------|------|------------|
-| frontend-align-dist-v1 | [`frontend-align-dist-v1/spec.md`](frontend-align-dist-v1/spec.md) | Capability: frontend-align-dist-v1 | 2026-05-28 |
-| iot-capability-phase1 | [`iot-capability-phase1/spec.md`](iot-capability-phase1/spec.md) | Capability: iot-capability-phase1 | 2026-05-28 |
-| jnpf-v52-workspace | [`jnpf-v52-workspace/spec.md`](jnpf-v52-workspace/spec.md) | jnpf-v52-workspace | 2026-05-28 |
+| frontend-align-dist-v1 | [`frontend-align-dist-v1/spec.md`](frontend-align-dist-v1/spec.md) | Capability: frontend-align-dist-v1 | 2026-06-16 |
+| iot-capability-phase1 | [`iot-capability-phase1/spec.md`](iot-capability-phase1/spec.md) | Capability: iot-capability-phase1 | 2026-06-16 |
+| jnpf-v52-workspace | [`jnpf-v52-workspace/spec.md`](jnpf-v52-workspace/spec.md) | jnpf-v52-workspace | 2026-06-16 |
 
 ## 维护规则
 
