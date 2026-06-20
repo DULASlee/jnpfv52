@@ -24,3 +24,8 @@ export function clearAuthCache(immediate = true) {
   const fn = isLocal ? Persistent.clearLocal : Persistent.clearSession;
   return fn(immediate);
 }
+
+// ============================================================================
+// Token 工具函数（推荐新代码使用）
+// ============================================================================
+export { getAuthHeader, getRawToken, getAuthHeaders, getTenantId } from './authToken';

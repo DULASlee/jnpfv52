@@ -34,7 +34,7 @@
   import { useBaseStore } from '/@/store/modules/base';
   import { downloadByUrl } from '/@/utils/file/download';
   import { useGlobSetting } from '/@/hooks/setting';
-  import { getToken } from '/@/utils/auth';
+  import { getRawToken } from '/@/utils/auth';
   import { PreviewModal } from '/@/components/CommonModal';
   import Form from './Form.vue';
   import PreviewPopup from './PreviewPopup.vue';
@@ -194,7 +194,7 @@
     });
   }
   function handleExport(id) {
-    const token = getToken();
+    const token = getRawToken();
     const url = `${reportServer}/Data/${id}/Actions/Export?token=${token}`;
     downloadByUrl({ url });
   }

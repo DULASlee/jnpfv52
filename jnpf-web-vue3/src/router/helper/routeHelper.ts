@@ -8,7 +8,7 @@ import { warn } from '/@/utils/log';
 import { createRouter, createWebHashHistory } from 'vue-router';
 import { defineComponent, defineAsyncComponent, h } from 'vue';
 import { useGlobSetting } from '/@/hooks/setting';
-import { getToken } from '/@/utils/auth';
+import { getRawToken } from '/@/utils/auth';
 import { BackMenu } from '/@/api/basic/model/userModel';
 
 export type LayoutMapKey = 'LAYOUT';
@@ -170,11 +170,11 @@ export function transformObjToRoute<T = AppRouteModule>(routerList: BackMenu[]):
         let propertyJson = e.propertyJson ? JSON.parse(e.propertyJson) : null,
           moduleId = '';
         if (propertyJson) moduleId = propertyJson.moduleId || '';
-        e.path = `${globSetting.dataVUrl}view/${moduleId}?token=${getToken()}`;
+        e.path = `${globSetting.dataVUrl}view/${moduleId}?token=${getRawToken()}`;
       }
       // 外链
       if (e.type == 7) {
-        const path = e.urlAddress.replace(/\${dataV}/g, globSetting.dataVUrl).replace(/\${jnpfToken}/g, getToken());
+        const path = e.urlAddress.replace(/\${dataV}/g, globSetting.dataVUrl).replace(/\${jnpfToken}/g, getRawToken());
         if (e.linkTarget === '_self') {
           e.path = '/' + e.enCode;
           const route: AppRouteModule = {

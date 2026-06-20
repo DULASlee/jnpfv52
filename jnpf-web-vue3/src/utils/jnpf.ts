@@ -1,5 +1,5 @@
 import { defHttp } from '/@/utils/http/axios';
-import { getToken } from '/@/utils/auth';
+import { getRawToken } from '/@/utils/auth';
 import { isString, isNumber } from '/@/utils/is';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { useUserStoreWithOut } from '/@/store/modules/user';
@@ -413,7 +413,7 @@ export const onlineUtils = {
   getUserInfo() {
     const userStore = useUserStoreWithOut();
     const userInfo: OnlineUserInfo = userStore.getUserInfo;
-    userInfo.token = getToken() as string;
+    userInfo.token = getRawToken();
     return userInfo;
   },
   // 获取设备信息

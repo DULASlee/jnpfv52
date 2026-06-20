@@ -25,7 +25,7 @@
   import { useGlobSetting } from '/@/hooks/setting';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
-  import { getToken } from '/@/utils/auth';
+  import { getAuthHeaders } from '/@/utils/auth';
   import { urlToBase64 } from '/@/utils/file/base64Conver';
   import { checkImgType, getBase64WithFile } from '/@/components/Jnpf/Upload/src/helper';
 
@@ -57,7 +57,7 @@
         };
       });
       const getAction = computed(() => uploadUrl + '/annexpic');
-      const getHeaders = computed(() => ({ Authorization: getToken() as string }));
+      const getHeaders = computed(() => getAuthHeaders());
 
       function beforeUpload(file: File) {
         if (!checkImgType(file)) {

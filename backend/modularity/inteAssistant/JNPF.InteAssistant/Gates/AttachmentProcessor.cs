@@ -55,7 +55,7 @@ public class AttachmentProcessor : ITransient
                     ".docx" => ExtractWord(file.Content),
                     ".pdf" => ExtractPdf(file.Content),
                     // 图片走多模态LLM，这里只标记占位
-                    ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp"
+                    _ when GateConstants.IsImageFile(file.FileName)
                         => $"[附件：图片 {file.FileName}，需通过多模态模型提取]",
                     ".txt" or ".csv" => ExtractText(file.Content),
                     _ => $"[附件：{file.FileName}，格式{ext}暂不支持自动解析]"
@@ -85,11 +85,7 @@ public class AttachmentProcessor : ITransient
     /// <summary>判断附件中是否包含图片（需走多模态LLM）</summary>
     public bool HasImageAttachments(List<AttachmentFile> attachments)
     {
-        return attachments?.Any(a =>
-        {
-            var ext = Path.GetExtension(a.FileName)?.ToLower();
-            return ext is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp";
-        }) ?? false;
+        return attachments?.Any(a => GateConstants.IsImageFile(a.FileName)) ?? false;
     }
 
     // ═══════════════════════════════════════════════════

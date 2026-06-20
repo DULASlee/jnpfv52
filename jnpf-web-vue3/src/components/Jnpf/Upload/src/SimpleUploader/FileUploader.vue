@@ -31,7 +31,7 @@
 <script lang="ts" setup>
   import { nextTick, ref, onMounted, reactive, computed, unref, watch } from 'vue';
   import { useGlobSetting } from '/@/hooks/setting';
-  import { getToken } from '/@/utils/auth';
+  import { getAuthHeaders } from '/@/utils/auth';
   import VueSimpleUploader from 'vue-simple-uploader';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { uploadFileProps, units } from '../props';
@@ -71,9 +71,7 @@
         return true;
       }
     },
-    headers: {
-      Authorization: getToken(),
-    },
+    headers: getAuthHeaders(),
     query: {
       fileType: '',
       extension: '',

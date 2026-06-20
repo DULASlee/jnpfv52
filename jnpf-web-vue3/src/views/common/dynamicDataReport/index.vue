@@ -6,7 +6,7 @@
 <script lang="ts" setup>
   import { reactive, onMounted } from 'vue';
   import { useGlobSetting } from '/@/hooks/setting';
-  import { getToken } from '/@/utils/auth';
+  import { getRawToken } from '/@/utils/auth';
   import { useRoute } from 'vue-router';
   import { getDataReportInfo } from '/@/api/onlineDev/dataReport';
 
@@ -25,7 +25,7 @@
     const route = useRoute();
     const id = route.meta.relationId;
     if (!id) return;
-    let targetUrl = `${report}/preview.html?id=${id}&token=${getToken()}&page=1&from=menu`;
+    let targetUrl = `${report}/preview.html?id=${id}&token=${getRawToken()}&page=1&from=menu`;
     getDataReportInfo(id).then(res => {
       let item = {};
       if (res.data?.searchForm?.components && Array.isArray(res.data.searchForm.components)) {

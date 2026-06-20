@@ -100,7 +100,7 @@
   import { useUserStore } from '/@/store/modules/user';
   import { useGlobSetting } from '/@/hooks/setting';
   import { useMessage } from '/@/hooks/web/useMessage';
-  import { getToken } from '/@/utils/auth';
+  import { getAuthHeaders } from '/@/utils/auth';
   import type { UploadChangeParam } from 'ant-design-vue';
   import { createLocalStorage } from '/@/utils/cache';
   import { CheckOutlined } from '@ant-design/icons-vue';
@@ -150,7 +150,7 @@
   });
   const { activeKey, user, tenantInfo, isTenant } = toRefs(state);
 
-  const getHeaders = computed(() => ({ Authorization: getToken() as string }));
+  const getHeaders = computed(() => getAuthHeaders());
   const getUseSocials = computed(() => !!ls.get('useSocials'));
 
   watch(

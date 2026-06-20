@@ -11,7 +11,7 @@ import { useGlobSetting } from '/@/hooks/setting';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { RequestEnum, ResultEnum, ContentTypeEnum } from '/@/enums/httpEnum';
 import { isString, isObject } from '/@/utils/is';
-import { getToken } from '/@/utils/auth';
+import { getToken, getAuthHeader, getRawToken } from '/@/utils/auth';
 import { setObjToUrlParams, deepMerge } from '/@/utils';
 import { useErrorLogStoreWithOut } from '/@/store/modules/errorLog';
 import { useI18n } from '/@/hooks/web/useI18n';
@@ -152,10 +152,14 @@ const transform: AxiosTransform = {
     // 请求之前处理config
     (config as Recordable).headers['jnpf-origin'] = 'pc';
     (config as Recordable).headers['vue-version'] = '3';
-    const token = getToken();
-    if (token && (config as Recordable)?.requestOptions?.withToken !== false) {
-      // jwt token
-      (config as Recordable).headers.Authorization = options.authenticationScheme ? `${options.authenticationScheme} ${token}` : token;
+    // jwt token — 优先使用统一工具函数；保留 authenticationScheme 兼容性
+    if ((config as Recordable)?.requestOptions?.withToken !== false) {
+      const authHeader = getAuthHeader();
+      if (authHeader) {
+        (config as Recordable).headers.Authorization = options.authenticationScheme
+          ? `${options.authenticationScheme} ${getRawToken()}`
+          : authHeader;
+      }
     }
     return config;
   },

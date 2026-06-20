@@ -1,5 +1,5 @@
 import { useGlobSetting } from '/@/hooks/setting';
-import { getToken } from '/@/utils/auth';
+import { getRawToken } from '/@/utils/auth';
 
 /**
  * 构建 SSE / fetch 流式请求 URL。
@@ -17,9 +17,9 @@ export function buildEventSourceUrl(relativeUrl: string): string {
 
   const fullUrl = /^https?:\/\//.test(url) ? new URL(url) : new URL(url, window.location.origin);
 
-  const token = getToken();
+  const token = getRawToken();
   if (token) {
-    fullUrl.searchParams.set('token', String(token));
+    fullUrl.searchParams.set('token', token);
   }
 
   return fullUrl.toString();

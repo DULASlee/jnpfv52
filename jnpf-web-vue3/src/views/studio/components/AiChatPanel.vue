@@ -185,7 +185,7 @@
   import { defHttp } from '/@/utils/http/axios';
   import IrPreviewCard from './chat/IrPreviewCard.vue';
   import { buildFetchSseUrl } from '/@/utils/http/sseUrl';
-  import { getToken } from '/@/utils/auth';
+  import { getAuthHeader, getTenantId } from '/@/utils/auth';
   import { marked } from 'marked';
   import hljs from 'highlight.js';
   import 'highlight.js/styles/github.css';
@@ -398,8 +398,8 @@
       abortController.value = new AbortController();
       const sseUrl = buildFetchSseUrl('/api/studio/pipeline/execute/' + pipelineId.value + '/events');
       const sseHeaders: Record<string, string> = { Accept: 'text/event-stream' };
-      const token = getToken();
-      if (token) sseHeaders['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      const authHeader = getAuthHeader();
+      if (authHeader) sseHeaders['Authorization'] = authHeader;
 
       const response = await fetch(sseUrl, {
         method: 'GET',
@@ -485,28 +485,30 @@
 
   async function uploadAttachmentsAndSend(content: string, files: File[]) {
     const uploadedFiles: Array<{ name: string; url: string }> = [];
+    const CONCURRENCY = 3;
 
     if (files.length > 0) {
-      for (const file of files) {
-        try {
-          const formData = new FormData();
-          formData.append('file', file);
-          const res = await defHttp.post({
-            url: '/api/File/Uploader/annex',
-            data: formData,
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
-          if (res?.data?.data) {
-            uploadedFiles.push({
-              name: file.name,
-              url: res.data.data.url || res.data.data,
+      for (let i = 0; i < files.length; i += CONCURRENCY) {
+        const batch = files.slice(i, i + CONCURRENCY);
+        const results = await Promise.allSettled(
+          batch.map(async file => {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await defHttp.post({
+              url: '/api/File/Uploader/annex',
+              data: formData,
+              headers: { 'Content-Type': 'multipart/form-data', 'X-Tenant-Id': getTenantId() },
             });
-          } else if (res?.data?.url) {
-            uploadedFiles.push({ name: file.name, url: res.data.url });
+            return { name: file.name, url: res?.data?.data?.url || res?.data?.url || res?.data?.data };
+          }),
+        );
+        results.forEach(r => {
+          if (r.status === 'fulfilled' && r.value) {
+            uploadedFiles.push(r.value);
+          } else if (r.status === 'rejected') {
+            console.error('附件上传失败:', r.reason);
           }
-        } catch (err) {
-          console.error('附件上传失败:', file.name, err);
-        }
+        });
       }
     }
 

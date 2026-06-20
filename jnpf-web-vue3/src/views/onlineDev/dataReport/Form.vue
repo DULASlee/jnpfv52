@@ -14,7 +14,7 @@
   import { reactive, onMounted } from 'vue';
   import { BasicModal, useModalInner } from '/@/components/Modal';
   import { useGlobSetting } from '/@/hooks/setting';
-  import { getToken } from '/@/utils/auth';
+  import { getRawToken } from '/@/utils/auth';
 
   interface State {
     url: string;
@@ -28,7 +28,7 @@
   });
 
   function init(data) {
-    state.url = `${report}/index.html?token=${getToken()}${data.id ? '&id=' + data.id : ''}`;
+    state.url = `${report}/index.html?token=${getRawToken()}${data.id ? '&id=' + data.id : ''}`;
   }
   function handleMessage(e) {
     const data = e.data;

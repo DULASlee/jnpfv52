@@ -117,7 +117,7 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
   import dayjs from 'dayjs';
-  import { getToken } from '/@/utils/auth';
+  import { getAuthHeaders } from '/@/utils/auth';
   import type { UploadChangeParam } from 'ant-design-vue';
   import { createImgPreview } from '/@/components/Preview/index';
 
@@ -174,7 +174,7 @@
     popoverVisible: false,
   });
   const { visible, userInfo, list, otherUser, historyList, showHistory, messageContent } = toRefs(state);
-  const getHeaders = computed(() => ({ Authorization: getToken() as string }));
+  const getHeaders = computed(() => getAuthHeaders());
 
   defineExpose({
     getImVisible,

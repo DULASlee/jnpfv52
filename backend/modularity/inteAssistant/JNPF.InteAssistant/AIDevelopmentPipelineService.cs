@@ -168,11 +168,51 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         _sseChannels[pipelineId] = channel;
 
         // 4. 启动后台 LLM 流式任务（不等待，立即返回）
+        // ── 捕获请求上下文，避免 Task.Run 内 HttpContext 为 null ──
         var user = _httpContextAccessor.HttpContext?.User;
         var userId = user?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "system";
         var userName = user?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "系统";
+        var capturedScheme = _httpContextAccessor.HttpContext?.Request.Scheme ?? "http";
+        var capturedHost = _httpContextAccessor.HttpContext?.Request.Host.ToString() ?? "localhost:5000";
+        var capturedTenantId = TenantResolver.Resolve().ToString();
+        var capturedAttachments = request.Attachments;
 
-        _ = Task.Run(() => StreamLlmResponseAsync(pipelineId, stageName, provider, authHeader, channel, request.Attachments, userId, userName));
+        // ── CTS 生命周期：10分钟超时 + 链接关闭信号 ──
+        var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await StreamLlmResponseAsync(
+                    pipelineId, stageName, provider, authHeader, channel,
+                    capturedAttachments, userId, userName,
+                    capturedScheme, capturedHost, capturedTenantId,
+                    linkedCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Pipeline {Id} 被取消或超时", pipelineId);
+                WriteSseSafe(channel, "⏱️ 分析已取消或超时");
+            }
+            catch (OutOfMemoryException ex)
+            {
+                _logger.LogCritical(ex, "Pipeline {Id} OOM", pipelineId);
+                WriteSseSafe(channel, "❌ 系统资源不足，请精简附件后重试");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Pipeline {Id} 异常", pipelineId);
+                WriteSseSafe(channel, $"❌ 分析异常：{ex.Message}");
+            }
+            finally
+            {
+                channel.Writer.TryComplete();
+                linkedCts.Dispose();
+                cts.Dispose();
+            }
+        }, linkedCts.Token);
 
         _logger.LogInformation("流水线阶段执行启动: PipelineId={Id}, Stage={Stage}", pipelineId, stageName);
         return stageResult;
@@ -182,7 +222,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     /// 后台执行 LLM 流式调用，token 写入 Channel 供 /events 读取。
     /// 从根 ServiceProvider 创建独立 scope，避免请求结束后 DI 服务被释放。
     /// </summary>
-    private async Task StreamLlmResponseAsync(long pipelineId, string stageName, string provider, string authHeader, Channel<SseEvent> channel, List<AttachmentPayload>? requestAttachments, string userId, string userName)
+    private async Task StreamLlmResponseAsync(long pipelineId, string stageName, string provider, string authHeader, Channel<SseEvent> channel, List<AttachmentPayload>? requestAttachments, string userId, string userName, string capturedScheme, string capturedHost, string capturedTenantId, CancellationToken ct)
     {
         // 创建独立 DI scope，确保 _db/_llmGateway 在请求结束后仍可用
         using var scope = App.RootServices.CreateScope();
@@ -220,7 +260,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             // ═══════════════════════════════════════════════════
             if (false)  // TODO: 改回 stageName == "requirement" 即可恢复 SA
             {
-                logger.LogInformation("[SA] 需求分析阶段，调用 SA Service pipelineId={PipelineId}", pipelineId);
+                _logger.LogInformation("[SA] 需求分析阶段，调用 SA Service pipelineId={PipelineId}", pipelineId);
 
                 // 从历史消息中提取用户需求文本
                 var requirementText = chatMessages
@@ -341,7 +381,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     // 保存 assistant 消息到数据库
                     await SaveMessageAsync(db, pipelineId.ToString(), stageName, "assistant", saContent);
 
-                    logger.LogInformation("[SA] 需求分析完成 pipelineId={PipelineId}", pipelineId);
+                    _logger.LogInformation("[SA] 需求分析完成 pipelineId={PipelineId}", pipelineId);
                     // SA 成功 → 推送完成并返回，不走 LLM 降级
                     await channel.Writer.WriteAsync(new SseEvent("done"));
                     return;
@@ -364,14 +404,14 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             // 需求门控：附件持久化 + 缓存 + 硬规则校验 + 成熟度评估
             // （仅 requirement 阶段触发，其他阶段走默认 SystemPrompt）
             // ═══════════════════════════════════════════════════
-            if (stageName == "requirement")
+            if (true) // 门控在所有阶段生效（不含SA拦截块，SA走单独路径）
             {
                 try
                 {
                     var gateService = scope.ServiceProvider.GetRequiredService<RequirementGateService>();
                     var attachmentProcessor = scope.ServiceProvider.GetRequiredService<AttachmentProcessor>();
                     var http = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient();
-                    var tenantId = TenantResolver.Resolve().ToString();
+                    var tenantId = capturedTenantId;
 
                     // ── 第1步：将请求带的新附件保存到数据库 ──
                     var existingAttachments = await db.Queryable<InteAssistantAttachment>()
@@ -416,7 +456,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                         if (att.ProcessStatus == 2 && !string.IsNullOrWhiteSpace(att.ExtractedText))
                         {
                             attachmentTexts.Add(att.ExtractedText);
-                            logger.LogInformation("附件命中缓存: {Name} ({Len}字)", att.FileName, att.ExtractedText.Length);
+                            _logger.LogInformation("附件命中缓存: {Name} ({Len}字)", att.FileName, att.ExtractedText.Length);
                             continue;
                         }
 
@@ -431,9 +471,9 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                             var fileUrl = att.FileUrl;
                             if (!fileUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                             {
-                                fileUrl = $"{App.HttpContext!.Request.Scheme}://{App.HttpContext.Request.Host}{fileUrl}";
+                                fileUrl = $"{capturedScheme}://{capturedHost}{fileUrl}";
                             }
-                            var bytes = await http.GetByteArrayAsync(fileUrl, CancellationToken.None);
+                            var bytes = await http.GetByteArrayAsync(fileUrl, ct);
                             var fileHash = ComputeSha256(bytes);
 
                             var extracted = await attachmentProcessor.ProcessAttachmentsAsync(
@@ -453,7 +493,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                             }
 
                             processedCount++;
-                            logger.LogInformation("附件解析完成: {Name}, {Len}字", att.FileName, extracted.Length);
+                            _logger.LogInformation("附件解析完成: {Name}, {Len}字", att.FileName, extracted.Length);
                         }
                         catch (Exception ex)
                         {
@@ -469,7 +509,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     }
 
                     var attachmentText = string.Join("\n\n", attachmentTexts);
-                    logger.LogInformation("附件处理完成: 文件数={Count}, 新解析={New}, 提取文本长度={Len}",
+                    _logger.LogInformation("附件处理完成: 文件数={Count}, 新解析={New}, 提取文本长度={Len}",
                         existingAttachments.Count, processedCount, attachmentText.Length);
 
                     // ── 第3步：合并用户文字 + 附件提取内容 ──
@@ -502,14 +542,14 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
                     if (gateService.IsForceRefine(lastUserMsg))
                     {
-                        logger.LogInformation("用户要求直接分析 pipelineId={Id}", pipelineId);
+                        _logger.LogInformation("用户要求直接分析 pipelineId={Id}", pipelineId);
                         systemPrompt = gateService.GetSystemPrompt("refine", new MaturityResult());
                         await channel.Writer.WriteAsync(new SseEvent("token",
                             "\n\n> 📊 已进入精化模式 — 开始深度分析\n\n"));
                     }
                     else if (gateService.IsMaxRoundsReached(assistantMsgCount))
                     {
-                        logger.LogInformation("追问{Count}轮，强制分析 pipelineId={Id}", assistantMsgCount, pipelineId);
+                        _logger.LogInformation("追问{Count}轮，强制分析 pipelineId={Id}", assistantMsgCount, pipelineId);
                         systemPrompt = gateService.GetSystemPrompt("refine", new MaturityResult
                         {
                             Score = 50,
@@ -524,7 +564,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     }
                     else
                     {
-                        var maturity = await gateService.EvaluateMaturity(chatMessages, provider, CancellationToken.None);
+                        var maturity = await gateService.EvaluateMaturity(chatMessages, provider, ct);
                         var modeLabel = maturity.Mode switch
                         {
                             "explore" => "探索模式 — 需要补充更多信息",
@@ -538,8 +578,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     }
 
                     // ── 图片附件提取（多模态）──
-                    if (attachmentProcessor.HasImageAttachments(
-                        existingAttachments.Select(a => new AttachmentFile { FileName = a.FileName, Content = Array.Empty<byte>() }).ToList()))
+                    if (existingAttachments.Any(a => GateConstants.IsImageFile(a.FileName)))
                     {
                         var visionConfig = _configuration.GetSection("MultimodalVision");
                         var apiUrl = visionConfig["ApiUrl"];
@@ -550,23 +589,19 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                         {
                             // 图片附件需要重新下载（因为内容在AttachmentFile中需要byte[]）
                             var imageFiles = new List<AttachmentFile>();
-                            foreach (var att in existingAttachments.Where(a =>
-                            {
-                                var ext = Path.GetExtension(a.FileName)?.ToLower();
-                                return ext is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp";
-                            }))
+                            foreach (var att in existingAttachments.Where(a => GateConstants.IsImageFile(a.FileName)))
                             {
                                 var imgUrl = att.FileUrl;
                                 if (!imgUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                                    imgUrl = $"{App.HttpContext!.Request.Scheme}://{App.HttpContext.Request.Host}{imgUrl}";
-                                var imgBytes = await http.GetByteArrayAsync(imgUrl, CancellationToken.None);
+                                    imgUrl = $"{capturedScheme}://{capturedHost}{imgUrl}";
+                                var imgBytes = await http.GetByteArrayAsync(imgUrl, ct);
                                 imageFiles.Add(new AttachmentFile { FileName = att.FileName, Content = imgBytes });
                             }
 
                             if (imageFiles.Count > 0)
                             {
                                 var imageAnalysis = await gateService.ExtractFromImages(
-                                    imageFiles, apiUrl, apiKey, model, CancellationToken.None);
+                                    imageFiles, apiUrl, apiKey, model, ct);
                                 if (!string.IsNullOrWhiteSpace(imageAnalysis))
                                 {
                                     var lastIdx = chatMessages.FindLastIndex(m => m.Role == "user");
@@ -583,6 +618,14 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                             logger.LogWarning("多模态API未配置，跳过图片分析。请配置 MultimodalVision 节点。");
                         }
                     }
+                }
+                catch (OperationCanceledException)
+                {
+                    throw; // 向上传播到 Task.Run 的取消处理
+                }
+                catch (OutOfMemoryException)
+                {
+                    throw; // OOM 不能继续执行，向上传播
                 }
                 catch (Exception ex)
                 {
@@ -1088,6 +1131,20 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     {
         var hash = System.Security.Cryptography.SHA256.HashData(data);
         return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// 安全写入 SSE — TryWrite 不阻塞，Channel 已关闭时返回 false 而非抛异常
+    /// </summary>
+    private static void WriteSseSafe(Channel<SseEvent> channel, string msg)
+    {
+        try
+        {
+            channel.Writer.TryWrite(new SseEvent("token", msg));
+            channel.Writer.TryWrite(new SseEvent("done"));
+            channel.Writer.TryComplete();
+        }
+        catch { /* 防御性兜底 */ }
     }
 
     // ═══════════════════════════════════════════════════

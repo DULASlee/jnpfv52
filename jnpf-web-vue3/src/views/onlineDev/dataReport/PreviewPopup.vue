@@ -7,7 +7,7 @@
   import { reactive, onMounted } from 'vue';
   import { BasicPopup, usePopupInner } from '/@/components/Popup';
   import { useGlobSetting } from '/@/hooks/setting';
-  import { getToken } from '/@/utils/auth';
+  import { getRawToken } from '/@/utils/auth';
   import { getDataReportInfo } from '/@/api/onlineDev/dataReport';
   interface State {
     url: string;
@@ -21,7 +21,7 @@
   });
 
   function init(data) {
-    let targetUrl = `${report}/preview.html?id=${data.id}&token=${getToken()}&page=1`;
+    let targetUrl = `${report}/preview.html?id=${data.id}&token=${getRawToken()}&page=1`;
     getDataReportInfo(data.id).then(res => {
       let item = {};
       if (res.data?.searchForm?.components && Array.isArray(res.data.searchForm.components)) {
