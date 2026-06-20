@@ -8,6 +8,7 @@ using JNPF.DynamicApiController;
 using JNPF.InteAssistant.Entitys.Common;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Entity;
+using JNPF.InteAssistant.Gates;
 using JNPF.InteAssistant.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -167,7 +168,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         _sseChannels[pipelineId] = channel;
 
         // 4. 启动后台 LLM 流式任务（不等待，立即返回）
-        _ = Task.Run(() => StreamLlmResponseAsync(pipelineId, stageName, provider, authHeader, channel));
+        _ = Task.Run(() => StreamLlmResponseAsync(pipelineId, stageName, provider, authHeader, channel, request.Attachments));
 
         _logger.LogInformation("流水线阶段执行启动: PipelineId={Id}, Stage={Stage}", pipelineId, stageName);
         return stageResult;
@@ -177,7 +178,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     /// 后台执行 LLM 流式调用，token 写入 Channel 供 /events 读取。
     /// 从根 ServiceProvider 创建独立 scope，避免请求结束后 DI 服务被释放。
     /// </summary>
-    private async Task StreamLlmResponseAsync(long pipelineId, string stageName, string provider, string authHeader, Channel<SseEvent> channel)
+    private async Task StreamLlmResponseAsync(long pipelineId, string stageName, string provider, string authHeader, Channel<SseEvent> channel, List<AttachmentPayload>? requestAttachments)
     {
         // 创建独立 DI scope，确保 _db/_llmGateway 在请求结束后仍可用
         using var scope = App.RootServices.CreateScope();
@@ -353,11 +354,234 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             // LLM 直接调用（含 SA 失败降级路径）
             // ═══════════════════════════════════════════════════
 
+            string? systemPrompt = null;
+
+            // ═══════════════════════════════════════════════════
+            // 需求门控：附件持久化 + 缓存 + 硬规则校验 + 成熟度评估
+            // （仅 requirement 阶段触发，其他阶段走默认 SystemPrompt）
+            // ═══════════════════════════════════════════════════
+            if (stageName == "requirement")
+            {
+                try
+                {
+                    var gateService = scope.ServiceProvider.GetRequiredService<RequirementGateService>();
+                    var attachmentProcessor = scope.ServiceProvider.GetRequiredService<AttachmentProcessor>();
+                    var http = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient();
+                    var tenantId = TenantResolver.Resolve().ToString();
+
+                    // ── 第1步：将请求带的新附件保存到数据库 ──
+                    var existingAttachments = await db.Queryable<InteAssistantAttachment>()
+                        .Where(a => a.PipelineId == pipelineId.ToString())
+                        .ToListAsync();
+
+                    if (requestAttachments?.Count > 0)
+                    {
+                        foreach (var att in requestAttachments)
+                        {
+                            var exists = existingAttachments.Any(e => e.FileUrl == att.Url);
+                            if (exists) continue;
+
+                            var entity = new InteAssistantAttachment
+                            {
+                                F_Id = Guid.NewGuid().ToString("N"),
+                                PipelineId = pipelineId.ToString(),
+                                FileName = att.Name,
+                                FileUrl = att.Url,
+                                FileSize = 0,
+                                FileType = Path.GetExtension(att.Name)?.TrimStart('.') ?? "",
+                                ProcessStatus = 0,
+                                TenantId = tenantId,
+                                CreateTime = DateTime.Now
+                            };
+
+                            await db.Insertable(entity).ExecuteCommandAsync();
+                            existingAttachments.Add(entity);
+                        }
+                    }
+
+                    // ── 第2步：处理附件（下载 + 解析，已解析的取缓存）──
+                    var attachmentTexts = new List<string>();
+                    int processedCount = 0;
+
+                    foreach (var att in existingAttachments)
+                    {
+                        if (att.ProcessStatus == 2 && !string.IsNullOrWhiteSpace(att.ExtractedText))
+                        {
+                            attachmentTexts.Add(att.ExtractedText);
+                            logger.LogInformation("附件命中缓存: {Name} ({Len}字)", att.FileName, att.ExtractedText.Length);
+                            continue;
+                        }
+
+                        try
+                        {
+                            await db.Updateable<InteAssistantAttachment>()
+                                .SetColumns(a => a.ProcessStatus == 1)
+                                .Where(a => a.F_Id == att.F_Id)
+                                .ExecuteCommandAsync();
+
+                            var fileUrl = att.FileUrl;
+                            if (!fileUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                            {
+                                fileUrl = $"{App.HttpContext!.Request.Scheme}://{App.HttpContext.Request.Host}{fileUrl}";
+                            }
+                            var bytes = await http.GetByteArrayAsync(fileUrl, CancellationToken.None);
+
+                            var extracted = await attachmentProcessor.ProcessAttachmentsAsync(
+                                new List<AttachmentFile> { new() { FileName = att.FileName, Content = bytes } });
+
+                            await db.Updateable<InteAssistantAttachment>()
+                                .SetColumns(a => a.ProcessStatus == 2)
+                                .SetColumns(a => a.ExtractedText == extracted)
+                                .Where(a => a.F_Id == att.F_Id)
+                                .ExecuteCommandAsync();
+
+                            if (!string.IsNullOrWhiteSpace(extracted))
+                            {
+                                attachmentTexts.Add(extracted);
+                            }
+
+                            processedCount++;
+                            logger.LogInformation("附件解析完成: {Name}, {Len}字", att.FileName, extracted.Length);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "附件处理失败: {Name}", att.FileName);
+                            var errMsg = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
+                            await db.Updateable<InteAssistantAttachment>()
+                                .SetColumns(a => a.ProcessStatus == 3)
+                                .SetColumns(a => a.ProcessError == errMsg)
+                                .Where(a => a.F_Id == att.F_Id)
+                                .ExecuteCommandAsync();
+                        }
+                    }
+
+                    var attachmentText = string.Join("\n\n", attachmentTexts);
+                    logger.LogInformation("附件处理完成: 文件数={Count}, 新解析={New}, 提取文本长度={Len}",
+                        existingAttachments.Count, processedCount, attachmentText.Length);
+
+                    // ── 第3步：合并用户文字 + 附件提取内容 ──
+                    var lastUserMsg = chatMessages.LastOrDefault(m => m.Role == "user")?.Content ?? "";
+                    var fullText = lastUserMsg + attachmentText;
+
+                    // ── 第4步：硬规则校验 ──
+                    var hardRule = gateService.ValidateHardRules(fullText, existingAttachments.Count);
+                    if (!hardRule.Passed)
+                    {
+                        await channel.Writer.WriteAsync(new SseEvent("token",
+                            $"❌ {hardRule.Reason}\n\n{hardRule.Hint}"));
+                        await channel.Writer.WriteAsync(new SseEvent("done"));
+                        return;
+                    }
+
+                    // ── 第5步：将附件内容追加到最后一条用户消息 ──
+                    if (!string.IsNullOrWhiteSpace(attachmentText))
+                    {
+                        var lastIdx = chatMessages.FindLastIndex(m => m.Role == "user");
+                        if (lastIdx >= 0)
+                        {
+                            chatMessages[lastIdx] = new ChatMessage("user",
+                                chatMessages[lastIdx].Content + attachmentText);
+                        }
+                    }
+
+                    // ── 第6步：追问轮次 + 模式判定 + SystemPrompt ──
+                    var assistantMsgCount = chatMessages.Count(m => m.Role == "assistant");
+
+                    if (gateService.IsForceRefine(lastUserMsg))
+                    {
+                        logger.LogInformation("用户要求直接分析 pipelineId={Id}", pipelineId);
+                        systemPrompt = gateService.GetSystemPrompt("refine", new MaturityResult());
+                        await channel.Writer.WriteAsync(new SseEvent("token",
+                            "\n\n> 📊 已进入精化模式 — 开始深度分析\n\n"));
+                    }
+                    else if (gateService.IsMaxRoundsReached(assistantMsgCount))
+                    {
+                        logger.LogInformation("追问{Count}轮，强制分析 pipelineId={Id}", assistantMsgCount, pipelineId);
+                        systemPrompt = gateService.GetSystemPrompt("refine", new MaturityResult
+                        {
+                            Score = 50,
+                            Mode = "refine",
+                            Strengths = chatMessages
+                                .Where(m => m.Role == "user")
+                                .Select(m => m.Content.Length > 50 ? m.Content[..50] + "..." : m.Content)
+                                .ToList()
+                        });
+                        await channel.Writer.WriteAsync(new SseEvent("token",
+                            $"\n\n> 📊 已进行{assistantMsgCount}轮追问，系统将基于当前信息开始分析\n\n"));
+                    }
+                    else
+                    {
+                        var maturity = await gateService.EvaluateMaturity(chatMessages, provider, CancellationToken.None);
+                        var modeLabel = maturity.Mode switch
+                        {
+                            "explore" => "探索模式 — 需要补充更多信息",
+                            "confirm" => "确认模式 — 需要确认部分细节",
+                            "refine" => "精化模式 — 开始深度分析",
+                            _ => maturity.Mode
+                        };
+                        await channel.Writer.WriteAsync(new SseEvent("token",
+                            $"\n\n> 📊 需求成熟度：{maturity.Score}/100（{modeLabel}）\n\n"));
+                        systemPrompt = gateService.GetSystemPrompt(maturity.Mode, maturity);
+                    }
+
+                    // ── 图片附件提取（多模态）──
+                    if (attachmentProcessor.HasImageAttachments(
+                        existingAttachments.Select(a => new AttachmentFile { FileName = a.FileName, Content = Array.Empty<byte>() }).ToList()))
+                    {
+                        var visionConfig = _configuration.GetSection("MultimodalVision");
+                        var apiUrl = visionConfig["ApiUrl"];
+                        var apiKey = visionConfig["ApiKey"];
+                        var model = visionConfig["Model"];
+
+                        if (!string.IsNullOrWhiteSpace(apiKey) && !string.IsNullOrWhiteSpace(apiUrl))
+                        {
+                            // 图片附件需要重新下载（因为内容在AttachmentFile中需要byte[]）
+                            var imageFiles = new List<AttachmentFile>();
+                            foreach (var att in existingAttachments.Where(a =>
+                            {
+                                var ext = Path.GetExtension(a.FileName)?.ToLower();
+                                return ext is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp";
+                            }))
+                            {
+                                var imgUrl = att.FileUrl;
+                                if (!imgUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                                    imgUrl = $"{App.HttpContext!.Request.Scheme}://{App.HttpContext.Request.Host}{imgUrl}";
+                                var imgBytes = await http.GetByteArrayAsync(imgUrl, CancellationToken.None);
+                                imageFiles.Add(new AttachmentFile { FileName = att.FileName, Content = imgBytes });
+                            }
+
+                            if (imageFiles.Count > 0)
+                            {
+                                var imageAnalysis = await gateService.ExtractFromImages(
+                                    imageFiles, apiUrl, apiKey, model, CancellationToken.None);
+                                if (!string.IsNullOrWhiteSpace(imageAnalysis))
+                                {
+                                    var lastIdx = chatMessages.FindLastIndex(m => m.Role == "user");
+                                    if (lastIdx >= 0)
+                                    {
+                                        chatMessages[lastIdx] = new ChatMessage("user",
+                                            chatMessages[lastIdx].Content + "\n\n" + imageAnalysis);
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            logger.LogWarning("多模态API未配置，跳过图片分析。请配置 MultimodalVision 节点。");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "需求门控执行异常，降级为默认 SystemPrompt pipelineId={Id}", pipelineId);
+                }
+            }
+
             // 构造 LLM 请求
             var llmRequest = new ChatCompletionRequest
             {
                 ProviderCode = provider,
-                SystemPrompt = GetStageSystemPrompt(stageName),
+                SystemPrompt = systemPrompt ?? GetStageSystemPrompt(stageName),
                 Messages = chatMessages,
                 MaxTokens = 4096,
                 Temperature = 0.7,
@@ -916,6 +1140,13 @@ public record ExecuteStageRequest
     public string StageName { get; init; } = "";
     public string? Message { get; init; }
     public string? Provider { get; init; }
+    public List<AttachmentPayload>? Attachments { get; init; }
+}
+
+public record AttachmentPayload
+{
+    public string Name { get; init; } = "";
+    public string Url { get; init; } = "";
 }
 
 public record RollbackRequest

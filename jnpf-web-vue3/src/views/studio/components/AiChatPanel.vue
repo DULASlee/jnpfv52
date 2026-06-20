@@ -342,7 +342,7 @@
   }
 
   // ====== SSE 流式消息 ======
-  async function sendMessage(content: string) {
+  async function sendMessage(content: string, uploadedFiles?: Array<{ name: string; url: string }>) {
     if (!content.trim()) return;
     loading.value = true;
     autoScroll.value = true;
@@ -390,6 +390,7 @@
           message: content,
           stageName: stages.value[currentStage.value - 1]?.code || 'requirement',
           provider: selectedProvider.value,
+          attachments: uploadedFiles || [],
         },
       });
 
@@ -474,8 +475,43 @@
     const content = inputText.value.trim();
     if (!content || loading.value) return;
     inputText.value = '';
+
+    // ═══ 上传附件到 JNPF 文件服务 ═══
+    const filesToUpload = [...attachments.value];
     attachments.value = [];
-    sendMessage(content);
+    uploadAttachmentsAndSend(content, filesToUpload);
+  }
+
+  async function uploadAttachmentsAndSend(content: string, files: File[]) {
+    const uploadedFiles: Array<{ name: string; url: string }> = [];
+
+    if (files.length > 0) {
+      for (const file of files) {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          const res = await defHttp.post({
+            url: '/api/File/Uploader/annex',
+            data: formData,
+            headers: { 'Content-Type': 'multipart/form-data' },
+          });
+          if (res?.data?.data) {
+            uploadedFiles.push({
+              name: file.name,
+              url: res.data.data.url || res.data.data,
+            });
+          } else if (res?.data?.url) {
+            uploadedFiles.push({ name: file.name, url: res.data.url });
+          }
+        } catch (err) {
+          console.error('附件上传失败:', file.name, err);
+        }
+      }
+    }
+
+    if (content || uploadedFiles.length > 0) {
+      await sendMessage(content, uploadedFiles);
+    }
   }
 
   function handleEnter(e: KeyboardEvent) {

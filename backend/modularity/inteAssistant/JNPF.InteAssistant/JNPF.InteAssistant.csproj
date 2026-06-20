@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <AcceptNPOIOSMFLicense>true</AcceptNPOIOSMFLicense>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\common\JNPF.Common.Core\JNPF.Common.Core.csproj" />
     <ProjectReference Include="..\..\message\JNPF.Message.Interfaces\JNPF.Message.Interfaces.csproj" />
@@ -9,8 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="EPPlus" Version="5.8.4" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.14" />
     <PackageReference Include="Hangfire.MemoryStorage" Version="1.8.1.1" />
+    <PackageReference Include="NPOI" Version="2.8.0" />
+    <PackageReference Include="PdfPig" Version="0.1.9" />
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
     <PackageReference Include="Serilog" Version="4.2.0" />
   </ItemGroup>
