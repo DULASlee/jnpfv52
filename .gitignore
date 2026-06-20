@@ -50,7 +50,9 @@ stats.json
 # Tool artifacts
 .playwright-mcp/
 .serena/memories/
-DB/
+# DB directory - track SQL scripts, ignore backups
+DB/*.bak
+DB/*.BAK
 
 # Claude Code session data (accidentally committed in Sprint 1)
 backend/.claude/
