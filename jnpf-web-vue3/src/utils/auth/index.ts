@@ -6,8 +6,8 @@ import { TOKEN_KEY } from '/@/enums/cacheEnum';
 const { permissionCacheType } = projectSetting;
 const isLocal = permissionCacheType === CacheTypeEnum.LOCAL;
 
-export function getToken() {
-  return getAuthCache(TOKEN_KEY);
+export function getToken(): string {
+  return getAuthCache<string>(TOKEN_KEY) || '';
 }
 
 export function getAuthCache<T>(key: BasicKeys) {
