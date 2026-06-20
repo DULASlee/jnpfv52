@@ -6,6 +6,22 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 
 你只负责手写定制代码。`.vm` 模板生成的代码不在你的范围内。
 
+## Core Principle: Evidence Over Assumption
+
+**禁止通过阅读源码猜测问题。必须抓取运行时数据定位问题。**
+
+源码告诉你"代码意图"，运行时数据告诉你"代码行为"。两者不一致时，数据是对的，源码分析是错的。
+
+| 场景 | 错误做法 | 正确做法 |
+|---|---|---|
+| 前端无响应 | 读 .vue 源码分析数据流，反复改代码试错 | Playwright `page.on('response')` 抓 SSE 响应体，看实际返回 |
+| API 异常 | 读 Controller 源码猜路由/参数 | 浏览器 Network 面板看请求 URL、状态码、响应体 |
+| 数据错误 | 读 SQL 拼装逻辑 | 看 SqlSugar `ToSql()` 输出的实际 SQL |
+| Token/认证失败 | 读 `getToken()` 源码 | console.log 输出 token 实际值 + JWT payload 解码 |
+| 编译通过但功能异常 | 再改源码再编译 | 在数据流边界加诊断日志，观察实际输入输出 |
+
+**排除步骤**：当一个问题耗时超过 10 分钟仍未解决，MUST 停止修改源码，切换到数据采集模式——在数据链路的关键节点采集实际值，追踪到哪个节点的输出偏离预期。修复那个节点，而非下游节点。**猜 3 次不行就停手抓数据，不要再猜第 4 次。**
+
 ---
 
 ## 🔴 Superpowers Mandatory（技能强制使用 — 所有 AI 模型必须遵守）
@@ -155,7 +171,7 @@ cd backend && dotnet build
 | 写架构文档 | `docs/architecture/ARCHITECTURE_DOC_RULES.md` |
 | 收到任何编码任务 | `.claude/rules/workflow.md`（任务分级 + 7 步流程） |
 | 遇到 bug / 测试失败 / 异常 / 编译错误 | `.claude/rules/debugging.md` + 执行 `/trace-bug` |
-| **前端无响应 / SSE 无数据 / 页面空白** | **MUST 用 Playwright `page.on('response')` 抓网络包看实际响应体，禁止只看源码猜测** |
+| **前端无响应 / SSE 无数据 / 页面空白** | **Evidence Over Assumption：用 Playwright 抓网络响应体，禁止看源码猜测（详见 Core Principle）** |
 | **犯错误后** | **MUST 追加到 `.claude/memory/mistake-log.md` 错题本**（格式：日期/类别/症状/根因/修复/关键词）|
 | **编码前** | Grep `.claude/memory/mistake-log.md` 搜索当前任务关键词，避免重复错误 |
 | 代码修改完成 / 准备声称"完成" | `.claude/rules/testing.md`（测试 Gate Function） |
