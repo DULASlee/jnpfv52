@@ -57,3 +57,4 @@ DB/*.BAK
 # Claude Code session data (accidentally committed in Sprint 1)
 backend/.claude/
 DB/*
+DB/
