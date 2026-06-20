@@ -8,6 +8,27 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 
 ---
 
+## 🔴 Superpowers Mandatory（技能强制使用 — 所有 AI 模型必须遵守）
+
+> **本项目启用 Superpowers 技能体系。任何 AI 模型处理本项目任务时 MUST 遵循以下铁律：**
+
+| # | 铁律 | 触发条件 | 技能 |
+|---|---|---|---|
+| S1 | 编码前先头脑风暴 | 任何功能/组件/逻辑的新增或修改 | `superpowers:brainstorming` |
+| S2 | 声称完成前验证 | 任何 "完成/已修复/已验证/通过" 的声称 | `superpowers:verification-before-completion` |
+| S3 | Bug/异常强制调试协议 | 任何编译错误/运行时异常/测试失败 | `superpowers:systematic-debugging` |
+| S4 | 响应前检查技能 | 每条用户消息到达时 | `superpowers:using-superpowers` |
+
+**违反任一 = Supreme Iron Law 验收不通过。无例外。**
+
+> 插件已由项目 `settings.json` 强制启用（`superpowers@superpowers-marketplace`）。
+> SessionStart hook `superpowers-check.mjs` 验证插件激活状态。
+> PostToolUse hook `skill-reminder.mjs` 在重度变更后注入技能调用提醒。
+
+---
+
+---
+
 ## ⬛ Supreme Iron Law — 战略对齐（最高层级，凌驾所有规则）
 
 > **浏览器端到端操作是唯一验收标准。**
@@ -52,25 +73,22 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 
 ## Architecture Redlines (NEVER VIOLATE)
 
-> **执行层级说明（决定 AI 能否绕过，2026-06-19 Phase 2 硬化后）：**
-> - **L0 硬阻断** — Hook `exit 2`，AI 无法绕过。真正的铁律。
-> - **L1 警告** — Hook `exit 1`，AI 可能忽略，需人工把关。
-> - **L2 约定** — 纯自然语言，长会话漂移率 ~50%，靠 AI 自觉。
+> **完整条款、执行层级、关联陷阱、Hook 覆盖矩阵** → `.claude/rules/architecture-redlines.md`（架构铁律单一信源）
 
-| # | 红线 | 说明 | 执行层 | 强制机制 |
-|---|---|---|---|---|
-| R1 | API Generation | Service 实现 IDynamicApiController 自动映射 API。NEVER 手写 Controller。 | L2 | 无 hook（建议未来加路径检测） |
-| R2 | Unified Response | `RESTfulResult<T>` 自动包装。异常用 `Oops.Oh()`/`Oops.Bah()`。NEVER raw Exception。code 600 = JWT 过期 | L2 | 无 hook |
-| R3 | Codegen Boundary | 生成代码 bug → 修 `.vm` 模板源码。NEVER 改模板输出文件 | L2 | 无 hook |
-| R4 | Multi-tenant | 新 SqlSugar 查询 MUST 验证 ITenantFilter 激活。漏过滤 = 跨租户泄漏 | **L0** | `guard-tenant-filter.mjs` 拦截原生SQL无WHERE/DisableGlobalFilter/Updateable无Where |
-| R5 | Module Boundary | OA 禁用 NEVER 改；IoT/MES 不存在 NEVER scaffold | **L0** | `guard-oa-module.mjs` 拦截 OA/IoT/MES 路径写入 |
-| R6 | SSE/Timer 泄漏 | 前端 setTimeout/setInterval/EventSource/WebSocket MUST 遵循 6 条铁律 → `.claude/rules/frontend-memory-leak.md` | **L0** | `guard-frontend-leak.mjs` 拦截无clear/无retry cap/onerror直连 |
-| R7 | SQL Injection | 动态 SQL MUST 参数化。NEVER 拼接用户输入 | **L0** | `guard-sql-injection.mjs` 拦截 `$"...SQL..."`/string.Format/Ado.SqlQuery |
-| R8 | API Permission | 新 API MUST 声明 `[AllowAnonymous]`/`[SecurityDefine]`。JwtHandler bypass 为临时态 | **L0** | `guard-auth.mjs` 拦截无权限属性的 IDynamicApiController |
-| R9 | Architect Fidelity | 编码前 MUST 输出需求提取清单；编码后逐条标注实现状态 | L2 | 无 hook（输出 gate，见 workflow.md Step 1.5） |
-| R10 | Bug Discovery | 发现任何 BUG MUST 结构化上报，NEVER 沉默跳过。详见 engineering-laws.md Law 1（**单一信源**） | L2 | 无 hook（输出 gate） |
+| # | 红线 | 层级 | 强制机制 |
+|---|---|---|---|
+| R1 | API Generation — NEVER 手写 Controller | L2 | code-reviewer |
+| R2 | Unified Response — Oops.Bah/Oops.Oh, NEVER raw Exception | L2 | code-reviewer |
+| R3 | Codegen Boundary — 修 `.vm` 模板, NEVER 改输出文件 | L2 | code-reviewer |
+| R4 | Multi-tenant — 漏过滤 = 跨租户泄漏 | **L0** | `guard-tenant-filter.mjs` |
+| R5 | Module Boundary — OA 禁用, IoT/MES 不存在 | **L0** | `guard-oa-module.mjs` |
+| R6 | SSE/Timer 泄漏 — 6 条铁律 → `.claude/rules/frontend-memory-leak.md` | **L0** | `guard-frontend-leak.mjs` |
+| R7 | SQL Injection — 动态 SQL 必须参数化 → `.claude/rules/sql-safety.md` | **L0** | `guard-sql-injection.mjs` |
+| R8 | API Permission — MUST 声明 `[AllowAnonymous]`/`[SecurityDefine]` | **L0** | `guard-auth.mjs` |
+| R9 | Architect Fidelity — 需求提取清单 + 实现标注 | L2 | code-reviewer |
+| R10 | Bug Discovery — 结构化上报, NEVER 沉默 → `.claude/rules/engineering-laws.md` Law 1 | L2 | code-reviewer |
 
-> **新增 hook 后的合规回归测试：** `node scripts/test-hooks.mjs`（20 用例覆盖 R4/R5/R6/R7/R8 + 基础守卫）
+> **合规测试：** `node scripts/test-hooks.mjs`（28 用例覆盖 R4/R5/R6/R7/R8 + 基础守卫 + MultiEdit）
 
 ---
 
@@ -114,7 +132,7 @@ cd backend && dotnet build
 
 | 工具 | 角色 | 编码？ |
 |---|---|---|
-| superpowers skill set | 日常开发（业务代码 MANDATORY） | ✅ |
+| superpowers skill set | 日常开发（**MANDATORY** — 违反 S1-S4 = 验收不通过） | ✅ |
 | Serena | C# 符号级 rename/find-refs | ✅ |
 | OpenSpec | 知识库 | ❌ |
 | episodic-memory | 跨会话上下文 | ❌ |
@@ -128,6 +146,7 @@ cd backend && dotnet build
 
 | 触发条件 | 读取文件 |
 |---|---|
+| **任何编码任务（架构约束）** | `.claude/rules/architecture-redlines.md` |
 | 写后端 C# 代码 | `.claude/rules/jnpf-expert-traps.md` + `.claude/rules/sql-safety.md` |
 | 写前端 Vue3 代码 | `.claude/rules/jnpf-frontend-rules.md` |
 | 前端实质性变更 / 需 E2E 验证 | `.claude/skills/playwright/SKILL.md`（产出 E1 截图证据） |
@@ -164,16 +183,23 @@ cd backend && dotnet build
 
 | 时机 | Hook | 作用 | 层级 |
 |---|---|---|---|
-| PreToolUse (Write\|Edit) | `guard-write.mjs` | 写入守卫（密钥/清空拦截） | L0 |
-| PreToolUse (Write\|Edit) | `guard-oa-module.mjs` | **R5 模块边界**拦截 OA/IoT/MES 写入 | L0 |
-| PreToolUse (Write\|Edit) | `guard-sql-injection.mjs` | **R7 SQL 注入**拦截（$string + SQL） | L0 |
-| PreToolUse (Write\|Edit) | `guard-auth.mjs` | **R8 权限声明**拦截无授权 API | L0 |
-| PreToolUse (Write\|Edit) | `guard-tenant-filter.mjs` | **R4 多租户**拦截原生SQL/无Where更新 | L0 |
-| PreToolUse (Write\|Edit) | `guard-frontend-leak.mjs` | **R6 前端泄漏**拦截无clear定时器/SSE | L0 |
+| SessionStart | `superpowers-check.mjs` | **Superpowers 强制激活验证** + 技能可用性检查 + AI 强制性指令 | — |
+| PreToolUse (Write\|Edit\|MultiEdit) | `guard-write.mjs` | **三层守卫** — L1 密钥/凭证文件拦截 / L2 空文件拦截 / L3 安全扫描 | L0 |
+| PreToolUse (Write\|Edit\|MultiEdit) | `guard-oa-module.mjs` | **R5 模块边界**拦截 OA/IoT/MES 写入 | L0 |
+| PreToolUse (Write\|Edit\|MultiEdit) | `guard-sql-injection.mjs` | **R7 SQL 注入**拦截 | L0 |
+| PreToolUse (Write\|Edit\|MultiEdit) | `guard-auth.mjs` | **R8 权限声明**拦截无授权 API | L0 |
+| PreToolUse (Write\|Edit\|MultiEdit) | `guard-tenant-filter.mjs` | **R4 多租户**拦截 | L0 |
+| PreToolUse (Write\|Edit\|MultiEdit) | `guard-frontend-leak.mjs` | **R6 前端泄漏**拦截 | L0 |
 | PreToolUse (Bash) | `guard-bash.mjs` | 危险命令拦截 | L0 |
-| PostToolUse (Write\|Edit) | `format-and-lint.mjs` | 自动 Prettier + ESLint | — |
-| Stop | `guard-finish.mjs` | 冒烟测试 + **E2E 证据新鲜度验证**（mtime≤30min, size≥5KB） | L0 |
-| Stop | `collect-summary.mjs` | 收集会话摘要 | — |
+| PostToolUse (Write\|Edit\|MultiEdit) | `format-and-lint.mjs` | 自动 Prettier + ESLint | — |
+| PostToolUse (Write\|Edit\|MultiEdit) | `skill-reminder.mjs` | **Superpowers 技能触发提醒**（重度变更后注入强制性技能调用指令） | — |
+| Stop | `guard-finish.mjs` | 冒烟测试 + **E2E 证据智能阻断**（仅前端UI目录 + 4h时效 + 三级判定） | L0 |
+| Stop | `collect-summary.mjs` | 会话变更摘要（7 类分类） | — |
+
+> **Hook 分层架构：** 项目级 hooks（上表 12 个）受版本控制，全团队共享。
+> 用户级 hooks 仅 3 个个人偏好（session-start, guard-deps, rtk-rewrite）。
+> ⚠️ 禁止在用户级恢复 `guard-write`/`guard-finish`/`skill-reminder`/`collect-summary` — 功能已被项目级版本全覆盖，历史残留。
+> 验证命令：`node scripts/test-hooks.mjs`（28 用例）
 
 ---
 

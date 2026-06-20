@@ -113,42 +113,52 @@ export class SAOrchestrator {
 
     // ═══════════════════════════════════════
     // Phase 2 & 3: EVENT / PROCESS 级（逐事件）
+    // 单事件失败隔离：一个事件异常不阻断其他事件
     // ═══════════════════════════════════════
     let pspec: PSpecOutput | undefined;
     let decisionTable: DecisionTableOutput | undefined;
     let ui: UIOutput | undefined;
 
     for (const event of scope.businessEvents) {
-      const tierDecision = classifyEvent(event, ctx.projectDict);
-      ctx.assetLevel = tierDecision.assetLevel;
-      ctx.currentEventId = event.id;
+      try {
+        const tierDecision = classifyEvent(event, ctx.projectDict);
+        ctx.assetLevel = tierDecision.assetLevel;
+        ctx.currentEventId = event.id;
 
-      console.log(`[SA] 事件 "${event.name}" → ${tierDecision.assetLevel}: ${tierDecision.reason}`);
+        console.log(`[SA] 事件 "${event.name}" → ${tierDecision.assetLevel}: ${tierDecision.reason}`);
 
-      // PROCESS 级：复杂事件深度推演
-      if (tierDecision.assetLevel === 'PROCESS') {
-        if (tierDecision.stepsToRun.includes('PSpecAgent')) {
-          pspec = await this.runStepWithValidation<PSpecOutput>('PSpecAgent', 'sa_pspec', ctx,
-            async (output) => { const { id } = await this.db.savePSpec(output, ctx, ctx.dictId!, ctx.bpmId!); ctx.pspecId = id; });
-          ctx.previousSteps['pspec'] = pspec;
-          validationStats.push({ step: 'PSpec', attempts: 1, passed: true });
+        // PROCESS 级：复杂事件深度推演
+        if (tierDecision.assetLevel === 'PROCESS') {
+          if (tierDecision.stepsToRun.includes('PSpecAgent')) {
+            pspec = await this.runStepWithValidation<PSpecOutput>('PSpecAgent', 'sa_pspec', ctx,
+              async (output) => { const { id } = await this.db.savePSpec(output, ctx, ctx.dictId!, ctx.bpmId!); ctx.pspecId = id; });
+            ctx.previousSteps['pspec'] = pspec;
+            validationStats.push({ step: 'PSpec', attempts: 1, passed: true });
+          }
+
+          if (tierDecision.stepsToRun.includes('DecisionTableAgent')) {
+            ctx.kgPatterns = await this.loadExistingDecisionTables(ctx);
+            decisionTable = await this.runStepWithValidation<DecisionTableOutput>('DecisionTableAgent', 'sa_decision_table', ctx,
+              async (output) => { const { id } = await this.db.saveDecisionTable(output, ctx, ctx.pspecId!, ctx.dictId!); ctx.decisionTableId = id; });
+            ctx.previousSteps['decisionTable'] = decisionTable;
+            validationStats.push({ step: 'DecisionTable', attempts: 1, passed: true });
+          }
         }
 
-        if (tierDecision.stepsToRun.includes('DecisionTableAgent')) {
-          ctx.kgPatterns = await this.loadExistingDecisionTables(ctx);
-          decisionTable = await this.runStepWithValidation<DecisionTableOutput>('DecisionTableAgent', 'sa_decision_table', ctx,
-            async (output) => { const { id } = await this.db.saveDecisionTable(output, ctx, ctx.pspecId!, ctx.dictId!); ctx.decisionTableId = id; });
-          ctx.previousSteps['decisionTable'] = decisionTable;
-          validationStats.push({ step: 'DecisionTable', attempts: 1, passed: true });
+        // EVENT / PROCESS 级：都跑 UI
+        if (tierDecision.stepsToRun.includes('UIAgent')) {
+          ui = await this.runStepWithValidation<UIOutput>('UIAgent', 'sa_ui', ctx,
+            async (output) => { const { id } = await this.db.saveUI(output, ctx, ctx.bpmId!, ctx.dictId!); ctx.uiId = id; });
+          ctx.previousSteps['ui'] = ui;
+          validationStats.push({ step: 'UI', attempts: 1, passed: true });
         }
-      }
-
-      // EVENT / PROCESS 级：都跑 UI
-      if (tierDecision.stepsToRun.includes('UIAgent')) {
-        ui = await this.runStepWithValidation<UIOutput>('UIAgent', 'sa_ui', ctx,
-          async (output) => { const { id } = await this.db.saveUI(output, ctx, ctx.bpmId!, ctx.dictId!); ctx.uiId = id; });
-        ctx.previousSteps['ui'] = ui;
-        validationStats.push({ step: 'UI', attempts: 1, passed: true });
+      } catch (e) {
+        console.error(`[SA] 事件 "${event.name}" (id=${event.id}) 处理失败，跳过并继续:`, e);
+        validationStats.push({ step: `Event_${event.id}`, attempts: 1, passed: false, error: (e as Error).message });
+        // 重置事件级 context 增量字段，避免污染下一个事件
+        ctx.previousSteps['pspec'] = undefined;
+        ctx.previousSteps['decisionTable'] = undefined;
+        ctx.previousSteps['ui'] = undefined;
       }
     }
 
@@ -198,46 +208,79 @@ export class SAOrchestrator {
   }
 
   // 默认 Validator 路由(根据 Agent 名选对应 Validator)
+  // 判空保护：Validator 未注入时跳过校验（允许无校验模式运行）
   private runDefaultValidator(agentName: string, output: any, ctx: SAContext): { passed: boolean; errors: ValidationError[] } {
     try {
       switch (agentName) {
         case 'DFDAgent': {
+          if (!this.validators.DFDValidator) {
+            console.warn('[Validator] DFDValidator 未注入，跳过 DFD 校验');
+            return { passed: true, errors: [] };
+          }
           const v = new this.validators.DFDValidator(output);
           return v.validate();
         }
         case 'BPMAgent': {
+          if (!this.validators.BPMValidator) {
+            console.warn('[Validator] BPMValidator 未注入，跳过 BPM 校验');
+            return { passed: true, errors: [] };
+          }
           const dfdProcesses = ctx.previousSteps['dfd']?.processes || [];
           const v = new this.validators.BPMValidator(output, dfdProcesses);
           return v.validate();
         }
         case 'DictAgent': {
+          if (!this.validators.DictValidator) {
+            console.warn('[Validator] DictValidator 未注入，跳过 Dict 校验');
+            return { passed: true, errors: [] };
+          }
           const dfd = ctx.previousSteps['dfd'] || { dataFlows: [], dataStores: [] };
           const v = new this.validators.DictValidator(output, dfd);
           return v.validate();
         }
         case 'PSpecAgent': {
+          if (!this.validators.LogicValidator) {
+            console.warn('[Validator] LogicValidator 未注入，跳过 PSpec 校验');
+            return { passed: true, errors: [] };
+          }
           const dict = ctx.previousSteps['dict'];
           if (!dict) return { passed: true, errors: [] };
           const v = new this.validators.LogicValidator(output, dict);
           return v.validate();
         }
         case 'DecisionTableAgent': {
+          if (!this.validators.CrossEventConsistencyValidator) {
+            console.warn('[Validator] CrossEventConsistencyValidator 未注入，跳过 DecisionTable 校验');
+            return { passed: true, errors: [] };
+          }
           const allTables = ctx.allDecisionTables || [];
           const v = new this.validators.CrossEventConsistencyValidator(output, allTables);
           return v.validate();
         }
         case 'ERAgent': {
+          if (!this.validators.ERValidator) {
+            console.warn('[Validator] ERValidator 未注入，跳过 ER 校验');
+            return { passed: true, errors: [] };
+          }
           const dict = ctx.previousSteps['dict'];
           if (!dict) return { passed: true, errors: [] };
           const v = new this.validators.ERValidator(output, dict);
           return v.validate();
         }
         case 'StateMachineAgent': {
+          if (!this.validators.STDValidator) {
+            console.warn('[Validator] STDValidator 未注入，跳过 StateMachine 校验');
+            return { passed: true, errors: [] };
+          }
           const dict = ctx.previousSteps['dict'];
           const v = new this.validators.STDValidator(output, dict);
           return v.validate();
         }
         case 'UIAgent': {
+          if (!this.validators.UIValidator) {
+            console.warn('[Validator] UIValidator 未注入，跳过 UI 校验');
+            return { passed: true, errors: [] };
+          }
           const dict = ctx.previousSteps['dict'];
           const bpm = ctx.previousSteps['bpm'];
           if (!dict || !bpm) return { passed: true, errors: [] };

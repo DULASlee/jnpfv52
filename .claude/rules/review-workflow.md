@@ -125,7 +125,7 @@ run_in_background: false
 
 **审查维度：**
 
-1. 架构合规性（对照 CLAUDE.md Architecture Redlines）
+1. 架构合规性（对照 `.claude/rules/architecture-redlines.md`）
    - R1: 是否手动创建了 Controller？（应由 IDynamicApiController 自动生成）
    - R2: 是否手动包装 RESTfulResult？（框架自动包装）
    - R4: 新 SqlSugar 查询是否包含 ITenantFilter？（防跨租户泄露）

@@ -8,6 +8,9 @@ export abstract class BaseAgent<TOutput> {
   abstract readonly tableName: string;
   abstract readonly systemPrompt: string;
 
+  /** 各 Agent 可覆盖的温度（不同步骤可能需要不同创造性） */
+  protected temperature: number = 0.1;
+
   constructor(protected llm: ILLMClient) {}
 
   /**
@@ -21,7 +24,7 @@ export abstract class BaseAgent<TOutput> {
       systemPrompt: this.systemPrompt,
       context: prompt,
       lastErrors: ctx.lastErrors,
-      temperature: 0.1,  // 创造性低,确定性高
+      temperature: this.temperature,  // Agent 级可覆盖温度
     });
 
     return result as TOutput;

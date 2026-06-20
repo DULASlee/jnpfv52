@@ -29,6 +29,11 @@ export interface IDKEEQueries {
 export class SqlServerDKEEQueries implements IDKEEQueries {
   constructor(private connection: any) {}  // mssql.ConnectionPool
 
+  /** 转义 LIKE 通配符，防止注入绕过 */
+  private escapeLike(value: string): string {
+    return value.replace(/[%_\[\]]/g, '[$&]');
+  }
+
   async fetchHighQualityDictRecords(industry: IndustryType, projectId?: number): Promise<DictSourceRecord[]> {
     // SQL Server 用 tags LIKE 匹配 industry
     const projectFilter = projectId ? 'AND d.project_id = @projectId' : '';
@@ -47,7 +52,7 @@ export class SqlServerDKEEQueries implements IDKEEQueries {
       ORDER BY d.project_id, d.id
     `;
     const result = await this.connection.request()
-      .input('industryPattern', `%${industry}%`)
+      .input('industryPattern', `%${this.escapeLike(industry)}%`)
       .input('projectId', projectId || 0)
       .query(query);
     return result.recordset;
@@ -70,7 +75,7 @@ export class SqlServerDKEEQueries implements IDKEEQueries {
       ORDER BY d.project_id, d.id
     `;
     const result = await this.connection.request()
-      .input('industryPattern', `%${industry}%`)
+      .input('industryPattern', `%${this.escapeLike(industry)}%`)
       .input('projectId', projectId || 0)
       .query(query);
     return result.recordset;
@@ -93,7 +98,7 @@ export class SqlServerDKEEQueries implements IDKEEQueries {
       ORDER BY d.project_id, d.id
     `;
     const result = await this.connection.request()
-      .input('industryPattern', `%${industry}%`)
+      .input('industryPattern', `%${this.escapeLike(industry)}%`)
       .input('projectId', projectId || 0)
       .query(query);
     return result.recordset;

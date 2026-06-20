@@ -33,6 +33,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     private readonly ISqlSugarClient _db;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     /// <summary>
     /// SSE 事件通道池：按 pipelineId 隔离。/execute 写入 token，/events 读取推送给前端。
@@ -47,6 +48,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         ISqlSugarClient sqlSugarClient,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
+        IHttpContextAccessor httpContextAccessor,
         ILogger<AIDevelopmentPipelineService> logger)
     {
         _pipelineEngine = pipelineEngine;
@@ -56,6 +58,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         _db = sqlSugarClient;
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
+        _httpContextAccessor = httpContextAccessor;
         _logger = logger;
     }
 
@@ -125,9 +128,21 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         long pipelineId, [FromBody] ExecuteStageRequest request)
     {
         var stageName = string.IsNullOrWhiteSpace(request.StageName)
-            ? PipelineStage.Requirement : request.StageName;
+            ? PipelineStage.Requirement : MapStageName(request.StageName);
         var message = request.Message ?? "";
         var provider = request.Provider ?? "";
+        // 从当前 HTTP 请求获取 Authorization header，透传给 SA / LLM Gateway
+        var authHeader = _httpContextAccessor.HttpContext?.Request.Headers["Authorization"].FirstOrDefault() ?? "";
+        if (string.IsNullOrWhiteSpace(authHeader))
+        {
+            var queryToken = _httpContextAccessor.HttpContext?.Request.Query["token"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(queryToken))
+            {
+                authHeader = queryToken.StartsWith("Bearer", StringComparison.OrdinalIgnoreCase)
+                    ? queryToken
+                    : $"Bearer {queryToken}";
+            }
+        }
 
         // 1. 保存用户消息到数据库
         if (!string.IsNullOrWhiteSpace(message))
@@ -150,7 +165,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         _sseChannels[pipelineId] = channel;
 
         // 4. 启动后台 LLM 流式任务（不等待，立即返回）
-        _ = Task.Run(() => StreamLlmResponseAsync(pipelineId, stageName, provider, channel));
+        _ = Task.Run(() => StreamLlmResponseAsync(pipelineId, stageName, provider, authHeader, channel));
 
         _logger.LogInformation("流水线阶段执行启动: PipelineId={Id}, Stage={Stage}", pipelineId, stageName);
         return stageResult;
@@ -160,8 +175,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     /// 后台执行 LLM 流式调用，token 写入 Channel 供 /events 读取。
     /// 从根 ServiceProvider 创建独立 scope，避免请求结束后 DI 服务被释放。
     /// </summary>
-    private async Task StreamLlmResponseAsync(
-        long pipelineId, string stageName, string provider, Channel<SseEvent> channel)
+    private async Task StreamLlmResponseAsync(long pipelineId, string stageName, string provider, string authHeader, Channel<SseEvent> channel)
     {
         // 创建独立 DI scope，确保 _db/_llmGateway 在请求结束后仍可用
         using var scope = App.RootServices.CreateScope();
@@ -218,15 +232,23 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
                 try
                 {
-                    var saServiceUrl = _configuration.GetValue<string>("SA:ServiceUrl") ?? "http://localhost:3001";
+                    var saServiceUrl = _configuration.GetValue<string>("SA:ServiceUrl");
+                    if (string.IsNullOrWhiteSpace(saServiceUrl))
+                    {
+                        logger.LogError("[SA] SA:ServiceUrl 未配置，无法调用 SA Service");
+                        await channel.Writer.WriteAsync(new SseEvent("error", "SA Service URL 未配置，请联系管理员设置 SA:ServiceUrl"));
+                        return;
+                    }
 
                     var httpClient = _httpClientFactory.CreateClient();
                     httpClient.Timeout = TimeSpan.FromMinutes(5);
 
-                    // 从 pipeline 记录获取 tenantId
+                    // 从 pipeline 记录获取 tenantId 和行业信息
                     var pipeline = await db.Queryable<AiPipelineEntity>()
                         .FirstAsync(p => p.Id == pipelineId.ToString());
-                    var tenantId = pipeline?.TenantId ?? "default";
+                    var tenantId = NormalizeTenantIdString(pipeline?.TenantId);
+                    // 行业从配置获取，不再硬编码（可通过 AiPipelineEntity 扩展字段或 SA:DefaultIndustry 配置）
+                    var industry = _configuration.GetValue<string>("SA:DefaultIndustry") ?? "general";
 
                     var saRequest = new
                     {
@@ -234,16 +256,19 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                         projectId = pipelineId,
                         requirementText = requirementText,
                         userId = "system",
-                        industry = "manufacturing"
+                        industry = industry,
+                        authHeader = authHeader,
+                        providerCode = string.IsNullOrWhiteSpace(provider) ? "deepseek" : provider
                     };
 
-                    // 同时通过 X-Tenant-Id 请求头传递租户信息
-                    httpClient.DefaultRequestHeaders.Remove("X-Tenant-Id");
-                    httpClient.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId);
+                    // 使用 HttpRequestMessage 避免 DefaultRequestHeaders 并发竞态
+                    var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{saServiceUrl}/api/sa/run");
+                    httpRequest.Content = JsonContent.Create(saRequest);
+                    httpRequest.Headers.Add("X-Tenant-Id", tenantId);
 
                     await channel.Writer.WriteAsync(new SseEvent("thinking", "正在执行 3-Tier SA 流水线（Scope → DFD → BPM → Dict → ER → STD）..."));
 
-                    var saResponse = await httpClient.PostAsJsonAsync($"{saServiceUrl}/api/sa/run", saRequest);
+                    var saResponse = await httpClient.SendAsync(httpRequest);
 
                     if (!saResponse.IsSuccessStatusCode)
                     {
@@ -294,7 +319,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     // 推送完整 SA 结果作为 Markdown token
                     var saContent = FormatSAResultAsMarkdown(saResult);
                     fullResponse.Append(saContent);
-                    await channel.Writer.WriteAsync(new SseEvent("chunk", saContent));
+                    await channel.Writer.WriteAsync(new SseEvent("token", saContent));
 
                     // 推送 IR 数据（结构化 JSON）
                     if (saResult?.Result != null)
@@ -314,7 +339,10 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "[SA] SA Service 调用异常 pipelineId={PipelineId}", pipelineId);
-                    await channel.Writer.WriteAsync(new SseEvent("error", $"SA 流水线执行异常: {ex.Message}"));
+                    var saErrorDetail = ex.InnerException != null
+                        ? $"SA 流水线执行异常: {ex.Message} | Inner: {ex.InnerException.Message}"
+                        : $"SA 流水线执行异常: {ex.Message}";
+                    await channel.Writer.WriteAsync(new SseEvent("error", saErrorDetail));
                 }
 
                 await channel.Writer.WriteAsync(new SseEvent("done"));
@@ -352,7 +380,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
                 chunkCount++;
                 fullResponse.Append(token);
-                await channel.Writer.WriteAsync(new SseEvent("chunk", token));
+                await channel.Writer.WriteAsync(new SseEvent("token", token));
             }
 
             logger.LogInformation("LLM 流式完成: PipelineId={Id}, Chunks={Chunks}, ResponseLength={Len}",
@@ -370,7 +398,10 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         catch (Exception ex)
         {
             logger.LogError(ex, "LLM 流式调用失败: PipelineId={Id}, Stage={Stage}", pipelineId, stageName);
-            await channel.Writer.WriteAsync(new SseEvent("error", $"LLM 调用失败: {ex.Message}"));
+            var llmErrorDetail = ex.InnerException != null
+                ? $"LLM 调用失败: {ex.Message} (Inner: {ex.InnerException.Message})"
+                : $"LLM 调用失败: {ex.Message}";
+            await channel.Writer.WriteAsync(new SseEvent("error", llmErrorDetail));
         }
         finally
         {
@@ -393,7 +424,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         response.Headers["X-Accel-Buffering"] = "no";
 
         Channel<SseEvent>? channel = null;
-        for (int i = 0; i < 30 && channel == null && !ct.IsCancellationRequested; i++)
+        // 最长等待 10 秒（100 × 100ms），覆盖慢 DB 查询
+        for (int i = 0; i < 100 && channel == null && !ct.IsCancellationRequested; i++)
         {
             _sseChannels.TryGetValue(pipelineId, out channel);
             if (channel == null) await Task.Delay(100, ct);
@@ -646,10 +678,47 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         await response.Body.FlushAsync();
     }
 
+    /// <summary>
+    /// 从 JWT 或请求头获取租户 ID。对齐 JNPF 框架 ClaimTenantResolver（"TenantId" 声明）。
+    /// 回退链：JWT.TenantId → JWT.tenant_id → X-Tenant-Id header → 401
+    /// </summary>
     private long GetTenantId()
     {
-        var claim = App.HttpContext?.User?.FindFirst("tenant_id")?.Value;
-        return long.TryParse(claim, out var id) ? id : 0;
+        var claim = App.HttpContext?.User?.FindFirst("TenantId")?.Value
+                 ?? App.HttpContext?.User?.FindFirst("tenant_id")?.Value;
+
+        // Development 模式：JWT TenantId = "default"（字符串，非数字）
+        if (string.IsNullOrWhiteSpace(claim) || claim == "default" || claim == "0")
+            return 1;
+
+        return long.TryParse(claim, out var id) && id > 0 ? id : 1;
+    }
+
+    /// <summary>
+    /// SA / 外部服务调用用的租户 ID 字符串归一化（"default"/"0"/空 → "1"）。
+    /// </summary>
+    private static string NormalizeTenantIdString(string? tenantId)
+    {
+        if (string.IsNullOrWhiteSpace(tenantId) || tenantId == "0" || tenantId == "default")
+            return "1";
+        return tenantId;
+    }
+
+    /// <summary>
+    /// 阶段名映射：支持数字(1-5)或字符串("requirement"...)
+    /// 前端 currentStage.value 可能发送数字字符串
+    /// </summary>
+    private static string MapStageName(string input)
+    {
+        return input switch
+        {
+            "1" => PipelineStage.Requirement,
+            "2" => PipelineStage.Architecture,
+            "3" => PipelineStage.Design,
+            "4" => PipelineStage.Development,
+            "5" => PipelineStage.Delivery,
+            _ => input // 已经是字符串名称，直接返回
+        };
     }
 
     private long GetUserId()
@@ -666,25 +735,56 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     {
         if (saResult?.Result == null) return "SA 分析未返回结果。";
 
+        var r = saResult.Result;
         var sb = new StringBuilder();
         sb.AppendLine("# 系统需求分析说明书");
         sb.AppendLine();
+
         sb.AppendLine("## 1. 系统边界");
-        sb.AppendLine("边界提取完成，已识别所有业务事件。");
+        if (TryGetJsonElementText(r.Scope, out var scopeText))
+            sb.AppendLine(TruncateJson(scopeText, 2000));
+        else
+            sb.AppendLine("边界提取完成，详见 IR 结构化数据。");
         sb.AppendLine();
-        sb.AppendLine("## 2. 数据字典");
-        sb.AppendLine("已生成数据字典，包含所有数据流和数据存储的字段定义。");
+
+        sb.AppendLine("## 2. 数据流图 (DFD)");
+        if (TryGetJsonElementText(r.Dfd, out var dfdText))
+            sb.AppendLine(TruncateJson(dfdText, 1500));
+        else
+            sb.AppendLine("数据流图已生成，详见 IR 结构化数据。");
         sb.AppendLine();
-        sb.AppendLine("## 3. ER 数据模型");
-        sb.AppendLine("已生成实体关系图。");
+
+        sb.AppendLine("## 3. 业务流程 (BPM)");
+        if (TryGetJsonElementText(r.Bpm, out var bpmText))
+            sb.AppendLine(TruncateJson(bpmText, 1500));
+        else
+            sb.AppendLine("业务流程已生成，详见 IR 结构化数据。");
         sb.AppendLine();
-        sb.AppendLine("## 4. 状态机");
-        sb.AppendLine("已生成状态转换图。");
+
+        sb.AppendLine("## 4. 数据字典");
+        if (TryGetJsonElementText(r.Dict, out var dictText))
+            sb.AppendLine(TruncateJson(dictText, 2000));
+        else
+            sb.AppendLine("数据字典已生成，详见 IR 结构化数据。");
         sb.AppendLine();
+
+        sb.AppendLine("## 5. ER 数据模型");
+        if (TryGetJsonElementText(r.Er, out var erText))
+            sb.AppendLine(TruncateJson(erText, 1500));
+        else
+            sb.AppendLine("实体关系图已生成，详见 IR 结构化数据。");
+        sb.AppendLine();
+
+        if (TryGetJsonElementText(r.Std, out var stdText) && stdText.Length > 4)
+        {
+            sb.AppendLine("## 6. 状态机 (STD)");
+            sb.AppendLine(TruncateJson(stdText, 1000));
+            sb.AppendLine();
+        }
 
         if (saResult.ValidationStats != null && saResult.ValidationStats.Count > 0)
         {
-            sb.AppendLine("## 5. 质量验证");
+            sb.AppendLine("## 7. 质量验证");
             foreach (var stat in saResult.ValidationStats)
             {
                 var icon = stat.Passed ? "✅" : "❌";
@@ -696,6 +796,23 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         sb.AppendLine("---");
         sb.AppendLine("请确认以上分析是否准确。如有需要补充的地方，请在下方输入框继续说明。");
         return sb.ToString();
+    }
+
+    private static bool TryGetJsonElementText(JsonElement? element, out string text)
+    {
+        if (element == null) { text = ""; return false; }
+        try
+        {
+            text = JsonSerializer.Serialize(element.Value, new JsonSerializerOptions { WriteIndented = true });
+            return !string.IsNullOrWhiteSpace(text) && text != "null" && text != "{}";
+        }
+        catch { text = ""; return false; }
+    }
+
+    private static string TruncateJson(string json, int maxLen)
+    {
+        if (json.Length <= maxLen) return json;
+        return json[..maxLen] + "\n... (已截断，完整数据见 IR 字段)";
     }
 
     // ═══════════════════════════════════════════════════

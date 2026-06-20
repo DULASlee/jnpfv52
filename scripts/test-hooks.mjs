@@ -62,6 +62,15 @@ function writePayload(file_path, content) {
   return { tool_name: 'Write', tool_input: { file_path, content } };
 }
 
+function editPayload(file_path, new_string) {
+  return { tool_name: 'Edit', tool_input: { file_path, new_string } };
+}
+
+function multiEditPayload(file_path, edits) {
+  // edits: array of { old_string, new_string }
+  return { tool_name: 'MultiEdit', tool_input: { file_path, edits } };
+}
+
 console.log('='.repeat(60));
 console.log('JNPF Hook 合规测试');
 console.log('='.repeat(60));
@@ -122,6 +131,16 @@ test(
   '已声明 AllowAnonymous'
 );
 
+test(
+  'R8-C: MultiEdit 无权限属性应 BLOCK',
+  'guard-auth.mjs',
+  multiEditPayload('backend/modularity/system/Services/FooService.cs', [
+    { old_string: '// old', new_string: 'public class FooService : IDynamicApiController { }' },
+  ]),
+  2,
+  'MultiEdit 新增 IDynamicApiController 缺权限声明'
+);
+
 // ─── guard-sql-injection.mjs (R7) ────────────────────────────
 console.log('\n[guard-sql-injection.mjs — R7 SQL 注入]');
 
@@ -141,6 +160,16 @@ test(
     'var p = new SqlSugarParameter("@id", id);'),
   0,
   '参数化安全'
+);
+
+test(
+  'R7-C: MultiEdit DROP TABLE 应 BLOCK',
+  'guard-sql-injection.mjs',
+  multiEditPayload('backend/Foo.cs', [
+    { old_string: '// old', new_string: 'var sql = $"DROP TABLE {tableName}";' },
+  ]),
+  2,
+  'MultiEdit DROP via string interpolation'
 );
 
 // ─── guard-tenant-filter.mjs (R4) ────────────────────────────
@@ -182,6 +211,16 @@ test(
   '显式豁免'
 );
 
+test(
+  'R4-E: MultiEdit Updateable 无 Where 应 BLOCK',
+  'guard-tenant-filter.mjs',
+  multiEditPayload('backend/Foo.cs', [
+    { old_string: '// old', new_string: 'db.Updateable<User>(entity).ExecuteCommand();' },
+  ]),
+  2,
+  'MultiEdit Updateable 无 Where = 跨租户修改'
+);
+
 // ─── guard-frontend-leak.mjs (R6) ────────────────────────────
 console.log('\n[guard-frontend-leak.mjs — R6 前端泄漏]');
 
@@ -212,6 +251,16 @@ test(
   '定时器配对清理'
 );
 
+test(
+  'R6-D: MultiEdit setInterval 无 clear 应 BLOCK',
+  'guard-frontend-leak.mjs',
+  multiEditPayload('jnpf-web-vue3/src/views/Foo.vue', [
+    { old_string: '// old', new_string: '<script setup>\nsetInterval(() => {}, 1000);\n</script>' },
+  ]),
+  2,
+  'MultiEdit interval 无清理'
+);
+
 // ─── guard-write.mjs (基础守卫) ──────────────────────────────
 console.log('\n[guard-write.mjs — 基础文件守卫]');
 
@@ -229,6 +278,40 @@ test(
   writePayload('backend/Foo.cs', 'public class Foo {}'),
   0,
   '正常文件'
+);
+
+test(
+  'GW-C: 清空 .cs 源文件应 BLOCK（扩展名匹配）',
+  'guard-write.mjs',
+  writePayload('jnpf-web-vue3/src/views/Foo.vue', ''),
+  2,
+  '扩展名 .vue 匹配，空内容 = BLOCK'
+);
+
+test(
+  'GW-D: .cs 文件中硬编码密钥应 BLOCK',
+  'guard-write.mjs',
+  writePayload('backend/Foo.cs', 'string apiKey = "sk-abc123def4567890abcdef";'),
+  2,
+  '硬编码密钥 = L3 高危阻断'
+);
+
+test(
+  'GW-E: .cs 中 MD5 哈希应 WARN（非阻断）',
+  'guard-write.mjs',
+  writePayload('backend/Foo.cs', 'var hash = MD5.ComputeHash(data);'),
+  0,
+  '弱加密 = L3 警告不阻断'
+);
+
+test(
+  'GW-F: MultiEdit .env 写入应 BLOCK',
+  'guard-write.mjs',
+  multiEditPayload('.env', [
+    { old_string: '# old', new_string: 'SECRET=new_value' },
+  ]),
+  2,
+  'MultiEdit 写入 .env = L1 阻断'
 );
 
 // ─── guard-bash.mjs (危险命令) ───────────────────────────────

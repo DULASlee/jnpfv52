@@ -206,7 +206,8 @@ import {
 import { message as antMessage } from 'ant-design-vue';
 import { defHttp } from '/@/utils/http/axios';
 import IrPreviewCard from './chat/IrPreviewCard.vue';
-import { buildSSEUrl } from '/@/utils/http/sseUrl';
+import { buildFetchSseUrl } from '/@/utils/http/sseUrl';
+import { getToken } from '/@/utils/auth';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
@@ -375,20 +376,27 @@ async function sendMessage(content: string) {
 
   try {
     // Step 1: POST /execute 发送消息，启动后台 LLM 流
-    const execUrl = buildSSEUrl('/api/studio/pipeline/execute/' + pipelineId.value + '/execute');
+    const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+    const token = getToken();
+    if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+
+    const execUrl = buildFetchSseUrl('/api/studio/pipeline/execute/' + pipelineId.value + '/execute');
     const execResponse = await fetch(execUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders,
       body: JSON.stringify({ message: content, stageName: stages.value[currentStage.value - 1]?.name || 'requirement', provider: selectedProvider.value }),
     });
     if (!execResponse.ok) throw new Error('Execute HTTP ' + execResponse.status);
 
     // Step 2: GET /events 读取 SSE 流
     abortController.value = new AbortController();
-    const sseUrl = buildSSEUrl('/api/studio/pipeline/execute/' + pipelineId.value + '/events');
+    const sseUrl = buildFetchSseUrl('/api/studio/pipeline/execute/' + pipelineId.value + '/events');
+    const sseHeaders: Record<string, string> = { 'Accept': 'text/event-stream' };
+    if (token) sseHeaders['Authorization'] = `Bearer ${token}`;
+
     const response = await fetch(sseUrl, {
       method: 'GET',
-      headers: { 'Accept': 'text/event-stream' },
+      headers: sseHeaders,
       signal: abortController.value.signal,
     });
     if (!response.ok) throw new Error('HTTP ' + response.status);

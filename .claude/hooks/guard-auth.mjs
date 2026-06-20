@@ -26,6 +26,9 @@ if (toolName === 'Write') {
   content = input.tool_input?.content || '';
 } else if (toolName === 'Edit') {
   content = input.tool_input?.newText || input.tool_input?.new_string || '';
+} else if (toolName === 'MultiEdit') {
+  const edits = input.tool_input?.edits || [];
+  content = edits.map(e => e.new_string || e.newText || '').filter(Boolean).join('\n');
 }
 if (!content) process.exit(0);
 

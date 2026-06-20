@@ -15,6 +15,11 @@ class HttpLlmClient implements ILLMClient {
   constructor(
     private gatewayUrl: string,
     private apiKey?: string,
+    private tenantId?: string,
+    private authHeader?: string,
+    private providerCode: string = 'deepseek',
+    private defaultTemperature: number = 0.3,
+    private defaultMaxTokens: number = 4096,
   ) {}
 
   async generate(params: {
@@ -23,32 +28,65 @@ class HttpLlmClient implements ILLMClient {
     lastErrors?: string[];
     temperature?: number;
   }): Promise<any> {
-    // 将 lastErrors 注入 context（错误回灌）
     const enrichedContext = { ...params.context };
     if (params.lastErrors && params.lastErrors.length > 0) {
       enrichedContext._lastErrors = params.lastErrors;
     }
 
+    // 构造对齐后端 ChatCompletionRequest 的请求体
+    const body = {
+      providerCode: this.providerCode,
+      systemPrompt: params.systemPrompt,
+      messages: [
+        { role: 'user', content: JSON.stringify(enrichedContext) }
+      ],
+      temperature: params.temperature ?? this.defaultTemperature,
+      maxTokens: this.defaultMaxTokens,
+    };
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (this.apiKey) {
+      headers['Authorization'] = `Bearer ${this.apiKey}`;
+    }
+    if (this.tenantId) {
+      const headerTenant = this.tenantId === 'default' ? '1' : this.tenantId;
+      headers['X-Tenant-Id'] = headerTenant;
+    }
+    // authHeader 优先级高于 apiKey（从上游请求透传）
+    if (this.authHeader) {
+      if (this.apiKey) {
+        console.log('[HttpLlmClient] authHeader 覆盖 apiKey，使用上游鉴权信息');
+      }
+      headers['Authorization'] = this.authHeader;
+    }
+
     const response = await fetch(this.gatewayUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(this.apiKey ? { 'Authorization': `Bearer ${this.apiKey}` } : {}),
-      },
-      body: JSON.stringify({
-        systemPrompt: params.systemPrompt,
-        userPrompt: JSON.stringify(enrichedContext),
-        temperature: params.temperature ?? 0.3,
-        maxTokens: 4096,
-      }),
+      headers,
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
       throw new Error(`LLM Gateway 返回 ${response.status}: ${await response.text()}`);
     }
 
-    const data: any = await response.json();
-    const content = data.content || data.choices?.[0]?.message?.content || data.result || data;
+    const raw: any = await response.json();
+    // JNPF RESTfulResult 包装：{ code, data: { content, isSuccess, error } }
+    const payload = raw?.data ?? raw;
+    if (payload?.isSuccess === false || payload?.IsSuccess === false) {
+      const err = payload?.error ?? payload?.Error ?? raw?.msg ?? 'LLM Gateway 返回失败';
+      throw new Error(String(err));
+    }
+
+    const content =
+      payload?.content ??
+      payload?.Content ??
+      raw?.content ??
+      raw?.choices?.[0]?.message?.content ??
+      raw?.result ??
+      payload;
 
     // 尝试解析 JSON（LLM 可能返回 markdown code block）
     if (typeof content === 'string') {
@@ -120,8 +158,14 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
 const PORT = parseInt(process.env.SA_SERVICE_PORT || '3001', 10);
-const LLM_GATEWAY_URL = process.env.LLM_GATEWAY_URL || 'http://localhost:5000/api/ai/generate';
+// LLM Gateway 配置（全部从环境变量读取，无硬编码回退）
+const LLM_GATEWAY_URL = process.env.LLM_GATEWAY_URL || '';
 const LLM_API_KEY = process.env.LLM_API_KEY || '';
+const LLM_PROVIDER = process.env.LLM_PROVIDER || 'deepseek';
+const LLM_TEMPERATURE = parseFloat(process.env.LLM_TEMPERATURE || '0.3');
+const LLM_MAX_TOKENS = parseInt(process.env.LLM_MAX_TOKENS || '4096', 10);
+// DB 后端：'inmemory' | 'sqlserver'（默认 inmemory，生产需设 sqlserver）
+const DB_BACKEND = (process.env.SA_DB_BACKEND || 'inmemory').toLowerCase();
 
 const sseManager = new SSEManager();
 
@@ -179,22 +223,36 @@ app.post('/api/sa/run', async (req, res) => {
       });
     }
 
-    const llm = new HttpLlmClient(LLM_GATEWAY_URL, LLM_API_KEY);
-    const db = new InMemorySADatabase();
-    const emptyValidators = {
+    const authHeader = req.body.authHeader || '';
+    const providerCode = req.body.providerCode || req.body.provider || LLM_PROVIDER;
+    const llm = new HttpLlmClient(
+      LLM_GATEWAY_URL, LLM_API_KEY,
+      tenantId ?? 'default', authHeader,
+      providerCode, LLM_TEMPERATURE, LLM_MAX_TOKENS,
+    );
+
+    // DB 后端选择（InMemory 仅用于开发/测试，生产需设 SA_DB_BACKEND=sqlserver）
+    const db = createDatabase(DB_BACKEND);
+
+    // Validator 未注入时跳过校验（SAOrchestrator 有判空保护）
+    const validators = {
       DFDValidator: null, BPMValidator: null, DictValidator: null,
       LogicValidator: null, CrossEventConsistencyValidator: null,
       ERValidator: null, STDValidator: null, UIValidator: null,
     };
-    const orchestrator = new SAOrchestrator(llm, db, emptyValidators);
+    const orchestrator = new SAOrchestrator(llm, db, validators);
 
     const saRequest: SARequest = {
       tenantId,
       projectId,
       requirementId: requirementId || 0,
       requirementText,
-      userId: userId || 'system',
+      userId: userId || 'anonymous',
     };
+    // 行业从请求体透传（优先级高于 SAOrchestrator 自动推断）
+    if (industry) {
+      (saRequest as any).industry = industry;
+    }
 
     if (sseSessionId) {
       sseManager.send(sseSessionId, 'phase-start', { phase: 'scope', name: '边界提取' });
@@ -276,9 +334,29 @@ app.get('/api/sa/tasks/:taskId', (req, res) => {
 // 启动
 // ═══════════════════════════════════════════════════════
 app.listen(PORT, () => {
-  console.log(`[SA Service] 启动成功 → http://localhost:${PORT}`);
-  console.log(`[SA Service] LLM Gateway → ${LLM_GATEWAY_URL}`);
-  console.log(`[SA Service] 健康检查 → http://localhost:${PORT}/api/sa/health`);
+  // 启动校验
+  if (!LLM_GATEWAY_URL) {
+    console.error('[SA Service] ⚠️  LLM_GATEWAY_URL 未设置！请配置环境变量后重启。');
+  }
+  if (DB_BACKEND === 'inmemory') {
+    console.warn('[SA Service] ⚠️  使用 InMemory 数据库（数据重启即丢失）。生产环境请设置 SA_DB_BACKEND=sqlserver');
+  }
+  console.log(`[SA Service] 启动完成 → 端口:${PORT}, DB:${DB_BACKEND}, Provider:${LLM_PROVIDER}`);
+  if (LLM_GATEWAY_URL) {
+    console.log(`[SA Service] LLM Gateway → ${LLM_GATEWAY_URL}`);
+  }
 });
+
+// ── DB 工厂 ──
+import { ISADatabase } from './orchestrator/orchestrator-types';
+
+function createDatabase(backend: string): ISADatabase {
+  if (backend === 'sqlserver') {
+    // 生产环境：此处应返回 SqlServerSADatabase 实例
+    throw new Error('SA_DB_BACKEND=sqlserver 尚未实现，请提供 SqlServerSADatabase 实现或联系开发团队');
+  }
+  // 默认：InMemory（开发/测试）
+  return new InMemorySADatabase();
+}
 
 export { app };

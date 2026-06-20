@@ -584,8 +584,13 @@ public class PipelineOrchestratorService : IDynamicApiController, ITransient
 
     private long GetTenantId()
     {
-        var claim = App.HttpContext?.User?.FindFirst("tenant_id")?.Value;
-        return long.TryParse(claim, out var id) ? id : 0;
+        var claim = App.HttpContext?.User?.FindFirst("TenantId")?.Value
+                 ?? App.HttpContext?.User?.FindFirst("tenant_id")?.Value;
+
+        if (string.IsNullOrWhiteSpace(claim) || claim == "default" || claim == "0")
+            return 1;
+
+        return long.TryParse(claim, out var id) && id > 0 ? id : 1;
     }
 
     private long GetUserId()
