@@ -30,11 +30,11 @@ public sealed class FounderGuardMiddleware
     private const string FingerprintSalt = "jnpf-foundry-v5.2";
 
     // TOTP setup/verify endpoints 即使是 founder 路径也需要允许无 token 访问
+    // 流水线执行 API 已迁移至 /api/studio/pipeline/execute（普通 JWT 鉴权，非 founder 专属）
     private static readonly string[] AnonymousFounderPaths = new[]
     {
         "/api/founder/auth/setup-totp",
         "/api/founder/auth/verify-totp",
-        "/api/founder/ai/pipeline",
         "/api/founder/ai/test",
         "/api/founder/ai/health",
     };

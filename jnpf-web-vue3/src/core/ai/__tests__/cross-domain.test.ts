@@ -13,6 +13,14 @@ import { ArchitectAgent } from '../agents/architect';
 import { DatabaseAgent } from '../agents/database';
 import { MockLLMGateway } from './mock-llm';
 
+interface RequirementResult {
+  proposedDomainModel: {
+    entities: Array<{ name: string }>;
+    businessRules: Array<{ name: string; condition: string }>;
+  };
+  implicitRequirements: string[];
+}
+
 // MES领域Mock数据
 const MES_REQ = {
   understanding: 'MES制造执行系统',
@@ -222,7 +230,8 @@ describe('跨领域实战验证', () => {
       const state = createInitialState();
       const result = await orch.advance(state, '我要一个MES制造执行系统');
       expect(result.requirement).toBeDefined();
-      const entities = result.requirement!.proposedDomainModel.entities.map(e => e.name);
+      const req = result.requirement as RequirementResult;
+      const entities = req.proposedDomainModel.entities.map(e => e.name);
       expect(entities).toContain('工单');
       expect(entities).toContain('设备');
       expect(entities).toContain('质检记录');
@@ -256,7 +265,8 @@ describe('跨领域实战验证', () => {
       mock.setResponse('智慧工地', JSON.stringify(SITE_REQ));
       const state = createInitialState();
       const result = await orch.advance(state, '智慧工地管理系统');
-      const entities = result.requirement!.proposedDomainModel.entities.map(e => e.name);
+      const req = result.requirement as RequirementResult;
+      const entities = req.proposedDomainModel.entities.map(e => e.name);
       expect(entities).toContain('安全帽');
       expect(entities).toContain('塔吊');
       expect(entities).toContain('施工进度');
@@ -285,7 +295,8 @@ describe('跨领域实战验证', () => {
       mock.setResponse('更衣柜', JSON.stringify(LOCKER_REQ));
       const state = createInitialState();
       const result = await orch.advance(state, '智能更衣柜系统，柜门开关控制、借用归还');
-      const entities = result.requirement!.proposedDomainModel.entities.map(e => e.name);
+      const req = result.requirement as RequirementResult;
+      const entities = req.proposedDomainModel.entities.map(e => e.name);
       expect(entities).toContain('柜门');
       expect(entities).toContain('借用记录');
       expect(entities).toContain('异常报警');
@@ -296,7 +307,8 @@ describe('跨领域实战验证', () => {
       mock.setResponse('更衣柜', JSON.stringify(LOCKER_REQ));
       const state = createInitialState();
       const result = await orch.advance(state, '智能更衣柜系统');
-      const rules = result.requirement!.proposedDomainModel.businessRules;
+      const req = result.requirement as RequirementResult;
+      const rules = req.proposedDomainModel.businessRules;
       expect(rules.some(r => r.name.includes('超时') || r.condition.includes('24h'))).toBe(true);
     });
 
@@ -304,7 +316,8 @@ describe('跨领域实战验证', () => {
       mock.setResponse('更衣柜', JSON.stringify(LOCKER_REQ));
       const state = createInitialState();
       const result = await orch.advance(state, '智能更衣柜系统');
-      expect(result.requirement!.implicitRequirements.some(i => i.includes('MQTT') || i.includes('IoT') || i.includes('设备通信'))).toBe(true);
+      const req = result.requirement as RequirementResult;
+      expect(req.implicitRequirements.some(i => i.includes('MQTT') || i.includes('IoT') || i.includes('设备通信'))).toBe(true);
     });
   });
 

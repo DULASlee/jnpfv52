@@ -1,0 +1,938 @@
+
+========== orchestrator-types.ts ==========
+// SA SDK - 共享类型定义
+
+import { ValidationError } from '../validators/types';
+
+// =====================================================
+// 客户需求
+// =====================================================
+export interface SARequest {
+  tenantId: string;
+  projectId: number;
+  requirementId: number;
+  requirementText: string;          // 客户原始需求
+  eventId?: number;                  // 单事件模式(可选)
+  eventDescription?: string;         // 单事件描述(可选)
+  assetLevel?: 'PROJECT' | 'EVENT' | 'PROCESS';
+  userId: string;                    // 触发人
+}
+
+// =====================================================
+// SA 步骤产出(对应 9 张表)
+// =====================================================
+export interface ScopeOutput {
+  systemBoundary: { inScope: string[]; outOfScope: string[] };
+  externalEntities: Array<{ name: string; type: string; description: string }>;
+  businessEvents: Array<{
+    id: number;
+    name: string;
+    description: string;
+    complexity: 'simple' | 'medium' | 'complex';
+  }>;
+  eventCount: number;
+}
+
+export interface DFDOutput {
+  contextDiagram: any;
+  dfdLevels: any;
+  processes: Array<{ id: string; name: string; inputFlows: string[]; outputFlows: string[]; parentId?: string }>;
+  dataFlows: Array<{ name: string }>;
+  dataStores: Array<{ name: string }>;
+}
+
+export interface BPMOutput {
+  swimLanes: any[];
+  activityNodes: any[];
+  edges: any[];
+  exceptionPaths: any[];
+  dfdProcessMappings: Record<string, string>;
+}
+
+export interface DictOutput {
+  elements: Array<{
+    name: string;
+    type: string;
+    isFK?: boolean;
+    refEntity?: string;
+    isRequired?: boolean;
+  }>;
+  dataFlows: Array<{ name: string; fields: any[] }>;
+  dataStores: Array<{ name: string; fields: any[] }>;
+}
+
+export interface PSpecOutput {
+  processSpecs: Array<{
+    id: string;
+    name: string;
+    input: string[];
+    output: string[];
+    validation?: string;
+    algorithm?: string;
+  }>;
+}
+
+export interface DecisionTableOutput {
+  tables: Array<{
+    id: string;
+    conditions: Array<{ name: string; operator: string; value: any }>;
+    actions: Array<{ name: string }>;
+    rules: Array<{ conditionMask: boolean[]; actionIndex: number }>;
+  }>;
+}
+
+export interface EROutput {
+  entities: Array<{ name: string; columns: any[] }>;
+  relationships: any[];
+}
+
+export interface StateMachineOutput {
+  stateMachines: Array<{
+    entity: string;
+    states: string[];
+    transitions: Array<{ from: string; to: string; trigger: string }>;
+  }>;
+}
+
+export interface UIOutput {
+  screens: Array<{
+    id: string;
+    name: string;
+    dataFlow: string;
+    bpmNodeId: string;
+    fields: Array<{ name: string; type: string; required: boolean; controlType: string }>;
+  }>;
+}
+
+// =====================================================
+// SA 总产出
+// =====================================================
+export interface SAOutput {
+  projectId: number;
+  tenantId: string;
+  scope: ScopeOutput;
+  dfd?: DFDOutput;
+  bpm?: BPMOutput;
+  dict?: DictOutput;
+  pspec?: PSpecOutput;
+  decisionTable?: DecisionTableOutput;
+  er?: EROutput;
+  stateMachine?: StateMachineOutput;
+  ui?: UIOutput;
+  metadata: {
+    totalDuration: number;
+    totalRetries: number;
+    validationStats: { step: string; attempts: number; passed: boolean }[];
+  };
+}
+
+// =====================================================
+// SA 上下文(贯穿整个流水线)
+// =====================================================
+export interface SAContext {
+  tenantId: string;
+  projectId: number;
+  requirementId: number;
+  requirementText: string;
+  eventId?: number;
+  eventDescription?: string;
+  assetLevel: 'PROJECT' | 'EVENT' | 'PROCESS';
+
+  // 上下文注入
+  kgPatterns: KGPattern[];                // 知识图谱注入
+  domainModel: DomainModelContext;        // 领域模型注入
+  previousSteps: Record<string, any>;     // 上一步产出(供下一步使用)
+
+  // 运行时 ID（流水线执行过程中逐步填充）
+  scopeId?: number;
+  dfdId?: number;
+  bpmId?: number;
+  dictId?: number;
+  pspecId?: number;
+  decisionTableId?: number;
+  erId?: number;
+  stateMachineId?: number;
+  uiId?: number;
+
+  // 跨事件判定表注入
+  allDecisionTables?: any[];
+
+  // 重试闭环
+  lastErrors?: string[];
+
+  // 元数据
+  userId: string;
+  startTime: number;
+}
+
+export interface KGPattern {
+  id: string;
+  type: 'field_naming' | 'decision_rule' | 'state_machine' | 'process_pattern';
+  content: any;
+  score: number;
+  tags: string[];
+}
+
+export interface DomainModelContext {
+  industry: string;
+  standardFields: Array<{ name: string; type: string; description: string }>;
+  standardEntities: Array<{ name: string; description: string; commonFields: string[] }>;
+  standardProcesses: Array<{ id: string; name: string; description: string }>;
+}
+
+// =====================================================
+// LLM 客户端接口(任何 LLM 都能接入)
+// =====================================================
+export interface ILLMClient {
+  generate(params: {
+    systemPrompt: string;
+    context: Record<string, any>;
+    lastErrors?: string[];
+    temperature?: number;
+  }): Promise<any>;
+}
+
+// =====================================================
+// 数据库接口
+// =====================================================
+export interface ISADatabase {
+  // 写入
+  saveScope(scope: ScopeOutput, ctx: SAContext): Promise<{ id: number }>;
+  saveDFD(dfd: DFDOutput, ctx: SAContext, scopeId: number): Promise<{ id: number }>;
+  saveBPM(bpm: BPMOutput, ctx: SAContext, dfdId: number): Promise<{ id: number }>;
+  saveDict(dict: DictOutput, ctx: SAContext, dfdId: number, bpmId: number): Promise<{ id: number }>;
+  savePSpec(pspec: PSpecOutput, ctx: SAContext, dictId: number, bpmId: number): Promise<{ id: number }>;
+  saveDecisionTable(dt: DecisionTableOutput, ctx: SAContext, pspecId: number, dictId: number): Promise<{ id: number }>;
+  saveER(er: EROutput, ctx: SAContext, dictId: number): Promise<{ id: number }>;
+  saveStateMachine(sm: StateMachineOutput, ctx: SAContext, dictId: number, bpmId: number): Promise<{ id: number }>;
+  saveUI(ui: UIOutput, ctx: SAContext, bpmId: number, dictId: number): Promise<{ id: number }>;
+
+  // 校验日志
+  logValidation(record: ValidationLogRecord): Promise<void>;
+
+  // 读取
+  getProjectKGPatterns(projectId: number, limit?: number): Promise<KGPattern[]>;
+  getDomainModel(industry: string): Promise<DomainModelContext>;
+  getAllDecisionTablesInProject(projectId: number): Promise<any[]>;
+}
+
+export interface ValidationLogRecord {
+  tenantId: string;
+  projectId: number;
+  saTableName: string;
+  saRecordId?: number;
+  validatorName: string;
+  retryCount: number;
+  previousErrors: string[] | null;
+  isConverged: boolean;
+  validationStatus: 'PASS' | 'FAIL';
+  errors: ValidationError[];
+  durationMs: number;
+}
+
+// =====================================================
+// SA 配置
+// =====================================================
+export interface SAConfig {
+  maxRetries: number;
+  retryDelayMs: number;
+  enableDKEE: boolean;
+  enableCrossEventCheck: boolean;
+  logLevel: 'debug' | 'info' | 'warn' | 'error';
+}
+
+export const DEFAULT_SA_CONFIG: SAConfig = {
+  maxRetries: 5,
+  retryDelayMs: 1000,
+  enableDKEE: true,
+  enableCrossEventCheck: true,
+  logLevel: 'info',
+};
+
+// 重新导出 Validator 类型供 SDK 使用
+export { ValidationError } from '../validators/types';
+
+
+========== BaseAgent.ts ==========
+// BaseAgent - 所有 SA Agent 的基类
+// 9 个 Agent(Scope/DFD/BPM/Dict/PSpec/DecisionTable/ER/StateMachine/UI)都继承这个
+
+import { ILLMClient, SAContext } from './orchestrator-types';
+
+export abstract class BaseAgent<TOutput> {
+  abstract readonly name: string;
+  abstract readonly tableName: string;
+  abstract readonly systemPrompt: string;
+
+  constructor(protected llm: ILLMClient) {}
+
+  /**
+   * 生成 SA 步骤产出
+   * 子类可以覆盖 buildPrompt 来定制上下文
+   */
+  async generate(ctx: SAContext): Promise<TOutput> {
+    const prompt = this.buildPrompt(ctx);
+
+    const result = await this.llm.generate({
+      systemPrompt: this.systemPrompt,
+      context: prompt,
+      lastErrors: ctx.lastErrors,
+      temperature: 0.1,  // 创造性低,确定性高
+    });
+
+    return result as TOutput;
+  }
+
+  /**
+   * 构造 LLM 输入(注入上一步产出 + KG/DM + 错误回灌)
+   * 子类可覆盖
+   */
+  protected buildPrompt(ctx: SAContext): Record<string, any> {
+    return {
+      requirement: ctx.requirementText,
+      eventDescription: ctx.eventDescription,
+      previousSteps: ctx.previousSteps,
+      kgPatterns: ctx.kgPatterns.map(p => ({
+        type: p.type,
+        content: p.content,
+        score: p.score,
+      })),
+      domainModel: ctx.domainModel,
+      lastErrors: ctx.lastErrors,
+    };
+  }
+}
+
+
+========== StepRouter.ts ==========
+// StepRouter - 6 问清单 + 三级分层路由
+// 根据 Step 1 提取的 events 复杂度,决定跑哪些步骤
+
+import { SAOrchestrator } from './SAOrchestrator';
+import { SAContext, ScopeOutput } from './orchestrator-types';
+
+export type EventComplexity = 'simple' | 'medium' | 'complex';
+
+export interface StepDecision {
+  runDFD: boolean;
+  runBPM: boolean;
+  runDict: boolean;
+  runPSpec: boolean;
+  runDecisionTable: boolean;
+  runER: boolean;
+  runStateMachine: boolean;
+  runUI: boolean;
+  reason: string;
+}
+
+/**
+ * 根据事件复杂度决定跑哪些步骤
+ * 这是"6 问清单"的核心逻辑
+ */
+export function decideSteps(complexity: EventComplexity, hasStateChange: boolean): StepDecision {
+  switch (complexity) {
+    case 'simple':
+      return {
+        runDFD: false,
+        runBPM: false,
+        runDict: false,
+        runPSpec: false,
+        runDecisionTable: false,
+        runER: false,
+        runStateMachine: false,
+        runUI: true,  // 即使简单也要生成 UI(可能就是个按钮)
+        reason: '简单事件:跳过 DFD/BPM/PSPEC/DT,只生成 UI',
+      };
+    case 'medium':
+      return {
+        runDFD: true,
+        runBPM: true,
+        runDict: true,
+        runPSpec: true,
+        runDecisionTable: false,  // 复杂规则才跑判定表
+        runER: true,
+        runStateMachine: hasStateChange,  // 有状态变化才跑 STD
+        runUI: true,
+        reason: '中等事件:跑 DFD/BPM/Dict/PSPEC/ER,按需跑 STD',
+      };
+    case 'complex':
+      return {
+        runDFD: true,
+        runBPM: true,
+        runDict: true,
+        runPSpec: true,
+        runDecisionTable: true,   // ★ 复杂事件必跑判定表
+        runER: true,
+        runStateMachine: true,
+        runUI: true,
+        reason: '复杂事件:跑全部 9 步',
+      };
+  }
+}
+
+/**
+ * 跑 Step 1(总是先跑,作为整个流水线的入口)
+ */
+export async function runScopeStep(orchestrator: SAOrchestrator, ctx: SAContext): Promise<ScopeOutput> {
+  return await orchestrator.runStepWithValidation(
+    'ScopeAgent',
+    'sa_scope',
+    ctx,
+    async (output) => orchestrator.runStepWithValidation('ScopeAgent', 'sa_scope', ctx, async () => {}),
+    // Scope 自身没有 Validator(它是源头)
+    // 但可以做"事件复杂度分布"的合理性检查
+    (output) => {
+      const errors = [];
+      if (output.eventCount === 0) {
+        errors.push({ code: 'SCOPE_NO_EVENTS', message: 'Scope 没提取到任何业务事件', severity: 'ERROR' as const });
+      }
+      if (output.systemBoundary.inScope.length === 0) {
+        errors.push({ code: 'SCOPE_NO_INSCOPE', message: 'Scope 没定义 In Scope', severity: 'ERROR' as const });
+      }
+      return { passed: errors.length === 0, errors };
+    }
+  );
+}
+
+
+========== RetryLoop.ts ==========
+// RetryLoop - "生成→验证→自修复"闭环
+// 每个 SA 步骤都用这个循环跑
+
+import { ValidationError, ISADatabase, SAContext, ValidationLogRecord } from './orchestrator-types';
+
+export interface RetryLoopConfig {
+  maxRetries: number;
+  retryDelayMs: number;
+}
+
+export interface RetryResult<T> {
+  output: T;
+  attempts: number;
+  validationPassed: boolean;
+  errors: ValidationError[];
+}
+
+/**
+ * 生成 → 验证 → 错误回灌 → 重试
+ */
+export async function runWithRetry<T>(
+  stepName: string,
+  ctx: SAContext,
+  db: ISADatabase,
+  config: RetryLoopConfig,
+  generate: () => Promise<T>,
+  validate: (output: T) => { passed: boolean; errors: ValidationError[] }
+): Promise<RetryResult<T>> {
+  let lastOutput: T;
+  let lastResult: { passed: boolean; errors: ValidationError[] } = { passed: false, errors: [] };
+
+  for (let attempt = 1; attempt <= config.maxRetries; attempt++) {
+    const startTime = Date.now();
+
+    // Step 1: LLM 生成
+    lastOutput = await generate();
+
+    // Step 2: Validator 校验
+    lastResult = validate(lastOutput);
+    const duration = Date.now() - startTime;
+
+    // Step 3: 写 sa_validation_log(含重试闭环)
+    const logRecord: ValidationLogRecord = {
+      tenantId: ctx.tenantId,
+      projectId: ctx.projectId,
+      saTableName: stepName,
+      validatorName: stepName,
+      retryCount: attempt - 1,
+      previousErrors: ctx.lastErrors || null,
+      isConverged: lastResult.passed,
+      validationStatus: lastResult.passed ? 'PASS' : 'FAIL',
+      errors: lastResult.errors,
+      durationMs: duration,
+    };
+    await db.logValidation(logRecord);
+
+    if (lastResult.passed) {
+      return {
+        output: lastOutput!,
+        attempts: attempt,
+        validationPassed: true,
+        errors: [],
+      };
+    }
+
+    // Step 4: 错误回灌到 ctx.lastErrors(下一轮 LLM 看到)
+    ctx.lastErrors = lastResult.errors.map(e => `[${e.code}] ${e.message}`);
+    console.warn(`[${stepName}] Attempt ${attempt}/${config.maxRetries} failed:`, lastResult.errors.length, 'errors');
+
+    // 等待重试延迟(避免过快打 LLM)
+    if (attempt < config.maxRetries) {
+      await sleep(config.retryDelayMs);
+    }
+  }
+
+  // 所有重试都失败
+  throw new Error(
+    `[${stepName}] 失败 ${config.maxRetries} 次仍未收敛。最后错误:\n` +
+    (lastResult?.errors || []).map(e => `  [${e.code}] ${e.message}`).join('\n')
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
+========== SADatabase.ts ==========
+// ISADatabase 实现 - in-memory mock(可直接替换为 SQL Server 实现)
+
+import {
+  ISADatabase, SAContext, ScopeOutput, DFDOutput, BPMOutput, DictOutput,
+  PSpecOutput, DecisionTableOutput, EROutput, StateMachineOutput, UIOutput,
+  ValidationLogRecord, KGPattern, DomainModelContext
+} from './orchestrator-types';
+
+// =====================================================
+// InMemorySADatabase - 内存实现(用于开发和测试)
+// 生产环境替换为 SqlServerSADatabase
+// =====================================================
+export class InMemorySADatabase implements ISADatabase {
+  private scopes = new Map<number, any>();
+  private dfds = new Map<number, any>();
+  private bpms = new Map<number, any>();
+  private dicts = new Map<number, any>();
+  private pspecs = new Map<number, any>();
+  private decisionTables = new Map<number, any>();
+  private ers = new Map<number, any>();
+  private stateMachines = new Map<number, any>();
+  private uis = new Map<number, any>();
+  private validationLogs: ValidationLogRecord[] = [];
+  private nextId = 1;
+
+  // ========================================================
+  // Save 方法
+  // ========================================================
+  async saveScope(scope: ScopeOutput, ctx: SAContext): Promise<{ id: number }> {
+    const id = this.nextId++;
+    this.scopes.set(id, { id, ...scope, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveDFD(dfd: DFDOutput, ctx: SAContext, scopeId: number): Promise<{ id: number }> {
+    const id = this.nextId++;
+    this.dfdpsCheck();  // 强外键:scopeId 必须存在
+    this.dfds.set(id, { id, ...dfd, scopeId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveBPM(bpm: BPMOutput, ctx: SAContext, dfdId: number): Promise<{ id: number }> {
+    const id = this.nextId++;
+    this.dfdpsCheck();
+    this.bpms.set(id, { id, ...bpm, dfdId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveDict(dict: DictOutput, ctx: SAContext, dfdId: number, bpmId: number): Promise<{ id: number }> {
+    const id = this.nextId++;
+    this.dfdpsCheck();
+    this.dicts.set(id, { id, ...dict, dfdId, bpmId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async savePSpec(pspec: PSpecOutput, ctx: SAContext, dictId: number, bpmId: number): Promise<{ id: number }> {
+    const id = this.nextId++;
+    this.dfdpsCheck();
+    this.pspecs.set(id, { id, ...pspec, dictId, bpmId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveDecisionTable(dt: DecisionTableOutput, ctx: SAContext, pspecId: number, dictId: number): Promise<{ id: number }> {
+    const id = this.nextId++;
+    this.dfdpsCheck();
+    this.decisionTables.set(id, { id, ...dt, pspecId, dictId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveER(er: EROutput, ctx: SAContext, dictId: number): Promise<{ id: number }> {
+    const id = this.nextId++;
+    this.dfdpsCheck();
+    this.ers.set(id, { id, ...er, dictId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveStateMachine(sm: StateMachineOutput, ctx: SAContext, dictId: number, bpmId: number): Promise<{ id: number }> {
+    const id = this.nextId++;
+    this.dfdpsCheck();
+    this.stateMachines.set(id, { id, ...sm, dictId, bpmId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveUI(ui: UIOutput, ctx: SAContext, bpmId: number, dictId: number): Promise<{ id: number }> {
+    const id = this.nextId++;
+    this.dfdpsCheck();
+    this.uis.set(id, { id, ...ui, bpmId, dictId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  // 强外键检查(防止凭空生成)
+  private dfdpsCheck() {
+    if (this.scopes.size === 0) throw new Error('强外键违规:必须先有 sa_scope');
+  }
+
+  // ========================================================
+  // 校验日志
+  // ========================================================
+  async logValidation(record: ValidationLogRecord): Promise<void> {
+    this.validationLogs.push(record);
+  }
+
+  // ========================================================
+  // 读取方法
+  // ========================================================
+  async getProjectKGPatterns(projectId: number, limit = 5): Promise<KGPattern[]> {
+    // Mock:返回空数组,实际从 kg_pattern 表查
+    return [];
+  }
+
+  async getDomainModel(industry: string): Promise<DomainModelContext> {
+    // Mock:返回空模型,实际从 domain_model 表查
+    return {
+      industry,
+      standardFields: [],
+      standardEntities: [],
+      standardProcesses: [],
+    };
+  }
+
+  async getAllDecisionTablesInProject(projectId: number): Promise<any[]> {
+    return Array.from(this.decisionTables.values())
+      .filter(dt => dt.projectId === projectId);
+  }
+
+  // 测试辅助
+  getValidationLogs(): ValidationLogRecord[] {
+    return this.validationLogs;
+  }
+
+  getStats() {
+    return {
+      scopes: this.scopes.size,
+      dfds: this.dfds.size,
+      bpms: this.bpms.size,
+      dicts: this.dicts.size,
+      pspecs: this.pspecs.size,
+      decisionTables: this.decisionTables.size,
+      ers: this.ers.size,
+      stateMachines: this.stateMachines.size,
+      uis: this.uis.size,
+      validationLogs: this.validationLogs.length,
+    };
+  }
+}
+
+
+========== SAOrchestrator.ts ==========
+// SAOrchestrator - SDK 主入口
+// 后端只需 await runSA(req) 即可完成完整需求分析
+
+import {
+  SARequest, SAContext, SAOutput, SAConfig, DEFAULT_SA_CONFIG,
+  ScopeOutput, DFDOutput, BPMOutput, DictOutput, PSpecOutput,
+  DecisionTableOutput, EROutput, StateMachineOutput, UIOutput,
+  ISADatabase, ILLMClient, ValidationError
+} from './orchestrator-types';
+import {
+  ScopeAgent, DFDAgent, BPMAgent, DictAgent, PSpecAgent,
+  DecisionTableAgent, ERAgent, StateMachineAgent, UIAgent
+} from '../agents';
+import { runWithRetry, RetryResult } from './RetryLoop';
+import { decideSteps, runScopeStep } from './StepRouter';
+import { DKEEFacade } from '../dkee';
+import { BaseAgent } from './BaseAgent';
+
+// =====================================================
+// 注入的 Validator(从 @your-org/sa-validators 包)
+// 这里用 type-only 避免硬依赖,实际使用方注入
+// =====================================================
+export interface ValidatorBundle {
+  DFDValidator: any;
+  BPMValidator: any;
+  DictValidator: any;
+  LogicValidator: any;
+  CrossEventConsistencyValidator: any;
+  ERValidator: any;
+  UIValidator: any;
+}
+
+// =====================================================
+// SAOrchestrator
+// =====================================================
+export class SAOrchestrator {
+  private agents: Map<string, any>;
+  private dkee: DKEEFacade;
+
+  constructor(
+    private llm: ILLMClient,
+    private db: ISADatabase,
+    private validators: ValidatorBundle,
+    private config: SAConfig = DEFAULT_SA_CONFIG
+  ) {
+    this.agents = new Map<string, any>([
+      ['ScopeAgent', new ScopeAgent(llm)],
+      ['DFDAgent', new DFDAgent(llm)],
+      ['BPMAgent', new BPMAgent(llm)],
+      ['DictAgent', new DictAgent(llm)],
+      ['PSpecAgent', new PSpecAgent(llm)],
+      ['DecisionTableAgent', new DecisionTableAgent(llm)],
+      ['ERAgent', new ERAgent(llm)],
+      ['StateMachineAgent', new StateMachineAgent(llm)],
+      ['UIAgent', new UIAgent(llm)],
+    ]);
+    this.dkee = new DKEEFacade();
+  }
+
+  // ============================================================
+  // 主入口:后端调用
+  // ============================================================
+  async runSA(req: SARequest): Promise<SAOutput> {
+    const startTime = Date.now();
+    const validationStats: any[] = [];
+
+    console.log(`[SA] 开始需求分析: project=${req.projectId} tenant=${req.tenantId}`);
+
+    // 1. 解析 Context(注入 KG 模式 + 领域模型)
+    const ctx = await this.resolveContext(req);
+
+    // 2. Step 1: 跑 Scope(总是先跑,作为入口)
+    const scopeResult = await runScopeStep(this, ctx);
+    const scope: ScopeOutput = scopeResult;
+    validationStats.push({ step: 'Scope', attempts: 1, passed: true });
+
+    // 3. 根据事件复杂度决定后续步骤
+    // 默认:取 events 中最高复杂度(也可以传 single event)
+    const maxComplexity = this.getMaxComplexity(scope);
+    const decision = decideSteps(maxComplexity, this.hasStateChange(scope));
+
+    console.log(`[SA] 复杂度=${maxComplexity}, 路由: ${decision.reason}`);
+
+    // 4. 按顺序跑后续步骤
+    let dfd: DFDOutput | undefined, bpm: BPMOutput | undefined;
+    let dict: DictOutput | undefined, pspec: PSpecOutput | undefined;
+    let decisionTable: DecisionTableOutput | undefined;
+    let er: EROutput | undefined, stateMachine: StateMachineOutput | undefined;
+    let ui: UIOutput | undefined;
+
+    // Step 2: DFD
+    if (decision.runDFD) {
+      const r = await this.runStepWithValidation<DFDOutput>('DFDAgent', 'sa_dfd', ctx,
+        async (output) => { const { id } = await this.db.saveDFD(output, ctx, ctx.scopeId!); ctx.dfdId = id; });
+      dfd = r;
+      validationStats.push({ step: 'DFD', attempts: 1, passed: true });
+    }
+
+    // Step 3: BPM
+    if (decision.runBPM && dfd) {
+      const r = await this.runStepWithValidation<BPMOutput>('BPMAgent', 'sa_business_process', ctx,
+        async (output) => { const { id } = await this.db.saveBPM(output, ctx, ctx.dfdId!); ctx.bpmId = id; });
+      bpm = r;
+      validationStats.push({ step: 'BPM', attempts: 1, passed: true });
+    }
+
+    // Step 4: 数据字典(★ 关键)
+    if (decision.runDict && dfd) {
+      const r = await this.runStepWithValidation<DictOutput>('DictAgent', 'sa_data_dictionary', ctx,
+        async (output) => { const { id } = await this.db.saveDict(output, ctx, ctx.dfdId!, ctx.bpmId!); ctx.dictId = id; });
+      dict = r;
+      validationStats.push({ step: 'Dict', attempts: 1, passed: true });
+    }
+
+    // Step 5: PSPEC
+    if (decision.runPSpec && dict) {
+      const r = await this.runStepWithValidation<PSpecOutput>('PSpecAgent', 'sa_pspec', ctx,
+        async (output) => { const { id } = await this.db.savePSpec(output, ctx, ctx.dictId!, ctx.bpmId!); });
+      pspec = r;
+      validationStats.push({ step: 'PSpec', attempts: 1, passed: true });
+    }
+
+    // Step 6: 判定表(★★ 跨事件一致)
+    if (decision.runDecisionTable && dict) {
+      ctx.kgPatterns = await this.loadExistingDecisionTables(ctx);
+      const r = await this.runStepWithValidation<DecisionTableOutput>('DecisionTableAgent', 'sa_decision_table', ctx,
+        async (output) => { const { id } = await this.db.saveDecisionTable(output, ctx, ctx.pspecId!, ctx.dictId!); });
+      decisionTable = r;
+      validationStats.push({ step: 'DecisionTable', attempts: 1, passed: true });
+    }
+
+    // Step 7: ER
+    if (decision.runER && dict) {
+      const r = await this.runStepWithValidation<EROutput>('ERAgent', 'sa_er', ctx,
+        async (output) => { const { id } = await this.db.saveER(output, ctx, ctx.dictId!); });
+      er = r;
+      validationStats.push({ step: 'ER', attempts: 1, passed: true });
+    }
+
+    // Step 8: 状态机
+    if (decision.runStateMachine && dict) {
+      const r = await this.runStepWithValidation<StateMachineOutput>('StateMachineAgent', 'sa_state_machine', ctx,
+        async (output) => { const { id } = await this.db.saveStateMachine(output, ctx, ctx.dictId!, ctx.bpmId!); });
+      stateMachine = r;
+      validationStats.push({ step: 'StateMachine', attempts: 1, passed: true });
+    }
+
+    // Step 9: UI
+    if (decision.runUI && bpm && dict) {
+      const r = await this.runStepWithValidation<UIOutput>('UIAgent', 'sa_ui', ctx,
+        async (output) => { const { id } = await this.db.saveUI(output, ctx, ctx.bpmId!, ctx.dictId!); });
+      ui = r;
+      validationStats.push({ step: 'UI', attempts: 1, passed: true });
+    }
+
+    // 5. DKEE 提炼(从 9 张表抽取 Pattern)
+    if (this.config.enableDKEE) {
+      await this.dkee.extractAndScore('general');
+    }
+
+    const totalDuration = Date.now() - startTime;
+    console.log(`[SA] 完成: ${totalDuration}ms, 步骤统计:`, validationStats);
+
+    return {
+      projectId: ctx.projectId,
+      tenantId: ctx.tenantId,
+      scope,
+      dfd, bpm, dict, pspec, decisionTable, er, stateMachine, ui,
+      metadata: { totalDuration, totalRetries: 0, validationStats },
+    };
+  }
+
+  // ============================================================
+  // 内部:跑单步(带 retry + validator + DB 写入)
+  // ============================================================
+  async runStepWithValidation<T>(
+    agentName: string,
+    tableName: string,
+    ctx: SAContext,
+    saveToDb: (output: T) => Promise<void>,
+    customValidator?: (output: T) => { passed: boolean; errors: ValidationError[] }
+  ): Promise<T> {
+    const agent = this.agents.get(agentName);
+    if (!agent) throw new Error(`Agent ${agentName} not found`);
+
+    const result = await runWithRetry<T>(
+      tableName,
+      ctx,
+      this.db,
+      { maxRetries: this.config.maxRetries, retryDelayMs: this.config.retryDelayMs },
+      async () => await agent.generate(ctx),
+      (output) => customValidator ? customValidator(output) : this.runDefaultValidator(agentName, output, ctx)
+    );
+
+    await saveToDb(result.output);
+    return result.output;
+  }
+
+  // 默认 Validator 路由(根据 Agent 名选对应 Validator)
+  private runDefaultValidator(agentName: string, output: any, ctx: SAContext): { passed: boolean; errors: ValidationError[] } {
+    switch (agentName) {
+      case 'DFDAgent':
+        return this.validators.DFDValidator.validate(output);
+      case 'BPMAgent':
+        return this.validators.BPMValidator.validate(output, ctx.previousSteps.dfd);
+      case 'DictAgent':
+        return this.validators.DictValidator.validate(output, ctx.previousSteps.dfd);
+      case 'PSpecAgent':
+        return this.validators.LogicValidator.validate(output, ctx.previousSteps.dict);
+      case 'DecisionTableAgent':
+        return this.validators.CrossEventConsistencyValidator.validate(output, ctx.allDecisionTables);
+      case 'ERAgent':
+        return this.validators.ERValidator.validate(output, ctx.previousSteps.dict);
+      case 'StateMachineAgent':
+        // STD 校验需要 dict + bpm,简化为只检查状态
+        return { passed: true, errors: [] };
+      case 'UIAgent':
+        return this.validators.UIValidator.validate(output, ctx.previousSteps.dict, ctx.previousSteps.bpm);
+      default:
+        return { passed: true, errors: [] };
+    }
+  }
+
+  // ============================================================
+  // 解析 Context(注入 KG 模式 + 领域模型)
+  // ============================================================
+  private async resolveContext(req: SARequest): Promise<SAContext> {
+    const kgPatterns = await this.db.getProjectKGPatterns(req.projectId, 5);
+    const industry = this.inferIndustry(req.requirementText);
+    const domainModel = await this.db.getDomainModel(industry);
+
+    return {
+      tenantId: req.tenantId,
+      projectId: req.projectId,
+      requirementId: req.requirementId,
+      requirementText: req.requirementText,
+      eventId: req.eventId,
+      eventDescription: req.eventDescription,
+      assetLevel: req.assetLevel || 'PROJECT',
+      kgPatterns,
+      domainModel,
+      previousSteps: {},
+      userId: req.userId,
+      startTime: Date.now(),
+    };
+  }
+
+  private async loadExistingDecisionTables(ctx: SAContext): Promise<any[]> {
+    return await this.db.getAllDecisionTablesInProject(ctx.projectId);
+  }
+
+  // ============================================================
+  // 工具:推断行业
+  // ============================================================
+  private inferIndustry(text: string): string {
+    if (/MES|制造|工单|工序|报工|加工/.test(text)) return 'manufacturing';
+    if (/电商|订单|购物|支付/.test(text)) return 'ecommerce';
+    if (/眼镜|验光|处方/.test(text)) return 'optical';
+    return 'general';
+  }
+
+  // 取 events 中最高复杂度
+  private getMaxComplexity(scope: ScopeOutput): 'simple' | 'medium' | 'complex' {
+    const order = { simple: 0, medium: 1, complex: 2 } as const;
+    let max: 'simple' | 'medium' | 'complex' = 'simple';
+    scope.businessEvents.forEach((e: { complexity: 'simple' | 'medium' | 'complex' }) => {
+      if (order[e.complexity] > order[max]) max = e.complexity;
+    });
+    return max;
+  }
+
+  // 是否有状态变化
+  private hasStateChange(scope: ScopeOutput): boolean {
+    return scope.businessEvents.some(e =>
+      /状态|报工|审批|驳回|关闭|完成/.test(e.name + e.description)
+    );
+  }
+}
+
+
+========== index.ts ==========
+// SA SDK - 主入口
+// 后端只需 3 行就能用:
+//   const orchestrator = new SAOrchestrator(llm, db, validators);
+//   const result = await orchestrator.runSA(req);
+//   console.log(result.scope, result.dfd, ...);
+
+export { SAOrchestrator, ValidatorBundle } from './SAOrchestrator';
+export { runWithRetry, RetryResult, RetryLoopConfig } from './RetryLoop';
+export { decideSteps, runScopeStep, StepDecision, EventComplexity } from './StepRouter';
+
+export { BaseAgent } from './BaseAgent';
+
+export { InMemorySADatabase } from './SADatabase';
+
+export {
+  SARequest, SAOutput, SAContext, SAConfig, DEFAULT_SA_CONFIG,
+  ILLMClient, ISADatabase, KGPattern, DomainModelContext,
+  ScopeOutput, DFDOutput, BPMOutput, DictOutput, PSpecOutput,
+  DecisionTableOutput, EROutput, StateMachineOutput, UIOutput,
+  ValidationError
+} from './orchestrator-types';
+
+

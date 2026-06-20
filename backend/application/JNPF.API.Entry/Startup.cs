@@ -1,6 +1,7 @@
 using JNPF.Extras.DatabaseAccessor.SqlSugar.TenantContext;
 using JNPF.InteAssistant;
 using JNPF.Modules;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using SqlSugar;
 
@@ -17,6 +18,27 @@ public class Startup : AppStartup
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
+        // ============ 启动完成横幅 ============
+        var lifetime = app.ApplicationServices.GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>();
+        lifetime.ApplicationStarted.Register(() =>
+        {
+            var logger = app.ApplicationServices.GetRequiredService<ILogger<Startup>>();
+            var serverAddressesFeature = app.ServerFeatures.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>();
+            var url = serverAddressesFeature?.Addresses.FirstOrDefault() ?? "http://localhost:5000";
+
+            logger.LogInformation("══════════════════════════════════════════════════");
+            logger.LogInformation("   JNPF Baobab-Studio 后端启动完成");
+            logger.LogInformation("══════════════════════════════════════════════════");
+            logger.LogInformation("  API 地址: {Url}", url);
+            logger.LogInformation("  Swagger:  {Url}/swagger", url);
+            logger.LogInformation("  环境:     {Env}", env.EnvironmentName);
+            logger.LogInformation("  启动时间: {Time}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            logger.LogInformation("══════════════════════════════════════════════════");
+            logger.LogInformation("  Studio API: {Url}/api/studio/menu/user-menus", url);
+            logger.LogInformation("  LLM 健康:   {Url}/api/studio/pipeline/providers", url);
+            logger.LogInformation("══════════════════════════════════════════════════");
+        });
+
         // 中间件管道顺序自检（千问 SEC-04 · 2026-06-20）
         // 目的：启动时断言关键中间件顺序正确，防止部署/重构时误改
         AssertMiddlewarePipeline(app);
@@ -50,6 +72,20 @@ public class Startup : AppStartup
         {
             const string msg = "[MiddlewareAssert] ISqlSugarClient is NOT registered in DI. "
                 + "Database access layer is unavailable — all data queries will fail.";
+            logger.LogCritical(ex, msg);
+            throw new InvalidOperationException(msg, ex);
+        }
+
+        // 断言 1.1：PipelineHub 的 IHubContext 必须可解析（Quartz StaleMonitorService 依赖）
+        try
+        {
+            var hubContext = app.ApplicationServices.GetRequiredService<IHubContext<PipelineHub>>();
+            logger.LogInformation("[MiddlewareAssert] ✓ IHubContext<PipelineHub> registered: {Type}", hubContext.GetType().Name);
+        }
+        catch (Exception ex)
+        {
+            const string msg = "[MiddlewareAssert] IHubContext<PipelineHub> is NOT registered in DI. "
+                + "Pipeline realtime events and StaleMonitorService will fail.";
             logger.LogCritical(ex, msg);
             throw new InvalidOperationException(msg, ex);
         }

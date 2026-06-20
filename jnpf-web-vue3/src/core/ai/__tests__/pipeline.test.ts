@@ -133,7 +133,7 @@ describe('编排器 — 全链路', () => {
 
     expect(result.status).toBe('waiting_confirmation');
     expect(result.requirement).toBeDefined();
-    expect(result.requirement!.proposedDomainModel.entities.length).toBe(1);
+    expect((result.requirement as { proposedDomainModel: { entities: unknown[] } }).proposedDomainModel.entities.length).toBe(1);
   });
 
   it('架构阶段：design → 自动注入审计字段', async () => {

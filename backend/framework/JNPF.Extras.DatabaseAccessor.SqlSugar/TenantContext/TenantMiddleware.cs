@@ -25,6 +25,7 @@ public sealed class TenantMiddleware
         "/api/system/",
         "/api/permission/",
         "/api/studio/",
+        "/api/LlmGateway/",
         "/swagger",
         "/.well-known",
         "/health",

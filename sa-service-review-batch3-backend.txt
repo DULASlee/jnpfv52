@@ -1,0 +1,5362 @@
+=== Backend Pipeline + LLM Gateway 打包 (2026-06-19 23:17:52) ===
+
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\LlmGatewayService.cs
+========================================
+
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.Json;
+using JNPF.DatabaseAccessor;
+using JNPF.DependencyInjection;
+using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
+using JNPF.InteAssistant.Entitys.Entity;
+using JNPF.InteAssistant.Interfaces;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using SqlSugar;
+
+namespace JNPF.InteAssistant;
+
+/// <summary>
+/// LLM 网关服务
+/// 统一 LLM 调用入口，封装 provider 切换，每次调用写入 BASE_AI_CALL_LOG
+/// 对齐前端 src/core/ai/llm/ — 支持 DeepSeek/MiMo/OpenAI/Ollama
+/// </summary>
+public class LlmGatewayService : ILlmGatewayService, ITransient
+{
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ISqlSugarRepository<AiCallLogEntity> _logRepository;
+    private readonly IConfiguration _configuration;
+    private readonly ILogger<LlmGatewayService> _logger;
+
+    private Dictionary<string, ProviderConfig>? _providers;
+    private string _defaultProvider = "mimo";
+    private string _fallbackProvider = "deepseek";
+
+    /// <summary>GAP-2: 熔断计数器（provider → failureCount）</summary>
+    private readonly ConcurrentDictionary<string, int> _failureCounts = new();
+
+    public LlmGatewayService(
+        IHttpClientFactory httpClientFactory,
+        ISqlSugarRepository<AiCallLogEntity> logRepository,
+        IConfiguration configuration,
+        ILogger<LlmGatewayService> logger)
+    {
+        _httpClientFactory = httpClientFactory;
+        _logRepository = logRepository;
+        _configuration = configuration;
+        _logger = logger;
+    }
+
+    // ─── GAP-2: 熔断计数器方法 ───
+
+    private void IncrementFailureCount(string provider)
+    {
+        _failureCounts.AddOrUpdate(provider, 1, (_, c) => c + 1);
+    }
+
+    private void ResetFailureCount(string provider)
+    {
+        _failureCounts.TryRemove(provider, out _);
+    }
+
+    private int GetFailureCount(string provider)
+    {
+        return _failureCounts.TryGetValue(provider, out var c) ? c : 0;
+    }
+
+    // ─── Provider 配置（延迟加载）───
+
+    private Dictionary<string, ProviderConfig> Providers
+    {
+        get
+        {
+            if (_providers == null)
+            {
+                _providers = _configuration.GetSection("AI:Providers")
+                    .Get<Dictionary<string, ProviderConfig>>() ?? new();
+                _defaultProvider = _configuration.GetValue("AI:DefaultProvider", "mimo")!;
+                _fallbackProvider = _configuration.GetValue("AI:FallbackProvider", "deepseek")!;
+            }
+            return _providers;
+        }
+    }
+
+    // ─── Obsolete 兼容方法 ───
+
+    /// <inheritdoc/>
+    [Obsolete]
+    public async Task<string> ChatAsync(string prompt, string? model = null)
+    {
+        var request = new ChatCompletionRequest
+        {
+            Messages = [new ChatMessage("user", prompt)],
+            ModelCode = model,
+            MaxTokens = 4096,
+            MaxRetries = 1,
+            TimeoutMs = 120000
+        };
+        var response = await ChatAsync(request);
+        return response.IsSuccess ? response.Content : $"[ERROR] {response.Error}";
+    }
+
+    /// <inheritdoc/>
+    [Obsolete]
+    public async Task<ProviderHealth> HealthCheckAsync()
+    {
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            var healthy = await HealthCheckAsync(_defaultProvider);
+            sw.Stop();
+            return new ProviderHealth
+            {
+                IsHealthy = healthy,
+                Provider = _defaultProvider,
+                LatencyMs = sw.ElapsedMilliseconds,
+                Error = healthy ? null : "Health check failed"
+            };
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            return new ProviderHealth
+            {
+                IsHealthy = false,
+                Provider = _defaultProvider,
+                LatencyMs = sw.ElapsedMilliseconds,
+                Error = ex.Message
+            };
+        }
+    }
+
+    // ─── 新接口（对齐前端 LLMGateway）───
+
+    /// <inheritdoc/>
+    public async Task<ChatCompletionResponse> ChatAsync(
+        ChatCompletionRequest request, CancellationToken ct = default)
+    {
+        var sw = Stopwatch.StartNew();
+        var originalProvider = request.ProviderCode.Length > 0
+            ? request.ProviderCode : _defaultProvider;
+        var currentProvider = originalProvider;
+        var maxRetries = request.MaxRetries > 0 ? request.MaxRetries : 3;
+        var retryCount = 0;
+
+        if (!Providers.TryGetValue(currentProvider, out _))
+        {
+            return new ChatCompletionResponse
+            {
+                IsSuccess = false,
+                Error = $"Provider '{currentProvider}' not configured",
+                LatencyMs = (int)sw.ElapsedMilliseconds
+            };
+        }
+
+        while (true)
+        {
+            if (!Providers.TryGetValue(currentProvider, out var provider))
+            {
+                return new ChatCompletionResponse
+                {
+                    IsSuccess = false,
+                    Error = $"Provider '{currentProvider}' not configured",
+                    LatencyMs = (int)sw.ElapsedMilliseconds
+                };
+            }
+
+            var model = request.ModelCode ?? provider.DefaultModel;
+
+            try
+            {
+                var httpClient = _httpClientFactory.CreateClient("LLM");
+                httpClient.Timeout = TimeSpan.FromMilliseconds(request.TimeoutMs);
+
+                var (requestBody, requestUri) = BuildRequest(request, provider, model);
+                var httpRequest = new HttpRequestMessage(HttpMethod.Post, requestUri)
+                {
+                    Content = new StringContent(
+                        JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json")
+                };
+
+                if (provider.ApiFormat == "anthropic")
+                {
+                    httpRequest.Headers.Add("x-api-key", provider.ApiKey);
+                    httpRequest.Headers.Add("anthropic-version", "2023-06-01");
+                }
+                else if (provider.ApiFormat == "openai")
+                {
+                    httpRequest.Headers.Add("Authorization", $"Bearer {provider.ApiKey}");
+                }
+
+                var response = await httpClient.SendAsync(httpRequest, ct);
+                var body = await response.Content.ReadAsStringAsync(ct);
+                sw.Stop();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = ParseResponse(body, provider.ApiFormat, model, sw.ElapsedMilliseconds);
+
+                    // GAP-2: 成功归零熔断计数器
+                    ResetFailureCount(currentProvider);
+
+                    // GAP-3: 写入审计日志（含降级字段）
+                    var isFallback = currentProvider != originalProvider;
+                    await WriteCallLogAsync(currentProvider, model,
+                        JsonSerializer.Serialize(requestBody), body,
+                        sw.ElapsedMilliseconds, (int)response.StatusCode,
+                        result.TokensIn, result.TokensOut, true, null,
+                        isFallback ? 1 : 0, originalProvider, model,
+                        isFallback ? $"主模型{originalProvider}连续失败，降级至{currentProvider}" : null);
+
+                    return result;
+                }
+
+                _logger.LogWarning(
+                    "LLM call attempt {Attempt} to {Provider}: HTTP {Status}",
+                    retryCount + 1, currentProvider, (int)response.StatusCode);
+
+                // 记录失败
+                await WriteCallLogAsync(currentProvider, model,
+                    JsonSerializer.Serialize(requestBody), body,
+                    sw.ElapsedMilliseconds, (int)response.StatusCode,
+                    0, 0, false, $"HTTP {response.StatusCode}",
+                    0, originalProvider, model, null);
+            }
+            catch (TaskCanceledException)
+            {
+                sw.Stop();
+                _logger.LogWarning("LLM timeout: Provider={Provider}, Attempt={Attempt}",
+                    currentProvider, retryCount + 1);
+            }
+            catch (Exception ex)
+            {
+                sw.Stop();
+                _logger.LogWarning(ex, "LLM error: Provider={Provider}, Attempt={Attempt}",
+                    currentProvider, retryCount + 1);
+            }
+
+            retryCount++;
+            IncrementFailureCount(currentProvider);
+
+            // GAP-1: 主Provider连续失败 >= 3次 → 切换到备用Provider
+            if (retryCount >= maxRetries && currentProvider == originalProvider
+                && !string.IsNullOrEmpty(_fallbackProvider)
+                && Providers.ContainsKey(_fallbackProvider))
+            {
+                _logger.LogWarning(
+                    "LLM降级: {Original}连续失败{Count}次 → 切换至{Fallback}",
+                    originalProvider, retryCount, _fallbackProvider);
+                currentProvider = _fallbackProvider;
+                retryCount = 0;
+                continue;
+            }
+
+            // GAP-1: 备用Provider也用完重试次数 → 全部失败
+            if (retryCount >= maxRetries)
+            {
+                _logger.LogError(
+                    "LLM全部Provider不可用: {Original}→{Current}, 连续失败{Count}次",
+                    originalProvider, currentProvider, retryCount);
+
+                await WriteCallLogAsync(currentProvider, model ?? "unknown",
+                    "", "", sw.ElapsedMilliseconds, 0, 0, 0, false,
+                    $"所有Provider(主:{originalProvider},备:{currentProvider})均失败{retryCount}次",
+                    2, originalProvider, "none", $"全部Provider不可用");
+
+                return new ChatCompletionResponse
+                {
+                    IsSuccess = false,
+                    Error = $"所有LLM Provider不可用: {originalProvider}和{currentProvider}均连续失败",
+                    LatencyMs = (int)sw.ElapsedMilliseconds
+                };
+            }
+
+            // 指数退避
+            var delay = TimeSpan.FromSeconds(Math.Pow(2, retryCount - 1));
+            await Task.Delay(delay, ct);
+        }
+    }
+
+    // ─── I-07: 5 级降级链（配置化）───
+
+    /// <summary>
+    /// 按 LLM 降级链顺序依次尝试调用（I-07 裁决 · v2.1）。
+    /// 读取配置 "LlmGateway:Providers" 数组，按 Level 排序后逐级降级。
+    /// 降级时通过 SignalR 推送 model_changed SSE 事件。
+    /// </summary>
+    public async Task<ChatCompletionResponse> ChatWithLevelFallbackAsync(
+        ChatCompletionRequest request, CancellationToken ct = default)
+    {
+        var sw = Stopwatch.StartNew();
+        var levelConfigs = LoadLevelChain();
+        var originalProvider = levelConfigs.FirstOrDefault()?.Name ?? _defaultProvider;
+
+        for (int levelIdx = 0; levelIdx < levelConfigs.Count; levelIdx++)
+        {
+            var levelCfg = levelConfigs[levelIdx];
+            var provider = levelCfg.Name;
+            var model = request.ModelCode ?? levelCfg.Model;
+            var maxRetries = levelCfg.MaxRetries;
+            var timeoutMs = levelCfg.TimeoutSeconds * 1000;
+
+            // 非首选时写入降级审计
+            if (levelIdx > 0)
+            {
+                _logger.LogWarning(
+                    "[LLM降级 L{Level}] {From}→{To}：{Reason}",
+                    levelIdx, originalProvider, provider,
+                    $"L{levelIdx - 1}级Provider连续失败");
+
+                await WriteCallLogAsync(provider, model,
+                    JsonSerializer.Serialize(request.Messages),
+                    string.Empty, 0, 0, 0, 0, false,
+                    $"L{levelIdx}降级触发",
+                    levelIdx, originalProvider, provider,
+                    $"L{levelIdx}降级: {originalProvider}→{provider}");
+            }
+
+            for (int retry = 0; retry < maxRetries; retry++)
+            {
+                if (!Providers.TryGetValue(provider, out var p))
+                {
+                    _logger.LogWarning("Provider {Name} 未配置，跳过", provider);
+                    break;
+                }
+
+                try
+                {
+                    var httpClient = _httpClientFactory.CreateClient("LLM");
+                    httpClient.Timeout = TimeSpan.FromMilliseconds(timeoutMs);
+
+                    var (requestBody, requestUri) = BuildRequest(request, p, model);
+                    var httpRequest = new HttpRequestMessage(HttpMethod.Post, requestUri)
+                    {
+                        Content = new StringContent(
+                            JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json")
+                    };
+
+                    if (p.ApiFormat == "anthropic")
+                    {
+                        httpRequest.Headers.Add("x-api-key", p.ApiKey);
+                        httpRequest.Headers.Add("anthropic-version", "2023-06-01");
+                    }
+                    else if (p.ApiFormat == "openai")
+                    {
+                        httpRequest.Headers.Add("Authorization", $"Bearer {p.ApiKey}");
+                    }
+
+                    var response = await httpClient.SendAsync(httpRequest, ct);
+                    var body = await response.Content.ReadAsStringAsync(ct);
+                    sw.Stop();
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var result = ParseResponse(body, p.ApiFormat, model, sw.ElapsedMilliseconds);
+                        ResetFailureCount(provider);
+
+                        await WriteCallLogAsync(provider, model,
+                            JsonSerializer.Serialize(requestBody), body,
+                            sw.ElapsedMilliseconds, (int)response.StatusCode,
+                            result.TokensIn, result.TokensOut, true, null,
+                            levelIdx, originalProvider, provider,
+                            levelIdx > 0 ? $"L{levelIdx}降级成功" : null);
+
+                        // I-07: 推送 SSE model_changed 事件
+                        // await PushModelChangedSse(request, originalProvider, provider, levelIdx);
+
+                        return result;
+                    }
+
+                    _logger.LogWarning(
+                        "[LLM L{Level}] {Provider} HTTP {Status} (retry {Retry}/{MaxRetry})",
+                        levelIdx, provider, (int)response.StatusCode, retry + 1, maxRetries);
+                }
+                catch (TaskCanceledException)
+                {
+                    sw.Restart();
+                    _logger.LogWarning("[LLM L{Level}] {Provider} 超时 (retry {Retry}/{MaxRetry})",
+                        levelIdx, provider, retry + 1, maxRetries);
+                }
+                catch (Exception ex)
+                {
+                    sw.Restart();
+                    _logger.LogWarning(ex, "[LLM L{Level}] {Provider} 异常 (retry {Retry}/{MaxRetry})",
+                        levelIdx, provider, retry + 1, maxRetries);
+                }
+
+                IncrementFailureCount(provider);
+
+                // 指数退避
+                if (retry < maxRetries - 1)
+                {
+                    var delay = TimeSpan.FromSeconds(Math.Pow(2, retry));
+                    await Task.Delay(delay, ct);
+                }
+            }
+        }
+
+        // 全部 Provider 失败 → L5 无 AI
+        sw.Stop();
+        _logger.LogError("[LLM] 全部 {Count} 级降级链不可用", levelConfigs.Count);
+
+        await WriteCallLogAsync("none", "unknown",
+            string.Empty, string.Empty, sw.ElapsedMilliseconds, 0, 0, 0, false,
+            "全部Provider不可用",
+            5, originalProvider, "none", "L5: 无AI模式");
+
+        return new ChatCompletionResponse
+        {
+            IsSuccess = false,
+            Error = "所有LLM Provider不可用——请切换到手工编辑模式",
+            LatencyMs = (int)sw.ElapsedMilliseconds
+        };
+    }
+
+    /// <summary>
+    /// 从配置 "LlmGateway:Providers" 加载降级链，按 Level 排序。
+    /// 配置示例（appsettings.json）：
+    /// "LlmGateway": { "Providers": [
+    ///   {"Name":"mimo","Model":"mimo-v2.5-pro","Level":0,"MaxRetries":3,"TimeoutSeconds":60},
+    ///   {"Name":"deepseek","Model":"deepseek-v4-pro","Level":1,"MaxRetries":3,"TimeoutSeconds":80},
+    ///   ...
+    /// ]}
+    /// </summary>
+    private List<LlmProviderLevelConfig> LoadLevelChain()
+    {
+        var configs = _configuration
+            .GetSection("LlmGateway:Providers")
+            .Get<List<LlmProviderLevelConfig>>();
+
+        return (configs ?? DefaultLevelChain())
+            .OrderBy(c => c.Level)
+            .ToList();
+    }
+
+    /// <summary>默认降级链（MiMo→DeepSeek 2 级，与现有逻辑对齐）</summary>
+    private static List<LlmProviderLevelConfig> DefaultLevelChain()
+    {
+        return new List<LlmProviderLevelConfig>
+        {
+            new() { Name = "mimo", Model = "mimo-v2.5-pro", Level = 0, MaxRetries = 3, TimeoutSeconds = 60 },
+            new() { Name = "deepseek", Model = "deepseek-v4-pro", Level = 1, MaxRetries = 3, TimeoutSeconds = 80 },
+        };
+    }
+
+    /// <inheritdoc/>
+    public async IAsyncEnumerable<string> ChatStreamAsync(
+        ChatCompletionRequest request,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var result = await TryCreateStreamAsync(request, ct);
+
+        if (result.Error != null)
+        {
+            yield return result.Error;
+            yield break;
+        }
+
+        // 从 stream 中逐行 yield（不能放在 try-catch 中）
+        using var stream = result.Stream!;
+        using var reader = new StreamReader(stream!);
+
+        while (!reader.EndOfStream && !ct.IsCancellationRequested)
+        {
+            var line = await reader.ReadLineAsync(ct);
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            if (line.StartsWith("data: "))
+            {
+                var json = line[6..];
+                if (json == "[DONE]") yield break;
+                yield return json;
+            }
+        }
+    }
+
+    /// <summary>
+    /// GAP-4: 带降级重试的流式连接建立
+    /// </summary>
+    private async Task<(Stream? Stream, string? Error)> TryCreateStreamAsync(
+        ChatCompletionRequest request, CancellationToken ct)
+    {
+        var originalProvider = request.ProviderCode.Length > 0
+            ? request.ProviderCode : _defaultProvider;
+        var currentProvider = originalProvider;
+        var maxRetries = request.MaxRetries > 0 ? request.MaxRetries : 3;
+        var retryCount = 0;
+
+        while (true)
+        {
+            if (!Providers.TryGetValue(currentProvider, out var provider))
+                return (null, $"[ERROR] Provider '{currentProvider}' not configured");
+
+            var model = request.ModelCode ?? provider.DefaultModel;
+
+            try
+            {
+                var httpClient = _httpClientFactory.CreateClient("LLM");
+                httpClient.Timeout = TimeSpan.FromMilliseconds(request.TimeoutMs);
+
+                var (requestBody, requestUri) = BuildRequest(request, provider, model);
+                if (requestBody is Dictionary<string, object> dict)
+                    dict["stream"] = true;
+
+                var httpRequest = new HttpRequestMessage(HttpMethod.Post, requestUri)
+                {
+                    Content = new StringContent(
+                        JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json")
+                };
+
+                if (provider.ApiFormat == "anthropic")
+                {
+                    httpRequest.Headers.Add("x-api-key", provider.ApiKey);
+                    httpRequest.Headers.Add("anthropic-version", "2023-06-01");
+                }
+                else if (provider.ApiFormat == "openai")
+                {
+                    httpRequest.Headers.Add("Authorization", $"Bearer {provider.ApiKey}");
+                }
+
+                var response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
+                response.EnsureSuccessStatusCode();
+
+                ResetFailureCount(currentProvider);
+
+                var isFallback = currentProvider != originalProvider;
+                await WriteCallLogAsync(currentProvider, model,
+                    JsonSerializer.Serialize(requestBody), "",
+                    0, 200, 0, 0, true, null,
+                    isFallback ? 1 : 0, originalProvider, model,
+                    isFallback ? $"主模型{originalProvider}连续失败，降级至{currentProvider}" : null);
+
+                return (await response.Content.ReadAsStreamAsync(ct), null);
+            }
+            catch (Exception ex) when (!ct.IsCancellationRequested)
+            {
+                retryCount++;
+                IncrementFailureCount(currentProvider);
+
+                _logger.LogWarning(ex, "LLM stream err: Provider={Provider}, Attempt={Attempt}",
+                    currentProvider, retryCount);
+
+                await WriteCallLogAsync(currentProvider, model ?? "unknown",
+                    "", "", 0, 0, 0, 0, false, ex.Message,
+                    0, originalProvider, model ?? currentProvider, null);
+
+                if (retryCount >= maxRetries && currentProvider == originalProvider
+                    && !string.IsNullOrEmpty(_fallbackProvider)
+                    && Providers.ContainsKey(_fallbackProvider))
+                {
+                    _logger.LogWarning("LLM Stream降级: {Original}→{Fallback}", originalProvider, _fallbackProvider);
+                    currentProvider = _fallbackProvider;
+                    retryCount = 0;
+                    continue;
+                }
+
+                if (retryCount >= maxRetries)
+                {
+                    _logger.LogError("LLM Stream全部Provider不可用");
+                    await WriteCallLogAsync(currentProvider, model ?? "unknown",
+                        "", "", 0, 0, 0, 0, false,
+                        "所有Provider均失败", 2, originalProvider, "none", "全部Provider不可用");
+                    return (null, "[ERROR] 所有LLM Provider不可用");
+                }
+
+                var delay = TimeSpan.FromSeconds(Math.Pow(2, retryCount - 1));
+                await Task.Delay(delay, ct);
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> HealthCheckAsync(string providerCode, CancellationToken ct = default)
+    {
+        if (!Providers.TryGetValue(providerCode, out var provider))
+            return false;
+
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient("LLM");
+            httpClient.Timeout = TimeSpan.FromSeconds(10);
+
+            // 发送轻量 ping（用空消息测试连通性）
+            var requestBody = new Dictionary<string, object>
+            {
+                ["model"] = provider.DefaultModel,
+                ["max_tokens"] = 1,
+                ["messages"] = new[] { new { role = "user", content = "ping" } }
+            };
+
+            var requestUri = provider.ApiFormat == "anthropic"
+                ? $"{provider.BaseUrl}/v1/messages"
+                : $"{provider.BaseUrl}/chat/completions";
+
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, requestUri)
+            {
+                Content = new StringContent(
+                    JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json")
+            };
+
+            if (provider.ApiFormat == "anthropic")
+            {
+                httpRequest.Headers.Add("x-api-key", provider.ApiKey);
+                httpRequest.Headers.Add("anthropic-version", "2023-06-01");
+            }
+            else if (provider.ApiFormat == "openai")
+            {
+                httpRequest.Headers.Add("Authorization", $"Bearer {provider.ApiKey}");
+            }
+
+            var response = await httpClient.SendAsync(httpRequest, ct);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Health check failed for provider {Provider}", providerCode);
+            return false;
+        }
+    }
+
+    /// <inheritdoc/>
+    public Task<ProviderInfo> GetProviderInfoAsync(string providerCode)
+    {
+        if (Providers.TryGetValue(providerCode, out var provider))
+        {
+            return Task.FromResult(new ProviderInfo
+            {
+                ProviderCode = providerCode,
+                ModelName = provider.DefaultModel
+            });
+        }
+        return Task.FromResult(new ProviderInfo
+        {
+            ProviderCode = providerCode,
+            ModelName = "unknown"
+        });
+    }
+
+    // ─── Private Helpers ───
+
+    private (object RequestBody, string RequestUri) BuildRequest(
+        ChatCompletionRequest request, ProviderConfig provider, string model)
+    {
+        if (provider.ApiFormat == "anthropic")
+        {
+            var messages = new List<object>();
+            if (!string.IsNullOrWhiteSpace(request.SystemPrompt))
+            {
+                messages.Add(new { role = "system", content = request.SystemPrompt });
+            }
+            foreach (var msg in request.Messages)
+            {
+                messages.Add(new { role = msg.Role, content = msg.Content });
+            }
+
+            var body = new Dictionary<string, object>
+            {
+                ["model"] = model,
+                ["max_tokens"] = request.MaxTokens,
+                ["temperature"] = request.Temperature,
+                ["messages"] = messages
+            };
+            return (body, $"{provider.BaseUrl}/v1/messages");
+        }
+        else
+        {
+            // OpenAI 兼容格式
+            var messages = new List<object>();
+            if (!string.IsNullOrWhiteSpace(request.SystemPrompt))
+            {
+                messages.Add(new { role = "system", content = request.SystemPrompt });
+            }
+            foreach (var msg in request.Messages)
+            {
+                messages.Add(new { role = msg.Role, content = msg.Content });
+            }
+
+            var body = new Dictionary<string, object>
+            {
+                ["model"] = model,
+                ["max_tokens"] = request.MaxTokens,
+                ["temperature"] = request.Temperature,
+                ["messages"] = messages
+            };
+
+            if (request.ResponseFormat == "json")
+            {
+                body["response_format"] = new { type = "json_object" };
+            }
+
+            return (body, $"{provider.BaseUrl}/chat/completions");
+        }
+    }
+
+    private ChatCompletionResponse ParseResponse(
+        string body, string apiFormat, string model, long latencyMs)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+
+            if (apiFormat == "anthropic")
+            {
+                var content = doc.RootElement
+                    .GetProperty("content")[0]
+                    .GetProperty("text")
+                    .GetString() ?? "";
+
+                var usage = doc.RootElement.GetProperty("usage");
+                var tokensIn = usage.GetProperty("input_tokens").GetInt32();
+                var tokensOut = usage.GetProperty("output_tokens").GetInt32();
+
+                return new ChatCompletionResponse
+                {
+                    Content = content,
+                    ModelUsed = model,
+                    TokensIn = tokensIn,
+                    TokensOut = tokensOut,
+                    LatencyMs = (int)latencyMs,
+                    IsSuccess = true
+                };
+            }
+            else
+            {
+                // OpenAI 兼容格式
+                var choices = doc.RootElement.GetProperty("choices");
+                var content = choices[0].GetProperty("message").GetProperty("content").GetString() ?? "";
+
+                var usage = doc.RootElement.GetProperty("usage");
+                var tokensIn = usage.GetProperty("prompt_tokens").GetInt32();
+                var tokensOut = usage.GetProperty("completion_tokens").GetInt32();
+
+                return new ChatCompletionResponse
+                {
+                    Content = content,
+                    ModelUsed = model,
+                    TokensIn = tokensIn,
+                    TokensOut = tokensOut,
+                    LatencyMs = (int)latencyMs,
+                    IsSuccess = true
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to parse LLM response: {Body}", body.Length > 500 ? body[..500] : body);
+            return new ChatCompletionResponse
+            {
+                Content = body,
+                ModelUsed = model,
+                LatencyMs = (int)latencyMs,
+                IsSuccess = true  // 即使解析失败也返回原始内容
+            };
+        }
+    }
+
+    private async Task WriteCallLogAsync(
+        string provider, string model,
+        string requestBody, string responseBody,
+        long latencyMs, int statusCode,
+        int tokensIn, int tokensOut,
+        bool isSuccess, string? error,
+        int? fallback = null,
+        string? originalModel = null,
+        string? actualModel = null,
+        string? fallbackReason = null)
+    {
+        try
+        {
+            var log = new AiCallLogEntity
+            {
+                Model = $"{provider}/{model}",
+                RequestBody = requestBody.Length > 4000 ? requestBody[..4000] : requestBody,
+                ResponseBody = responseBody.Length > 4000 ? responseBody[..4000] : responseBody,
+                LatencyMs = latencyMs,
+                StatusCode = statusCode,
+                // GAP-3: 降级审计字段
+                Fallback = fallback,
+                OriginalModel = originalModel,
+                ActualModel = actualModel,
+                FallbackReason = fallbackReason?.Length > 200 ? fallbackReason[..200] : fallbackReason,
+            };
+            log.Create();
+
+            await _logRepository.AsInsertable(log)
+                .IgnoreColumns(ignoreNullColumn: true)
+                .ExecuteCommandAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to write AI call log");
+        }
+    }
+
+    /// <summary>
+    /// 质量评估: 评估 LLM 响应质量。分数 < 0.4 视为低质量，触发供应商切换 (Sprint 4 - S4-4)
+    /// </summary>
+    private static double EvaluateResponseQuality(string? content, string? expectedFormat = null)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return 0.0;
+        double score = 0.6;
+        if (content.Length < 50) score -= 0.3;
+        else if (content.Length > 100) score += 0.1;
+        if (expectedFormat == "json")
+        {
+            try { System.Text.Json.JsonDocument.Parse(content); score += 0.15; }
+            catch
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(content, @"```json\s*([\s\S]*?)\s*```");
+                if (match.Success)
+                {
+                    try { System.Text.Json.JsonDocument.Parse(match.Groups[1].Value); score += 0.1; }
+                    catch { score -= 0.2; }
+                }
+                else score -= 0.2;
+            }
+        }
+        var sentences = content.Split(new[] { '.', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        if (sentences.Length > 0)
+        {
+            var uniqueRatio = (double)sentences.Distinct().Count() / sentences.Length;
+            if (uniqueRatio < 0.5) score -= 0.2;
+        }
+        if (content.EndsWith("...") || content.EndsWith("…")) score -= 0.15;
+        return Math.Max(0.0, Math.Min(1.0, score));
+    }
+}
+
+/// <summary>
+/// Provider 配置（从 AI:Providers 读取）
+/// </summary>
+internal class ProviderConfig
+{
+    public string BaseUrl { get; set; } = "";
+    public string ApiKey { get; set; } = "";
+    public string DefaultModel { get; set; } = "";
+    public string ApiFormat { get; set; } = "anthropic";
+}
+
+/// <summary>
+/// LLM 降级链 Provider 配置（I-07 裁决 · 从 LlmGateway:Providers 读取）。
+/// </summary>
+internal class LlmProviderLevelConfig
+{
+    public string Name { get; set; } = string.Empty;
+    public string Model { get; set; } = string.Empty;
+    public int Level { get; set; }
+    public int MaxRetries { get; set; } = 3;
+    public int TimeoutSeconds { get; set; } = 60;
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\Interfaces\ILlmGatewayService.cs
+========================================
+
+using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
+
+namespace JNPF.InteAssistant.Interfaces;
+
+/// <summary>
+/// LLM 网关服务接口
+/// 统一 LLM 调用入口，封装 provider 切换，每次调用写入 BASE_AI_CALL_LOG
+/// 对齐前端 src/core/ai/llm/types.ts LLMGateway
+/// </summary>
+public interface ILlmGatewayService
+{
+    /// <summary>
+    /// 执行聊天补全（旧接口，保留向后兼容）
+    /// </summary>
+    [Obsolete("Use ChatAsync(ChatCompletionRequest, CancellationToken) instead.")]
+    Task<string> ChatAsync(string prompt, string? model = null);
+
+    /// <summary>
+    /// 健康检查（旧接口，保留向后兼容）
+    /// </summary>
+    [Obsolete("Use HealthCheckAsync(string, CancellationToken) instead.")]
+    Task<ProviderHealth> HealthCheckAsync();
+
+    // ─── 新接口（对齐前端 LLMGateway）───
+
+    /// <summary>
+    /// 执行聊天补全（完整参数）
+    /// </summary>
+    /// <param name="request">聊天请求</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>聊天响应</returns>
+    Task<ChatCompletionResponse> ChatAsync(ChatCompletionRequest request, CancellationToken ct = default);
+
+    /// <summary>
+    /// 执行聊天补全（流式输出）
+    /// 返回 SSE 流，每条 yield 增量文本
+    /// </summary>
+    /// <param name="request">聊天请求</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>流式文本块</returns>
+    IAsyncEnumerable<string> ChatStreamAsync(ChatCompletionRequest request, CancellationToken ct = default);
+
+    /// <summary>
+    /// 健康检查（指定 Provider）
+    /// </summary>
+    /// <param name="providerCode">Provider 代码</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>true=可用</returns>
+    Task<bool> HealthCheckAsync(string providerCode, CancellationToken ct = default);
+
+    /// <summary>
+    /// 获取 Provider 信息
+    /// </summary>
+    /// <param name="providerCode">Provider 代码</param>
+    /// <returns>Provider 信息</returns>
+    Task<ProviderInfo> GetProviderInfoAsync(string providerCode);
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\AIDevelopmentPipelineService.cs
+========================================
+
+using System.Collections.Concurrent;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Channels;
+using JNPF.DependencyInjection;
+using JNPF.DynamicApiController;
+using JNPF.InteAssistant.Entitys.Common;
+using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
+using JNPF.InteAssistant.Entitys.Entity;
+using JNPF.InteAssistant.Interfaces;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using SqlSugar;
+using Microsoft.Extensions.Configuration;
+using System.Net.Http.Json;
+
+namespace JNPF.InteAssistant;
+
+/// <summary>
+/// AI 开发流水线 API — 完整的五阶段 AI 辅助开发平台
+/// </summary>
+[ApiDescriptionSettings(Tag = "Studio", Name = "PipelineExecute", Order = 195)]
+[Route("api/studio/pipeline/execute")]
+public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
+{
+    private readonly IPipelineEngine _pipelineEngine;
+    private readonly DetailedDesignOrchestrator _designOrchestrator;
+    private readonly ILlmGatewayService _llmGateway;
+    private readonly ILogger<AIDevelopmentPipelineService> _logger;
+    private readonly ISandboxManager _sandbox;
+    private readonly ISqlSugarClient _db;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IConfiguration _configuration;
+
+    /// <summary>
+    /// SSE 事件通道池：按 pipelineId 隔离。/execute 写入 token，/events 读取推送给前端。
+    /// </summary>
+    private static readonly ConcurrentDictionary<long, Channel<SseEvent>> _sseChannels = new();
+
+    public AIDevelopmentPipelineService(
+        IPipelineEngine pipelineEngine,
+        DetailedDesignOrchestrator designOrchestrator,
+        ILlmGatewayService llmGateway,
+        ISandboxManager sandbox,
+        ISqlSugarClient sqlSugarClient,
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
+        ILogger<AIDevelopmentPipelineService> logger)
+    {
+        _pipelineEngine = pipelineEngine;
+        _designOrchestrator = designOrchestrator;
+        _llmGateway = llmGateway;
+        _sandbox = sandbox;
+        _db = sqlSugarClient;
+        _httpClientFactory = httpClientFactory;
+        _configuration = configuration;
+        _logger = logger;
+    }
+
+    // ─── 创建流水线 ───
+
+    /// <summary>
+    /// 创建流水线（落库 + 保存用户需求消息）
+    /// </summary>
+    [HttpPost("create")]
+    public async Task<PipelineResult> CreateAsync([FromBody] CreatePipelineInput input)
+    {
+        var tenantId = GetTenantId();
+        var userId = GetUserId();
+
+        var requirement = input.Requirement ?? input.UserRequirement ?? "";
+        var name = string.IsNullOrWhiteSpace(input.Name)
+            ? (requirement.Length > 50 ? requirement[..50] : requirement)
+            : input.Name;
+        if (string.IsNullOrWhiteSpace(name)) name = "未命名流水线";
+
+        var request = new PipelineCreateRequest
+        {
+            Name = name,
+            UserRequirement = requirement
+        };
+
+        var result = await _pipelineEngine.CreateAsync(request, tenantId, userId);
+
+        // 落库 BASE_AI_PIPELINE（用 engine 的 pipelineId 作为主键，保持前后端 ID 一致）
+        var entity = new AiPipelineEntity
+        {
+            Id = result.PipelineId.ToString(),
+            Name = name,
+            CurrentStage = PipelineStage.Requirement,
+            Status = "draft",
+            StartedTime = DateTime.Now
+        };
+        entity.Create();
+        await _db.Insertable(entity).ExecuteCommandAsync();
+
+        // 保存用户需求消息
+        await SaveMessageAsync(result.PipelineId.ToString(), PipelineStage.Requirement, "user", requirement);
+
+        _logger.LogInformation("流水线创建: Id={Id}, Name={Name}", result.PipelineId, name);
+        return result;
+    }
+
+    // ─── 启动流水线 ───
+
+    /// <summary>
+    /// 启动流水线
+    /// </summary>
+    [HttpPost("{pipelineId:long}/start")]
+    public async Task<PipelineResult> StartAsync(long pipelineId)
+    {
+        return await _pipelineEngine.StartAsync(pipelineId);
+    }
+
+    // ─── 执行当前阶段（调 LLM 流式输出）───
+
+    /// <summary>
+    /// 执行当前阶段 — 保存用户消息，启动后台 LLM 流式任务，立即返回。
+    /// 前端随后通过 GET /events 读取 SSE 流式 token。
+    /// </summary>
+    [HttpPost("{pipelineId:long}/execute")]
+    public async Task<StageResult> ExecuteStageAsync(
+        long pipelineId, [FromBody] ExecuteStageRequest request)
+    {
+        var stageName = string.IsNullOrWhiteSpace(request.StageName)
+            ? PipelineStage.Requirement : request.StageName;
+        var message = request.Message ?? "";
+        var provider = request.Provider ?? "";
+
+        // 1. 保存用户消息到数据库
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            await SaveMessageAsync(pipelineId.ToString(), stageName, "user", message);
+        }
+
+        // 2. 流转状态机
+        var stageResult = await _pipelineEngine.ExecuteStageAsync(pipelineId, stageName);
+
+        // 3. 创建 SSE 通道（替换旧通道，支持重复执行）
+        if (_sseChannels.TryRemove(pipelineId, out var oldChannel))
+            oldChannel.Writer.TryComplete();
+
+        var channel = Channel.CreateUnbounded<SseEvent>(new UnboundedChannelOptions
+        {
+            SingleReader = true,
+            SingleWriter = true
+        });
+        _sseChannels[pipelineId] = channel;
+
+        // 4. 启动后台 LLM 流式任务（不等待，立即返回）
+        _ = Task.Run(() => StreamLlmResponseAsync(pipelineId, stageName, provider, authHeader, channel));
+
+        _logger.LogInformation("流水线阶段执行启动: PipelineId={Id}, Stage={Stage}", pipelineId, stageName);
+        return stageResult;
+    }
+
+    /// <summary>
+    /// 后台执行 LLM 流式调用，token 写入 Channel 供 /events 读取。
+    /// 从根 ServiceProvider 创建独立 scope，避免请求结束后 DI 服务被释放。
+    /// </summary>
+    private async Task StreamLlmResponseAsync(long pipelineId, string stageName, string provider, string authHeader, Channel<SseEvent> channel)
+    {
+        // 创建独立 DI scope，确保 _db/_llmGateway 在请求结束后仍可用
+        using var scope = App.RootServices.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
+        var llmGateway = scope.ServiceProvider.GetRequiredService<ILlmGatewayService>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<AIDevelopmentPipelineService>>();
+
+        var fullResponse = new StringBuilder();
+        try
+        {
+            logger.LogInformation("LLM 流式任务开始: PipelineId={Id}, Stage={Stage}, Provider={Provider}",
+                pipelineId, stageName, provider);
+
+            // 读取历史消息（构建上下文）
+            var history = await db.Queryable<AiPipelineMessageEntity>()
+                .Where(x => x.PipelineId == pipelineId.ToString() && (x.DeleteMark == 0 || x.DeleteMark == null))
+                .OrderBy(x => x.CreatorTime)
+                .ToListAsync();
+
+            var chatMessages = history
+                .Where(x => x.Role is "user" or "assistant")
+                .Select(x => new ChatMessage(x.Role, x.Content))
+                .ToList();
+
+            logger.LogInformation("LLM 历史消息数: {Count}", chatMessages.Count);
+
+            if (chatMessages.Count == 0)
+            {
+                await channel.Writer.WriteAsync(new SseEvent("error", "无历史消息可发送给 LLM"));
+                return;
+            }
+
+            // ═══════════════════════════════════════════════════
+            // SA 流水线拦截：需求分析阶段走 SA Service
+            // ═══════════════════════════════════════════════════
+            if (stageName == "requirement")
+            {
+                logger.LogInformation("[SA] 需求分析阶段，调用 SA Service pipelineId={PipelineId}", pipelineId);
+
+                // 从历史消息中提取用户需求文本
+                var requirementText = chatMessages
+                    .Where(m => m.Role == "user")
+                    .Select(m => m.Content)
+                    .LastOrDefault() ?? "";
+
+                if (string.IsNullOrWhiteSpace(requirementText))
+                {
+                    await channel.Writer.WriteAsync(new SseEvent("error", "未找到用户需求文本"));
+                    return;
+                }
+
+                // 推送 SSE：SA 流水线开始
+                await channel.Writer.WriteAsync(new SseEvent("thinking", "正在启动 SA 结构化分析流水线..."));
+
+                try
+                {
+                    var saServiceUrl = _configuration.GetValue<string>("SA:ServiceUrl") ?? "http://localhost:3001";
+
+                    var httpClient = _httpClientFactory.CreateClient();
+                    httpClient.Timeout = TimeSpan.FromMinutes(5);
+
+                    // 从 pipeline 记录获取 tenantId
+                    var pipeline = await db.Queryable<AiPipelineEntity>()
+                        .FirstAsync(p => p.Id == pipelineId.ToString());
+                    var tenantId = pipeline?.TenantId ?? "default";
+
+                    var saRequest = new
+                    {
+                        tenantId = tenantId,
+                        projectId = pipelineId,
+                        requirementText = requirementText,
+                        userId = "system",
+                        industry = "manufacturing"
+                    };
+
+                    // 同时通过 X-Tenant-Id 请求头传递租户信息
+                    httpClient.DefaultRequestHeaders.Remove("X-Tenant-Id");
+                    httpClient.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId);
+
+                    await channel.Writer.WriteAsync(new SseEvent("thinking", "正在执行 3-Tier SA 流水线（Scope → DFD → BPM → Dict → ER → STD）..."));
+
+                    var saResponse = await httpClient.PostAsJsonAsync($"{saServiceUrl}/api/sa/run", saRequest);
+
+                    if (!saResponse.IsSuccessStatusCode)
+                    {
+                        var errorBody = await saResponse.Content.ReadAsStringAsync();
+                        logger.LogError("[SA] SA Service 返回错误: {StatusCode} {Body}", saResponse.StatusCode, errorBody);
+                        await channel.Writer.WriteAsync(new SseEvent("error", $"SA Service 调用失败: {saResponse.StatusCode}"));
+                        return;
+                    }
+
+                    var saResult = await saResponse.Content.ReadFromJsonAsync<SAResultDto>();
+
+                    // 推送 Scope 结果
+                    if (saResult?.Result?.Scope != null)
+                    {
+                        await channel.Writer.WriteAsync(new SseEvent("thinking", "✅ 边界提取完成"));
+                    }
+
+                    // 推送 DFD 结果
+                    if (saResult?.Result?.Dfd != null)
+                    {
+                        await channel.Writer.WriteAsync(new SseEvent("thinking", "✅ DFD 数据流图生成完成"));
+                    }
+
+                    // 推送 BPM 结果
+                    if (saResult?.Result?.Bpm != null)
+                    {
+                        await channel.Writer.WriteAsync(new SseEvent("thinking", "✅ 业务流程图生成完成"));
+                    }
+
+                    // 推送数据字典结果
+                    if (saResult?.Result?.Dict != null)
+                    {
+                        await channel.Writer.WriteAsync(new SseEvent("thinking", "✅ 数据字典生成完成"));
+                    }
+
+                    // 推送 ER 图结果
+                    if (saResult?.Result?.Er != null)
+                    {
+                        await channel.Writer.WriteAsync(new SseEvent("thinking", "✅ ER 图生成完成"));
+                    }
+
+                    // 推送状态机结果
+                    if (saResult?.Result?.Std != null)
+                    {
+                        await channel.Writer.WriteAsync(new SseEvent("thinking", "✅ 状态机生成完成"));
+                    }
+
+                    // 推送完整 SA 结果作为 Markdown token
+                    var saContent = FormatSAResultAsMarkdown(saResult);
+                    fullResponse.Append(saContent);
+                    await channel.Writer.WriteAsync(new SseEvent("chunk", saContent));
+
+                    // 推送 IR 数据（结构化 JSON）
+                    if (saResult?.Result != null)
+                    {
+                        var irJson = JsonSerializer.Serialize(saResult.Result);
+                        await channel.Writer.WriteAsync(new SseEvent("ir", irJson));
+                    }
+
+                    // 推送阶段完成信号
+                    await channel.Writer.WriteAsync(new SseEvent("stage_complete"));
+
+                    // 保存 assistant 消息到数据库
+                    await SaveMessageAsync(db, pipelineId.ToString(), stageName, "assistant", saContent);
+
+                    logger.LogInformation("[SA] 需求分析完成 pipelineId={PipelineId}", pipelineId);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "[SA] SA Service 调用异常 pipelineId={PipelineId}", pipelineId);
+                    await channel.Writer.WriteAsync(new SseEvent("error", $"SA 流水线执行异常: {ex.Message}"));
+                }
+
+                await channel.Writer.WriteAsync(new SseEvent("done"));
+                return;
+            }
+            // ═══════════════════════════════════════════════════
+            // 以下原有 LLM 调用代码，一个字不动
+            // ═══════════════════════════════════════════════════
+
+            // 构造 LLM 请求
+            var llmRequest = new ChatCompletionRequest
+            {
+                ProviderCode = provider,
+                SystemPrompt = GetStageSystemPrompt(stageName),
+                Messages = chatMessages,
+                MaxTokens = 4096,
+                Temperature = 0.7,
+                MaxRetries = 2,
+                TimeoutMs = 120000
+            };
+
+            // 流式调用 LLM Gateway
+            var chunkCount = 0;
+            await foreach (var json in llmGateway.ChatStreamAsync(llmRequest))
+            {
+                if (json.StartsWith("[ERROR]") || json.StartsWith("[error]"))
+                {
+                    logger.LogWarning("LLM Gateway 返回错误: {Error}", json);
+                    await channel.Writer.WriteAsync(new SseEvent("error", json));
+                    return;
+                }
+
+                var token = ExtractToken(json);
+                if (string.IsNullOrEmpty(token)) continue;
+
+                chunkCount++;
+                fullResponse.Append(token);
+                await channel.Writer.WriteAsync(new SseEvent("chunk", token));
+            }
+
+            logger.LogInformation("LLM 流式完成: PipelineId={Id}, Chunks={Chunks}, ResponseLength={Len}",
+                pipelineId, chunkCount, fullResponse.Length);
+
+            // 保存 AI 完整回复到数据库
+            if (fullResponse.Length > 0)
+            {
+                await SaveMessageAsync(db, pipelineId.ToString(), stageName, "assistant", fullResponse.ToString());
+            }
+
+            // 推送完成事件
+            await channel.Writer.WriteAsync(new SseEvent("done"));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "LLM 流式调用失败: PipelineId={Id}, Stage={Stage}", pipelineId, stageName);
+            await channel.Writer.WriteAsync(new SseEvent("error", $"LLM 调用失败: {ex.Message}"));
+        }
+        finally
+        {
+            channel.Writer.TryComplete();
+            _sseChannels.TryRemove(pipelineId, out _);
+        }
+    }
+
+    // ─── SSE 事件流（对齐前端 useSSE 契约）───
+
+    /// <summary>
+    /// SSE 事件流 — 从 Channel 读取 LLM token
+    /// </summary>
+    [HttpGet("{pipelineId:long}/events")]
+    public async Task GetPipelineEvents(long pipelineId, CancellationToken ct)
+    {
+        var response = App.HttpContext!.Response;
+        response.ContentType = "text/event-stream";
+        response.Headers["Cache-Control"] = "no-cache";
+        response.Headers["X-Accel-Buffering"] = "no";
+
+        Channel<SseEvent>? channel = null;
+        for (int i = 0; i < 30 && channel == null && !ct.IsCancellationRequested; i++)
+        {
+            _sseChannels.TryGetValue(pipelineId, out channel);
+            if (channel == null) await Task.Delay(100, ct);
+        }
+
+        if (channel == null)
+        {
+            await WriteSseAsync(response, new SseEvent("error", "无活跃的流式任务，请先调用 POST /execute"));
+            return;
+        }
+
+        try
+        {
+            await foreach (var evt in channel.Reader.ReadAllAsync(ct))
+            {
+                await WriteSseAsync(response, evt);
+                if (evt.Type is "done" or "error") break;
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (ChannelClosedException) { }
+    }
+
+    // ─── 确认阶段（人工审核）───
+
+    [HttpPost("stage/{stageId:long}/confirm")]
+    public async Task<StageResult> ConfirmStageAsync(
+        long stageId, [FromBody] StageConfirmation confirmation)
+    {
+        return await _pipelineEngine.ConfirmStageAsync(stageId, confirmation);
+    }
+
+    [HttpPost("{pipelineId:long}/rollback")]
+    public async Task<StageResult> RollbackAsync(long pipelineId, [FromBody] RollbackRequest request)
+    {
+        var target = string.IsNullOrWhiteSpace(request.TargetStage) ? PipelineStage.Requirement : request.TargetStage;
+        return await _pipelineEngine.RollbackAsync(pipelineId, target, request.Reason);
+    }
+
+    // ─── 获取流水线详情 ───
+
+    [HttpGet("{pipelineId:long}")]
+    public async Task<PipelineDetail> GetDetailAsync(long pipelineId)
+    {
+        return await _pipelineEngine.GetDetailAsync(pipelineId);
+    }
+
+    // ─── 流水线列表 ───
+
+    [HttpGet("list")]
+    public async Task<List<PipelineSummary>> ListAsync(
+        [FromQuery] int pageIndex = 0, [FromQuery] int pageSize = 20)
+    {
+        return await _pipelineEngine.ListAsync(GetTenantId(), pageIndex, pageSize);
+    }
+
+    // ─── Provider 列表（前端模型选择器）───
+
+    [HttpGet("providers")]
+    public object GetProviders()
+    {
+        var providers = _configuration.GetSection("LlmGateway:Providers").Get<List<ProviderEntry>>() ?? new();
+        var items = providers.Select(p => new { p.ProviderCode, p.Name, Enabled = true }).ToList();
+        return new { items };
+    }
+
+    private record ProviderEntry
+    {
+        public string ProviderCode { get; init; } = "";
+        public string Name { get; init; } = "";
+        public int Level { get; init; }
+    }
+
+    // ─── 执行详细设计（6 SubAgent 并行）───
+
+    [HttpPost("{pipelineId:long}/detailed-design")]
+    public async Task<DetailedDesignResult> ExecuteDetailedDesignAsync(
+        long pipelineId, CancellationToken ct)
+    {
+        var pipeline = await _pipelineEngine.GetDetailAsync(pipelineId);
+        if (pipeline?.CurrentStage != PipelineStage.Design)
+            throw new InvalidOperationException("当前阶段不是总体设计阶段");
+
+        var context = new DetailedDesignContext
+        {
+            ProjectName = pipeline.Name,
+            Requirements = "从流水线获取的需求",
+            TenantId = GetTenantId()
+        };
+
+        return await _designOrchestrator.ExecuteAsync(context, null, ct);
+    }
+
+    // ─── 获取流水线 IR 版本快照 ───
+
+    [HttpGet("{pipelineId:long}/ir")]
+    public async Task<object> GetPipelineIRAsync(long pipelineId)
+    {
+        var pid = pipelineId.ToString();
+        var dt = await _db.Ado.GetDataTableAsync(
+            "SELECT TOP 1 F_IR_SNAPSHOT, F_VERSION, F_DIFF, F_CHANGE_SUMMARY, F_VALIDATION_RESULT, F_SNAPSHOT_AT FROM BASE_IR_VERSION WHERE F_PIPELINE_ID = @pid ORDER BY F_VERSION DESC",
+            new SugarParameter("@pid", pid));
+
+        if (dt.Rows.Count == 0)
+            return new { pipelineId = pid, irSnapshot = (string?)null, irVersion = 0 };
+
+        var row = dt.Rows[0];
+        return new
+        {
+            pipelineId = pid,
+            irSnapshot = row["F_IR_SNAPSHOT"] as string,
+            irVersion = Convert.ToInt32(row["F_VERSION"]),
+            diff = row["F_DIFF"] as string,
+            changeSummary = row["F_CHANGE_SUMMARY"] as string,
+            validationResult = row["F_VALIDATION_RESULT"] as string,
+            snapshotAt = row["F_SNAPSHOT_AT"] as DateTime?
+        };
+    }
+
+    // ─── 辅助方法 ───
+
+    private async Task SaveMessageAsync(string pipelineId, string stage, string role, string content)
+    {
+        var msg = new AiPipelineMessageEntity
+        {
+            PipelineId = pipelineId,
+            Stage = stage,
+            Role = role,
+            Content = content,
+            Sequence = await GetNextSequenceAsync(pipelineId, stage),
+            DeleteMark = 0
+        };
+        msg.Creator();
+        await _db.Insertable(msg).ExecuteCommandAsync();
+    }
+
+    private static async Task SaveMessageAsync(
+        ISqlSugarClient db, string pipelineId, string stage, string role, string content)
+    {
+        var msg = new AiPipelineMessageEntity
+        {
+            PipelineId = pipelineId,
+            Stage = stage,
+            Role = role,
+            Content = content,
+            Sequence = await GetNextSequenceAsync(db, pipelineId, stage),
+            DeleteMark = 0
+        };
+        msg.Creator();
+        await db.Insertable(msg).ExecuteCommandAsync();
+    }
+
+    private async Task<int> GetNextSequenceAsync(string pipelineId, string stage)
+    {
+        return await GetNextSequenceAsync(_db, pipelineId, stage);
+    }
+
+    private static async Task<int> GetNextSequenceAsync(
+        ISqlSugarClient db, string pipelineId, string stage)
+    {
+        var maxSeq = await db.Queryable<AiPipelineMessageEntity>()
+            .Where(x => x.PipelineId == pipelineId && x.Stage == stage)
+            .MaxAsync(x => (int?)x.Sequence) ?? 0;
+        return maxSeq + 1;
+    }
+
+    private static string? ExtractToken(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("delta", out var delta) &&
+                delta.TryGetProperty("text", out var text))
+                return text.GetString();
+
+            if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
+            {
+                var choice = choices[0];
+                if (choice.TryGetProperty("delta", out var delta2) &&
+                    delta2.TryGetProperty("content", out var content))
+                    return content.GetString();
+            }
+
+            return null;
+        }
+        catch { return null; }
+    }
+
+    private static string GetStageSystemPrompt(string stage) => stage switch
+    {
+        PipelineStage.Requirement => """
+            你是需求分析师 AI。你的职责是：
+            1. 理解用户的业务需求（不要急于给方案）
+            2. 主动追问关键问题（至少 3 个问题）
+            3. 提供策略选项（不是唯一方案）
+            4. 分析每个选项的利弊
+
+            请用中文回复，条理清晰，使用 Markdown 格式。
+            """,
+        PipelineStage.Architecture => """
+            你是架构师 AI。基于需求分析结果，设计系统架构：
+            1. 技术选型及理由
+            2. 模块划分
+            3. 接口设计
+            4. 数据库设计概要
+
+            请用中文回复，条理清晰。
+            """,
+        PipelineStage.Design => """
+            你是总体设计师 AI。产出详细的软件设计文档：
+            1. 详细数据模型（ER 图描述）
+            2. API 接口规格
+            3. 前端页面结构
+
+            请用中文回复。
+            """,
+        PipelineStage.Development => """
+            你是开发工程师 AI。基于设计文档生成代码：
+            1. 后端服务代码
+            2. 前端页面代码
+            3. 数据库脚本
+
+            请用中文说明，代码用代码块包裹。
+            """,
+        PipelineStage.Delivery => """
+            你是交付工程师 AI。整理交付物：
+            1. 部署说明
+            2. 测试报告
+            3. 用户手册
+
+            请用中文回复。
+            """,
+        _ => "你是一个 AI 开发助手，请用中文回复。"
+    };
+
+    private static async Task WriteSseAsync(HttpResponse response, SseEvent evt)
+    {
+        var payload = new Dictionary<string, string?>
+        {
+            ["type"] = evt.Type,
+            ["data"] = evt.Data
+        };
+        if (evt.Stage != null) payload["stage"] = evt.Stage;
+
+        var json = JsonSerializer.Serialize(payload);
+        var bytes = Encoding.UTF8.GetBytes($"data: {json}\n\n");
+        await response.Body.WriteAsync(bytes);
+        await response.Body.FlushAsync();
+    }
+
+    private long GetTenantId()
+    {
+        var claim = App.HttpContext?.User?.FindFirst("tenant_id")?.Value;
+        return long.TryParse(claim, out var id) ? id : 0;
+    }
+
+    private long GetUserId()
+    {
+        var claim = App.HttpContext?.User?.FindFirst("user_id")?.Value;
+        return long.TryParse(claim, out var id) ? id : 0;
+    }
+
+    // ═══════════════════════════════════════════════════
+    // SA 结果格式化辅助方法
+    // ═══════════════════════════════════════════════════
+
+    private static string FormatSAResultAsMarkdown(SAResultDto? saResult)
+    {
+        if (saResult?.Result == null) return "SA 分析未返回结果。";
+
+        var sb = new StringBuilder();
+        sb.AppendLine("# 系统需求分析说明书");
+        sb.AppendLine();
+        sb.AppendLine("## 1. 系统边界");
+        sb.AppendLine("边界提取完成，已识别所有业务事件。");
+        sb.AppendLine();
+        sb.AppendLine("## 2. 数据字典");
+        sb.AppendLine("已生成数据字典，包含所有数据流和数据存储的字段定义。");
+        sb.AppendLine();
+        sb.AppendLine("## 3. ER 数据模型");
+        sb.AppendLine("已生成实体关系图。");
+        sb.AppendLine();
+        sb.AppendLine("## 4. 状态机");
+        sb.AppendLine("已生成状态转换图。");
+        sb.AppendLine();
+
+        if (saResult.ValidationStats != null && saResult.ValidationStats.Count > 0)
+        {
+            sb.AppendLine("## 5. 质量验证");
+            foreach (var stat in saResult.ValidationStats)
+            {
+                var icon = stat.Passed ? "✅" : "❌";
+                sb.AppendLine($"- {icon} {stat.Step}: {(stat.Passed ? "通过" : "需修正")}");
+            }
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("---");
+        sb.AppendLine("请确认以上分析是否准确。如有需要补充的地方，请在下方输入框继续说明。");
+        return sb.ToString();
+    }
+
+    // ═══════════════════════════════════════════════════
+    // SA 结果 DTO
+    // ═══════════════════════════════════════════════════
+
+    private class SAResultDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("taskId")]
+        public string? TaskId { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string? Status { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("result")]
+        public SAOutputDto? Result { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("validationStats")]
+        public List<ValidationStatDto>? ValidationStats { get; set; }
+    }
+
+    private class SAOutputDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("scope")]
+        public JsonElement? Scope { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("dfd")]
+        public JsonElement? Dfd { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("bpm")]
+        public JsonElement? Bpm { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("dict")]
+        public JsonElement? Dict { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("er")]
+        public JsonElement? Er { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("std")]
+        public JsonElement? Std { get; set; }
+    }
+
+    private class ValidationStatDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("step")]
+        public string Step { get; set; } = "";
+
+        [System.Text.Json.Serialization.JsonPropertyName("attempts")]
+        public int Attempts { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("passed")]
+        public bool Passed { get; set; }
+    }
+
+    /// <summary>
+    /// SSE 事件内部模型
+    /// </summary>
+    private record SseEvent(string Type, string? Data = null, string? Stage = null);
+}
+
+// ─── 请求 DTO ───
+
+public record CreatePipelineInput
+{
+    public string? Requirement { get; init; }
+    public string? Name { get; init; }
+    public string? UserRequirement { get; init; }
+}
+
+public record ExecuteStageRequest
+{
+    public string StageName { get; init; } = "";
+    public string? Message { get; init; }
+    public string? Provider { get; init; }
+}
+
+public record RollbackRequest
+{
+    public string TargetStage { get; init; } = "";
+    public string? Reason { get; init; }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\PipelineEngineService.cs
+========================================
+
+using JNPF.DependencyInjection;
+using JNPF.InteAssistant.Entitys.Common;
+using JNPF.InteAssistant.Entitys.Entity;
+using JNPF.InteAssistant.Interfaces;
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
+using System.Text.Json;
+
+namespace JNPF.InteAssistant;
+
+/// <summary>
+/// 五阶段流水线引擎实现
+/// 阶段: requirement → architecture → design → development → delivery
+/// </summary>
+public class PipelineEngineService : IPipelineEngine, ISingleton
+{
+    private readonly ILogger<PipelineEngineService> _logger;
+    private readonly SqlSugar.ISqlSugarClient _db;
+    private readonly ConcurrentDictionary<long, PipelineState> _pipelines = new();
+    private long _nextId = 1;
+    private int _idSeedLoaded;
+
+    public PipelineEngineService(ILogger<PipelineEngineService> logger, SqlSugar.ISqlSugarClient db = null!)
+    {
+        _logger = logger;
+        _db = db;
+    }
+
+    public Task<PipelineResult> CreateAsync(
+        PipelineCreateRequest request, long tenantId, long userId, CancellationToken ct = default)
+    {
+        EnsureNextIdSeedLoaded();
+        var id = Interlocked.Increment(ref _nextId);
+        var state = new PipelineState
+        {
+            Id = id,
+            Name = request.Name,
+            PipelineType = request.PipelineType,
+            UserRequirement = request.UserRequirement,
+            CurrentStage = PipelineStage.Requirement,
+            Status = "draft",
+            TenantId = tenantId,
+            UserId = userId,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _pipelines[id] = state;
+
+        _logger.LogInformation("流水线创建: ID={Id}, Name={Name}, Tenant={TenantId}",
+            id, request.Name, tenantId);
+
+        return Task.FromResult(new PipelineResult
+        {
+            PipelineId = id,
+            Name = request.Name,
+            CurrentStage = PipelineStage.Requirement,
+            Status = "draft"
+        });
+    }
+
+    public async Task<PipelineResult> StartAsync(long pipelineId, CancellationToken ct = default)
+    {
+        var state = await GetPipelineStateAsync(pipelineId, ct);
+        if (state == null)
+            throw new InvalidOperationException($"流水线 {pipelineId} 不存在");
+
+        state.Status = "running";
+        state.StartedAt = DateTime.UtcNow;
+        await PersistPipelineSnapshotAsync(state, ct);
+
+        _logger.LogInformation("流水线启动: ID={Id}", pipelineId);
+
+        return new PipelineResult
+        {
+            PipelineId = pipelineId,
+            Name = state.Name,
+            CurrentStage = state.CurrentStage,
+            Status = state.Status
+        };
+    }
+
+    public async Task<StageResult> ExecuteStageAsync(
+        long pipelineId, string stageName, CancellationToken ct = default)
+    {
+        var state = await GetPipelineStateAsync(pipelineId, ct);
+        if (state == null)
+            throw new InvalidOperationException($"流水线 {pipelineId} 不存在");
+
+        if (!PipelineStage.Order.Contains(stageName))
+            throw new ArgumentException($"未知阶段: {stageName}");
+
+        state.CurrentStage = stageName;
+        state.Status = "running";
+        var stageOrder = Array.IndexOf(PipelineStage.Order, stageName);
+        var stage = state.Stages.FirstOrDefault(s => s.StageName == stageName);
+        if (stage == null)
+        {
+            stage = new StageRecord
+            {
+                Id = state.Stages.Count + 1,
+                StageName = stageName,
+                StageOrder = stageOrder,
+                StartedAt = DateTime.UtcNow
+            };
+            state.Stages.Add(stage);
+        }
+
+        stage.Status = "running";
+        if (stage.StartedAt == default) stage.StartedAt = DateTime.UtcNow;
+        await PersistPipelineSnapshotAsync(state, ct);
+
+        _logger.LogInformation("流水线阶段执行: ID={Id}, Stage={Stage}", pipelineId, stageName);
+
+        return new StageResult
+        {
+            StageId = stage.Id,
+            StageName = stageName,
+            Status = "running"
+        };
+    }
+
+    public async Task<StageResult> ConfirmStageAsync(
+        long stageId, StageConfirmation confirmation, CancellationToken ct = default)
+    {
+        // 前端当前传的是 pipelineId；这里兼容「按 pipelineId」和「按 stageId」两种调用。
+        var pipeline = await GetPipelineStateAsync(stageId, ct);
+        StageRecord? stage = null;
+
+        if (pipeline != null)
+        {
+            stage = pipeline.Stages.FirstOrDefault(s => s.StageName == pipeline.CurrentStage)
+                ?? pipeline.Stages.OrderByDescending(s => s.StageOrder).FirstOrDefault();
+        }
+        else
+        {
+            pipeline = _pipelines.Values.FirstOrDefault(p => p.Stages.Any(s => s.Id == stageId));
+            if (pipeline != null) stage = pipeline.Stages.FirstOrDefault(s => s.Id == stageId);
+        }
+
+        if (pipeline == null || stage == null)
+            throw new InvalidOperationException($"阶段 {stageId} 不存在");
+
+        stage.Status = confirmation.Approved ? "approved" : "review";
+        stage.CompletedAt = DateTime.UtcNow;
+        var systemText = confirmation.Approved
+            ? $"✅ 已确认「{stage.StageName}」阶段"
+            : $"🛠️ 已退回「{stage.StageName}」阶段，请根据意见继续完善";
+
+        if (confirmation.Approved)
+        {
+            var nextStage = PipelineStage.GetNext(stage.StageName);
+            if (nextStage != null)
+            {
+                pipeline.CurrentStage = nextStage;
+                var nextOrder = Array.IndexOf(PipelineStage.Order, nextStage);
+                if (!pipeline.Stages.Any(s => s.StageName == nextStage))
+                {
+                    pipeline.Stages.Add(new StageRecord
+                    {
+                        Id = pipeline.Stages.Count + 1,
+                        StageName = nextStage,
+                        StageOrder = nextOrder,
+                        Status = "pending",
+                        StartedAt = DateTime.UtcNow
+                    });
+                }
+                systemText = $"✅ 已进入阶段 {nextOrder + 1}：{nextStage}";
+            }
+            else
+            {
+                pipeline.Status = "completed";
+                systemText = "🎉 已完成全部阶段";
+            }
+        }
+        else
+        {
+            pipeline.Status = "review";
+        }
+
+        await PersistPipelineSnapshotAsync(pipeline, ct);
+        await AppendSystemMessageAsync(pipeline.Id, pipeline.CurrentStage, systemText, ct);
+
+        _logger.LogInformation("阶段确认: StageId={Id}, Approved={Approved}, Next={Next}",
+            stageId, confirmation.Approved, pipeline.CurrentStage);
+
+        return new StageResult
+        {
+            StageId = stage.Id,
+            StageName = stage.StageName,
+            Status = stage.Status
+        };
+    }
+
+    public async Task<StageResult> RollbackAsync(
+        long pipelineId, string targetStage, string? reason = null, CancellationToken ct = default)
+    {
+        var pipeline = await GetPipelineStateAsync(pipelineId, ct);
+        if (pipeline == null)
+            throw new InvalidOperationException($"流水线 {pipelineId} 不存在");
+        if (!PipelineStage.Order.Contains(targetStage))
+            throw new ArgumentException($"未知阶段: {targetStage}");
+
+        var targetOrder = Array.IndexOf(PipelineStage.Order, targetStage);
+        pipeline.CurrentStage = targetStage;
+        pipeline.Status = "running";
+
+        pipeline.Stages.RemoveAll(s => s.StageOrder > targetOrder);
+        foreach (var stage in pipeline.Stages)
+        {
+            stage.Status = stage.StageOrder < targetOrder ? "completed" : "running";
+            if (stage.StageOrder == targetOrder) stage.CompletedAt = null;
+        }
+
+        if (!pipeline.Stages.Any(s => s.StageName == targetStage))
+        {
+            pipeline.Stages.Add(new StageRecord
+            {
+                Id = pipeline.Stages.Count + 1,
+                StageName = targetStage,
+                Status = "running",
+                StageOrder = targetOrder,
+                StartedAt = DateTime.UtcNow
+            });
+        }
+
+        await PersistPipelineSnapshotAsync(pipeline, ct);
+        var rollbackMessage = string.IsNullOrWhiteSpace(reason)
+            ? $"↩️ 已回退到阶段 {targetOrder + 1}：{targetStage}"
+            : $"↩️ 已回退到阶段 {targetOrder + 1}：{targetStage}，原因：{reason}";
+        await AppendSystemMessageAsync(pipeline.Id, targetStage, rollbackMessage, ct);
+
+        _logger.LogInformation("阶段回退: PipelineId={Id}, Target={Stage}, Reason={Reason}",
+            pipelineId, targetStage, reason ?? "-");
+
+        return new StageResult
+        {
+            StageId = targetOrder + 1,
+            StageName = targetStage,
+            Status = "running",
+            Output = rollbackMessage
+        };
+    }
+
+    public async Task<PipelineDetail> GetDetailAsync(long pipelineId, CancellationToken ct = default)
+    {
+        var state = await GetPipelineStateAsync(pipelineId, ct);
+        if (state == null)
+            throw new InvalidOperationException($"流水线 {pipelineId} 不存在");
+
+        var messages = await GetPipelineMessagesAsync(pipelineId, ct);
+
+        return new PipelineDetail
+        {
+            Id = state.Id,
+            Name = state.Name,
+            CurrentStage = state.CurrentStage,
+            Status = state.Status,
+            Stages = state.Stages.Select(s => new StageInfo
+            {
+                Id = s.Id,
+                StageName = s.StageName,
+                Status = s.Status,
+                StageOrder = s.StageOrder
+            }).ToList(),
+            Messages = messages
+        };
+    }
+
+    public async Task<List<PipelineSummary>> ListAsync(
+        long tenantId, int pageIndex, int pageSize, CancellationToken ct = default)
+    {
+        if (_db == null) return new List<PipelineSummary>();
+        if (pageIndex < 0) pageIndex = 0;
+        if (pageSize <= 0) pageSize = 20;
+
+        var tenant = tenantId <= 0 ? null : tenantId.ToString();
+        var query = _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.DeleteMark == null || x.DeleteMark == 0);
+        if (!string.IsNullOrWhiteSpace(tenant))
+        {
+            query = query.Where(x => x.TenantId == tenant);
+        }
+
+        var entities = await query
+            .OrderBy(x => x.LastModifyTime, SqlSugar.OrderByType.Desc)
+            .OrderBy(x => x.CreatorTime, SqlSugar.OrderByType.Desc)
+            .ToPageListAsync(pageIndex + 1, pageSize);
+
+        var list = entities.Select(x => new PipelineSummary
+            {
+                Id = long.TryParse(x.Id, out var parsedId) ? parsedId : 0,
+                Name = x.Name ?? "",
+                PipelineType = "full_app",
+                CurrentStage = x.CurrentStage ?? PipelineStage.Requirement,
+                Status = x.Status ?? "draft",
+                UpdatedAt = x.LastModifyTime ?? x.CreatorTime ?? DateTime.Now
+            })
+            .ToList();
+
+        return list;
+    }
+
+    private class PipelineState
+    {
+        public long Id { get; set; }
+        public string Name { get; set; } = "";
+        public string PipelineType { get; set; } = "";
+        public string UserRequirement { get; set; } = "";
+        public string CurrentStage { get; set; } = "";
+        public string Status { get; set; } = "draft";
+        public long TenantId { get; set; }
+        public long UserId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? StartedAt { get; set; }
+        public List<StageRecord> Stages { get; set; } = new();
+    }
+
+    private void EnsureNextIdSeedLoaded()
+    {
+        if (Interlocked.CompareExchange(ref _idSeedLoaded, 1, 0) != 0) return;
+        if (_db == null) return;
+
+        try
+        {
+            var maxId = _db.Ado.GetLong("SELECT ISNULL(MAX(CAST(F_ID AS BIGINT)), 0) FROM BASE_AI_PIPELINE");
+            _nextId = Math.Max(_nextId, maxId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "加载流水线 ID 种子失败，继续使用内存自增");
+        }
+    }
+
+    private async Task<PipelineState?> GetPipelineStateAsync(long pipelineId, CancellationToken ct = default)
+    {
+        if (_pipelines.TryGetValue(pipelineId, out var memoryState)) return memoryState;
+        if (_db == null) return null;
+
+        var entity = await _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.Id == pipelineId.ToString() && (x.DeleteMark == null || x.DeleteMark == 0))
+            .FirstAsync();
+        if (entity == null) return null;
+
+        var stage = string.IsNullOrWhiteSpace(entity.CurrentStage) ? PipelineStage.Requirement : entity.CurrentStage;
+        if (!PipelineStage.Order.Contains(stage)) stage = PipelineStage.Requirement;
+
+        var hydrated = new PipelineState
+        {
+            Id = pipelineId,
+            Name = entity.Name ?? $"Pipeline-{pipelineId}",
+            CurrentStage = stage,
+            Status = string.IsNullOrWhiteSpace(entity.Status) ? "draft" : entity.Status,
+            CreatedAt = entity.CreatorTime ?? DateTime.UtcNow,
+            StartedAt = entity.StartedTime,
+            TenantId = long.TryParse(entity.TenantId, out var tenantId) ? tenantId : 0
+        };
+
+        var currentStageOrder = Array.IndexOf(PipelineStage.Order, stage);
+        if (currentStageOrder < 0) currentStageOrder = 0;
+
+        for (var i = 0; i <= currentStageOrder; i++)
+        {
+            hydrated.Stages.Add(new StageRecord
+            {
+                Id = i + 1,
+                StageName = PipelineStage.Order[i],
+                Status = i < currentStageOrder ? "completed" : "running",
+                StageOrder = i,
+                StartedAt = entity.StartedTime ?? hydrated.CreatedAt
+            });
+        }
+
+        _pipelines[pipelineId] = hydrated;
+        _logger.LogInformation("流水线状态回填: ID={Id}, Stage={Stage}, Status={Status}", pipelineId, stage, hydrated.Status);
+        return hydrated;
+    }
+
+    private async Task<List<PipelineMessageInfo>> GetPipelineMessagesAsync(long pipelineId, CancellationToken ct = default)
+    {
+        if (_db == null) return new List<PipelineMessageInfo>();
+        var rows = await _db.Queryable<AiPipelineMessageEntity>()
+            .Where(x => x.PipelineId == pipelineId.ToString() && (x.DeleteMark == null || x.DeleteMark == 0))
+            .OrderBy(x => x.CreatorTime, SqlSugar.OrderByType.Asc)
+            .OrderBy(x => x.Sequence, SqlSugar.OrderByType.Asc)
+            .ToListAsync();
+
+        return rows.Select(x => new PipelineMessageInfo
+        {
+            Id = x.Id,
+            Role = x.Role ?? "assistant",
+            Content = x.Content ?? "",
+            Stage = x.Stage ?? PipelineStage.Requirement,
+            Sequence = x.Sequence,
+            CreateTime = x.CreatorTime
+        }).ToList();
+    }
+
+    private async Task PersistPipelineSnapshotAsync(PipelineState state, CancellationToken ct = default)
+    {
+        if (_db == null) return;
+        var entity = await _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.Id == state.Id.ToString() && (x.DeleteMark == null || x.DeleteMark == 0))
+            .FirstAsync();
+        if (entity == null) return;
+
+        entity.CurrentStage = state.CurrentStage;
+        entity.Status = state.Status;
+        if (state.StartedAt.HasValue && !entity.StartedTime.HasValue) entity.StartedTime = state.StartedAt;
+        if (state.Status == "completed") entity.FinishedTime = DateTime.Now;
+        entity.LastModify();
+
+        await _db.Updateable(entity)
+            .UpdateColumns(x => new
+            {
+                x.CurrentStage,
+                x.Status,
+                x.StartedTime,
+                x.FinishedTime,
+                x.LastModifyTime,
+                x.LastModifyUserId
+            })
+            .ExecuteCommandAsync();
+    }
+
+    private async Task AppendSystemMessageAsync(long pipelineId, string stage, string content, CancellationToken ct = default)
+    {
+        if (_db == null || string.IsNullOrWhiteSpace(content)) return;
+        var maxSeq = await _db.Queryable<AiPipelineMessageEntity>()
+            .Where(x => x.PipelineId == pipelineId.ToString() && x.Stage == stage)
+            .MaxAsync(x => (int?)x.Sequence) ?? 0;
+
+        var msg = new AiPipelineMessageEntity
+        {
+            PipelineId = pipelineId.ToString(),
+            Stage = stage,
+            Role = "system",
+            Content = content,
+            Sequence = maxSeq + 1,
+            DeleteMark = 0
+        };
+        msg.Creator();
+        await _db.Insertable(msg).ExecuteCommandAsync();
+    }
+
+    #region I-12: 失败计数原子操作
+
+    /// <summary>
+    /// 原子递增失败计数（JSON_MODIFY，无并发覆盖风险）
+    /// </summary>
+    public async Task IncrementFailureCountAsync(long pipelineId, string failureType)
+    {
+        if (_db == null) return;
+        var sql = @"
+            UPDATE BASE_AI_PIPELINE
+            SET F_FAILURE_COUNTS = JSON_MODIFY(
+                ISNULL(F_FAILURE_COUNTS, '{}'),
+                '$.' + @failureType,
+                ISNULL(JSON_VALUE(F_FAILURE_COUNTS, '$.' + @failureType), 0) + 1
+            )
+            WHERE F_ID = @pipelineId";
+        await _db.Ado.ExecuteCommandAsync(sql, new { pipelineId = pipelineId.ToString(), failureType });
+    }
+
+    /// <summary>
+    /// 归零指定类型计数（仅归零该类型，其他类型保留）
+    /// </summary>
+    public async Task ResetFailureCountAsync(long pipelineId, string failureType)
+    {
+        if (_db == null) return;
+        var sql = @"
+            UPDATE BASE_AI_PIPELINE
+            SET F_FAILURE_COUNTS = JSON_MODIFY(
+                ISNULL(F_FAILURE_COUNTS, '{}'),
+                '$.' + @failureType,
+                0
+            )
+            WHERE F_ID = @pipelineId";
+        await _db.Ado.ExecuteCommandAsync(sql, new { pipelineId = pipelineId.ToString(), failureType });
+    }
+
+    /// <summary>
+    /// 读取失败计数（服务重启时恢复内存缓存）
+    /// </summary>
+    public async Task<Dictionary<string, int>> GetFailureCountsAsync(long pipelineId)
+    {
+        if (_db == null) return new Dictionary<string, int>();
+        var json = await _db.Ado.GetStringAsync(
+            "SELECT F_FAILURE_COUNTS FROM BASE_AI_PIPELINE WHERE F_ID = @id",
+            new { id = pipelineId.ToString() });
+        return string.IsNullOrEmpty(json)
+            ? new Dictionary<string, int>()
+            : JsonSerializer.Deserialize<Dictionary<string, int>>(json) ?? new Dictionary<string, int>();
+    }
+
+    /// <summary>
+    /// 检查是否触发熔断（任一类型 >= 3）
+    /// </summary>
+    public async Task<bool> ShouldBlockAsync(long pipelineId)
+    {
+        var counts = await GetFailureCountsAsync(pipelineId);
+        return counts.Any(kv => kv.Value >= 3);
+    }
+
+    #endregion
+
+    private class StageRecord
+    {
+        public long Id { get; set; }
+        public string StageName { get; set; } = "";
+        public string Status { get; set; } = "";
+        public int StageOrder { get; set; }
+        public DateTime StartedAt { get; set; }
+        public DateTime? CompletedAt { get; set; }
+    }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\PipelineOrchestratorService.cs
+========================================
+
+using Hangfire;
+using JNPF.DependencyInjection;
+using JNPF.DynamicApiController;
+using JNPF.FriendlyException;
+using JNPF.InteAssistant.Entitys.Common;
+using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
+using JNPF.InteAssistant.Entitys.Entity;
+using JNPF.InteAssistant.Entitys.Enum;
+using JNPF.InteAssistant.Interfaces;
+using JNPF.InstantMessaging;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+
+namespace JNPF.InteAssistant;
+
+/// <summary>
+/// Pipeline 编排服务 — 裁决书接口实现
+/// 版 本：v5.2.0
+/// 版 权：引迈信息技术有限公司（https://www.jnpfsoft.com）
+/// 作 者：JNPF开发平台组
+/// 日 期：2026-6-20
+/// </summary>
+[ApiDescriptionSettings(Tag = "AI", Name = "PipelineOrchestrator", Order = 181)]
+[Route("api/pipeline")]
+public class PipelineOrchestratorService : IDynamicApiController, ITransient
+{
+    private readonly SqlSugar.ISqlSugarClient _db;
+    private readonly IHubContext<PipelineHub> _hub;
+    private readonly ILogger<PipelineOrchestratorService> _logger;
+    private readonly ISandboxManager _sandbox;
+    private readonly IConfiguration _configuration;
+
+    /// <summary>
+    /// 允许执行审核操作的角色集合
+    /// </summary>
+    private static readonly HashSet<string> AllowedReviewerRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "expert", "developer", "admin", "founder"
+    };
+
+    /// <summary>
+    /// 阶段 4→5 只允许 admin/founder
+    /// </summary>
+    private static readonly HashSet<string> ElevatedRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "admin", "founder"
+    };
+
+    public PipelineOrchestratorService(
+        SqlSugar.ISqlSugarClient db,
+        IHubContext<PipelineHub> hub,
+        ISandboxManager sandbox,
+        IConfiguration configuration,
+        ILogger<PipelineOrchestratorService> logger)
+    {
+        _db = db;
+        _hub = hub;
+        _sandbox = sandbox;
+        _configuration = configuration;
+        _logger = logger;
+    }
+
+    #region 裁决书接口1：审核当前阶段
+
+    /// <summary>
+    /// 审核当前阶段（裁决书接口1）
+    /// POST /api/pipeline/{pipelineId}/stage/{stageName}/review
+    /// </summary>
+    [HttpPost("{pipelineId:long}/stage/{stageName}/review")]
+    public async Task<ReviewResponse> ReviewStageAsync(
+        long pipelineId,
+        string stageName,
+        [FromBody] ReviewRequest request)
+    {
+        // ─── 1. 参数校验 ───
+        if ((request.Action is "reject" or "request_changes") && string.IsNullOrWhiteSpace(request.Comment))
+        {
+            throw Oops.Bah("否决或要求修改时，评论不能为空");
+        }
+
+        if (!AllowedReviewerRoles.Contains(request.ReviewerRole))
+        {
+            throw Oops.Bah($"无效的审核角色: {request.ReviewerRole}，允许的角色: {string.Join(", ", AllowedReviewerRoles)}");
+        }
+
+        // ─── 2. 状态校验 ───
+        var pipeline = await _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.Id == pipelineId.ToString())
+            .FirstAsync();
+
+        if (pipeline == null)
+        {
+            throw Oops.Bah($"流水线 {pipelineId} 不存在");
+        }
+
+        if (pipeline.StageStatus != PipelineStatus.Review)
+        {
+            throw Oops.Bah($"当前状态为 {pipeline.StageStatus}，不允许审核操作");
+        }
+
+        if (!string.Equals(pipeline.CurrentStage, stageName, StringComparison.OrdinalIgnoreCase))
+        {
+            throw Oops.Bah($"当前阶段为 {pipeline.CurrentStage}，与请求的 {stageName} 不一致");
+        }
+
+        // ─── 3. 角色门控校验 ───
+        // 阶段 4→5（development→delivery）只允许 admin/founder
+        if (stageName == PipelineStage.Development && !ElevatedRoles.Contains(request.ReviewerRole))
+        {
+            throw Oops.Bah("开发→交付阶段只能由 admin 或 founder 审核");
+        }
+
+        // ─── 4. 根据 action 分支处理 ───
+        return request.Action switch
+        {
+            "approve" => await HandleApproveAsync(pipeline, stageName, request),
+            "reject" => await HandleRejectAsync(pipeline, stageName, request),
+            "request_changes" => await HandleRequestChangesAsync(pipeline, stageName, request),
+            _ => throw Oops.Bah($"无效的操作类型: {request.Action}，支持: approve / reject / request_changes")
+        };
+    }
+
+    #endregion
+
+    #region 审核分支逻辑
+
+    /// <summary>
+    /// 审批通过 → validating 过渡态 → 后台校验
+    /// </summary>
+    private async Task<ReviewResponse> HandleApproveAsync(
+        AiPipelineEntity pipeline, string stageName, ReviewRequest request)
+    {
+        // 4a. 流转至 validating 过渡态
+        var validationId = Guid.NewGuid().ToString("N");
+        pipeline.StageStatus = PipelineStatus.Validating;
+        pipeline.ValidationId = validationId;
+        pipeline.LastModify();
+
+        await _db.Updateable(pipeline).ExecuteCommandAsync();
+
+        // 4b. 提交 Hangfire 后台校验任务（持久化队列，支持重试）
+        var capturedPipelineId = long.Parse(pipeline.Id);
+        BackgroundJob.Enqueue<PipelineValidationJob>(job => job.ExecuteAsync(capturedPipelineId, validationId));
+
+        // 写审核消息
+        await AppendMessageAsync(pipeline.Id, stageName, "approve",
+            request.Comment ?? "审核通过", request.ReviewerRole);
+
+        // IR 版本快照
+        await SnapshotIrAsync(pipeline.Id, request.ReviewerRole,
+            $"阶段{stageName}审核通过");
+
+        _logger.LogInformation(
+            "流水线审核通过: PipelineId={PipelineId}, Stage={Stage}, ValidationId={ValidationId}",
+            pipeline.Id, stageName, validationId);
+
+        // 4c. 返回（框架自动包装为 RESTfulResult，code=200）
+        return new ReviewResponse
+        {
+            Status = "validating",
+            ValidationId = validationId,
+            EstimatedSeconds = 10
+        };
+    }
+
+    /// <summary>
+    /// 否决 → 增加否决计数 → 3 轮升级 → 停留在当前阶段
+    /// </summary>
+    private async Task<ReviewResponse> HandleRejectAsync(
+        AiPipelineEntity pipeline, string stageName, ReviewRequest request)
+    {
+        // 4d. 否决：增加否决计数
+        pipeline.RejectCount++;
+        pipeline.StageStatus = PipelineStatus.Rejected;
+        pipeline.LastModify();
+
+        // 4e. 3 轮否决→升级
+        if (pipeline.RejectCount >= 3)
+        {
+            var tenantId = GetTenantId();
+            await _hub.Clients.Group($"tenant_{tenantId}").SendAsync("PipelineEvent", new PipelineEventPayload
+            {
+                EventType = "pipeline_escalated",
+                PipelineId = pipeline.Id,
+                Stage = stageName,
+                Reason = $"已被否决{pipeline.RejectCount}次，需管理员介入",
+                Actions = new List<PipelineAction>
+                {
+                    new() { Type = "view", Url = $"/studio/pipeline/{pipeline.Id}" },
+                    new() { Type = "reset", Url = $"/api/pipeline/{pipeline.Id}/resume" }
+                }
+            });
+
+            _logger.LogWarning(
+                "流水线升级: PipelineId={Id}, RejectCount={Count}, Stage={Stage}",
+                pipeline.Id, pipeline.RejectCount, stageName);
+        }
+
+        // 4f. 写审核记录
+        await AppendMessageAsync(pipeline.Id, stageName, "reject",
+            request.Comment ?? "审核否决", request.ReviewerRole);
+
+        // 4g. IR 版本快照
+        await SnapshotIrAsync(pipeline.Id, request.ReviewerRole,
+            $"阶段{stageName}被否决: {request.Comment}");
+
+        await _db.Updateable(pipeline).ExecuteCommandAsync();
+
+        return new ReviewResponse
+        {
+            NextStage = stageName // 否决后停留在当前阶段
+        };
+    }
+
+    /// <summary>
+    /// 要求修改 → 状态回到 Running，停留在当前阶段
+    /// </summary>
+    private async Task<ReviewResponse> HandleRequestChangesAsync(
+        AiPipelineEntity pipeline, string stageName, ReviewRequest request)
+    {
+        pipeline.StageStatus = PipelineStatus.Running;
+        pipeline.LastModify();
+
+        await AppendMessageAsync(pipeline.Id, stageName, "request_changes",
+            request.Comment ?? "需要修改后重新提交", request.ReviewerRole);
+
+        await SnapshotIrAsync(pipeline.Id, request.ReviewerRole,
+            $"阶段{stageName}需要修改: {request.Comment}");
+
+        await _db.Updateable(pipeline).ExecuteCommandAsync();
+
+        _logger.LogInformation(
+            "流水线要求修改: PipelineId={Id}, Stage={Stage}, Comment={Comment}",
+            pipeline.Id, stageName, request.Comment);
+
+        return new ReviewResponse
+        {
+            NextStage = stageName
+        };
+    }
+
+    #endregion
+
+    #region 裁决书接口2：恢复流水线
+
+    /// <summary>
+    /// 恢复流水线（从 stale 恢复）
+    /// POST /api/pipeline/{id}/resume
+    /// </summary>
+    [HttpPost("{pipelineId:long}/resume")]
+    public async Task<ReviewResponse> ResumeAsync(long pipelineId)
+    {
+        var pipeline = await _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.Id == pipelineId.ToString())
+            .FirstAsync();
+
+        if (pipeline == null)
+        {
+            throw Oops.Bah($"流水线 {pipelineId} 不存在");
+        }
+
+        if (pipeline.StageStatus != PipelineStatus.Stale)
+        {
+            throw Oops.Bah($"当前状态为 {pipeline.StageStatus}，只有 stale 状态可恢复");
+        }
+
+        // 恢复到进入 stale 时的阶段
+        var restoreStage = pipeline.StaleFromStage ?? pipeline.CurrentStage;
+        pipeline.CurrentStage = restoreStage;
+        pipeline.StageStatus = PipelineStatus.Running;
+        pipeline.StaleFromStage = null;
+        pipeline.StaleSince = null;
+        pipeline.LastModify();
+
+        await AppendMessageAsync(pipeline.Id, restoreStage, "resume",
+            "流水线已恢复", "system");
+
+        // SignalR 推送
+        var tenantId = GetTenantId();
+        await _hub.Clients.Group($"tenant_{tenantId}").SendAsync("PipelineEvent", new PipelineEventPayload
+        {
+            EventType = "pipeline_resumed",
+            PipelineId = pipeline.Id,
+            Stage = restoreStage,
+            Reason = "流水线已从超时状态恢复"
+        });
+
+        await _db.Updateable(pipeline).ExecuteCommandAsync();
+
+        _logger.LogInformation(
+            "流水线恢复: PipelineId={Id}, RestoredStage={Stage}",
+            pipelineId, restoreStage);
+
+        return new ReviewResponse
+        {
+            NextStage = restoreStage
+        };
+    }
+
+    #endregion
+
+    #region 裁决书接口3：Stale 列表
+
+    /// <summary>
+    /// 获取超时流水线列表
+    /// GET /api/pipeline/stale
+    /// </summary>
+    [HttpGet("stale")]
+    public async Task<List<object>> GetStaleListAsync(
+        [FromQuery] int pageIndex = 0,
+        [FromQuery] int pageSize = 20)
+    {
+        var list = await _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.StageStatus == PipelineStatus.Stale)
+            .OrderByDescending(x => x.StaleSince)
+            .ToPageListAsync(pageIndex + 1, pageSize);
+
+        return list.Select(p => new
+        {
+            p.Id,
+            p.Name,
+            p.CurrentStage,
+            StageStatus = p.StageStatus?.ToString(),
+            p.StaleFromStage,
+            p.StaleSince,
+            p.LastModifyTime
+        }).ToList<object>();
+    }
+
+    #endregion
+
+    #region 裁决书接口4：放弃流水线
+
+    /// <summary>
+    /// 放弃流水线（终止态）
+    /// POST /api/pipeline/{id}/abandon
+    /// </summary>
+    [HttpPost("{pipelineId:long}/abandon")]
+    public async Task<ReviewResponse> AbandonAsync(
+        long pipelineId,
+        [FromBody] AbandonRequest request)
+    {
+        var pipeline = await _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.Id == pipelineId.ToString())
+            .FirstAsync();
+
+        if (pipeline == null)
+        {
+            throw Oops.Bah($"流水线 {pipelineId} 不存在");
+        }
+
+        var currentUserId = GetUserId().ToString();
+
+        // 检查关联沙箱并销毁（如果存在）
+        await DestroyAssociatedSandboxIfExists(pipelineId);
+
+        // 状态设为 Abandoned
+        pipeline.StageStatus = PipelineStatus.Abandoned;
+        pipeline.AbandonedAt = DateTime.Now;
+        pipeline.AbandonedBy = currentUserId;
+        pipeline.AbandonReason = request.Reason;
+        pipeline.LastModify();
+
+        // 写审计日志
+        await AppendMessageAsync(pipeline.Id, pipeline.CurrentStage, "abandon",
+            request.Reason ?? "流水线已放弃", "system");
+
+        await _db.Updateable(pipeline).ExecuteCommandAsync();
+
+        _logger.LogWarning(
+            "流水线已放弃: PipelineId={Id}, Reason={Reason}, By={User}",
+            pipelineId, request.Reason, currentUserId);
+
+        return new ReviewResponse
+        {
+            Status = "abandoned"
+        };
+    }
+
+    #endregion
+
+    #region 裁决书接口5：预览回滚影响
+
+    /// <summary>
+    /// 预览回滚影响范围
+    /// POST /api/pipeline/{id}/preview-rollback
+    /// </summary>
+    [HttpPost("{pipelineId:long}/preview-rollback")]
+    public async Task<RollbackPreview> PreviewRollbackAsync(
+        long pipelineId,
+        [FromQuery] int? targetVersion = null)
+    {
+        var pipeline = await _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.Id == pipelineId.ToString())
+            .FirstAsync();
+
+        if (pipeline == null)
+        {
+            throw Oops.Bah($"流水线 {pipelineId} 不存在");
+        }
+
+        // 构建依赖图 + 传播影响
+        var versions = await _db.Queryable<IrVersionEntity>()
+            .Where(x => x.PipelineId == pipelineId.ToString())
+            .OrderByDescending(x => x.Version)
+            .ToListAsync();
+
+        if (versions.Count == 0)
+        {
+            return new RollbackPreview
+            {
+                AffectedNodes = new List<string>(),
+                EstimatedDuration = 0,
+                Warnings = new List<string> { "无版本快照，无法预览回滚影响" }
+            };
+        }
+
+        var currentVersion = versions.First();
+        var target = targetVersion.HasValue
+            ? versions.FirstOrDefault(v => v.Version == targetVersion.Value)
+            : versions.Skip(1).FirstOrDefault(); // 默认回滚到上一版本
+
+        if (target == null)
+        {
+            throw Oops.Bah($"目标版本 {targetVersion} 不存在");
+        }
+
+        // 计算影响范围（骨架：实际依赖图分析由前端 IR 模块完成）
+        var affectedNodes = new List<string>();
+        var warnings = new List<string>();
+
+        if (!string.IsNullOrEmpty(currentVersion.Diff))
+        {
+            affectedNodes.Add($"版本 {currentVersion.Version} 的变更将被回滚");
+        }
+
+        if (currentVersion.Version - target.Version > 3)
+        {
+            warnings.Add($"跨 {currentVersion.Version - target.Version} 个版本回滚，影响范围较大");
+        }
+
+        var estimatedDuration = affectedNodes.Count * 2; // 估算每个节点 2 秒
+
+        return new RollbackPreview
+        {
+            AffectedNodes = affectedNodes,
+            EstimatedDuration = estimatedDuration,
+            Warnings = warnings
+        };
+    }
+
+    #endregion
+
+    #region 裁决书接口6：审批摘要
+
+    /// <summary>
+    /// 获取审批摘要（配置化阈值对比）
+    /// GET /api/pipeline/{id}/approval-summary
+    /// </summary>
+    [HttpGet("{pipelineId:long}/approval-summary")]
+    public async Task<object> GetApprovalSummaryAsync(long pipelineId)
+    {
+        var pipeline = await _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.Id == pipelineId.ToString())
+            .FirstAsync();
+
+        if (pipeline == null)
+        {
+            throw Oops.Bah($"流水线 {pipelineId} 不存在");
+        }
+
+        // 配置化阈值（从 AI.json 读取，支持热更新）
+        var section = _configuration.GetSection("AI:Pipeline:ReviewThresholds");
+        var thresholds = new Dictionary<string, int>
+        {
+            ["maxRejectCount"] = section.GetValue("maxRejectCount", 3),
+            ["maxStaleHours"] = section.GetValue("maxStaleHours", 72),
+            ["maxExecutionMinutes"] = section.GetValue("maxExecutionMinutes", 30)
+        };
+
+        // 实际指标
+        var passed = pipeline.RejectCount < thresholds["maxRejectCount"];
+        var staleWarning = pipeline.StaleSince.HasValue &&
+            (DateTime.Now - pipeline.StaleSince.Value).TotalHours > 0;
+
+        var details = new List<object>
+        {
+            new { metric = "否决次数", actual = pipeline.RejectCount, threshold = thresholds["maxRejectCount"], passed },
+            new { metric = "超时状态", actual = pipeline.StageStatus == PipelineStatus.Stale ? "是" : "否", threshold = $">{thresholds["maxStaleHours"]}h", passed = !staleWarning },
+        };
+
+        return new
+        {
+            pipelineId = pipelineId.ToString(),
+            pipeline.Name,
+            pipeline.CurrentStage,
+            StageStatus = pipeline.StageStatus?.ToString(),
+            pipeline.RejectCount,
+            passed = passed && !staleWarning,
+            details
+        };
+    }
+
+    #endregion
+
+    #region 辅助方法
+
+    /// <summary>
+    /// 追加流水线消息
+    /// </summary>
+    private async Task AppendMessageAsync(
+        string pipelineId, string stage, string role, string content, string reviewerRole)
+    {
+        var message = new AiPipelineMessageEntity
+        {
+            PipelineId = pipelineId,
+            Stage = stage,
+            Role = role,
+            Content = $"[{reviewerRole}] {content}",
+            Sequence = await GetNextSequenceAsync(pipelineId, stage)
+        };
+        message.Creator();
+
+        await _db.Insertable(message).ExecuteCommandAsync();
+    }
+
+    /// <summary>
+    /// 获取下一个消息序号
+    /// </summary>
+    private async Task<int> GetNextSequenceAsync(string pipelineId, string stage)
+    {
+        var maxSeq = await _db.Queryable<AiPipelineMessageEntity>()
+            .Where(x => x.PipelineId == pipelineId && x.Stage == stage)
+            .MaxAsync(x => (int?)x.Sequence) ?? 0;
+        return maxSeq + 1;
+    }
+
+    /// <summary>
+    /// IR 版本快照
+    /// </summary>
+    private async Task SnapshotIrAsync(string pipelineId, string triggeredBy, string summary)
+    {
+        var latestVersion = await _db.Queryable<IrVersionEntity>()
+            .Where(x => x.PipelineId == pipelineId)
+            .OrderByDescending(x => x.Version)
+            .Select(x => x.Version)
+            .FirstAsync();
+
+        var entity = new IrVersionEntity
+        {
+            PipelineId = pipelineId,
+            Version = latestVersion + 1,
+            TriggeredBy = triggeredBy,
+            ChangeSummary = summary,
+            ParentVersion = latestVersion > 0 ? latestVersion : null
+        };
+        entity.Creator();
+
+        await _db.Insertable(entity).ExecuteCommandAsync();
+    }
+
+    /// <summary>
+    /// 销毁关联沙箱
+    /// </summary>
+    private async Task DestroyAssociatedSandboxIfExists(long pipelineId)
+    {
+        try
+        {
+            var sandboxId = $"pipeline-{pipelineId}";
+            var sandbox = await _sandbox.GetStatusAsync(sandboxId);
+            if (sandbox != null && sandbox.Status != "destroyed")
+            {
+                await _sandbox.DestroyAsync(sandboxId);
+                _logger.LogInformation("沙箱已销毁: SandboxId={SandboxId}, PipelineId={PipelineId}", sandboxId, pipelineId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "销毁沙箱失败: PipelineId={PipelineId}", pipelineId);
+        }
+    }
+
+    private long GetTenantId()
+    {
+        var claim = App.HttpContext?.User?.FindFirst("tenant_id")?.Value;
+        return long.TryParse(claim, out var id) ? id : 0;
+    }
+
+    private long GetUserId()
+    {
+        var claim = App.HttpContext?.User?.FindFirst("user_id")?.Value;
+        return long.TryParse(claim, out var id) ? id : 0;
+    }
+
+    #endregion
+}
+
+// ─── 辅助 DTO ───
+
+/// <summary>
+/// 放弃请求
+/// </summary>
+public class AbandonRequest
+{
+    /// <summary>放弃原因</summary>
+    public string? Reason { get; set; }
+}
+
+/// <summary>
+/// 回滚预览结果
+/// </summary>
+public class RollbackPreview
+{
+    /// <summary>受影响的节点</summary>
+    public List<string> AffectedNodes { get; set; } = new();
+
+    /// <summary>预估耗时（秒）</summary>
+    public int EstimatedDuration { get; set; }
+
+    /// <summary>警告信息</summary>
+    public List<string> Warnings { get; set; } = new();
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\PipelineHub.cs
+========================================
+
+using JNPF.InstantMessaging;
+using Microsoft.AspNetCore.SignalR;
+
+namespace JNPF.InteAssistant;
+
+/// <summary>
+/// Pipeline SignalR Hub
+/// 用于实时推送流水线状态变更事件
+/// </summary>
+[MapHub("/hubs/pipeline")]
+public class PipelineHub : Hub
+{
+    /// <summary>
+    /// 加入租户组（按租户隔离推送）
+    /// </summary>
+    public async Task JoinTenantGroup(string tenantId)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"tenant_{tenantId}");
+    }
+
+    /// <summary>
+    /// 离开租户组
+    /// </summary>
+    public async Task LeaveTenantGroup(string tenantId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"tenant_{tenantId}");
+    }
+
+    /// <summary>
+    /// 加入指定流水线组（按流水线 ID 定向推送）
+    /// </summary>
+    public async Task JoinPipelineGroup(string pipelineId)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"pipeline_{pipelineId}");
+    }
+
+    /// <summary>
+    /// 离开流水线组
+    /// </summary>
+    public async Task LeavePipelineGroup(string pipelineId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"pipeline_{pipelineId}");
+    }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\PipelineSchedulingModule.cs
+========================================
+
+using Hangfire;
+using Hangfire.MemoryStorage;
+using JNPF.Modules;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Quartz;
+
+namespace JNPF.InteAssistant;
+
+/// <summary>
+/// Pipeline 调度模块 — Hangfire + Quartz.NET 注册
+/// 得益于 JnpfModule 自动发现，无需修改 Program.cs
+/// 版 本：v5.2.0
+/// </summary>
+[JNPF.Modules.DependsOn()]
+public class PipelineSchedulingModule : JnpfModule
+{
+    public override void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+    {
+        // SignalR（提供 IHubContext<PipelineHub>，供 Quartz/Hangfire 任务推送实时事件）
+        services.AddSignalR();
+
+        // ─── Hangfire 注册 ───
+        services.AddHangfire(config =>
+        {
+            // 当前使用内存存储（开发/测试）
+            // 生产环境：安装 Hangfire.SqlServer 包后切换为
+            //   config.UseSqlServerStorage(configuration.GetConnectionString("Default"));
+            config.UseMemoryStorage();
+        });
+
+        services.AddHangfireServer(options =>
+        {
+            options.WorkerCount = Math.Min(Environment.ProcessorCount * 2, 10);
+            options.Queues = new[] { "default", "pipeline_validation" };
+        });
+
+        // ─── Quartz.NET 注册 ───
+        services.AddQuartz(q =>
+        {
+            // StaleMonitorService — 每小时整点执行
+            var staleJobKey = new JobKey("StaleMonitorJob", "Pipeline");
+            q.AddJob<StaleMonitorService>(opts => opts
+                .WithIdentity(staleJobKey)
+                .StoreDurably());
+
+            q.AddTrigger(opts => opts
+                .ForJob(staleJobKey)
+                .WithIdentity("StaleMonitorTrigger", "Pipeline")
+                .WithCronSchedule("0 0 * * * ?", x => x
+                    .WithMisfireHandlingInstructionFireAndProceed()));
+        });
+
+        services.AddQuartzHostedService(options =>
+        {
+            options.WaitForJobsToComplete = true;
+            options.AwaitApplicationStarted = true;
+        });
+    }
+
+    public override void OnApplicationInitialization(IApplicationBuilder app)
+    {
+        // Hangfire Dashboard — 开发环境启用，生产环境需加认证
+        app.UseHangfireDashboard("/hangfire", new DashboardOptions
+        {
+            DashboardTitle = "JNPF Pipeline 任务调度",
+            DisplayStorageConnectionString = false
+        });
+
+        // 注册 Pipeline Hub 路由（/hubs/pipeline）
+        app.UseRouting();
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapHubs();
+        });
+    }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\PipelineModuleInitializer.cs
+========================================
+
+using Hangfire;
+using Hangfire.MemoryStorage;
+using JNPF.InteAssistant.Job;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Quartz;
+
+namespace JNPF.InteAssistant;
+
+/// <summary>
+/// Pipeline 模块初始化器
+/// 注册 Hangfire 后台任务 + Quartz.NET 定时调度
+/// 版 本：v5.2.0
+/// 版 权：引迈信息技术有限公司（https://www.jnpfsoft.com）
+/// 作 者：JNPF开发平台组
+/// 日 期：2026-6-20
+/// </summary>
+public static class PipelineModuleInitializer
+{
+    /// <summary>
+    /// 添加 Pipeline 调度服务（Hangfire + Quartz.NET）
+    /// 在 Program.cs 中调用: builder.Services.AddPipelineScheduling(builder.Configuration);
+    /// </summary>
+    public static IServiceCollection AddPipelineScheduling(
+        this IServiceCollection services, IConfiguration configuration)
+    {
+        // SignalR（提供 IHubContext<PipelineHub>，供后台任务推送事件）
+        services.AddSignalR();
+
+        // ─── Hangfire 注册 ───
+        services.AddHangfire(config =>
+        {
+            // 当前使用内存存储（开发/测试）
+            // 生产环境需安装 Hangfire.SqlServer 包并切换：
+            //   config.UseSqlServerStorage(configuration.GetConnectionString("Default"));
+            config.UseMemoryStorage();
+        });
+
+        services.AddHangfireServer(options =>
+        {
+            options.WorkerCount = Math.Min(Environment.ProcessorCount * 2, 10);
+            options.Queues = new[] { "default", "pipeline_validation" };
+        });
+
+        // ─── Hangfire 全局过滤器 ───
+        // TraceContextJobFilter: W3C TraceContext 传播（分布式追踪）
+        GlobalJobFilters.Filters.Add(new TraceContextJobFilter());
+        // HangfireExceptionFilter: 异常捕获 + Serilog 日志（错误追踪闭环）
+        GlobalJobFilters.Filters.Add(new HangfireExceptionFilter());
+
+        // ─── Quartz.NET 注册 ───
+        services.AddQuartz(q =>
+        {
+            // StaleMonitorService — 每小时整点执行
+            var staleJobKey = new JobKey("StaleMonitorJob", "Pipeline");
+            q.AddJob<StaleMonitorService>(opts => opts
+                .WithIdentity(staleJobKey)
+                .StoreDurably());
+
+            q.AddTrigger(opts => opts
+                .ForJob(staleJobKey)
+                .WithIdentity("StaleMonitorTrigger", "Pipeline")
+                .WithCronSchedule("0 0 * * * ?", x => x
+                    .WithMisfireHandlingInstructionFireAndProceed()));
+        });
+
+        services.AddQuartzHostedService(options =>
+        {
+            options.WaitForJobsToComplete = true;
+            options.AwaitApplicationStarted = true;
+        });
+
+        return services;
+    }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\Interfaces\IPipelineEngine.cs
+========================================
+
+namespace JNPF.InteAssistant.Interfaces;
+
+/// <summary>
+/// 五阶段 AI 流水线引擎
+/// 阶段: requirement → architecture → design → development → delivery
+/// 对齐前端 src/core/ai/pipeline/orchestrator.ts OrchestratorAgent
+/// </summary>
+public interface IPipelineEngine
+{
+    /// <summary>
+    /// 创建流水线
+    /// </summary>
+    Task<PipelineResult> CreateAsync(
+        PipelineCreateRequest request, long tenantId, long userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// 启动流水线（进入第一阶段）
+    /// </summary>
+    Task<PipelineResult> StartAsync(long pipelineId, CancellationToken ct = default);
+
+    /// <summary>
+    /// 执行指定阶段
+    /// </summary>
+    Task<StageResult> ExecuteStageAsync(
+        long pipelineId, string stageName, CancellationToken ct = default);
+
+    /// <summary>
+    /// 人工确认阶段产出
+    /// </summary>
+    Task<StageResult> ConfirmStageAsync(
+        long stageId, StageConfirmation confirmation, CancellationToken ct = default);
+
+    /// <summary>
+    /// 回退到指定阶段
+    /// </summary>
+    Task<StageResult> RollbackAsync(
+        long pipelineId, string targetStage, string? reason = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// 获取流水线详情
+    /// </summary>
+    Task<PipelineDetail> GetDetailAsync(long pipelineId, CancellationToken ct = default);
+
+    /// <summary>
+    /// 分页查询流水线列表
+    /// </summary>
+    Task<List<PipelineSummary>> ListAsync(
+        long tenantId, int pageIndex, int pageSize, CancellationToken ct = default);
+}
+
+// ─── DTO ───
+
+public record PipelineCreateRequest
+{
+    public string Name { get; init; } = "";
+    public string PipelineType { get; init; } = "full_app";
+    public string UserRequirement { get; init; } = "";
+}
+
+public record PipelineResult
+{
+    public long PipelineId { get; init; }
+    public string Name { get; init; } = "";
+    public string CurrentStage { get; init; } = "";
+    public string Status { get; init; } = "";
+}
+
+public record PipelineDetail
+{
+    public long Id { get; init; }
+    public string Name { get; init; } = "";
+    public string CurrentStage { get; init; } = "";
+    public string Status { get; init; } = "";
+    public List<StageInfo> Stages { get; init; } = new();
+    public List<PipelineMessageInfo> Messages { get; init; } = new();
+}
+
+public record PipelineSummary
+{
+    public long Id { get; init; }
+    public string Name { get; init; } = "";
+    public string PipelineType { get; init; } = "";
+    public string CurrentStage { get; init; } = "";
+    public string Status { get; init; } = "";
+    public DateTime UpdatedAt { get; init; }
+}
+
+public record StageInfo
+{
+    public long Id { get; init; }
+    public string StageName { get; init; } = "";
+    public string Status { get; init; } = "";
+    public int StageOrder { get; init; }
+    public int? TokensUsed { get; init; }
+}
+
+public record StageResult
+{
+    public long StageId { get; init; }
+    public string StageName { get; init; } = "";
+    public string Status { get; init; } = "";
+    public string? Output { get; init; }
+}
+
+public record PipelineMessageInfo
+{
+    public string Id { get; init; } = "";
+    public string Role { get; init; } = "";
+    public string Content { get; init; } = "";
+    public string Stage { get; init; } = "";
+    public int Sequence { get; init; }
+    public DateTime? CreateTime { get; init; }
+}
+
+public record StageConfirmation
+{
+    public bool Approved { get; init; }
+    public string Comment { get; init; } = "";
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant.Entitys\Common\PipelineStage.cs
+========================================
+
+namespace JNPF.InteAssistant.Entitys.Common;
+
+/// <summary>
+/// 流水线阶段常量
+/// 统一前后端阶段定义
+/// 对齐前端 src/core/ai/pipeline/stages.ts STAGES
+/// </summary>
+public static class PipelineStage
+{
+    /// <summary>阶段1: 需求分析</summary>
+    public const string Requirement = "requirement";
+
+    /// <summary>阶段2: 架构设计</summary>
+    public const string Architecture = "architecture";
+
+    /// <summary>阶段3: 总体设计（多 SubAgent 并行）</summary>
+    public const string Design = "design";
+
+    /// <summary>阶段4: 自动开发（代码生成 + 编译验证）</summary>
+    public const string Development = "development";
+
+    /// <summary>阶段5: 交付（沙箱部署 + ZIP 导出）</summary>
+    public const string Delivery = "delivery";
+
+    /// <summary>
+    /// 阶段顺序（用于确定下一阶段）
+    /// </summary>
+    public static readonly string[] Order =
+        [Requirement, Architecture, Design, Development, Delivery];
+
+    /// <summary>
+    /// 获取下一阶段
+    /// </summary>
+    public static string? GetNext(string current)
+    {
+        var idx = Array.IndexOf(Order, current);
+        return idx >= 0 && idx < Order.Length - 1 ? Order[idx + 1] : null;
+    }
+
+    /// <summary>
+    /// 获取上一阶段
+    /// </summary>
+    public static string? GetPrev(string current)
+    {
+        var idx = Array.IndexOf(Order, current);
+        return idx > 0 ? Order[idx - 1] : null;
+    }
+
+    /// <summary>
+    /// 阶段内状态
+    /// </summary>
+    public static class Status
+    {
+        /// <summary>等待执行</summary>
+        public const string Pending = "pending";
+
+        /// <summary>执行中</summary>
+        public const string Running = "running";
+
+        /// <summary>等待人工确认</summary>
+        public const string Review = "review";
+
+        /// <summary>已确认通过</summary>
+        public const string Approved = "approved";
+
+        /// <summary>执行失败</summary>
+        public const string Failed = "failed";
+
+        /// <summary>已跳过</summary>
+        public const string Skipped = "skipped";
+    }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant.Entitys\Enum\PipelineStatus.cs
+========================================
+
+namespace JNPF.InteAssistant.Entitys.Enum;
+
+/// <summary>
+/// 流水线阶段状态枚举
+/// 用于 F_STAGE_STATUS 字段
+/// </summary>
+public enum PipelineStatus
+{
+    /// <summary>等待开始</summary>
+    Pending = 0,
+
+    /// <summary>执行中</summary>
+    Running = 1,
+
+    /// <summary>等待人工确认</summary>
+    Review = 2,
+
+    /// <summary>已确认</summary>
+    Approved = 3,
+
+    /// <summary>被否决</summary>
+    Rejected = 4,
+
+    /// <summary>熔断</summary>
+    Blocked = 5,
+
+    /// <summary>超时未操作</summary>
+    Stale = 6,
+
+    /// <summary>部署中</summary>
+    Deploying = 7,
+
+    /// <summary>完成</summary>
+    Completed = 8,
+
+    /// <summary>失败</summary>
+    Failed = 9,
+
+    /// <summary>校验中（过渡态）</summary>
+    Validating = 10,
+
+    /// <summary>已放弃（终止态）</summary>
+    Abandoned = 11
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant.Entitys\Entity\AiPipelineEntity.cs
+========================================
+
+using JNPF.Common.Contracts;
+using JNPF.InteAssistant.Entitys.Enum;
+using SqlSugar;
+
+namespace JNPF.InteAssistant.Entitys.Entity;
+
+/// <summary>
+/// AI 五阶段流水线
+/// 版 本：v5.2.0
+/// 版 权：引迈信息技术有限公司（https://www.jnpfsoft.com）
+/// 作 者：JNPF开发平台组
+/// 日 期：2026-6-12
+/// </summary>
+[SugarTable("BASE_AI_PIPELINE", TableDescription = "AI五阶段流水线")]
+public class AiPipelineEntity : TenantCLDSEntityBase
+{
+    /// <summary>
+    /// 流水线名称
+    /// </summary>
+    [SugarColumn(ColumnName = "F_NAME")]
+    public string Name { get; set; }
+
+    /// <summary>
+    /// 当前阶段
+    /// requirement / architecture / design / development / delivery
+    /// 对齐 PipelineStage 常量 + 前端 stages.ts
+    /// </summary>
+    [SugarColumn(ColumnName = "F_CURRENT_STAGE")]
+    public string CurrentStage { get; set; }
+
+    /// <summary>
+    /// 运行状态（字符串，兼容旧逻辑）
+    /// running / completed / failed
+    /// </summary>
+    [SugarColumn(ColumnName = "F_STATUS")]
+    public string Status { get; set; }
+
+    /// <summary>
+    /// 阶段状态（枚举，裁决书新增）
+    /// 对齐 PipelineStatus 枚举
+    /// </summary>
+    [SugarColumn(ColumnName = "F_STAGE_STATUS")]
+    public PipelineStatus? StageStatus { get; set; }
+
+    /// <summary>
+    /// 开始时间
+    /// </summary>
+    [SugarColumn(ColumnName = "F_STARTED_TIME")]
+    public DateTime? StartedTime { get; set; }
+
+    /// <summary>
+    /// 完成时间
+    /// </summary>
+    [SugarColumn(ColumnName = "F_FINISHED_TIME")]
+    public DateTime? FinishedTime { get; set; }
+
+    /// <summary>
+    /// 校验任务 ID（validating 过渡态时使用）
+    /// </summary>
+    [SugarColumn(ColumnName = "F_VALIDATION_ID")]
+    public string? ValidationId { get; set; }
+
+    /// <summary>
+    /// 进入 stale 状态时的阶段
+    /// </summary>
+    [SugarColumn(ColumnName = "F_STALE_FROM_STAGE")]
+    public string? StaleFromStage { get; set; }
+
+    /// <summary>
+    /// 否决次数（3 轮否决后升级）
+    /// </summary>
+    [SugarColumn(ColumnName = "F_REJECT_COUNT")]
+    public int RejectCount { get; set; }
+
+    /// <summary>
+    /// 放弃时间
+    /// </summary>
+    [SugarColumn(ColumnName = "F_ABANDONED_AT")]
+    public DateTime? AbandonedAt { get; set; }
+
+    /// <summary>
+    /// 放弃操作人
+    /// </summary>
+    [SugarColumn(ColumnName = "F_ABANDONED_BY")]
+    public string? AbandonedBy { get; set; }
+
+    /// <summary>
+    /// 放弃原因
+    /// </summary>
+    [SugarColumn(ColumnName = "F_ABANDON_REASON")]
+    public string? AbandonReason { get; set; }
+
+    /// <summary>
+    /// 进入 stale 的时间
+    /// </summary>
+    [SugarColumn(ColumnName = "F_STALE_SINCE")]
+    public DateTime? StaleSince { get; set; }
+
+    /// <summary>
+    /// 失败计数JSON（唯一真源）。格式：{"llm_timeout":2,"compile_failure":0,"sandbox_error":0}
+    /// 更新使用SQL JSON_MODIFY原子操作，无并发覆盖风险
+    /// </summary>
+    [SugarColumn(ColumnName = "F_FAILURE_COUNTS")]
+    public string? FailureCounts { get; set; }
+
+    /// <summary>
+    /// 进入stale的时间（议题3补充，与F_STALE_SINCE互补）
+    /// </summary>
+    [SugarColumn(ColumnName = "F_STALE_AT")]
+    public DateTime? StaleAt { get; set; }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant.Entitys\Entity\AiPipelineMessageEntity.cs
+========================================
+
+using JNPF.Common.Contracts;
+using SqlSugar;
+
+namespace JNPF.InteAssistant.Entitys.Entity;
+
+/// <summary>
+/// AI 流水线消息
+/// 版 本：v5.2.0
+/// 版 权：引迈信息技术有限公司（https://www.jnpfsoft.com）
+/// 作 者：JNPF开发平台组
+/// 日 期：2026-6-12
+/// </summary>
+[SugarTable("BASE_AI_PIPELINE_MESSAGE", TableDescription = "AI流水线消息")]
+public class AiPipelineMessageEntity : TenantCLDSEntityBase
+{
+    /// <summary>
+    /// 流水线 ID（FK → BASE_AI_PIPELINE）
+    /// </summary>
+    [SugarColumn(ColumnName = "F_PIPELINE_ID")]
+    public string PipelineId { get; set; }
+
+    /// <summary>
+    /// 角色
+    /// user / assistant / system / tool
+    /// </summary>
+    [SugarColumn(ColumnName = "F_ROLE")]
+    public string Role { get; set; }
+
+    /// <summary>
+    /// 消息内容
+    /// </summary>
+    [SugarColumn(ColumnName = "F_CONTENT")]
+    public string Content { get; set; }
+
+    /// <summary>
+    /// 所属阶段
+    /// requirement / architecture / design / development / delivery
+    /// 对齐 PipelineStage 常量
+    /// </summary>
+    [SugarColumn(ColumnName = "F_STAGE")]
+    public string Stage { get; set; }
+
+    /// <summary>
+    /// 序号
+    /// </summary>
+    [SugarColumn(ColumnName = "F_SEQUENCE")]
+    public int Sequence { get; set; }
+
+    /// <summary>
+    /// 通知对象JSON。格式：["admin","expert"] 或 [{"role":"admin","userId":"123"}]
+    /// </summary>
+    [SugarColumn(ColumnName = "F_NOTIFY_TARGETS")]
+    public string? NotifyTargets { get; set; }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant.Entitys\Dto\InteAssistant\PipelineEventPayload.cs
+========================================
+
+namespace JNPF.InteAssistant.Entitys.Dto.InteAssistant;
+
+/// <summary>
+/// Pipeline SSE 事件载荷
+/// 通过 SignalR 推送给前端
+/// </summary>
+public class PipelineEventPayload
+{
+    /// <summary>事件类型</summary>
+    public string EventType { get; set; } = "";
+
+    /// <summary>流水线 ID</summary>
+    public string PipelineId { get; set; } = "";
+
+    /// <summary>当前阶段</summary>
+    public string Stage { get; set; } = "";
+
+    /// <summary>用户 ID（定向推送）</summary>
+    public string? UserId { get; set; }
+
+    /// <summary>原因/消息</summary>
+    public string? Reason { get; set; }
+
+    /// <summary>操作按钮列表</summary>
+    public List<PipelineAction>? Actions { get; set; }
+}
+
+/// <summary>
+/// Pipeline 操作按钮
+/// </summary>
+public class PipelineAction
+{
+    public string Type { get; set; } = "";
+    public string Url { get; set; } = "";
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant.Entitys\Dto\InteAssistant\PipelineSSEEvent.cs
+========================================
+
+namespace JNPF.InteAssistant.Entitys.Dto.InteAssistant;
+
+/// <summary>
+/// Pipeline SSE 事件（校验进度推送）
+/// </summary>
+public class PipelineSSEEvent
+{
+    /// <summary>当前阶段</summary>
+    public string? Stage { get; set; }
+
+    /// <summary>校验阶段</summary>
+    public string Phase { get; set; } = "";
+
+    /// <summary>思考/日志内容</summary>
+    public string Thought { get; set; } = "";
+
+    /// <summary>进度 0-100</summary>
+    public int Progress { get; set; }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant.Entitys\Dto\InteAssistant\ChatCompletionRequest.cs
+========================================
+
+namespace JNPF.InteAssistant.Entitys.Dto.InteAssistant;
+
+/// <summary>
+/// 聊天补全请求
+/// 对齐前端 src/core/ai/llm/types.ts ChatRequest
+/// </summary>
+public record ChatCompletionRequest
+{
+    /// <summary>
+    /// 供应商代码 ("deepseek", "mimo", "openai", "ollama")
+    /// </summary>
+    public string ProviderCode { get; init; } = "";
+
+    /// <summary>
+    /// 模型代码（可选，默认使用 Provider 的 DefaultModel）
+    /// </summary>
+    public string? ModelCode { get; init; }
+
+    /// <summary>
+    /// 系统提示词
+    /// </summary>
+    public string? SystemPrompt { get; init; }
+
+    /// <summary>
+    /// 消息列表
+    /// </summary>
+    public List<ChatMessage> Messages { get; init; } = new();
+
+    /// <summary>
+    /// 温度参数 (0-2，默认 0.7)
+    /// </summary>
+    public double Temperature { get; init; } = 0.7;
+
+    /// <summary>
+    /// 最大输出 Token 数（默认 4096）
+    /// </summary>
+    public int MaxTokens { get; init; } = 4096;
+
+    /// <summary>
+    /// 响应格式 ("text", "json")
+    /// </summary>
+    public string? ResponseFormat { get; init; }
+
+    /// <summary>
+    /// 最大重试次数（默认 3）
+    /// </summary>
+    public int MaxRetries { get; init; } = 3;
+
+    /// <summary>
+    /// 超时毫秒（默认 120000）
+    /// </summary>
+    public int TimeoutMs { get; init; } = 120000;
+}
+
+/// <summary>
+/// 聊天消息
+/// </summary>
+public record ChatMessage
+{
+    public string Role { get; init; } = "user";
+    public string Content { get; init; } = "";
+
+    public ChatMessage() { }
+
+    public ChatMessage(string role, string content)
+    {
+        Role = role;
+        Content = content;
+    }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant.Entitys\Dto\InteAssistant\ChatCompletionResponse.cs
+========================================
+
+namespace JNPF.InteAssistant.Entitys.Dto.InteAssistant;
+
+/// <summary>
+/// 聊天补全响应
+/// 对齐前端 src/core/ai/llm/types.ts ChatResponse
+/// </summary>
+public record ChatCompletionResponse
+{
+    /// <summary>
+    /// 响应内容
+    /// </summary>
+    public string Content { get; init; } = "";
+
+    /// <summary>
+    /// 实际使用的模型
+    /// </summary>
+    public string ModelUsed { get; init; } = "";
+
+    /// <summary>
+    /// 输入 Token 数
+    /// </summary>
+    public int TokensIn { get; init; }
+
+    /// <summary>
+    /// 输出 Token 数
+    /// </summary>
+    public int TokensOut { get; init; }
+
+    /// <summary>
+    /// 延迟（毫秒）
+    /// </summary>
+    public int LatencyMs { get; init; }
+
+    /// <summary>
+    /// 是否成功
+    /// </summary>
+    public bool IsSuccess { get; init; }
+
+    /// <summary>
+    /// 错误信息（IsSuccess=false 时）
+    /// </summary>
+    public string? Error { get; init; }
+}
+
+/// <summary>
+/// Provider 信息
+/// </summary>
+public record ProviderInfo
+{
+    public string ProviderCode { get; init; } = "";
+    public string ModelName { get; init; } = "";
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant.Entitys\Dto\InteAssistant\ProviderHealth.cs
+========================================
+
+namespace JNPF.InteAssistant.Entitys.Dto.InteAssistant;
+
+/// <summary>
+/// LLM Provider 健康检查结果
+/// </summary>
+public class ProviderHealth
+{
+    /// <summary>
+    /// 是否健康
+    /// </summary>
+    public bool IsHealthy { get; set; }
+
+    /// <summary>
+    /// Provider 名称
+    /// </summary>
+    public string Provider { get; set; }
+
+    /// <summary>
+    /// 延迟毫秒
+    /// </summary>
+    public long LatencyMs { get; set; }
+
+    /// <summary>
+    /// 错误信息（如有）
+    /// </summary>
+    public string Error { get; set; }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\AiTestService.cs
+========================================
+
+using JNPF.DependencyInjection;
+using JNPF.DynamicApiController;
+using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
+using JNPF.InteAssistant.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+
+namespace JNPF.InteAssistant;
+
+/// <summary>
+/// AI 测试 API — 验证 LLM 网关联通性
+/// 对齐文档 Sprint 0-B 地桩 9: LLM 测试端点
+/// </summary>
+[ApiDescriptionSettings(Tag = "AI", Name = "AiTest", Order = 185)]
+public class AiTestService : IDynamicApiController, ITransient
+{
+    private readonly ILlmGatewayService _gateway;
+    private readonly ILogger<AiTestService> _logger;
+
+    public AiTestService(ILlmGatewayService gateway, ILogger<AiTestService> logger)
+    {
+        _gateway = gateway;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// 测试 LLM 聊天
+    /// </summary>
+    [HttpPost("/api/founder/ai/test")]
+    public async Task<ChatCompletionResponse> TestChatAsync(
+        [FromBody] TestChatRequest request, CancellationToken ct)
+    {
+        _logger.LogInformation("AI test chat requested: {Prompt}",
+            request.Prompt.Length > 100 ? request.Prompt[..100] : request.Prompt);
+
+        var chatRequest = new ChatCompletionRequest
+        {
+            ProviderCode = request.ProviderCode ?? "",
+            Messages = [new ChatMessage("user", request.Prompt)],
+            MaxRetries = 1,
+            TimeoutMs = 60000
+        };
+
+        return await _gateway.ChatAsync(chatRequest, ct);
+    }
+
+    /// <summary>
+    /// 测试 LLM 健康检查
+    /// </summary>
+    [HttpPost("/api/founder/ai/health")]
+    public async Task<object> TestHealthAsync(
+        [FromBody] TestHealthRequest request, CancellationToken ct)
+    {
+        var providerCode = request.ProviderCode ?? "";
+        if (providerCode.Length == 0)
+        {
+            // 检查所有 Provider
+            var results = new Dictionary<string, bool>();
+            foreach (var code in new[] { "mimo", "deepseek", "openai", "ollama" })
+            {
+                results[code] = await _gateway.HealthCheckAsync(code, ct);
+            }
+            return new { providers = results };
+        }
+
+        var healthy = await _gateway.HealthCheckAsync(providerCode, ct);
+        var info = await _gateway.GetProviderInfoAsync(providerCode);
+
+        return new
+        {
+            provider = providerCode,
+            model = info.ModelName,
+            healthy
+        };
+    }
+}
+
+/// <summary>
+/// 测试聊天请求
+/// </summary>
+public record TestChatRequest
+{
+    public string Prompt { get; init; } = "";
+    public string? ProviderCode { get; init; }
+}
+
+/// <summary>
+/// 测试健康检查请求
+/// </summary>
+public record TestHealthRequest
+{
+    public string? ProviderCode { get; init; }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\AiCallLogService.cs
+========================================
+
+using JNPF.Common.Core.Manager;
+using JNPF.Common.Filter;
+using JNPF.Common.Security;
+using JNPF.DatabaseAccessor;
+using JNPF.DependencyInjection;
+using JNPF.DynamicApiController;
+using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
+using JNPF.InteAssistant.Entitys.Entity;
+using JNPF.InteAssistant.Interfaces;
+using JNPF.Systems.Entitys.Permission;
+using Mapster;
+using Microsoft.AspNetCore.Mvc;
+using SqlSugar;
+
+namespace JNPF.InteAssistant;
+
+/// <summary>
+/// 业务实现：AI 调用日志
+/// </summary>
+[ApiDescriptionSettings(Tag = "InteAssistant", Name = "AiCallLog", Order = 177)]
+[Route("api/InteAssistant/[controller]")]
+public class AiCallLogService : IAiCallLogService, IDynamicApiController, ITransient
+{
+    /// <summary>
+    /// 服务基础仓储
+    /// </summary>
+    private readonly ISqlSugarRepository<AiCallLogEntity> _repository;
+
+    /// <summary>
+    /// 用户管理
+    /// </summary>
+    private readonly IUserManager _userManager;
+
+    /// <summary>
+    /// 初始化一个<see cref="AiCallLogService"/>类型的新实例
+    /// </summary>
+    public AiCallLogService(
+        ISqlSugarRepository<AiCallLogEntity> repository,
+        IUserManager userManager)
+    {
+        _repository = repository;
+        _userManager = userManager;
+    }
+
+    #region GET
+
+    /// <summary>
+    /// 获取 AI 调用日志列表
+    /// </summary>
+    [HttpGet("")]
+    public async Task<dynamic> GetList([FromQuery] AiCallLogListQueryInput input)
+    {
+        var data = await _repository.AsQueryable()
+            .WhereIF(!string.IsNullOrEmpty(input.model), it => it.Model == input.model)
+            .WhereIF(input.statusCode != null, it => it.StatusCode == input.statusCode)
+            .WhereIF(input.startTime != null, it => it.CreatorTime >= input.startTime)
+            .WhereIF(input.endTime != null, it => it.CreatorTime <= input.endTime)
+            .Where(it => it.DeleteMark == null)
+            .OrderBy(it => it.CreatorTime, OrderByType.Desc)
+            .Select(it => new AiCallLogListOutput
+            {
+                id = it.Id,
+                model = it.Model,
+                promptTokens = it.PromptTokens,
+                completionTokens = it.CompletionTokens,
+                latencyMs = it.LatencyMs,
+                statusCode = it.StatusCode,
+                creatorTime = it.CreatorTime,
+                creatorUser = SqlFunc.Subqueryable<UserEntity>().Where(u => u.Id.Equals(it.CreatorUserId)).Select(u => SqlFunc.MergeString(u.RealName, "/", u.Account)),
+            }).ToPagedListAsync(input.currentPage, input.pageSize);
+        return PageResult<AiCallLogListOutput>.SqlSugarPageResult(data);
+    }
+
+    /// <summary>
+    /// 获取 AI 调用日志详情
+    /// </summary>
+    [HttpGet("{id}")]
+    public async Task<dynamic> GetInfo(string id)
+    {
+        var data = await _repository.AsQueryable().FirstAsync(it => it.Id == id && it.DeleteMark == null);
+        return data.Adapt<AiCallLogInfoOutput>();
+    }
+
+    #endregion
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\Interfaces\IAiCallLogService.cs
+========================================
+
+using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
+
+namespace JNPF.InteAssistant.Interfaces;
+
+/// <summary>
+/// AI 调用日志服务接口
+/// </summary>
+public interface IAiCallLogService
+{
+    /// <summary>
+    /// 获取调用日志列表
+    /// </summary>
+    Task<dynamic> GetList(AiCallLogListQueryInput input);
+
+    /// <summary>
+    /// 获取调用日志详情
+    /// </summary>
+    Task<dynamic> GetInfo(string id);
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\Studio\PipelineStageConfigEntity.cs
+========================================
+
+using SqlSugar;
+namespace JNPF.InteAssistant.Studio;
+[SugarTable("BASE_AI_PIPELINE_STAGE_CONFIG")]
+public class PipelineStageConfigEntity
+{
+    [SugarColumn(IsPrimaryKey = true, ColumnName = "F_Id")] public long F_Id { get; set; }
+    [SugarColumn(ColumnName = "F_Stage")] public int F_Stage { get; set; }
+    [SugarColumn(ColumnName = "F_StageName")] public string F_StageName { get; set; } = string.Empty;
+    [SugarColumn(ColumnName = "F_Description")] public string? F_Description { get; set; }
+    [SugarColumn(ColumnName = "F_AgentCode")] public string? F_AgentCode { get; set; }
+    [SugarColumn(ColumnName = "F_PromptTemplateId")] public long? F_PromptTemplateId { get; set; }
+    [SugarColumn(ColumnName = "F_TimeoutSeconds")] public int F_TimeoutSeconds { get; set; } = 300;
+    [SugarColumn(ColumnName = "F_RequireConfirm")] public bool F_RequireConfirm { get; set; } = true;
+    [SugarColumn(ColumnName = "F_AllowRollback")] public bool F_AllowRollback { get; set; } = true;
+    [SugarColumn(ColumnName = "F_Enabled")] public bool F_Enabled { get; set; } = true;
+    [SugarColumn(ColumnName = "F_CreatorTime")] public DateTime F_CreatorTime { get; set; }
+    [SugarColumn(ColumnName = "F_CreatorUserId")] public long? F_CreatorUserId { get; set; }
+    [SugarColumn(ColumnName = "F_ModifyTime")] public DateTime? F_ModifyTime { get; set; }
+    [SugarColumn(ColumnName = "F_ModifyUserId")] public long? F_ModifyUserId { get; set; }
+    [SugarColumn(ColumnName = "F_DeleteMark")] public bool F_DeleteMark { get; set; }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\Studio\PipelineStageConfigService.cs
+========================================
+
+using JNPF.DependencyInjection;
+using JNPF.DynamicApiController;
+using Microsoft.AspNetCore.Mvc;
+using SqlSugar;
+
+namespace JNPF.InteAssistant.Studio;
+
+[ApiDescriptionSettings(Tag = "Studio", Name = "PipelineStageConfig", Order = 200)]
+[Route("api/studio/pipeline")]
+public class PipelineStageConfigService : IDynamicApiController, ITransient
+{
+    private readonly ISqlSugarClient _db;
+    public PipelineStageConfigService(ISqlSugarClient db) { _db = db; }
+
+    [HttpGet("stages")]
+    public async Task<object> GetStages()
+    {
+        var list = await _db.Queryable<PipelineStageConfigEntity>().Where(x => !x.F_DeleteMark).OrderBy(x => x.F_Stage).ToListAsync();
+        return new { items = list };
+    }
+
+    [HttpPut("stage/{stageNumber}/update")]
+    public async Task UpdateStage(int stageNumber, [FromBody] StageConfigUpdateInput input)
+    {
+        var e = await _db.Queryable<PipelineStageConfigEntity>().Where(x => x.F_Stage == stageNumber && !x.F_DeleteMark).FirstAsync()
+            ?? throw new InvalidOperationException($"阶段 {stageNumber} 配置不存在");
+        if (input.StageName != null) e.F_StageName = input.StageName;
+        if (input.Description != null) e.F_Description = input.Description;
+        if (input.AgentCode != null) e.F_AgentCode = input.AgentCode;
+        if (input.PromptTemplateId.HasValue) e.F_PromptTemplateId = input.PromptTemplateId;
+        if (input.TimeoutSeconds.HasValue) e.F_TimeoutSeconds = input.TimeoutSeconds.Value;
+        if (input.RequireConfirm.HasValue) e.F_RequireConfirm = input.RequireConfirm.Value;
+        if (input.AllowRollback.HasValue) e.F_AllowRollback = input.AllowRollback.Value;
+        if (input.Enabled.HasValue) e.F_Enabled = input.Enabled.Value;
+        e.F_ModifyTime = DateTime.Now;
+        await _db.Updateable(e).ExecuteCommandAsync();
+    }
+}
+
+public class StageConfigUpdateInput { public string? StageName { get; set; } public string? Description { get; set; } public string? AgentCode { get; set; } public long? PromptTemplateId { get; set; } public int? TimeoutSeconds { get; set; } public bool? RequireConfirm { get; set; } public bool? AllowRollback { get; set; } public bool? Enabled { get; set; } }
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\Studio\ModelProviderEntity.cs
+========================================
+
+using SqlSugar;
+
+namespace JNPF.InteAssistant.Studio;
+
+/// <summary>
+/// 模型供应商配置实体
+/// 对应表: BASE_AI_MODEL_PROVIDER
+/// </summary>
+[SugarTable("BASE_AI_MODEL_PROVIDER")]
+public class ModelProviderEntity
+{
+    [SugarColumn(IsPrimaryKey = true)]
+    public long F_Id { get; set; }
+
+    [SugarColumn(Length = 50, IsNullable = false)]
+    public string F_ProviderCode { get; set; }
+
+    [SugarColumn(Length = 100, IsNullable = false)]
+    public string F_Name { get; set; }
+
+    [SugarColumn(Length = 500, IsNullable = false)]
+    public string F_BaseUrl { get; set; }
+
+    [SugarColumn(Length = 500, IsNullable = false)]
+    public string F_ApiKey { get; set; }
+
+    [SugarColumn(Length = 100, IsNullable = true)]
+    public string F_DefaultModel { get; set; }
+
+    /// <summary>
+    /// API 协议格式: openai / anthropic / ollama
+    /// </summary>
+    [SugarColumn(Length = 20, IsNullable = false)]
+    public string F_ApiFormat { get; set; } = "openai";
+
+    public long F_MaxTokens { get; set; } = 1000000;
+
+    [SugarColumn(Length = 38, IsNullable = false, DecimalDigits = 2)]
+    public decimal F_Temperature { get; set; } = 0.7m;
+
+    [SugarColumn(Length = 20, IsNullable = false)]
+    public string F_Status { get; set; } = "healthy";
+
+    public int F_Priority { get; set; } = 1;
+
+    public bool F_Enabled { get; set; } = true;
+
+    [SugarColumn(Length = 500, IsNullable = true)]
+    public string F_Description { get; set; }
+
+    public DateTime? F_LastTestTime { get; set; }
+
+    [SugarColumn(ColumnDataType = "text", IsNullable = true)]
+    public string F_LastTestResult { get; set; }
+
+    public DateTime F_CreatorTime { get; set; }
+    public long? F_CreatorUserId { get; set; }
+    public DateTime? F_ModifyTime { get; set; }
+    public long? F_ModifyUserId { get; set; }
+    public bool F_DeleteMark { get; set; }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\Studio\ModelProviderService.cs
+========================================
+
+using JNPF.Common.Core.Manager;
+using JNPF.DependencyInjection;
+using JNPF.DynamicApiController;
+using Microsoft.AspNetCore.Mvc;
+using SqlSugar;
+using System.Text;
+using System.Text.Json;
+
+namespace JNPF.InteAssistant.Studio;
+
+/// <summary>
+/// 模型供应商配置服务
+/// </summary>
+[ApiDescriptionSettings(Tag = "Studio", Name = "ModelProvider", Order = 210)]
+[Route("api/studio/pipeline")]
+public class ModelProviderService : IDynamicApiController, ITransient
+{
+    private readonly ISqlSugarClient _db;
+    private readonly IUserManager _userManager;
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public ModelProviderService(
+        ISqlSugarClient db,
+        IUserManager userManager,
+        IHttpClientFactory httpClientFactory)
+    {
+        _db = db;
+        _userManager = userManager;
+        _httpClientFactory = httpClientFactory;
+    }
+
+    #region CRUD
+
+    /// <summary>
+    /// 供应商列表
+    /// </summary>
+    [HttpGet("providers")]
+    public async Task<dynamic> GetList()
+    {
+        var list = await _db.Queryable<ModelProviderEntity>()
+            .Where(x => !x.F_DeleteMark)
+            .OrderBy(x => x.F_Priority)
+            .OrderByDescending(x => x.F_CreatorTime)
+            .ToListAsync();
+
+        var safeList = list.Select(x => new
+        {
+            id = x.F_Id,
+            providerCode = x.F_ProviderCode,
+            name = x.F_Name,
+            baseUrl = x.F_BaseUrl,
+            apiKeyMasked = MaskApiKey(x.F_ApiKey),
+            defaultModel = x.F_DefaultModel,
+            apiFormat = x.F_ApiFormat,
+            maxTokens = x.F_MaxTokens,
+            temperature = x.F_Temperature,
+            status = x.F_Status,
+            priority = x.F_Priority,
+            enabled = x.F_Enabled,
+            description = x.F_Description,
+            lastTestTime = x.F_LastTestTime,
+            lastTestResult = x.F_LastTestResult,
+            creatorTime = x.F_CreatorTime
+        }).ToList();
+
+        return new { items = safeList, total = safeList.Count };
+    }
+
+    /// <summary>
+    /// 供应商详情
+    /// </summary>
+    [HttpGet("providers/{id}")]
+    public async Task<dynamic> GetDetail(long id)
+    {
+        var entity = await _db.Queryable<ModelProviderEntity>()
+            .Where(x => x.F_Id == id && !x.F_DeleteMark)
+            .FirstAsync();
+
+        if (entity == null) throw new Exception("供应商不存在");
+
+        return new
+        {
+            id = entity.F_Id,
+            providerCode = entity.F_ProviderCode,
+            name = entity.F_Name,
+            baseUrl = entity.F_BaseUrl,
+            apiKeyMasked = MaskApiKey(entity.F_ApiKey),
+            defaultModel = entity.F_DefaultModel,
+            apiFormat = entity.F_ApiFormat,
+            maxTokens = entity.F_MaxTokens,
+            temperature = entity.F_Temperature,
+            status = entity.F_Status,
+            priority = entity.F_Priority,
+            enabled = entity.F_Enabled,
+            description = entity.F_Description
+        };
+    }
+
+    /// <summary>
+    /// 创建供应商
+    /// </summary>
+    [HttpPost("providers")]
+    public async Task<long> Create([FromBody] ProviderCreateInput input)
+    {
+        var exists = await _db.Queryable<ModelProviderEntity>()
+            .AnyAsync(x => x.F_ProviderCode == input.ProviderCode && !x.F_DeleteMark);
+        if (exists) throw new Exception($"供应商编码 {input.ProviderCode} 已存在");
+
+        var entity = new ModelProviderEntity
+        {
+            F_Id = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            F_ProviderCode = input.ProviderCode,
+            F_Name = input.Name,
+            F_BaseUrl = input.BaseUrl,
+            F_ApiKey = input.ApiKey,
+            F_DefaultModel = input.DefaultModel,
+            F_MaxTokens = input.MaxTokens ?? 1000000,
+            F_Temperature = input.Temperature ?? 0.7m,
+            F_Status = "testing",
+            F_Priority = input.Priority,
+            F_Enabled = true,
+            F_Description = input.Description,
+            F_CreatorTime = DateTime.Now,
+            F_CreatorUserId = long.TryParse(_userManager.UserId, out var uid) ? uid : null
+        };
+
+        await _db.Insertable(entity).ExecuteCommandAsync();
+        return entity.F_Id;
+    }
+
+    /// <summary>
+    /// 更新供应商
+    /// </summary>
+    [HttpPut("providers/{id}")]
+    public async Task Update(long id, [FromBody] ProviderUpdateInput input)
+    {
+        var entity = await _db.Queryable<ModelProviderEntity>()
+            .Where(x => x.F_Id == id && !x.F_DeleteMark)
+            .FirstAsync();
+        if (entity == null) throw new Exception("供应商不存在");
+
+        entity.F_Name = input.Name ?? entity.F_Name;
+        entity.F_BaseUrl = input.BaseUrl ?? entity.F_BaseUrl;
+
+        if (!string.IsNullOrEmpty(input.ApiKey) && input.ApiKey != "***********")
+            entity.F_ApiKey = input.ApiKey;
+
+        entity.F_DefaultModel = input.DefaultModel ?? entity.F_DefaultModel;
+        entity.F_MaxTokens = input.MaxTokens ?? entity.F_MaxTokens;
+        entity.F_Temperature = input.Temperature ?? entity.F_Temperature;
+        entity.F_Priority = input.Priority ?? entity.F_Priority;
+        entity.F_Description = input.Description ?? entity.F_Description;
+        entity.F_ModifyTime = DateTime.Now;
+        entity.F_ModifyUserId = long.TryParse(_userManager.UserId, out var uid) ? uid : null;
+
+        await _db.Updateable(entity).ExecuteCommandAsync();
+    }
+
+    /// <summary>
+    /// 删除供应商
+    /// </summary>
+    [HttpDelete("providers/{id}")]
+    public async Task Delete(long id)
+    {
+        await _db.Updateable<ModelProviderEntity>()
+            .SetColumns(x => x.F_DeleteMark, true)
+            .SetColumns(x => x.F_ModifyTime, DateTime.Now)
+            .Where(x => x.F_Id == id)
+            .ExecuteCommandAsync();
+    }
+
+    /// <summary>
+    /// 启用/禁用
+    /// </summary>
+    [HttpPut("providers/{id}/toggle")]
+    public async Task Toggle(long id)
+    {
+        var entity = await _db.Queryable<ModelProviderEntity>()
+            .Where(x => x.F_Id == id && !x.F_DeleteMark)
+            .FirstAsync();
+        if (entity == null) throw new Exception("供应商不存在");
+
+        entity.F_Enabled = !entity.F_Enabled;
+        entity.F_ModifyTime = DateTime.Now;
+
+        await _db.Updateable(entity).ExecuteCommandAsync();
+    }
+
+    #endregion
+
+    #region 测试连接
+
+    /// <summary>
+    /// 测试供应商连接 — 支持 OpenAI 和 Anthropic 两种 API 格式
+    /// </summary>
+    [HttpPost("providers/{id}/test")]
+    public async Task<dynamic> TestConnection(long id)
+    {
+        var entity = await _db.Queryable<ModelProviderEntity>()
+            .Where(x => x.F_Id == id && !x.F_DeleteMark)
+            .FirstAsync();
+        if (entity == null) throw new Exception("供应商不存在");
+
+        var start = DateTime.Now;
+        var client = _httpClientFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(30);
+
+        try
+        {
+            HttpResponseMessage response;
+            string url;
+            string json;
+
+            if (entity.F_ApiFormat == "anthropic")
+            {
+                // Anthropic API 格式
+                url = $"{entity.F_BaseUrl}/v1/messages";
+
+                var requestBody = new
+                {
+                    model = entity.F_DefaultModel,
+                    max_tokens = 50,
+                    messages = new[] { new { role = "user", content = "请回复'连接成功'四个字" } }
+                };
+
+                json = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Headers.Add("x-api-key", entity.F_ApiKey);
+                request.Headers.Add("anthropic-version", "2023-06-01");
+                request.Content = content;
+
+                response = await client.SendAsync(request);
+            }
+            else
+            {
+                // OpenAI 兼容格式
+                url = $"{entity.F_BaseUrl}/chat/completions";
+
+                var requestBody = new
+                {
+                    model = entity.F_DefaultModel,
+                    max_tokens = 50,
+                    messages = new[] { new { role = "user", content = "请回复'连接成功'四个字" } },
+                    temperature = 0.1
+                };
+
+                json = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Headers.Add("Authorization", $"Bearer {entity.F_ApiKey}");
+                request.Content = content;
+
+                response = await client.SendAsync(request);
+            }
+
+            var latency = (DateTime.Now - start).TotalMilliseconds;
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                entity.F_Status = "healthy";
+                entity.F_LastTestTime = DateTime.Now;
+                entity.F_LastTestResult = $"✅ HTTP {(int)response.StatusCode} | {latency:F0}ms | {entity.F_DefaultModel}";
+
+                await _db.Updateable(entity)
+                    .UpdateColumns(x => new { x.F_Status, x.F_LastTestTime, x.F_LastTestResult })
+                    .ExecuteCommandAsync();
+
+                return new { success = true, message = entity.F_LastTestResult, latency, httpStatus = (int)response.StatusCode, model = entity.F_DefaultModel, provider = entity.F_ProviderCode, apiFormat = entity.F_ApiFormat };
+            }
+            else
+            {
+                entity.F_Status = "degraded";
+                entity.F_LastTestTime = DateTime.Now;
+                entity.F_LastTestResult = $"❌ HTTP {(int)response.StatusCode} | {latency:F0}ms";
+
+                await _db.Updateable(entity)
+                    .UpdateColumns(x => new { x.F_Status, x.F_LastTestTime, x.F_LastTestResult })
+                    .ExecuteCommandAsync();
+
+                return new { success = false, message = entity.F_LastTestResult, detail = responseBody.Substring(0, Math.Min(responseBody.Length, 500)), latency, httpStatus = (int)response.StatusCode };
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            entity.F_Status = "offline";
+            entity.F_LastTestTime = DateTime.Now;
+            entity.F_LastTestResult = "❌ 连接超时 (30s)";
+
+            await _db.Updateable(entity)
+                .UpdateColumns(x => new { x.F_Status, x.F_LastTestTime, x.F_LastTestResult })
+                .ExecuteCommandAsync();
+
+            return new { success = false, message = "连接超时 (30s)", latency = 30000d };
+        }
+        catch (Exception ex)
+        {
+            entity.F_Status = "offline";
+            entity.F_LastTestTime = DateTime.Now;
+            entity.F_LastTestResult = $"❌ {ex.Message}";
+
+            await _db.Updateable(entity)
+                .UpdateColumns(x => new { x.F_Status, x.F_LastTestTime, x.F_LastTestResult })
+                .ExecuteCommandAsync();
+
+            return new { success = false, message = ex.Message, latency = (DateTime.Now - start).TotalMilliseconds };
+        }
+    }
+
+    #endregion
+
+    #region 内部方法
+
+    private string MaskApiKey(string apiKey)
+    {
+        if (string.IsNullOrEmpty(apiKey)) return "未配置";
+        if (apiKey.Length <= 8) return "****";
+        return apiKey.Substring(0, 4) + "****" + apiKey.Substring(apiKey.Length - 4);
+    }
+
+    #endregion
+}
+
+#region DTO
+
+public class ProviderCreateInput
+{
+    public string ProviderCode { get; set; }
+    public string Name { get; set; }
+    public string BaseUrl { get; set; }
+    public string ApiKey { get; set; }
+    public string DefaultModel { get; set; }
+    public long? MaxTokens { get; set; }
+    public decimal? Temperature { get; set; }
+    public int Priority { get; set; }
+    public string Description { get; set; }
+}
+
+public class ProviderUpdateInput
+{
+    public string Name { get; set; }
+    public string BaseUrl { get; set; }
+    public string ApiKey { get; set; }
+    public string DefaultModel { get; set; }
+    public long? MaxTokens { get; set; }
+    public decimal? Temperature { get; set; }
+    public int? Priority { get; set; }
+    public string Description { get; set; }
+}
+
+#endregion
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\DetailedDesignOrchestrator.cs
+========================================
+
+using JNPF.DependencyInjection;
+using JNPF.InteAssistant.Interfaces;
+using Microsoft.Extensions.Logging;
+
+namespace JNPF.InteAssistant;
+
+/// <summary>
+/// 详细设计编排器
+/// 6 个 SubAgent 两批次并行执行:
+///   批次 1: 功能模块 + 业务流程 + 数据库
+///   批次 2: UI + 权限 + API (依赖批次 1 产出)
+/// </summary>
+public class DetailedDesignOrchestrator : ITransient
+{
+    private readonly IEnumerable<ISubAgent> _subAgents;
+    private readonly IDocumentMerger _merger;
+    private readonly ILogger<DetailedDesignOrchestrator> _logger;
+
+    public DetailedDesignOrchestrator(
+        IEnumerable<ISubAgent> subAgents,
+        IDocumentMerger merger,
+        ILogger<DetailedDesignOrchestrator> logger)
+    {
+        _subAgents = subAgents;
+        _merger = merger;
+        _logger = logger;
+    }
+
+    public async Task<DetailedDesignResult> ExecuteAsync(
+        DetailedDesignContext context,
+        IProgress<object>? progress,
+        CancellationToken ct = default)
+    {
+        var agentMap = _subAgents.ToDictionary(a => a.AgentName);
+        var results = new Dictionary<string, SubAgentResult>();
+
+        _logger.LogInformation("[详细设计] 启动批次1: 功能模块, 业务流程, 数据库 (并行)");
+        var batch1Names = new[] { "functional_module", "business_process", "database" };
+
+        var batch1Tasks = batch1Names.Select(async name =>
+        {
+            if (!agentMap.TryGetValue(name, out var agent))
+            {
+                results[name] = new SubAgentResult
+                { AgentName = name, IsSuccess = false, Error = $"Agent '{name}' 未注册" };
+                return;
+            }
+            var result = await agent.ExecuteAsync(context, results, ct);
+            lock (results) { results[name] = result; }
+            _logger.LogInformation("[详细设计] {Agent}: {Status}", name,
+                result.IsSuccess ? "✅" : $"❌ {result.Error}");
+        });
+
+        await Task.WhenAll(batch1Tasks);
+
+        if (results.Values.Count(r => r.IsSuccess) < 2)
+        {
+            return new DetailedDesignResult
+            { IsSuccess = false, Error = "批次 1 执行失败，无法继续进行批次 2" };
+        }
+
+        _logger.LogInformation("[详细设计] 启动批次2: UI, 权限, API (并行)");
+        var batch2Names = new[] { "ui_design", "permission", "api_design" };
+
+        var batch2Tasks = batch2Names.Select(async name =>
+        {
+            if (!agentMap.TryGetValue(name, out var agent))
+            {
+                results[name] = new SubAgentResult
+                { AgentName = name, IsSuccess = false, Error = $"Agent '{name}' 未注册" };
+                return;
+            }
+            var result = await agent.ExecuteAsync(context, results, ct);
+            lock (results) { results[name] = result; }
+            _logger.LogInformation("[详细设计] {Agent}: {Status}", name,
+                result.IsSuccess ? "✅" : $"❌ {result.Error}");
+        });
+
+        await Task.WhenAll(batch2Tasks);
+
+        // 合并为完整文档
+        _logger.LogInformation("[详细设计] 合并文档...");
+        var mergedDocument = await _merger.MergeAsync(context.ProjectName, results, ct);
+
+        return new DetailedDesignResult
+        {
+            IsSuccess = true,
+            SubAgentResults = results,
+            MergedDocument = mergedDocument,
+            DocumentUrl = mergedDocument.StoragePath
+        };
+    }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\SandboxManager.cs
+========================================
+
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Text;
+using JNPF.DependencyInjection;
+using JNPF.InteAssistant.Interfaces;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+
+namespace JNPF.InteAssistant;
+
+/// <summary>
+/// Docker 沙箱调度器 (Phase 6 Day 3).
+/// 使用 docker CLI 管理容器生命周期，共享 SQL Server 实例.
+/// SemaphoreSlim 限制 5 并发.
+/// </summary>
+public sealed class SandboxManager : ISandboxManager, ISingleton
+{
+    private readonly ILogger<SandboxManager> _logger;
+    private readonly IConfiguration _configuration;
+    private readonly SemaphoreSlim _semaphore = new(5, 5);
+    private readonly ConcurrentDictionary<string, SandboxInstance> _instances = new();
+
+    private const string DockerNetwork = "jnpf-sandbox-net";
+    private const string DbServerHost = "host.docker.internal"; // Docker 容器访问宿主机 SQL Server
+
+    public SandboxManager(ILogger<SandboxManager> logger, IConfiguration configuration)
+    {
+        _logger = logger;
+        _configuration = configuration;
+    }
+
+    /// <inheritdoc/>
+    public async Task<SandboxInstance> CreateAsync(SandboxConfig config, CancellationToken ct = default)
+    {
+        await _semaphore.WaitAsync(ct);
+        try
+        {
+            var instance = new SandboxInstance
+            {
+                Id = config.Id,
+                Status = "creating",
+                CreatedAt = DateTime.UtcNow,
+                Config = config,
+            };
+
+            _instances[config.Id] = instance;
+
+            // 1. 确保 Docker 网络存在
+            await EnsureNetworkAsync();
+
+            // 2. 构建容器名
+            var containerName = $"jnpf-sandbox-{config.Id}";
+
+            // 3. 构建数据库连接字符串（共享 SQL Server，per-tenant database）
+            var dbName = $"JNPF_Sandbox_{config.TenantId}";
+            var dbConnectionString = BuildConnectionString(dbName);
+            instance.DbConnectionString = dbConnectionString;
+
+            // 4. 启动 Docker 容器
+            var port = config.Port;
+            var args = new StringBuilder();
+            args.Append("run -d --rm ");
+            args.Append($"--name {containerName} ");
+            args.Append($"--network {DockerNetwork} ");
+            args.Append($"--cpus={config.CpuLimit} ");
+            args.Append($"--memory={config.MemoryLimit} ");
+            args.Append($"-p {port}:8080 ");
+            args.Append($"-e ASPNETCORE_ENVIRONMENT=Sandbox ");
+            args.Append($"-e ConnectionStrings__Default=\"{dbConnectionString}\" ");
+            args.Append($"-e TenantId={config.TenantId} ");
+            args.Append($"{config.Image}");
+
+            var result = await RunDockerAsync(args.ToString());
+
+            if (result.ExitCode != 0)
+            {
+                instance.Status = "error";
+                _logger.LogError("Docker 容器创建失败: {Error}", result.Stderr);
+                throw new InvalidOperationException($"Docker 容器创建失败: {result.Stderr}");
+            }
+
+            // 5. 记录容器 ID
+            instance.ContainerId = result.Stdout.Trim();
+            instance.Status = "ready";
+            instance.Url = $"http://localhost:{port}";
+
+            _logger.LogInformation("沙箱 {SandboxId} 创建成功, 容器 {ContainerId}, URL: {Url}",
+                config.Id, instance.ContainerId, instance.Url);
+
+            return instance;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task DeployAsync(string sandboxId, byte[] zipContent)
+    {
+        if (!_instances.TryGetValue(sandboxId, out var instance) || instance.ContainerId == null)
+            throw new InvalidOperationException($"沙箱 {sandboxId} 不存在或未就绪");
+
+        instance.Status = "testing";
+
+        try
+        {
+            // 将 zip 复制到容器并解压
+            var tempFile = Path.GetTempFileName() + ".zip";
+            await File.WriteAllBytesAsync(tempFile, zipContent);
+
+            var copyResult = await RunDockerAsync($"cp \"{tempFile}\" {instance.ContainerId}:/app/deploy.zip");
+            if (copyResult.ExitCode != 0)
+                throw new InvalidOperationException($"部署文件复制失败: {copyResult.Stderr}");
+
+            var unzipResult = await RunDockerAsync(
+                $"exec {instance.ContainerId} unzip -o /app/deploy.zip -d /app/");
+            if (unzipResult.ExitCode != 0)
+                throw new InvalidOperationException($"解压失败: {unzipResult.Stderr}");
+
+            // 清理临时文件
+            try { File.Delete(tempFile); } catch { /* ignore */ }
+
+            instance.Status = "ready";
+            _logger.LogInformation("沙箱 {SandboxId} 部署成功", sandboxId);
+        }
+        catch
+        {
+            instance.Status = "error";
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task DestroyAsync(string sandboxId, CancellationToken ct = default)
+    {
+        if (!_instances.TryGetValue(sandboxId, out var instance))
+        {
+            _logger.LogWarning("沙箱 {SandboxId} 不存在，跳过销毁", sandboxId);
+            return;
+        }
+
+        instance.Status = "destroying";
+
+        try
+        {
+            if (instance.ContainerId != null)
+            {
+                await RunDockerAsync($"stop -t 10 {instance.ContainerId}");
+                // --rm 标志会自动删除容器
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "销毁沙箱 {SandboxId} 时出错", sandboxId);
+        }
+
+        instance.Status = "destroyed";
+        _instances.TryRemove(sandboxId, out _);
+        _logger.LogInformation("沙箱 {SandboxId} 已销毁", sandboxId);
+    }
+
+    /// <inheritdoc/>
+    public Task<SandboxInstance?> GetStatusAsync(string sandboxId, CancellationToken ct = default)
+    {
+        _instances.TryGetValue(sandboxId, out var instance);
+        return Task.FromResult(instance);
+    }
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyList<SandboxInstance>> GetAllAsync(CancellationToken ct = default)
+    {
+        return Task.FromResult<IReadOnlyList<SandboxInstance>>(
+            _instances.Values.ToList());
+    }
+
+    /// <inheritdoc/>
+    public async Task DestroyAllAsync(CancellationToken ct = default)
+    {
+        var ids = _instances.Keys.ToList();
+        foreach (var id in ids)
+        {
+            await DestroyAsync(id, ct);
+        }
+    }
+
+    // ─── 新增方法（P0-3 修复）───
+
+    /// <inheritdoc/>
+    public async Task UploadFilesAsync(
+        string sandboxId, List<GeneratedFile> files, CancellationToken ct = default)
+    {
+        if (!_instances.TryGetValue(sandboxId, out var instance) || instance.ContainerId == null)
+            throw new InvalidOperationException($"沙箱 {sandboxId} 不存在或未就绪");
+
+        // 创建临时目录结构
+        var tempDir = Path.Combine(Path.GetTempPath(), $"sandbox-upload-{sandboxId}-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            foreach (var file in files)
+            {
+                var filePath = Path.Combine(tempDir, file.FilePath.Replace('/', Path.DirectorySeparatorChar));
+                var dir = Path.GetDirectoryName(filePath);
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
+                await File.WriteAllTextAsync(filePath, file.Content, ct);
+            }
+
+            // docker cp 到容器
+            var result = await RunDockerAsync($"cp {tempDir}/. {instance.ContainerId}:/app/");
+            if (result.ExitCode != 0)
+                throw new InvalidOperationException($"docker cp 失败: {result.Stderr}");
+
+            _logger.LogInformation("沙箱 {SandboxId} 上传 {Count} 个文件成功", sandboxId, files.Count);
+        }
+        finally
+        {
+            try { Directory.Delete(tempDir, true); } catch { /* ignore */ }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<CommandResult> ExecuteCommandAsync(
+        string sandboxId, string command, CancellationToken ct = default)
+    {
+        if (!_instances.TryGetValue(sandboxId, out var instance) || instance.ContainerId == null)
+            throw new InvalidOperationException($"沙箱 {sandboxId} 不存在或未就绪");
+
+        var sw = Stopwatch.StartNew();
+        // 转义单引号，避免 shell 注入
+        var escapedCommand = command.Replace("'", "'\\''");
+        var result = await RunDockerAsync($"exec {instance.ContainerId} sh -c '{escapedCommand}'");
+        sw.Stop();
+
+        return new CommandResult
+        {
+            ExitCode = result.ExitCode,
+            Output = result.Stdout,
+            Error = result.Stderr,
+            ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<CommandResult> ExecuteScriptAsync(
+        string sandboxId, string scriptType, string scriptContent, CancellationToken ct = default)
+    {
+        if (!_instances.TryGetValue(sandboxId, out var instance) || instance.ContainerId == null)
+            throw new InvalidOperationException($"沙箱 {sandboxId} 不存在或未就绪");
+
+        // 创建临时脚本文件
+        var ext = scriptType == "sql" ? ".sql" : ".sh";
+        var tempScript = Path.GetTempFileName() + ext;
+        await File.WriteAllTextAsync(tempScript, scriptContent, ct);
+
+        try
+        {
+            // 上传脚本
+            var copyResult = await RunDockerAsync($"cp \"{tempScript}\" {instance.ContainerId}:/tmp/sandbox-script{ext}");
+            if (copyResult.ExitCode != 0)
+                throw new InvalidOperationException($"脚本上传失败: {copyResult.Stderr}");
+
+            // 执行脚本
+            var sw = Stopwatch.StartNew();
+            var execCmd = scriptType == "sql"
+                ? $"exec {instance.ContainerId} sh -c \"mysql -u sa -p -e 'source /tmp/sandbox-script.sql'\""
+                : $"exec {instance.ContainerId} sh /tmp/sandbox-script.sh";
+            var result = await RunDockerAsync(execCmd);
+            sw.Stop();
+
+            return new CommandResult
+            {
+                ExitCode = result.ExitCode,
+                Output = result.Stdout,
+                Error = result.Stderr,
+                ExecutionTimeMs = (int)sw.ElapsedMilliseconds
+            };
+        }
+        finally
+        {
+            try { File.Delete(tempScript); } catch { /* ignore */ }
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<SandboxInfo> GetSandboxInfoAsync(
+        string sandboxId, CancellationToken ct = default)
+    {
+        if (!_instances.TryGetValue(sandboxId, out var instance))
+            throw new InvalidOperationException($"沙箱 {sandboxId} 不存在");
+
+        // docker inspect 获取容器 IP 和端口映射
+        var result = await RunDockerAsync(
+            $"inspect --format '{{{{.NetworkSettings.IPAddress}}}}' {instance.ContainerId}");
+        var host = result.ExitCode == 0 ? result.Stdout.Trim() : "localhost";
+
+        var port = instance.Config?.Port ?? 8080;
+
+        return new SandboxInfo
+        {
+            SandboxId = sandboxId,
+            Host = host,
+            Port = port,
+            ApiUrl = $"http://{host}:5000",
+            FrontendUrl = $"http://{host}:3000",
+            DbConnectionString = instance.DbConnectionString ?? ""
+        };
+    }
+
+    // ─── Private helpers ───
+
+    private async Task EnsureNetworkAsync()
+    {
+        var result = await RunDockerAsync($"network inspect {DockerNetwork}");
+        if (result.ExitCode != 0)
+        {
+            await RunDockerAsync($"network create {DockerNetwork}");
+            _logger.LogInformation("创建 Docker 网络: {Network}", DockerNetwork);
+        }
+    }
+
+    private string BuildConnectionString(string dbName)
+    {
+        // 从配置读取 SQL Server 连接模板
+        var template = _configuration.GetValue<string>("Sandbox:ConnectionStringTemplate")
+            ?? $"Server={DbServerHost},1433;Database={{DB}};User Id=sa;Password=YourPassword123;TrustServerCertificate=True;";
+        return template.Replace("{DB}", dbName);
+    }
+
+    private static async Task<(int ExitCode, string Stdout, string Stderr)> RunDockerAsync(string arguments)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = "docker",
+            Arguments = arguments,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+
+        using var process = Process.Start(psi);
+        if (process == null)
+            throw new InvalidOperationException("无法启动 docker 进程");
+
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+
+        await process.WaitForExitAsync();
+
+        return (process.ExitCode, await stdoutTask, await stderrTask);
+    }
+}
+
+
+--- MISSING: D:\JNPF-v52\backend\modularity\inteAssistant\JNPF.InteAssistant\Entitys\Entity\FounderAuthLogEntity.cs ---
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\FounderAuthService.cs
+========================================
+
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using JNPF.DependencyInjection;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+
+namespace JNPF.InteAssistant;
+
+/// <summary>
+/// 创始人认证服务 (Phase 6 Day 6-8).
+/// 管理 TOTP 设置、验证和 founder_token 签发.
+/// </summary>
+public sealed class FounderAuthService : ITransient
+{
+    private readonly IConfiguration _configuration;
+    private readonly TotpService _totpService;
+    private readonly IMemoryCache _cache;
+
+    // founder_token 有效期 12 小时
+    private static readonly TimeSpan TokenLifetime = TimeSpan.FromHours(12);
+
+    public FounderAuthService(
+        IConfiguration configuration,
+        TotpService totpService,
+        IMemoryCache memoryCache)
+    {
+        _configuration = configuration;
+        _totpService = totpService;
+        _cache = memoryCache;
+    }
+
+    /// <summary>
+    /// 设置 TOTP — 生成密钥和二维码 URL.
+    /// </summary>
+    public (string Secret, string QrCodeUrl) SetupTotp(string email)
+    {
+        var secret = _totpService.GenerateSecret();
+
+        // 暂存到缓存（5 分钟窗口期用于验证）
+        _cache.Set($"founder:totp:pending:{email}", secret, TimeSpan.FromMinutes(5));
+
+        var qrCodeUrl = _totpService.GetQrCodeUrl(secret, email);
+        return (secret, qrCodeUrl);
+    }
+
+    /// <summary>
+    /// 验证 TOTP 码并签发 founder_token.
+    /// </summary>
+    public (bool Success, string? Token, string? Error) VerifyTotpAndIssueToken(string email, int code)
+    {
+        // 1. 从缓存获取待验证密钥
+        var cacheKey = $"founder:totp:pending:{email}";
+        if (!_cache.TryGetValue<string>(cacheKey, out var pendingSecret) || string.IsNullOrEmpty(pendingSecret))
+        {
+            // 也尝试从已生效密钥查找
+            var activeKey = $"founder:totp:active:{email}";
+            if (!_cache.TryGetValue<string>(activeKey, out var activeSecret) || string.IsNullOrEmpty(activeSecret))
+                return (false, null, "TOTP 未设置或已过期，请重新设置");
+            pendingSecret = activeSecret;
+        }
+
+        // 2. 验证 TOTP 码
+        if (!_totpService.ValidateCode(pendingSecret, code))
+            return (false, null, "TOTP 验证码无效");
+
+        // 3. 验证通过，将密钥标记为已激活
+        _cache.Set($"founder:totp:active:{email}", pendingSecret, TokenLifetime);
+        _cache.Remove(cacheKey);
+
+        // 4. 签发 founder_token (JWT)
+        var token = IssueFounderToken(email);
+
+        return (true, token, null);
+    }
+
+    /// <summary>
+    /// 验证 founder_token 是否有效.
+    /// </summary>
+    public bool ValidateFounderToken(string token)
+    {
+        if (string.IsNullOrEmpty(token))
+            return false;
+
+        try
+        {
+            var signingKey = GetFounderSigningKey();
+            var tokenHandler = new JwtSecurityTokenHandler();
+
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(signingKey),
+                ValidateIssuer = true,
+                ValidIssuer = "JNPF-Founder",
+                ValidateAudience = true,
+                ValidAudience = "founder-console",
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.FromMinutes(1),
+            };
+
+            var principal = tokenHandler.ValidateToken(token, validationParameters, out _);
+            return principal != null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 从 founder_token 中提取用户邮箱.
+    /// </summary>
+    public string? ExtractEmailFromToken(string token)
+    {
+        try
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var jwt = tokenHandler.ReadJwtToken(token);
+            return jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    // ─── Private ───
+
+    private string IssueFounderToken(string email)
+    {
+        var signingKey = GetFounderSigningKey();
+        var securityKey = new SymmetricSecurityKey(signingKey);
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Email, email),
+            new Claim(ClaimTypes.Role, "Founder"),
+            new Claim("auth_method", "totp"),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString()),
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: "JNPF-Founder",
+            audience: "founder-console",
+            claims: claims,
+            expires: DateTime.UtcNow.Add(TokenLifetime),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private byte[] GetFounderSigningKey()
+    {
+        // 优先从配置读取，否则使用 AES Key 派生
+        var configKey = _configuration.GetValue<string>("App:FounderJwtKey");
+        if (!string.IsNullOrEmpty(configKey))
+            return Encoding.UTF8.GetBytes(configKey);
+
+        // 从现有 AES Key 派生
+        var aesKey = _configuration.GetValue<string>("JNPF_App:AesKey", "EY8WePvjM5GGwQzn");
+        var derived = SHA256.HashData(Encoding.UTF8.GetBytes(aesKey + "-founder-jwt"));
+        return derived;
+    }
+}
+
+
+
+========================================
+FILE: backend\modularity\inteAssistant\JNPF.InteAssistant\FounderGuardMiddleware.cs
+========================================
+
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using JNPF.Common.Security;
+using JNPF.DatabaseAccessor;
+using JNPF.InteAssistant.Entitys.Entity;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using SqlSugar;
+
+namespace JNPF.InteAssistant;
+
+/// <summary>
+/// 创始人认证守卫中间件 (Phase 6 Enhanced).
+/// 拦截所有 /api/founder/* 请求.
+/// Phase 0 → 404（功能未开放）
+/// Phase 3 → 403（需创始人认证，仅地桩）
+/// Phase 4+ → 验证 X-Founder-Token（真实 TOTP 认证）+ 设备指纹校验
+/// 每次拦截写入 BASE_FOUNDER_AUTH_LOG.
+/// </summary>
+public sealed class FounderGuardMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly IConfiguration _configuration;
+
+    private const string FounderPathPrefix = "/api/founder";
+    private const string ConfigKey = "App:FounderPhase";
+    private const string FingerprintSalt = "jnpf-foundry-v5.2";
+
+    // TOTP setup/verify endpoints 即使是 founder 路径也需要允许无 token 访问
+    // 流水线执行 API 已迁移至 /api/studio/pipeline/execute（普通 JWT 鉴权，非 founder 专属）
+    private static readonly string[] AnonymousFounderPaths = new[]
+    {
+        "/api/founder/auth/setup-totp",
+        "/api/founder/auth/verify-totp",
+        "/api/founder/ai/test",
+        "/api/founder/ai/health",
+    };
+
+    public FounderGuardMiddleware(RequestDelegate next, IConfiguration configuration)
+    {
+        _next = next;
+        _configuration = configuration;
+    }
+
+    public async Task InvokeAsync(
+        HttpContext context,
+        ISqlSugarRepository<FounderAuthLogEntity> logRepository,
+        FounderAuthService founderAuthService,
+        ILogger<FounderGuardMiddleware> logger)
+    {
+        if (!context.Request.Path.StartsWithSegments(FounderPathPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            await _next(context);
+            return;
+        }
+
+        var phase = _configuration.GetValue<int>(ConfigKey, 0);
+        var action = $"{context.Request.Method} {context.Request.Path}";
+        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var userAgent = context.Request.Headers["User-Agent"].ToString();
+        var deviceFingerprint = ComputeDeviceFingerprint(ipAddress, userAgent);
+
+        switch (phase)
+        {
+            case 0:
+                await WriteLog(logRepository, action, "not_found", ipAddress, userAgent, deviceFingerprint);
+                await WriteJsonResponse(context, HttpStatusCode.NotFound, new
+                {
+                    code = 404,
+                    message = "Founder API not available in current phase"
+                });
+                break;
+
+            case 3:
+                await WriteLog(logRepository, action, "deny", ipAddress, userAgent, deviceFingerprint);
+                await WriteJsonResponse(context, HttpStatusCode.Forbidden, new
+                {
+                    code = 403,
+                    message = "Founder authentication required"
+                });
+                break;
+
+            default:
+                // Phase 4+: 真实 TOTP 认证 + 设备指纹校验
+                // 匿名端点（setup-totp, verify-totp）放行
+                if (IsAnonymousFounderPath(context.Request.Path))
+                {
+                    await _next(context);
+                    return;
+                }
+
+                // 验证 X-Founder-Token
+                var token = context.Request.Headers["X-Founder-Token"].FirstOrDefault();
+                if (string.IsNullOrEmpty(token))
+                {
+                    await WriteLog(logRepository, action, "missing_token", ipAddress, userAgent, deviceFingerprint);
+                    await WriteJsonResponse(context, HttpStatusCode.Unauthorized, new
+                    {
+                        code = 401,
+                        message = "Missing X-Founder-Token header. Use POST /api/founder/auth/verify-totp to obtain a token."
+                    });
+                    return;
+                }
+
+                if (!founderAuthService.ValidateFounderToken(token))
+                {
+                    await WriteLog(logRepository, action, "invalid_token", ipAddress, userAgent, deviceFingerprint);
+                    await WriteJsonResponse(context, HttpStatusCode.Forbidden, new
+                    {
+                        code = 403,
+                        message = "Invalid or expired founder token. Please re-authenticate with TOTP."
+                    });
+                    return;
+                }
+
+                // Token 有效 → 设备指纹校验
+                var email = founderAuthService.ExtractEmailFromToken(token) ?? "unknown";
+                var fingerprintResult = await VerifyDeviceFingerprint(logRepository, email, deviceFingerprint, logger);
+
+                if (fingerprintResult == FingerprintStatus.Mismatch)
+                {
+                    logger.LogWarning(
+                        "[FounderGuard] Device fingerprint mismatch for {Email}. IP={Ip}, NewFP={NewFP}",
+                        email, ipAddress, deviceFingerprint);
+                    // 指纹不匹配不阻断请求，但记录告警日志
+                    await WriteLog(logRepository, action, $"allow:{email}:fp_mismatch", ipAddress, userAgent, deviceFingerprint);
+                }
+                else
+                {
+                    await WriteLog(logRepository, action, $"allow:{email}", ipAddress, userAgent, deviceFingerprint);
+                }
+
+                await _next(context);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// 计算设备指纹：SHA256(IP + UserAgent + Salt)。
+    /// 同一设备/网络环境产生相同指纹，用于跨 Session 设备识别。
+    /// </summary>
+    private static string ComputeDeviceFingerprint(string ipAddress, string userAgent)
+    {
+        var raw = $"{ipAddress}|{userAgent}|{FingerprintSalt}";
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(raw));
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// 校验设备指纹：比对当前指纹与该创始人最后一次成功认证的指纹。
+    /// 首次认证（无历史记录）→ 视为匹配。
+    /// </summary>
+    private static async Task<FingerprintStatus> VerifyDeviceFingerprint(
+        ISqlSugarRepository<FounderAuthLogEntity> logRepository,
+        string email,
+        string currentFingerprint,
+        ILogger logger)
+    {
+        try
+        {
+            // 查询该创始人最后一次 allow 的认证记录
+            var lastAllowLog = await logRepository.AsQueryable()
+                .Where(x => x.Result!.StartsWith($"allow:{email}"))
+                .OrderByDescending(x => x.CreatorTime)
+                .FirstAsync();
+
+            if (lastAllowLog == null || string.IsNullOrEmpty(lastAllowLog.DeviceFingerprint))
+            {
+                // 首次认证，无基线指纹
+                return FingerprintStatus.FirstUse;
+            }
+
+            if (!string.Equals(lastAllowLog.DeviceFingerprint, currentFingerprint, StringComparison.Ordinal))
+            {
+                return FingerprintStatus.Mismatch;
+            }
+
+            return FingerprintStatus.Match;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[FounderGuard] Fingerprint verification failed, falling back to allow");
+            // 指纹校验异常不阻断请求
+            return FingerprintStatus.Error;
+        }
+    }
+
+    private enum FingerprintStatus
+    {
+        Match,
+        Mismatch,
+        FirstUse,
+        Error,
+    }
+
+    private static bool IsAnonymousFounderPath(PathString path)
+    {
+        foreach (var prefix in AnonymousFounderPaths)
+        {
+            if (path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
+    private static async Task WriteJsonResponse(HttpContext context, HttpStatusCode statusCode, object body)
+    {
+        context.Response.StatusCode = (int)statusCode;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync(JsonSerializer.Serialize(body));
+    }
+
+    private static async Task WriteLog(
+        ISqlSugarRepository<FounderAuthLogEntity> logRepository,
+        string action,
+        string result,
+        string ipAddress,
+        string userAgent,
+        string deviceFingerprint)
+    {
+        try
+        {
+            var log = new FounderAuthLogEntity
+            {
+                Action = action,
+                Result = result,
+                IpAddress = ipAddress,
+                UserAgent = userAgent,
+                DeviceFingerprint = deviceFingerprint,
+            };
+            log.Create();
+
+            await logRepository.AsInsertable(log).IgnoreColumns(ignoreNullColumn: true).ExecuteCommandAsync();
+        }
+        catch
+        {
+            // 日志写入失败不阻塞请求
+        }
+    }
+}
+

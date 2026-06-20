@@ -4,6 +4,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { UIUXAgent, type UIDesign } from '../agents/ui-ux';
+import type { FormPageIR } from '../../ir/types';
 import { MockLLMGateway } from './mock-llm';
 
 describe('UI/UX 设计智能体', () => {
@@ -148,7 +149,15 @@ describe('UI/UX 设计智能体', () => {
   it('自动补全 pc/app 映射', async () => {
     const incompleteDesign = {
       ...basicUIDesign,
-      ir: { ...basicUIDesign.ir, fields: [{ ...basicUIDesign.ir.fields[0], component: { ...basicUIDesign.ir.fields[0].component, pc: '', app: '' } }] },
+      ir: {
+        ...basicUIDesign.ir,
+        fields: [
+          {
+            ...(basicUIDesign.ir as Partial<FormPageIR>).fields![0],
+            component: { ...(basicUIDesign.ir as Partial<FormPageIR>).fields![0].component, pc: '', app: '' },
+          },
+        ],
+      },
     };
     mockLLM.setResponse('学生管理', JSON.stringify(incompleteDesign));
     const result = await agent.design('设计一个学生管理表单');

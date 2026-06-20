@@ -56,12 +56,19 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
     server: {
       https: false,
       // Listening on all local IPs
-      host: true,
+      host: '0.0.0.0',
       port: VITE_PORT,
       strictPort: true,
       // Load proxy configuration from .env
       proxy: createProxy(VITE_PROXY),
-      open: true, //vite项目启动时自动打开浏览器
+      open: true,
+      hmr: {
+        overlay: true,
+      },
+      watch: {
+        usePolling: false,
+        interval: 1000,
+      },
     },
     esbuild: {
       drop: VITE_DROP_CONSOLE ? ['console', 'debugger'] : [],
@@ -91,14 +98,6 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
           chunkFileNames: 'static/js/[name]-[hash].js',
           entryFileNames: 'static/js/[name]-[hash].js',
           assetFileNames: 'static/[ext]/[name]-[hash].[ext]',
-          // P0-3: 拆分重型依赖为独立 chunk，不进首屏
-          manualChunks: {
-            'vendor-vue': ['vue', 'vue-router', 'pinia'],
-            'vendor-antd': ['ant-design-vue', '@ant-design/icons-vue'],
-            'vendor-tinymce': ['tinymce'],
-            'vendor-monaco': ['monaco-editor'],
-            'vendor-codemirror': ['codemirror'],
-          },
         },
       },
     },
@@ -133,20 +132,7 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
       esbuildOptions: {
         target: 'es2020',
       },
-      // @iconify/iconify: The dependency is dynamically and virtually loaded by @purge-icons/generated, so it needs to be specified explicitly
-      include: [
-        '@vue/runtime-core',
-        '@vue/shared',
-        '@iconify/iconify',
-        'ant-design-vue/es/locale/zh_CN',
-        'ant-design-vue/es/locale/zh_TW',
-        'ant-design-vue/es/locale/en_US',
-        `monaco-editor/esm/vs/language/json/json.worker`,
-        `monaco-editor/esm/vs/language/css/css.worker`,
-        `monaco-editor/esm/vs/language/html/html.worker`,
-        `monaco-editor/esm/vs/language/typescript/ts.worker`,
-        `monaco-editor/esm/vs/editor/editor.worker`,
-      ],
+      include: ['vue', 'vue-router', 'pinia', 'ant-design-vue'],
     },
   };
 };

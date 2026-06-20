@@ -14,7 +14,7 @@ import type { FormPageIR } from '../../ir/types';
 import { formIRToSchema } from '../../ir/ir-to-schema';
 import type { CompileTarget } from '../../compiler/targets';
 import { compileGateway, type CompileResponse } from '../../compiler/gateway';
-import { compileExport } from '../../compiler/bundler/index';
+import { compileExportMulti } from '../../compiler/bundler/index';
 import { downloadZip } from '../../compiler/bundler/zip-bundler';
 
 // ============================================================
@@ -119,16 +119,18 @@ export async function compileAndDownload(page: AIGeneratedPage, targets: Compile
     await bundleDownload(result.response.project, page.entity, targets[0]);
   }
 
-  // 多目标时使用 compileExport
+  // 多目标时使用 compileExportMulti
   if (targets.length > 1) {
-    const exportResponse = await compileExport({
-      schema: page.ir,
-      targets,
-      config: { entity: page.entity },
-    });
+    const exportResponses = await compileExportMulti(
+      page.ir,
+      targets.map(t => ({ target: t, config: { entity: page.entity } })),
+    );
 
-    if (exportResponse.success && exportResponse.blob) {
-      downloadZip(exportResponse.blob, fileName ?? `${page.entity}_${new Date().toISOString().slice(0, 10)}.zip`);
+    for (const exportResponse of exportResponses.values()) {
+      if (exportResponse.success && exportResponse.blob) {
+        downloadZip(exportResponse.blob, fileName ?? `${page.entity}_${new Date().toISOString().slice(0, 10)}.zip`);
+        break;
+      }
     }
   }
 
@@ -156,7 +158,7 @@ export function summarizeResult(result: CompileBridgeResult): {
   return {
     status: result.success ? 'success' : 'failed',
     targetLabel: result.target,
-    fileCount: result.response.project?.files?.length ?? 0,
+    fileCount: result.response.project?.size ?? 0,
     issues: result.response.issues?.length ?? 0,
     duration: result.response.duration ?? 0,
   };
@@ -174,7 +176,7 @@ export function summarizeBatchResult(result: BatchCompileResult): {
     perTarget: result.results.map(r => ({
       target: r.target,
       status: r.success ? '✅' : '❌',
-      files: r.response.project?.files?.length ?? 0,
+      files: r.response.project?.size ?? 0,
     })),
   };
 }

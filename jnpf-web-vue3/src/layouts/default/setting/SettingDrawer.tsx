@@ -1,7 +1,8 @@
-import { defineComponent, computed, unref } from 'vue';
+import { defineComponent, unref } from 'vue';
 import { BasicDrawer } from '/@/components/Drawer/index';
 import { Divider } from 'ant-design-vue';
-import { TypePicker, ThemeColorPicker, SwitchItem, SelectItem, InputNumberItem } from './components';
+import { TypePicker, ThemeColorPicker, SwitchItem as _SwitchItem } from './components';
+const SwitchItem = _SwitchItem as any;
 
 import { AppDarkModeToggle } from '/@/components/Application';
 
@@ -17,15 +18,7 @@ import { useI18n } from '/@/hooks/web/useI18n';
 
 import { baseHandler } from './handler';
 
-import {
-  HandlerEnum,
-  contentModeOptions,
-  topMenuAlignOptions,
-  getMenuTriggerOptions,
-  routerTransitionOptions,
-  menuTypeList,
-  mixSidebarTriggerOptions,
-} from './enum';
+import { HandlerEnum, getMenuTriggerOptions, menuTypeList } from './enum';
 
 import { HEADER_PRESET_BG_COLOR_LIST, SIDE_BAR_BG_COLOR_LIST, APP_PRESET_COLOR_LIST } from '/@/settings/designSetting';
 
@@ -34,82 +27,48 @@ const { t } = useI18n();
 export default defineComponent({
   name: 'SettingDrawer',
   setup(_, { attrs }) {
-    const {
-      getContentMode,
-      getShowFooter,
-      getShowBreadCrumb,
-      getShowBreadCrumbIcon,
-      getShowLogo,
-      getFullContent,
-      getColorWeak,
-      getGrayMode,
-      getLockTime,
-      getShowDarkModeToggle,
-      getThemeColor,
-      getOpenKeepAlive,
-    } = useRootSetting();
+    const { getColorWeak, getGrayMode, getShowDarkModeToggle, getThemeColor, getOpenKeepAlive } = useRootSetting();
 
-    const { getOpenPageLoading, getBasicTransition, getEnableTransition, getOpenNProgress } = useTransitionSetting();
+    const { getOpenPageLoading, getOpenNProgress } = useTransitionSetting();
 
-    const {
-      getIsHorizontal,
-      getShowMenu,
-      getMenuType,
-      getTrigger,
-      getCollapsedShowTitle,
-      getMenuFixed,
-      getCollapsed,
-      getCanDrag,
-      getTopMenuAlign,
-      getAccordion,
-      getMenuWidth,
-      getMenuBgColor,
-      getIsTopMenu,
-      getSplit,
-      getIsMixSidebar,
-      getCloseMixSidebarOnChange,
-      getMixSideTrigger,
-      getMixSideFixed,
-    } = useMenuSetting();
+    const { getIsHorizontal, getMenuType, getTrigger, getMenuBgColor, getSplit } = useMenuSetting();
 
-    const { getShowHeader, getFixed: getHeaderFixed, getHeaderBgColor, getShowSearch } = useHeaderSetting();
+    const { getShowHeader, getHeaderBgColor, getShowSearch } = useHeaderSetting();
 
-    const { getShowMultipleTab, getShowIcon, getShowQuick, getShowRedo, getShowFold } = useMultipleTabSetting();
+    const { getShowMultipleTab, getShowIcon } = useMultipleTabSetting();
 
     const { getShowLocalePicker } = useLocale();
-
-    const getShowMenuRef = computed(() => {
-      return unref(getShowMenu) && !unref(getIsHorizontal);
-    });
 
     function renderSidebar() {
       return (
         <>
           <TypePicker
-            menuTypeList={menuTypeList}
-            handler={(item: (typeof menuTypeList)[0]) => {
-              baseHandler(HandlerEnum.CHANGE_LAYOUT, {
-                mode: item.mode,
-                type: item.type,
-                split: unref(getIsHorizontal) ? false : undefined,
-              });
-            }}
-            def={unref(getMenuType)}
+            {...({
+              menuTypeList: menuTypeList,
+              handler: (item: (typeof menuTypeList)[0]) => {
+                baseHandler(HandlerEnum.CHANGE_LAYOUT, {
+                  mode: item.mode,
+                  type: item.type,
+                  split: unref(getIsHorizontal) ? false : undefined,
+                });
+              },
+              def: unref(getMenuType),
+            } as any)}
           />
         </>
       );
     }
 
     function renderHeaderTheme() {
-      return <ThemeColorPicker colorList={HEADER_PRESET_BG_COLOR_LIST} def={unref(getHeaderBgColor)} event={HandlerEnum.HEADER_THEME} />;
+      return <ThemeColorPicker {...({ colorList: HEADER_PRESET_BG_COLOR_LIST, def: unref(getHeaderBgColor), event: HandlerEnum.HEADER_THEME } as any)} />;
     }
 
     function renderSiderTheme() {
-      return <ThemeColorPicker colorList={SIDE_BAR_BG_COLOR_LIST} def={unref(getMenuBgColor)} event={HandlerEnum.MENU_THEME} />;
+      return <ThemeColorPicker {...({ colorList: SIDE_BAR_BG_COLOR_LIST, def: unref(getMenuBgColor), event: HandlerEnum.MENU_THEME } as any)} />;
     }
 
     function renderMainTheme() {
-      return <ThemeColorPicker colorList={APP_PRESET_COLOR_LIST} def={unref(getThemeColor)} event={HandlerEnum.CHANGE_THEME_COLOR} />;
+      return <ThemeColorPicker {...({ colorList: APP_PRESET_COLOR_LIST, def: unref(getThemeColor), event: HandlerEnum.CHANGE_THEME_COLOR } as any)} />;
     }
 
     /**
@@ -190,7 +149,7 @@ export default defineComponent({
     }
 
     return () => (
-      <BasicDrawer {...attrs} title={t('layout.setting.drawerTitle')} width={330} class="setting-drawer">
+      <BasicDrawer {...attrs} {...({ title: t('layout.setting.drawerTitle'), width: 330, class: 'setting-drawer' } as any)}>
         <div class="p-20px">
           {unref(getShowDarkModeToggle) && <Divider>{() => t('layout.setting.darkMode')}</Divider>}
           {unref(getShowDarkModeToggle) && <AppDarkModeToggle class="mx-auto" />}

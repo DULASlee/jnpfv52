@@ -222,6 +222,25 @@
 
   // SSE 清理
   let sseDisconnect: (() => void) | null = null;
+  let connectTimer: ReturnType<typeof setTimeout> | null = null;
+  /** 仅用于 SSE HTTP 连接建立（onopen），不限制 LLM 首 token 等待（后端 TimeoutMs=120s） */
+  const SSE_CONNECT_TIMEOUT_MS = 15000;
+
+  function clearConnectTimer() {
+    if (connectTimer) {
+      clearTimeout(connectTimer);
+      connectTimer = null;
+    }
+  }
+
+  function failStream(aiMsgId: number, text: string, disconnect: () => void) {
+    clearConnectTimer();
+    const aiMsg = messages.value.find(m => m.id === aiMsgId);
+    if (aiMsg && !aiMsg.content) aiMsg.content = text;
+    streaming.value = false;
+    loading.value = false;
+    disconnect();
+  }
 
   // ── 生命周期 ──
   onMounted(async () => {
@@ -236,6 +255,7 @@
 
   onUnmounted(() => {
     if (sseDisconnect) sseDisconnect();
+    clearConnectTimer();
     if (thinkingTimer) clearInterval(thinkingTimer);
   });
 
@@ -255,7 +275,7 @@
   // ── 加载流水线状态 ──
   async function loadPipelineState() {
     try {
-      const res: any = await defHttp.get({ url: `/api/founder/ai/pipeline/${props.pipelineId}` });
+      const res: any = await defHttp.get({ url: `/api/studio/pipeline/execute/${props.pipelineId}` });
       const detail = res?.data || res;
       if (detail?.currentStage) {
         const idx = pipelineStages.findIndex(s => s.key === detail.currentStage);
@@ -313,10 +333,11 @@
       time: new Date().toLocaleTimeString(),
     });
 
-    // 通过 /execute 触发流水线 → 连接 SSE 获取流式输出
+    // 先连 SSE 再触发 execute，避免 channel 竞态；token 经 buildEventSourceUrl ?token= 传递
     try {
+      connectSSE(aiMsgId);
       await defHttp.post({
-        url: `/api/founder/ai/pipeline/${props.pipelineId}/execute`,
+        url: `/api/studio/pipeline/execute/${props.pipelineId}/execute`,
         data: {
           message: content,
           stageName: pipelineStages[currentStageIdx.value]?.key || 'requirement',
@@ -326,20 +347,24 @@
     } catch {
       /* 忽略 /execute 同步返回错误，直接读 SSE */
     }
-
-    // SSE 流式接收
-    connectSSE(aiMsgId);
   }
 
   // ── SSE 流式连接 ──
   function connectSSE(aiMsgId: number) {
     if (sseDisconnect) sseDisconnect();
+    clearConnectTimer();
 
     streamText.value = '';
     streaming.value = true;
 
+    let sseOpened = false;
+
     const { connect, disconnect } = useSSE({
-      url: `/api/founder/ai/pipeline/${props.pipelineId}/events`,
+      url: `/api/studio/pipeline/execute/${props.pipelineId}/events`,
+      onOpen: () => {
+        sseOpened = true;
+        clearConnectTimer();
+      },
       onMessage: (msg: any) => {
         if (abortFlag.value) {
           disconnect();
@@ -362,6 +387,7 @@
           const idx = pipelineStages.findIndex(s => s.key === (msg.stage || 'requirement'));
           if (idx >= 0) updateStageUI(idx);
         } else if (msg.type === 'done') {
+          clearConnectTimer();
           if (aiMsg && streamText.value) {
             aiMsg.content = streamText.value;
             streamText.value = '';
@@ -372,25 +398,23 @@
           disconnect();
           scrollToBottom();
         } else if (msg.type === 'error') {
-          if (aiMsg && !aiMsg.content) aiMsg.content = '⚠️ 请求失败，请重试';
-          streaming.value = false;
-          loading.value = false;
-          disconnect();
+          failStream(aiMsgId, msg.data || '⚠️ 请求失败，请重试', disconnect);
         }
       },
-      onError: () => {
-        setTimeout(() => {
-          if (streaming.value && !streamText.value) {
-            const aiMsg = messages.value.find(m => m.id === aiMsgId);
-            if (aiMsg && !aiMsg.content) aiMsg.content = '⚠️ 连接超时，请重试';
-            streaming.value = false;
-            loading.value = false;
-          }
-        }, 8000);
+      onGiveUp: () => {
+        if (streaming.value) {
+          failStream(aiMsgId, '⚠️ 连接中断，请重试', disconnect);
+        }
       },
     });
 
     sseDisconnect = disconnect;
+    connectTimer = setTimeout(() => {
+      connectTimer = null;
+      if (!sseOpened && streaming.value) {
+        failStream(aiMsgId, '⚠️ 无法连接流式服务，请重试', disconnect);
+      }
+    }, SSE_CONNECT_TIMEOUT_MS);
     connect();
   }
 
@@ -427,7 +451,7 @@
   async function handleConfirmStage() {
     try {
       await defHttp.post({
-        url: `/api/founder/ai/pipeline/stage/${props.pipelineId}/confirm`,
+        url: `/api/studio/pipeline/execute/stage/${props.pipelineId}/confirm`,
         data: { stage: currentStageIdx.value + 1, approved: true },
       });
 
@@ -577,6 +601,7 @@
   /* ====== 消息区 ====== */
   .messages-area {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 20px 16px;
   }

@@ -31,6 +31,12 @@ public interface IPipelineEngine
         long stageId, StageConfirmation confirmation, CancellationToken ct = default);
 
     /// <summary>
+    /// 回退到指定阶段
+    /// </summary>
+    Task<StageResult> RollbackAsync(
+        long pipelineId, string targetStage, string? reason = null, CancellationToken ct = default);
+
+    /// <summary>
     /// 获取流水线详情
     /// </summary>
     Task<PipelineDetail> GetDetailAsync(long pipelineId, CancellationToken ct = default);
@@ -66,6 +72,7 @@ public record PipelineDetail
     public string CurrentStage { get; init; } = "";
     public string Status { get; init; } = "";
     public List<StageInfo> Stages { get; init; } = new();
+    public List<PipelineMessageInfo> Messages { get; init; } = new();
 }
 
 public record PipelineSummary
@@ -93,6 +100,16 @@ public record StageResult
     public string StageName { get; init; } = "";
     public string Status { get; init; } = "";
     public string? Output { get; init; }
+}
+
+public record PipelineMessageInfo
+{
+    public string Id { get; init; } = "";
+    public string Role { get; init; } = "";
+    public string Content { get; init; } = "";
+    public string Stage { get; init; } = "";
+    public int Sequence { get; init; }
+    public DateTime? CreateTime { get; init; }
 }
 
 public record StageConfirmation

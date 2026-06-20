@@ -196,7 +196,10 @@ export const useUserStore = defineStore({
       this.setToken(undefined);
       this.setSessionTimeout(false);
       this.setUserInfo(null);
-      router.push(PageEnum.BASE_LOGIN);
+      // 防止死循环：如果当前已在登录页，不再 push
+      if (router.currentRoute.value.path !== PageEnum.BASE_LOGIN) {
+        router.push(PageEnum.BASE_LOGIN);
+      }
     },
     /**
      * @description: Confirm before logging out

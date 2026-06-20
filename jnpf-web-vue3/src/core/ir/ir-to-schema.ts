@@ -21,9 +21,9 @@ export function formIRToSchema(ir: FormPageIR): Record<string, unknown> {
       virtualFieldList: [],
     }),
     formConfig: {
-      labelWidth: (ir.config as Record<string, unknown>)?.labelWidth ?? 100,
-      labelPosition: (ir.config as Record<string, unknown>)?.labelPosition ?? 'right',
-      size: (ir.config as Record<string, unknown>)?.size ?? 'default',
+      labelWidth: (ir.config as unknown as Record<string, unknown>)?.labelWidth ?? 100,
+      labelPosition: (ir.config as unknown as Record<string, unknown>)?.labelPosition ?? 'right',
+      size: (ir.config as unknown as Record<string, unknown>)?.size ?? 'default',
     },
     listConfig: ir.listConfig
       ? {

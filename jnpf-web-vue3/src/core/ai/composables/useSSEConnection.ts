@@ -8,6 +8,7 @@
  *   - Last-Event-ID 续接
  */
 import { ref, onUnmounted } from 'vue';
+import { buildEventSourceUrl } from '/@/utils/http/sseUrl';
 
 export type SSELevel = 'L1_thinking' | 'L2_long_running' | 'L3_timeout_warning' | 'L4_timeout_hard';
 export type SSEStatus = 'connected' | 'reconnecting' | 'disconnected';
@@ -67,7 +68,7 @@ export function useSSEConnection(opts: SSEOptions) {
       updateLevel();
     }, 1000);
 
-    const url = new URL(opts.url, window.location.origin);
+    const url = new URL(buildEventSourceUrl(opts.url));
     if (lastEventId.value) {
       url.searchParams.set('lastEventId', lastEventId.value);
     }

@@ -1,7 +1,7 @@
 /**
  * usePipelineSSE — Pipeline SSE 事件订阅（P2）
  *
- * 连接到 GET /api/pipeline/{id}/events 的 SSE 流，
+ * 连接到 GET /api/studio/pipeline/execute/{id}/events 的 SSE 流，
  * 解析 PipelineSSEEvent 并暴露响应式状态。
  *
  * @module ai/composables/usePipelineSSE
@@ -9,6 +9,7 @@
  */
 
 import { ref, onUnmounted, type Ref } from 'vue';
+import { buildEventSourceUrl } from '/@/utils/http/sseUrl';
 import type { PipelineSSEEvent } from '../services/pipeline-sse-types';
 
 export interface UsePipelineSSEReturn {
@@ -34,14 +35,18 @@ export function usePipelineSSE(pipelineId: number): UsePipelineSSEReturn {
   const connected = ref(false);
   const error = ref<string | null>(null);
   let eventSource: EventSource | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let retryCount = 0;
+  const MAX_RETRIES = 5;
 
   function connect() {
-    const url = `/api/pipeline/${pipelineId}/events`;
+    const url = buildEventSourceUrl(`/api/studio/pipeline/execute/${pipelineId}/events`);
     eventSource = new EventSource(url);
 
     eventSource.onopen = () => {
       connected.value = true;
       error.value = null;
+      retryCount = 0;
     };
 
     eventSource.onmessage = (e: MessageEvent<string>) => {
@@ -56,18 +61,29 @@ export function usePipelineSSE(pipelineId: number): UsePipelineSSEReturn {
 
     eventSource.onerror = () => {
       connected.value = false;
-      error.value = 'SSE 连接中断';
+      eventSource?.close();
+      eventSource = null;
+
+      if (retryCount >= MAX_RETRIES) {
+        error.value = `SSE 连接中断（已达重连上限 ${MAX_RETRIES} 次）`;
+        return;
+      }
+
+      error.value = `SSE 连接中断，正在重连 (${retryCount + 1}/${MAX_RETRIES})...`;
+      retryCount++;
       // 5 秒后自动重连
-      setTimeout(() => {
-        if (eventSource) {
-          eventSource.close();
-          connect();
-        }
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connect();
       }, 5000);
     };
   }
 
   function close() {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
     eventSource?.close();
     eventSource = null;
     connected.value = false;

@@ -37,6 +37,7 @@
       },
       theme: {
         type: String as PropType<'dark' | 'light'>,
+        default: '',
       },
     },
   });

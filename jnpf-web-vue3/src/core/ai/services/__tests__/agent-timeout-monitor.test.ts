@@ -26,8 +26,8 @@ describe('AgentTimeoutMonitor', () => {
     vi.useRealTimers();
   });
 
-  it('TC-TM-1: 超过expectedMs → warning事件已推送', () => {
-    monitor.startMonitoring('UIAgent', { expectedMs: 1000, maxMs: 5000 });
+  it('TC-TM-1: 超过expected_ms → warning事件已推送', () => {
+    monitor.startMonitoring('UIAgent', { expected_ms: 1000, max_ms: 5000 });
 
     vi.advanceTimersByTime(1100);
 
@@ -38,8 +38,8 @@ describe('AgentTimeoutMonitor', () => {
     expect(warningEvent!.timeout_alert).toBe(false);
   });
 
-  it('TC-TM-2: 超过maxMs → timeout_alert事件已推送', () => {
-    monitor.startMonitoring('DBAgent', { expectedMs: 1000, maxMs: 3000 });
+  it('TC-TM-2: 超过max_ms → timeout_alert事件已推送', () => {
+    monitor.startMonitoring('DBAgent', { expected_ms: 1000, max_ms: 3000 });
 
     vi.advanceTimersByTime(3100);
 
@@ -50,7 +50,7 @@ describe('AgentTimeoutMonitor', () => {
   });
 
   it('TC-TM-3: stopMonitoring → 无事件推送', () => {
-    monitor.startMonitoring('UIAgent', { expectedMs: 1000, maxMs: 5000 });
+    monitor.startMonitoring('UIAgent', { expected_ms: 1000, max_ms: 5000 });
     monitor.stopMonitoring('UIAgent');
 
     vi.advanceTimersByTime(6000);
@@ -63,10 +63,10 @@ describe('AgentTimeoutMonitor', () => {
   });
 
   it('TC-TM-5: 同一agent start两次 → 旧timer被清除，新timer覆盖', () => {
-    monitor.startMonitoring('Agent', { expectedMs: 1000, maxMs: 5000 });
+    monitor.startMonitoring('Agent', { expected_ms: 1000, max_ms: 5000 });
 
     // 第二次start会内部调用stopMonitoring清除旧timer
-    monitor.startMonitoring('Agent', { expectedMs: 1000, maxMs: 5000 });
+    monitor.startMonitoring('Agent', { expected_ms: 1000, max_ms: 5000 });
 
     vi.advanceTimersByTime(1100);
 
@@ -79,7 +79,7 @@ describe('AgentTimeoutMonitor', () => {
   });
 
   it('TC-TM-6: getElapsedMs返回已运行毫秒数', () => {
-    monitor.startMonitoring('TimedAgent', { expectedMs: 5000, maxMs: 30000 });
+    monitor.startMonitoring('TimedAgent', { expected_ms: 5000, max_ms: 30000 });
     vi.advanceTimersByTime(2500);
     const elapsed = monitor.getElapsedMs('TimedAgent');
     expect(elapsed).toBeDefined();

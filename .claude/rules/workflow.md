@@ -34,6 +34,26 @@
 - 与用户确认范围和预期结果
 - **不确定就问，不要猜**
 
+### Step 1.5: Requirement Extraction（需求提取 — 硬性要求，不可跳过）
+
+**A 级及以上任务，编码前 MUST 输出：**
+
+```
+📋 需求提取清单
+| # | 需求原文（来自架构师/用户指令） | 实现映射 | 歧义/风险 |
+|---|---|---|---|
+| 1 | [逐条引用原文] | [映射到哪个文件/函数] | 无 / [具体歧义] |
+```
+
+**清单为空 → 不得开始编码。**
+**有条目标注"歧义" → 必须先提问澄清，获准后才能编码。**
+
+编码完成后，Step 6 Self-review MUST 对照此清单逐条标注：
+```
+✅已实现 / ⚠️偏离(附理由及审批记录) / ❌未实现(附阻塞原因)
+```
+偏离或未实现若无事前审批记录 → 流程违规，MUST 退回补救。
+
 ### Step 2: Scout（侦察）
 
 - Grep/Read 扫描影响面：哪些文件、哪些方法会被影响
@@ -85,10 +105,11 @@ S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
 **执行铁律：**
 - 标记 `in_progress` 后再开始，完成后立即标记 `completed`
 - 严格按计划步骤执行，不"顺手"改计划外的东西
+- **审查项强制注入：** 每次开始编码时，todo_write 中 MUST 含 `🔍 代码审查 (子代理)` 条目（status: pending）。该条目在 code-reviewer 返回 PASS 之前 MUST NOT 标记 completed。无此条目 → 流程阻塞。
 - 子代理不信任报告：完成后必须独立检查 VCS diff + 验证变更
 - 子代理 BLOCKED → 分析原因（缺上下文？能力不足？计划有误？），不盲目重试
 
-### Step 5: Test（测试）
+### Step 5: Test（测试 + E2E 验证）
 
 - 输出 `🧪 Testing Protocol 启动` 声明
 - 运行 `dotnet build`（后端）或 `vue-tsc --noEmit`（前端）
@@ -97,6 +118,12 @@ S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
 - Bug 修复：复现原始症状 → 确认消失
 - **S 级任务：自动触发 test-runner 子代理**
 - Gate Function 全部打勾后才能声称通过
+- **⬛ Supreme Iron Law：前端实质性变更 MUST 执行浏览器端到端验证**
+  - 使用 playwright 技能打开浏览器
+  - 产出截图至 `.claude/evidence/`（E1 证据）
+  - 记录操作路径（E2 证据）→  Step 7 报告中输出
+  - 描述实际 UI 状态（E3 证据）→  Step 7 报告中输出
+  - 无 E1/E2/E3 → `guard-finish.mjs` BLOCK → 流程退回
 
 > **详细测试规则、Gate Function、项目健康验证命令：** 见 `.claude/rules/testing.md`
 > **子代理编排规则（test-runner / code-reviewer）：** 见 `.claude/rules/review-workflow.md`
@@ -105,7 +132,7 @@ S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
 
 - `git status` + `git diff` 审查变更
 - 对照需求/计划逐项检查完成度
-- 架构合规性检查（R1-R5）
+- 架构合规性检查（R1-R10）
 - **S 级任务：自动触发 code-reviewer 子代理**
 - FAIL → 修复 → 重审（最多 3 轮）
 - 3 轮后仍有 FAIL → 报告给用户，请求介入
@@ -124,6 +151,11 @@ S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
 |---|---|---|
 
 **测试结果：** PASS / FAIL（含证据）
+
+**⬛ E2E 验证证据（Supreme Iron Law）：**
+- E1 截图：[路径，如 `.claude/evidence/page-login.png`]
+- E2 操作路径：[打开页面 → 操作步骤 → 观察结果]
+- E3 实际输出：[浏览器中实际看到的 UI 状态]
 
 **已知问题：** 无 / [列出]
 

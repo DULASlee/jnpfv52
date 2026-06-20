@@ -1,0 +1,133 @@
+
+========== ScopeAgent.ts ==========
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { ScopeOutput, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class ScopeAgent extends BaseAgent<ScopeOutput> {
+  readonly name = 'ScopeAgent';
+  readonly tableName = 'sa_scope';
+  readonly systemPrompt = '你是需求分析师。从客户需求中提取系统边界、外部实体和业务事件。';
+
+  constructor(llm: ILLMClient) { super(llm); }
+}
+
+
+========== DFDAgent.ts ==========
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { DFDOutput, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class DFDAgent extends BaseAgent<DFDOutput> {
+  readonly name = 'DFDAgent';
+  readonly tableName = 'sa_dfd';
+  readonly systemPrompt = '你是数据流分析师。生成 DFD（数据流图），包括 process、flow、data store。';
+
+  constructor(llm: ILLMClient) { super(llm); }
+}
+
+
+========== BPMAgent.ts ==========
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { BPMOutput, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class BPMAgent extends BaseAgent<BPMOutput> {
+  readonly name = 'BPMAgent';
+  readonly tableName = 'sa_business_process';
+  readonly systemPrompt = '你是业务流程分析师。生成 BPM（业务流程图），包括泳道、活动节点、边。';
+
+  constructor(llm: ILLMClient) { super(llm); }
+}
+
+
+========== DictAgent.ts ==========
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { DictOutput, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class DictAgent extends BaseAgent<DictOutput> {
+  readonly name = 'DictAgent';
+  readonly tableName = 'sa_data_dictionary';
+  readonly systemPrompt = '你是数据字典分析师。生成数据字典，包括字段元素、数据流、数据存储。';
+
+  constructor(llm: ILLMClient) { super(llm); }
+}
+
+
+========== PSpecAgent.ts ==========
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { PSpecOutput, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class PSpecAgent extends BaseAgent<PSpecOutput> {
+  readonly name = 'PSpecAgent';
+  readonly tableName = 'sa_pspec';
+  readonly systemPrompt = '你是过程规格分析师。生成 PSPEC（过程规格说明），包括输入、输出、验证、算法。';
+
+  constructor(llm: ILLMClient) { super(llm); }
+}
+
+
+========== DecisionTableAgent.ts ==========
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { DecisionTableOutput, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class DecisionTableAgent extends BaseAgent<DecisionTableOutput> {
+  readonly name = 'DecisionTableAgent';
+  readonly tableName = 'sa_decision_table';
+  readonly systemPrompt = '你是业务规则分析师。生成判定表，包括条件、动作、规则。';
+
+  constructor(llm: ILLMClient) { super(llm); }
+}
+
+
+========== ERAgent.ts ==========
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { EROutput, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class ERAgent extends BaseAgent<EROutput> {
+  readonly name = 'ERAgent';
+  readonly tableName = 'sa_er';
+  readonly systemPrompt = '你是数据建模分析师。生成 ER 图，包括实体、列、关系。';
+
+  constructor(llm: ILLMClient) { super(llm); }
+}
+
+
+========== StateMachineAgent.ts ==========
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { StateMachineOutput, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class StateMachineAgent extends BaseAgent<StateMachineOutput> {
+  readonly name = 'StateMachineAgent';
+  readonly tableName = 'sa_state_machine';
+  readonly systemPrompt = '你是状态机分析师。生成状态机，包括状态、转换、触发条件。';
+
+  constructor(llm: ILLMClient) { super(llm); }
+}
+
+
+========== UIAgent.ts ==========
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { UIOutput, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class UIAgent extends BaseAgent<UIOutput> {
+  readonly name = 'UIAgent';
+  readonly tableName = 'sa_ui';
+  readonly systemPrompt = '你是 UI 设计分析师。生成 UI 原型，包括页面、字段、控件类型。';
+
+  constructor(llm: ILLMClient) { super(llm); }
+}
+
+
+========== index.ts ==========
+// SA Agents - 9 个 Agent 的统一导出
+// 每个 Agent 继承 BaseAgent,实现 generate → LLM 调用
+
+export { ScopeAgent } from './ScopeAgent';
+export { DFDAgent } from './DFDAgent';
+export { BPMAgent } from './BPMAgent';
+export { DictAgent } from './DictAgent';
+export { PSpecAgent } from './PSpecAgent';
+export { DecisionTableAgent } from './DecisionTableAgent';
+export { ERAgent } from './ERAgent';
+export { StateMachineAgent } from './StateMachineAgent';
+export { UIAgent } from './UIAgent';
+
+

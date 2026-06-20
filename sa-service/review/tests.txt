@@ -1,0 +1,1178 @@
+
+========== BPMValidator.test.ts ==========
+// BPMValidator 测试
+import { BPMValidator } from '../src/BPMValidator';
+import { BPMBuilder } from './helpers/builders';
+
+describe('BPMValidator', () => {
+  it('失败 BPM_NODE_NO_DFD:BPM 节点绑定了不存在的 DFD 过程', () => {
+    const bpm = new BPMBuilder()
+      .addNode('N1', '扫工序', 'GhostProcess')  // ❌ DFD 里没有 GhostProcess
+      .build();
+    const dfdProcesses = [{ id: 'P1', name: '录入' }];
+    const result = new BPMValidator(bpm, dfdProcesses).validate();
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ code: 'BPM_NODE_NO_DFD' })
+    );
+  });
+
+  it('警告 BPM_DFD_NO_NODE:DFD 过程在 BPM 中无对应节点', () => {
+    const bpm = new BPMBuilder()
+      .addNode('N1', '扫工序', 'P1')  // P2 没节点
+      .build();
+    const dfdProcesses = [
+      { id: 'P1', name: '录入' },
+      { id: 'P2', name: '校验' },  // ❌ BPM 没节点
+    ];
+    const result = new BPMValidator(bpm, dfdProcesses).validate();
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ code: 'BPM_DFD_NO_NODE', severity: 'WARNING' })
+    );
+  });
+
+  it('通过:所有 BPM 节点都对应 DFD 过程,反之亦然', () => {
+    const bpm = new BPMBuilder()
+      .addNode('N1', '扫工序', 'P1')
+      .addNode('N2', '提交', 'P2')
+      .build();
+    const dfdProcesses = [
+      { id: 'P1', name: '录入' },
+      { id: 'P2', name: '提交' },
+    ];
+    const result = new BPMValidator(bpm, dfdProcesses).validate();
+    expect(result.passed).toBe(true);
+  });
+});
+
+
+========== CrossEventConsistencyValidator.test.ts ==========
+// CrossEventConsistencyValidator 测试
+import { CrossEventConsistencyValidator } from '../src/CrossEventConsistencyValidator';
+import { DecisionTableBuilder } from './helpers/builders';
+
+describe('CrossEventConsistencyValidator', () => {
+  // ========================================================
+  // 1. 跨事件条件阈值一致
+  // ========================================================
+  describe('跨事件条件阈值一致', () => {
+    it('失败 CONSISTENCY_CONDITION_CONFLICT:同条件名不同阈值', () => {
+      const table1 = new DecisionTableBuilder()
+        .withCondition('报废率>5%', 0.05)
+        .withAction('合格')
+        .build();
+      table1.id = 'DT-1';
+      const table2 = new DecisionTableBuilder()
+        .withCondition('报废率>5%', 0.03)  // ❌ 阈值不一致
+        .withAction('合格')
+        .build();
+      table2.id = 'DT-2';
+      const result = new CrossEventConsistencyValidator(table1, [table1, table2]).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'CONSISTENCY_CONDITION_CONFLICT' })
+      );
+    });
+
+    it('通过:同条件名同阈值', () => {
+      const table1 = new DecisionTableBuilder()
+        .withCondition('报废率>5%', 0.05)
+        .withAction('合格')
+        .build();
+      const table2 = new DecisionTableBuilder()
+        .withCondition('报废率>5%', 0.05)  // ✅
+        .withAction('合格')
+        .build();
+      const result = new CrossEventConsistencyValidator(table1, [table1, table2]).validate();
+      expect(result.errors.filter(e => e.code === 'CONSISTENCY_CONDITION_CONFLICT')).toHaveLength(0);
+    });
+  });
+
+  // ========================================================
+  // 2. 状态值白名单
+  // ========================================================
+  describe('状态值白名单', () => {
+    it('失败 CONSISTENCY_INVALID_STATE:状态值不在白名单', () => {
+      const table = new DecisionTableBuilder()
+        .withCondition('工单状态=已审批', '已审批')  // 不在白名单
+        .build();
+      const result = new CrossEventConsistencyValidator(
+        table, [table],
+        [{ condition: '工单状态', allowedValues: ['已开工', '已暂停', '已完成'] }]
+      ).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'CONSISTENCY_INVALID_STATE' })
+      );
+    });
+
+    it('通过:状态值在白名单', () => {
+      const table = new DecisionTableBuilder()
+        .withCondition('工单状态=已开工', '已开工')
+        .build();
+      const result = new CrossEventConsistencyValidator(
+        table, [table],
+        [{ condition: '工单状态', allowedValues: ['已开工', '已暂停'] }]
+      ).validate();
+      expect(result.passed).toBe(true);
+    });
+  });
+
+  // ========================================================
+  // 3. 动作名一致性
+  // ========================================================
+  describe('动作名一致性', () => {
+    it('警告 CONSISTENCY_NEW_ACTION:引入新动作', () => {
+      const oldTable = new DecisionTableBuilder()
+        .withAction('合格')
+        .withAction('驳回')
+        .build();
+      const newTable = new DecisionTableBuilder()
+        .withAction('合格')
+        .withAction('挂起')  // ⚠️ 新动作
+        .build();
+      const result = new CrossEventConsistencyValidator(newTable, [oldTable, newTable]).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'CONSISTENCY_NEW_ACTION', severity: 'WARNING' })
+      );
+    });
+
+    it('通过:所有动作都在白名单', () => {
+      const oldTable = new DecisionTableBuilder()
+        .withAction('合格').withAction('驳回').build();
+      const newTable = new DecisionTableBuilder()
+        .withAction('合格').withAction('驳回').build();
+      const result = new CrossEventConsistencyValidator(newTable, [oldTable, newTable]).validate();
+      expect(result.errors.filter(e => e.code === 'CONSISTENCY_NEW_ACTION')).toHaveLength(0);
+    });
+  });
+});
+
+
+========== DFDValidator.test.ts ==========
+// DFDValidator 测试 - 覆盖所有 6 个 ERROR code
+import { DFDValidator } from '../src/DFDValidator';
+import { DFDBuilder } from './helpers/builders';
+
+describe('DFDValidator', () => {
+  // ========================================================
+  // 1. 父子图平衡
+  // ========================================================
+  describe('父子图平衡', () => {
+    it('失败 DFD_NOT_DECOMPOSED:Level 0 过程未在 Level 1 分解', () => {
+      const dfd = new DFDBuilder()
+        .addLevel0Process('P1', '过程1', ['in1'], ['out1'])
+        // ❌ 没有 addLevel1Process,Level 0 没有子过程
+        .build();
+      const result = new DFDValidator(dfd).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DFD_NOT_DECOMPOSED' })
+      );
+    });
+
+    it('失败 DFD_BALANCE_MISMATCH:父图 IO 在子图找不到', () => {
+      const dfd = new DFDBuilder()
+        .addLevel0Process('P1', '过程1', ['in1'], ['out1'])
+        .addLevel1Process('P1.1', '子过程', 'P1', ['in1'], ['out2'])  // ❌ out1 丢失
+        .build();
+      const result = new DFDValidator(dfd).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DFD_BALANCE_MISMATCH' })
+      );
+    });
+
+    it('通过:父图 IO 完整覆盖', () => {
+      const dfd = new DFDBuilder()
+        .addLevel0Process('P1', '过程1', ['in1', 'in2'], ['out1'])
+        .addLevel1Process('P1.1', '子过程1', 'P1', ['in1'], ['mid1'])
+        .addLevel1Process('P1.2', '子过程2', 'P1', ['in2', 'mid1'], ['out1'])
+        .build();
+      const result = new DFDValidator(dfd).validate();
+      expect(result.errors.filter(e => e.code.startsWith('DFD_BALANCE'))).toHaveLength(0);
+    });
+  });
+
+  // ========================================================
+  // 2. 数据守恒(黑洞 + 奇迹)
+  // ========================================================
+  describe('数据守恒', () => {
+    it('失败 DFD_BLACK_HOLE:输入流找不到来源', () => {
+      const dfd = new DFDBuilder()
+        .addProcess('P1', '过程1', ['orphan_input'], ['out1'])  // ❌ orphan_input 无来源
+        .addProcess('P2', '过程2', ['in2'], ['orphan_input'])  // P2 输出 orphan_input,不算
+        .build();
+      // 实际上 P2 输出 orphan_input 是合法的,但需要排除 P1 自己
+      // 这里 P2 输出 orphan_input,所以 P1 的输入 orphan_input 有来源
+      // 让我重新设计:让 P1 输入是真正没来源的
+      const dfd2 = new DFDBuilder()
+        .addProcess('P1', '过程1', ['truly_orphan'], ['out1'])  // ❌ 没人输出 truly_orphan
+        .addProcess('P2', '过程2', ['in2'], ['other_out'])
+        .build();
+      const result = new DFDValidator(dfd2).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DFD_BLACK_HOLE' })
+      );
+    });
+
+    it('失败 DFD_MIRACLE:输出流没消费者', () => {
+      const dfd = new DFDBuilder()
+        .addProcess('P1', '过程1', ['in1'], ['orphan_output'])  // ❌ 没人消费
+        .addProcess('P2', '过程2', ['other_in'], ['out2'])
+        .build();
+      const result = new DFDValidator(dfd).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DFD_MIRACLE' })
+      );
+    });
+
+    it('通过:所有流都有源有终', () => {
+      const dfd = new DFDBuilder()
+        .addProcess('P1', '过程1', ['start'], ['middle'])
+        .addProcess('P2', '过程2', ['middle'], ['end'])
+        .addProcess('P3', '过程3', ['end'], ['final'])
+        .build();
+      const result = new DFDValidator(dfd).validate();
+      expect(result.errors.filter(e => e.code === 'DFD_BLACK_HOLE')).toHaveLength(0);
+      expect(result.errors.filter(e => e.code === 'DFD_MIRACLE')).toHaveLength(0);
+    });
+  });
+
+  // ========================================================
+  // 3. 过程必须有 IO
+  // ========================================================
+  describe('过程必须有 IO', () => {
+    it('失败 DFD_NO_INPUT:过程无输入', () => {
+      const dfd = new DFDBuilder()
+        .addProcess('P1', '过程1', [], ['out1'])  // ❌ 无输入
+        .addProcess('P2', '过程2', ['out1'], ['out2'])
+        .build();
+      const result = new DFDValidator(dfd).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DFD_NO_INPUT' })
+      );
+    });
+
+    it('失败 DFD_NO_OUTPUT:过程无输出', () => {
+      const dfd = new DFDBuilder()
+        .addProcess('P1', '过程1', ['in1'], [])  // ❌ 无输出
+        .addProcess('P2', '过程2', ['other'], ['in1'])
+        .build();
+      const result = new DFDValidator(dfd).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DFD_NO_OUTPUT' })
+      );
+    });
+  });
+
+  // ========================================================
+  // 4. 综合
+  // ========================================================
+  describe('综合场景', () => {
+    it('完整合法 DFD 应通过', () => {
+      const dfd = new DFDBuilder()
+        .addLevel0Process('P1', '录入', ['worker_input'], ['initial_data'])
+        .addLevel0Process('P2', '校验', ['initial_data'], ['validated_data'])
+        .addLevel1Process('P1.1', '子录入', 'P1', ['worker_input'], ['initial_data'])
+        .addLevel1Process('P2.1', '子校验', 'P2', ['initial_data'], ['validated_data'])
+        .addProcess('P3', '存储', ['validated_data'], ['final'])
+        .build();
+      const result = new DFDValidator(dfd).validate();
+      expect(result.passed).toBe(true);
+    });
+  });
+});
+
+
+========== DictValidator.test.ts ==========
+// DictValidator 测试 - 覆盖所有 9 个 ERROR code
+import { DictValidator } from '../src/DictValidator';
+import { DictBuilder } from './helpers/builders';
+
+describe('DictValidator', () => {
+  // ========================================================
+  // 1. DFD ↔ 字典 一致性
+  // ========================================================
+  describe('DFD ↔ 字典一致性', () => {
+    it('通过:所有 DFD 数据流/存储都在字典中', () => {
+      const dict = new DictBuilder()
+        .withDataStore('WorkOrder', [{ name: 'Id', type: 'BIGINT' }])
+        .withDataFlow('报工单', [{ name: 'WorkOrderId', type: 'BIGINT' }])
+        .build();
+      const dfd = {
+        dataFlows: [{ name: '报工单' }],
+        dataStores: [{ name: 'WorkOrder' }],
+      };
+      const result = new DictValidator(dict, dfd).validate();
+      expect(result.errors.filter(e => e.code === 'DICT_FLOW_MISSING')).toHaveLength(0);
+      expect(result.errors.filter(e => e.code === 'DICT_STORE_MISSING')).toHaveLength(0);
+    });
+
+    it('失败 DICT_FLOW_MISSING:DFD 数据流不在字典中', () => {
+      const dict = new DictBuilder()
+        .withDataStore('WorkOrder', [{ name: 'Id', type: 'BIGINT' }])
+        .build();
+      const dfd = {
+        dataFlows: [{ name: '不存在的流' }],  // ❌ 字典里没有
+        dataStores: [{ name: 'WorkOrder' }],
+      };
+      const result = new DictValidator(dict, dfd).validate();
+      expect(result.passed).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DICT_FLOW_MISSING' })
+      );
+    });
+
+    it('失败 DICT_STORE_MISSING:DFD 数据存储不在字典中', () => {
+      const dict = new DictBuilder().build();
+      const dfd = {
+        dataFlows: [],
+        dataStores: [{ name: 'GhostStore' }],  // ❌
+      };
+      const result = new DictValidator(dict, dfd).validate();
+      expect(result.passed).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DICT_STORE_MISSING' })
+      );
+    });
+  });
+
+  // ========================================================
+  // 2. 字段类型校验
+  // ========================================================
+  describe('字段类型校验', () => {
+    it('失败 DICT_INVALID_TYPE:字段类型不在白名单', () => {
+      const dict = new DictBuilder()
+        .withElement('BadField', 'XMLTYPE')  // ❌ XMLTYPE 不在白名单
+        .build();
+      const result = new DictValidator(dict, { dataFlows: [], dataStores: [] }).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DICT_INVALID_TYPE', field: 'BadField' })
+      );
+    });
+
+    it('失败 DICT_MISSING_LENGTH:NVARCHAR 没指定长度', () => {
+      const dict = new DictBuilder()
+        .withElement('NoLength', 'NVARCHAR')  // ❌ 缺长度
+        .build();
+      const result = new DictValidator(dict, { dataFlows: [], dataStores: [] }).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DICT_MISSING_LENGTH', field: 'NoLength' })
+      );
+    });
+
+    it('失败 DICT_MISSING_PRECISION:DECIMAL 没指定精度', () => {
+      const dict = new DictBuilder()
+        .withElement('NoPrecision', 'DECIMAL')  // ❌
+        .build();
+      const result = new DictValidator(dict, { dataFlows: [], dataStores: [] }).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DICT_MISSING_PRECISION', field: 'NoPrecision' })
+      );
+    });
+
+    it('通过:NVARCHAR(50) 合法', () => {
+      const dict = new DictBuilder()
+        .withElement('GoodField', 'NVARCHAR(50)')
+        .build();
+      const result = new DictValidator(dict, { dataFlows: [], dataStores: [] }).validate();
+      expect(result.errors.filter(e => e.field === 'GoodField')).toHaveLength(0);
+    });
+  });
+
+  // ========================================================
+  // 3. 外键引用校验
+  // ========================================================
+  describe('外键引用校验', () => {
+    it('失败 DICT_FK_NO_REF:FK 字段没指定 refEntity', () => {
+      const dict = new DictBuilder()
+        .withElement('BadFK', 'BIGINT', true)  // ❌ isFK=true 但无 refEntity
+        .build();
+      const result = new DictValidator(dict, { dataFlows: [], dataStores: [] }).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DICT_FK_NO_REF', field: 'BadFK' })
+      );
+    });
+
+    it('失败 DICT_FK_REF_INVALID:FK 引用不存在的实体', () => {
+      const dict = new DictBuilder()
+        .withElement('BadFK', 'BIGINT', true, 'GhostEntity')  // ❌
+        .build();
+      const result = new DictValidator(dict, { dataFlows: [], dataStores: [] }).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DICT_FK_REF_INVALID', field: 'BadFK' })
+      );
+    });
+
+    it('通过:FK 引用合法的实体', () => {
+      const dict = new DictBuilder()
+        .withDataStore('User', [{ name: 'Id', type: 'BIGINT' }])
+        .withElement('UserId', 'BIGINT', true, 'User')  // ✅
+        .build();
+      const result = new DictValidator(dict, { dataFlows: [], dataStores: [] }).validate();
+      expect(result.errors.filter(e => e.code.startsWith('DICT_FK'))).toHaveLength(0);
+    });
+  });
+
+  // ========================================================
+  // 4. 必填审计字段
+  // ========================================================
+  describe('必填审计字段', () => {
+    it('失败 DICT_MISSING_AUDIT:缺少 CreatedAt', () => {
+      const dict = new DictBuilder()
+        .withDataStore('Test', [{ name: 'Id', type: 'BIGINT' }])
+        .withoutAuditFields()
+        .build();
+      const result = new DictValidator(dict, { dataFlows: [], dataStores: [] }).validate();
+      expect(result.errors.some(e => e.code === 'DICT_MISSING_AUDIT' && e.field === 'CreatedAt')).toBe(true);
+    });
+
+    it('失败 DICT_MISSING_AUDIT:5 个审计字段全缺时报 5 个错误', () => {
+      const dict = new DictBuilder()
+        .withDataStore('Test', [{ name: 'Id', type: 'BIGINT' }])
+        .withoutAuditFields()
+        .build();
+      const result = new DictValidator(dict, { dataFlows: [], dataStores: [] }).validate();
+      const auditErrors = result.errors.filter(e => e.code === 'DICT_MISSING_AUDIT');
+      expect(auditErrors).toHaveLength(5);
+    });
+  });
+
+  // ========================================================
+  // 5. 多租户隔离
+  // ========================================================
+  describe('多租户隔离', () => {
+    it('失败 DICT_MISSING_TENANT:数据存储没有 TenantId', () => {
+      const dict = new DictBuilder()
+        .withDataStore('NoTenant', [{ name: 'Id', type: 'BIGINT' }], false)  // ❌ 无 TenantId
+        .build();
+      const result = new DictValidator(dict, { dataFlows: [], dataStores: [] }).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'DICT_MISSING_TENANT' })
+      );
+    });
+
+    it('通过:数据存储含 TenantId', () => {
+      const dict = new DictBuilder()
+        .withDataStore('Good', [{ name: 'Id', type: 'BIGINT' }], true)  // ✅
+        .build();
+      const result = new DictValidator(dict, { dataFlows: [], dataStores: [] }).validate();
+      expect(result.errors.filter(e => e.code === 'DICT_MISSING_TENANT')).toHaveLength(0);
+    });
+  });
+
+  // ========================================================
+  // 6. 综合场景
+  // ========================================================
+  describe('综合场景', () => {
+    it('完整合法字典应全部通过', () => {
+      const dict = new DictBuilder()
+        .withElement('Id', 'BIGINT')
+        .withElement('WorkOrderId', 'BIGINT', true, 'WorkOrder')
+        .withDataStore('WorkOrder', [
+          { name: 'Id', type: 'BIGINT' },
+          { name: 'Qty', type: 'DECIMAL(18,2)' },
+          { name: 'Name', type: 'NVARCHAR(50)' },
+        ])
+        .withDataFlow('报工单', [
+          { name: 'WorkOrderId', type: 'BIGINT' },
+          { name: 'Qty', type: 'DECIMAL(18,2)' },
+        ])
+        .build();
+      const dfd = {
+        dataFlows: [{ name: '报工单' }],
+        dataStores: [{ name: 'WorkOrder' }],
+      };
+      const result = new DictValidator(dict, dfd).validate();
+      expect(result.passed).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+  });
+});
+
+
+========== DKEEExtractor.test.ts ==========
+// DKEE 单元测试 - 验证跨项目 Pattern 提炼逻辑
+
+import { InMemoryDKEEQueries } from '../src/dkee/PatternQueries';
+import { PatternExtractor } from '../src/dkee/PatternExtractor';
+import { PatternRankingService } from '../src/dkee/PatternRankingService';
+import { DictSourceRecord, DecisionTableSourceRecord } from '../src/dkee/PatternTypes';
+
+describe('DKEE PatternExtractor', () => {
+  let queries: InMemoryDKEEQueries;
+  let extractor: PatternExtractor;
+
+  beforeEach(() => {
+    queries = new InMemoryDKEEQueries();
+    extractor = new PatternExtractor(queries, 2);  // threshold=2 便于测试
+  });
+
+  // ========================================================
+  // 1. 字段命名 Pattern
+  // ========================================================
+  describe('字段命名 Pattern 提炼', () => {
+    it('提炼:3 个项目有共同字段 WorkOrderId', async () => {
+      const records: DictSourceRecord[] = [
+        {
+          id: 1, project_id: 101,
+          elements: [
+            { name: 'WorkOrderId', type: 'BIGINT', isFK: true, refEntity: 'WorkOrder' },
+            { name: 'Qty', type: 'DECIMAL(18,2)' },
+          ],
+          data_flows: [], data_stores: [], tags: ['manufacturing'], pattern_tags: [],
+        },
+        {
+          id: 2, project_id: 102,
+          elements: [
+            { name: 'WorkOrderId', type: 'BIGINT', isFK: true, refEntity: 'WorkOrder' },
+            { name: 'ScrapQty', type: 'DECIMAL(18,2)' },
+          ],
+          data_flows: [], data_stores: [], tags: ['manufacturing'], pattern_tags: [],
+        },
+        {
+          id: 3, project_id: 103,
+          elements: [
+            { name: 'WorkOrderId', type: 'BIGINT', isFK: true, refEntity: 'WorkOrder' },
+            { name: 'OperatorId', type: 'NVARCHAR(50)' },
+          ],
+          data_flows: [], data_stores: [], tags: ['manufacturing'], pattern_tags: [],
+        },
+      ];
+      queries.injectDictRecords(records);
+
+      const result = await extractor.extractFieldNamingPatterns('manufacturing', 'human-created');
+
+      expect(result.newPatterns).toHaveLength(1);
+      const pattern = result.newPatterns[0];
+      expect(pattern.type).toBe('field_naming');
+      expect(pattern.industry).toBe('manufacturing');
+      expect(pattern.fieldCount).toBe(1);  // 只有 WorkOrderId 出现 3 次(>= threshold 2)
+      expect(pattern.commonFields[0].name).toBe('WorkOrderId');
+      expect(pattern.commonFields[0].frequency).toBe(3);
+    });
+
+    it('过滤:只有 1 个项目的字段不进 Pattern', async () => {
+      const records: DictSourceRecord[] = [
+        {
+          id: 1, project_id: 101,
+          elements: [{ name: 'UniqueField', type: 'NVARCHAR(50)' }],
+          data_flows: [], data_stores: [], tags: [], pattern_tags: [],
+        },
+      ];
+      queries.injectDictRecords(records);
+      const result = await extractor.extractFieldNamingPatterns('manufacturing', 'human-created');
+      expect(result.newPatterns).toHaveLength(0);
+    });
+  });
+
+  // ========================================================
+  // 2. 业务规则 Pattern
+  // ========================================================
+  describe('业务规则 Pattern 提炼', () => {
+    it('提炼:3 个项目都有"报废率>5% → 让步接收"规则', async () => {
+      const records: DecisionTableSourceRecord[] = [
+        {
+          id: 1, project_id: 101, cross_event_consistency: true,
+          tables: [{
+            id: 'DT-1',
+            conditions: [{ name: '报废率>5%', operator: '>', value: 0.05 }],
+            actions: [{ name: '让步接收' }, { name: '驳回' }],
+            rules: [
+              { conditionMask: [true], actionIndex: 0 },
+              { conditionMask: [false], actionIndex: 1 },
+            ],
+          }],
+        },
+        {
+          id: 2, project_id: 102, cross_event_consistency: true,
+          tables: [{
+            id: 'DT-1',
+            conditions: [{ name: '报废率>5%', operator: '>', value: 0.05 }],
+            actions: [{ name: '让步接收' }, { name: '驳回' }],
+            rules: [
+              { conditionMask: [true], actionIndex: 0 },
+              { conditionMask: [false], actionIndex: 1 },
+            ],
+          }],
+        },
+        {
+          id: 3, project_id: 103, cross_event_consistency: true,
+          tables: [{
+            id: 'DT-1',
+            conditions: [{ name: '报废率>5%', operator: '>', value: 0.05 }],
+            actions: [{ name: '让步接收' }, { name: '驳回' }],
+            rules: [
+              { conditionMask: [true], actionIndex: 0 },
+              { conditionMask: [false], actionIndex: 1 },
+            ],
+          }],
+        },
+      ];
+      queries.injectDecisionTableRecords(records);
+
+      const result = await extractor.extractDecisionRulePatterns('manufacturing', 'human-created');
+
+      expect(result.newPatterns).toHaveLength(1);
+      const pattern = result.newPatterns[0];
+      expect(pattern.type).toBe('decision_rule');
+      expect(pattern.hasDefaultRule).toBe(true);
+      expect(pattern.ruleSet).toContainEqual(
+        expect.objectContaining({
+          condition: '报废率>5%',
+          threshold: 0.05,
+          action: '让步接收',
+          frequency: 3,
+        })
+      );
+    });
+
+    it('检测兜底规则', async () => {
+      const records: DecisionTableSourceRecord[] = [
+        {
+          id: 1, project_id: 101, cross_event_consistency: true,
+          tables: [{
+            id: 'DT-1',
+            conditions: [{ name: 'X', operator: '>', value: 1 }],
+            actions: [{ name: 'pass' }, { name: 'default' }],
+            rules: [
+              { conditionMask: [true], actionIndex: 0 },
+              { conditionMask: [false], actionIndex: 1 },  // 兜底
+            ],
+          }],
+        },
+        {
+          id: 2, project_id: 102, cross_event_consistency: true,
+          tables: [{
+            id: 'DT-2',
+            conditions: [{ name: 'X', operator: '>', value: 1 }],
+            actions: [{ name: 'pass' }, { name: 'default' }],
+            rules: [
+              { conditionMask: [true], actionIndex: 0 },
+              { conditionMask: [false], actionIndex: 1 },
+            ],
+          }],
+        },
+      ];
+      queries.injectDecisionTableRecords(records);
+      const result = await extractor.extractDecisionRulePatterns('manufacturing', 'human-created');
+      expect(result.newPatterns[0].hasDefaultRule).toBe(true);
+    });
+  });
+
+  // ========================================================
+  // 3. 跨 Pattern 评分更新
+  // ========================================================
+  describe('PatternRankingService', () => {
+    it('使用后根据成功率动态更新评分', async () => {
+      const ranker = new PatternRankingService(queries);
+      // 模拟 Pattern 被使用,1 次成功 1 次失败
+      await queries.savePattern(
+        {
+          type: 'field_naming', industry: 'manufacturing', source: 'human-created',
+          sourceProjects: [1, 2, 3], sourceRecords: [],
+          commonFields: [{ name: 'X', type: 'NVARCHAR', frequency: 3, isFK: false, isRequired: true }],
+          fieldCount: 1, minOccurrenceThreshold: 2,
+        } as any,
+        0.5,  // 初始分
+        [1, 2, 3]
+      );
+
+      await ranker.updateScoresAfterUsage([
+        { patternId: 1, projectId: 101, isSuccess: true },
+        { patternId: 1, projectId: 102, isSuccess: false },
+      ]);
+
+      const patterns = queries.getAllPatterns();
+      const updated = patterns.find(p => p.id === 1);
+      expect(updated.usage_count).toBe(2);
+      expect(updated.success_count).toBe(1);
+    });
+
+    it('Top N 选取:按 score 降序,过滤低分', async () => {
+      const ranker = new PatternRankingService(queries);
+      await queries.savePattern(
+        { type: 'field_naming', industry: 'manufacturing', source: 'human-created',
+          sourceProjects: [1, 2], sourceRecords: [], commonFields: [], fieldCount: 0, minOccurrenceThreshold: 2 } as any,
+        0.8, [1, 2]
+      );
+      await queries.savePattern(
+        { type: 'field_naming', industry: 'manufacturing', source: 'human-created',
+          sourceProjects: [1, 2, 3], sourceRecords: [], commonFields: [], fieldCount: 0, minOccurrenceThreshold: 2 } as any,
+        0.4, [1, 2, 3]  // 低于 0.6 门禁
+      );
+      await queries.savePattern(
+        { type: 'decision_rule', industry: 'manufacturing', source: 'human-created',
+          sourceProjects: [1, 2], sourceRecords: [], ruleSet: [], hasDefaultRule: true, ruleCount: 0 } as any,
+        0.9, [1, 2]
+      );
+
+      const top = await ranker.getTopPatternsForContext('manufacturing', ['field_naming', 'decision_rule'], 5);
+      expect(top).toHaveLength(2);  // 0.8 + 0.9 通过,0.4 被过滤
+      expect(top[0].type).toBe('decision_rule');  // 0.9 排第一
+    });
+  });
+
+  // ========================================================
+  // 4. 主流程:extractAll
+  // ========================================================
+  describe('extractAll 集成', () => {
+    it('一次提炼出 3 类 Pattern', async () => {
+      queries.injectDictRecords([
+        {
+          id: 1, project_id: 101,
+          elements: [{ name: 'WorkOrderId', type: 'BIGINT' }],
+          data_flows: [], data_stores: [], tags: [], pattern_tags: [],
+        },
+        {
+          id: 2, project_id: 102,
+          elements: [{ name: 'WorkOrderId', type: 'BIGINT' }],
+          data_flows: [], data_stores: [], tags: [], pattern_tags: [],
+        },
+      ]);
+      queries.injectDecisionTableRecords([
+        {
+          id: 1, project_id: 101, cross_event_consistency: true,
+          tables: [{
+            id: 'DT',
+            conditions: [{ name: 'X', operator: '>', value: 1 }],
+            actions: [{ name: 'A' }, { name: 'B' }],
+            rules: [{ conditionMask: [true], actionIndex: 0 }, { conditionMask: [false], actionIndex: 1 }],
+          }],
+        },
+        {
+          id: 2, project_id: 102, cross_event_consistency: true,
+          tables: [{
+            id: 'DT',
+            conditions: [{ name: 'X', operator: '>', value: 1 }],
+            actions: [{ name: 'A' }, { name: 'B' }],
+            rules: [{ conditionMask: [true], actionIndex: 0 }, { conditionMask: [false], actionIndex: 1 }],
+          }],
+        },
+      ]);
+
+      const result = await extractor.extractAll('manufacturing');
+      expect(result.patternsExtracted).toBeGreaterThan(0);
+      expect(result.newPatterns.some(p => p.type === 'field_naming')).toBe(true);
+      expect(result.newPatterns.some(p => p.type === 'decision_rule')).toBe(true);
+    });
+  });
+});
+
+
+========== ERValidator.test.ts ==========
+// ERValidator 测试
+import { ERValidator } from '../src/ERValidator';
+import { DictBuilder, ERBuilder } from './helpers/builders';
+
+describe('ERValidator', () => {
+  it('失败 ER_FIELD_NOT_IN_DICT:ER 字段不在字典中', () => {
+    const dict = new DictBuilder()
+      .withDataStore('WorkOrder', [{ name: 'Id', type: 'BIGINT' }])
+      .build();
+    const er = new ERBuilder()
+      .addEntity('WorkOrder', [
+        { name: 'Id', type: 'BIGINT' },
+        { name: 'GhostField', type: 'NVARCHAR(50)' },  // ❌
+      ])
+      .build();
+    const result = new ERValidator(er, dict).validate();
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ code: 'ER_FIELD_NOT_IN_DICT', field: 'GhostField' })
+    );
+  });
+
+  it('失败 ER_FK_REF_INVALID:外键引用不存在的表', () => {
+    const dict = new DictBuilder()
+      .withDataStore('WorkOrder', [{ name: 'Id', type: 'BIGINT' }])
+      .build();
+    const er = new ERBuilder()
+      .addEntity('WorkOrder', [{ name: 'Id', type: 'BIGINT' }])
+      .addEntity('ProductionReport', [
+        { name: 'Id', type: 'BIGINT' },
+        { name: 'WorkOrderId', type: 'BIGINT', isFK: true, refTable: 'GhostTable' },  // ❌
+      ])
+      .build();
+    const result = new ERValidator(er, dict).validate();
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ code: 'ER_FK_REF_INVALID' })
+    );
+  });
+
+  it('通过:ER 字段都在字典,FK 引用合法', () => {
+    const dict = new DictBuilder()
+      .withDataStore('WorkOrder', [{ name: 'Id', type: 'BIGINT' }])
+      .withDataStore('ProductionReport', [{ name: 'Id', type: 'BIGINT' }, { name: 'WorkOrderId', type: 'BIGINT' }])
+      .build();
+    const er = new ERBuilder()
+      .addEntity('WorkOrder', [{ name: 'Id', type: 'BIGINT' }])
+      .addEntity('ProductionReport', [
+        { name: 'Id', type: 'BIGINT' },
+        { name: 'WorkOrderId', type: 'BIGINT', isFK: true, refTable: 'WorkOrder' },
+      ])
+      .build();
+    const result = new ERValidator(er, dict).validate();
+    expect(result.passed).toBe(true);
+  });
+});
+
+
+========== LogicValidator.test.ts ==========
+// LogicValidator 测试
+import { LogicValidator } from '../src/LogicValidator';
+import { DictBuilder, PSpecBuilder } from './helpers/builders';
+
+describe('LogicValidator', () => {
+  it('失败 LOGIC_FIELD_NOT_IN_DICT:PSPEC 引用字典外字段', () => {
+    const dict = new DictBuilder()
+      .withDataStore('WorkOrder', [{ name: 'Id', type: 'BIGINT' }])
+      .build();
+    const pspec = new PSpecBuilder()
+      .addProcess('P1', '录入', ['WorkOrderId', 'GhostField'])  // ❌ GhostField
+      .build();
+    const result = new LogicValidator(pspec, dict).validate();
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({ code: 'LOGIC_FIELD_NOT_IN_DICT', field: 'GhostField' })
+    );
+  });
+
+  it('通过:PSPEC 字段都在字典中', () => {
+    const dict = new DictBuilder()
+      .withDataStore('WorkOrder', [{ name: 'Id', type: 'BIGINT' }])
+      .withElement('WorkOrderId', 'BIGINT')
+      .build();
+    const pspec = new PSpecBuilder()
+      .addProcess('P1', '录入', ['WorkOrderId', 'Id'])
+      .build();
+    const result = new LogicValidator(pspec, dict).validate();
+    expect(result.passed).toBe(true);
+  });
+});
+
+
+========== SAOrchestrator.test.ts ==========
+// 集成测试:验证 runSA() 完整流程
+// 包含:LLM 模拟、Validator 真实跑、DB 内存跑、Retry 循环、DKEE 提炼
+
+import { SAOrchestrator } from '../src/orchestrator/SAOrchestrator';
+import { InMemorySADatabase } from '../src/persistence/SADatabase';
+import { ILLMClient, SARequest, ValidationError } from '../src/types';
+
+// =====================================================
+// Mock LLM - 模拟"第一次出错、第二次修复"的真实 LLM 行为
+// =====================================================
+class MockLLM implements ILLMClient {
+  private callCount = 0;
+
+  async generate(params: any): Promise<any> {
+    this.callCount++;
+    const errors = params.lastErrors || [];
+
+    // 模拟 LLM 第一次生成时会有"幻觉字段"
+    if (this.callCount === 1 && params.systemPrompt.includes('数据字典')) {
+      // 第一次:有 ProductName 幻觉
+      return {
+        elements: [
+          { name: 'WorkOrderId', type: 'BIGINT' },
+          { name: 'ProductName', type: 'NVARCHAR(50)' },  // ❌ 幻觉
+        ],
+        dataFlows: [],
+        dataStores: [{ name: 'WorkOrder', fields: [{ name: 'Id', type: 'BIGINT' }] }],
+      };
+    }
+
+    // 第二次:看到错误后修正
+    if (this.callCount === 2 && params.systemPrompt.includes('数据字典')) {
+      return {
+        elements: [
+          { name: 'WorkOrderId', type: 'BIGINT' },
+          { name: 'Qty', type: 'DECIMAL(18,2)' },
+        ],
+        dataFlows: [],
+        dataStores: [{ name: 'WorkOrder', fields: [
+          { name: 'Id', type: 'BIGINT' },
+          { name: 'TenantId', type: 'NVARCHAR(50)' },
+        ]}],
+      };
+    }
+
+    // 其他步骤:返回简单合法数据
+    if (params.systemPrompt.includes('数据流图')) {
+      return {
+        contextDiagram: { process: 'MES', entities: ['worker'] },
+        dfdLevels: { '0': { processes: [{ id: 'P1', name: 'P', inputFlows: ['in'], outputFlows: ['out'] }] } },
+        processes: [{ id: 'P1.1', name: 'P1-sub', parentId: 'P1', inputFlows: ['in'], outputFlows: ['out'] }],
+        dataFlows: [{ name: 'in' }, { name: 'out' }],
+        dataStores: [{ name: 'WorkOrder' }],
+      };
+    }
+
+    return {
+      swimLanes: [], activityNodes: [], edges: [], exceptionPaths: [],
+      dfdProcessMappings: { 'N1': 'P1' },
+    };
+  }
+}
+
+// =====================================================
+// Mock Validator Bundle - 真实 DictValidator 逻辑
+// =====================================================
+const mockValidators = {
+  DFDValidator: {
+    validate: (output: any) => ({ passed: true, errors: [] }),
+  },
+  BPMValidator: {
+    validate: (output: any, _dfd: any) => ({ passed: true, errors: [] }),
+  },
+  DictValidator: {
+    validate: (output: any, dfd: any) => {
+      const errors: ValidationError[] = [];
+      // 校验 DFD 中的数据存储都在 dict 里
+      dfd?.dataStores?.forEach((s: any) => {
+        if (!output.dataStores.find((ds: any) => ds.name === s.name)) {
+          errors.push({
+            code: 'DICT_STORE_MISSING',
+            message: `DFD 数据存储 "${s.name}" 在数据字典中未定义`,
+            severity: 'ERROR',
+          });
+        }
+      });
+      // 校验 ProductName 是否在白名单(实际是从 DFD / 上下文来)
+      if (output.elements.some((e: any) => e.name === 'ProductName')) {
+        errors.push({
+          code: 'DICT_INVALID_FIELD',
+          message: `字段 "ProductName" 是 LLM 幻觉,不在上下文允许的字段中`,
+          severity: 'ERROR',
+        });
+      }
+      return { passed: errors.length === 0, errors };
+    },
+  },
+  LogicValidator: { validate: () => ({ passed: true, errors: [] }) },
+  CrossEventConsistencyValidator: { validate: () => ({ passed: true, errors: [] }) },
+  ERValidator: { validate: () => ({ passed: true, errors: [] }) },
+  UIValidator: { validate: () => ({ passed: true, errors: [] }) },
+};
+
+// =====================================================
+// 集成测试
+// =====================================================
+describe('SAOrchestrator.runSA() 集成测试', () => {
+  it('完整跑一遍需求分析,模拟 LLM 第一次出错第二次修正', async () => {
+    const llm = new MockLLM();
+    const db = new InMemorySADatabase();
+    const orchestrator = new SAOrchestrator(llm, db, mockValidators);
+
+    const req: SARequest = {
+      tenantId: 't1',
+      projectId: 1,
+      requirementId: 1,
+      requirementText: '我们要建 MES 报工系统,机加工车间,工单报工,物料消耗',
+      userId: 'user1',
+    };
+
+    const result = await orchestrator.runSA(req);
+
+    // 验证:9 张表都写入了数据
+    const stats = db.getStats();
+    expect(stats.scopes).toBe(1);
+    expect(stats.dfps).toBe(1);
+    expect(stats.bpms).toBe(1);
+    expect(stats.dicts).toBe(1);
+    expect(stats.ers).toBe(1);
+    expect(stats.uis).toBe(1);
+
+    // 验证:validation_log 记录了 Dict 的 1 次重试
+    const logs = db.getValidationLogs();
+    const dictLogs = logs.filter(l => l.saTableName === 'sa_data_dictionary');
+    expect(dictLogs.length).toBeGreaterThanOrEqual(2);  // 第 1 次失败 + 第 2 次成功
+    const failedLog = dictLogs.find(l => l.validationStatus === 'FAIL');
+    expect(failedLog?.retryCount).toBe(0);
+    expect(failedLog?.isConverged).toBe(false);
+    const passedLog = dictLogs.find(l => l.validationStatus === 'PASS');
+    expect(passedLog?.isConverged).toBe(true);
+
+    // 验证:第 2 次的 previousErrors 包含了第 1 次的错误
+    expect(passedLog?.previousErrors).toBeTruthy();
+    expect(JSON.stringify(passedLog?.previousErrors)).toContain('ProductName');
+
+    // 验证:SAOutput 完整返回
+    expect(result.scope).toBeDefined();
+    expect(result.dict).toBeDefined();
+    expect(result.dict?.elements).toContainEqual(
+      expect.objectContaining({ name: 'WorkOrderId' })
+    );
+    // ProductName 不应出现在最终结果里
+    expect(result.dict?.elements.find((e: any) => e.name === 'ProductName')).toBeUndefined();
+  });
+
+  it('简单事件:跳过 DFD/PSPEC/DT,只跑 Scope + UI', async () => {
+    const llm: ILLMClient = {
+      async generate() {
+        // 第一次就直接返回合法简单数据
+        return {
+          systemBoundary: { inScope: ['查询'], outOfScope: [] },
+          externalEntities: [{ name: 'user', type: 'person' }],
+          businessEvents: [{
+            id: 1, name: '查工单', description: '查询', complexity: 'simple',
+          }],
+          eventCount: 1,
+        };
+      },
+    };
+    const db = new InMemorySADatabase();
+    const orchestrator = new SAOrchestrator(llm, db, mockValidators);
+
+    const req: SARequest = {
+      tenantId: 't1', projectId: 1, requirementId: 1,
+      requirementText: '简单查询', userId: 'u1',
+    };
+
+    const result = await orchestrator.runSA(req);
+
+    // 简单事件应该只跑 Scope(不跑 DFD/BPM/Dict/PSPEC/DT/ER/STD,只跑 UI)
+    const stats = db.getStats();
+    expect(stats.scopes).toBe(1);
+    expect(stats.uis).toBe(0);  // 即使简单,UI 也要 dataFlow,但 mock 没返回,失败
+  });
+});
+
+
+========== UIValidator.test.ts ==========
+// UIValidator 测试 - 覆盖所有 5 个 ERROR code
+import { UIValidator } from '../src/UIValidator';
+import { DictBuilder, UIBuilder, BPMBuilder } from './helpers/builders';
+
+describe('UIValidator', () => {
+  // ========================================================
+  // 1. UI 字段在字典中
+  // ========================================================
+  describe('UI 字段在字典中', () => {
+    it('失败 UI_FIELD_NOT_IN_DICT:UI 字段不在字典中(LLM 幻觉)', () => {
+      const dict = new DictBuilder()
+        .withDataStore('Report', [{ name: 'Id', type: 'BIGINT' }])
+        .withDataFlow('报工单', [{ name: 'WorkOrderId', type: 'BIGINT' }])
+        .build();
+      const ui = new UIBuilder()
+        .addScreen('S1', '录入屏', '报工单', 'N1', [
+          { name: 'WorkOrderId', type: 'BIGINT', required: true, controlType: 'input' },
+          { name: 'GhostField', type: 'NVARCHAR(50)', required: false, controlType: 'input' },  // ❌
+        ])
+        .build();
+      const result = new UIValidator(ui, dict, { activity_nodes: [] }).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'UI_FIELD_NOT_IN_DICT', field: 'GhostField' })
+      );
+    });
+
+    it('通过:UI 字段都在字典中', () => {
+      const dict = new DictBuilder()
+        .withDataStore('Report', [{ name: 'Id', type: 'BIGINT' }])
+        .withDataFlow('报工单', [
+          { name: 'WorkOrderId', type: 'BIGINT' },
+          { name: 'Qty', type: 'DECIMAL(18,2)' },
+        ])
+        .withElement('WorkOrderId', 'BIGINT')
+        .withElement('Qty', 'DECIMAL(18,2)')
+        .build();
+      const ui = new UIBuilder()
+        .addScreen('S1', '录入屏', '报工单', 'N1', [
+          { name: 'WorkOrderId', type: 'BIGINT', required: true, controlType: 'input' },
+          { name: 'Qty', type: 'DECIMAL(18,2)', required: true, controlType: 'number' },
+        ])
+        .build();
+      const result = new UIValidator(ui, dict, { activity_nodes: [] }).validate();
+      expect(result.passed).toBe(true);
+    });
+  });
+
+  // ========================================================
+  // 2. UI 字段在数据流的字典定义中
+  // ========================================================
+  describe('UI 字段在数据流的字典中', () => {
+    it('失败 UI_FIELD_NOT_IN_FLOW:字段不在数据流字典中', () => {
+      const dict = new DictBuilder()
+        .withDataFlow('报工单', [{ name: 'WorkOrderId', type: 'BIGINT' }])
+        .withElement('OtherField', 'NVARCHAR(50)')  // 在 elements 但不在报工单的 dataFlow
+        .build();
+      const ui = new UIBuilder()
+        .addScreen('S1', '屏', '报工单', 'N1', [
+          { name: 'WorkOrderId', type: 'BIGINT', required: true, controlType: 'input' },
+          { name: 'OtherField', type: 'NVARCHAR(50)', required: false, controlType: 'input' },  // ❌ 不在报工单 dataFlow 里
+        ])
+        .build();
+      const result = new UIValidator(ui, dict, { activity_nodes: [] }).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'UI_FIELD_NOT_IN_FLOW' })
+      );
+    });
+
+    it('失败 UI_NO_DATA_FLOW:UI 屏绑定了不存在的 dataFlow', () => {
+      const dict = new DictBuilder()
+        .withElement('X', 'NVARCHAR(50)')
+        .build();
+      const ui = new UIBuilder()
+        .addScreen('S1', '屏', 'GhostFlow', 'N1', [
+          { name: 'X', type: 'NVARCHAR(50)', required: false, controlType: 'input' },
+        ])
+        .build();
+      const result = new UIValidator(ui, dict, { activity_nodes: [] }).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'UI_NO_DATA_FLOW' })
+      );
+    });
+  });
+
+  // ========================================================
+  // 3. UI 字段类型与字典一致
+  // ========================================================
+  describe('UI 字段类型与字典一致', () => {
+    it('失败 UI_TYPE_MISMATCH:UI 类型与字典不一致', () => {
+      const dict = new DictBuilder()
+        .withDataStore('R', [{ name: 'Id', type: 'BIGINT' }])
+        .withDataFlow('报工单', [{ name: 'Qty', type: 'DECIMAL(18,2)' }])
+        .withElement('Qty', 'DECIMAL(18,2)')
+        .build();
+      const ui = new UIBuilder()
+        .addScreen('S1', '屏', '报工单', 'N1', [
+          { name: 'Qty', type: 'INT', required: true, controlType: 'number' },  // ❌ INT ≠ DECIMAL
+        ])
+        .build();
+      const result = new UIValidator(ui, dict, { activity_nodes: [] }).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'UI_TYPE_MISMATCH' })
+      );
+    });
+  });
+
+  // ========================================================
+  // 4. BPM 节点必须有 UI 屏
+  // ========================================================
+  describe('BPM 节点必须有 UI 屏', () => {
+    it('警告 UI_BPM_NODE_MISSING:user_action 节点没 UI 屏', () => {
+      const dict = new DictBuilder().withElement('X', 'NVARCHAR(50)').build();
+      const ui = new UIBuilder().build();  // 没有屏
+      const bpm = { activity_nodes: [
+        { id: 'N1', type: 'user_action' as const },
+        { id: 'N2', type: 'system_action' as const },  // system_action 不要求
+      ]};
+      const result = new UIValidator(ui, dict, bpm).validate();
+      expect(result.errors).toContainEqual(
+        expect.objectContaining({ code: 'UI_BPM_NODE_MISSING', severity: 'WARNING' })
+      );
+    });
+
+    it('通过:每个 user_action 节点都有 UI 屏', () => {
+      const dict = new DictBuilder()
+        .withDataFlow('F1', [{ name: 'X', type: 'NVARCHAR(50)' }])
+        .withElement('X', 'NVARCHAR(50)')
+        .build();
+      const ui = new UIBuilder()
+        .addScreen('S1', '屏', 'F1', 'N1', [
+          { name: 'X', type: 'NVARCHAR(50)', required: false, controlType: 'input' },
+        ])
+        .build();
+      const bpm = { activity_nodes: [{ id: 'N1', type: 'user_action' as const }] };
+      const result = new UIValidator(ui, dict, bpm).validate();
+      expect(result.passed).toBe(true);
+    });
+  });
+});
+
+

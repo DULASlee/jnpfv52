@@ -294,7 +294,7 @@ export function validateFlowIR(ir: FlowIR): FlowIRIssue[] {
     // end 节点可以没有出边
     if (node.type === 'end') continue;
 
-    if (!edgeTargets.has(node.id) && node.type !== 'start') {
+    if (!edgeTargets.has(node.id) && (node.type as string) !== 'start') {
       issues.push({
         level: 'warning',
         path: `nodes.${node.id}`,
@@ -302,7 +302,7 @@ export function validateFlowIR(ir: FlowIR): FlowIRIssue[] {
         code: 'ORPHAN_NODE_NO_INPUT',
       });
     }
-    if (!edgeSources.has(node.id) && node.type !== 'end') {
+    if (!edgeSources.has(node.id) && (node.type as string) !== 'end') {
       issues.push({
         level: 'warning',
         path: `nodes.${node.id}`,

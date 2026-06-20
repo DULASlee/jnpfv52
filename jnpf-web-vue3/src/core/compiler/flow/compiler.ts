@@ -107,8 +107,8 @@ export class FlowCompiler {
     const nodeIds = new Set(ir.nodes.map(n => n.id));
     const connectedIds = new Set<string>();
     for (const edge of ir.edges) {
-      connectedIds.add(edge.from);
-      connectedIds.add(edge.to);
+      connectedIds.add(edge.sourceNodeId);
+      connectedIds.add(edge.targetNodeId);
     }
     for (const id of nodeIds) {
       if (!connectedIds.has(id)) {
@@ -118,21 +118,21 @@ export class FlowCompiler {
 
     // 检查空节点引用
     for (const edge of ir.edges) {
-      if (!nodeIds.has(edge.from)) {
-        warnings.push(`边引用不存在的源节点: ${edge.from}`);
+      if (!nodeIds.has(edge.sourceNodeId)) {
+        warnings.push(`边引用不存在的源节点: ${edge.sourceNodeId}`);
       }
-      if (!nodeIds.has(edge.to)) {
-        warnings.push(`边引用不存在的目标节点: ${edge.to}`);
+      if (!nodeIds.has(edge.targetNodeId)) {
+        warnings.push(`边引用不存在的目标节点: ${edge.targetNodeId}`);
       }
     }
 
     // 变量名校验
     const varNames = new Set<string>();
     for (const v of ir.variables) {
-      if (varNames.has(v.key)) {
-        warnings.push(`变量名重复: ${v.key}`);
+      if (varNames.has(v.name)) {
+        warnings.push(`变量名重复: ${v.name}`);
       }
-      varNames.add(v.key);
+      varNames.add(v.name);
     }
 
     return warnings;
@@ -171,27 +171,31 @@ export class FlowCompiler {
 
     switch (node.config.type) {
       case 'approval': {
-        const ac = node.config as { type: string; approverType: string; approverId: string; multiInstance?: boolean };
+        const ac = node.config as unknown as { type: string; approverType: string; approverIds: string[] };
         props.approverType = ac.approverType;
-        props.approverId = ac.approverId;
-        props.multiInstance = ac.multiInstance ?? false;
+        props.approverIds = ac.approverIds;
         break;
       }
       case 'condition': {
-        const cc = node.config as { type: string; expression: string };
-        props.expression = cc.expression;
+        const cc = node.config as unknown as {
+          type: string;
+          conditions: Array<{ field: string; operator: string; value: unknown; nextNodeId: string }>;
+          defaultNodeId: string;
+        };
+        props.conditions = cc.conditions;
+        props.defaultNodeId = cc.defaultNodeId;
         break;
       }
       case 'notification': {
-        const nc = node.config as { type: string; template: string; channel: string };
-        props.template = nc.template;
+        const nc = node.config as unknown as { type: string; templateId: string; channel: string };
+        props.templateId = nc.templateId;
         props.channel = nc.channel;
         break;
       }
       case 'timer': {
-        const tc = node.config as { type: string; delay: string; unit: string };
+        const tc = node.config as unknown as { type: string; delay: number; delayType: string };
         props.delay = tc.delay;
-        props.unit = tc.unit;
+        props.delayType = tc.delayType;
         break;
       }
       default:
@@ -208,8 +212,8 @@ export class FlowCompiler {
   private compileEdge(edge: FlowEdge): JnpfFlowLine {
     return {
       id: edge.id,
-      from: edge.from,
-      to: edge.to,
+      from: edge.sourceNodeId,
+      to: edge.targetNodeId,
       label: edge.label ?? '',
       condition: edge.condition ?? undefined,
     };
@@ -226,7 +230,7 @@ export class FlowCompiler {
     defaultValue: unknown;
   } {
     return {
-      key: variable.key,
+      key: variable.name,
       name: variable.name,
       type: variable.type,
       defaultValue: variable.defaultValue ?? null,

@@ -16,5 +16,7 @@
     right: 0;
     bottom: 0;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 </style>

@@ -27,8 +27,9 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
     private readonly ILogger<LlmGatewayService> _logger;
 
     private Dictionary<string, ProviderConfig>? _providers;
-    private string _defaultProvider = "mimo";
-    private string _fallbackProvider = "deepseek";
+    private string _defaultProvider = "";
+    private string _fallbackProvider = "";
+    private bool _providersLoaded;
 
     /// <summary>GAP-2: 熔断计数器（provider → failureCount）</summary>
     private readonly ConcurrentDictionary<string, int> _failureCounts = new();
@@ -62,20 +63,24 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
         return _failureCounts.TryGetValue(provider, out var c) ? c : 0;
     }
 
-    // ─── Provider 配置（延迟加载）───
+    // ─── Provider 配置（延迟加载，默认值来自配置而非硬编码）───
+
+    private void EnsureProvidersLoaded()
+    {
+        if (_providersLoaded) return;
+        _providers = _configuration.GetSection("AI:Providers")
+            .Get<Dictionary<string, ProviderConfig>>() ?? new();
+        _defaultProvider = _configuration.GetValue("AI:DefaultProvider", "mimo")!;
+        _fallbackProvider = _configuration.GetValue("AI:FallbackProvider", "deepseek")!;
+        _providersLoaded = true;
+    }
 
     private Dictionary<string, ProviderConfig> Providers
     {
         get
         {
-            if (_providers == null)
-            {
-                _providers = _configuration.GetSection("AI:Providers")
-                    .Get<Dictionary<string, ProviderConfig>>() ?? new();
-                _defaultProvider = _configuration.GetValue("AI:DefaultProvider", "mimo")!;
-                _fallbackProvider = _configuration.GetValue("AI:FallbackProvider", "deepseek")!;
-            }
-            return _providers;
+            EnsureProvidersLoaded();
+            return _providers!;
         }
     }
 
@@ -430,13 +435,22 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
             .ToList();
     }
 
-    /// <summary>默认降级链（MiMo→DeepSeek 2 级，与现有逻辑对齐）</summary>
-    private static List<LlmProviderLevelConfig> DefaultLevelChain()
+    /// <summary>默认降级链（从配置读取模型名，无配置时使用通用回退）</summary>
+    private List<LlmProviderLevelConfig> DefaultLevelChain()
     {
+        EnsureProvidersLoaded();
         return new List<LlmProviderLevelConfig>
         {
-            new() { Name = "mimo", Model = "mimo-v2.5-pro", Level = 0, MaxRetries = 3, TimeoutSeconds = 60 },
-            new() { Name = "deepseek", Model = "deepseek-v4-pro", Level = 1, MaxRetries = 3, TimeoutSeconds = 80 },
+            new() {
+                Name = _configuration.GetValue("LlmGateway:DefaultChain:PrimaryName", "mimo")!,
+                Model = _configuration.GetValue("LlmGateway:DefaultChain:PrimaryModel", "default")!,
+                Level = 0, MaxRetries = 3, TimeoutSeconds = 60
+            },
+            new() {
+                Name = _configuration.GetValue("LlmGateway:DefaultChain:FallbackName", "deepseek")!,
+                Model = _configuration.GetValue("LlmGateway:DefaultChain:FallbackModel", "default")!,
+                Level = 1, MaxRetries = 3, TimeoutSeconds = 80
+            },
         };
     }
 
@@ -689,6 +703,42 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
         }
     }
 
+    /// <summary>
+    /// 从 Anthropic 格式响应中提取文本（兼容 thinking + text 混排 content 数组）。
+    /// </summary>
+    private static string ExtractAnthropicText(JsonElement root)
+    {
+        if (!root.TryGetProperty("content", out var blocks) || blocks.ValueKind != JsonValueKind.Array)
+        {
+            return root.TryGetProperty("text", out var directText)
+                ? directText.GetString() ?? ""
+                : "";
+        }
+
+        var sb = new StringBuilder();
+        foreach (var block in blocks.EnumerateArray())
+        {
+            if (block.TryGetProperty("type", out var typeEl))
+            {
+                var type = typeEl.GetString();
+                if (type == "text" && block.TryGetProperty("text", out var textEl))
+                {
+                    sb.Append(textEl.GetString());
+                }
+                else if (type == "thinking" && block.TryGetProperty("thinking", out var thinkingEl))
+                {
+                    // thinking 块不作为主输出，但保留供调试
+                }
+            }
+            else if (block.TryGetProperty("text", out var legacyText))
+            {
+                sb.Append(legacyText.GetString());
+            }
+        }
+
+        return sb.Length > 0 ? sb.ToString() : "";
+    }
+
     private ChatCompletionResponse ParseResponse(
         string body, string apiFormat, string model, long latencyMs)
     {
@@ -698,10 +748,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
 
             if (apiFormat == "anthropic")
             {
-                var content = doc.RootElement
-                    .GetProperty("content")[0]
-                    .GetProperty("text")
-                    .GetString() ?? "";
+                var content = ExtractAnthropicText(doc.RootElement);
 
                 var usage = doc.RootElement.GetProperty("usage");
                 var tokensIn = usage.GetProperty("input_tokens").GetInt32();
@@ -803,7 +850,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
             try { System.Text.Json.JsonDocument.Parse(content); score += 0.15; }
             catch
             {
-                var match = System.Text.RegularExpressions.Regex.Match(content, @"```json\s*([\s\S]*?)\s*```");
+                var match = System.Text.RegularExpressions.Regex.Match(content, @"```[jJ][sS][oO][nN]\s*([\s\S]*?)\s*```");
                 if (match.Success)
                 {
                     try { System.Text.Json.JsonDocument.Parse(match.Groups[1].Value); score += 0.1; }

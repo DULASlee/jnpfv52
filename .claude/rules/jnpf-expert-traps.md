@@ -1,5 +1,15 @@
 # JNPF Expert Traps & Survival Guide
 
+> **⚠️ 架构级陷阱已迁移至** `.claude/rules/architecture-redlines.md`（架构铁律单一信源）。
+> 本文档保留的陷阱侧重于**实际编码中的"出乎意料"行为**（非红线违反，而是直觉陷阱）。
+>
+> **架构红线映射：**
+> - Traps 1, 6, 9 → R1 (API Generation)
+> - Traps 4, 5 → R2 (Unified Response)
+> - Traps 7, 8, 13 → R4 (Multi-Tenant Isolation)
+> - Trap 12 → R3 (Codegen Boundary)
+> - Traps 2, 3, 10, 11, 14 → 本文档保留（实操陷阱，非架构铁律）
+
 These are real traps in the JNPF framework that violate standard .NET intuition. Each one is a "without being told, you'd never figure out why it breaks" lesson learned the hard way.
 
 ---

@@ -85,8 +85,8 @@
           if (parent.includes(item.path)) {
             metched.push({
               ...item,
-              name: item.meta?.title || item.name,
-            });
+              name: ((item as any).meta?.title || (item as any).name) as any,
+            } as any);
           }
           if (item.children?.length) {
             metched.push(...getMatched(item.children, parent));
@@ -109,7 +109,7 @@
         }).filter(item => !item.meta?.hideBreadcrumb);
       }
 
-      function handleClick(route: RouteLocationMatched, paths: string[], e: Event) {
+      function handleClick(route: RouteLocationMatched, paths: string[], e: any) {
         e?.preventDefault();
         const { children, redirect, meta } = route;
 

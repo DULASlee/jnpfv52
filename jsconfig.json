@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "noEmit": true,
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "/@/*": ["jnpf-web-vue3/src/*"]
+    }
+  },
+  "include": [
+    "jnpf-web-vue3/src",
+    "jnpf-web-vue3/types",
+    "jnpf-web-datascreen/src",
+    "jnpf-app-vue3/src"
+  ],
+  "exclude": [
+    "node_modules",
+    "backend",
+    "docs",
+    "openspec",
+    "scripts",
+    "brand",
+    "DB",
+    "poc",
+    "graphify-out",
+    "**/node_modules",
+    "**/dist",
+    "**/.git"
+  ]
+}

@@ -24,7 +24,7 @@
     if (!props.endTime) return [];
     return props.endTime.split(':');
   });
-  const getBindValue = computed(() => ({
+  const getBindValue = computed((): any => ({
     ...unref(attrs),
     placeholder: props.placeholder,
     format: props.format,

@@ -23,7 +23,7 @@ export interface DomainPattern {
   name: string;
   domain: string;
   description: string;
-  source: 'ai-discovered' | 'human-created' | 'self-play';
+  source: 'ai-discovered' | 'human-created' | 'self-play' | 'hybrid';
   pattern: {
     entities: Array<{ name: string; fields: Array<{ name: string; type: string }> }>;
     rules: Array<{ name: string; condition: string; action: string }>;
@@ -45,7 +45,7 @@ export interface HumanAction {
 }
 
 /** 操作分组（按领域聚合） */
-interface ActionGroup {
+interface _ActionGroup {
   domain: string;
   actions: HumanAction[];
 }

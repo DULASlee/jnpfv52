@@ -1,0 +1,62 @@
+{
+  "scenario_1_cold_start": {
+    "scenario": "cold_start",
+    "passed": true,
+    "retries": 0,
+    "duration_ms": 140,
+    "human_changes": 1,
+    "new_patterns": 2,
+    "total_patterns": 2,
+    "pattern_avg_score": 0.5
+  },
+  "scenario_2_warm_start": {
+    "scenario": "warm_start",
+    "passed": true,
+    "retries": 0,
+    "duration_ms": 140,
+    "human_changes": 1,
+    "new_patterns": 2,
+    "total_patterns": 2,
+    "kg_injected": 2,
+    "pattern_avg_score": 0.8
+  },
+  "scenario_3_improvement": [
+    {
+      "iteration": 1,
+      "retries": 0,
+      "passed": true,
+      "kg_count": 2
+    },
+    {
+      "iteration": 2,
+      "retries": 0,
+      "passed": true,
+      "kg_count": 2
+    },
+    {
+      "iteration": 3,
+      "retries": 0,
+      "passed": true,
+      "kg_count": 2
+    },
+    {
+      "iteration": 4,
+      "retries": 0,
+      "passed": true,
+      "kg_count": 2
+    },
+    {
+      "iteration": 5,
+      "retries": 0,
+      "passed": true,
+      "kg_count": 2
+    },
+    {
+      "iteration": 6,
+      "retries": 0,
+      "passed": true,
+      "kg_count": 2
+    }
+  ],
+  "all_passed": true
+}
