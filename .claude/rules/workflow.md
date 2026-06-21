@@ -136,6 +136,13 @@ S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
 - **S 级任务：自动触发 code-reviewer 子代理**
 - FAIL → 修复 → 重审（最多 3 轮）
 - 3 轮后仍有 FAIL → 报告给用户，请求介入
+- **🟠 错题本强制检查（硬性要求，不可跳过）：**
+  - 本次 session 是否有 `fix:` / `bug:` / 错误修复性质的改动？
+  - **判断方法：** `git log --oneline --since="<session-start>"` 检查 commit message 前缀
+  - **有 → MUST 追加到 `.claude/memory/mistake-log.md`**，格式：日期 | 类别 | 症状 | 根因 | 修复 | 关键词
+  - **追加后在 Step 7 报告中注明：** 错题本本次新增 N 条（Mxxx-Myyy）/ 无需新增
+  - **未追加 → 流程阻塞，MUST NOT 声称 Step 7 完成**
+  - 此项检查不因任务级别（S/A/B）豁免
 
 > **子代理审查维度、Prompt 模板、循环终止条件：** 见 `.claude/rules/review-workflow.md`
 
@@ -156,6 +163,8 @@ S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
 - E1 截图：[路径，如 `.claude/evidence/page-login.png`]
 - E2 操作路径：[打开页面 → 操作步骤 → 观察结果]
 - E3 实际输出：[浏览器中实际看到的 UI 状态]
+
+**🟠 错题本：** 本次新增 N 条（Mxxx-Myyy）/ 无需新增
 
 **已知问题：** 无 / [列出]
 

@@ -152,6 +152,11 @@ run_in_background: false
    - 命名是否符合 PascalCase（C#）/ camelCase（字段）？
    - 是否有硬编码的魔法数字/字符串？
 
+5. 错题本纪律（对照 `.claude/rules/workflow.md` Step 6）
+   - 本次变更是否包含 fix/bug/错误修复性质的改动？
+   - 如有，是否已在 `.claude/memory/mistake-log.md` 追加对应条目？
+   - 未追加 → 报告为严重问题（违反 Step 6 错题本强制检查）
+
 **审查范围：** 只审查本次变更的文件，不审查未修改的代码。
 
 **输出格式（严格遵守）：**

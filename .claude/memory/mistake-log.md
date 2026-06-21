@@ -82,3 +82,51 @@
 - **根因**：跳过对比步骤，假设同名文件 = 功能重叠。实际用户级文件未在 settings.json 注册（死文件），但应该先展示判断依据再操作
 - **修复**：删除前必须：Read 内容 → 对比差异 → 输出分析 → 获确认后再删
 - **关键词**：`文件删除`, `hook`, `对比`, `操作流程`
+
+### M013 | 后端 | Pipeline 步骤间重复下载同一图片
+- **症状**：SA 门控链路中同一张图片在步骤2（分析）和步骤7（生成方案）各下载一次，浪费带宽和延迟
+- **根因**：Pipeline 步骤间无数据共享机制，每个步骤独立获取所需数据，`DownloadFileBytesAsync` 无缓存层
+- **修复**：步骤2 下载后将 `byte[]` 缓存到 `ConcurrentDictionary<string, byte[]>`（key=attachmentId），步骤7 优先从缓存取，命中则跳过下载
+- **关键词**：`重复下载`, `缓存`, `ConcurrentDictionary`, `Pipeline`, `附件`
+
+### M014 | 后端 | AttachmentProcessor 尝试处理音视频格式
+- **症状**：用户上传 mp3/mp4 等音视频文件后，AttachmentProcessor 尝试对其执行文档分析（OCR/文本提取），无意义且浪费资源
+- **根因**：AttachmentProcessor 未做格式过滤，对所有附件类型一视同仁
+- **修复**：App.json 配置排除音视频格式，AttachmentProcessor 检查 `IsAudioVideoFile()` 后直接跳过
+- **关键词**：`音视频`, `AttachmentProcessor`, `格式过滤`, `边界条件`
+
+### M015 | 配置 | AllowUploadFileType 白名单过严（28→58）
+- **症状**：文档分析系统只允许 28 种文件格式上传，用户无法上传常见文档格式（如 .csv/.log/.xml/.rtf 等）
+- **根因**：文件类型白名单基于保守策略（仅常见 Office 格式），未考虑文档分析场景需要处理多种数据源
+- **修复**：扩展到 58 种全格式覆盖
+- **关键词**：`AllowUploadFileType`, `白名单`, `文件格式`, `配置`
+
+### M016 | 配置 | AllowUploadFileType 白名单遗漏 Markdown
+- **症状**：用户上传 .md 文件被 D1800 校验拦截
+- **根因**：白名单逐一列举格式时遗漏了 Markdown（.md），每种新格式都是潜在遗漏点
+- **修复**：白名单补充 md 扩展名
+- **关键词**：`Markdown`, `D1800`, `白名单遗漏`, `文件上传`
+
+### M017 | 前端 | `getToken()` 返回类型不明确导致 28 处 `as string` 断言
+- **症状**：全项目 28 处调用 `getToken() as string` 类型断言，类型安全性丧失
+- **根因**：`getToken()` 声明时未标注返回类型，TypeScript 推断不精确，调用方被迫手动断言
+- **修复**：在 `getToken()` 声明处加返回类型标注 `string | null`，28 处断言自动消除
+- **关键词**：`getToken`, `as string`, `类型标注`, `TypeScript`
+
+### M018 | 前端 | 纯附件消息发送被 handleSend 守卫拦截
+- **症状**：用户只上传文件不打字，点击发送无任何反应，附件从未离开前端
+- **根因**：`handleSend` 第 476 行 `if (!content || loading) return`，content 为空字符串时直接 return，附件上传代码不可达
+- **修复**：handleSend 改为有附件时即使无文字也继续；sendMessage 同样放过有 uploadedFiles 的情况
+- **关键词**：`handleSend`, `附件`, `空文本`, `守卫逻辑`, `早返回`
+
+### M019 | 前端 | FormData 文件上传不带 `X-Tenant-Id` 导致 403
+- **症状**：SA 门控文件上传返回 403
+- **根因**：`defHttp` FormData POST 不经过 axios 拦截器链（拦截器只能拦截 JSON 请求），`X-Tenant-Id` header 缺失。FileService 标了 `[AllowAnonymous]` 跳过 JWT 校验，但租户守卫仍然拦截无 TenantId 的请求
+- **修复**：authToken 新增 `getTenantId()` 从 JWT payload 解码 TenantId；上传请求显式携带 `X-Tenant-Id` header
+- **关键词**：`FormData`, `X-Tenant-Id`, `403`, `多租户`, `axios 拦截器`
+
+### M020 | 后端 | Mapster Adapt 覆盖审计字段
+- **症状**：表更新操作后 CreateTime/CreateUserId 被重置为默认值
+- **根因**：`input.Adapt<Entity>()` 全量映射，未排除审计字段。直接用 Adapt 结果做 Updateable 导致原始审计数据丢失
+- **修复**：先查询原始实体 → `input.Adapt(entity)`（保留已有审计字段）→ 再更新，或使用 `.Ignore(dest => dest.CreateTime)` 排除
+- **关键词**：`Mapster`, `Adapt`, `审计字段`, `CreateTime`, `Trap 2`

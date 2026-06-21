@@ -119,6 +119,8 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 
 **todo_write 强制注入：** 每次开始编码时，todo_write 中 MUST 包含 `🔍 代码审查 (子代理)` 条目。该条目在 code-reviewer 返回 PASS 之前 MUST 保持 pending。Step 7 报告前，如该条目仍为 pending → 流程阻塞，MUST NOT 声称完成。
 
+**🟠 错题本强制注入：** todo_write 中 MUST 包含 `📝 错题本追加` 条目。Step 6 Self-review 时检查：本次 session 有 fix/bug 性质的改动？有 → 追加 `.claude/memory/mistake-log.md` → 标记 completed。无 → 标记为 N/A。Step 7 报告前该条目仍为 pending → 流程阻塞。
+
 ---
 
 ## Build & Run
