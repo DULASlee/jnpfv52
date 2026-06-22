@@ -83,10 +83,111 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
   - 截图 < 5KB → **BLOCK**（防 0 字节假文件）
   - `playwright-smoke.png`（技能自检产物）不计为业务证据
 - **playwright 技能真实可用**（chromium 1.61.0，已 smoke test 验证）→ `.claude/skills/playwright/SKILL.md`
-- Step 7 报告中缺 E2E 证据段 → 退回 Step 5 补做
+- Step 7 报告中缺 E2E 证据段 → 退回 Phase 5 补做
 - 严禁用 "已验证" / "已确认" / "测试通过" 等无证据措辞替代 E1/E2/E3
 
 **违反此铁律 = 任务未完成。无例外。无豁免。无借口。**
+
+---
+
+## Workflow Pipeline（七阶段流水线 — Superpowers 骨架 + JNPF 约束）
+
+> 所有任务遵循以下流水线。每阶段调用 Superpowers (SP) 技能，JNPF 规则作为补充约束挂载。
+
+### ⚡ 强制抬头声明（违反 = 流程违规）
+
+**每次进入新 Phase，MUST 向用户输出以下格式的抬头。无抬头 = 未使用 SP 技能 = Phase 未执行 = 流程阻塞。**
+
+```
+╔══════════════════════════════════════════╗
+║  🔵 Phase N: <Phase名称>                ║
+║  SP: <superpowers技能名>                ║
+║  动作: <本阶段要做什么>                  ║
+╚══════════════════════════════════════════╝
+```
+
+**示例：**
+```
+╔══════════════════════════════════════════╗
+║  🟡 Phase 2: Brainstorm                ║
+║  SP: brainstorming                      ║
+║  动作: 需求探索、设计方向、风险识别       ║
+╚══════════════════════════════════════════╝
+```
+
+**颜色/阶段对应：**
+| Phase | 颜色 | 名称 | SP 技能 |
+|---|---|---|---|
+| 1 | 🔵 | Align | using-superpowers (auto) |
+| 2 | 🟡 | Brainstorm | brainstorming |
+| 3 | 🟠 | Plan | writing-plans |
+| 4 | 🟢 | Build | executing-plans |
+| 5 | 🔴 | Verify | verification-before-completion |
+| 6 | 🟣 | Review | requesting-code-review |
+| 7 | ⚫ | Complete | finishing-a-development-branch |
+| Debug | ⚡ | Debug | systematic-debugging |
+
+### Entry Gate（Session Start — 自动）
+- Hook: `superpowers-check.mjs` → SP 激活验证
+- Hook: `load-mistakes.mjs` → 加载最近 30 天错题
+- SP: `using-superpowers` (自动)
+- Rule: `memory.md` → 跨会话上下文
+
+### Phase 1: Align（理解任务）
+- 动作: 重述任务、S/A/B 分级、确认范围
+- Rule: `architecture-redlines.md` → 约束预加载
+- Skill: `spec` → 知识库查询 (可选)
+
+### Phase 2: Brainstorm（头脑风暴 — **ALL 级别强制不可跳过**）
+- **SP: `brainstorming`** — S1 铁律
+- Rule: `jnpf-expert-traps.md` → 陷阱预检
+- Grep: `mistake-log.md` → 关键词避坑
+
+### Phase 3: Plan（计划 — S/A 级）
+- **SP: `writing-plans`**
+- Rule: `workflow.md` → 需求提取清单
+- Rule: `jnpf-frontend-rules.md` (按需)
+- B 级跳过此 Phase，直接进入 Phase 4
+
+### Phase 4: Build（实施）
+- **SP: `executing-plans`** / `subagent-driven-development` (S级) / `dispatching-parallel-agents` / `using-git-worktrees`
+- Hooks: 7 guard hooks (L0 自动阻断)
+- Hooks: `format-and-lint.mjs` (自动) + `skill-reminder.mjs` (提醒)
+- Rule: `sql-safety.md` (if .cs) + `frontend-memory-leak.md` (if SSE/timer)
+- todo 强制注入: `🔍 代码审查(子代理)` + `📝 错题本追加`
+
+### Phase 5: Verify（测试 + E2E）
+- **SP: `verification-before-completion`** — Gate Function 5 步
+- **SP: `test-driven-development`** — 新逻辑
+- Rule: `testing.md` → 具体命令
+- Skill: `start-dev` → 启动环境
+- Skill: `playwright` → 浏览器 E2E (E1/E2/E3)
+- Hook: `post-build-verify.mjs` → build 后 30min 内未测试 = BLOCK
+
+### Phase 6: Review（审查 — max 3 cycles）
+- **SP: `requesting-code-review` → `receiving-code-review`**
+- Rule: `review-workflow.md` → 子代理编排 + 审查维度 (含错题本纪律)
+- Rule: `architecture-redlines.md` → R1-R10 合规
+- Skill: `security-review` (可选)
+- Check: `📝错题本追加` todo 条目必须 completed
+
+### Phase 7: Complete（报告 + 提交）
+- **SP: `finishing-a-development-branch`**
+- Skill: `pre-commit` → 提交前检查
+- Hook: `guard-finish.mjs` → 冒烟测试 + E2E 证据 + 错题本验证
+- Hook: `collect-summary.mjs` → 会话摘要
+- Rule: `workflow.md` → 报告模板
+- **🟠 强制写入 `session-key-points.md`** — 本阶段 MUST 将以下内容写入 `.claude/memory/session-key-points.md`：
+  - 本次关键技术决策 + 理由
+  - 发现的 Bug 及其根因分析（即使已提交也要摘要记录）
+  - 踩过的坑 + 避免策略
+  - 未写入 → `collect-summary.mjs` 无法收录 → 跨会话丢失上下文
+
+### Debug Path（中断驱动，随时切入 → 完成后返回 Phase 5）
+- **SP: `systematic-debugging`** → 4 阶段调试
+- Skill: `data-driven-debug` → 运行时数据采集 (触发: ≥3次失败 或 >10min)
+- Rule: `debugging.md` → JNPF 专项检查清单 + 返回主流程条件
+- Rule: `engineering-laws.md` L1/L4
 
 ---
 
@@ -117,9 +218,9 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 
 **不计入计数器：** 仅修改 `.md` / `.json` / 配置文件 / 单行（需显式声明理由）。
 
-**todo_write 强制注入：** 每次开始编码时，todo_write 中 MUST 包含 `🔍 代码审查 (子代理)` 条目。该条目在 code-reviewer 返回 PASS 之前 MUST 保持 pending。Step 7 报告前，如该条目仍为 pending → 流程阻塞，MUST NOT 声称完成。
+**todo_write 强制注入：** 每次开始编码时，todo_write 中 MUST 包含 `🔍 代码审查 (子代理)` 条目。该条目在 Phase 6 Review (code-reviewer 返回 PASS) 之前 MUST 保持 pending。Phase 7 报告前，如该条目仍为 pending → 流程阻塞，MUST NOT 声称完成。
 
-**🟠 错题本强制注入：** todo_write 中 MUST 包含 `📝 错题本追加` 条目。Step 6 Self-review 时检查：本次 session 有 fix/bug 性质的改动？有 → 追加 `.claude/memory/mistake-log.md` → 标记 completed。无 → 标记为 N/A。Step 7 报告前该条目仍为 pending → 流程阻塞。
+**🟠 错题本强制注入：** todo_write 中 MUST 包含 `📝 错题本追加` 条目。Phase 6 Review 时检查：本次 session 有 fix/bug 性质的改动？有 → 追加 `.claude/memory/mistake-log.md` → 标记 completed。无 → 标记为 N/A。Phase 7 报告前该条目仍为 pending → 流程阻塞。
 
 ---
 
@@ -174,16 +275,16 @@ cd backend && dotnet build
 | 写 SSE / EventSource / WebSocket / setTimeout | `.claude/rules/frontend-memory-leak.md` |
 | 修改自定义页面视觉样式（非生成） | `.claude/skills/jnpf-ui-enhance/SKILL.md` |
 | 写架构文档 | `docs/architecture/ARCHITECTURE_DOC_RULES.md` |
-| 收到任何编码任务 | `.claude/rules/workflow.md`（任务分级 + 7 步流程） |
-| 遇到 bug / 测试失败 / 异常 / 编译错误 | `.claude/rules/debugging.md` + 执行 `/trace-bug` |
+| 收到任何编码任务 | `.claude/rules/workflow.md`（任务分级 + 七阶段流水线映射）|
+| 遇到 bug / 测试失败 / 异常 / 编译错误 | `.claude/rules/debugging.md` + SP: `systematic-debugging` |
 | **问题 10 分钟无进展 / 3 次修复仍无效** | **`/data-driven-debug`：停止改代码，抓运行时数据定位** |
 | **前端无响应 / SSE 无数据 / 页面空白** | **Evidence Over Assumption：用 Playwright 抓网络响应体，禁止看源码猜测（详见 Core Principle）** |
 | **犯错误后** | **MUST 追加到 `.claude/memory/mistake-log.md` 错题本**（格式：日期/类别/症状/根因/修复/关键词）|
 | **编码前** | Grep `.claude/memory/mistake-log.md` 搜索当前任务关键词，避免重复错误 |
 | 代码修改完成 / 准备声称"完成" | `.claude/rules/testing.md`（测试 Gate Function） |
 | 任何编码任务（工程铁律） | `.claude/rules/engineering-laws.md`（Law 1-4） |
-| 涉及 2+ 文件或 20+ 行变更 | `.claude/rules/review-workflow.md` + 执行 `/full-review` |
-| 用户要求 "review" / "审查" / "跑测试" | `.claude/rules/review-workflow.md` + `/full-review` |
+| 涉及 2+ 文件或 20+ 行变更 | `.claude/rules/review-workflow.md` + SP: `requesting-code-review` |
+| 用户要求 "review" / "审查" / "跑测试" | `.claude/rules/review-workflow.md` + SP: `requesting-code-review` |
 | 启动开发环境 / "跑起来" / "start" | `/start-dev` |
 | 提交代码 / "commit" / "push" 前 | `/pre-commit` |
 | 问架构决策 / "为什么这样设计" | `/spec` |
@@ -235,9 +336,7 @@ cd backend && dotnet build
 |---|---|
 | `/start-dev` | 一键启动开发环境 |
 | `/pre-commit` | 提交前检查 |
-| `/full-review` | 三阶段代码审查 |
 | `/security-review` | 安全审查 |
-| `/trace-bug` | 结构化调试 |
 | `/spec` | 查询 OpenSpec 知识库 |
 | `/learn` | 学习手册导航 |
 

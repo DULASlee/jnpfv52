@@ -10,9 +10,28 @@
 
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { execSync } from 'child_process';
+
+// ─── 项目根目录解析 ─────────────────────────────────────────────
+function getProjectRoot() {
+  try {
+    return execSync('git rev-parse --show-toplevel', {
+      encoding: 'utf-8', stdio: 'pipe', timeout: 3000,
+    }).trim().replace(/\\/g, '/');
+  } catch { /* fall through */ }
+  let dir = process.cwd();
+  for (let i = 0; i < 5; i++) {
+    if (existsSync(`${dir}/CLAUDE.md`)) return dir.replace(/\\/g, '/');
+    const parent = dir.replace(/[/\\][^/\\]+$/, '');
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return process.cwd().replace(/\\/g, '/');
+}
+const ROOT = getProjectRoot();
 
 try {
-  const mistakePath = join('.claude', 'memory', 'mistake-log.md');
+  const mistakePath = join(ROOT, '.claude', 'memory', 'mistake-log.md');
   if (!existsSync(mistakePath)) {
     console.log(JSON.stringify({ decision: 'approve' }));
     process.exit(0);

@@ -1,18 +1,18 @@
-# Default Workflow
+# Default Workflow — JNPF 专属约束
 
-> 默认工作流：所有任务的执行框架。触发条件：收到任何编码任务。
+> 七阶段流水线见 `CLAUDE.md` Workflow Pipeline。本文件仅保留 JNPF 项目的专属输出格式和约束。
 
 ---
 
 ## 任务分级
 
-| 级别 | 条件 | 流程 |
+| 级别 | 条件 | 流水线 |
 |---|---|---|
-| **S 级（复杂）** | 3+ 文件 / 50+ 行 / 架构决策 / 新模块 | 完整 7 步 + 头脑风暴 + 子代理 |
-| **A 级（标准）** | 2 文件 / 10-50 行 / 功能增强 | 7 步，可选子代理 |
-| **B 级（简单）** | 单文件 ≤10 行 / bug fix / 样式 / 文档 | 跳过头脑风暴，直接 Step 4→5→6→7 |
+| **S 级（复杂）** | 3+ 文件 / 50+ 行 / 架构决策 / 新模块 | 完整 7 Phase + brainstorming 独立阶段 + 子代理 |
+| **A 级（标准）** | 2 文件 / 10-50 行 / 功能增强 | 完整 7 Phase |
+| **B 级（简单）** | 单文件 ≤10 行 / bug fix / 样式 / 文档 | 跳过 Phase 3 Plan，不跳过 Phase 2 Brainstorm |
 
-**简单任务不等于不需要流程。** B 级跳过头脑风暴，但绝不跳过测试和验证。
+**B 级绝不跳过 Brainstorm（S1 铁律）和 Verify（Law 2）。**
 
 ## 强制声明 — 开始任何任务前，输出：
 
@@ -20,21 +20,11 @@
 🔄 Workflow 启动
 - 任务分级：S / A / B
 - 理由：[为什么是这个级别]
-- 预计步骤：[哪些 Step]
 ```
 
 ---
 
-## 七步流程
-
-### Step 1: Understand（理解）
-
-- 重述任务，确认理解正确
-- 评估任务分级（S / A / B）
-- 与用户确认范围和预期结果
-- **不确定就问，不要猜**
-
-### Step 1.5: Requirement Extraction（需求提取 — 硬性要求，不可跳过）
+## Phase 2 Brainstorm 后 → Phase 3 Plan 时的需求提取清单
 
 **A 级及以上任务，编码前 MUST 输出：**
 
@@ -48,105 +38,47 @@
 **清单为空 → 不得开始编码。**
 **有条目标注"歧义" → 必须先提问澄清，获准后才能编码。**
 
-编码完成后，Step 6 Self-review MUST 对照此清单逐条标注：
+编码完成后，Phase 6 Review MUST 对照此清单逐条标注：
 ```
 ✅已实现 / ⚠️偏离(附理由及审批记录) / ❌未实现(附阻塞原因)
 ```
 偏离或未实现若无事前审批记录 → 流程违规，MUST 退回补救。
 
-### Step 2: Scout（侦察）
+---
 
-- Grep/Read 扫描影响面：哪些文件、哪些方法会被影响
-- 找到同代码库中类似的**正常工作的**代码作为参考
-- 检查近期 git 变更，了解上下文
+## Phase 4 Build 执行铁律
 
-### Step 3: Plan（设计 + 计划）
-
-**S 级任务 — 头脑风暴（硬性要求）：**
-
-1. 探索项目上下文（文件、文档、近期提交）
-2. 逐个提问澄清需求（一次一个问题，优先多选）
-3. 提出 2-3 种实现路径 + 推荐方案
-4. 分段展示设计，每段获得用户确认
-5. 写设计文档 → `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
-6. 自检：占位符扫描、内部一致性、范围检查、歧义检查
-7. 用户审核设计文档后，进入计划编写
-
-**S 级和 A 级任务 — 编写实施计划：**
-
-1. 文件结构映射：哪些文件创建、哪些修改、各自职责
-2. 任务分解为可独立执行的小步骤（每步 2-5 分钟）
-3. 每步包含：精确文件路径、完整代码、精确命令、预期输出
-4. 计划写入 → `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
-5. 自检：需求覆盖、占位符扫描、类型一致性
-6. 与用户确认后进入实施
-
-**B 级任务：** 跳过设计文档和实施计划，在脑中形成方案后直接进入 Step 4。
-
-### Step 4: Implement（实施）
-
-**选择执行方式：**
-
-```
-S 级任务（3+ tasks）→ 子代理驱动（推荐）
-  - 每个 Task 派一个子代理
-  - 两阶段审查：spec 合规 → 代码质量
-  - 连续执行，不暂停确认
-
-S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
-  - 按计划步骤逐个执行
-  - 每个 Task 标记 in_progress → 完成 → completed
-
-3+ 个独立任务 → 并行子代理
-  - 每个子代理独立上下文
-  - 完成后检查冲突，运行全量测试
-```
-
-**执行铁律：**
 - 标记 `in_progress` 后再开始，完成后立即标记 `completed`
 - 严格按计划步骤执行，不"顺手"改计划外的东西
 - **审查项强制注入：** 每次开始编码时，todo_write 中 MUST 含 `🔍 代码审查 (子代理)` 条目（status: pending）。该条目在 code-reviewer 返回 PASS 之前 MUST NOT 标记 completed。无此条目 → 流程阻塞。
+- **错题本强制注入：** todo_write 中 MUST 含 `📝 错题本追加` 条目。Phase 6 Review 时检查。Phase 7 报告前该条目仍为 pending → 流程阻塞。
 - 子代理不信任报告：完成后必须独立检查 VCS diff + 验证变更
 - 子代理 BLOCKED → 分析原因（缺上下文？能力不足？计划有误？），不盲目重试
 
-### Step 5: Test（测试 + E2E 验证）
+---
 
-- 输出 `🧪 Testing Protocol 启动` 声明
-- 运行 `dotnet build`（后端）或 `vue-tsc --noEmit`（前端）
-- 运行实际服务或测试命令
-- 读完整输出，确认 0 errors
-- Bug 修复：复现原始症状 → 确认消失
-- **S 级任务：自动触发 test-runner 子代理**
-- Gate Function 全部打勾后才能声称通过
-- **⬛ Supreme Iron Law：前端实质性变更 MUST 执行浏览器端到端验证**
-  - 使用 playwright 技能打开浏览器
-  - 产出截图至 `.claude/evidence/`（E1 证据）
-  - 记录操作路径（E2 证据）→  Step 7 报告中输出
-  - 描述实际 UI 状态（E3 证据）→  Step 7 报告中输出
-  - 无 E1/E2/E3 → `guard-finish.mjs` BLOCK → 流程退回
+## Phase 5 Verify — Supreme Iron Law（E2E 证据）
 
-> **详细测试规则、Gate Function、项目健康验证命令：** 见 `.claude/rules/testing.md`
-> **子代理编排规则（test-runner / code-reviewer）：** 见 `.claude/rules/review-workflow.md`
+- **⬛ 浏览器端到端操作是唯一验收标准**
+- 使用 `playwright` 技能打开浏览器
+- 产出截图至 `.claude/evidence/`（E1 证据）
+- 记录操作路径（E2 证据）→ Phase 7 报告中输出
+- 描述实际 UI 状态（E3 证据）→ Phase 7 报告中输出
+- 无 E1/E2/E3 → `guard-finish.mjs` BLOCK
 
-### Step 6: Self-review（自查）
+---
 
-- `git status` + `git diff` 审查变更
-- 对照需求/计划逐项检查完成度
-- 架构合规性检查（R1-R10）
-- **S 级任务：自动触发 code-reviewer 子代理**
-- FAIL → 修复 → 重审（最多 3 轮）
-- 3 轮后仍有 FAIL → 报告给用户，请求介入
-- **🟠 错题本强制检查（硬性要求，不可跳过）：**
-  - 本次 session 是否有 `fix:` / `bug:` / 错误修复性质的改动？
-  - **判断方法：** `git log --oneline --since="<session-start>"` 检查 commit message 前缀
-  - **有 → MUST 追加到 `.claude/memory/mistake-log.md`**，格式：日期 | 类别 | 症状 | 根因 | 修复 | 关键词
-  - **追加后在 Step 7 报告中注明：** 错题本本次新增 N 条（Mxxx-Myyy）/ 无需新增
-  - **未追加 → 流程阻塞，MUST NOT 声称 Step 7 完成**
-  - 此项检查不因任务级别（S/A/B）豁免
+## Phase 6 Review — 错题本强制检查
 
-> **子代理审查维度、Prompt 模板、循环终止条件：** 见 `.claude/rules/review-workflow.md`
+- 本次 session 是否有 `fix:` / `bug:` / 错误修复性质的改动？
+- **判断方法：** `git log --oneline --since="<session-start>"` 检查 commit message 前缀
+- **有 → MUST 追加到 `.claude/memory/mistake-log.md`**
+- **未追加 → 流程阻塞，MUST NOT 声称 Phase 7 完成**
+- 此项检查不因任务级别（S/A/B）豁免
 
-### Step 7: Report（报告）
+---
+
+## Phase 7 Report（报告模板）
 
 ```
 ## 完成报告
@@ -160,7 +92,7 @@ S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
 **测试结果：** PASS / FAIL（含证据）
 
 **⬛ E2E 验证证据（Supreme Iron Law）：**
-- E1 截图：[路径，如 `.claude/evidence/page-login.png`]
+- E1 截图：[路径]
 - E2 操作路径：[打开页面 → 操作步骤 → 观察结果]
 - E3 实际输出：[浏览器中实际看到的 UI 状态]
 
@@ -180,11 +112,23 @@ S 级任务（<3 tasks）或 A 级任务 → 本会话内执行
 ```
 收到任务
   │
-  ├─ 简单？(B级) → Step 4 → 5 → 6 → 7
+  ├─ 简单？(B级) → Phase 1→2→4→5→6→7 (skip Phase 3 Plan)
   │
-  ├─ 标准？(A级) → Step 1 → 2 → 3(计划) → 4 → 5 → 6 → 7
+  ├─ 标准？(A级) → Phase 1→2→3→4→5→6→7
   │
-  └─ 复杂？(S级) → Step 1 → 2 → 3(头脑风暴+计划) → 4(子代理) → 5(test-runner) → 6(code-reviewer) → 7
+  └─ 复杂？(S级) → Phase 1→2→3→4(subagent)→5(test-runner)→6(code-reviewer)→7
 ```
 
-> 手动触发完整审查：使用 `/full-review` slash command
+> 手动触发完整审查：SP `requesting-code-review`
+
+---
+
+## 关联规则索引
+
+| 阶段 | 规则文件 |
+|---|---|
+| Phase 1-2 | `architecture-redlines.md`, `jnpf-expert-traps.md` |
+| Phase 4 | `sql-safety.md`, `frontend-memory-leak.md` |
+| Phase 5 | `testing.md`, `engineering-laws.md` |
+| Phase 6 | `review-workflow.md`, `architecture-redlines.md` |
+| Debug | `debugging.md`, `engineering-laws.md` |

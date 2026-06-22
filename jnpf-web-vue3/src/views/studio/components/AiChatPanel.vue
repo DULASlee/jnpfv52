@@ -179,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, nextTick, watch } from 'vue';
+  import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
   import { PlusOutlined, SendOutlined, PauseOutlined, UpOutlined, DownOutlined } from '@ant-design/icons-vue';
   import { message as antMessage } from 'ant-design-vue';
   import { defHttp } from '/@/utils/http/axios';
@@ -237,6 +237,7 @@
   // ====== 状态 ======
   const currentStage = ref(1);
   const messages = ref<any[]>([]);
+  const blobUrls: string[] = []; // 追踪 Blob URL，组件卸载时释放
   const inputText = ref('');
   const loading = ref(false);
   const attachments = ref<File[]>([]);
@@ -298,6 +299,14 @@
       await loadPipelineState();
       if (messages.value.length === 0 && props.initialMessage) await sendMessage(props.initialMessage);
     }
+  });
+
+  onUnmounted(() => {
+    // 释放所有 Blob URL，防止内存泄漏
+    for (const url of blobUrls) {
+      URL.revokeObjectURL(url);
+    }
+    blobUrls.length = 0;
   });
 
   // ====== 方法 ======
@@ -445,6 +454,19 @@
                   break;
                 case 'stage_complete':
                   msg.stageConfirmable = true;
+                  // 从已有内容生成文档下载链接
+                  if (msg.content && !msg.document) {
+                    const stageName = stages.value[currentStage.value - 1]?.name || '分析结果';
+                    const blob = new Blob([msg.content], { type: 'text/markdown;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    blobUrls.push(url); // 追踪 URL，组件卸载时释放
+                    msg.document = {
+                      name: stageName + '_' + pipelineId.value,
+                      previewUrl: url,
+                      downloadPdfUrl: url,
+                      downloadWordUrl: url,
+                    };
+                  }
                   break;
                 case 'done':
                   break;

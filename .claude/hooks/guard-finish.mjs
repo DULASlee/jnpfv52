@@ -15,7 +15,27 @@
  */
 
 import { execSync } from 'child_process';
-import { existsSync, readdirSync, statSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
+
+// ─── 项目根目录解析（cwd 可能在子目录）─────────────────────────
+function getProjectRoot() {
+  try {
+    return execSync('git rev-parse --show-toplevel', {
+      encoding: 'utf-8', stdio: 'pipe', timeout: 3000,
+    }).trim().replace(/\\/g, '/');
+  } catch { /* fall through */ }
+  // fallback: 向上查找 CLAUDE.md
+  let dir = process.cwd();
+  for (let i = 0; i < 5; i++) {
+    if (existsSync(`${dir}/CLAUDE.md`)) return dir.replace(/\\/g, '/');
+    const parent = dir.replace(/[/\\][^/\\]+$/, '');
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return process.cwd().replace(/\\/g, '/');
+}
+const ROOT = getProjectRoot();
+function rootPath(rel) { return `${ROOT}/${rel}`; }
 
 // ─── Supreme Iron Law 证据有效性阈值 ─────────────────────────────
 const EVIDENCE_MAX_AGE_MIN = 30;
@@ -138,10 +158,53 @@ try {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// L0: 错题本强制验证（代码变更时必须追加今日条目）
+// ═══════════════════════════════════════════════════════════════════
+{
+  // 检测是否有实质性代码变更（排除纯文档/证据/配置/摘要文件）
+  const codeLines = allFiles.split('\n').filter(line => {
+    const f = line.trim();
+    if (!f) return false;
+    if (/\.claude[\\/]evidence[\\/]/.test(f)) return false;
+    if (/\.claude[\\/]memory[\\/]session-summaries[\\/]/.test(f)) return false;
+    if (/^tc-result\.txt$/.test(f)) return false;
+    if (/\.(md|json|png|jpg|jpeg)$/i.test(f)) {
+      if (!/CLAUDE\.md$/i.test(f) && !/\.claude[\\/]rules[\\/]/.test(f)) return false;
+    }
+    return true;
+  });
+
+  if (codeLines.length > 0) {
+    console.error('▸ [0/3] 错题本验证...');
+    const mistakeLogPath = rootPath('.claude/memory/mistake-log.md');
+    if (existsSync(mistakeLogPath)) {
+      const content = readFileSync(mistakeLogPath, 'utf-8');
+      const now2 = new Date();
+      const dateStr = `${now2.getFullYear()}-${String(now2.getMonth() + 1).padStart(2, '0')}-${String(now2.getDate()).padStart(2, '0')}`;
+      if (!content.includes(`## ${dateStr}`)) {
+        hasError = true;
+        errorDetails.push(`⛔ 错题本验证失败: 本会话有 ${codeLines.length} 个代码文件变更，但 .claude/memory/mistake-log.md 无今日 (${dateStr}) 条目。\n请在 todo_write 中将 📝错题本次 标记 completed，并追加条目（格式: 日期 | 类别 | 症状 | 根因 | 修复 | 关键词）。`);
+        console.error(`  ❌ 无今日 (${dateStr}) 错题本条目`);
+        checks.push('L0: ❌ no mistake-log entry today');
+      } else {
+        console.error(`  ✅ 错题本已有今日 (${dateStr}) 条目`);
+        checks.push('L0: ✅ mistake-log updated');
+      }
+    } else {
+      hasError = true;
+      errorDetails.push('⛔ 错题本验证失败: .claude/memory/mistake-log.md 不存在。');
+      checks.push('L0: ❌ mistake-log.md missing');
+    }
+  } else {
+    checks.push('L0: ⏭️ no code changes (skip mistake-log check)');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // L1: dotnet build（后端变更时）
 // ═══════════════════════════════════════════════════════════════════
 if (hasBackendChanges) {
-  const csprojPath = 'backend/application/JNPF.API.Entry/JNPF.API.Entry.csproj';
+  const csprojPath = rootPath('backend/application/JNPF.API.Entry/JNPF.API.Entry.csproj');
 
   if (!existsSync(csprojPath)) {
     console.error(`▸ [1/3] 未找到 ${csprojPath}，跳过后端编译`);
@@ -193,11 +256,11 @@ if (hasBackendChanges) {
 // ═══════════════════════════════════════════════════════════════════
 // L2: vue-tsc --noEmit（前端变更时）
 // ═══════════════════════════════════════════════════════════════════
-if (hasFrontendChanges && existsSync('jnpf-web-vue3/package.json')) {
+if (hasFrontendChanges && existsSync(rootPath('jnpf-web-vue3/package.json'))) {
   console.error('▸ [2/3] 前端类型检查...');
   try {
     execSync('npx vue-tsc --noEmit', {
-      cwd: 'jnpf-web-vue3',
+      cwd: rootPath('jnpf-web-vue3'),
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 120000,
     });
@@ -230,7 +293,7 @@ if (hasSubstantiveFrontend) {
   console.error('▸ [3/3] E2E 验证证据检查（Supreme Iron Law）...');
 
   try {
-    const evidenceDir = '.claude/evidence';
+    const evidenceDir = rootPath('.claude/evidence');
     if (!existsSync(evidenceDir)) {
       hasError = true;
       const detail = 'E2E 验证证据缺失: .claude/evidence/ 目录不存在。\n'

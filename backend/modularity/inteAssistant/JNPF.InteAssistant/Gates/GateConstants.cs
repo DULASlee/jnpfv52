@@ -9,7 +9,7 @@ public static class GateConstants
 {
     /// <summary>支持的图片扩展名</summary>
     public static readonly HashSet<string> ImageExtensions =
-        new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
+        new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" };
 
     /// <summary>是否为图片文件</summary>
     public static bool IsImageFile(string fileName)
@@ -20,7 +20,7 @@ public static class GateConstants
 
     /// <summary>支持的文档扩展名</summary>
     public static readonly HashSet<string> DocumentExtensions =
-        new(StringComparer.OrdinalIgnoreCase) { ".docx", ".xlsx", ".xls", ".pdf", ".txt", ".csv" };
+        new(StringComparer.OrdinalIgnoreCase) { ".docx", ".doc", ".xlsx", ".xls", ".pdf", ".txt", ".csv", ".md" };
 
     /// <summary>是否为文档文件</summary>
     public static bool IsDocumentFile(string fileName)

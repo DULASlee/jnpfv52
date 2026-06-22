@@ -1,6 +1,8 @@
 # Testing Discipline
 
 > 测试纪律：没有跑过测试，不准说"完成"。触发条件：代码修改完成 / 准备声称"完成"/"通过"/"修复"。
+>
+> **本文件是 `verification-before-completion` (SP) 的 JNPF 具体化。** SP 提供 5 步 Gate Function 协议（IDENTIFY→RUN→READ→VERIFY→CLAIM），本文件提供 JNPF 项目的具体命令。
 
 ---
 
@@ -10,15 +12,15 @@
 NO TASK IS COMPLETE WITHOUT RUNNING THE ACTUAL TEST COMMAND
 ```
 
-## Gate Function — 宣布任务完成前，逐项打勾
+## Gate Function — 宣布任务完成前，逐项打勾（对齐 SP: verification-before-completion）
 
 ```
 ✅ 测试自检清单：
-- [ ] 我跑了 dotnet build（后端）或 vue-tsc --noEmit（前端），输出 0 errors
-- [ ] 我跑了实际服务（dotnet run / pnpm run dev）或相关测试命令
-- [ ] 我读了完整输出，不是扫一眼就信
-- [ ] 如果是 bug 修复，我复现了原始症状并确认消失
-- [ ] 我没有用"应该通过"代替实际运行
+- [ ] IDENTIFY — 确定验证命令（dotnet build / vue-tsc --noEmit / playwright）
+- [ ] RUN — 执行完整命令（本次、实时，不是上次结果）
+- [ ] READ — 读完整输出，检查 exit code，数失败数
+- [ ] VERIFY — 输出是否确认了声称？否 → 如实报告实际状态
+- [ ] CLAIM — 带证据声称结果
 ```
 
 **全部打勾才能声称完成。任何一项空白 = 任务未完成。**

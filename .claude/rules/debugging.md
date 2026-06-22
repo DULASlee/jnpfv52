@@ -130,3 +130,42 @@ NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
 - 无根因分析就随机改动
 
 **回滚优先：** 修复导致服务启动失败 → ALWAYS 先回滚到上一个稳定提交，再分析。NEVER 在挂掉的服务上继续调试。
+
+---
+
+## 数据驱动调试 (Data-Driven Debugging)
+
+> 触发条件：同一问题修改 ≥3 次仍无效 / 耗时超 10 分钟无进展 / 编译通过但与预期行为不一致
+> 完整技能：`data-driven-debug`
+
+**核心原则：** 停止修改源码，切换到数据采集模式。在数据链路的关键节点采集实际值，追踪到哪个节点的输出偏离预期。修复那个节点，而非下游节点。
+
+**常用采集手段：**
+
+| 场景 | 采集方式 |
+|---|---|
+| 前端无响应 / SSE 无数据 / 页面空白 | Playwright `page.on('response')` 抓网络响应体 |
+| API 返回异常 | 浏览器 Network 面板看请求 URL、状态码、响应体 |
+| SQL 查询不对 | SqlSugar `ToSql()` 输出实际 SQL |
+| Token/认证失败 | `console.log` 输出 token 实际值 + JWT payload 解码 |
+| 后端数据流异常 | Serilog 结构化日志 + 边界处加诊断日志 |
+
+---
+
+## 返回主流程条件 (Return to Main Flow)
+
+> 调试完成后 MUST 返回主流水线 Phase 5 (Verify)，**严禁直接从 Debug Path 跳至 Phase 7 (Complete)**。
+
+满足以下所有条件即视为调试完成：
+
+1. **修复已验证** — 修复代码通过对应测试（`dotnet build` + 类型检查），E2E Case 通过（如有前端改动）
+2. **根因已记录** — 追加到 `.claude/memory/mistake-log.md`（格式：日期/类别/症状/根因/修复/关键词）
+3. **红线复审** — 若修复涉及架构红线（R1-R10），必须重新通过 `architecture-redlines.md` 检查
+
+**返回流程声明：**
+```
+✅ 调试完成，返回主流程 Phase 5 (Verify)
+→ 修复验证: [PASS/FAIL 含证据]
+→ 错题本: [Mxxx 已追加]
+→ 红线复检: [PASS / N/A]
+```

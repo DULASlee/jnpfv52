@@ -18,6 +18,24 @@ import { execSync } from 'child_process';
 import { mkdirSync, writeFileSync, existsSync, readFileSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
+// ─── 项目根目录解析 ─────────────────────────────────────────────
+function getProjectRoot() {
+  try {
+    return execSync('git rev-parse --show-toplevel', {
+      encoding: 'utf-8', stdio: 'pipe', timeout: 3000,
+    }).trim().replace(/\\/g, '/');
+  } catch { /* fall through */ }
+  let dir = process.cwd();
+  for (let i = 0; i < 5; i++) {
+    if (existsSync(`${dir}/CLAUDE.md`)) return dir.replace(/\\/g, '/');
+    const parent = dir.replace(/[/\\][^/\\]+$/, '');
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return process.cwd().replace(/\\/g, '/');
+}
+const ROOT = getProjectRoot();
+
 // ─── 读取 stdin ──────────────────────────────────────────────────
 let input = {};
 try {
@@ -45,7 +63,7 @@ try {
     .join('\n');
 
   // ─── 读取 AI 写入的决策/根因 ──────────────────────────────────
-  const keyPointsPath = join('.claude', 'memory', 'session-key-points.md');
+  const keyPointsPath = join(ROOT, '.claude', 'memory', 'session-key-points.md');
   let keyPointsContent = '';
   if (existsSync(keyPointsPath)) {
     try {
@@ -144,7 +162,7 @@ try {
   }
 
   // ─── 写入文件 ──────────────────────────────────────────────────
-  const summariesDir = join('.claude', 'memory', 'session-summaries');
+  const summariesDir = join(ROOT, '.claude', 'memory', 'session-summaries');
   mkdirSync(summariesDir, { recursive: true });
 
   const filename = `${dateStr}-${shortId}.md`;

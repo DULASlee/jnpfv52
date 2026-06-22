@@ -9,6 +9,9 @@ using JNPF.InteAssistant.Entitys.Common;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Gates;
+using JNPF.InteAssistant.Infrastructure.Background;
+using JNPF.InteAssistant.Infrastructure.Messaging;
+using JNPF.InteAssistant.Infrastructure.Security;
 using JNPF.InteAssistant.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -36,6 +39,10 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IBackgroundTaskRunner _taskRunner;
+    private readonly ISseSenderFactory _senderFactory;
+    private readonly ITenantGuard _tenantGuard;
+    private readonly IGatePipeline _gatePipeline;
 
     /// <summary>
     /// SSE 事件通道池：按 pipelineId 隔离。/execute 写入 token，/events 读取推送给前端。
@@ -51,7 +58,11 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<AIDevelopmentPipelineService> logger)
+        ILogger<AIDevelopmentPipelineService> logger,
+        IBackgroundTaskRunner taskRunner,
+        ISseSenderFactory senderFactory,
+        ITenantGuard tenantGuard,
+        IGatePipeline gatePipeline)
     {
         _pipelineEngine = pipelineEngine;
         _designOrchestrator = designOrchestrator;
@@ -62,6 +73,10 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         _configuration = configuration;
         _httpContextAccessor = httpContextAccessor;
         _logger = logger;
+        _taskRunner = taskRunner;
+        _senderFactory = senderFactory;
+        _tenantGuard = tenantGuard;
+        _gatePipeline = gatePipeline;
     }
 
     // ─── 创建流水线 ───
@@ -167,52 +182,35 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         });
         _sseChannels[pipelineId] = channel;
 
-        // 4. 启动后台 LLM 流式任务（不等待，立即返回）
-        // ── 捕获请求上下文，避免 Task.Run 内 HttpContext 为 null ──
-        var user = _httpContextAccessor.HttpContext?.User;
-        var userId = user?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "system";
-        var userName = user?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "系统";
-        var capturedScheme = _httpContextAccessor.HttpContext?.Request.Scheme ?? "http";
-        var capturedHost = _httpContextAccessor.HttpContext?.Request.Host.ToString() ?? "localhost:5000";
-        var capturedTenantId = TenantResolver.Resolve().ToString();
-        var capturedAttachments = request.Attachments;
-
-        // ── CTS 生命周期：10分钟超时 + 链接关闭信号 ──
-        var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
-        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
-
-        _ = Task.Run(async () =>
-        {
-            try
+        // 4. 启动后台 LLM 流式任务（BackgroundTaskRunner 自动捕获上下文 + 管理 CTS 生命周期）
+        _taskRunner.Run(
+            $"pipeline-{pipelineId}",
+            async (ctx, ct) =>
             {
-                await StreamLlmResponseAsync(
-                    pipelineId, stageName, provider, authHeader, channel,
-                    capturedAttachments, userId, userName,
-                    capturedScheme, capturedHost, capturedTenantId,
-                    linkedCts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                _logger.LogInformation("Pipeline {Id} 被取消或超时", pipelineId);
-                WriteSseSafe(channel, "⏱️ 分析已取消或超时");
-            }
-            catch (OutOfMemoryException ex)
-            {
-                _logger.LogCritical(ex, "Pipeline {Id} OOM", pipelineId);
-                WriteSseSafe(channel, "❌ 系统资源不足，请精简附件后重试");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Pipeline {Id} 异常", pipelineId);
-                WriteSseSafe(channel, $"❌ 分析异常：{ex.Message}");
-            }
-            finally
-            {
-                channel.Writer.TryComplete();
-                linkedCts.Dispose();
-                cts.Dispose();
-            }
-        }, linkedCts.Token);
+                using var sse = _senderFactory.Create(pipelineId.ToString(), channel);
+                try
+                {
+                    await StreamLlmResponseAsync(
+                        pipelineId, stageName, provider, authHeader, sse,
+                        request.Attachments, ctx, ct);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("Pipeline {Id} 被取消或超时", pipelineId);
+                    sse.Token("⏱️ 分析已取消或超时");
+                }
+                catch (OutOfMemoryException ex)
+                {
+                    _logger.LogCritical(ex, "Pipeline {Id} OOM", pipelineId);
+                    sse.Error("系统资源不足，请精简附件后重试");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Pipeline {Id} 异常", pipelineId);
+                    sse.Error($"分析异常：{ex.Message}");
+                }
+            },
+            timeout: TimeSpan.FromMinutes(10));
 
         _logger.LogInformation("流水线阶段执行启动: PipelineId={Id}, Stage={Stage}", pipelineId, stageName);
         return stageResult;
@@ -222,7 +220,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     /// 后台执行 LLM 流式调用，token 写入 Channel 供 /events 读取。
     /// 从根 ServiceProvider 创建独立 scope，避免请求结束后 DI 服务被释放。
     /// </summary>
-    private async Task StreamLlmResponseAsync(long pipelineId, string stageName, string provider, string authHeader, Channel<SseEvent> channel, List<AttachmentPayload>? requestAttachments, string userId, string userName, string capturedScheme, string capturedHost, string capturedTenantId, CancellationToken ct)
+    private async Task StreamLlmResponseAsync(long pipelineId, string stageName, string provider, string authHeader, SseSender sse, List<AttachmentPayload>? requestAttachments, RequestContext ctx, CancellationToken ct)
     {
         // 创建独立 DI scope，确保 _db/_llmGateway 在请求结束后仍可用
         using var scope = App.RootServices.CreateScope();
@@ -251,7 +249,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
             if (chatMessages.Count == 0)
             {
-                await channel.Writer.WriteAsync(new SseEvent("error", "无历史消息可发送给 LLM"));
+                sse.Error("无历史消息可发送给 LLM");
                 return;
             }
 
@@ -270,12 +268,12 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
                 if (string.IsNullOrWhiteSpace(requirementText))
                 {
-                    await channel.Writer.WriteAsync(new SseEvent("error", "未找到用户需求文本"));
-                    return;
+                    sse.Error("未找到用户需求文本");
+                return;
                 }
 
                 // 推送 SSE：SA 流水线开始
-                await channel.Writer.WriteAsync(new SseEvent("thinking", "正在启动 SA 结构化分析流水线..."));
+                sse.Thinking("正在启动 SA 结构化分析流水线...");
 
                 try
                 {
@@ -283,8 +281,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     if (string.IsNullOrWhiteSpace(saServiceUrl))
                     {
                         logger.LogError("[SA] SA:ServiceUrl 未配置，无法调用 SA Service");
-                        await channel.Writer.WriteAsync(new SseEvent("error", "SA Service URL 未配置，请联系管理员设置 SA:ServiceUrl"));
-                        return;
+                        sse.Error("SA Service URL 未配置，请联系管理员设置 SA:ServiceUrl");
+                return;
                     }
 
                     var httpClient = _httpClientFactory.CreateClient();
@@ -313,7 +311,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     httpRequest.Content = JsonContent.Create(saRequest);
                     httpRequest.Headers.Add("X-Tenant-Id", tenantId);
 
-                    await channel.Writer.WriteAsync(new SseEvent("thinking", "正在执行 3-Tier SA 流水线（Scope → DFD → BPM → Dict → ER → STD）..."));
+                    sse.Thinking("正在执行 3-Tier SA 流水线（Scope → DFD → BPM → Dict → ER → STD）...");
 
                     var saResponse = await httpClient.SendAsync(httpRequest);
 
@@ -321,8 +319,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     {
                         var errorBody = await saResponse.Content.ReadAsStringAsync();
                         logger.LogError("[SA] SA Service 返回错误: {StatusCode} {Body}", saResponse.StatusCode, errorBody);
-                        await channel.Writer.WriteAsync(new SseEvent("error", $"SA Service 调用失败: {saResponse.StatusCode}"));
-                        return;
+                        sse.Error($"SA Service 调用失败: {saResponse.StatusCode}");
+                return;
                     }
 
                     var saResult = await saResponse.Content.ReadFromJsonAsync<SAResultDto>();
@@ -330,67 +328,66 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     // 推送 Scope 结果
                     if (saResult?.Result?.Scope != null)
                     {
-                        await channel.Writer.WriteAsync(new SseEvent("thinking", "✅ 边界提取完成"));
+                        sse.Thinking("✅ 边界提取完成");
                     }
 
                     // 推送 DFD 结果
                     if (saResult?.Result?.Dfd != null)
                     {
-                        await channel.Writer.WriteAsync(new SseEvent("thinking", "✅ DFD 数据流图生成完成"));
+                        sse.Thinking("✅ DFD 数据流图生成完成");
                     }
 
                     // 推送 BPM 结果
                     if (saResult?.Result?.Bpm != null)
                     {
-                        await channel.Writer.WriteAsync(new SseEvent("thinking", "✅ 业务流程图生成完成"));
+                        sse.Thinking("✅ 业务流程图生成完成");
                     }
 
                     // 推送数据字典结果
                     if (saResult?.Result?.Dict != null)
                     {
-                        await channel.Writer.WriteAsync(new SseEvent("thinking", "✅ 数据字典生成完成"));
+                        sse.Thinking("✅ 数据字典生成完成");
                     }
 
                     // 推送 ER 图结果
                     if (saResult?.Result?.Er != null)
                     {
-                        await channel.Writer.WriteAsync(new SseEvent("thinking", "✅ ER 图生成完成"));
+                        sse.Thinking("✅ ER 图生成完成");
                     }
 
                     // 推送状态机结果
                     if (saResult?.Result?.Std != null)
                     {
-                        await channel.Writer.WriteAsync(new SseEvent("thinking", "✅ 状态机生成完成"));
+                        sse.Thinking("✅ 状态机生成完成");
                     }
 
                     // 推送完整 SA 结果作为 Markdown token
                     var saContent = FormatSAResultAsMarkdown(saResult);
                     fullResponse.Append(saContent);
-                    await channel.Writer.WriteAsync(new SseEvent("token", saContent));
+                    await sse.TokenAsync(saContent, ct);
 
                     // 推送 IR 数据（结构化 JSON）
                     if (saResult?.Result != null)
                     {
                         var irJson = JsonSerializer.Serialize(saResult.Result);
-                        await channel.Writer.WriteAsync(new SseEvent("ir", irJson));
+                        sse.TrySend("ir", irJson);
                     }
 
                     // 推送阶段完成信号
-                    await channel.Writer.WriteAsync(new SseEvent("stage_complete"));
+                    sse.TrySend("stage_complete", "");
 
                     // 保存 assistant 消息到数据库
                     await SaveMessageAsync(db, pipelineId.ToString(), stageName, "assistant", saContent);
 
                     _logger.LogInformation("[SA] 需求分析完成 pipelineId={PipelineId}", pipelineId);
                     // SA 成功 → 推送完成并返回，不走 LLM 降级
-                    await channel.Writer.WriteAsync(new SseEvent("done"));
-                    return;
+                    sse.Complete();
+                return;
                 }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "[SA] SA Service 调用异常，降级为纯 LLM 分析 pipelineId={PipelineId}", pipelineId);
-                    await channel.Writer.WriteAsync(new SseEvent("info",
-                        "SA 结构化流水线暂不可用，降级为 LLM 直接分析..."));
+                    sse.TrySend("info", "SA 结构化流水线暂不可用，降级为 LLM 直接分析...");
                     // 不 return，fallthrough 到下方 LLM 直接调用
                 }
             }
@@ -411,7 +408,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     var gateService = scope.ServiceProvider.GetRequiredService<RequirementGateService>();
                     var attachmentProcessor = scope.ServiceProvider.GetRequiredService<AttachmentProcessor>();
                     var http = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient();
-                    var tenantId = capturedTenantId;
+                    var tenantId = ctx.TenantId;
 
                     // ── 第1步：将请求带的新附件保存到数据库 ──
                     var existingAttachments = await db.Queryable<InteAssistantAttachment>()
@@ -435,8 +432,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                                 FileType = Path.GetExtension(att.Name)?.TrimStart('.') ?? "",
                                 FileHash = null, // 下载后计算
                                 ProcessStatus = 0,
-                                CreatorUserId = userId,
-                                CreatorUserName = userName,
+                                CreatorUserId = ctx.UserId,
+                                CreatorUserName = ctx.UserName,
                                 TenantId = tenantId,
                                 CreateTime = DateTime.Now,
                                 DeleteMark = false
@@ -472,7 +469,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                             var fileUrl = att.FileUrl;
                             if (!fileUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                             {
-                                fileUrl = $"{capturedScheme}://{capturedHost}{fileUrl}";
+                                fileUrl = $"{ctx.Scheme}://{ctx.Host}{fileUrl}";
                             }
                             var bytes = await http.GetByteArrayAsync(fileUrl, ct);
                             var fileHash = ComputeSha256(bytes);
@@ -522,10 +519,9 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     var hardRule = gateService.ValidateHardRules(fullText, existingAttachments.Count);
                     if (!hardRule.Passed)
                     {
-                        await channel.Writer.WriteAsync(new SseEvent("token",
-                            $"❌ {hardRule.Reason}\n\n{hardRule.Hint}"));
-                        await channel.Writer.WriteAsync(new SseEvent("done"));
-                        return;
+                        await sse.TokenAsync($"❌ {hardRule.Reason}\n\n{hardRule.Hint}", ct);
+                        sse.Complete();
+                return;
                     }
 
                     // ── 第5步：将附件内容追加到最后一条用户消息 ──
@@ -546,8 +542,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     {
                         _logger.LogInformation("用户要求直接分析 pipelineId={Id}", pipelineId);
                         systemPrompt = gateService.GetSystemPrompt("refine", new MaturityResult());
-                        await channel.Writer.WriteAsync(new SseEvent("token",
-                            "\n\n> 📊 已进入精化模式 — 开始深度分析\n\n"));
+                        sse.TrySend("info", "\n\n> 📊 已进入精化模式 — 开始深度分析\n\n");
                     }
                     else if (gateService.IsMaxRoundsReached(assistantMsgCount))
                     {
@@ -561,8 +556,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                                 .Select(m => m.Content.Length > 50 ? m.Content[..50] + "..." : m.Content)
                                 .ToList()
                         });
-                        await channel.Writer.WriteAsync(new SseEvent("token",
-                            $"\n\n> 📊 已进行{assistantMsgCount}轮追问，系统将基于当前信息开始分析\n\n"));
+                        sse.TrySend("info", $"\n\n> 📊 已进行{assistantMsgCount}轮追问，系统将基于当前信息开始分析\n\n");
                     }
                     else
                     {
@@ -574,8 +568,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                             "refine" => "精化模式 — 开始深度分析",
                             _ => maturity.Mode
                         };
-                        await channel.Writer.WriteAsync(new SseEvent("token",
-                            $"\n\n> 📊 需求成熟度：{maturity.Score}/100（{modeLabel}）\n\n"));
+                        sse.TrySend("info", $"\n\n> 📊 需求成熟度：{maturity.Score}/100（{modeLabel}）\n\n");
                         systemPrompt = gateService.GetSystemPrompt(maturity.Mode, maturity);
                     }
 
@@ -602,7 +595,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                                 {
                                     var imgUrl = att.FileUrl;
                                     if (!imgUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                                        imgUrl = $"{capturedScheme}://{capturedHost}{imgUrl}";
+                                        imgUrl = $"{ctx.Scheme}://{ctx.Host}{imgUrl}";
                                     var imgBytes = await http.GetByteArrayAsync(imgUrl, ct);
                                     imageFiles.Add(new AttachmentFile { FileName = att.FileName, Content = imgBytes });
                                 }
@@ -639,7 +632,10 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                 }
                 catch (Exception ex)
                 {
-                    logger.LogWarning(ex, "需求门控执行异常，降级为默认 SystemPrompt pipelineId={Id}", pipelineId);
+                    logger.LogError(ex, "需求门控执行异常，阻断 LLM 调用 pipelineId={Id}", pipelineId);
+                    sse.Error($"门控校验异常: {ex.Message}");
+                    sse.Complete();
+                return;
                 }
             }
 
@@ -662,8 +658,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                 if (json.StartsWith("[ERROR]") || json.StartsWith("[error]"))
                 {
                     logger.LogWarning("LLM Gateway 返回错误: {Error}", json);
-                    await channel.Writer.WriteAsync(new SseEvent("error", json));
-                    return;
+                    sse.Error(json);
+                return;
                 }
 
                 var token = ExtractToken(json);
@@ -671,7 +667,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
                 chunkCount++;
                 fullResponse.Append(token);
-                await channel.Writer.WriteAsync(new SseEvent("token", token));
+                await sse.TokenAsync(token, ct);
             }
 
             logger.LogInformation("LLM 流式完成: PipelineId={Id}, Chunks={Chunks}, ResponseLength={Len}",
@@ -683,8 +679,10 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                 await SaveMessageAsync(db, pipelineId.ToString(), stageName, "assistant", fullResponse.ToString());
             }
 
+            // 推送阶段完成信号 → 前端显示确认按钮
+            sse.TrySend("stage_complete", "");
             // 推送完成事件
-            await channel.Writer.WriteAsync(new SseEvent("done"));
+            sse.Complete();
         }
         catch (Exception ex)
         {
@@ -692,11 +690,11 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             var llmErrorDetail = ex.InnerException != null
                 ? $"LLM 调用失败: {ex.Message} (Inner: {ex.InnerException.Message})"
                 : $"LLM 调用失败: {ex.Message}";
-            await channel.Writer.WriteAsync(new SseEvent("error", llmErrorDetail));
+            sse.Error(llmErrorDetail);
         }
         finally
         {
-            channel.Writer.TryComplete();
+            // SseSender.Dispose() 已处理 Channel 关闭（由 using 块保证）
             // 不立即移除 Channel：前端可能尚未连接（LLM 太快时 <3s 完成）
             // 下次 POST /execute 时通过 TryRemove 覆盖旧 Channel，无泄漏
         }
@@ -1143,19 +1141,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
-    /// <summary>
-    /// 安全写入 SSE — TryWrite 不阻塞，Channel 已关闭时返回 false 而非抛异常
-    /// </summary>
-    private static void WriteSseSafe(Channel<SseEvent> channel, string msg)
-    {
-        try
-        {
-            channel.Writer.TryWrite(new SseEvent("token", msg));
-            channel.Writer.TryWrite(new SseEvent("done"));
-            channel.Writer.TryComplete();
-        }
-        catch { /* 防御性兜底 */ }
-    }
+
 
     // ═══════════════════════════════════════════════════
     // SA 结果 DTO
@@ -1209,10 +1195,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         public bool Passed { get; set; }
     }
 
-    /// <summary>
-    /// SSE 事件内部模型
-    /// </summary>
-    private record SseEvent(string Type, string? Data = null, string? Stage = null);
+
 }
 
 // ─── 请求 DTO ───
