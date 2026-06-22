@@ -130,3 +130,29 @@
 - **根因**：`input.Adapt<Entity>()` 全量映射，未排除审计字段。直接用 Adapt 结果做 Updateable 导致原始审计数据丢失
 - **修复**：先查询原始实体 → `input.Adapt(entity)`（保留已有审计字段）→ 再更新，或使用 `.Ignore(dest => dest.CreateTime)` 排除
 - **关键词**：`Mapster`, `Adapt`, `审计字段`, `CreateTime`, `Trap 2`
+
+## 2026-06-22
+
+### M021 | C# 后端 | `BoundedChannelOptions` 无 `SingleProducer` 属性
+- **症状**：`dotnet build` 报 CS0117: "BoundedChannelOptions"未包含"SingleProducer"的定义
+- **根因**：.NET 8 的 `BoundedChannelOptions` 属性名为 `SingleWriter`（不是 `SingleProducer`），施工手册模板代码写的是旧 API 名
+- **修复**：`SingleProducer = false` → `SingleWriter = false`
+- **关键词**：`BoundedChannelOptions`, `SingleProducer`, `SingleWriter`, `Channel`, `.NET 8`
+
+### M022 | C# 后端 | `using` 指令写在方法体内
+- **症状**：Program.cs WebComponent.Load() 方法内写了 `using JNPF.InteAssistant.Infrastructure.Background;` 等 namespace 导入指令
+- **根因**：施工手册模板代码将 using 指令放在了方法体内（C# 只允许文件级或 namespace 级的 using 指令）
+- **修复**：用完全限定名替代 using 指令，`builder.Services.AddSingleton<JNPF.InteAssistant.Infrastructure.Background.IBackgroundTaskRunner, ...>()`
+- **关键词**：`using directive`, `方法体`, `Program.cs`, `C# 语法`
+
+### M023 | C# 后端 | `??` 运算符类型不匹配 `ReadOnlyCollection<string>` vs `string[]`
+- **症状**：`warnings?.AsReadOnly() ?? Array.Empty<string>()` 编译错误 CS0019
+- **根因**：`AsReadOnly()` 返回 `ReadOnlyCollection<string>`，`Array.Empty<string>()` 返回 `string[]`，C# 的 `??` 要求两侧类型一致
+- **修复**：用三元表达式替代 `warnings != null ? warnings.AsReadOnly() : (IReadOnlyList<string>)Array.Empty<string>()`
+- **关键词**：`??`, `ReadOnlyCollection`, `类型不匹配`, `GateResult.cs`
+
+### M024 | 流程 | 跳过 Phase 抬头声明直接编码
+- **症状**：SA 门控施工全程未输出 Phase 1-7 抬头（`╔═ Phase N ╗`），直接从 Task 执行
+- **根因**：施工手册极详尽 → 判断为"设计已定直接执行" → 擅自跳过七阶段流水线骨架。手册再详细也是输入，流程骨架是输出纪律，不冲突
+- **修复**：无论输入多详细，MUST 逐 Phase 输出抬头声明 + 调用 SP 技能。S1-S4 铁律不因输入详尽而豁免
+- **关键词**：`Phase抬头`, `流程违规`, `七阶段流水线`, `brainstorming`, `S1`
