@@ -1,0 +1,183 @@
+<!-- @jnpf-generated v<%= version %> entity=<%= entity %> type=list-page platform=<%= platform %> -->
+<!-- 生成时间：<%= timestamp %> -->
+<!-- 此文件由 JNPF UniApp 代码生成器生成，可手动修改 -->
+
+<template>
+  <view class="page-list">
+    <!-- ============================================================ -->
+    <!-- 搜索栏 -->
+    <!-- ============================================================ -->
+    <view class="search-bar">
+<% for (const sf of searchFields) { %>
+      <wd-input
+        v-model="searchParams.<%= sf.field %>"
+        placeholder="请输入<%= sf.label %>"
+        clearable
+      />
+<% } %>
+      <view class="search-actions">
+        <wd-button type="primary" @click="handleSearch">查询</wd-button>
+        <wd-button @click="handleReset">重置</wd-button>
+      </view>
+    </view>
+
+    <!-- ============================================================ -->
+    <!-- 列表 -->
+    <!-- ============================================================ -->
+    <wd-cell-group>
+      <wd-cell
+        v-for="item in store.list"
+        :key="item.id"
+        :title="String(item.<%= displayField %> ?? '')"
+        @click="handleDetail(item)"
+      >
+        <template #value>
+          <wd-button size="small" @click.stop="handleEdit(item)">编辑</wd-button>
+          <wd-button size="small" type="error" @click.stop="handleDelete(item)">删除</wd-button>
+        </template>
+      </wd-cell>
+    </wd-cell-group>
+
+    <!-- ============================================================ -->
+    <!-- 空状态 -->
+    <!-- ============================================================ -->
+    <wd-status-tip
+      v-if="!store.loading && store.list.length === 0"
+      image="search"
+      tip="暂无数据"
+    />
+
+    <!-- ============================================================ -->
+    <!-- 加载状态 -->
+    <!-- ============================================================ -->
+    <wd-loading v-if="store.loading" />
+
+    <!-- ============================================================ -->
+    <!-- 悬浮新增按钮 -->
+    <!-- ============================================================ -->
+    <view class="fab" @click="handleAdd">
+      <wd-icon name="add" size="24px" color="#fff" />
+    </view>
+  </view>
+</template>
+
+<script setup lang="ts">
+import { reactive, onMounted } from 'vue'
+<% if (useStore) { %>
+import { use<%= entity %>Store } from '@/stores/<%= entityLower %>'
+<% } %>
+import { onPullDownRefresh, onReachBottom } from '@dcloudio/uni-app'
+<% for (const imp of customImports || []) { %>
+<%- imp %>
+<% } %>
+
+<% if (useStore) { %>
+const store = use<%= entity %>Store()
+<% } %>
+
+// ================================================================
+// 搜索参数
+// ================================================================
+const searchParams = reactive<Record<string, string>>({
+<% for (const sf of searchFields) { %>
+  <%= sf.field %>: '',
+<% } %>
+})
+
+// ================================================================
+// 生命周期
+// ================================================================
+
+onMounted(() => {
+  store.loadList()
+})
+
+// 下拉刷新
+onPullDownRefresh(async () => {
+  store.pagination.current = 1
+  await store.loadList()
+  uni.stopPullDownRefresh()
+})
+
+// 上拉加载更多
+onReachBottom(() => {
+  if (store.list.length >= store.pagination.total) return
+  store.pagination.current++
+  store.loadList()
+})
+
+// ================================================================
+// 操作函数
+// ================================================================
+
+function handleSearch() {
+  store.pagination.current = 1
+  store.loadList(searchParams)
+}
+
+function handleReset() {
+  Object.keys(searchParams).forEach(key => {
+    searchParams[key] = ''
+  })
+  handleSearch()
+}
+
+function handleAdd() {
+  uni.navigateTo({ url: '/pages/<%= entityLower %>/form' })
+}
+
+function handleEdit(item: Record<string, unknown>) {
+  uni.navigateTo({ url: `/pages/<%= entityLower %>/form?id=${item.id}` })
+}
+
+function handleDetail(item: Record<string, unknown>) {
+  uni.navigateTo({ url: `/pages/<%= entityLower %>/detail?id=${item.id}` })
+}
+
+async function handleDelete(item: Record<string, unknown>) {
+  const res = await uni.showModal({
+    title: '确认删除',
+    content: `确定要删除该<%= entityLabel %>吗？`,
+  })
+  if (res.confirm) {
+    await store.remove(item.id as string)
+    uni.showToast({ title: '删除成功', icon: 'success' })
+  }
+}
+
+// @jnpf-gen:insert-point=custom-list-logic
+// @jnpf-gen:end-insert-point=custom-list-logic
+</script>
+
+<style scoped lang="scss">
+.page-list {
+  padding: 24rpx;
+  padding-bottom: 120rpx;
+}
+
+.search-bar {
+  margin-bottom: 24rpx;
+}
+
+.search-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.fab {
+  position: fixed;
+  right: 40rpx;
+  bottom: 120rpx;
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: #0083ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+</style>

@@ -2,7 +2,7 @@
   <BasicModal v-bind="$attrs" @register="registerModal" width="400px" title="页面设置" @ok="handleSubmit">
     <a-form :model="dataForm" layout="vertical" class="page-size-content">
       <a-form-item label="纸张设置">
-        <jnpf-select v-model:value="dataForm.type" :options="options" placeholder="请选择" @change="onPageSizeChange"></jnpf-select>
+        <jnpf-select v-model:value="dataForm.type" :options="options" placeholder="请选择" @change="onPageSizeChange" />
       </a-form-item>
       <a-form-item label="" v-if="dataForm.type">
         <a-row :gutter="10">

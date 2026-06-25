@@ -1,7 +1,7 @@
 <template>
   <MenuItem :key="itemKey">
     <span class="flex items-center">
-      <i :class="icon" class="mr-1" />
+      <i :class="icon" class="mr-1"></i>
       <span>{{ text }}</span>
     </span>
   </MenuItem>

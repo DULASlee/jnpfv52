@@ -75,3 +75,18 @@
 
 **理由**：两者职责不同，不应合并
 **影响范围**：CLAUDE.md 跨会话记忆使用规范
+## 2026-06-14 | Phase 3 Week 1 完成
+
+**F-7.1-7.3 交付：**
+- Alova 请求封装 (request.ts + httpEnum.ts)
+- createEntityApi 通用 CRUD + createEntityStore Pinia 模板
+- 3 个 EJS 页面模板 (list/form/detail)，全部 wot-design-uni
+
+**后端 CreateScope 清零：**
+- Sprint 4-5: 11 处 + Day 2: 2 处构造函数泄漏 + Day 3: 4 处 IServiceProvider→IServiceScopeFactory
+- App.GetService 业务层已清零
+- framework 层 25 处判定为框架基础设施，不消化
+
+**硬性约束：** 零 eval/Function，全部 @jnpf-generated 标记
+
+**提交：** 371956e

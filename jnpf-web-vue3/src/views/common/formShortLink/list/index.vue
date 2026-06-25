@@ -29,8 +29,7 @@
             @advanced-change="redoHeight"
             @submit="handleSearchSubmit"
             @reset="handleSearchReset"
-            class="search-form">
-          </BasicForm>
+            class="search-form" />
         </div>
         <div class="jnpf-content-wrapper-content">
           <BasicTable @register="registerTable" v-bind="getTableBindValue" ref="tableRef" @columns-change="handleColumnChange">
@@ -64,7 +63,7 @@
                   <ChildTableColumn
                     :data="record[item.prop]"
                     :head="item.children"
-                    @toggleExpand="toggleExpand(record, `${item.prop}Expand`)"
+                    @toggle-expand="toggleExpand(record, `${item.prop}Expand`)"
                     :expand="record[`${item.prop}Expand`]"
                     :showOverflow="columnData.showOverflow"
                     :key="index" />
@@ -106,7 +105,7 @@
                 <a-table-summary-row>
                   <a-table-summary-cell :index="0">合计</a-table-summary-cell>
                   <a-table-summary-cell v-for="(item, index) in getColumnSum" :key="index" :index="index + 1">{{ item }}</a-table-summary-cell>
-                  <a-table-summary-cell :index="getColumnSum.length + 1"></a-table-summary-cell>
+                  <a-table-summary-cell :index="getColumnSum.length + 1" />
                 </a-table-summary-row>
               </a-table-summary>
             </template>

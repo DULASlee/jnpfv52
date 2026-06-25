@@ -2,7 +2,7 @@
   <div class="jnpf-content-wrapper profile-wrapper bg-white">
     <a-tabs v-model:activeKey="activeKey" tab-position="left" class="common-left-tabs profile-left-tabs" destroyInactiveTabPane>
       <a-tab-pane key="user" tab="个人资料">
-        <UserInfo :user="user" @updateInfo="getInfo" />
+        <UserInfo :user="user" @update-info="getInfo" />
       </a-tab-pane>
       <a-tab-pane key="tenantInfo" tab="租户信息" v-if="isTenant">
         <TenantInfo :tenantInfo="tenantInfo" />
@@ -10,7 +10,7 @@
       <a-tab-pane key="password" tab="修改密码">
         <Password />
       </a-tab-pane>
-      <a-tab-pane key="line" disabled></a-tab-pane>
+      <a-tab-pane key="line" disabled />
       <a-tab-pane key="organize" tab="我的组织">
         <jnpf-group-title content="我的组织" helpMessage="用户可以自行切换组织信息，我的组织默认只能进行单选" />
         <div class="organize-list">
@@ -53,7 +53,7 @@
           <BasicTree ref="subTreeRef" :treeData="state.subordinateList" :load-data="loadData">
             <template #title="item">
               <a-card class="subordinate-tree-node" shadow="never" slot-scope="{ data }">
-                <a-avatar :size="50" :src="apiUrl + item.avatar"></a-avatar>
+                <a-avatar :size="50" :src="apiUrl + item.avatar" />
                 <div class="text">
                   <p>{{ item.userName }}</p>
                   <p class="user-text">{{ item.department }}{{ item.position ? '/' + item.position : '' }}</p>
@@ -100,7 +100,7 @@
   import { useUserStore } from '/@/store/modules/user';
   import { useGlobSetting } from '/@/hooks/setting';
   import { useMessage } from '/@/hooks/web/useMessage';
-  import { getToken } from '/@/utils/auth';
+  import { getAuthHeaders } from '/@/utils/auth';
   import type { UploadChangeParam } from 'ant-design-vue';
   import { createLocalStorage } from '/@/utils/cache';
   import { CheckOutlined } from '@ant-design/icons-vue';
@@ -150,7 +150,7 @@
   });
   const { activeKey, user, tenantInfo, isTenant } = toRefs(state);
 
-  const getHeaders = computed(() => ({ Authorization: getToken() as string }));
+  const getHeaders = computed(() => getAuthHeaders());
   const getUseSocials = computed(() => !!ls.get('useSocials'));
 
   watch(

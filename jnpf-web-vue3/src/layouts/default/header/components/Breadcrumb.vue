@@ -63,7 +63,7 @@
         }
 
         const parent = getAllParentPath(menus, path);
-        const filterMenus = menus.filter((item) => item.path === parent[0]);
+        const filterMenus = menus.filter(item => item.path === parent[0]);
         const matched = getMatched(filterMenus, parent) as any;
 
         if (!matched || matched.length === 0) return;
@@ -81,12 +81,12 @@
 
       function getMatched(menus: Menu[], parent: string[]) {
         const metched: Menu[] = [];
-        menus.forEach((item) => {
+        menus.forEach(item => {
           if (parent.includes(item.path)) {
             metched.push({
               ...item,
-              name: item.meta?.title || item.name,
-            });
+              name: ((item as any).meta?.title || (item as any).name) as any,
+            } as any);
           }
           if (item.children?.length) {
             metched.push(...getMatched(item.children, parent));
@@ -96,7 +96,7 @@
       }
 
       function filterItem(list: RouteLocationMatched[]) {
-        return filter(list, (item) => {
+        return filter(list, item => {
           const { meta, name } = item;
           if (!meta) {
             return !!name;
@@ -106,10 +106,10 @@
             return false;
           }
           return true;
-        }).filter((item) => !item.meta?.hideBreadcrumb);
+        }).filter(item => !item.meta?.hideBreadcrumb);
       }
 
-      function handleClick(route: RouteLocationMatched, paths: string[], e: Event) {
+      function handleClick(route: RouteLocationMatched, paths: string[], e: any) {
         e?.preventDefault();
         const { children, redirect, meta } = route;
 

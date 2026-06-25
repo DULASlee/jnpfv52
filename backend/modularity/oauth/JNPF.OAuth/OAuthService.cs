@@ -3,6 +3,7 @@ using JNPF.Common.Captcha.General;
 using JNPF.Common.Const;
 using JNPF.Common.Core.Manager;
 using JNPF.Common.Core.Manager.Tenant;
+using JNPF.Common.Core.MultiTenancy;
 using JNPF.Common.Dtos.OAuth;
 using JNPF.Common.Enums;
 using JNPF.Common.Extension;
@@ -37,10 +38,12 @@ using JNPF.UnifyResult;
 using JNPF.VisualDev.Entitys;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using SqlSugar;
 using System.Diagnostics;
@@ -138,7 +141,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <summary>
     /// 解析服务作用域工厂服务.
     /// </summary>
-    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly IServer _server;
 
     /// <summary>
     /// SqlSugarClient客户端.
@@ -153,7 +156,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// 初始化一个<see cref="OAuthService"/>类型的新实例.
     /// </summary>
     public OAuthService(
-        IServiceScopeFactory serviceScopeFactory,
+        IServer server,
         IGeneralCaptcha captchaHandler,
         ISqlSugarRepository<UserEntity> userRepository,
         IModuleService moduleService,
@@ -173,7 +176,7 @@ public class OAuthService : IDynamicApiController, ITransient
         ITenantManager tenantManager,
         IEventPublisher eventPublisher)
     {
-        _serviceScopeFactory = serviceScopeFactory;
+        _server = server;
         _captchaHandler = captchaHandler;
         _userRepository = userRepository;
         _moduleService = moduleService;
@@ -728,6 +731,8 @@ public class OAuthService : IDynamicApiController, ITransient
     [LogPolicy(LogPolicy.IgnoreRequest)]
     public async Task<dynamic> Login([FromForm] LoginInput input, CancellationToken cancellationToken = default)
     {
+        try
+        {
         // 普通登录 密码 AES 解密.
         if (!input.isSocialsLoginCallBack && (input.grant_type.IsNullOrEmpty() || !input.grant_type.Equals("official")))
             input.password = AESEncryption.AesDecrypt(input.password, App.GetConfig<AppOptions>("JNPF_App", true).AesKey);
@@ -805,17 +810,21 @@ public class OAuthService : IDynamicApiController, ITransient
             // 官网授权验证(手机短信等方式)
             if (input.grant_type.IsNotEmptyOrNull() && input.grant_type.Equals("official"))
             {
-                var apiUrl = string.Format("{0}/Tenant/LoginSmsCodeCheck/{1}/{2}", _tenant.MultiTenancyDBInterFace.Split("/Tenant").First(), oldAccount, input.code);
-
-                // 请求接口 验证
-                var resStr = await apiUrl.SetHeaders(new Dictionary<string, object> {
-                { "X-Forwarded-For", ip}
-            }).GetAsStringAsync();
-                var resObj = resStr.ToObject<RESTfulResult<TenantInterFaceOutput>>();
-                if (resObj == null || resObj.code != 200)
+                // 开发环境本地解析：跳过远程 API 调用，直接从 DB 取密码
+                if (!"true".Equals(App.Configuration["Tenant:LocalTenantResolve"], StringComparison.OrdinalIgnoreCase))
                 {
-                    await AddLoginLog(apiUrl, user, logUserName, input.grant_type, userAgent, (int)sw.ElapsedMilliseconds, loginType, 0, resObj.ToJsonString());
-                    throw Oops.Oh(resObj?.msg);
+                    var apiUrl = string.Format("{0}/Tenant/LoginSmsCodeCheck/{1}/{2}", _tenant.MultiTenancyDBInterFace.Split("/Tenant").First(), oldAccount, input.code);
+
+                    // 请求接口 验证
+                    var resStr = await apiUrl.SetHeaders(new Dictionary<string, object> {
+                    { "X-Forwarded-For", ip}
+                }).GetAsStringAsync();
+                    var resObj = resStr.ToObject<RESTfulResult<TenantInterFaceOutput>>();
+                    if (resObj == null || resObj.code != 200)
+                    {
+                        await AddLoginLog(apiUrl, user, logUserName, input.grant_type, userAgent, (int)sw.ElapsedMilliseconds, loginType, 0, resObj.ToJsonString());
+                        throw Oops.Oh(resObj?.msg ?? ErrorCode.D1000);
+                    }
                 }
                 input.password = await _sqlSugarClient.Queryable<UserEntity>().Where(it => it.Account.Equals(input.account) && it.DeleteMark == null).Select(x => x.Password).FirstAsync();
             }
@@ -917,7 +926,7 @@ public class OAuthService : IDynamicApiController, ITransient
                     { ClaimConst.CLAINMACCOUNT, userAnyPwd.Account },
                     { ClaimConst.CLAINMREALNAME, userAnyPwd.RealName },
                     { ClaimConst.CLAINMADMINISTRATOR, userAnyPwd.IsAdministrator },
-                    { ClaimConst.TENANTID, tenantId},
+                    { ClaimConst.TENANTID, ResolveLoginTenantId(userAnyPwd, tenantId) },
                     { ClaimConst.OnlineTicket, input.online_ticket },
                     { ClaimConst.ZXSYSTEMID, userAnyPwd.BizSystemId }
                     }, tokenTimeout);
@@ -1049,7 +1058,12 @@ public class OAuthService : IDynamicApiController, ITransient
         {
             sw.Stop();
             await AddLoginLog(tenantId, user, logUserName, input.grant_type, userAgent, (int)sw.ElapsedMilliseconds, loginType, 0, ex.Message);
-            throw Oops.Bah(ex.Message);
+            throw;
+        }
+        }
+        catch (Exception)
+        {
+            throw;
         }
     }
 
@@ -1442,9 +1456,7 @@ public class OAuthService : IDynamicApiController, ITransient
     /// <returns></returns>
     private string GetLocalAddress()
     {
-        using var scope = _serviceScopeFactory.CreateScope();
-        var server = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>();
-        var addressesFeature = server.Features.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>();
+        var addressesFeature = _server.Features.Get<IServerAddressesFeature>();
         var addresses = addressesFeature?.Addresses;
         return addresses.FirstOrDefault().Replace("[::]", "localhost");
     }
@@ -2074,4 +2086,30 @@ public class OAuthService : IDynamicApiController, ITransient
     }
 
     #endregion
+
+    /// <summary>
+    /// 解析登录时的租户 ID（铁律 R1）
+    /// 管理员 → 平台租户（上帝视角），普通用户 → 必须持有有效租户
+    /// </summary>
+    private string ResolveLoginTenantId(UserEntity user, string rawTenantId)
+    {
+        var platformTenantId = TenantResolver.PlatformTenantId;
+
+        // 超级管理员 → 平台租户（上帝视角）
+        if (user.IsAdministrator == 1)
+            return platformTenantId.ToString();
+
+        // 普通用户 → 必须有有效租户
+        if (long.TryParse(rawTenantId, out var id) && id > 0)
+            return rawTenantId;
+
+        // 尝试从用户记录取
+        if (!string.IsNullOrWhiteSpace(user.TenantId)
+            && long.TryParse(user.TenantId, out var userTenant)
+            && userTenant > 0)
+            return user.TenantId;
+
+        // 普通用户无租户 → 拒绝登录
+        throw Oops.Bah("您的账号尚未分配租户，请联系管理员");
+    }
 }

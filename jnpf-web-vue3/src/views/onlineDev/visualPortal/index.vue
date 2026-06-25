@@ -5,7 +5,7 @@
         <BasicTable @register="registerTable">
           <template #tableTitle>
             <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" @click="addOrUpdateHandle()">{{ t('common.addText') }}</a-button>
-            <jnpf-upload-btn url="/api/visualdev/Portal/Actions/Import" accept=".vp" @on-success="reload"></jnpf-upload-btn>
+            <jnpf-upload-btn url="/api/visualdev/Portal/Actions/Import" accept=".vp" @on-success="reload" />
           </template>
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'isRelease'">
@@ -23,7 +23,7 @@
     <Form @register="registerForm" @reload="reload" @design="handleDesignFun" />
     <PortalDesign @register="registerPortalDesign" @reload="reload" />
     <ReleaseModal @register="registerReleaseModal" @reload="reload" />
-    <PreviewModal @register="registerPreviewModal" @previewPc="previewPc" />
+    <PreviewModal @register="registerPreviewModal" @preview-pc="previewPc" />
     <Preview @register="registerPreview" />
   </div>
 </template>
@@ -42,7 +42,7 @@
   import Preview from '/@/components/VisualPortal/Design/components/Preview.vue';
   import { PreviewModal } from '/@/components/CommonModal';
 
-  defineOptions({ name: 'onlineDev-webDesign' });
+  defineOptions({ name: 'OnlineDevWebDesign' });
 
   const { createMessage } = useMessage();
   const baseStore = useBaseStore();

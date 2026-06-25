@@ -130,7 +130,7 @@
   import type { FormInstance } from 'ant-design-vue';
   import { useMessage } from '/@/hooks/web/useMessage';
 
-  defineOptions({ name: 'extend-formDemo-verifyForm' });
+  defineOptions({ name: 'ExtendFormDemoVerifyForm' });
 
   const validatePass = (_rule, value) => {
     if (value !== state.dataForm.password) {

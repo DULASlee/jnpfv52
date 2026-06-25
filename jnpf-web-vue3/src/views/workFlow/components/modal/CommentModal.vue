@@ -44,7 +44,7 @@
   import { Upload as AUpload } from 'ant-design-vue';
   import { createImgPreview } from '/@/components/Preview/index';
   import { useGlobSetting } from '/@/hooks/setting';
-  import { getToken } from '/@/utils/auth';
+  import { getAuthHeaders } from '/@/utils/auth';
   import type { UploadChangeParam, UploadFile } from 'ant-design-vue';
 
   interface State {
@@ -79,7 +79,7 @@
   const [registerModal, { changeOkLoading, closeModal }] = useModalInner(init);
 
   const getAction = computed(() => globSetting.uploadUrl + '/annexpic');
-  const getHeaders = computed(() => ({ Authorization: getToken() as string }));
+  const getHeaders = computed(() => getAuthHeaders());
 
   function init() {
     changeOkLoading(false);

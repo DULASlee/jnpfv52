@@ -6,10 +6,10 @@
         打印
       </a-button>
       <a-tabs v-model:activeKey="activeKey" type="card" class="jnpf-content-wrapper-tabs" destroyInactiveTabPane>
-        <a-tab-pane key="1" tab="报价单子"> <offer ref="offer"></offer></a-tab-pane>
-        <a-tab-pane key="2" tab="水电费用"><bill ref="bill"></bill></a-tab-pane>
-        <a-tab-pane key="3" tab="员工档案"><record ref="record"></record></a-tab-pane>
-        <a-tab-pane key="4" tab="入库通知"><storage ref="storage"></storage></a-tab-pane>
+        <a-tab-pane key="1" tab="报价单子"> <offer ref="offer" /></a-tab-pane>
+        <a-tab-pane key="2" tab="水电费用"><bill ref="bill" /></a-tab-pane>
+        <a-tab-pane key="3" tab="员工档案"><record ref="record" /></a-tab-pane>
+        <a-tab-pane key="4" tab="入库通知"><storage ref="storage" /></a-tab-pane>
       </a-tabs>
     </div>
   </div>
@@ -22,7 +22,7 @@
   import Storage from './components/Storage.vue';
   import printStyle from './components/printStyle';
 
-  defineOptions({ name: 'extend-printData' });
+  defineOptions({ name: 'ExtendPrintData' });
 
   const activeKey = ref('1');
   const offer = ref();

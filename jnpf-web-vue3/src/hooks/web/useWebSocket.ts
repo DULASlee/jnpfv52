@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { useUserStore } from '/@/store/modules/user';
 import { useGlobSetting } from '/@/hooks/setting';
-import { getToken } from '/@/utils/auth';
+import { getRawToken } from '/@/utils/auth';
 import { isDevMode } from '/@/utils/env';
 import ReconnectingWebSocket from 'reconnecting-websocket';
 import { getJnpfAppId } from '/@/utils/jnpf';
@@ -22,8 +22,8 @@ let ws: any;
 const listeners = new Map();
 
 export function useWebSocket() {
-  const token = getToken();
-  const server = ref(webSocketUrl + encodeURIComponent(token as string));
+  const token = getRawToken();
+  const server = ref(webSocketUrl + encodeURIComponent(token));
   /** 初始化WebSocket */
   function initWebSocket() {
     if (ws) {
@@ -48,7 +48,7 @@ export function useWebSocket() {
     function onMessage(res) {
       if (res.data) {
         try {
-          let dataStr = res.data;
+          const dataStr = res.data;
           const data = JSON.parse(dataStr);
           for (const callback of listeners.keys()) {
             try {
@@ -132,7 +132,7 @@ export function useWebSocket() {
     try {
       const msgObj = JSON.parse(msg);
       msgObj.token = token;
-      let content = JSON.stringify(msgObj);
+      const content = JSON.stringify(msgObj);
       ws.send(content);
     } catch (_) {}
     return;

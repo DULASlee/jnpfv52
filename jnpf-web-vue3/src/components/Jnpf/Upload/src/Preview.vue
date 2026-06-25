@@ -34,7 +34,7 @@
   import { useI18n } from '/@/hooks/web/useI18n';
   import { getDownloadUrl, previewFile } from '/@/api/basic/common';
   import { downloadByUrl } from '/@/utils/file/download';
-  import { getToken } from '/@/utils/auth';
+  import { getRawToken } from '/@/utils/auth';
 
   interface State {
     visible: boolean;
@@ -76,7 +76,7 @@
       .then(res => {
         state.loading = false;
         if (res.data) {
-          state.url = res.data + '&token=' + getToken();
+          state.url = res.data + '&token=' + getRawToken();
         } else {
           createMessage.warning('文件不存在');
           handleCancel();

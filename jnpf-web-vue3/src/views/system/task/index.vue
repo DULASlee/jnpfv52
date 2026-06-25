@@ -30,7 +30,7 @@
   import Form from './Form.vue';
   import Log from './Log.vue';
 
-  defineOptions({ name: 'system-task' });
+  defineOptions({ name: 'SystemTask' });
 
   const { t } = useI18n();
   const { createMessage } = useMessage();

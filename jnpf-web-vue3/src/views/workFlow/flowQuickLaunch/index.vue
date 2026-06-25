@@ -12,7 +12,7 @@
 
   const [registerFlowParser, { openPopup: openFlowParser }] = usePopup();
 
-  defineOptions({ name: 'workFlow-addFlow' });
+  defineOptions({ name: 'WorkFlowAddFlow' });
 
   function onSelect(record) {
     const data = {

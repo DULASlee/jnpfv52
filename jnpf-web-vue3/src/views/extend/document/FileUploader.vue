@@ -12,7 +12,7 @@
       @complete="onComplete"
       :autoStart="false"
       :key="uploadKey">
-      <uploader-unsupport></uploader-unsupport>
+      <uploader-unsupport />
       <UploaderBtn id="file-uploader-btn" ref="uploaderBtnRef" :attrs="attrs">选择文件</UploaderBtn>
       <uploader-list v-show="panelShow">
         <template #default="{ fileList }">
@@ -43,7 +43,7 @@
 <script lang="ts" setup>
   import { nextTick, ref, onMounted, reactive } from 'vue';
   import { useGlobSetting } from '/@/hooks/setting';
-  import { getToken } from '/@/utils/auth';
+  import { getAuthHeaders } from '/@/utils/auth';
   import VueSimpleUploader from 'vue-simple-uploader';
   import { useMessage } from '/@/hooks/web/useMessage';
   import SparkMD5 from 'spark-md5';
@@ -87,9 +87,7 @@
         return true;
       }
     },
-    headers: {
-      Authorization: getToken(),
-    },
+    headers: getAuthHeaders(),
     query: {
       fileType: '',
       extension: '',

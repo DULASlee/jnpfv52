@@ -20,7 +20,7 @@
               </span>
             </a-popconfirm>
           </div>
-          <add-btn :activeData="item" @addComponent="handleAddComponent" v-show="!item.children?.length && !detailed" />
+          <add-btn :activeData="item" @add-component="handleAddComponent" v-show="!item.children?.length && !detailed" />
         </div>
       </a-card>
     </template>
@@ -28,7 +28,7 @@
       <a-tabs
         v-model:activeKey="item.active"
         :tabPosition="item.tabPosition"
-        @tabClick="handleTabClick"
+        @tab-click="handleTabClick"
         :type="item.type"
         class="portal-box-tab h-full bg-white"
         :class="{ 'portal-eChart-tab-position': item.tabPosition == 'left' || item.tabPosition == 'right' }">
@@ -45,7 +45,7 @@
                 </span>
               </a-popconfirm>
             </div>
-            <add-btn :activeData="item" @addComponent="handleAddComponent" v-show="!child.children?.length && !detailed" />
+            <add-btn :activeData="item" @add-component="handleAddComponent" v-show="!child.children?.length && !detailed" />
           </div>
         </a-tab-pane>
       </a-tabs>

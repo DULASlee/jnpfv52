@@ -14,7 +14,7 @@
             </BreadcrumbItem>
           </Breadcrumb>
           <div class="jnpf-common-search-box">
-            <BasicForm class="search-form" @register="registerAllForm" @submit="handleAllSubmit" @reset="handleAllReset"></BasicForm>
+            <BasicForm class="search-form" @register="registerAllForm" @submit="handleAllSubmit" @reset="handleAllReset" />
             <div class="jnpf-common-search-box-right">
               <a-button @click="addFolder()">新建文件夹</a-button>
               <a-button type="primary" preIcon="icon-ym icon-ym-btn-upload" @click="uploadFile()" class="ml-10px">上传文件</a-button>
@@ -24,11 +24,11 @@
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'fullName'">
                 <span v-if="record.type">
-                  <i :class="'icon-ym ' + toFileExt(record.fileExtension) + ' i-default'" />
+                  <i :class="'icon-ym ' + toFileExt(record.fileExtension) + ' i-default'"></i>
                   {{ record.fullName }}
                 </span>
                 <span class="cursor-pointer" v-else @click="openFolder(record)">
-                  <i class="icon-ym icon-ym-extend-folder text-warning" />
+                  <i class="icon-ym icon-ym-extend-folder text-warning"></i>
                   {{ record.fullName }}
                 </span>
               </template>
@@ -54,7 +54,7 @@
           <BasicTable @register="registerShareOutTable">
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'fullName'">
-                <i :class="'icon-ym ' + toFileExt(record.fileExtension) + ' i-default'" />
+                <i :class="'icon-ym ' + toFileExt(record.fileExtension) + ' i-default'"></i>
                 {{ record.fullName }}
               </template>
               <template v-if="column.key === 'fileSize'">
@@ -76,7 +76,7 @@
           <BasicTable @register="registerShareTomeTable">
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'fullName'">
-                <i :class="'icon-ym ' + toFileExt(record.fileExtension) + ' i-default'" />
+                <i :class="'icon-ym ' + toFileExt(record.fileExtension) + ' i-default'"></i>
                 {{ record.fullName }}
               </template>
               <template v-if="column.key === 'fileSize'">
@@ -99,11 +99,11 @@
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'fullName'">
                 <span v-if="record.type">
-                  <i :class="'icon-ym ' + toFileExt(record.fileExtension) + ' i-default'" />
+                  <i :class="'icon-ym ' + toFileExt(record.fileExtension) + ' i-default'"></i>
                   {{ record.fullName }}
                 </span>
                 <span v-else>
-                  <i class="icon-ym icon-ym-extend-folder text-warning" />
+                  <i class="icon-ym icon-ym-extend-folder text-warning"></i>
                   {{ record.fullName }}
                 </span>
               </template>
@@ -119,7 +119,7 @@
         </div>
       </a-tab-pane>
     </a-tabs>
-    <FileUploader ref="fileUploaderRef" :parentId="allListSearchInfo.parentId" @fileSuccess="reloadAllTable({ page: 1 })" />
+    <FileUploader ref="fileUploaderRef" :parentId="allListSearchInfo.parentId" @file-success="reloadAllTable({ page: 1 })" />
     <Form @register="registerFormModal" @reload="reloadAllTable()" />
     <UserBox @register="registerUserBox" @reload="reloadAllTable()" />
     <FolderTree @register="registerFolderTree" @reload="reloadAllTable()" />
@@ -160,7 +160,7 @@
     parentId: string;
   }
 
-  defineOptions({ name: 'extend-document' });
+  defineOptions({ name: 'ExtendDocument' });
   const { t } = useI18n();
   const { createMessage, createConfirm } = useMessage();
   const fileUploaderRef = ref<any>(null);

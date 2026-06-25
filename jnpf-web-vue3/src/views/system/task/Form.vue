@@ -71,7 +71,7 @@
     interfaceName: string;
   }
 
-  defineOptions({ name: 'system-task' });
+  defineOptions({ name: 'SystemTask' });
   const emit = defineEmits(['register', 'reload']);
   const id = ref('');
   const { createMessage } = useMessage();

@@ -18,7 +18,6 @@ using JNPF.Schedule;
 using JNPF.VisualDev.Entitys.Dto.WebHook;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
 using SqlSugar;
 using System.Text;
 
@@ -32,9 +31,9 @@ namespace JNPF.InteAssistant;
 public class WebHookService : IDynamicApiController, ITransient
 {
     /// <summary>
-    /// 解析服务作用域工厂服务.
+    /// SqlSugar 客户端.
     /// </summary>
-    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly ISqlSugarClient _sqlSugarClient;
 
     /// <summary>
     /// 服务基础仓储.
@@ -70,7 +69,7 @@ public class WebHookService : IDynamicApiController, ITransient
     /// 初始化一个<see cref="WebHookService"/>类型的新实例.
     /// </summary>
     public WebHookService(
-        IServiceScopeFactory serviceScopeFactory,
+        ISqlSugarClient sqlSugarClient,
         ICacheManager cacheManager,
         ISqlSugarRepository<IntegrateEntity> repository,
         IJobManager jobManager,
@@ -78,7 +77,7 @@ public class WebHookService : IDynamicApiController, ITransient
         ITenantManager tenantManager,
         ISchedulerFactory schedulerFactory)
     {
-        _serviceScopeFactory = serviceScopeFactory;
+        _sqlSugarClient = sqlSugarClient;
         _cacheManager = cacheManager;
         _repository = repository;
         _jobManager = jobManager;
@@ -177,8 +176,7 @@ public class WebHookService : IDynamicApiController, ITransient
         tenantId ??= "default";
         var inteId = Encoding.UTF8.GetString(Convert.FromBase64String(id));
 
-        using var scope = _serviceScopeFactory.CreateScope();
-        var sqlSugarClient = scope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
+        var sqlSugarClient = _sqlSugarClient;
 
         var cacheKey = string.Empty;
 

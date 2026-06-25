@@ -36,7 +36,7 @@
   import Form from './Form.vue';
   import dayjs from 'dayjs';
 
-  defineOptions({ name: 'system-notice' });
+  defineOptions({ name: 'SystemNotice' });
 
   const { t } = useI18n();
   const { createMessage } = useMessage();

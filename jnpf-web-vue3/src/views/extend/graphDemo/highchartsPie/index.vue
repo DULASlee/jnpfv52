@@ -15,7 +15,7 @@
   import { Chart } from 'highcharts-vue';
   import Highcharts from 'highcharts';
 
-  defineOptions({ name: 'extend-graphDemo-highchartsPie' });
+  defineOptions({ name: 'ExtendGraphDemoHighchartsPie' });
 
   const options = ref<any>({
     accessibility: { enabled: false },
@@ -137,7 +137,7 @@
           name: data[i].drilldown.categories[j],
           y: data[i].drilldown.data[j],
           // @ts-ignore
-          color:new Highcharts.Color(data[i].color).brighten(brightness).get(),
+          color: new Highcharts.Color(data[i].color).brighten(brightness).get(),
         });
       }
     }
@@ -221,4 +221,3 @@
     init();
   });
 </script>
-

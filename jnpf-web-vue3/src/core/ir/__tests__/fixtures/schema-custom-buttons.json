@@ -1,0 +1,30 @@
+{
+  "data": {
+    "id": "custom-btn-leave",
+    "fullName": "请假申请（含自定义按钮）",
+    "fields": [
+      { "__vModel__": "leaveType", "__config__": { "label": "请假类型", "tag": "JnpfSelect", "jnpfKey": "JnpfSelect", "required": true }, "options": [{ "label": "年假", "value": "annual" }, { "label": "病假", "value": "sick" }, { "label": "事假", "value": "personal" }] },
+      { "__vModel__": "startDate", "__config__": { "label": "开始日期", "tag": "JnpfDatePicker", "jnpfKey": "JnpfDatePicker", "required": true } },
+      { "__vModel__": "endDate", "__config__": { "label": "结束日期", "tag": "JnpfDatePicker", "jnpfKey": "JnpfDatePicker", "required": true } },
+      { "__vModel__": "reason", "__config__": { "label": "请假原因", "tag": "JnpfTextarea", "jnpfKey": "JnpfTextarea" } }
+    ],
+    "funcs": {
+      "onLoad": "({ formData, setFormData, onlineUtils }) => {}",
+      "beforeSubmit": "({ formData }) => { return new Promise((resolve) => { resolve() }) }"
+    },
+    "customBtns": [
+      { "id": "btnDraft", "label": "保存草稿", "type": "primary", "position": "formFooter", "callback": "({ formData, setFormData }) => {}" },
+      { "id": "btnCheckConflict", "label": "检查冲突", "type": "default", "position": "formFooter", "callback": "({ formData, setFormData }) => { return new Promise((r) => r(true)) }" },
+      { "id": "btnEmergency", "label": "紧急提交", "type": "danger", "position": "formHeader", "visible": "formData.leaveType === 'personal'", "callback": "({ formData, setFormData }) => {}" }
+    ],
+    "virtualFieldList": [
+      { "field": "leaveType", "type": "varchar", "length": 50 },
+      { "field": "startDate", "type": "datetime" },
+      { "field": "endDate", "type": "datetime" },
+      { "field": "reason", "type": "text" }
+    ],
+    "labelWidth": 100,
+    "popupType": "drawer",
+    "drawerWidth": "600px"
+  }
+}

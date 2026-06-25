@@ -1,0 +1,30 @@
+- generic [ref=e1]:
+  - generic [ref=e13]:
+    - generic [ref=e15] [cursor=pointer]:
+      - img [ref=e17]
+      - img [ref=e19]
+    - generic [ref=e22]:
+      - generic [ref=e23]: 欢迎使用
+      - generic [ref=e24]: 通过账号密码登录，或者切换为扫码登录
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - textbox "请输入账号" [ref=e31]: admin
+          - generic [ref=e36]:
+            - textbox "请输入密码" [ref=e37]: "123456"
+            - img "eye-invisible" [ref=e39] [cursor=pointer]:
+              - img [ref=e40]
+          - button "loading 登 录" [active] [ref=e65]:
+            - img "loading" [ref=e67]:
+              - img [ref=e68]
+            - generic [ref=e49]: 登 录
+        - generic [ref=e50]:
+          - separator [ref=e51]:
+            - generic [ref=e52]: 其他登录方式
+          - generic [ref=e53]:
+            - generic [ref=e55] [cursor=pointer]: 
+            - generic [ref=e57] [cursor=pointer]: 
+            - generic [ref=e59] [cursor=pointer]: 
+            - generic [ref=e61] [cursor=pointer]: 
+            - generic [ref=e63] [cursor=pointer]: 
+    - generic [ref=e64]: Copyright @ 2026 面包树科技有限公司版权所有
+  - img

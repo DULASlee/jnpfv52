@@ -8,7 +8,6 @@ using JNPF.EventBus;
 using JNPF.EventHandler;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.Schedule;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SqlSugar;
 
@@ -19,13 +18,10 @@ namespace JNPF.InteAssistant.Engine;
 /// 不可删除！.
 /// </summary>
 [JobDetail("job_builtIn_ExecutionQueue", Description = "集成助手-执行队列", GroupName = "Integrate", Concurrent = false)]
-public class ExecutionQueue : IJob, IDisposable
+public class ExecutionQueue : IJob
 {
-    /// <summary>
-    /// 服务提供器.
-    /// </summary>
-    private readonly IServiceScope _serviceScope;
-
+    private readonly ISqlSugarClient _sqlSugarClient;
+    private readonly ICacheManager _cacheManager;
     private readonly ILogger<ExecutionQueue> _logger;
 
     /// <summary>
@@ -49,33 +45,30 @@ public class ExecutionQueue : IJob, IDisposable
     public ExecutionQueue(
         ISchedulerFactory schedulerFactory,
         ILogger<ExecutionQueue> logger,
-        IServiceScopeFactory serviceScopeFactory,
+        ISqlSugarClient sqlSugarClient,
+        ICacheManager cacheManager,
         IEventPublisher eventPublisher,
         ITenantManager tenantManager)
     {
         _schedulerFactory = schedulerFactory;
         _logger = logger;
-        _serviceScope = serviceScopeFactory.CreateScope();
+        _sqlSugarClient = sqlSugarClient;
+        _cacheManager = cacheManager;
         _eventPublisher = eventPublisher;
         _tenantManager = tenantManager;
-    }
-
-    public void Dispose()
-    {
-        _serviceScope.Dispose();
     }
 
     [UnitOfWork]
     public async Task ExecuteAsync(JobExecutingContext context, CancellationToken stoppingToken)
     {
-        var sqlSugarClient = _serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
+        var sqlSugarClient = _sqlSugarClient;
 
         string cacheKey = string.Empty;
 
         // 多租户场景 需要获取到 租户ID
         var tenantId = context.TriggerId.Match("((?<=_trigger_schedule_).+)");
 
-        var _cacheManager = _serviceScope.ServiceProvider.GetService<ICacheManager>();
+        var cacheManager = _cacheManager;
 
         if (KeyVariable.MultiTenancy && !string.IsNullOrEmpty(tenantId) && !sqlSugarClient.AsTenant().IsAnyConnection(tenantId))
         {

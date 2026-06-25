@@ -11,6 +11,7 @@ import { createPermissionGuard } from './permissionGuard';
 import { createStateGuard } from './stateGuard';
 import nProgress from 'nprogress';
 import projectSetting from '/@/settings/projectSetting';
+import { errorReporter } from '/@/utils/error-reporter';
 // import { createParamMenuGuard } from './paramMenuGuard';
 
 // Don't change the order of creation
@@ -24,6 +25,20 @@ export function setupRouterGuard(router: Router) {
   createPermissionGuard(router);
   // createParamMenuGuard(router); // must after createPermissionGuard (menu has been built.)
   createStateGuard(router);
+
+  // 路由级错误捕获：异步组件加载失败、chunk 加载失败等
+  router.onError(error => {
+    errorReporter.report({
+      message: `路由加载失败: ${error.message}`,
+      stack: error.stack,
+      source: 'vue',
+    });
+
+    // chunk 加载失败自动刷新（通常是版本更新后旧 chunk 被删除）
+    if (/Loading chunk \d+ failed/.test(error.message) || /Failed to fetch dynamically imported module/.test(error.message)) {
+      window.location.reload();
+    }
+  });
 }
 
 /**
@@ -32,7 +47,7 @@ export function setupRouterGuard(router: Router) {
 function createPageGuard(router: Router) {
   const loadedPageMap = new Map<string, boolean>();
 
-  router.beforeEach(async (to) => {
+  router.beforeEach(async to => {
     // The page has already been loaded, it will be faster to open it again, you don’t need to do loading and other processing
     to.meta.loaded = !!loadedPageMap.get(to.path);
     // Notify routing changes
@@ -41,7 +56,7 @@ function createPageGuard(router: Router) {
     return true;
   });
 
-  router.afterEach((to) => {
+  router.afterEach(to => {
     loadedPageMap.set(to.path, true);
   });
 }
@@ -51,7 +66,7 @@ function createPageLoadingGuard(router: Router) {
   const userStore = useUserStoreWithOut();
   const appStore = useAppStoreWithOut();
   const { getOpenPageLoading } = useTransitionSetting();
-  router.beforeEach(async (to) => {
+  router.beforeEach(async to => {
     if (!userStore.getToken) {
       return true;
     }
@@ -103,7 +118,7 @@ function createScrollGuard(router: Router) {
 
   const body = document.body;
 
-  router.afterEach(async (to) => {
+  router.afterEach(async to => {
     // scroll top
     isHash((to as RouteLocationNormalized & { href: string })?.href) && body.scrollTo(0, 0);
     return true;
@@ -132,7 +147,7 @@ export function createMessageGuard(router: Router) {
 
 export function createProgressGuard(router: Router) {
   const { getOpenNProgress } = useTransitionSetting();
-  router.beforeEach(async (to) => {
+  router.beforeEach(async to => {
     if (to.meta.loaded) {
       return true;
     }

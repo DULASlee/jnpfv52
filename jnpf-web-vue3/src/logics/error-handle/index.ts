@@ -9,6 +9,7 @@ import { useErrorLogStoreWithOut } from '/@/store/modules/errorLog';
 import { ErrorTypeEnum } from '/@/enums/exceptionEnum';
 import { App } from 'vue';
 import projectSetting from '/@/settings/projectSetting';
+import { errorReporter } from '/@/utils/error-reporter';
 
 /**
  * Handling error stack information
@@ -23,7 +24,7 @@ function processStackMsg(error: Error) {
     .replace(/\bat\b/gi, '@') // At in chrome, @ in ff
     .split('@') // Split information with @
     .slice(0, 9) // The maximum stack length (Error.stackTraceLimit = 10), so only take the first 10
-    .map((v) => v.replace(/^\s*|\s*$/g, '')) // Remove extra spaces
+    .map(v => v.replace(/^\s*|\s*$/g, '')) // Remove extra spaces
     .join('~') // Manually add separators for later display
     .replace(/\?[^:]+/gi, ''); // Remove redundant parameters of js file links (?x=1 and the like)
   const msg = error.toString();
@@ -75,18 +76,18 @@ function vueErrorHandler(err: Error, vm: any, info: string) {
     detail: info,
     url: window.location.href,
   });
+  // 上报到后端 Serilog（错误追踪闭环）
+  errorReporter.report({
+    message: err.message,
+    stack: err.stack,
+    source: 'vue',
+  });
 }
 
 /**
  * Configure script error handling function
  */
-export function scriptErrorHandler(
-  event: Event | string,
-  source?: string,
-  lineno?: number,
-  colno?: number,
-  error?: Error,
-) {
+export function scriptErrorHandler(event: Event | string, source?: string, lineno?: number, colno?: number, error?: Error) {
   if (event === 'Script error.' && !source) {
     return false;
   }
@@ -108,6 +109,12 @@ export function scriptErrorHandler(
     url: window.location.href,
     ...(errorInfo as Pick<ErrorLogInfo, 'message' | 'stack'>),
   });
+  // 上报到后端 Serilog
+  errorReporter.report({
+    message: event as string,
+    stack: error?.stack,
+    source: 'uncaught',
+  });
   return true;
 }
 
@@ -127,6 +134,12 @@ function registerPromiseErrorHandler() {
         url: window.location.href,
         stack: 'promise error!',
         message: event.reason,
+      });
+      // 上报到后端 Serilog
+      errorReporter.report({
+        message: event.reason?.message || String(event.reason),
+        stack: event.reason?.stack,
+        source: 'unhandledrejection',
       });
     },
     true,

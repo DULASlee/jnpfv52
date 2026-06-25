@@ -29,7 +29,7 @@
   import { getErrorLogList } from '/@/api/system/technicalLog';
   import dayjs from 'dayjs';
 
-  defineOptions({ name: 'system-error-log' });
+  defineOptions({ name: 'SystemErrorLog' });
 
   const router = useRouter();
 

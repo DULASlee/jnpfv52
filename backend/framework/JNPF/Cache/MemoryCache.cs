@@ -196,12 +196,21 @@ public class MemoryCache : ICache, ISingleton
     /// </summary>
     public List<string> GetAllKeys()
     {
-        const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
-        var entries = _memoryCache.GetType().GetField("_entries", flags).GetValue(_memoryCache);
-        var cacheItems = entries.GetType().GetProperty("Keys").GetValue(entries) as ICollection<object>;
-        var keys = new List<string>();
-        if (cacheItems == null) return keys;
-        return cacheItems.Select(u => u.ToString()).ToList();
+        try
+        {
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            var entriesField = _memoryCache.GetType().GetField("_entries", flags);
+            if (entriesField == null) return new List<string>();
+            var entries = entriesField.GetValue(_memoryCache);
+            if (entries == null) return new List<string>();
+            var cacheItems = entries.GetType().GetProperty("Keys")?.GetValue(entries) as ICollection<object>;
+            if (cacheItems == null) return new List<string>();
+            return cacheItems.Select(u => u.ToString()).ToList();
+        }
+        catch
+        {
+            return new List<string>();
+        }
     }
 
     /// <summary>

@@ -1,0 +1,24 @@
+{
+  "id": "GOLDEN-01",
+  "domain": "教育",
+  "difficulty": 2,
+  "requirement": "我需要一个学生成绩管理系统。包含学生信息管理（姓名、学号、班级）、课程管理（课程名、学分、教师）、成绩录入与查询。支持按班级、课程统计平均分和排名。需要一个成绩总览仪表盘。",
+  "expectedIR": {
+    "modules": [
+      { "nodeType": "ModuleDefinition", "moduleName": "学生管理" },
+      { "nodeType": "ModuleDefinition", "moduleName": "课程管理" },
+      { "nodeType": "ModuleDefinition", "moduleName": "成绩管理" }
+    ],
+    "tables": [
+      { "nodeType": "TableDefinition", "tableName": "Student", "requiredFields": ["student_no", "name", "class"] },
+      { "nodeType": "TableDefinition", "tableName": "Course", "requiredFields": ["course_name", "credit", "teacher"] },
+      { "nodeType": "TableDefinition", "tableName": "Score", "requiredFields": ["student_id", "course_id", "score"] }
+    ],
+    "pages": { "nodeType": "Component", "minCount": 3, "descriptions": ["学生列表", "课程列表", "成绩录入"] },
+    "dashboard": { "nodeType": "DashboardConfig", "requiredCharts": ["平均分柱状图", "排名表格"] }
+  },
+  "evalDimensions": ["schema_compliance", "semantic_accuracy", "ux_score"],
+  "minPassScore": 0.80,
+  "created": "2026-06-20",
+  "author": "高级架构师（代玛维思）"
+}

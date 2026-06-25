@@ -1,0 +1,7 @@
+{
+  "MultimodalVision": {
+    "ApiUrl": "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+    "ApiKey": "",
+    "Model": "glm-4v"
+  }
+}

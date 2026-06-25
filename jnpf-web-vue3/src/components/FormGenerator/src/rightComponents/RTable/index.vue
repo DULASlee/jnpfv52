@@ -14,11 +14,11 @@
       <template #item="{ element, index }">
         <div class="custom-draggable-item">
           <div class="custom-line-icon option-drag">
-            <i class="icon-ym icon-ym-darg" />
+            <i class="icon-ym icon-ym-darg"></i>
           </div>
           <p class="custom-line-value" @click="handleActiveFormItem(element)">{{ element.__config__.label }}</p>
           <div class="close-btn custom-line-icon" @click="activeData.__config__.children.splice(index, 1)">
-            <i class="icon-ym icon-ym-btn-clearn" />
+            <i class="icon-ym icon-ym-btn-clearn"></i>
           </div>
         </div>
       </template>
@@ -29,17 +29,17 @@
         <template #overlay>
           <a-menu class="custom-draggable-dropdown-menu">
             <a-menu-item v-for="item in getInputComponents" @click.native="addComponent(item)">
-              <i :class="item.__config__.tagIcon" />
+              <i :class="item.__config__.tagIcon"></i>
               {{ item.__config__.label }}
             </a-menu-item>
             <a-menu-divider />
             <a-menu-item v-for="item in getSelectComponents" @click.native="addComponent(item)">
-              <i :class="item.__config__.tagIcon" />
+              <i :class="item.__config__.tagIcon"></i>
               {{ item.__config__.label }}
             </a-menu-item>
             <a-menu-divider />
             <a-menu-item v-for="item in getSystemComponents" @click.native="addComponent(item)">
-              <i :class="item.__config__.tagIcon" />
+              <i :class="item.__config__.tagIcon"></i>
               {{ item.__config__.label }}
             </a-menu-item>
           </a-menu>
@@ -52,11 +52,11 @@
     <template #item="{ element }">
       <div class="custom-draggable-item">
         <div class="custom-line-icon option-drag">
-          <i class="icon-ym icon-ym-darg" />
+          <i class="icon-ym icon-ym-darg"></i>
         </div>
         <p class="custom-line-value">{{ element.label }}</p>
         <div class="edit-btn custom-line-icon" @click="editBtnConfig(element)">
-          <i class="icon-ym icon-ym-btn-edit" />
+          <i class="icon-ym icon-ym-btn-edit"></i>
         </div>
       </div>
     </template>
@@ -67,14 +67,14 @@
       <template #item="{ element, index }">
         <div class="custom-draggable-item">
           <div class="custom-line-icon option-drag">
-            <i class="icon-ym icon-ym-darg" />
+            <i class="icon-ym icon-ym-darg"></i>
           </div>
           <p class="custom-line-value">{{ element.label }}</p>
           <div class="close-btn custom-line-icon" @click="activeData.footerBtnsList.splice(index, 1)" v-if="index > 1">
-            <i class="icon-ym icon-ym-btn-clearn" />
+            <i class="icon-ym icon-ym-btn-clearn"></i>
           </div>
           <div class="edit-btn custom-line-icon" @click="editBtnConfig(element)">
-            <i class="icon-ym icon-ym-btn-edit" />
+            <i class="icon-ym icon-ym-btn-edit"></i>
           </div>
         </div>
       </template>

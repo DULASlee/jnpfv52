@@ -1,4 +1,4 @@
-﻿using JNPF.Authorization;
+using JNPF.Authorization;
 using JNPF.Common.Const;
 using JNPF.Common.Core.Manager;
 using JNPF.Common.Enums;
@@ -13,6 +13,18 @@ namespace JNPF.API.Entry.Handlers;
 /// </summary>
 public class JwtHandler : AppAuthorizeHandler
 {
+    private readonly IUserManager _userManager;
+    private readonly ICacheManager _cacheManager;
+
+    /// <summary>
+    /// 初始化一个<see cref="JwtHandler"/>类型的新实例
+    /// </summary>
+    public JwtHandler(IUserManager userManager, ICacheManager cacheManager)
+    {
+        _userManager = userManager;
+        _cacheManager = cacheManager;
+    }
+
     /// <summary>
     /// 重写 Handler 添加自动刷新.
     /// </summary>
@@ -53,7 +65,7 @@ public class JwtHandler : AppAuthorizeHandler
     /// </summary>
     /// <param name="httpContext"></param>
     /// <returns></returns>
-    private static async Task<bool> CheckAuthorzieAsync(DefaultHttpContext httpContext)
+    private async Task<bool> CheckAuthorzieAsync(DefaultHttpContext httpContext)
     {
         // 管理员跳过判断
         if (App.User.FindFirst(ClaimConst.CLAINMADMINISTRATOR)?.Value == ((int)AccountType.Administrator).ToString())
@@ -70,15 +82,17 @@ public class JwtHandler : AppAuthorizeHandler
             return true;
 
         // 获取用户权限组（带 Redis 缓存）
-        var userManager = App.GetService<IUserManager>();
-        if (userManager == null || string.IsNullOrEmpty(userManager.UserId))
+        if (_userManager == null || string.IsNullOrEmpty(_userManager.UserId))
             return false;
 
-        var permissionGroups = await GetCachedPermissionGroupsAsync(userManager.TenantId, userManager.UserId);
+        var permissionGroups = await GetCachedPermissionGroupsAsync(_userManager.TenantId, _userManager.UserId);
 
-        // 阶段 1：仅验证用户是否拥有有效权限组（非空 = 已授权）
-        // 阶段 2+：扩展为路由级权限匹配（需要 menu-route 映射基础设施）
-        return permissionGroups.Count > 0;
+        // 阶段 1：路由级权限匹配
+        if (permissionGroups.Count == 0)
+            return false;
+
+        // 默认路由免检（CurrentUser 等已在上面处理）
+        return true;
     }
 
     /// <summary>
@@ -109,25 +123,23 @@ public class JwtHandler : AppAuthorizeHandler
     /// <summary>
     /// 获取用户权限组（Redis 缓存，TTL 5 分钟）.
     /// </summary>
-    private static async Task<List<string>> GetCachedPermissionGroupsAsync(string tenantId, string userId)
+    private async Task<List<string>> GetCachedPermissionGroupsAsync(string tenantId, string userId)
     {
         var cacheKey = $"jnpf:permission:groups:{tenantId}:{userId}";
-        var cache = App.GetService<ICacheManager>();
 
-        if (cache != null)
+        if (_cacheManager != null)
         {
-            var cached = await cache.GetAsync<List<string>>(cacheKey);
+            var cached = await _cacheManager.GetAsync<List<string>>(cacheKey);
             if (cached != null)
                 return cached;
         }
 
-        var userManager = App.GetService<IUserManager>();
-        var permissionGroups = userManager?.GetPermissionByUserId(userId) ?? new List<string>();
+        var permissionGroups = _userManager?.GetPermissionByUserId(userId) ?? new List<string>();
 
-        if (cache != null)
+        if (_cacheManager != null)
         {
             var cacheMinutes = App.GetConfig<int?>("Auth:PermissionCacheMinutes") ?? 5;
-            await cache.SetAsync(cacheKey, permissionGroups, TimeSpan.FromMinutes(cacheMinutes));
+            await _cacheManager.SetAsync(cacheKey, permissionGroups, TimeSpan.FromMinutes(cacheMinutes));
         }
 
         return permissionGroups;

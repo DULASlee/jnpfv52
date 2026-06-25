@@ -1,19 +1,46 @@
-# JNPF-v52 推进登记（Superpowers 阶段完成时追加）
-version: 1
-project: JNPF-v52
-entries:
-  - id: knowledge-base-infra-20260531
-    date: 2026-05-31
-    phase: 知识库基础设施（施工包阶段0-5）
-    status: completed
-    deliverables:
-      - openspec/adr/ADR-001-reject-local-vector-rag.md
-      - .cursor/rules/knowledge-base.mdc
-      - scripts/update-openspec-index.mjs
-      - scripts/check-knowledge-freshness.mjs
-      - scripts/refresh-knowledge.mjs
-      - .githooks/post-commit
-      - openspec/changes/add-logging-audit-spec/
-    decisions:
-      - 驳回 ChromaDB 向量 RAG，改用原生工具链知识库
-    next: 启动切面1日志系统施工（executing-plans）
+# JNPF V5.2 Progress Registry
+# Canonical reference for all completed milestones and current state.
+
+version: "7.1"
+last_updated: "2026-06-15"
+current_phase: "阶段二（F-6b）启动前"
+current_focus:
+  - "Sprint 0-C（V7.1 POC-A~F）"
+  - "阶段二 F-6b 3D 数字孪生"
+  - "数据轨 DS-0 预研（35 号）"
+
+canonical_tests:
+  frontend_total: 158
+  frontend_files: 11
+  backend_total: 3
+  backend_files: 1
+
+milestones:
+  F-0: { status: completed, tag: null, description: "eval/Function 清零 (PC+DataV)" }
+  F-1: { status: completed, tag: v5.2-ai-ready-m1, description: "IR 类型系统" }
+  F-2: { status: completed, tag: v5.2-ai-ready-m2, description: "表达式引擎" }
+  F-3: { status: completed, tag: v5.2-ai-ready-m3, description: "组件注册表" }
+  F-4: { status: completed, tag: v5.2-ai-ready-m4, description: "Vue3 编译器" }
+  F-5: { status: completed, tag: v5.2-ai-ready-m5, description: "端到端验证" }
+  F-6a: { status: completed, tag: v5.2-dashboard-m1, description: "大屏编译器基础" }
+  F-6b: { status: pending, description: "3D 数字孪生 VIP · 阶段二" }
+  ADR-016: { status: completed, description: "模块化单体架构决策" }
+  ADR-017: { status: completed, description: "新旧代码生成器共存" }
+  ADR-018: { status: completed, description: "UniApp UI 库选型" }
+
+sprint_0a:
+  status: completed
+  tag: v5.2-gate-p0-complete
+  archived: "_archived-非施工依据/14、Sprint0前置阶段-已完成摘要（ARCH-004）.md"
+
+sprint_0b:
+  status: completed
+  tag: v5.2-ai-infrastructure-m0
+
+sprint_0c:
+  status: pending
+  tag: v7.0-poc-complete
+  reference: "36、全栈开发总计划 §2.3"
+
+next_milestone: "F-6b 阶段二 或 Sprint 0-C 全绿"
+doc_entry: "docs/架构迭代/7、AI原生低代码框架/00、文档库索引.md"

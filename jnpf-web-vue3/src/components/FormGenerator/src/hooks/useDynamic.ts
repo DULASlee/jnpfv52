@@ -33,7 +33,7 @@ export function useDynamic(activeData, initFieldData?) {
     return '';
   });
   const formFieldsOptions = computed(() => {
-    let list: any[] = [];
+    const list: any[] = [];
     const loop = (data, parent?) => {
       if (!data) return;
       if (data.__config__ && isIncludesTable(data) && data.__config__.children && Array.isArray(data.__config__.children)) {
@@ -55,7 +55,7 @@ export function useDynamic(activeData, initFieldData?) {
   });
 
   const formFieldsSelectOptions = computed(() => {
-    let list: any[] = [];
+    const list: any[] = [];
     const loop = (data, parent?) => {
       if (!data) return;
       if (data.__config__ && isIncludesTable(data) && data.__config__.children && Array.isArray(data.__config__.children)) {
@@ -135,9 +135,9 @@ export function useDynamic(activeData, initFieldData?) {
   };
   const onRelationFieldChange = (val, row) => {
     if (!val) return (row.jnpfKey = '');
-    let list = unref(formFieldsOptions).filter(o => o.id === val);
+    const list = unref(formFieldsOptions).filter(o => o.id === val);
     if (!list.length) return (row.jnpfKey = '');
-    let item = list[0];
+    const item = list[0];
     row.jnpfKey = item.__config__.jnpfKey;
   };
   const onMultipleChange = val => {

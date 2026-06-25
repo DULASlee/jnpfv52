@@ -110,7 +110,7 @@
               </div>
             </a-col>
             <a-col :span="1" class="text-center">
-              <i class="icon-ym icon-ym-btn-clearn" @click="delItem(index, childIndex)" />
+              <i class="icon-ym icon-ym-btn-clearn" @click="delItem(index, childIndex)"></i>
             </a-col>
           </a-row>
         </div>
@@ -150,7 +150,7 @@
     'getFormFieldList',
     'beforeNodeOptions',
   ]);
-  defineOptions({ name: 'conditionNode', inheritAttrs: false });
+  defineOptions({ name: 'ConditionNode', inheritAttrs: false });
   defineExpose({ getContent });
   const [registerFormulaModal, { openModal: openFormulaModal }] = useModal();
   const conditionTypeOptions = [

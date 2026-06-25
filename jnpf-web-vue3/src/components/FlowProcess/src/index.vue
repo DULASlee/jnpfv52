@@ -8,7 +8,7 @@
         <template #item="{ element, index }">
           <div class="left-item" @click="changeFlow(element)" :class="{ active: activeConf.flowId === element.flowId }">
             <div class="option-drag">
-              <i class="icon-ym icon-ym-darg" />
+              <i class="icon-ym icon-ym-darg"></i>
             </div>
             <p class="name">{{ element.fullName }}</p>
             <a-dropdown>

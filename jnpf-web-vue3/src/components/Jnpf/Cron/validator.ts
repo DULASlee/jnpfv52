@@ -7,7 +7,7 @@ const cronRule: ValidatorRule = {
     if (!value) {
       return Promise.resolve();
     }
-    const values: string[] = value.split(' ').filter((item) => !!item);
+    const values: string[] = value.split(' ').filter(item => !!item);
     if (values.length > 7) {
       return Promise.reject('Cron表达式最多7项！');
     }
@@ -25,7 +25,7 @@ const cronRule: ValidatorRule = {
           yearValues = [year];
         }
         // 判断是否都是数字
-        const checkYear = yearValues.some((item) => isNaN(Number(item)));
+        const checkYear = yearValues.some(item => isNaN(Number(item)));
         if (checkYear) {
           return Promise.reject('Cron表达式参数[年]错误：' + year);
         }

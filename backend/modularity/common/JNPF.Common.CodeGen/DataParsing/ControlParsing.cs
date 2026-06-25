@@ -259,7 +259,7 @@ public class ControlParsing : ITransient
                                     Scoped.Create((_, scope) =>
                                     {
                                         var services = scope.ServiceProvider;
-                                        var _runService = App.GetService<IRunService>(services);
+                                        var _runService = (IRunService)services.GetService(typeof(IRunService));
                                         var res = _runService.GetRelationFormList(relationFormModel, listQueryInput).WaitAsync(TimeSpan.FromMinutes(2)).Result;
                                         _cacheManager.Set(redisName, res.list.ToList(), TimeSpan.FromMinutes(10)); // 缓存10分钟
                                     });

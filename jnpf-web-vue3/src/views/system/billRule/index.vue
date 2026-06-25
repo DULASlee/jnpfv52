@@ -5,7 +5,7 @@
         <BasicTable @register="registerTable">
           <template #tableTitle>
             <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" @click="addOrUpdateHandle()">{{ t('common.addText') }}</a-button>
-            <jnpf-upload-btn url="/api/system/BillRule/Actions/Import" accept=".bb" @on-success="reload"></jnpf-upload-btn>
+            <jnpf-upload-btn url="/api/system/BillRule/Actions/Import" accept=".bb" @on-success="reload" />
           </template>
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'enabledMark'">
@@ -32,7 +32,7 @@
   import { useBaseStore } from '/@/store/modules/base';
   import Form from './Form.vue';
 
-  defineOptions({ name: 'system-task' });
+  defineOptions({ name: 'SystemTask' });
 
   const { t } = useI18n();
   const baseStore = useBaseStore();

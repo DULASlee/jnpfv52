@@ -13,11 +13,44 @@ const BASE_FORM_SHORT_LINK_PATH = PageEnum.BASE_FORM_SHORT_LINK;
 
 const whitePathList: PageEnum[] = [LOGIN_PATH, SSO_PATH, BASE_FORM_SHORT_LINK_PATH];
 
+// Founder path prefix (D-4: 2026-06-20 — TOTP session binding)
+const FOUNDER_PATH_PREFIX = '/studio/founder';
+const FOUNDER_TOTP_PATH = '/studio/founder/totp-verify';
+const FOUNDER_SESSION_KEY = 'founder_totp_session';
+
+function isFounderSessionValid(): boolean {
+  try {
+    const raw = localStorage.getItem(FOUNDER_SESSION_KEY);
+    if (!raw) return false;
+    const session = JSON.parse(raw);
+    return session?.expiresAt && Date.now() < session.expiresAt;
+  } catch {
+    return false;
+  }
+}
+
 export function createPermissionGuard(router: Router) {
   const userStore = useUserStoreWithOut();
   const permissionStore = usePermissionStoreWithOut();
   router.beforeEach(async (to, from, next) => {
     const token = userStore.getToken;
+
+    // Founder TOTP guard (D-4): redirect to TOTP verify if session expired/missing
+    if (to.path.startsWith(FOUNDER_PATH_PREFIX) && to.path !== FOUNDER_TOTP_PATH && !isFounderSessionValid()) {
+      next({
+        path: FOUNDER_TOTP_PATH,
+        query: { redirect: to.fullPath },
+        replace: true,
+      });
+      return;
+    }
+
+    // Founder session is valid and navigating to TOTP page → skip to target
+    if (to.path === FOUNDER_TOTP_PATH && isFounderSessionValid()) {
+      const redirect = (to.query.redirect as string) || '/studio/founder/console';
+      next({ path: redirect, replace: true });
+      return;
+    }
 
     if (to.path == '/workFlowDetail' && to.query.token && token != to.query.token) {
       userStore.updateToken(to.query.token as string);

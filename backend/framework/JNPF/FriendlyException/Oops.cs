@@ -194,14 +194,24 @@ public static class Oops
 
         // 获取出错的方法
         var methodIfException = GetEndPointExceptionMethod();
+        IfExceptionAttribute ifExceptionAttribute = null;
 
-        // 获取当前状态码匹配异常特性
-        var ifExceptionAttribute = methodIfException?.IfExceptionAttributes?.FirstOrDefault(u => u.ErrorCode != null && HandleEnumErrorCode(u.ErrorCode).ToString().Equals(errorCode.ToString()));
+        string errorCodeMessage;
+        if (errorCode == null)
+        {
+            // 调用方未提供有效错误码（传入了 null 或无法解析的值），使用框架默认错误消息
+            errorCodeMessage = _friendlyExceptionSettings.DefaultErrorMessage;
+        }
+        else
+        {
+            // 获取当前状态码匹配异常特性
+            ifExceptionAttribute = methodIfException?.IfExceptionAttributes?.FirstOrDefault(u => u.ErrorCode != null && HandleEnumErrorCode(u.ErrorCode)?.ToString() == errorCode.ToString());
 
-        // 获取错误码消息
-        var errorCodeMessage = ifExceptionAttribute == null || string.IsNullOrWhiteSpace(ifExceptionAttribute.ErrorMessage)
-            ? (_errorCodeMessages.GetValueOrDefault(errorCode.ToString()) ?? _friendlyExceptionSettings.DefaultErrorMessage)
-            : ifExceptionAttribute.ErrorMessage;
+            // 获取错误码消息
+            errorCodeMessage = ifExceptionAttribute == null || string.IsNullOrWhiteSpace(ifExceptionAttribute.ErrorMessage)
+                ? (_errorCodeMessages.GetValueOrDefault(errorCode.ToString()) ?? _friendlyExceptionSettings.DefaultErrorMessage)
+                : ifExceptionAttribute.ErrorMessage;
+        }
 
         // 如果所有错误码都获取不到，则找全局 [IfException] 错误
         if (string.IsNullOrWhiteSpace(errorCodeMessage))
@@ -209,8 +219,8 @@ public static class Oops
             errorCodeMessage = methodIfException?.IfExceptionAttributes?.FirstOrDefault(u => u.ErrorCode == null && !string.IsNullOrWhiteSpace(u.ErrorMessage))?.ErrorMessage;
         }
 
-        // 字符串格式化
-        return (errorCode, MontageErrorMessage(errorCodeMessage, errorCode.ToString(), hideErrorCode
+        // 字符串格式化（errorCode 为 null 时 MontageErrorMessage 不展示错误码前缀）
+        return (errorCode, MontageErrorMessage(errorCodeMessage, errorCode?.ToString(), hideErrorCode
             , args != null && args.Length > 0 ? args : ifExceptionAttribute?.Args));
     }
 
@@ -221,6 +231,9 @@ public static class Oops
     /// <returns></returns>
     private static object HandleEnumErrorCode(object errorCode)
     {
+        // null 保护：如果 errorCode 为 null，直接返回 null 走字符串分支
+        if (errorCode == null) return null;
+
         // 获取类型
         var errorType = errorCode.GetType();
 

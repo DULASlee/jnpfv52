@@ -4,6 +4,7 @@
   import { buildUUID } from '/@/utils/uuid';
   import { getScriptFunc, onlineUtils, getDateTimeUnit, getTimeUnit, getParamList } from '/@/utils/jnpf';
   import { dyOptionsList } from '../helper/config';
+  import { safeParseRegex, isValidRegex } from '../helper/regexp';
   import render from '../helper/render';
   import { useGeneratorStore } from '/@/store/modules/generator';
   import { useBaseStore } from '/@/store/modules/base';
@@ -22,13 +23,13 @@
   }
 
   export default defineComponent({
-    name: 'parser',
-    inheritAttrs: false,
-    props: ['formConf'],
-    emits: ['submit'],
+    name: 'Parser',
     components: {
       render,
     },
+    inheritAttrs: false,
+    props: ['formConf'],
+    emits: ['submit'],
 
     setup(props, { expose, emit }) {
       const generatorStore = useGeneratorStore();
@@ -524,19 +525,12 @@
             config.regList.push(required);
           }
           state.formRules[cur.__vModel__] = config.regList.map(item => {
-            item.pattern && isRegExp(item.pattern) && (item.pattern = eval(item.pattern));
+            item.pattern && isValidRegex(item.pattern) && (item.pattern = safeParseRegex(item.pattern));
             item.trigger = config.trigger || 'blur';
             return item;
           });
           if (config.children && config.jnpfKey !== 'table') buildRules(config.children);
         });
-      }
-      function isRegExp(val) {
-        try {
-          return Object.prototype.toString.call(eval(val)) === '[object RegExp]';
-        } catch {
-          return false;
-        }
       }
       function buildOptions(componentList) {
         componentList.forEach(cur => {

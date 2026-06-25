@@ -1,12 +1,5 @@
 <template>
-  <transition-group
-    class="h-full w-full"
-    v-bind="$attrs"
-    ref="elRef"
-    :name="transitionName"
-    :tag="tag"
-    mode="out-in"
-  >
+  <transition-group class="h-full w-full" v-bind="$attrs" ref="elRef" :name="transitionName" :tag="tag" mode="out-in">
     <div key="component" v-if="isInit">
       <slot :loading="loading"></slot>
     </div>
@@ -52,7 +45,7 @@
     direction: {
       type: String,
       default: 'vertical',
-      validator: (v) => ['vertical', 'horizontal'].includes(v),
+      validator: v => ['vertical', 'horizontal'].includes(v),
     },
     /**
      * The label name of the outer container that wraps the component

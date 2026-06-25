@@ -1,0 +1,34 @@
+{
+  "id": "GOLDEN-02",
+  "domain": "零售",
+  "difficulty": 5,
+  "requirement": "我需要一个进销存管理系统。包含商品管理（名称、条码、分类、价格）、采购入库（供应商、入库单、数量）、销售出库（客户、出库单、金额）、库存盘点。采购入库后自动更新库存，库存低于阈值自动提醒。需要一个库存总览仪表盘，显示库存周转率和滞销商品。",
+  "expectedIR": {
+    "modules": [
+      { "nodeType": "ModuleDefinition", "moduleName": "商品管理" },
+      { "nodeType": "ModuleDefinition", "moduleName": "采购管理" },
+      { "nodeType": "ModuleDefinition", "moduleName": "销售管理" },
+      { "nodeType": "ModuleDefinition", "moduleName": "库存管理" }
+    ],
+    "tables": [
+      { "nodeType": "TableDefinition", "tableName": "Product" },
+      { "nodeType": "TableDefinition", "tableName": "PurchaseOrder" },
+      { "nodeType": "TableDefinition", "tableName": "SalesOrder" },
+      { "nodeType": "TableDefinition", "tableName": "Inventory" }
+    ],
+    "workflows": [
+      { "nodeType": "WorkflowStep", "name": "采购审批流" },
+      { "nodeType": "WorkflowStep", "name": "库存预警触发" }
+    ],
+    "rules": [
+      { "nodeType": "RuleNode", "description": "库存低于阈值→自动提醒" },
+      { "nodeType": "RuleNode", "description": "入库→自动更新库存" }
+    ],
+    "pages": { "nodeType": "Component", "minCount": 6 },
+    "dashboard": { "nodeType": "DashboardConfig", "requiredCharts": ["库存周转率", "滞销商品TOP10"] }
+  },
+  "evalDimensions": ["schema_compliance", "semantic_accuracy", "ux_score"],
+  "minPassScore": 0.80,
+  "created": "2026-06-20",
+  "author": "高级架构师（代玛维思）"
+}

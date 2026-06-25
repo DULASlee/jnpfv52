@@ -69,7 +69,7 @@
           />
 
           <div class="p-2">
-            <CollapseTransition enable={props.canExpan}>
+            <CollapseTransition {...({ enable: props.canExpan } as any)}>
               {props.loading ? (
                 <Skeleton active={props.loading} />
               ) : (

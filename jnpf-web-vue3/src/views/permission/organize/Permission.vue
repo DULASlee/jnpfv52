@@ -4,7 +4,7 @@
       <a-tabs v-model:activeKey="activeKey" tab-position="left" class="common-left-tabs !p-10px permission-contain" destroyInactiveTabPane>
         <a-tab-pane class="permission" v-for="tab in groupList" :key="tab.id" :tab="tab.fullName">
           <a-tabs class="tabs-box" v-model:activeKey="subActiveKey" @change="initData">
-            <a-tab-pane v-for="tab in permissionList" :key="tab.id" :tab="tab.fullName"> </a-tab-pane>
+            <a-tab-pane v-for="tab in permissionList" :key="tab.id" :tab="tab.fullName" />
           </a-tabs>
           <div class="permission-tree">
             <BasicTree :treeData="treeData" :loading="loading" defaultExpandAll :key="key" />

@@ -28,7 +28,7 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import Form from './Form.vue';
 
-  defineOptions({ name: 'msgCenter-accountConfig-shortMsg' });
+  defineOptions({ name: 'MsgCenterAccountConfigShortMsg' });
 
   const { t } = useI18n();
   const { createMessage } = useMessage();

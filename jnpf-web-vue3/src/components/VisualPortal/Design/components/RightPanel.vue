@@ -1,8 +1,8 @@
 <template>
   <div class="right-box">
     <a-tabs v-model:activeKey="activeKey" :tabBarGutter="10" class="average-tabs">
-      <a-tab-pane :key="1" tab="控件属性"></a-tab-pane>
-      <a-tab-pane :key="2" tab="门户属性"></a-tab-pane>
+      <a-tab-pane :key="1" tab="控件属性" />
+      <a-tab-pane :key="2" tab="门户属性" />
     </a-tabs>
     <div class="filed-box">
       <ScrollContainer class="p-15px !pt-0px">

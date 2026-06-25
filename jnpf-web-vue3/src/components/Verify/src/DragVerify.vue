@@ -84,7 +84,7 @@
 
       watch(
         () => state.isPassing,
-        (isPassing) => {
+        isPassing => {
           if (isPassing) {
             const { startTime, endTime } = state;
             const time = (endTime - startTime) / 1000;
@@ -248,19 +248,9 @@
             cls.push('to-left');
           }
           return (
-            <div
-              class={cls}
-              onMousedown={handleDragStart}
-              onTouchstart={handleDragStart}
-              style={unref(getActionStyleRef)}
-              ref={actionElRef}
-            >
+            <div class={cls} onMousedown={handleDragStart} onTouchstart={handleDragStart} style={unref(getActionStyleRef)} ref={actionElRef}>
               {getSlot(slots, 'actionIcon', isPassing) ||
-                (isPassing ? (
-                  <CheckOutlined class={`darg-verify-action__icon`} />
-                ) : (
-                  <DoubleRightOutlined class={`darg-verify-action__icon`} />
-                ))}
+                (isPassing ? <CheckOutlined class={`darg-verify-action__icon`} /> : <DoubleRightOutlined class={`darg-verify-action__icon`} />)}
             </div>
           );
         };
@@ -274,8 +264,7 @@
             onTouchmove={handleDragMoving}
             onMouseleave={handleDragOver}
             onMouseup={handleDragOver}
-            onTouchend={handleDragOver}
-          >
+            onTouchend={handleDragOver}>
             {renderBar()}
             {renderContent()}
             {renderAction()}

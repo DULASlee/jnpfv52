@@ -6,6 +6,7 @@
   import type { TableActionType } from '/@/components/Table';
   import { Col, Form } from 'ant-design-vue';
   import { JnpfDivider } from '/@/components/Jnpf';
+  import { BasicHelp } from '/@/components/Basic';
   import { componentMap } from '../componentMap';
   import { isBoolean, isFunction, isNull, isArray } from '/@/utils/is';
   import { getSlot } from '/@/utils/helper/tsxHelper';

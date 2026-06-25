@@ -31,7 +31,7 @@
   import { useBaseStore } from '/@/store/modules/base';
   import Form from './Form.vue';
 
-  defineOptions({ name: 'dynamic-dictionary' });
+  defineOptions({ name: 'DynamicDictionary' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

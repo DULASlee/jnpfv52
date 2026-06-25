@@ -26,7 +26,7 @@ export default defineComponent({
     expose({ tableRef });
     function buildVModel(dataObject, defaultValue) {
       dataObject.value = defaultValue;
-      let obj = dataObject.on ?? {};
+      const obj = dataObject.on ?? {};
       obj['update:value'] = val => {
         emit('update:value', val);
       };

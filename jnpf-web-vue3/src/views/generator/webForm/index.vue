@@ -31,7 +31,7 @@
   import DownloadModal from '../DownloadModal.vue';
   import PreviewModal from '../PreviewModal.vue';
 
-  defineOptions({ name: 'generator-webForm' });
+  defineOptions({ name: 'GeneratorWebForm' });
 
   const { createMessage } = useMessage();
   const baseStore = useBaseStore();

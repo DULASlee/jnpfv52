@@ -2,7 +2,7 @@
   <BasicPopup v-bind="$attrs" @register="registerPopup" :title="title" class="full-popup">
     <template v-if="groupList.length">
       <a-tabs class="tabs-box" v-model:activeKey="activeKey">
-        <a-tab-pane v-for="tab in groupList" :key="tab.id" :tab="tab.fullName"></a-tab-pane>
+        <a-tab-pane v-for="tab in groupList" :key="tab.id" :tab="tab.fullName" />
       </a-tabs>
       <ScrollContainer class="px-20px">
         <template v-for="item in authorizeList">

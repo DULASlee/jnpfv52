@@ -65,7 +65,7 @@
             <a-table-summary-cell v-for="(item, index) in getColumnSum" :key="index" :index="index + 1" :align="getSummaryCellAlign(index)">
               {{ item }}
             </a-table-summary-cell>
-            <a-table-summary-cell :index="getColumnSum.length + 1" v-if="!disabled"></a-table-summary-cell>
+            <a-table-summary-cell :index="getColumnSum.length + 1" v-if="!disabled" />
           </a-table-summary-row>
         </a-table-summary>
       </template>
@@ -576,13 +576,23 @@
     if (Array.isArray(value)) return value.length > 0;
     return true;
   }
+  function safeParseRegex(pattern) {
+    if (typeof pattern !== 'string') return pattern;
+    const match = pattern.match(/^\/(.+)\/([gimsuyd]*)$/);
+    if (!match) return null;
+    try {
+      return new RegExp(match[1], match[2]);
+    } catch {
+      return null;
+    }
+  }
   function checkRegData(col) {
     let res = true;
     for (let i = 0; i < col.regList.length; i++) {
       const item = col.regList[i];
       if (item.pattern) {
-        let pattern = eval(item.pattern);
-        if (col.value && !pattern.test(col.value)) {
+        let pattern = safeParseRegex(item.pattern);
+        if (pattern && col.value && !pattern.test(col.value)) {
           res = false;
           col.regErrorText = item.message;
           break;

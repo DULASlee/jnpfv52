@@ -32,7 +32,7 @@
       :data="getUploadData"
       v-if="!detailed">
       <div>
-        <plus-outlined></plus-outlined>
+        <plus-outlined />
         <div class="ant-upload-text" v-if="buttonText">{{ props.buttonText }}</div>
       </div>
     </a-upload>
@@ -47,7 +47,7 @@
   import { computed, ref, unref, watch } from 'vue';
   import { uploadImgProps, imgItem, units } from './props';
   import { useGlobSetting } from '/@/hooks/setting';
-  import { getToken } from '/@/utils/auth';
+  import { getAuthHeaders } from '/@/utils/auth';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { createImgPreview } from '/@/components/Preview/index';
 
@@ -63,7 +63,7 @@
   const formItemContext = Form.useInjectFormItemContext();
 
   const getAction = computed(() => globSetting.uploadUrl + '/' + props.type);
-  const getHeaders = computed(() => ({ Authorization: getToken() as string }));
+  const getHeaders = computed(() => getAuthHeaders());
   const getUploadData = computed(() => ({ pathType: props.pathType, isAccount: props.isAccount, folder: props.folder }));
 
   watch(

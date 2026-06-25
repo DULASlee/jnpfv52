@@ -13,7 +13,7 @@
       </div>
     </template>
     <div class="basic-content">
-      <div ref="printRrf" class="print-content" v-html="printData" />
+      <div ref="printRrf" class="print-content" v-html="printData"></div>
     </div>
   </BasicModal>
 </template>

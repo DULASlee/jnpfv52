@@ -14,7 +14,7 @@
   import { reactive } from 'vue';
   import { Chart } from 'highcharts-vue';
 
-  defineOptions({ name: 'extend-graphDemo-highchartsArea' });
+  defineOptions({ name: 'ExtendGraphDemoHighchartsArea' });
 
   const options = reactive({
     accessibility: { enabled: false },
@@ -46,4 +46,3 @@
     ],
   });
 </script>
-

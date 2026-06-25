@@ -9,7 +9,7 @@
   import { reactive } from 'vue';
   import { Chart } from '/@/components/Chart';
 
-  defineOptions({ name: 'extend-graphDemo-echartsCandlestick' });
+  defineOptions({ name: 'ExtendGraphDemoEchartsCandlestick' });
 
   const upColor = '#ec0000';
   const upBorderColor = '#8A0000';

@@ -141,7 +141,7 @@
                           <span>上次登录信息提示</span>
                         </template>
                         <template #extra>
-                          <i class="icon-ym icon-ym-nav-close card-extra" />
+                          <i class="icon-ym icon-ym-nav-close card-extra"></i>
                         </template>
                         <div class="card-item">
                           <p>时间：2018-10-17 12:40</p>
@@ -469,7 +469,7 @@
     dingLoading: boolean;
   }
 
-  defineOptions({ name: 'system-sysConfig' });
+  defineOptions({ name: 'SystemSysConfig' });
 
   const state = reactive<State>({
     baseForm: {},

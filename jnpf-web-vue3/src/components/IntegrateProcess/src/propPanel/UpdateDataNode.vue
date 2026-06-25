@@ -10,7 +10,7 @@
           <div class="condition-main">
             <a-row :gutter="8">
               <a-col :span="7">选择目标表单字段</a-col>
-              <a-col :span="3"></a-col>
+              <a-col :span="3" />
               <a-col :span="14">设置触发表单字段或自定义值 </a-col>
             </a-row>
             <a-row :gutter="8" v-for="(item, index) in formConf.transferList" :key="index" class="mt-10px">
@@ -40,7 +40,7 @@
                 <a-input v-model:value="item.sourceValue" placeholder="请输入" allowClear v-if="item.sourceType === 2" />
               </a-col>
               <a-col :span="1" class="text-center" v-if="!item.required">
-                <i class="icon-ym icon-ym-btn-clearn" @click="delTransferItem(index)" />
+                <i class="icon-ym icon-ym-btn-clearn" @click="delTransferItem(index)"></i>
               </a-col>
             </a-row>
             <span class="link-text mt-10px inline-block" @click="addTransferItem()"><i class="icon-ym icon-ym-btn-add text-14px mr-4px"></i>添加字段</span>
@@ -93,7 +93,7 @@
                     :fieldNames="{ options: 'options1' }" />
                 </a-col>
                 <a-col :span="1" class="text-center">
-                  <i class="icon-ym icon-ym-btn-clearn" @click="delItem(index, childIndex)" />
+                  <i class="icon-ym icon-ym-btn-clearn" @click="delItem(index, childIndex)"></i>
                 </a-col>
               </a-row>
             </div>
@@ -117,7 +117,7 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import ConditionMain from '/@/components/ColumnDesign/src/components/ConditionMain.vue';
 
-  defineOptions({ name: 'addDataNode', inheritAttrs: false });
+  defineOptions({ name: 'AddDataNode', inheritAttrs: false });
   defineExpose({ initCondition, submitCondition });
   const props = defineProps(['formConf', 'integrateType', 'formFieldsOptions', 'usedFormItems', 'getFormFieldList', 'flowOptions']);
   const conditionMainRef = ref();

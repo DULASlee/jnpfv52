@@ -1,9 +1,9 @@
 <template>
   <div class="right-board common-board">
     <a-tabs v-model:activeKey="activeKey" :tabBarGutter="10" class="average-tabs">
-      <a-tab-pane key="field" tab="组件属性"></a-tab-pane>
-      <a-tab-pane key="style" tab="组件样式"></a-tab-pane>
-      <a-tab-pane key="form" tab="表单属性"></a-tab-pane>
+      <a-tab-pane key="field" tab="组件属性" />
+      <a-tab-pane key="style" tab="组件样式" />
+      <a-tab-pane key="form" tab="表单属性" />
     </a-tabs>
     <div class="field-box" v-if="activeData?.__config__ && activeData.__config__.jnpfKey">
       <ScrollContainer>
@@ -63,8 +63,7 @@
                     :options="getAllTable.map(o => ({ ...o, fullName: o.tableName ? o.table + '(' + o.tableName + ')' : o.table }))"
                     :fieldNames="{ value: 'table' }"
                     showSearch
-                    disabled>
-                  </jnpf-select>
+                    disabled />
                 </a-form-item>
                 <a-form-item label="控件字段">
                   <jnpf-select
@@ -168,7 +167,7 @@
         <FormAttrPane v-bind="getBindValue" :printTplOptions="printTplOptions" v-show="activeKey === 'form'" />
       </ScrollContainer>
     </div>
-    <FieldModal @register="registerFieldModal" @updateOptions="updateFieldOptions" />
+    <FieldModal @register="registerFieldModal" @update-options="updateFieldOptions" />
     <FormScript @register="registerScriptModal" :treeTitle="formInfo.fullName" :drawingList="drawingList" @confirm="updateScript" />
   </div>
 </template>

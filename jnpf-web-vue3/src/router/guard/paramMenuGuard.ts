@@ -19,8 +19,8 @@ export function createParamMenuGuard(router: Router) {
       return;
     }
 
-    let menus: Menu[] = permissionStore.getMenuList;
-    menus.forEach((item) => configureDynamicParamsMenu(item, to.params));
+    const menus: Menu[] = permissionStore.getMenuList;
+    menus.forEach(item => configureDynamicParamsMenu(item, to.params));
 
     next();
   });

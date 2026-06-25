@@ -1585,4 +1585,3 @@ export const chartComponents = [
     maxH: 20,
   },
 ];
-

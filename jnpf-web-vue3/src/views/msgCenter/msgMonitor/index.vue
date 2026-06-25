@@ -29,7 +29,7 @@
   import Detail from './Detail.vue';
   import dayjs from 'dayjs';
 
-  defineOptions({ name: 'msgCenter-msgMonitor' });
+  defineOptions({ name: 'MsgCenterMsgMonitor' });
 
   const { t } = useI18n();
   const baseStore = useBaseStore();

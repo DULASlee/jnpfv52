@@ -2,17 +2,12 @@ import type { ComputedRef, Ref } from 'vue';
 import { nextTick, unref } from 'vue';
 import { warn } from '/@/utils/log';
 
-export function useTableScrollTo(
-  tableElRef: Ref<ComponentRef>,
-  getDataSourceRef: ComputedRef<Recordable[]>,
-) {
+export function useTableScrollTo(tableElRef: Ref<ComponentRef>, getDataSourceRef: ComputedRef<Recordable[]>) {
   let bodyEl: HTMLElement | null;
 
   async function findTargetRowToScroll(targetRowData: Recordable) {
     const { id } = targetRowData;
-    const targetRowEl: HTMLElement | null | undefined = bodyEl?.querySelector(
-      `[data-row-key="${id}"]`,
-    );
+    const targetRowEl: HTMLElement | null | undefined = bodyEl?.querySelector(`[data-row-key="${id}"]`);
     //Add a delay to get new dataSource
     await nextTick();
     bodyEl?.scrollTo({
@@ -42,7 +37,7 @@ export function useTableScrollTo(
     } else if (pos === 'bottom') {
       findTargetRowToScroll(dataSource[dataSource.length - 1]);
     } else {
-      const targetRowData = dataSource.find((data) => data.id === pos);
+      const targetRowData = dataSource.find(data => data.id === pos);
       if (targetRowData) {
         findTargetRowToScroll(targetRowData);
       } else {

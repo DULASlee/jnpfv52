@@ -24,7 +24,7 @@ export function useTable(activeData) {
     }
     if (!columnData.length) return [];
     const columnList = columnData.map((o, i) => {
-      let newObj: any = {
+      const newObj: any = {
         title: o.fullName,
         dataIndex: o.filedName,
         key: o.filedName,
@@ -87,7 +87,7 @@ export function useTable(activeData) {
     val => {
       nextTick(() => {
         const tableEl = tableElRef.value?.$el;
-        let bodyEl = tableEl?.querySelector('.ant-table-body');
+        const bodyEl = tableEl?.querySelector('.ant-table-body');
         if (bodyEl) bodyEl!.style.height = `${val - (activeData.option.showHeader ? headerHeight.value : 0)}px`;
       });
     },

@@ -13,17 +13,17 @@ namespace JNPF.Extras.EventBus.Outbox;
 /// </summary>
 public class EventOutboxDispatcher : BackgroundService
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<EventOutboxDispatcher> _logger;
     private readonly Channel<EventOutboxMessage> _channel;
     private const int BatchSize = 50;
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
 
     public EventOutboxDispatcher(
-        IServiceProvider serviceProvider,
+        IServiceScopeFactory serviceScopeFactory,
         ILogger<EventOutboxDispatcher> logger)
     {
-        _serviceProvider = serviceProvider;
+        _serviceScopeFactory = serviceScopeFactory;
         _logger = logger;
         _channel = Channel.CreateBounded<EventOutboxMessage>(new BoundedChannelOptions(1000)
         {
@@ -80,7 +80,7 @@ public class EventOutboxDispatcher : BackgroundService
 
     private async Task ProcessPendingAsync(CancellationToken stoppingToken)
     {
-        using var scope = _serviceProvider.CreateScope();
+        using var scope = _serviceScopeFactory.CreateScope();
         var store = scope.ServiceProvider.GetRequiredService<SqlSugarEventOutboxStore>();
         var publisher = scope.ServiceProvider.GetRequiredService<IEventPublisher>();
 

@@ -7,7 +7,7 @@
 <script lang="ts" setup>
   import { ref, computed, onMounted } from 'vue';
   import { isUrl } from '/@/utils/is';
-  import { getToken } from '/@/utils/auth';
+  import { getRawToken } from '/@/utils/auth';
   import { encryptByBase64 } from '/@/utils/cipher';
   import { useGlobSetting } from '/@/hooks/setting';
 
@@ -36,13 +36,13 @@
       let propertyJson = props.propertyJson ? JSON.parse(props.propertyJson) : null,
         moduleId = '';
       if (propertyJson) moduleId = propertyJson.moduleId || '';
-      path = `${globSetting.dataVUrl}view/${moduleId}?token=${getToken()}`;
+      path = `${globSetting.dataVUrl}view/${moduleId}?token=${getRawToken()}`;
     }
     if (props.type == 7 || props.linkType == '2') {
       if (props.linkTarget === '_self') {
         path = `/externalLink?href=${encodeURIComponent(encryptByBase64(props.urlAddress))}`;
       } else {
-        path = props.urlAddress.replace(/\${dataV}/g, globSetting.dataVUrl).replace(/\${jnpfToken}/g, getToken() as string);
+        path = props.urlAddress.replace(/\${dataV}/g, globSetting.dataVUrl).replace(/\${jnpfToken}/g, getRawToken());
       }
     }
     to.value = path;

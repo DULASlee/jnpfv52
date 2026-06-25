@@ -139,12 +139,12 @@
         <a-card :hoverable="item.shadow === 'hover'" :size="formConf.size">
           <template #title v-if="item.header">{{ item.header }}<BasicHelp :text="getConfig.tipLabel" v-if="getConfig.tipLabel" /></template>
           <a-row>
-            <Item v-for="(childItem, childIndex) in getConfig.children" v-bind="getBindValue" :key="childIndex" :item="childItem" @toDetail="toDetail" />
+            <Item v-for="(childItem, childIndex) in getConfig.children" v-bind="getBindValue" :key="childIndex" :item="childItem" @to-detail="toDetail" />
           </a-row>
         </a-card>
       </template>
       <a-row v-if="getConfig.jnpfKey === 'row'">
-        <Item v-for="(childItem, childIndex) in getConfig.children" v-bind="getBindValue" :key="childIndex" :item="childItem" @toDetail="toDetail" />
+        <Item v-for="(childItem, childIndex) in getConfig.children" v-bind="getBindValue" :key="childIndex" :item="childItem" @to-detail="toDetail" />
       </a-row>
       <template v-if="getConfig.jnpfKey === 'tab'">
         <a-tabs :type="item.type" :tabPosition="item.tabPosition" :size="formConf.size" v-model:activeKey="getConfig.active">
@@ -155,7 +155,7 @@
                 v-bind="getBindValue"
                 :key="childIndex"
                 :item="childItem"
-                @toDetail="toDetail" />
+                @to-detail="toDetail" />
             </a-row>
           </a-tab-pane>
         </a-tabs>
@@ -169,7 +169,7 @@
                 v-bind="getBindValue"
                 :key="childIndex"
                 :item="childItem"
-                @toDetail="toDetail" />
+                @to-detail="toDetail" />
             </a-row>
           </a-collapse-panel>
         </a-collapse>
@@ -293,7 +293,7 @@
                   v-bind="getBindValue"
                   :key="childIndex"
                   :item="childItem"
-                  @toDetail="toDetail" />
+                  @to-detail="toDetail" />
               </td>
             </tr>
           </tbody>

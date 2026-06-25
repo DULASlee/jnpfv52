@@ -1,0 +1,5 @@
+{
+  "data": {
+    "formData": "{\"fields\":[{\"__vModel__\":\"name\",\"__config__\":{\"label\":\"姓名\",\"tag\":\"JnpfInput\",\"jnpfKey\":\"JnpfInput\",\"required\":true,\"defaultValue\":\"\",\"trigger\":\"blur\",\"regList\":[]},\"placeholder\":\"请输入姓名\",\"on\":{\"change\":\"({ data, formData, setFormData }) => {}\"}},{\"__vModel__\":\"age\",\"__config__\":{\"label\":\"年龄\",\"tag\":\"JnpfInputNumber\",\"jnpfKey\":\"JnpfInputNumber\",\"required\":false,\"defaultValue\":\"\",\"trigger\":\"change\",\"regList\":[{\"pattern\":\"/^\\\\d+$/\",\"message\":\"请输入正确的数字\"}]},\"on\":{\"change\":\"({ data, formData }) => { formData.name = data.value; }\"}}],\"funcs\":{\"onLoad\":\"({ formData, setFormData }) => {}\",\"beforeSubmit\":\"({ formData }) => { return new Promise((resolve) => { resolve(1); }) }\"},\"labelPosition\":\"left\",\"labelWidth\":100,\"size\":\"default\",\"popupType\":\"general\"}"
+  }
+}

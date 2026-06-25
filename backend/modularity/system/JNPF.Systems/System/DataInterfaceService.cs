@@ -30,9 +30,10 @@ using JNPF.Systems.Entitys.System;
 using JNPF.Systems.Interfaces.System;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SqlSugar;
@@ -64,7 +65,7 @@ public class DataInterfaceService : IDataInterfaceService, IDynamicApiController
     private readonly SqlSugarScope _sqlSugarClient;
     private readonly ICacheManager _cacheManager;
     private readonly ITenantManager _tenantManager;
-    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly IServer _server;
     private string _configId = App.GetOptions<ConnectionStringsOptions>().DefaultConnectionConfig.ConfigId.ToString();
     private string _dbName = App.GetOptions<ConnectionStringsOptions>().DefaultConnectionConfig.DBName;
     private int currentPage = 1;
@@ -83,7 +84,7 @@ public class DataInterfaceService : IDataInterfaceService, IDynamicApiController
         ICacheManager cacheManager,
         IFileManager fileManager,
         ITenantManager tenantManager,
-        IServiceScopeFactory serviceScopeFactory,
+        IServer server,
         ISqlSugarClient context)
     {
         _repository = repository;
@@ -92,7 +93,7 @@ public class DataInterfaceService : IDataInterfaceService, IDynamicApiController
         _userManager = userManager;
         _cacheManager = cacheManager;
         _tenantManager = tenantManager;
-        _serviceScopeFactory = serviceScopeFactory;
+        _server = server;
         _sqlSugarClient = (SqlSugarScope)context;
     }
 
@@ -1850,9 +1851,7 @@ public class DataInterfaceService : IDataInterfaceService, IDynamicApiController
     /// <returns></returns>
     private string GetLocalAddress()
     {
-        using var scope = _serviceScopeFactory.CreateScope();
-        var server = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>();
-        var addressesFeature = server.Features.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>();
+        var addressesFeature = _server.Features.Get<IServerAddressesFeature>();
         var addresses = addressesFeature?.Addresses;
         
         //modify by harry 原只能获取locahost,不能获取远程地址
@@ -1861,19 +1860,19 @@ public class DataInterfaceService : IDataInterfaceService, IDynamicApiController
 
         return locahDomain;
 
-        //以下在add update自定义接口时出现异常，待处理;
-
-        var httpContextAccessor = scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
-        var request = httpContextAccessor.HttpContext.Request;
-
-        var protocol = request.Scheme; // 获取请求的协议，http 或 https
-        var domain = request.Host.Value; // 获取请求的域名
-         
-
-        var url = $"{protocol}://{domain}"; // 组合成完整的 URL
-        return url;
-
-        //end 
+//         //以下在add update自定义接口时出现异常，待处理;
+// 
+//         var httpContextAccessor = scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
+//         var request = httpContextAccessor.HttpContext.Request;
+// 
+//         var protocol = request.Scheme; // 获取请求的协议，http 或 https
+//         var domain = request.Host.Value; // 获取请求的域名
+//          
+// 
+//         var url = $"{protocol}://{domain}"; // 组合成完整的 URL
+//         return url;
+// 
+//         //end 
     }
     #endregion
 

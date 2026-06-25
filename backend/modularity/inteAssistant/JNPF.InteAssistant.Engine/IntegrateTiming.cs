@@ -8,7 +8,6 @@ using JNPF.Common.Models.Job;
 using JNPF.Common.Security;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.Schedule;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SqlSugar;
 
@@ -19,13 +18,10 @@ namespace JNPF.InteAssistant.Engine;
 /// 不可删除！.
 /// </summary>
 [JobDetail("job_builtIn_IntegrateTiming", Description = "集成助手-定时触发", GroupName = "Integrate", Concurrent = true)]
-public class IntegrateTiming : IJob, IDisposable
+public class IntegrateTiming : IJob
 {
-    /// <summary>
-    /// 服务提供器.
-    /// </summary>
-    private readonly IServiceScope _serviceScope;
-
+    private readonly ISqlSugarClient _sqlSugarClient;
+    private readonly ICacheManager _cacheManager;
     private readonly ILogger<IntegrateTiming> _logger;
 
     /// <summary>
@@ -47,14 +43,16 @@ public class IntegrateTiming : IJob, IDisposable
     /// 构造函数.
     /// </summary>
     public IntegrateTiming(
-        IServiceScopeFactory serviceScopeFactory,
         ILogger<IntegrateTiming> logger,
+        ISqlSugarClient sqlSugarClient,
+        ICacheManager cacheManager,
         IJobManager jobManager,
         ISchedulerFactory schedulerFactory,
         ITenantManager tenantManager)
     {
-        _serviceScope = serviceScopeFactory.CreateScope();
         _logger = logger;
+        _sqlSugarClient = sqlSugarClient;
+        _cacheManager = cacheManager;
         _jobManager = jobManager;
         _schedulerFactory = schedulerFactory;
         _tenantManager = tenantManager;
@@ -62,7 +60,7 @@ public class IntegrateTiming : IJob, IDisposable
 
     public async Task ExecuteAsync(JobExecutingContext context, CancellationToken stoppingToken)
     {
-        var sqlSugarClient = _serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
+        var sqlSugarClient = _sqlSugarClient;
 
         string cacheKey = string.Empty;
 
@@ -70,7 +68,7 @@ public class IntegrateTiming : IJob, IDisposable
         var tenantId = context.TriggerId.Match("(.+(?=_trigger_schedule_))");
         var taskId = context.TriggerId.Match("((?<=_trigger_schedule_).+)");
 
-        var _cacheManager = _serviceScope.ServiceProvider.GetService<ICacheManager>();
+        var cacheManager = _cacheManager;
 
         if (KeyVariable.MultiTenancy && !string.IsNullOrEmpty(tenantId) && !sqlSugarClient.AsTenant().IsAnyConnection(tenantId))
         {
@@ -111,8 +109,4 @@ public class IntegrateTiming : IJob, IDisposable
         }
     }
 
-    public void Dispose()
-    {
-        _serviceScope.Dispose();
-    }
 }

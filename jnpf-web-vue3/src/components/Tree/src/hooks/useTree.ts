@@ -199,7 +199,7 @@ export function useTree(treeDataRef: Ref<TreeDataItem[]>, getFieldNames: Compute
   }
   // 获取选中节点
   function getEnabledNodes(keys: KeyType[], list?: TreeItem[]) {
-    let enabledNodes: TreeItem[] = [];
+    const enabledNodes: TreeItem[] = [];
     if (!keys || !keys?.length) return [];
     const treeData = list || unref(treeDataRef);
     const { key: keyField, children: childrenField } = unref(getFieldNames);

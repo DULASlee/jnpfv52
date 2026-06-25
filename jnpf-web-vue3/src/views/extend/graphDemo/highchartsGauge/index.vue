@@ -17,7 +17,7 @@
   import HighchartsMore from 'highcharts/highcharts-more';
   HighchartsMore(Highcharts);
 
-  defineOptions({ name: 'extend-graphDemo-highchartsGauge' });
+  defineOptions({ name: 'ExtendGraphDemoHighchartsGauge' });
 
   const timer = ref<any>(null);
   const options = reactive({
@@ -121,4 +121,3 @@
     timer.value = null;
   });
 </script>
-

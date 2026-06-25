@@ -1,7 +1,7 @@
 <template>
   <BasicPopup v-bind="$attrs" @register="registerPopup" :title="state.title" class="full-popup" destroyOnClose :closeFunc="onClose">
     <div class="h-full p-10px overflow-y-auto">
-      <component :is="state.currentView" :config="state.config" @setPageLoad="setPageLoad" />
+      <component :is="state.currentView" :config="state.config" @set-page-load="setPageLoad" />
     </div>
   </BasicPopup>
 </template>

@@ -6,7 +6,7 @@
           <a-row>
             <a-col :span="8">
               <a-form-item label="订单编码" name="code">
-                <a-input v-model:value="dataForm.code" placeholder="提交后系统自动生成" readonly> </a-input>
+                <a-input v-model:value="dataForm.code" placeholder="提交后系统自动生成" readonly />
               </a-form-item>
             </a-col>
             <a-col :span="16">
@@ -114,8 +114,8 @@
     <BasicTable :data-source="dataForm.productEntryList" @register="registerTable">
       <template #bodyCell="{ column, record, index }">
         <template v-if="column.key === 'action'">
-          <a-button type="link" preIcon="ym-custom ym-custom-plus" @click="handleAddItem(index)"></a-button>
-          <a-button type="link" danger preIcon="ym-custom ym-custom-minus" @click="handleDelItem(record)"></a-button>
+          <a-button type="link" preIcon="ym-custom ym-custom-plus" @click="handleAddItem(index)" />
+          <a-button type="link" danger preIcon="ym-custom ym-custom-minus" @click="handleDelItem(record)" />
         </template>
         <template v-if="column.key === 'productCode'">
           <a-auto-complete v-model:value="record.productCode" placeholder="商品编码" :options="productOptions" @search="handleProductSearch">

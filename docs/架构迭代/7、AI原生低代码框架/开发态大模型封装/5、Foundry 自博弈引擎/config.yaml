@@ -1,0 +1,55 @@
+# Foundry 配置
+foundry:
+  # 总迭代次数(参考内容: 10000)
+  total_iterations: 10000
+  # 收敛阈值(连续 N 次 pass rate >= 95% 视为收敛)
+  convergence_window: 100
+  convergence_threshold: 0.95
+  # 检查点间隔
+  checkpoint_interval: 100
+  # 报告间隔
+  report_interval: 10
+
+# LLM 配置
+llm:
+  provider: openai  # openai / anthropic
+  model: gpt-4
+  temperature: 0.8   # Attacker 用高温度,Builder 用低温度
+  max_tokens: 4096
+  api_key: ${OPENAI_API_KEY}
+
+# 4 个 Agent 各自的 LLM 配置
+agents:
+  attacker:
+    temperature: 0.9   # 高温度 → 多样性
+  builder:
+    temperature: 0.1   # 低温度 → 确定性
+  judge:
+    temperature: 0.0
+  distiller:
+    temperature: 0.3
+
+# 后端服务(SAOrchestrator / Validator 通过 HTTP 调用)
+backend:
+  sa_orchestrator_url: http://localhost:3000
+  validator_url: http://localhost:3001
+
+# 知识存储
+knowledge:
+  vector_store_path: ./data/vector_store
+  pattern_db_path: ./data/patterns.db
+
+# 初始种子知识
+seeds:
+  industry: manufacturing
+  initial_patterns:
+    - name: 标准 MES 字段
+      type: field_naming
+      content:
+        commonFields: [WorkOrderId, OperatorId, ReportQty, ScrapQty]
+    - name: 标准判定规则
+      type: decision_rule
+      content:
+        rules:
+          - { condition: "报废率>5%", action: "让步接收" }
+          - { condition: "报废率>20%", action: "驳回" }

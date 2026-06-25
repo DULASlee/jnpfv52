@@ -103,7 +103,7 @@
               <a-input v-model:value="child.value" placeholder="请输入字段值" allowClear :readonly="child.readonly" :disabled="child.disabled" v-else />
             </a-col>
             <a-col :span="1">
-              <i class="icon-ym icon-ym-btn-clearn" @click="delItem(index, childIndex)" />
+              <i class="icon-ym icon-ym-btn-clearn" @click="delItem(index, childIndex)"></i>
             </a-col>
           </a-row>
         </div>

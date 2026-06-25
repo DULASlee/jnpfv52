@@ -44,7 +44,7 @@
   import GoodsModal from '/@/views/workFlow/workFlowForm/crmOrder/GoodsModal.vue';
   import { useModal } from '/@/components/Modal';
 
-  defineOptions({ name: 'extend-formDemo-verifyForm4' });
+  defineOptions({ name: 'ExtendFormDemoVerifyForm4' });
 
   const state = reactive({
     dataForm: {

@@ -1,0 +1,257 @@
+/**
+ * 业务规则引擎核心类型
+ *
+ * 定义决策表、决策树、规则链的核心数据结构。
+ * 所有规则产出的都是 IR 同构数据，可被编译网关消费。
+ *
+ * @version 1.0.0
+ * @module ai/rules/engine
+ */
+
+// ============================================================
+// 规则来源标记
+// ============================================================
+
+/** 规则来源 */
+export type RuleSource = 'ai-generated' | 'human-created' | 'hybrid';
+
+// ============================================================
+// 决策表
+// ============================================================
+
+/** 条件列定义 */
+export interface ConditionColumn {
+  field: string;
+  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'notIn' | 'contains' | 'between';
+  label: string;
+}
+
+/** 动作列定义 */
+export interface ActionColumn {
+  field: string;
+  value: string;
+  label: string;
+}
+
+/** 决策表 */
+export interface DecisionTable {
+  id: string;
+  name: string;
+  source: RuleSource;
+  conditions: ConditionColumn[];
+  actions: ActionColumn[];
+  rows: Array<{
+    conditions: string[];
+    actions: string[];
+    priority: number;
+  }>;
+}
+
+/** 决策表执行结果 */
+export interface DecisionTableResult {
+  matched: boolean;
+  actions: Array<{ field: string; value: string }>;
+  matchedRow: number;
+}
+
+// ============================================================
+// 决策树
+// ============================================================
+
+/** 决策树节点 */
+export interface DecisionTreeNode {
+  id: string;
+  type: 'condition' | 'action';
+  condition?: {
+    field: string;
+    operator: string;
+    value: string;
+  };
+  action?: {
+    type: string;
+    params: Record<string, unknown>;
+  };
+  trueBranch?: string;
+  falseBranch?: string;
+}
+
+/** 决策树 */
+export interface DecisionTree {
+  id: string;
+  name: string;
+  source: RuleSource;
+  nodes: DecisionTreeNode[];
+  rootNodeId: string;
+}
+
+/** 决策树执行结果 */
+export interface DecisionTreeResult {
+  /** 执行路径（节点 ID 序列） */
+  path: string[];
+  /** 最终执行的动作 */
+  action: DecisionTreeNode['action'] | null;
+}
+
+// ============================================================
+// 规则链
+// ============================================================
+
+/** 规则链单条规则 */
+export interface RuleChainItem {
+  id: string;
+  condition: string;
+  action: string;
+  stopOnMatch: boolean;
+}
+
+/** 规则链 */
+export interface RuleChain {
+  id: string;
+  name: string;
+  source: RuleSource;
+  rules: RuleChainItem[];
+}
+
+// ============================================================
+// 执行引擎
+// ============================================================
+
+/**
+ * 评估决策表。
+ * 按优先级顺序匹配，返回第一个匹配的行。
+ */
+export function evaluateDecisionTable(table: DecisionTable, facts: Record<string, unknown>): DecisionTableResult {
+  const sorted = [...table.rows].sort((a, b) => b.priority - a.priority);
+
+  for (let i = 0; i < sorted.length; i++) {
+    const row = sorted[i];
+    let allMatch = true;
+
+    for (let j = 0; j < table.conditions.length; j++) {
+      const cond = table.conditions[j];
+      const expected = row.conditions[j];
+      const actual = facts[cond.field];
+
+      if (!matchCondition(cond.operator, actual, expected)) {
+        allMatch = false;
+        break;
+      }
+    }
+
+    if (allMatch) {
+      const actions = table.actions.map((act, idx) => ({
+        field: act.field,
+        value: row.actions[idx] ?? act.value,
+      }));
+      return { matched: true, actions, matchedRow: i };
+    }
+  }
+
+  return { matched: false, actions: [], matchedRow: -1 };
+}
+
+/**
+ * 评估决策树。
+ * 从根节点出发，沿条件分支直到叶子动作节点。
+ */
+export function evaluateDecisionTree(tree: DecisionTree, facts: Record<string, unknown>): DecisionTreeResult {
+  const path: string[] = [];
+  const nodeMap = new Map(tree.nodes.map(n => [n.id, n]));
+  let current = nodeMap.get(tree.rootNodeId);
+
+  while (current) {
+    path.push(current.id);
+
+    if (current.type === 'action') {
+      return { path, action: current.action };
+    }
+
+    if (current.type === 'condition' && current.condition) {
+      const { field, operator, value } = current.condition;
+      const actual = facts[field];
+      const result = matchCondition(operator as ConditionColumn['operator'], actual, value);
+      const nextId = result ? current.trueBranch : current.falseBranch;
+      current = nextId ? nodeMap.get(nextId) : undefined;
+    } else {
+      break;
+    }
+  }
+
+  return { path, action: null };
+}
+
+/**
+ * 评估规则链。
+ * 按顺序执行，stopOnMatch 为 true 时遇第一个匹配即停。
+ */
+export function evaluateRuleChain(chain: RuleChain, facts: Record<string, unknown>): Array<{ rule: RuleChainItem; action: string }> {
+  const results: Array<{ rule: RuleChainItem; action: string }> = [];
+
+  for (const rule of chain.rules) {
+    const matched = evaluateConditionExpression(rule.condition, facts);
+    if (matched) {
+      results.push({ rule, action: rule.action });
+      if (rule.stopOnMatch) break;
+    }
+  }
+
+  return results;
+}
+
+// ============================================================
+// 条件匹配工具
+// ============================================================
+
+function matchCondition(operator: ConditionColumn['operator'], actual: unknown, expected: string): boolean {
+  switch (operator) {
+    case 'eq':
+      return String(actual) === expected;
+    case 'neq':
+      return String(actual) !== expected;
+    case 'gt':
+      return Number(actual) > Number(expected);
+    case 'gte':
+      return Number(actual) >= Number(expected);
+    case 'lt':
+      return Number(actual) < Number(expected);
+    case 'lte':
+      return Number(actual) <= Number(expected);
+    case 'in':
+      return expected
+        .split(',')
+        .map(s => s.trim())
+        .includes(String(actual));
+    case 'notIn':
+      return !expected
+        .split(',')
+        .map(s => s.trim())
+        .includes(String(actual));
+    case 'contains':
+      return String(actual).includes(expected);
+    case 'between': {
+      const [min, max] = expected.split(',').map(Number);
+      const num = Number(actual);
+      return num >= min && num <= max;
+    }
+    default:
+      return false;
+  }
+}
+
+/** 简易条件表达式评估器 */
+function evaluateConditionExpression(expression: string, facts: Record<string, unknown>): boolean {
+  try {
+    const keys = Object.keys(facts);
+    let expr = expression;
+    for (const key of keys) {
+      const value = facts[key];
+      const replacement = typeof value === 'string' ? `"${value}"` : String(value);
+      expr = expr.replaceAll(`{{${key}}}`, replacement);
+    }
+    // 安全评估：仅允许简单比较
+    const fn = new Function(`return ${expr}`);
+    return Boolean(fn());
+  } catch {
+    return false;
+  }
+}

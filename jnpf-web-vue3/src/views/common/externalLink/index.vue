@@ -9,7 +9,7 @@
   import { useTabs } from '/@/hooks/web/useTabs';
   import { decodeByBase64 } from '/@/utils/cipher';
 
-  defineOptions({ name: 'externalLink' });
+  defineOptions({ name: 'ExternalLink' });
 
   const route = useRoute();
   const { setTitle } = useTabs();

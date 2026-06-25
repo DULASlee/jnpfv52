@@ -42,7 +42,7 @@
     [prop: string]: any;
   }
 
-  defineOptions({ name: 'uploader-file' });
+  defineOptions({ name: 'UploaderFile' });
   const props = defineProps({
     file: { type: Object, default: () => ({}) },
     list: { type: Boolean, default: false },

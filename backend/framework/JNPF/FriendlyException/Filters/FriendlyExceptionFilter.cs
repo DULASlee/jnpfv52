@@ -142,6 +142,34 @@ public sealed class FriendlyExceptionFilter : IAsyncExceptionFilter
 
         // 打印错误消息
         PrintToMiniProfiler(context.Exception);
+
+        // 非友好异常：替换原始 .NET 消息为友好消息
+        if (!(context.Exception is AppFriendlyException) && context.Result is ObjectResult objResult)
+        {
+            var friendlyMessage = GetFriendlyMessage(context.Exception);
+            var resultValue = objResult.Value;
+            if (resultValue != null)
+            {
+                var msgProperty = resultValue.GetType().GetProperty("msg");
+                msgProperty?.SetValue(resultValue, friendlyMessage);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 非友好异常 → 友好消息映射
+    /// </summary>
+    private static string GetFriendlyMessage(Exception ex)
+    {
+        return ex switch
+        {
+            NullReferenceException => "系统内部数据异常，请稍后重试",
+            TimeoutException => "服务响应超时，请稍后重试",
+            HttpRequestException => "外部服务暂时不可用",
+            UnauthorizedAccessException => "无权限执行此操作",
+            ArgumentException => "请求参数不正确",
+            _ => "系统异常，请联系管理员"
+        };
     }
 
     /// <summary>

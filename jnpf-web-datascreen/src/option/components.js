@@ -12,6 +12,23 @@ Object.keys(requireComponent).forEach(fileName => {
 
 requireComponent = import.meta.globEager('../components/**/*.vue')
 
+// Build unified component registry from all globbed modules
+const optionRegistry = {}
+function buildRegistry(modules) {
+  for (const [fileName, mod] of Object.entries(modules)) {
+    const cmp = mod.default
+    if (!cmp || !cmp.name) continue
+    if (!optionRegistry[cmp.name]) {
+      optionRegistry[cmp.name] = cmp
+    }
+    const baseName = fileName.split('/').pop().replace(/\.vue$/, '')
+    if (!optionRegistry[baseName]) {
+      optionRegistry[baseName] = cmp
+    }
+  }
+}
+buildRegistry(import.meta.globEager('./components/**/*.vue'))
+buildRegistry(requireComponent)
 
 Object.keys(requireComponent).forEach(fileName => {
   if (fileName.includes('option.vue')) {
@@ -20,14 +37,14 @@ Object.keys(requireComponent).forEach(fileName => {
   }
 })
 
-website.componentsList.map(ele => ele.option).forEach(cmp => {
-  try {
-    cmp = eval(cmp)
+website.componentsList.forEach(ele => {
+  const cmpName = ele.option
+  const cmp = optionRegistry[cmpName]
+  if (cmp) {
     components[cmp.name + key] = cmp
-  } catch (err) {
-    console.log(err)
+  } else {
+    console.warn('[option/components] 未找到图表选项: ' + cmpName)
   }
-
 })
 
 export default {

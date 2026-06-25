@@ -9,7 +9,7 @@
   import { onMounted, onUnmounted, reactive, ref } from 'vue';
   import { Chart } from '/@/components/Chart';
 
-  defineOptions({ name: 'extend-graphDemo-echartsGauge' });
+  defineOptions({ name: 'ExtendGraphDemoEchartsGauge' });
 
   const options = reactive({
     tooltip: {

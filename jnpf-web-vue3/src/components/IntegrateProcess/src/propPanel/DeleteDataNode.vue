@@ -52,7 +52,7 @@
                     :fieldNames="{ options: 'options1' }" />
                 </a-col>
                 <a-col :span="1" class="text-center">
-                  <i class="icon-ym icon-ym-btn-clearn" @click="delItem(index, childIndex)" />
+                  <i class="icon-ym icon-ym-btn-clearn" @click="delItem(index, childIndex)"></i>
                 </a-col>
               </a-row>
             </div>
@@ -75,7 +75,7 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import ConditionMain from '/@/components/ColumnDesign/src/components/ConditionMain.vue';
 
-  defineOptions({ name: 'deleteDataNode', inheritAttrs: false });
+  defineOptions({ name: 'DeleteDataNode', inheritAttrs: false });
   defineExpose({ initCondition, submitCondition });
   const props = defineProps(['formConf', 'integrateType', 'formFieldsOptions', 'usedFormItems', 'getFormFieldList']);
   const conditionMainRef = ref();

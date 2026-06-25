@@ -10,9 +10,9 @@
       </a-form-item>
     </a-form>
     <a-tabs v-model:activeKey="activeName">
-      <a-tab-pane key="module" tab="开发平台"></a-tab-pane>
-      <a-tab-pane key="system" tab="应用权限"></a-tab-pane>
-      <a-tab-pane key="gradeManage" tab="组织权限"></a-tab-pane>
+      <a-tab-pane key="module" tab="开发平台" />
+      <a-tab-pane key="system" tab="应用权限" />
+      <a-tab-pane key="gradeManage" tab="组织权限" />
     </a-tabs>
     <a-table
       :data-source="orgAdminList"

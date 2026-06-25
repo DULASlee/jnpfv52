@@ -29,8 +29,8 @@
       @change="handleChange"
       v-else>
       <div>
-        <loading-outlined v-if="loading"></loading-outlined>
-        <plus-outlined v-else></plus-outlined>
+        <loading-outlined v-if="loading" />
+        <plus-outlined v-else />
         <div class="ant-upload-text" v-if="tipText">{{ tipText }}</div>
         <div class="ant-upload-text ant-upload-sub-text" v-if="subTipText">{{ subTipText }}</div>
       </div>
@@ -44,7 +44,7 @@
   import type { UploadChangeParam } from 'ant-design-vue';
   import { computed, ref, unref, watch } from 'vue';
   import { useGlobSetting } from '/@/hooks/setting';
-  import { getToken } from '/@/utils/auth';
+  import { getAuthHeaders } from '/@/utils/auth';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { createImgPreview } from '/@/components/Preview/index';
   import { uploadImgSingleProps, units } from './props';
@@ -61,7 +61,7 @@
   const formItemContext = Form.useInjectFormItemContext();
 
   const getAction = computed(() => globSetting.uploadUrl + '/' + props.type);
-  const getHeaders = computed(() => ({ Authorization: getToken() as string }));
+  const getHeaders = computed(() => getAuthHeaders());
   const getImgList = computed<string[]>(() => (imageUrl.value ? [apiUrl.value + imageUrl.value] : []));
 
   watch(

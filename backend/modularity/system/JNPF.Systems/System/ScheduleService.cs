@@ -60,7 +60,7 @@ public class ScheduleService : IScheduleService, IDynamicApiController, ITransie
     /// <summary>
     /// 服务提供器.
     /// </summary>
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
 
     /// <summary>
     /// 初始化一个<see cref="ScheduleService"/>类型的新实例.
@@ -71,14 +71,14 @@ public class ScheduleService : IScheduleService, IDynamicApiController, ITransie
         ITaskQueue taskQueue,
         ICacheManager cacheManager,
         IMessageManager messageManager,
-        IServiceProvider serviceProvider)
+        IServiceScopeFactory serviceScopeFactory)
     {
         _repository = repository;
         _userManager = userManager;
         _taskQueue = taskQueue;
         _cacheManager = cacheManager;
         _messageManager = messageManager;
-        _serviceProvider = serviceProvider;
+        _serviceScopeFactory = serviceScopeFactory;
     }
 
     #region Get
@@ -920,7 +920,7 @@ public class ScheduleService : IScheduleService, IDynamicApiController, ITransie
         var nextDayTime = DateTime.Now.AddDays(1);
         var endTime = new DateTime(nextDayTime.Year, nextDayTime.Month, nextDayTime.Day, 0, 5, 0);
 
-        using var scoped = _serviceProvider.CreateScope();
+        using var scoped = _serviceScopeFactory.CreateScope();
         var sqlSugarClient = scoped.ServiceProvider.GetRequiredService<ISqlSugarClient>();
         var dataBaseManager = scoped.ServiceProvider.GetService<IDataBaseManager>();
 

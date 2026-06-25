@@ -50,7 +50,7 @@
   import Form from './Form.vue';
   import TypeList from './components/index.vue';
 
-  defineOptions({ name: 'systemData-dictionary' });
+  defineOptions({ name: 'SystemDataDictionary' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

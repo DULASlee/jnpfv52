@@ -62,7 +62,7 @@
     </div>
     <a-tabs v-model:activeKey="state.activeKey" class="flow-parser-tabs" :class="{ 'no-head-margin': state.activeKey == '3' }" v-loading="loading">
       <a-tab-pane key="1" tab="表单信息" v-if="config.opType != '4'">
-        <component :is="state.currentView" ref="formRef" :config="config" @eventReceiver="eventReceiver" @setPageLoad="setPageLoad" />
+        <component :is="state.currentView" ref="formRef" :config="config" @event-receiver="eventReceiver" @set-page-load="setPageLoad" />
       </a-tab-pane>
       <a-tab-pane key="2" tab="流程信息" class="!overflow-hidden">
         <FlowProcessMain
@@ -70,7 +70,7 @@
           :isPreview="true"
           :isEnd="state.flowTaskInfo.completion == 100"
           v-if="state.flowTemplateJson.nodeId"
-          @viewSubFlow="viewSubFlow" />
+          @view-sub-flow="viewSubFlow" />
       </a-tab-pane>
       <a-tab-pane key="3" tab="流转记录" class="!p-0" v-if="config.opType != '-1' || (config.opType == '-1' && config.status == 7)">
         <RecordList
@@ -78,8 +78,8 @@
           :endTime="state.endTime"
           :flowId="config.flowId"
           :opType="config.opType"
-          @viewDetail="viewNodeDetail"
-          @viewLog="viewNodeLog"
+          @view-detail="viewNodeDetail"
+          @view-log="viewNodeLog"
           v-if="state.activeKey == '3'" />
       </a-tab-pane>
       <a-tab-pane key="4" tab="审批汇总" forceRender v-if="config.opType != '-1' && state.isSummary">

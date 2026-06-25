@@ -1,4 +1,4 @@
-import type { ComponentRenderProxy, VNode, VNodeChild, ComponentPublicInstance, FunctionalComponent, PropType as VuePropType } from 'vue';
+import type { VNodeChild, ComponentPublicInstance, FunctionalComponent, PropType as VuePropType } from 'vue';
 
 declare global {
   const __APP_INFO__: {
@@ -69,24 +69,21 @@ declare global {
   declare function parseInt(s: string | number, radix?: number): number;
 
   declare function parseFloat(string: string | number): number;
+}
 
+// Augment Vue's JSX IntrinsicAttributes to allow arbitrary props on .tsx components
+// (Vue 3.3 JSX runtime validates props strictly; JNPF .tsx components predate this)
+declare global {
   namespace JSX {
-    // tslint:disable no-empty-interface
-    type Element = VNode;
-    // tslint:disable no-empty-interface
-    type ElementClass = ComponentRenderProxy;
-    interface ElementAttributesProperty {
-      $props: any;
-    }
-    interface IntrinsicElements {
-      [elem: string]: any;
-    }
     interface IntrinsicAttributes {
-      [elem: string]: any;
+      [key: string]: any;
     }
   }
 }
 
 declare module 'vue' {
   export type JSXComponent<Props = any> = { new (): ComponentPublicInstance<Props> } | FunctionalComponent<Props>;
+  export interface GlobalComponents {
+    BasicHelp: typeof import('/@/components/Basic')['BasicHelp'];
+  }
 }

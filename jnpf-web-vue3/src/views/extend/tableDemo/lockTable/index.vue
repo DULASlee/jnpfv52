@@ -27,7 +27,7 @@
   import { useBaseStore } from '/@/store/modules/base';
   import Form from '../commonForm/index.vue';
 
-  defineOptions({ name: 'extend-tableDemo-lockTable' });
+  defineOptions({ name: 'ExtendTableDemoLockTable' });
 
   interface State {
     industryTypeList: any[];

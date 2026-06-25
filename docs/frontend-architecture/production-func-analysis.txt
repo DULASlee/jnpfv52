@@ -1,0 +1,79 @@
+============================================================
+JNPF Schema Production Function Analysis (UPDATED)
+Date: 2026-06-10
+Source: LIVE API capture from running dev server
+Database: ZXAF_V1_DevTest1 (local SQL Server)
+Models: 24 total (type=1 Web设计), 3 captured for analysis
+============================================================
+
+--- Captured Models ---
+
+1. 流程外链功能 (followLink)    — webType=2, enableFlow=1, 3 fields
+2. 账单收款 (order.receivable)   — webType=2, enableFlow=0, 5 fields
+3. 自定义测试 (tesst000)         — webType=5, enableFlow=0, 3 fields
+
+--- Function Signature Catalog (CONFIRMED from production data) ---
+
+Form-level (fields[].funcs):
+  onLoad({ formData, setFormData, setShowOrHide, setRequired, setDisabled, onlineUtils }) => { /* code */ }
+  beforeSubmit({ ... }) => { return new Promise((resolve, reject) => { /* code */; resolve() }) }
+  afterSubmit({ ... }) => { /* code */ }
+
+Field-level (fields[].on):
+  on.change({ data, rowIndex, formData, setFormData, setShowOrHide, setRequired, setDisabled, onlineUtils }) => { /* code */ }
+  on.blur({ ...same 8-parameter signature... }) => { /* code */ }
+
+--- Parameter API Surface (framework-injected, VERIFIED) ---
+
+  Parameter       | Source            | Description                    | Level
+  data            | framework         | Current field value            | field only
+  rowIndex        | framework         | Row index (sub-table)          | field only
+  formData        | form model state  | All form field values          | both
+  setFormData     | form model setter | Update form field values       | both
+  setShowOrHide   | form visibility   | Toggle field visibility        | both
+  setRequired     | form validation   | Toggle required state          | both
+  setDisabled     | form state        | Toggle disabled state          | both
+  onlineUtils     | JNPF framework    | Platform utilities             | both
+
+--- Function Distribution (25 functions across 3 schemas) ---
+
+  EMPTY (no body):       22 (88%) — arrow function with empty body {}
+  TEMPLATE (Promise only): 3 (12%) — beforeSubmit with resolve(), no business logic
+  L1-SIMPLE:               0
+  L2-MEDIUM:               0
+  L3-HARD:                 0
+
+--- Key Findings ---
+
+1. 100% of captured functions are template-generated placeholders
+2. 0 custom business logic in this test database
+3. Function signatures are 100% CONSISTENT — matching .vm template output exactly
+4. beforeSubmit is ALWAYS wrapped in Promise (template pattern)
+5. Field-level events have `data` + `rowIndex` extra params; form-level do not
+6. The `undefined` field names in initial analysis were a parsing artifact — resolved by reading raw JSON structure
+
+--- Implications for Expression Engine Design ---
+
+1. The parameter shape is FIXED and known: 7 params (form-level) or 8 params (field-level)
+2. Framework-injected parameters must survive the IR transform: setFormData, setShowOrHide, setRequired, setDisabled, onlineUtils
+3. beforeSubmit ALWAYS wraps in Promise — IR must treat this as a first-class pattern, not generic expression
+4. 88-100% empty functions → lazy compilation is valid: only compile non-empty expressions
+5. No custom logic in captured schemas → real complexity data requires PRODUCTION access with real user-written code
+6. Template code is generated from .vm templates → function signatures are defined by the code generator, not by users
+
+--- Schema Files ---
+
+  schema-production-followLink.json      — 18,904 chars
+  schema-production-order.receivable.json — 76,176 chars
+  schema-production-tesst000.json         — 52,745 chars
+
+--- Security Fix Status (A-1 through A-3 + bonus 3) ---
+
+A-1: jnpf.ts eval(str)               REPLACED with safeDataProcessing()
+A-2: Hardcoded AES keys               MOVED to env vars with defaults
+A-3: datascreen new Function          REPLACED with parseExpressionValue()
+#1:  option/components.js eval(cmp)   REPLACED with registry lookup
+#2:  components/index.js eval(cmp)    REPLACED with registry lookup
+#3:  echart vue new Function(script)  REPLACED with safe degradation
+
+Final verification: 0 eval() calls, 0 new Function() calls in both projects

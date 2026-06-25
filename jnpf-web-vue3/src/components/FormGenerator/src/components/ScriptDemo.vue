@@ -1,5 +1,5 @@
 <template>
-  <a-popover overlayClassName="script-demo-popover" @visibleChange="onVisibleChange">
+  <a-popover overlayClassName="script-demo-popover" @visible-change="onVisibleChange">
     <template #title>
       <div class="script-demo-popover-title">参数介绍及使用示例</div>
     </template>

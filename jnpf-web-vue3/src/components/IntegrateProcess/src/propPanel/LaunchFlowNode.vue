@@ -14,7 +14,7 @@
           <div class="condition-main">
             <a-row :gutter="8">
               <a-col :span="7">选择目标表单字段</a-col>
-              <a-col :span="3"></a-col>
+              <a-col :span="3" />
               <a-col :span="14">设置触发表单字段或自定义值 </a-col>
             </a-row>
             <a-row :gutter="8" v-for="(item, index) in formConf.transferList" :key="index" class="mt-10px">
@@ -44,7 +44,7 @@
                 <a-input v-model:value="item.sourceValue" placeholder="请输入" allowClear v-if="item.sourceType === 2" />
               </a-col>
               <a-col :span="1" class="text-center" v-if="!item.required">
-                <i class="icon-ym icon-ym-btn-clearn" @click="delTransferItem(index)" />
+                <i class="icon-ym icon-ym-btn-clearn" @click="delTransferItem(index)"></i>
               </a-col>
             </a-row>
             <span class="link-text mt-10px inline-block" @click="addTransferItem()"><i class="icon-ym icon-ym-btn-add text-14px mr-4px"></i>添加字段</span>
@@ -64,7 +64,7 @@
   import { sourceTypeOptions } from '../helper/define';
   import { cloneDeep } from 'lodash-es';
 
-  defineOptions({ name: 'launchFlowNode', inheritAttrs: false });
+  defineOptions({ name: 'LaunchFlowNode', inheritAttrs: false });
   const props = defineProps(['formConf', 'integrateType', 'formFieldsOptions', 'usedFormItems', 'getFlowFormFieldList', 'flowOptions']);
   const emptyChildItem = { field: '', symbol: '==', fieldValueType: 1, fieldValue: undefined, jnpfKey: '', fieldValueJnpfKey: '', cellKey: +new Date() };
   const emptyItem = { logic: 'and', groups: [emptyChildItem] };

@@ -1,13 +1,6 @@
 <template>
   <div :class="getClass" :style="getWrapperStyle">
-    <img
-      v-show="isReady"
-      ref="imgElRef"
-      :src="src"
-      :alt="alt"
-      :crossorigin="crossorigin"
-      :style="getImageStyle"
-    />
+    <img v-show="isReady" ref="imgElRef" :src="src" :alt="alt" :crossorigin="crossorigin" :style="getImageStyle" />
   </div>
 </template>
 <script lang="ts">
@@ -134,13 +127,13 @@
         }
         let imgInfo = cropper.value.getData();
         const canvas = props.circled ? getRoundedCanvas() : cropper.value.getCroppedCanvas();
-        canvas.toBlob((blob) => {
+        canvas.toBlob(blob => {
           if (!blob) {
             return;
           }
           let fileReader: FileReader = new FileReader();
           fileReader.readAsDataURL(blob);
-          fileReader.onloadend = (e) => {
+          fileReader.onloadend = e => {
             emit('cropend', {
               imgBase64: e.target?.result ?? '',
               imgInfo,

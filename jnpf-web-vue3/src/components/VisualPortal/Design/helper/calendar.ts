@@ -311,7 +311,7 @@ export const calendar = {
    *
    * @param param {Object} 按照festival的格式输入数据，设置阳历节日
    */
-  setFestival(param = {}) {
+  setFestival(param: any = {}) {
     this.festival = param;
   },
 
@@ -319,7 +319,7 @@ export const calendar = {
    *
    * @param param {Object} 按照lFestival的格式输入数据，设置农历节日
    */
-  setLunarFestival(param = {}) {
+  setLunarFestival(param: any = {}) {
     this.lFestival = param;
   },
 
@@ -668,8 +668,8 @@ export const calendar = {
    * @return Cn string
    */
   toGanZhiYear: function (lYear) {
-    var ganKey = (lYear - 3) % 10;
-    var zhiKey = (lYear - 3) % 12;
+    let ganKey = (lYear - 3) % 10;
+    let zhiKey = (lYear - 3) % 12;
     if (ganKey === 0) ganKey = 10; //如果余数为0则为最后一个天干
     if (zhiKey === 0) zhiKey = 12; //如果余数为0则为最后一个地支
     return this.Gan[ganKey - 1] + this.Zhi[zhiKey - 1];
@@ -709,9 +709,9 @@ export const calendar = {
       return -1;
     }
     const _table = this.sTermInfo[y - 1900];
-    const _calcDay = [];
+    const _calcDay: string[] = [];
     for (let index = 0; index < _table.length; index += 5) {
-      const chunk = parseInt('0x' + _table.substr(index, 5)).toString();
+      const chunk = parseInt('0x' + _table.substr(index, 5), 16).toString();
       _calcDay.push(chunk[0], chunk.substr(1, 2), chunk[3], chunk.substr(4, 2));
     }
     return parseInt(_calcDay[n - 1]);
@@ -816,14 +816,14 @@ export const calendar = {
     }
 
     //是否今天
-    let isTodayObj = new Date(),
-      isToday = false;
+    const isTodayObj = new Date();
+    let isToday = false;
     if (isTodayObj.getFullYear() === y && isTodayObj.getMonth() + 1 === m && isTodayObj.getDate() === d) {
       isToday = true;
     }
     //星期几
-    let nWeek = objDate.getDay(),
-      cWeek = this.nStr1[nWeek];
+    let nWeek = objDate.getDay();
+    const cWeek = this.nStr1[nWeek];
     //数字表示周几顺应天朝周一开始的惯例
     if (nWeek === 0) {
       nWeek = 7;
@@ -883,7 +883,7 @@ export const calendar = {
 
     //传入的日期的节气与否
     let isTerm = false;
-    let Term = null;
+    let Term: string | null = null;
     if (firstNode === d) {
       isTerm = true;
       Term = this.solarTerm[m * 2 - 2];
@@ -901,8 +901,8 @@ export const calendar = {
     const solarDate = y + '-' + m + '-' + d;
     const lunarDate = year + '-' + month + '-' + day;
 
-    const festival = this.festival;
-    const lFestival = this.lFestival;
+    const festival = this.festival as Record<string, any>;
+    const lFestival = this.lFestival as Record<string, any>;
 
     const festivalDate = m + '-' + d;
     let lunarFestivalDate = month + '-' + day;
@@ -957,9 +957,9 @@ export const calendar = {
     m = parseInt(m);
     d = parseInt(d);
     isLeapMonth = !!isLeapMonth;
-    const leapOffset = 0;
+    const _leapOffset = 0;
     const leapMonth = this.leapMonth(y);
-    const leapDay = this.leapDays(y);
+    const _leapDay = this.leapDays(y);
     if (isLeapMonth && leapMonth !== m) {
       return -1;
     } //传参要求计算该闰月公历 但该年得出的闰月与传参的月份并不同
@@ -971,7 +971,7 @@ export const calendar = {
     //bugFix 2016-9-25
     //if month is leap, _day use leapDays method
     if (isLeapMonth) {
-      _day = this.leapDays(y, m);
+      _day = this.leapDays(y);
     }
     if (y < 1900 || y > 2100 || d > _day) {
       return -1;

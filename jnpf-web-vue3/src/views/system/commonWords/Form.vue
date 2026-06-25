@@ -7,7 +7,7 @@
     :showContinueBtn="!id"
     @continue="handleSubmit(1)"
     @cancel="handleCancel">
-    <BasicForm @register="registerForm"></BasicForm>
+    <BasicForm @register="registerForm" />
   </BasicModal>
 </template>
 <script lang="ts" setup>

@@ -1,12 +1,12 @@
 <template>
   <div class="flow-list-container">
     <a-tabs v-model:activeKey="category" tab-position="left" class="common-left-tabs flow-left-tabs">
-      <a-tab-pane key="" tab="全部流程"></a-tab-pane>
-      <a-tab-pane :key="item.id" :tab="item.fullName" v-for="item in categoryList"></a-tab-pane>
+      <a-tab-pane key="" tab="全部流程" />
+      <a-tab-pane :key="item.id" :tab="item.fullName" v-for="item in categoryList" />
     </a-tabs>
     <div class="flow-list">
       <div class="jnpf-common-search-box">
-        <BasicForm class="search-form" @register="registerForm" @submit="handleSubmit" @reset="handleReset"></BasicForm>
+        <BasicForm class="search-form" @register="registerForm" @submit="handleSubmit" @reset="handleReset" />
       </div>
       <div class="list">
         <ScrollContainer v-loading="loading && listQuery.currentPage === 1" ref="infiniteBody">

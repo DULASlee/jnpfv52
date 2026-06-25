@@ -6,7 +6,7 @@
       </div>
       <div class="jnpf-content-wrapper-content bg-white">
         <a-tabs v-model:activeKey="activeKey" type="card" class="jnpf-content-wrapper-tabs" destroyInactiveTabPane>
-          <a-tab-pane v-for="item in messageType" :key="item.enCode" :tab="item.fullName"></a-tab-pane>
+          <a-tab-pane v-for="item in messageType" :key="item.enCode" :tab="item.fullName" />
         </a-tabs>
         <BasicTable @register="registerTable" :columns="columns" :searchInfo="getSearchInfo">
           <template #tableTitle>
@@ -45,7 +45,7 @@
   import ScheduleDetail from '/@/components/VisualPortal/Portal/HSchedule/Detail.vue';
   import { getScheduleDetail } from '/@/api/onlineDev/portal';
 
-  defineOptions({ name: 'messageRecord' });
+  defineOptions({ name: 'MessageRecord' });
 
   interface State {
     activeKey: string;

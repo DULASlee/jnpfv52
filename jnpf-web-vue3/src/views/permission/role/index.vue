@@ -51,7 +51,7 @@
   import OrgTree from '../user/OrgTree.vue';
   import PermissionPopup from '../organize/Permission.vue';
 
-  defineOptions({ name: 'permission-role' });
+  defineOptions({ name: 'PermissionRole' });
 
   const userStore = useUserStore();
   const { createMessage } = useMessage();

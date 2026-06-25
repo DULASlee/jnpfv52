@@ -1,0 +1,160 @@
+<!-- @jnpf-generated v<%= version %> entity=<%= entity %> type=form-page platform=<%= platform %> -->
+<!-- 生成时间：<%= timestamp %> -->
+<!-- 此文件由 JNPF UniApp 代码生成器生成，可手动修改 -->
+
+<template>
+  <view class="page-form">
+    <!-- ============================================================ -->
+    <!-- 表单 -->
+    <!-- ============================================================ -->
+    <wd-form ref="formRef" :model="formData">
+      <wd-cell-group>
+<% for (const field of fields) { %>
+<%   const appComp = field.component?.app || 'uni-easyinput'; %>
+<%   const isRequired = field.config?.required ? ' required' : ''; %>
+        <wd-cell title="<%= field.label %>"<%= isRequired %>>
+<%   if (appComp === 'uni-easyinput') { %>
+<%     const isNumber = field.jnpfKey === 'JnpfInputNumber'; %>
+          <wd-input
+            v-model="formData.<%= field.model %>"
+            placeholder="请输入<%= field.label %>"
+            <%= isNumber ? 'type="number"' : '' %>
+          />
+<%   } else if (appComp === 'uni-data-select') { %>
+          <wd-select-picker
+            v-model="formData.<%= field.model %>"
+            :columns="<%= field.model %>Options"
+            placeholder="请选择<%= field.label %>"
+          />
+<%   } else if (appComp === 'uni-datetime-picker') { %>
+          <wd-datetime-picker
+            v-model="formData.<%= field.model %>"
+            placeholder="请选择<%= field.label %>"
+          />
+<%   } else if (appComp === 'switch') { %>
+          <wd-switch v-model="formData.<%= field.model %>" active-value="1" inactive-value="0" />
+<%   } else { %>
+          <wd-input
+            v-model="formData.<%= field.model %>"
+            placeholder="请输入<%= field.label %>"
+          />
+<%   } %>
+        </wd-cell>
+<% } %>
+      </wd-cell-group>
+    </wd-form>
+
+    <!-- @jnpf-gen:insert-point=custom-form-fields -->
+    <!-- @jnpf-gen:end-insert-point=custom-form-fields -->
+
+    <!-- ============================================================ -->
+    <!-- 操作按钮 -->
+    <!-- ============================================================ -->
+    <view class="form-actions">
+      <wd-button type="primary" block @click="handleSubmit">
+        {{ isEdit ? '更新' : '提交' }}
+      </wd-button>
+      <wd-button block @click="handleCancel">取消</wd-button>
+    </view>
+  </view>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, onMounted } from 'vue'
+import { api as <%= entityLower %>Api } from '@/api/<%= entityLower %>'
+<% for (const imp of customImports || []) { %>
+<%- imp %>
+<% } %>
+
+// ================================================================
+// 状态
+// ================================================================
+
+const formRef = ref()
+const isEdit = ref(false)
+
+const formData = reactive<Record<string, unknown>>({
+<% for (const field of fields) { %>
+<%   const appComp = field.component?.app || 'uni-easyinput'; %>
+<%   if (appComp === 'switch') { %>
+  <%= field.model %>: false,
+<%   } else if (field.jnpfKey === 'JnpfInputNumber') { %>
+  <%= field.model %>: 0,
+<%   } else { %>
+  <%= field.model %>: '',
+<%   } %>
+<% } %>
+})
+
+// ================================================================
+// 初始化 — 编辑模式回填
+// ================================================================
+
+onMounted(async () => {
+  const pages = getCurrentPages()
+  const page = pages[pages.length - 1]
+  const id = (page as Record<string, unknown>)?.options?.id as string | undefined
+
+  if (id) {
+    isEdit.value = true
+    try {
+      const detail = await <%= entityLower %>Api.detail(id).send()
+      if (detail) {
+        Object.assign(formData, detail)
+      }
+    } catch {
+      uni.showToast({ title: '加载数据失败', icon: 'none' })
+    }
+  }
+})
+
+// ================================================================
+// 操作函数
+// ================================================================
+
+async function handleSubmit() {
+  try {
+    await formRef.value?.validate()
+    const data = { ...formData } as Record<string, unknown>
+    const id = isEdit.value
+      ? (getCurrentPages().slice(-1)[0] as Record<string, unknown>)?.options?.id as string | undefined
+      : undefined
+
+    if (id) {
+      await <%= entityLower %>Api.update(id, data).send()
+    } else {
+      await <%= entityLower %>Api.create(data).send()
+    }
+
+    uni.showToast({
+      title: isEdit.value ? '更新成功' : '创建成功',
+      icon: 'success',
+    })
+    setTimeout(() => {
+      uni.navigateBack()
+    }, 1500)
+  } catch {
+    // 校验失败或网络错误，不处理（wd-form 已展示错误信息）
+  }
+}
+
+function handleCancel() {
+  uni.navigateBack()
+}
+
+// @jnpf-gen:insert-point=custom-form-logic
+// @jnpf-gen:end-insert-point=custom-form-logic
+</script>
+
+<style scoped lang="scss">
+.page-form {
+  padding: 24rpx;
+}
+
+.form-actions {
+  margin-top: 48rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+</style>

@@ -8,7 +8,7 @@
   import { useRouter, useRoute } from 'vue-router';
   import { useUserStore } from '/@/store/modules/user';
 
-  defineOptions({ name: 'ssoRedirect' });
+  defineOptions({ name: 'SsoRedirect' });
 
   const loading = ref(true);
   const userStore = useUserStore();

@@ -1,5 +1,5 @@
 import { defHttp } from '/@/utils/http/axios';
-import { getToken } from '/@/utils/auth';
+import { getRawToken } from '/@/utils/auth';
 import { isString, isNumber } from '/@/utils/is';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { useUserStoreWithOut } from '/@/store/modules/user';
@@ -10,7 +10,7 @@ interface OnlineUserInfo extends UserInfo {
   token?: string;
 }
 
-export function toDecimal(num: number = 0) {
+export function toDecimal(num = 0) {
   const sign = num == (num = Math.abs(num));
   num = Math.floor(num * 100 + 0.50000000001);
   const cents = num % 100;
@@ -30,20 +30,20 @@ export function toFileSize(size) {
 export function toDateText(dateTimeStamp) {
   if (!dateTimeStamp) return '';
   let result = '';
-  let minute = 1000 * 60; //把分，时，天，周，半个月，一个月用毫秒表示
-  let hour = minute * 60;
-  let day = hour * 24;
-  let week = day * 7;
+  const minute = 1000 * 60; //把分，时，天，周，半个月，一个月用毫秒表示
+  const hour = minute * 60;
+  const day = hour * 24;
+  const week = day * 7;
   // let halfAMonth = day * 15;
-  let month = day * 30;
-  let now = new Date().getTime(); //获取当前时间毫秒
-  let diffValue = now - dateTimeStamp; //时间差
+  const month = day * 30;
+  const now = new Date().getTime(); //获取当前时间毫秒
+  const diffValue = now - dateTimeStamp; //时间差
   if (diffValue < 0) return '刚刚';
-  let minC = diffValue / minute; //计算时间差的分，时，天，周，月
-  let hourC = diffValue / hour;
-  let dayC = diffValue / day;
-  let weekC = diffValue / week;
-  let monthC = diffValue / month;
+  const minC = diffValue / minute; //计算时间差的分，时，天，周，月
+  const hourC = diffValue / hour;
+  const dayC = diffValue / day;
+  const weekC = diffValue / week;
+  const monthC = diffValue / month;
   if (monthC >= 1 && monthC <= 3) {
     result = ' ' + parseInt(monthC) + '月前';
   } else if (weekC >= 1 && weekC <= 3) {
@@ -57,7 +57,7 @@ export function toDateText(dateTimeStamp) {
   } else if (diffValue >= 0 && diffValue <= minute) {
     result = '刚刚';
   } else {
-    let datetime = new Date();
+    const datetime = new Date();
     datetime.setTime(dateTimeStamp);
     const nYear = datetime.getFullYear();
     const nMonth = datetime.getMonth() + 1 < 10 ? '0' + (datetime.getMonth() + 1) : datetime.getMonth() + 1;
@@ -72,14 +72,14 @@ export function toDateText(dateTimeStamp) {
 export function toDateValue(dateTimeStamp) {
   if (!dateTimeStamp) return '';
   let result = '';
-  let datetime = new Date();
-  let nowYear = datetime.getFullYear();
+  const datetime = new Date();
+  const nowYear = datetime.getFullYear();
   datetime.setTime(dateTimeStamp);
-  let nYear = datetime.getFullYear();
-  let nMonth = datetime.getMonth() + 1 < 10 ? '0' + (datetime.getMonth() + 1) : datetime.getMonth() + 1;
-  let nDate = datetime.getDate() < 10 ? '0' + datetime.getDate() : datetime.getDate();
-  let nHour = datetime.getHours() < 10 ? '0' + datetime.getHours() : datetime.getHours();
-  let nMinute = datetime.getMinutes() < 10 ? '0' + datetime.getMinutes() : datetime.getMinutes();
+  const nYear = datetime.getFullYear();
+  const nMonth = datetime.getMonth() + 1 < 10 ? '0' + (datetime.getMonth() + 1) : datetime.getMonth() + 1;
+  const nDate = datetime.getDate() < 10 ? '0' + datetime.getDate() : datetime.getDate();
+  const nHour = datetime.getHours() < 10 ? '0' + datetime.getHours() : datetime.getHours();
+  const nMinute = datetime.getMinutes() < 10 ? '0' + datetime.getMinutes() : datetime.getMinutes();
   if (nYear == nowYear) {
     result = nMonth + '-' + nDate + ' ' + nHour + ':' + nMinute;
   } else {
@@ -115,12 +115,116 @@ export function getDataTypeText(val) {
   }
   return text;
 }
+// 白名单数据处理函数（替代 eval）
+const DATA_PROCESSING_FUNCTIONS: Record<string, (data: unknown, ...args: unknown[]) => unknown> = {
+  formatDate: (data: unknown, fmt?: string) => {
+    if (!data) return '';
+    const d = new Date(data as string);
+    if (isNaN(d.getTime())) return data;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const map: Record<string, string> = {
+      yyyy: String(d.getFullYear()),
+      MM: pad(d.getMonth() + 1),
+      dd: pad(d.getDate()),
+      HH: pad(d.getHours()),
+      mm: pad(d.getMinutes()),
+      ss: pad(d.getSeconds()),
+    };
+    let result = fmt || 'yyyy-MM-dd';
+    for (const [k, v] of Object.entries(map)) {
+      result = result.replace(k, v);
+    }
+    return result;
+  },
+  formatMoney: (data: unknown) => {
+    const num = Number(data);
+    if (isNaN(num)) return data;
+    return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  },
+  toFixed: (data: unknown, n?: unknown) => {
+    const num = Number(data);
+    if (isNaN(num)) return data;
+    return num.toFixed(Number(n) || 2);
+  },
+  toUpperCase: (data: unknown) => String(data).toUpperCase(),
+  toLowerCase: (data: unknown) => String(data).toLowerCase(),
+  trim: (data: unknown) => String(data).trim(),
+  maskPhone: (data: unknown) => {
+    const s = String(data);
+    return s.length >= 11 ? s.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : s;
+  },
+  maskIdCard: (data: unknown) => {
+    const s = String(data);
+    return s.length >= 18 ? s.replace(/(\d{6})\d{8}(\d{4})/, '$1********$2') : s;
+  },
+  round: (data: unknown, n?: unknown) => {
+    const num = Number(data);
+    if (isNaN(num)) return data;
+    const factor = Math.pow(10, Number(n) || 0);
+    return Math.round(num * factor) / factor;
+  },
+};
+
+function safeParseLiteralArgs(argsStr: string): unknown[] {
+  if (!argsStr.trim()) return [];
+  const args: unknown[] = [];
+  const tokenPattern = /'([^']*)'|"([^"]*)"|(\d+\.?\d*)|(true|false|null|undefined)/g;
+  let match;
+  while ((match = tokenPattern.exec(argsStr)) !== null) {
+    if (match[1] !== undefined) args.push(match[1]);
+    else if (match[2] !== undefined) args.push(match[2]);
+    else if (match[3] !== undefined) args.push(Number(match[3]));
+    else if (match[4] === 'true') args.push(true);
+    else if (match[4] === 'false') args.push(false);
+    else if (match[4] === 'null') args.push(null);
+    else if (match[5] !== undefined) args.push(undefined);
+  }
+  return args;
+}
+
+function resolvePath(obj: unknown, path: string): unknown {
+  return path.split('.').reduce((o, k) => (o as Record<string, unknown>)?.[k], obj);
+}
+
+function safeDataProcessing(str: string, data: unknown): unknown {
+  if (!str || !str.trim()) return data;
+
+  const trimmed = str.trim();
+
+  // 模式 1：简单函数调用 —— "funcName(data)" 或 "funcName(data, 'arg1', 123)"
+  const callMatch = trimmed.match(/^(\w+)\((.*)\)$/s);
+  if (callMatch) {
+    const fnName = callMatch[1];
+    const fn = DATA_PROCESSING_FUNCTIONS[fnName];
+    if (fn) {
+      try {
+        const args = safeParseLiteralArgs(callMatch[2].replace(/^data\s*,?\s*/, ''));
+        return fn(data, ...args);
+      } catch (e) {
+        console.warn(`[dataProcessing] 执行失败: ${str}`, e);
+        return data;
+      }
+    }
+    console.warn(`[dataProcessing] 未知函数: ${fnName}，跳过执行`);
+    return data;
+  }
+
+  // 模式 2：简单属性访问 —— "data.fieldName"
+  const pathMatch = trimmed.match(/^data\.([\w.]+)$/);
+  if (pathMatch) {
+    return resolvePath(data, pathMatch[1]);
+  }
+
+  // 模式 3：不支持的表达式 → 安全降级
+  console.warn(`[dataProcessing] 不支持的表达式格式: ${str}，跳过执行`);
+  return data;
+}
+
 export function getScriptFunc(str) {
-  let func = null;
+  if (!str || !str.trim()) return false;
   try {
-    func = eval(str);
-    if (Object.prototype.toString.call(func) !== '[object Function]') return false;
-    return func;
+    // 返回安全包装器：使用白名单评估器替代 eval
+    return (contextData: unknown) => safeDataProcessing(str, contextData);
   } catch (_) {
     return false;
   }
@@ -139,9 +243,9 @@ export function dynamicText(value, options) {
   if (!value) return '';
   if (Array.isArray(value)) {
     if (!options || !Array.isArray(options)) return value.join();
-    let textList: any[] = [];
+    const textList: any[] = [];
     for (let i = 0; i < value.length; i++) {
-      let item = options.filter(o => o.id == value[i])[0];
+      const item = options.filter(o => o.id == value[i])[0];
       if (!item || !item.fullName) {
         textList.push(value[i]);
       } else {
@@ -151,7 +255,7 @@ export function dynamicText(value, options) {
     return textList.join();
   }
   if (!options || !Array.isArray(options)) return value;
-  let item = options.filter(o => o.id == value)[0];
+  const item = options.filter(o => o.id == value)[0];
   if (!item || !item.fullName) return value;
   return item.fullName;
 }
@@ -160,7 +264,7 @@ export function dynamicTreeText(value, options) {
   if (!value) return '';
 
   function transfer(data) {
-    let textList: any[] = [];
+    const textList: any[] = [];
 
     function loop(data, id) {
       for (let i = 0; i < data.length; i++) {
@@ -178,12 +282,12 @@ export function dynamicTreeText(value, options) {
   }
   if (!options || !Array.isArray(options)) return value.join();
   if (Array.isArray(value)) {
-    let text = transfer(value);
+    const text = transfer(value);
     return text;
   } else {
     if (!options || !Array.isArray(options)) return value;
-    let list = value.split();
-    let text = transfer(list);
+    const list = value.split();
+    const text = transfer(list);
     return text;
   }
 }
@@ -221,7 +325,7 @@ export function getAmountChinese(val) {
   const N_UNIT1 = ['', '拾', '佰', '仟'];
   const N_UNIT2 = ['', '万', '亿', '兆'];
   const D_UNIT = ['角', '分', '厘', '毫'];
-  let [integer, decimal] = amount.toString().split('.');
+  const [integer, decimal] = amount.toString().split('.');
   if (integer && (integer.length > 15 || integer.indexOf('e') > -1)) return '数字较大溢出';
   let res = '';
   // 整数部分
@@ -309,7 +413,7 @@ export const onlineUtils = {
   getUserInfo() {
     const userStore = useUserStoreWithOut();
     const userInfo: OnlineUserInfo = userStore.getUserInfo;
-    userInfo.token = getToken() as string;
+    userInfo.token = getRawToken();
     return userInfo;
   },
   // 获取设备信息
@@ -327,7 +431,7 @@ export const onlineUtils = {
     router.push(url);
   },
   // 消息提示
-  toast(message: string | number, type: string = 'info', duration: number = 3000) {
+  toast(message: string | number, type = 'info', duration = 3000) {
     const { createMessage } = useMessage();
     if (!isString(message) && !isNumber(message)) return;
     const newDuration = duration / 1000;

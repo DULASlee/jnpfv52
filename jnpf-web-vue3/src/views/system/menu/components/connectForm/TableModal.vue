@@ -8,7 +8,7 @@
       <div class="jnpf-content-wrapper">
         <div class="jnpf-content-wrapper-center">
           <div class="jnpf-content-wrapper-content">
-            <BasicTable @register="registerTable" :searchInfo="searchInfo" class="jnpf-sub-table"></BasicTable>
+            <BasicTable @register="registerTable" :searchInfo="searchInfo" class="jnpf-sub-table" />
           </div>
         </div>
       </div>

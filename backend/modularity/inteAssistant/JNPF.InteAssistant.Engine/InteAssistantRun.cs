@@ -18,7 +18,6 @@ using JNPF.UnifyResult;
 using Mapster;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.Extensions.DependencyInjection;
 using SqlSugar;
 
 namespace JNPF.InteAssistant.Engine;
@@ -26,15 +25,10 @@ namespace JNPF.InteAssistant.Engine;
 /// <summary>
 /// 集成助手-运行核心.
 /// </summary>
-public class InteAssistantRun : ITransient, IDisposable
+public class InteAssistantRun : ITransient
 {
-    /// <summary>
-    /// 服务提供器.
-    /// </summary>
-    private readonly IServiceScope _serviceScope;
-
+    private readonly IServer _server;
     private readonly ICacheManager _cacheManager;
-
     private readonly ISqlSugarClient _sqlSugarClient;
 
     /// <summary>
@@ -46,12 +40,12 @@ public class InteAssistantRun : ITransient, IDisposable
     /// 初始化一个<see cref="InteAssistantRun"/>类型的新实例.
     /// </summary>
     public InteAssistantRun(
-        IServiceScopeFactory serviceScopeFactory,
+        IServer server,
         ICacheManager cacheManager,
         ITenantManager tenantManager,
         ISqlSugarClient sqlSugarClient)
     {
-        _serviceScope = serviceScopeFactory.CreateScope();
+        _server = server;
         _sqlSugarClient = sqlSugarClient;
         _cacheManager = cacheManager;
         _tenantManager = tenantManager;
@@ -932,8 +926,7 @@ public class InteAssistantRun : ITransient, IDisposable
     /// <returns></returns>
     private string GetLocalAddress()
     {
-        var server = _serviceScope.ServiceProvider.GetRequiredService<IServer>();
-        var addressesFeature = server.Features.Get<IServerAddressesFeature>();
+        var addressesFeature = _server.Features.Get<IServerAddressesFeature>();
         var addresses = addressesFeature?.Addresses;
         return addresses?.FirstOrDefault()?.Replace("[::]", "localhost");
     }
@@ -1414,8 +1407,4 @@ public class InteAssistantRun : ITransient, IDisposable
         return ruleLogicList.ToObject<List<object>>();
     }
 
-    public void Dispose()
-    {
-        _serviceScope.Dispose();
-    }
 }

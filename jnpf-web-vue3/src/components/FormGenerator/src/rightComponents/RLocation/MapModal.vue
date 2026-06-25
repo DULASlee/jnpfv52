@@ -9,7 +9,7 @@
         placeholder="输入搜索或直接在下图选择定位中心"
         @select="onSelect"
         @search="debounceOnSearch"
-        @dropdownVisibleChange="onDropdownVisibleChange">
+        @dropdown-visible-change="onDropdownVisibleChange">
         <template #option="item">
           <div @click="onSelect(item)"> {{ item.name }}</div>
         </template>

@@ -14,7 +14,7 @@
   import { useAppStore } from '/@/store/modules/app';
 
   export default defineComponent({
-    name: 'monacoEditor',
+    name: 'MonacoEditor',
     props: editorProps,
     emits: ['update:modelValue', 'change', 'editor-mounted'],
     setup(props, { emit, expose }) {

@@ -1,11 +1,16 @@
 import CryptoJS from 'crypto-js'
 
 export default class crypto {
-  // 使用AesUtil.genAesKey()生成,需和后端配置保持一致
-  static aesKey = "EY8WePvjM5GGwQzn";
+  static aesKey = import.meta.env.VITE_AES_KEY || '';
+  static desKey = import.meta.env.VITE_DES_KEY || '';
 
-  // 使用DesUtil.genDesKey()生成,需和后端配置保持一致
-  static desKey = "jMVCBsFGDQr1USHo";
+  static _warned = false;
+  static _checkKey() {
+    if (!this._warned && (!this.aesKey || !this.desKey)) {
+      console.warn('[JNPF Security] AES/DES keys not configured. Set VITE_AES_KEY and VITE_DES_KEY environment variables.');
+      this._warned = true;
+    }
+  }
 
   /**
    * aes 加密方法

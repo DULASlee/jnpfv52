@@ -189,4 +189,3 @@ const setting: ProjectConfig = {
 };
 
 export default setting;
-

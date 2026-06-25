@@ -10,7 +10,7 @@
   import DetailMain from './DetailMain.vue';
   import { useRoute } from 'vue-router';
 
-  defineOptions({ name: 'extend-email' });
+  defineOptions({ name: 'ExtendEmail' });
 
   interface State {
     dataForm: any;

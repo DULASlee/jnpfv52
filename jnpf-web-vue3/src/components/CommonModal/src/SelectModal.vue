@@ -17,7 +17,7 @@
             <a-row :gutter="10">
               <a-col :span="8">
                 <a-form-item :label="t('common.keyword')" name="keyword">
-                  <a-input v-model:value="listQuery.keyword" :placeholder="t('common.enterKeyword')" allowClear @pressEnter="handleSearch" />
+                  <a-input v-model:value="listQuery.keyword" :placeholder="t('common.enterKeyword')" allowClear @press-enter="handleSearch" />
                 </a-form-item>
               </a-col>
               <a-col :span="8">
@@ -52,7 +52,7 @@
               <a-row :gutter="10">
                 <a-col :span="8">
                   <a-form-item :label="t('common.keyword')" name="keyword">
-                    <a-input v-model:value="listQuery.keyword" :placeholder="t('common.enterKeyword')" allowClear @pressEnter="handleSearch" />
+                    <a-input v-model:value="listQuery.keyword" :placeholder="t('common.enterKeyword')" allowClear @press-enter="handleSearch" />
                   </a-form-item>
                 </a-col>
                 <a-col :span="8">
@@ -78,7 +78,7 @@
             </template>
           </a-table>
         </div>
-        <DrawerFooter showFooter @close="handleCancel" @ok="handleSubmit"></DrawerFooter>
+        <DrawerFooter showFooter @close="handleCancel" @ok="handleSubmit" />
       </a-drawer>
     </template>
   </div>

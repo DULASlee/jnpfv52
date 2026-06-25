@@ -36,7 +36,7 @@
   import Detail from './Detail.vue';
   import dayjs from 'dayjs';
 
-  defineOptions({ name: 'extend-operationLog' });
+  defineOptions({ name: 'ExtendOperationLog' });
 
   const { t } = useI18n();
   const { createMessage } = useMessage();
@@ -117,7 +117,7 @@
   }
 
   function handleDelete(id) {
-    delOperationLog({ ids: [id] }).then((res) => {
+    delOperationLog({ ids: [id] }).then(res => {
       createMessage.success(res.msg);
       reload();
     });
@@ -130,7 +130,7 @@
       title: '确认删除',
       content: `确认删除选中的 ${rows.length} 条记录？`,
       onOk: async () => {
-        await delOperationLog({ ids: rows.map((r) => r.id) });
+        await delOperationLog({ ids: rows.map(r => r.id) });
         createMessage.success('删除成功');
         reload();
       },

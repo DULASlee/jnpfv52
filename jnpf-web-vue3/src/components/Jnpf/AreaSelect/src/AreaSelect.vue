@@ -1,5 +1,5 @@
 <template>
-  <a-select v-bind="getSelectBindValue" v-model:value="innerValue" :options="options" @change="onChange" @click="openSelectModal"></a-select>
+  <a-select v-bind="getSelectBindValue" v-model:value="innerValue" :options="options" @change="onChange" @click="openSelectModal" />
   <a-modal v-model:visible="visible" title="省市区" :width="800" class="transfer-modal" @ok="handleSubmit" centered :maskClosable="false" :keyboard="false">
     <template #closeIcon>
       <ModalClose :canFullscreen="false" @cancel="handleCancel" />

@@ -1,0 +1,51 @@
+{
+    "AI": {
+        "Providers": {
+            "mimo": {
+                "BaseUrl": "https://token-plan-cn.xiaomimimo.com/anthropic",
+                "ApiKey": "tp-cu5unlnpxecv11b9h9pcln9tnscsih5irvko2fszyvo3rtg5",
+                "DefaultModel": "mimo-v2.5-pro",
+                "ApiFormat": "anthropic"
+            },
+            "deepseek": {
+                "BaseUrl": "https://api.deepseek.com/anthropic",
+                "ApiKey": "sk-1141cc8a39824fbd91c40506aff12767",
+                "DefaultModel": "deepseek-v4-pro",
+                "ApiFormat": "anthropic"
+            },
+            "openai": {
+                "BaseUrl": "https://api.openai.com/v1",
+                "ApiKey": "",
+                "DefaultModel": "gpt-4o",
+                "ApiFormat": "openai"
+            },
+            "ollama": {
+                "BaseUrl": "http://localhost:11434/api",
+                "ApiKey": "",
+                "DefaultModel": "llama3.1",
+                "ApiFormat": "ollama"
+            }
+        },
+        "DefaultProvider": "mimo",
+        "FallbackProvider": "deepseek",
+        "Pipeline": {
+            "ReviewThresholds": {
+                "maxRejectCount": 3,
+                "maxExecutionMinutes": 30
+            },
+            "StaleTimeouts": {
+                "requirement": 168,
+                "architecture": 168,
+                "design": 72,
+                "development": 168,
+                "delivery": 336
+            },
+            "Validation": {
+                "estimatedSeconds": 10,
+                "enableSchemaCheck": true,
+                "enableIrCheck": true,
+                "enableTypeCheck": true
+            }
+        }
+    }
+}

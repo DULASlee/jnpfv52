@@ -1,13 +1,13 @@
 <template>
   <BasicPopup v-bind="$attrs" @register="registerPopup" class="full-popup report-popup">
-    <iframe :src="state.url" width="100%" height="100%" frameborder="0" />
+    <iframe :src="state.url" width="100%" height="100%" frameborder="0"></iframe>
   </BasicPopup>
 </template>
 <script lang="ts" setup>
   import { reactive, onMounted } from 'vue';
   import { BasicPopup, usePopupInner } from '/@/components/Popup';
   import { useGlobSetting } from '/@/hooks/setting';
-  import { getToken } from '/@/utils/auth';
+  import { getRawToken } from '/@/utils/auth';
   import { getDataReportInfo } from '/@/api/onlineDev/dataReport';
   interface State {
     url: string;
@@ -21,7 +21,7 @@
   });
 
   function init(data) {
-    let targetUrl = `${report}/preview.html?id=${data.id}&token=${getToken()}&page=1`;
+    let targetUrl = `${report}/preview.html?id=${data.id}&token=${getRawToken()}&page=1`;
     getDataReportInfo(data.id).then(res => {
       let item = {};
       if (res.data?.searchForm?.components && Array.isArray(res.data.searchForm.components)) {

@@ -35,7 +35,7 @@
         :mouseEnterDelay="0.5"
         v-if="getUserInfo.systemIds && getUserInfo.systemIds.length > 1 && !getJnpfAppId()">
         <div :class="`${prefixCls}-action__item`" @click="openSystemTriggerDrawer(true, { list: getUserInfo.systemIds })">
-          <i class="icon-ym icon-ym-systemToggle" />
+          <i class="icon-ym icon-ym-systemToggle"></i>
         </div>
       </a-tooltip>
 
@@ -46,9 +46,9 @@
       <UserDropDown :theme="getHeaderTheme" />
 
       <SettingDrawer v-if="getShowSetting" :class="`${prefixCls}-action__item`" />
-      <ChatDrawer @register="registerChatDrawer" @toggleTwinkle="toggleTwinkle" />
+      <ChatDrawer @register="registerChatDrawer" @toggle-twinkle="toggleTwinkle" />
       <SystemTriggerDrawer @register="registerSystemTriggerDrawer" />
-      <MessageDrawer @register="registerMessageDrawer" @readMsg="readMsg" />
+      <MessageDrawer @register="registerMessageDrawer" @read-msg="readMsg" />
       <ResetPwdForm @register="registerForm" />
     </div>
   </Header>

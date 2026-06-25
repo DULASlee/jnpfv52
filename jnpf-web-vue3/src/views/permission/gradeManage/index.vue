@@ -25,7 +25,7 @@
   import { useModal } from '/@/components/Modal';
   import Form from './Form.vue';
 
-  defineOptions({ name: 'permission-grade' });
+  defineOptions({ name: 'PermissionGrade' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

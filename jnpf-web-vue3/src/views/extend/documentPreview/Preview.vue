@@ -32,7 +32,7 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
   import { previewFile } from '/@/api/extend/documentPreview';
-  import { getToken } from '/@/utils/auth';
+  import { getRawToken } from '/@/utils/auth';
   import { useGlobSetting } from '/@/hooks/setting';
   import { encryptByBase64 } from '/@/utils/cipher';
 
@@ -67,7 +67,7 @@
         state.loading = false;
         if (res.data) {
           if (data.type === 'localPreview') {
-            state.url = `${globSetting.filePreviewServer}/onlinePreview?url=` + encodeURIComponent(encryptByBase64(res.data)) + '&token=' + getToken();
+            state.url = `${globSetting.filePreviewServer}/onlinePreview?url=` + encodeURIComponent(encryptByBase64(res.data)) + '&token=' + getRawToken();
             return;
           }
           state.url = res.data;

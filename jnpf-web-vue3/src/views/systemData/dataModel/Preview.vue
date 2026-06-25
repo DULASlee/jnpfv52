@@ -1,6 +1,6 @@
 <template>
   <BasicPopup v-bind="$attrs" @register="registerPopup" :title="getTitle" class="full-popup">
-    <BasicTable :columns="columns" @register="registerTable" class="jnpf-sub-table"></BasicTable>
+    <BasicTable :columns="columns" @register="registerTable" class="jnpf-sub-table" />
   </BasicPopup>
 </template>
 <script lang="ts" setup>

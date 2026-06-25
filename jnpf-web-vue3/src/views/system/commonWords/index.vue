@@ -28,7 +28,7 @@
   import { useModal } from '/@/components/Modal';
   import Form from './Form.vue';
 
-  defineOptions({ name: 'commonWords' });
+  defineOptions({ name: 'CommonWords' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

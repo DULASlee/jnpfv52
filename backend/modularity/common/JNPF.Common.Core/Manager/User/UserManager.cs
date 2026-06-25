@@ -293,7 +293,7 @@ public class UserManager : IUserManager, IScoped
     /// </summary>
     public string UserOrigin
     {
-        get => _httpContext?.Request.Headers["jnpf-origin"];
+        get => _httpContext?.Request.Headers["jnpf-origin"] ?? "pc";
     }
 
     /// <summary>

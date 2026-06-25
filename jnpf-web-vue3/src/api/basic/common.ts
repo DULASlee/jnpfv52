@@ -8,7 +8,7 @@ enum Api {
 }
 
 // 获取下载文件链接
-export function getDownloadUrl(type: string, fileName: string = '') {
+export function getDownloadUrl(type: string, fileName = '') {
   return defHttp.get({ url: `/api/file/Download/${type}/${fileName}` });
 }
 // 获取全部下载文件链接（打包下载）

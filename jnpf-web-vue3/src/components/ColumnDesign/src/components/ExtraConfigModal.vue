@@ -16,12 +16,12 @@
               <template #item="{ element, index }">
                 <div class="select-item">
                   <div class="select-line-icon option-drag">
-                    <i class="icon-ym icon-ym-darg" />
+                    <i class="icon-ym icon-ym-darg"></i>
                   </div>
                   <a-input v-model:value="element.fullName" placeholder="选项名" />
                   <a-input v-model:value="element.id" placeholder="选项值" />
                   <div class="close-btn select-line-icon" @click="activeData.options.splice(index, 1)">
-                    <i class="icon-ym icon-ym-btn-clearn" />
+                    <i class="icon-ym icon-ym-btn-clearn"></i>
                   </div>
                 </div>
               </template>
@@ -29,7 +29,7 @@
           </div>
           <div class="add-btn" v-if="activeData.__config__.dataType === 'static'">
             <a-button type="link" preIcon="icon-ym icon-ym-btn-add" @click="addSelectItem" class="!px-0">添加选项</a-button>
-            <a-divider type="vertical"></a-divider>
+            <a-divider type="vertical" />
             <a-button type="link" @click="openModal(true, { options: activeData.options })" class="!px-0">批量编辑</a-button>
           </div>
           <div v-if="activeData.__config__.dataType === 'dictionary'">

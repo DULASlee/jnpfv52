@@ -14,7 +14,7 @@
 import { getList } from '@/api/glob'
 import navs from './nav.vue'
 import logo from './logo.vue'
-import { getUrlParam } from "../utils/utils";
+import { getToken } from "@/utils/auth";
 export default {
   name: "index",
   components: {
@@ -27,8 +27,7 @@ export default {
     };
   },
   created() {
-    const token = getUrlParam("token") || "";
-    if (token) localStorage.setItem("token", token);
+    if (!getToken()) this.$router.push('/login');
     this.initGlob();
   },
   methods: {

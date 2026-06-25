@@ -51,12 +51,12 @@
           <template #item="{ element, index }">
             <div class="select-item">
               <div class="select-line-icon option-drag">
-                <i class="icon-ym icon-ym-darg" />
+                <i class="icon-ym icon-ym-darg"></i>
               </div>
               <a-input v-model:value="element.label" placeholder="列名" />
               <a-input v-model:value="element.value" placeholder="字段" />
               <div class="close-btn select-line-icon" :class="{ 'opacity-50': activeData.option.columnOptions.length == 1 }" @click="handleDel(index)">
-                <i class="icon-ym icon-ym-btn-clearn" />
+                <i class="icon-ym icon-ym-btn-clearn"></i>
               </div>
             </div>
           </template>
@@ -620,4 +620,3 @@
     initData();
   });
 </script>
-

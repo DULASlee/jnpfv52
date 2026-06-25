@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SqlSugarCore" Version="5.1.4.140" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\infrastructure\JNPF.Extras.EventBus.Outbox\JNPF.Extras.EventBus.Outbox.csproj" />
+    <ProjectReference Include="..\..\modularity\common\JNPF.Common.Core\JNPF.Common.Core.csproj" />
+    <ProjectReference Include="..\..\framework\JNPF\JNPF.csproj" />
+    <ProjectReference Include="..\..\application\JNPF.API.Entry\JNPF.API.Entry.csproj" />
+  </ItemGroup>
+
+</Project>

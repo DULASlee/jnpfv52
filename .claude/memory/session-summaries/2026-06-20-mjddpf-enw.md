@@ -1,0 +1,31 @@
+# 会话变更摘要
+
+**时间**: 2026-06-20 23:52:23
+**变更文件数**: 3
+
+## 📝 最近提交
+
+```
+chore: 全量备份 — hooks/规则/记忆/证据/会话摘要
+Hook & Rule:
+- collect-summary.mjs: 摘要收集器更新
+- load-mistakes.mjs: 新增错误加载hook
+- CLAUDE.md: 项目规则更新
+
+Memory:
+- mistake-log.md: 新增错误日志
+- 8 份会话摘要 (session-summaries)
+
+Evidence:
+- pipelineid-fix-verify.png: E2E 验证截图
+```
+
+## Hooks/规则 (2)
+
+- `.claude/evidence/e2e-final-after-send.png`
+- `.claude/evidence/e2e-final-result.png`
+
+## 其他 (1)
+
+- `DB/jnpf_v52_complete_init.sql`
+

@@ -20,7 +20,7 @@
     encryption: string;
   }
 
-  defineOptions({ name: 'formShortLink' });
+  defineOptions({ name: 'FormShortLink' });
   const { createMessage } = useMessage();
   const { close } = useTabs();
   const state = reactive<State>({

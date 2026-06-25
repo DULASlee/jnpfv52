@@ -1,0 +1,31 @@
+{
+  "data": {
+    "id": "subtable-order",
+    "fullName": "采购订单（含子表）",
+    "fields": [
+      { "__vModel__": "orderNo", "__config__": { "label": "订单编号", "tag": "JnpfInput", "jnpfKey": "JnpfInput", "required": true }, "placeholder": "自动生成" },
+      { "__vModel__": "supplierName", "__config__": { "label": "供应商", "tag": "JnpfSelect", "jnpfKey": "JnpfSelect", "required": true }, "placeholder": "请选择供应商" },
+      { "__vModel__": "orderDate", "__config__": { "label": "下单日期", "tag": "JnpfDatePicker", "jnpfKey": "JnpfDatePicker", "required": true }, "placeholder": "请选择日期" },
+      { "__vModel__": "items", "__config__": { "label": "采购明细", "tag": "JnpfTable", "jnpfKey": "JnpfTable", "children": [
+        { "__vModel__": "productName", "__config__": { "label": "商品名称", "jnpfKey": "JnpfInput" } },
+        { "__vModel__": "quantity", "__config__": { "label": "数量", "jnpfKey": "JnpfInputNumber" } },
+        { "__vModel__": "unitPrice", "__config__": { "label": "单价", "jnpfKey": "JnpfInputNumber" } },
+        { "__vModel__": "totalPrice", "__config__": { "label": "小计", "jnpfKey": "JnpfCalculate" } }
+      ] } },
+      { "__vModel__": "totalAmount", "__config__": { "label": "总金额", "tag": "JnpfCalculate", "jnpfKey": "JnpfCalculate" } }
+    ],
+    "funcs": {
+      "onLoad": "({ formData, setFormData, onlineUtils }) => {}",
+      "beforeSubmit": "({ formData }) => { return new Promise((resolve) => { resolve() }) }"
+    },
+    "virtualFieldList": [
+      { "field": "orderNo", "type": "varchar", "length": 50 },
+      { "field": "supplierName", "type": "varchar", "length": 100 },
+      { "field": "orderDate", "type": "datetime" },
+      { "field": "totalAmount", "type": "decimal" }
+    ],
+    "labelWidth": 120,
+    "popupType": "general",
+    "generalWidth": "900px"
+  }
+}

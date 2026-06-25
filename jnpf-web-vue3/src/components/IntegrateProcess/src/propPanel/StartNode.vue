@@ -1,8 +1,8 @@
 <template>
   <section class="common-pane">
     <a-tabs v-model:activeKey="activeKey" size="small" class="pane-tabs">
-      <a-tab-pane key="1" :tab="integrateType == 1 ? '表单配置' : integrateType == 2 ? '触发配置' : 'webhook配置'"></a-tab-pane>
-      <a-tab-pane key="2" tab="通知配置"></a-tab-pane>
+      <a-tab-pane key="1" :tab="integrateType == 1 ? '表单配置' : integrateType == 2 ? '触发配置' : 'webhook配置'" />
+      <a-tab-pane key="2" tab="通知配置" />
     </a-tabs>
     <ScrollContainer class="config-content">
       <a-form :colon="false" layout="vertical" :model="formConf" class="config-form" v-show="activeKey === '1'">
@@ -85,7 +85,7 @@
                     <a-input v-model:value="item.fullName" placeholder="字段说明" @change="onItemChange(item)" />
                   </a-col>
                   <a-col :span="1" class="text-center">
-                    <i class="icon-ym icon-ym-btn-clearn" @click="delItem(index)" />
+                    <i class="icon-ym icon-ym-btn-clearn" @click="delItem(index)"></i>
                   </a-col>
                 </a-row>
               </div>
@@ -151,7 +151,7 @@
     activeKey: string;
   }
 
-  defineOptions({ name: 'startNode', inheritAttrs: false });
+  defineOptions({ name: 'StartNode', inheritAttrs: false });
   defineExpose({ initCondition, submitCondition });
   const props = defineProps(['formConf', 'integrateType', 'formFieldsOptions', 'getFormFieldList', 'formInfo']);
   const { createMessage } = useMessage();

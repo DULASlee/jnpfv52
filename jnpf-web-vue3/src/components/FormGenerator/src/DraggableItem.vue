@@ -3,6 +3,7 @@
   import { defineComponent } from 'vue';
   import { CopyOutlined, DeleteOutlined } from '@ant-design/icons-vue';
   import render from './helper/render';
+  import { BasicHelp } from '/@/components/Basic';
 
   interface AttrsType {
     onActiveItem: (element) => void;
@@ -15,13 +16,13 @@
   }
 
   export default defineComponent({
-    inheritAttrs: false,
     components: {
       CopyOutlined,
       DeleteOutlined,
       draggable,
       render,
     },
+    inheritAttrs: false,
     props: ['element', 'index', 'drawingList', 'activeId', 'formConf', 'showType'],
 
     setup(props, { attrs }) {

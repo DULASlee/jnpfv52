@@ -22,7 +22,7 @@
       </div>
     </div>
     <Preview ref="filePreviewRef" :type="type" :showDownload="simple" />
-    <FileUploader ref="fileUploaderRef" v-bind="getBindValue" @fileSuccess="handleFileSuccess" />
+    <FileUploader ref="fileUploaderRef" v-bind="getBindValue" @file-success="handleFileSuccess" />
   </div>
 </template>
 

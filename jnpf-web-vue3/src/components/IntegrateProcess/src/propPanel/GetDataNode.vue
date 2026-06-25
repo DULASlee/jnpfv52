@@ -42,7 +42,7 @@
   import { SelectInterface } from '/@/components/Interface';
   import ConditionMain from '/@/components/ColumnDesign/src/components/ConditionMain.vue';
 
-  defineOptions({ name: 'addDataNode', inheritAttrs: false });
+  defineOptions({ name: 'AddDataNode', inheritAttrs: false });
   defineExpose({ initCondition, submitCondition });
   const props = defineProps(['formConf', 'integrateType', 'formFieldsOptions', 'getFormFieldList']);
   const conditionMainRef = ref();

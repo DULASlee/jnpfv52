@@ -72,7 +72,7 @@
       :columnData="columnData"
       :appColumnData="appColumnData"
       :formInfo="dataForm"
-      @toggleWebType="toggleWebType"
+      @toggle-web-type="toggleWebType"
       v-if="activeStep == 2" />
     <TableModal @register="registerTableModal" @select="onTableSelect" />
   </BasicModal>

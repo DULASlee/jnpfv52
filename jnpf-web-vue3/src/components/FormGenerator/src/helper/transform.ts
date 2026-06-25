@@ -1,5 +1,6 @@
 import { cloneDeep, upperFirst, lowerFirst } from 'lodash-es';
 import { useInputList, useDateList, useSelectList } from '/@/components/FormGenerator/src/helper/config';
+import { safeParseRegex } from '/@/components/FormGenerator/src/helper/regexp';
 
 export const getRealProps = (data, jnpfKey) => {
   if (Reflect.has(data, 'clearable')) {
@@ -38,12 +39,13 @@ export const getFormSchemaItem = data => {
   //   componentProps.children = item.__config__.children;
   // }
 
-  let rules: any[] = [];
+  const rules: any[] = [];
   const regList = item.__config__.regList;
   if (regList) {
     for (let i = 0; i < regList.length; i++) {
+      const p = regList[i].pattern;
       rules.push({
-        pattern: eval(regList[i].pattern),
+        pattern: p ? safeParseRegex(p) : undefined,
         message: regList[i].message,
         trigger: item.__config__.trigger,
       });
@@ -92,7 +94,7 @@ export const getSearchFormSchemas = (list: any[]) => {
   const schemas: any[] = getFormSchemas(list);
   for (let i = 0; i < schemas.length; i++) {
     const e = schemas[i];
-    let delList = ['className', 'colProps', 'labelWidth', 'required', 'rules', 'defaultValue'];
+    const delList = ['className', 'colProps', 'labelWidth', 'required', 'rules', 'defaultValue'];
     for (let i = 0; i < delList.length; i++) {
       delete e[delList[i]];
     }

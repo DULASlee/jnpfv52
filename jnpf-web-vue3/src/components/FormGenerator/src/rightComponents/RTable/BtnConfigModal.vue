@@ -58,7 +58,7 @@
           <a-form-item label="远端数据">
             <interface-modal :value="actionConfig.interfaceId" :title="actionConfig.interfaceName" :sourceType="2" @change="onInterfaceChange" />
           </a-form-item>
-          <a-form-item label="参数设置" style="margin-bottom: 0"></a-form-item>
+          <a-form-item label="参数设置" style="margin-bottom: 0" />
           <a-table :data-source="actionConfig.templateJson" :columns="templateJsonColumns" size="small" :pagination="false">
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'field'">
@@ -104,7 +104,7 @@
         <a-form-item label="表单数据" v-else>
           <JnpfTreeSelect v-model:value="actionConfig.modelId" :options="treeData" placeholder="请选择" lastLevel allowClear @change="onModeIdChange" />
         </a-form-item>
-        <a-form-item label="设置列表字段" style="margin-bottom: 0" :labelCol="{ style: { width: '100px' } }"></a-form-item>
+        <a-form-item label="设置列表字段" style="margin-bottom: 0" :labelCol="{ style: { width: '100px' } }" />
         <a-table :data-source="actionConfig.columnOptions" :columns="getColumnOptionsColumns" size="small" :pagination="false">
           <template #headerCell="{ column }">
             <template v-if="column.key === 'width'">{{ column.title }}<BasicHelp text="移动端不支持宽度设置" /></template>
@@ -140,7 +140,7 @@
         <div class="table-add-action" @click="handleAddColumnOption()">
           <a-button type="link" preIcon="icon-ym icon-ym-btn-add">新增</a-button>
         </div>
-        <a-form-item label="设置关联字段" style="margin-bottom: 0" :labelCol="{ style: { width: '100px' } }"></a-form-item>
+        <a-form-item label="设置关联字段" style="margin-bottom: 0" :labelCol="{ style: { width: '100px' } }" />
         <a-table :data-source="actionConfig.relationOptions" :columns="relationOptionsColumns" size="small" :pagination="false">
           <template #bodyCell="{ column, record, index }">
             <template v-if="column.key === 'field'">

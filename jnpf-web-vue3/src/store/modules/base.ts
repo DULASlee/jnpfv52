@@ -44,7 +44,7 @@ export const useBaseStore = defineStore({
         return [];
       }
     },
-    async getDictionaryData(encode: string, id: string = ''): Promise<DicChildItem[] | DicChildItem> {
+    async getDictionaryData(encode: string, id = ''): Promise<DicChildItem[] | DicChildItem> {
       try {
         let list: DicItem[] = [],
           data: Partial<DicItem> = {},
@@ -55,7 +55,7 @@ export const useBaseStore = defineStore({
           list = this.dictionaryList;
         }
         if (encode) {
-          let arr = list.filter(o => o.enCode === encode);
+          const arr = list.filter(o => o.enCode === encode);
           if (!arr.length) return [];
           data = arr[0];
           if (!id) {
@@ -96,7 +96,7 @@ export const useBaseStore = defineStore({
         return [];
       }
     },
-    async getDicDataSelector(value: string, key: string = 'id'): Promise<DicChildItem[]> {
+    async getDicDataSelector(value: string, key = 'id'): Promise<DicChildItem[]> {
       try {
         let list: DicItem[] = [],
           data: Partial<DicItem> = {},
@@ -107,7 +107,7 @@ export const useBaseStore = defineStore({
           list = this.dictionaryList;
         }
         if (!value) return [];
-        let arr = list.filter(o => {
+        const arr = list.filter(o => {
           return o[key] === value;
         });
         if (!arr.length) return [];

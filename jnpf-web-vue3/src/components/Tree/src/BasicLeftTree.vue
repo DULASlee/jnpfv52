@@ -9,7 +9,7 @@
       :checkAll="checkAll"
       @strictly-change="onStrictlyChange"
       @reload="reload"
-      @clearSearch="searchValue = ''"
+      @clear-search="searchValue = ''"
       :isAsync="!!loadData"
       v-if="title || dropDownActions.length">
       <template #headerTitle v-if="slots.headerTitle">

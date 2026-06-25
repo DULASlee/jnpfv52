@@ -5,7 +5,7 @@
         <BasicTable @register="registerTable">
           <template #tableTitle>
             <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" @click="addOrUpdateHandle()">{{ t('common.addText') }}</a-button>
-            <jnpf-upload-btn url="/api/system/printDev/Actions/Import" accept=".bp" @on-success="reload"></jnpf-upload-btn>
+            <jnpf-upload-btn url="/api/system/printDev/Actions/Import" accept=".bp" @on-success="reload" />
           </template>
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'enabledMark'">
@@ -37,7 +37,7 @@
   import Preview from './Preview.vue';
   import Log from './Log.vue';
 
-  defineOptions({ name: 'system-printDev' });
+  defineOptions({ name: 'SystemPrintDev' });
 
   const { t } = useI18n();
   const baseStore = useBaseStore();

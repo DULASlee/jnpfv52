@@ -29,7 +29,7 @@
             <ScrollContainer>
               <div class="icon-box-list">
                 <a-button v-for="(item, index) in ymIconList" :key="index" @click="handleIconClick(item)" :class="{ 'is-active': item === active }">
-                  <i :class="item" />
+                  <i :class="item"></i>
                 </a-button>
               </div>
             </ScrollContainer>
@@ -38,7 +38,7 @@
             <ScrollContainer>
               <div class="icon-box-list">
                 <a-button v-for="(item, index) in ymCustomList" :key="index" @click="handleIconClick(item)" :class="{ 'is-active': item === innerValue }">
-                  <i :class="item" />
+                  <i :class="item"></i>
                 </a-button>
               </div>
             </ScrollContainer>

@@ -7,10 +7,10 @@
         </div>
         <div class="transfer-pane__body transfer-pane__body-tab">
           <a-tabs v-model:activeKey="activeKey" :tabBarGutter="10" size="small" class="pane-tabs">
-            <a-tab-pane key="1" tab="部门"></a-tab-pane>
-            <a-tab-pane key="2" tab="角色"></a-tab-pane>
-            <a-tab-pane key="3" tab="岗位"></a-tab-pane>
-            <a-tab-pane key="4" tab="分组"></a-tab-pane>
+            <a-tab-pane key="1" tab="部门" />
+            <a-tab-pane key="2" tab="角色" />
+            <a-tab-pane key="3" tab="岗位" />
+            <a-tab-pane key="4" tab="分组" />
           </a-tabs>
           <template v-if="activeKey === '1'">
             <BasicTree
@@ -61,7 +61,7 @@
                   </p>
                   <div v-for="(child, i) in item.children" :key="i" class="selected-item selected-item-user">
                     <div class="selected-item-main">
-                      <a-avatar :size="36" :src="apiUrl + child.headIcon" class="selected-item-headIcon" v-if="child.type === 'user'"></a-avatar>
+                      <a-avatar :size="36" :src="apiUrl + child.headIcon" class="selected-item-headIcon" v-if="child.type === 'user'" />
                       <div class="selected-item-icon" v-else>{{ child.fullName.substring(0, 1) }}</div>
                       <div class="selected-item-text">
                         <p class="name">{{ child.fullName }}</p>

@@ -14,7 +14,7 @@
       <span v-else>{{ properties.title }}</span>
     </template>
     <!-- 发起节点配置 -->
-    <StartNode ref="startRef" v-bind="getBindValue" :formConf="startForm" @updateFormFieldList="updateFormFieldList" v-if="value && isStartNode()" />
+    <StartNode ref="startRef" v-bind="getBindValue" :formConf="startForm" @update-form-field-list="updateFormFieldList" v-if="value && isStartNode()" />
     <!-- 定时器节点配置 -->
     <TimerNode ref="timerRef" v-bind="getBindValue" :formConf="state.timerForm" v-if="value && isTimerNode()" />
     <!-- 条件节点配置 -->
@@ -24,7 +24,7 @@
       ref="approverRef"
       v-bind="getBindValue"
       :formConf="state.approverForm"
-      @updateFormFieldList="updateFormFieldList"
+      @update-form-field-list="updateFormFieldList"
       v-if="value && isApproverNode()" />
     <!-- 子流程节点配置 -->
     <SubFlowNode ref="subFlowRef" v-bind="getBindValue" :formConf="state.subFlowForm" v-if="value && isSubFlowNode()" />

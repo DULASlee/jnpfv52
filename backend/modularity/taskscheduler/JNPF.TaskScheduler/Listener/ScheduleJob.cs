@@ -16,15 +16,15 @@ public class ScheduleJob : IJob
     /// <summary>
     /// 服务提供器.
     /// </summary>
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
 
     /// <summary>
     /// 构造函数.
     /// </summary>
     /// <param name="serviceProvider">服务提供器.</param>
-    public ScheduleJob(IServiceProvider serviceProvider)
+    public ScheduleJob(IServiceScopeFactory serviceScopeFactory)
     {
-        _serviceProvider = serviceProvider;
+        _serviceScopeFactory = serviceScopeFactory;
     }
 
     /// <summary>
@@ -35,7 +35,7 @@ public class ScheduleJob : IJob
     /// <returns></returns>
     public async Task ExecuteAsync(JobExecutingContext context, CancellationToken stoppingToken)
     {
-        using var serviceScope = _serviceProvider.CreateScope();
+        using var serviceScope = _serviceScopeFactory.CreateScope();
         var _cacheManager = serviceScope.ServiceProvider.GetService<ICacheManager>();
         var _scheduleService = serviceScope.ServiceProvider.GetService<IScheduleService>();
 

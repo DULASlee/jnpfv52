@@ -30,7 +30,7 @@
   import Form from './Form.vue';
   import dayjs from 'dayjs';
 
-  defineOptions({ name: 'system-cache' });
+  defineOptions({ name: 'SystemCache' });
 
   const { t } = useI18n();
   const { createMessage, createConfirm } = useMessage();

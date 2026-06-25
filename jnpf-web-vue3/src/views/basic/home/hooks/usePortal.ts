@@ -101,7 +101,7 @@ export function usePortal() {
     const loop = (list, type = 1) => {
       list.forEach(ele => {
         if ((ele.refresh && ele.refresh.autoRefresh && ele.refresh.autoRefreshTime) || type == 2) {
-          var timer = setInterval(
+          const timer = setInterval(
             () => {
               ele.renderKey = +new Date();
               autoRefresh(ele);

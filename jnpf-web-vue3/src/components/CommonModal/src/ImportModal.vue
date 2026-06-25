@@ -149,7 +149,7 @@
   import { useI18n } from '/@/hooks/web/useI18n';
   import { downloadByUrl } from '/@/utils/file/download';
   import { useGlobSetting } from '/@/hooks/setting';
-  import { getToken } from '/@/utils/auth';
+  import { getAuthHeaders } from '/@/utils/auth';
   import { Upload as AUpload } from 'ant-design-vue';
   import type { UploadChangeParam, UploadFile } from 'ant-design-vue';
   import { cloneDeep } from 'lodash-es';
@@ -202,7 +202,7 @@
   const { activeStep, fileName, fileList, btnLoading, list, result, resultList, columns, resultColumns } = toRefs(state);
 
   const getAction = computed(() => globSetting.apiUrl + state.actionUrl);
-  const getHeaders = computed(() => ({ Authorization: getToken() as string }));
+  const getHeaders = computed(() => getAuthHeaders());
 
   function init(data) {
     state.actionUrl = `/api/${data.url || 'visualdev/OnlineDev'}/Uploader`;

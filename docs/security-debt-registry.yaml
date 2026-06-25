@@ -1,0 +1,156 @@
+# JNPF Security Debt Registry
+# 版本：v5.2
+# 更新：2026-06-12 Sprint 0-A Day 3
+# 用途：跟踪所有已知安全债务，每个条目含风险等级/影响范围/修复方案/状态
+
+entries:
+  # ============================================================
+  # SD-001: SQL Injection — ScreenDataSourceService
+  # 严重度：CRITICAL
+  # ============================================================
+  - id: SD-001
+    title: "SQL Injection in ScreenDataSourceService"
+    severity: CRITICAL
+    file: "backend/modularity/visualdev/JNPF.VisualDev/ScreenDataSourceService.cs"
+    line: 186
+    description: >
+      用户在数字大屏数据源中写入的原始 SQL 被直接执行，未经任何过滤或参数化。
+      攻击者可通过大屏设计器注入任意 SQL 语句。
+    impact: "数据库完全暴露：数据泄露、数据篡改、DROP TABLE"
+    fix: >
+      1. 将 ExecuteSql 改为参数化查询（SqlSugar SqlQueryable<T>）
+      2. 添加 SQL 语法白名单（仅允许 SELECT 语句）
+      3. 在 API 层添加 PreventSqlInjectionFilter
+    status: open
+    sprint: Sprint 0-A Day 3
+    adr: null
+
+  # ============================================================
+  # SD-002: SQL Injection — ConfigController DROP TABLE
+  # 严重度：CRITICAL
+  # ============================================================
+  - id: SD-002
+    title: "SQL Injection via string.Format in ConfigController"
+    severity: CRITICAL
+    file: "backend/modularity/visualdev/JNPF.VisualDev/ConfigController.cs"
+    line: 290
+    description: >
+      ConfigController 使用 string.Format 拼接用户输入到 SQL 语句中，
+      可执行 DROP TABLE 等破坏性操作。
+    impact: "数据库被删除或篡改"
+    fix: >
+      1. 移除 string.Format 拼接，改用 SqlSugar 安全查询
+      2. 添加输入校验：禁止 DDL/DML 关键字（DROP、ALTER、TRUNCATE、DELETE）
+      3. 使用只读数据库连接执行查询
+    status: open
+    sprint: Sprint 0-A Day 3
+    adr: null
+
+  # ============================================================
+  # SD-003: JwtHandler Permission Bypass
+  # 严重度：HIGH
+  # ============================================================
+  - id: SD-003
+    title: "JwtHandler AuthorizeHandleAsync returns true for all requests"
+    severity: HIGH
+    file: "backend/application/JNPF.API.Entry/Handlers/JwtHandler.cs"
+    line: 47
+    description: >
+      原始代码中权限检查被注释，CheckAuthorzieAsync 始终返回 true。
+      Sprint 0-A Day 3 已修复：添加路由级白名单 + 权限组非空验证 +
+      route-match 403 逻辑。
+    impact: "任何持有有效 JWT Token 的用户可访问所有 API"
+    fix: >
+      1. ✅ 路由级匹配 + 白名单 + 403（Day 3 修复）
+      2. ⬜ 权限组路由映射（阶段二 — menu-route mapping infrastructure）
+      3. ⬜ X-Idempotency-Key 防重放（阶段三）
+    status: partial_fix
+    sprint: Sprint 0-A Day 3
+    adr: null
+
+  # ============================================================
+  # SD-004: QueryFilter Clear/Add 竞争条件
+  # 严重度：HIGH
+  # ============================================================
+  - id: SD-004
+    title: "SqlSugar QueryFilter.Clear() + Add() race condition"
+    severity: HIGH
+    file: "backend/framework/JNPF.Extras.DatabaseAccessor.SqlSugar/SqlSugarConfigureExtensions.cs"
+    line: 57
+    description: >
+      Clear() 清除所有全局过滤器后再 Add() 重新添加 ITenantFilter。
+      在 Clear 和 Add 之间的窗口期，任何查询都不会经过租户过滤，
+      导致跨租户数据泄露。这不是理论风险——ASP.NET 的并发请求模型
+      使窗口期请求确实可能绕过租户检查。
+    impact: "并发请求可能绕过租户过滤，读取其他租户的数据"
+    fix: >
+      方案 A（推荐）：移除 Clear()，使用 AddTableFilter() 追加过滤器，
+      依赖 SqlSugar 的 filter ID 去重机制防止重复添加。
+      方案 B：在 Clear/Add 之间使用 lock/ReaderWriterLockSlim。
+    status: open
+    sprint: Sprint 0-A Day 3
+    adr: null
+    note: "不能用 Filter(null) 臆造处理——SqlSugar 没有 Filter(null) API"
+
+  # ============================================================
+  # SD-005: Swagger/Knife4jUI Not Disabled for Production
+  # 严重度：MEDIUM
+  # ============================================================
+  - id: SD-005
+    title: "Swagger/Knife4jUI exposed in production"
+    severity: MEDIUM
+    file: "backend/application/JNPF.API.Entry/Configurations/Swagger.json"
+    description: >
+      /newapi 端点在生产环境仍然可访问，暴露了全部 API 路由、
+      请求/响应模型。且未配置 JWT Bearer 认证按钮。
+    impact: "API 结构完全暴露给攻击者，信息泄露"
+    fix: >
+      1. 检查 ASPNETCORE_ENVIRONMENT 环境变量
+      2. 生产环境禁用 Swagger/Knife4jUI 中间件
+      3. 非生产环境添加 JWT Bearer 认证配置
+    status: open
+    sprint: Sprint 0-A Day 3
+    adr: null
+
+  # ============================================================
+  # SD-006: No Token Revocation After Password Change
+  # 严重度：MEDIUM
+  # ============================================================
+  - id: SD-006
+    title: "JWT Tokens remain valid after password change or account disable"
+    severity: MEDIUM
+    file: "backend/modularity/common/JNPF.Common.Core/Manager/UserManager.cs"
+    description: >
+      密码修改或账户禁用后，已签发的 JWT Token 仍然有效直到过期。
+      无 Token 撤销列表（revocation list）或版本号机制。
+    impact: "被解雇员工或密码泄露后旧 Token 可持续使用直到过期"
+    fix: >
+      1. 在 JwtHandler.PipelineAsync 中检查 token version（jti claim）
+      2. 用户表中添加 TokenVersion 字段
+      3. 密码修改/账户禁用时递增 TokenVersion
+      4. Token 验证时比较版本号
+    status: open
+    sprint: Sprint 0-A Day 3
+    adr: null
+
+  # ============================================================
+  # SD-007: No Cache Penetration/Avalanche Protection
+  # 严重度：MEDIUM
+  # ============================================================
+  - id: SD-007
+    title: "No cache penetration or avalanche protection"
+    severity: MEDIUM
+    file: "backend/modularity/common/JNPF.Common.Core/"
+    description: >
+      缓存层缺少：
+      1. Bloom Filter（缓存穿透——恶意查询不存在的数据）
+      2. 互斥锁/Mutex（缓存击穿——热点 Key 过期瞬间大量请求穿透）
+      3. 随机 TTL jitter（缓存雪崩——大量 Key 同时过期）
+    impact: "缓存层在攻击或热点 Key 过期时可能崩溃，导致 DB 压力飙升"
+    fix: >
+      1. Bloom filter：在缓存前插入 bloom filter 过滤器
+      2. Mutex：热点 Key 使用 SetNx 互斥锁，首次查询重建缓存
+      3. TTL jitter：随机 ±10% 过期时间，避免集中过期
+    status: open
+    sprint: Sprint 0-A Day 3
+    adr: null

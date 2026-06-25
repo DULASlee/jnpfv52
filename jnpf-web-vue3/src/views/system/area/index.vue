@@ -29,7 +29,7 @@
   import { reactive, ref } from 'vue';
   import Form from './Form.vue';
 
-  defineOptions({ name: 'system-task' });
+  defineOptions({ name: 'SystemTask' });
 
   const { t } = useI18n();
   const key = ref(+new Date());

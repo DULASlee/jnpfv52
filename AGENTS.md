@@ -1,53 +1,110 @@
 # AGENTS.md
 
-> **Runtime:** GitHub Copilot Agents / Copilot Workspace
->
-> 项目完整上下文（架构、模块、命名、工具链、安全规则）统一维护在 CLAUDE.md。
-> 本文件仅包含 AGENTS 运行时的差异化配置。
+Compact instruction file for automated coding agents working in this repository.
 
-## 项目上下文引用
+## Multi-Agent Environment
 
-参见 [CLAUDE.md](./CLAUDE.md)
+This repo is used by **multiple AI coding agents**. Each has its own instruction system — they must coexist without conflict:
 
-## AGENTS 运行时特有配置
+| Agent | Instructions | Auto-loaded by |
+|-------|-------------|----------------|
+| **Claude Code** | `.claude/rules/*.md`, `.claude/skills/*/SKILL.md`, [CLAUDE.md](./CLAUDE.md) | Claude Code session start |
+| **Cursor** | `.cursor/rules/*.mdc` (alwaysApply), `.cursor/skills/*/SKILL.md` | Cursor IDE |
+| **Any agent** | This file (`AGENTS.md`) | OpenCode / other agents |
 
-- 本文件服务对象为 GitHub Copilot Agents / Copilot Workspace
-- 项目架构约定、命名规范、工具链矩阵等完整上下文请参见 CLAUDE.md
-- Copilot Agent 在 PR/Issue 上下文中加载时，应优先引用 CLAUDE.md 中的规范
+**Rules of coexistence:**
+- This file is a **subset** of [CLAUDE.md](./CLAUDE.md) — it repeats only what an agent would guess wrong. CLAUDE.md remains the single source of truth.
+- **Never delete or alter** `.claude/` or `.cursor/` content from this agent — those are managed by their respective environments.
+- **On-Demand Rules** (`.claude/rules/`) and **Cursor rules** (`.cursor/rules/`) contain deeper context. When available, prefer reading them over this summary.
 
-## 项目结构参考
+## Project
 
-```
-d:\JNPF-v52\
-├── backend\              # .NET solution (zx_lowcode_netcore.sln)
-│   ├── framework\        # Core: DynamicApiController, DI, SqlSugar, JWT, Serilog
-│   ├── infrastructure\   # Cross-cutting: event bus, OAuth, WebSockets
-│   ├── modularity\       # Business modules (15个)
-│   ├── application\      # Hosts: JNPF.API.Entry, JNPF.OA.API.Entry
-│   └── web\              # SQL init + static assets
-├── jnpf-web-vue3\       # PC frontend → :3100
-├── jnpf-web-datascreen\ # Data screen → :8100/DataV/
-├── jnpf-app-vue3\       # UniApp mobile → :3800 (H5 + proxy)
-└── docs\                # Demo manual, architecture, toolchain
+JNPF v5.2 low-code platform — .NET 8 backend + Vue 3 frontends. Full architecture/rules in [CLAUDE.md](./CLAUDE.md).
+
+## Dev Environment Startup
+
+**Only** use the unified script — never `npm run dev` or `dotnet run` directly:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1
 ```
 
-## Docker 部署命令
+Kills stale dotnet/node processes, frees ports 3100+5000, then launches frontend (`:3100`) and backend (`:5000` with hot-reload).
+
+## Key Commands
+
+| What | Command | Working Dir |
+|------|---------|-------------|
+| Backend build | `dotnet build` | `backend/` |
+| Backend Release build | `dotnet build -c Release` | `backend/` |
+| Backend CI build (with analyzers) | `dotnet build /p:CI_BUILD=true` | `backend/` |
+| Backend tests | `dotnet test backend/zx_lowcode_netcore.sln` | repo root |
+| Frontend lint | `pnpm lint` | `jnpf-web-vue3/` |
+| Frontend type-check | `pnpm type-check` | `jnpf-web-vue3/` |
+| Frontend unit tests | `pnpm test:unit` | `jnpf-web-vue3/` |
+| Frontend build | `pnpm build` | `jnpf-web-vue3/` |
+| Toolchain verify | `node scripts/verify-toolchain.mjs` | repo root |
+| Git hooks enable (after clone) | `git config core.hooksPath .githooks` | repo root |
+
+**CI gate order:** `lint → type-check → test:unit → build`
+
+## Monorepo Layout
+
+```
+backend/              .NET 8 solution (zx_lowcode_netcore.sln)
+  framework/          Core: DynamicApiController, DI, SqlSugar, JWT, Serilog
+  infrastructure/     Cross-cutting: event bus, OAuth, WebSockets
+  modularity/         15 business modules (system, workflow, visualdev, etc.)
+  application/        Hosts: JNPF.API.Entry (main), JNPF.OA.API.Entry (OA — disabled)
+  tests/              Integration test projects (Gate, Phase6, Stage5, ADR012)
+  tools/              JNPF.Analyzers (custom Roslyn analyzer)
+jnpf-web-vue3/        PC admin frontend → :3100 (pnpm, Vite, Ant Design Vue, WindiCSS)
+jnpf-web-datascreen/  Data screen frontend → :8100/DataV/ (pnpm, Element Plus)
+jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
+```
+
+## Architecture Rules (violation = broken system)
+
+- **Never write Controllers.** All APIs auto-map from Service classes implementing `IDynamicApiController`.
+- **Unified response:** `RESTfulResult<T>` wraps automatically. Throw `Oops.Oh()` (system) / `Oops.Bah()` (business) — never raw `Exception`. HTTP code 600 = JWT expired.
+- **Codegen boundary:** Bugs in generated code → fix `.vm` template source. Never edit template output files directly.
+- **Multi-tenant:** Every SqlSugar query MUST verify `ITenantFilter` is active. Missing filter = cross-tenant data leak.
+- **OA module is disabled** — never modify. IoT/MES modules don't exist — never scaffold.
+- **Database:** SqlSugar (SQL Server) + Dapper. Table names: `UPPER_SNAKE_CASE` with module prefix (`BASE_USER`, `FLOW_TASK`). C# code: PascalCase.
+
+## Frontend SSE/Timer Rules (memory leak prevention)
+
+Every `setTimeout`/`setInterval`/`EventSource`/`WebSocket` must follow these or leaks result:
+
+1. **Save** timer return values to variables — never fire-and-forget.
+2. **Clear** all timers in `onUnmounted`.
+3. **EventSource reconnect must have a retry cap** (e.g., `MAX_RETRIES = 5`), not infinite.
+4. **Never call `connect()` directly in `onerror`** — always via `setTimeout` + counter (synchronous error → busy loop).
+5. **SSE URL must use `buildEventSourceUrl()`** from `/@/utils/http/sseUrl` — dev proxy requires `/dev` prefix, not raw `/api`.
+6. **EventSource must pass JWT via `?token=`** — cannot set Authorization header. `buildEventSourceUrl()` handles this.
+
+## Secrets / Config (gitignored)
+
+- `backend/application/JNPF.API.Entry/Configurations/ConnectionStrings.json` — must create locally.
+- `backend/application/JNPF.API.Entry/Configurations/JWT.json`
+- `.env.local`, `.env.*.local`, `.env.toolchain` — never commit.
+
+## Package Manager / Registry
+
+- **Frontends:** pnpm (8.x). Registry pre-configured in root `.npmrc` → `registry.npmmirror.com`.
+- **Backend:** NuGet with Huawei Cloud mirror (`backend/nuget.config`).
+- Node.js 18+, .NET SDK 8.0 (pinned in `backend/global.json`).
+
+## Default Credentials
+
+admin / 123456 (seed data). Backend API docs: `http://localhost:5000/newapi`.
+
+## Docker
 
 ```bash
-cd d:\JNPF-v52\backend
-docker build -f application/JNPF.API.Entry/Dockerfile -t jnpf-api .
+# Production
+docker compose -f docker-compose.production.yml --env-file .env.production up -d
+
+# Backend image only
+docker build -f backend/application/JNPF.API.Entry/Dockerfile -t jnpf-api backend/
 ```
-
-## Release 构建命令
-
-```bash
-cd d:\JNPF-v52\backend
-dotnet build -c Release
-```
-
-## 关键约束（与 CLAUDE.md 一致）
-
-- **Dynamic API**: 禁止手动创建 Controller，所有 API 由 Service + IDynamicApiController 自动映射
-- **Unified Response**: `RESTfulResult<T>` 自动包装，异常用 `Oops.Oh()`
-- **Database**: SqlSugar (SQL Server) + Dapper，表名全大写 + 下划线分隔
-- **工具链**: 日常开发用 superpowers 技能集，/opsx:apply 严禁用于编码操作

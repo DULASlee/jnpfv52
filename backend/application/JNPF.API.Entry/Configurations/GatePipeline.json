@@ -1,0 +1,17 @@
+{
+  "GatePipeline": {
+    "MaxFileSizeBytes": 20971520,
+    "MaxTotalSizeBytes": 52428800,
+    "MaxAttachmentCount": 10,
+    "PerFileTimeoutMinutes": 2,
+    "MaxConcurrentFiles": 3,
+    "AllowedExtensions": [
+      ".docx", ".doc", ".xlsx", ".xls", ".pdf", ".txt", ".csv", ".md",
+      ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"
+    ],
+    "BlockedExtensions": [
+      ".exe", ".dll", ".bat", ".sh", ".ps1", ".cmd",
+      ".zip", ".rar", ".7z", ".mp3", ".mp4", ".avi"
+    ]
+  }
+}

@@ -27,6 +27,8 @@ using JNPF.WorkFlow.Entitys.Model.Properties;
 using JNPF.WorkFlow.Interfaces.Manager;
 using JNPF.WorkFlow.Interfaces.Repository;
 using Mapster;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 using SqlSugar;
@@ -42,7 +44,7 @@ public class FlowTaskManager : IFlowTaskManager, ITransient
     private readonly IJobManager _jobManager;
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly ITenant _db;
-    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly IServer _server;
     private readonly ITaskQueue _taskQueue;
     private FlowTemplateUtil flowTemplateUtil;
     private FlowTaskUserUtil flowTaskUserUtil;
@@ -52,7 +54,6 @@ public class FlowTaskManager : IFlowTaskManager, ITransient
 
     public FlowTaskManager(
         IFlowTaskRepository flowTaskRepository,
-        IServiceScopeFactory serviceScopeFactory,
         IUsersService usersService,
         IOrganizeService organizeService,
         IDepartmentService departmentService,
@@ -66,10 +67,11 @@ public class FlowTaskManager : IFlowTaskManager, ITransient
         ITaskQueue taskQueue,
         IDataBaseManager dataBaseManager,
         ICacheManager cacheManager,
-        ISqlSugarClient context)
+        ISqlSugarClient context,
+        IServer server)
     {
         _flowTaskRepository = flowTaskRepository;
-        _serviceScopeFactory = serviceScopeFactory;
+        _server = server;
         _usersService = usersService;
         _runService = runService;
         _userManager = userManager;
@@ -2368,9 +2370,7 @@ public class FlowTaskManager : IFlowTaskManager, ITransient
     {
         var userEntity = _userManager.User;
         var tenantId = _userManager.TenantId;
-        using var scope = _serviceScopeFactory.CreateScope();
-        var server = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>();
-        var addressesFeature = server.Features.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>();
+        var addressesFeature = _server.Features.Get<IServerAddressesFeature>();
         var addresses = addressesFeature?.Addresses;
         var localAddress = addresses.FirstOrDefault().Replace("[::]", "localhost");
         var token = NetHelper.GetToken(userEntity.Id, userEntity.Account, userEntity.RealName, userEntity.IsAdministrator, tenantId);

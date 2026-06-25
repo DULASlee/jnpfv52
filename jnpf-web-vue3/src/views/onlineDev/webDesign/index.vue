@@ -5,7 +5,7 @@
         <BasicTable @register="registerTable">
           <template #tableTitle>
             <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" @click="openAddModal()">{{ t('common.addText') }}</a-button>
-            <jnpf-upload-btn url="/api/visualdev/OnlineDev/Actions/Import" accept=".vdd" @on-success="reload"></jnpf-upload-btn>
+            <jnpf-upload-btn url="/api/visualdev/OnlineDev/Actions/Import" accept=".vdd" @on-success="reload" />
           </template>
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'isRelease'">
@@ -50,7 +50,7 @@
   import { downloadByUrl } from '/@/utils/file/download';
   import { PreviewModal } from '/@/components/CommonModal';
 
-  defineOptions({ name: 'onlineDev-webDesign' });
+  defineOptions({ name: 'OnlineDevWebDesign' });
 
   const { createMessage } = useMessage();
   const baseStore = useBaseStore();

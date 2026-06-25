@@ -256,7 +256,7 @@
           </template>
         </a-col>
         <a-col :span="1" class="text-center">
-          <i class="icon-ym icon-ym-btn-clearn" @click="delItem(index, childIndex)" />
+          <i class="icon-ym icon-ym-btn-clearn" @click="delItem(index, childIndex)"></i>
         </a-col>
       </a-row>
     </div>
@@ -264,7 +264,7 @@
       <img src="../../../../assets/images/query-noData.png" class="noData-img" />
       <div class="noData-txt">
         <span>没有任何查询条件</span>
-        <a-divider type="vertical"></a-divider>
+        <a-divider type="vertical" />
         <span class="link-text" @click="addGroup">点击新增</span>
       </div>
     </div>

@@ -3,7 +3,7 @@
     <template v-if="!noData">
       <template v-if="!ajaxing">
         <template v-if="portalId">
-          <PortalLayout :layout="layout" :enabledLock="enabledLock" v-if="type === 0" @layoutUpdatedEvent="layoutUpdatedEvent" />
+          <PortalLayout :layout="layout" :enabledLock="enabledLock" v-if="type === 0" @layout-updated-event="layoutUpdatedEvent" />
           <div class="custom-page" v-if="type === 1">
             <component :is="currentView" v-if="linkType === 0" />
             <embed :src="url" width="100%" height="100%" type="text/html" v-if="linkType === 1" />
@@ -14,7 +14,7 @@
         </div>
       </template>
       <Setting @register="registerSettingDrawer" @refresh="refresh" />
-      <a-button type="primary" preIcon="icon-ym icon-ym-left" class="setting-btn" size="large" @click="openSettingDrawer(true, { id: portalId })"></a-button>
+      <a-button type="primary" preIcon="icon-ym icon-ym-left" class="setting-btn" size="large" @click="openSettingDrawer(true, { id: portalId })" />
     </template>
     <template v-else>
       <ScrollContainer class="dashboard-container">

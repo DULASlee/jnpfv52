@@ -189,12 +189,17 @@ internal static class InternalApp
         // 遍历所有配置分组
         foreach (var group in jsonFilesGroups)
         {
-            // 限制查找的 json 文件组
-            var limitFileNames = new[] { $"{group.Key}.json", $"{group.Key}.{envName}.json" };
+            // 限制查找的 json 文件组（始终包含 Development 覆盖）
+            var candidates = new List<string> { $"{group.Key}.json", $"{group.Key}.Development.json" };
+            if (envName != "Development")
+                candidates.Add($"{group.Key}.{envName}.json");
 
             // 查找默认配置和环境配置
-            var files = group.Where(u => limitFileNames.Contains(Path.GetFileName(u), StringComparer.OrdinalIgnoreCase))
-                                             .OrderBy(u => Path.GetFileName(u).Length);
+            var files = group
+                .Where(u => candidates.Contains(Path.GetFileName(u), StringComparer.OrdinalIgnoreCase))
+                .OrderBy(u => u.EndsWith(".Development.json", StringComparison.OrdinalIgnoreCase) ? 2 :
+                              u.EndsWith($".{envName}.json", StringComparison.OrdinalIgnoreCase) ? 3 : 1)
+                .ThenBy(u => u.Length);
 
             // 循环加载
             foreach (var jsonFile in files)

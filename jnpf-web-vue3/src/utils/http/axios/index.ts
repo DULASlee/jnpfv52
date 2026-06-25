@@ -11,7 +11,7 @@ import { useGlobSetting } from '/@/hooks/setting';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { RequestEnum, ResultEnum, ContentTypeEnum } from '/@/enums/httpEnum';
 import { isString, isObject } from '/@/utils/is';
-import { getToken } from '/@/utils/auth';
+import { getToken, getAuthHeader, getRawToken } from '/@/utils/auth';
 import { setObjToUrlParams, deepMerge } from '/@/utils';
 import { useErrorLogStoreWithOut } from '/@/store/modules/errorLog';
 import { useI18n } from '/@/hooks/web/useI18n';
@@ -32,6 +32,12 @@ const transform: AxiosTransform = {
    * @description: 处理响应数据。如果数据不是预期格式，可直接抛出错误
    */
   transformResponseHook: (res: AxiosResponse<Result>, options: RequestOptions) => {
+    // 防御：res 为 null/undefined/非对象（后端返回 .NET 异常文本、502 网关错误等）
+    if (!res || typeof res !== 'object') {
+      throw new Error(typeof res === 'string' ? res : '服务器响应异常，请稍后重试');
+    }
+    // 从响应头提取 TraceId（后端 TraceIdMiddleware 写入 X-Trace-Id）
+    const traceId = res.headers?.['x-trace-id'] as string | undefined;
     const { t } = useI18n();
     const { isTransformResponse, isReturnNativeResponse } = options;
     // 是否返回原生响应头 比如：需要获取响应头时使用该属性
@@ -46,15 +52,20 @@ const transform: AxiosTransform = {
     // 错误的时候返回
 
     if (!res.data) {
-      // return '[HTTP] Request has no return value';
       throw new Error(t('sys.api.apiRequestFailed'));
     }
-    //  这里 code,data,msg为 后台统一的字段，需要在 types.ts内修改为项目自己的接口返回格式
-    const { code, msg } = res.data;
+    // 这里 code,data,msg为 后台统一的字段，需要在 types.ts内修改为项目自己的接口返回格式
+    // 防御：res.data 可能不是标准 RESTfulResult 格式（如后端异常直接透传）
+    const code = (res.data as any)?.code;
+    const msg = (res.data as any)?.msg ?? (res.data as any)?.message;
 
     // 这里逻辑可以根据项目进行修改
     const hasSuccess = res.data && isObject(res.data) && Reflect.has(res.data, 'code') && code === ResultEnum.SUCCESS;
     if (hasSuccess) {
+      // 将 TraceId 注入返回数据，前端错误弹窗/日志可携带定位
+      if (traceId) {
+        (res.data as any)._traceId = traceId;
+      }
       return res.data;
     }
 
@@ -82,7 +93,10 @@ const transform: AxiosTransform = {
       createMessage.error(errorMsg);
     }
 
-    throw new Error(errorMsg);
+    // 业务错误也注入 TraceId，前端错误提示可携带定位
+    const bizError = new Error(errorMsg) as any;
+    bizError.traceId = traceId;
+    throw bizError;
   },
 
   // 请求之前处理config
@@ -138,10 +152,14 @@ const transform: AxiosTransform = {
     // 请求之前处理config
     (config as Recordable).headers['jnpf-origin'] = 'pc';
     (config as Recordable).headers['vue-version'] = '3';
-    const token = getToken();
-    if (token && (config as Recordable)?.requestOptions?.withToken !== false) {
-      // jwt token
-      (config as Recordable).headers.Authorization = options.authenticationScheme ? `${options.authenticationScheme} ${token}` : token;
+    // jwt token — 优先使用统一工具函数；保留 authenticationScheme 兼容性
+    if ((config as Recordable)?.requestOptions?.withToken !== false) {
+      const authHeader = getAuthHeader();
+      if (authHeader) {
+        (config as Recordable).headers.Authorization = options.authenticationScheme
+          ? `${options.authenticationScheme} ${getRawToken()}`
+          : authHeader;
+      }
     }
     return config;
   },
@@ -164,6 +182,8 @@ const transform: AxiosTransform = {
     const errorMessageMode = config?.requestOptions?.errorMessageMode || 'none';
     const msg: string = response?.data?.error?.message ?? '';
     const err: string = error?.toString?.() ?? '';
+    // 从错误响应头提取 TraceId（后端 TraceIdMiddleware 写入）
+    const errorTraceId = response?.headers?.['x-trace-id'] as string | undefined;
     let errMessage = '';
 
     if (axios.isCancel(error)) {
@@ -199,6 +219,11 @@ const transform: AxiosTransform = {
       isOpenRetry &&
       // @ts-ignore
       retryRequest.retry(axiosInstance, error);
+
+    // 注入 TraceId 到拒绝的 Promise，调用方可读取 .traceId
+    if (errorTraceId) {
+      (error as any).traceId = errorTraceId;
+    }
     return Promise.reject(error);
   },
 };

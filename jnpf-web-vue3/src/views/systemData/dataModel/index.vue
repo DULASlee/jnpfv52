@@ -5,7 +5,7 @@
         <BasicTable @register="registerTable">
           <template #tableTitle>
             <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" @click="addOrUpdateHandle()">{{ t('common.addText') }}</a-button>
-            <jnpf-upload-btn :url="getUploadUrl" accept=".bdb" @on-success="reload"></jnpf-upload-btn>
+            <jnpf-upload-btn :url="getUploadUrl" accept=".bdb" @on-success="reload" />
             <a-button type="link" preIcon="icon-ym icon-ym-btn-common" @click="handleFieldManage()">常用字段</a-button>
           </template>
           <template #expandedRowRender="{ record }">
@@ -44,7 +44,7 @@
   import Preview from './Preview.vue';
   import { downloadByUrl } from '/@/utils/file/download';
 
-  defineOptions({ name: 'systemData-dataModel' });
+  defineOptions({ name: 'SystemDataDataModel' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();

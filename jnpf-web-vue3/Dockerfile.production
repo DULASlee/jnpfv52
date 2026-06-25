@@ -1,0 +1,41 @@
+# =============================================================================
+# JNPF V5.2 Web - Production Dockerfile
+# =============================================================================
+# Build context: ./jnpf-web-vue3
+# docker build -f Dockerfile.production -t jnpf-web:production .
+# =============================================================================
+
+FROM node:18-alpine AS build-stage
+LABEL maintainer=jnpf-team
+
+ENV TZ=Asia/Shanghai
+WORKDIR /temp
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy project files
+COPY . .
+
+# Install dependencies (production-only for smaller image)
+RUN pnpm install --frozen-lockfile --prod
+
+# Build for production
+RUN pnpm build --mode production
+
+# Runtime stage
+FROM nginx:stable-alpine AS production-stage
+
+ENV WORKDIR=/wwwroot/jnpfsoft/jnpf-web-vue3
+WORKDIR $WORKDIR
+
+# Copy build output
+COPY --from=build-stage /temp/dist ${WORKDIR}
+
+# Copy production nginx config
+COPY deploy/nginx.production.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+  CMD wget -qO- http://localhost:80/ || exit 1

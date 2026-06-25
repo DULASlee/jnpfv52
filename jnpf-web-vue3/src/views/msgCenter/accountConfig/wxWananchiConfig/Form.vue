@@ -92,7 +92,7 @@
       field: 'description',
       label: '说明',
       component: 'Textarea',
-      componentProps: { rows: 3 , placeholder: '请输入'},
+      componentProps: { rows: 3, placeholder: '请输入' },
     },
   ];
   const getTitle = computed(() => (!state.dataForm.id ? t('common.addText') : t('common.editText')));

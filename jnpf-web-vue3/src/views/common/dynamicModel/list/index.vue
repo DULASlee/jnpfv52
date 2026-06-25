@@ -11,8 +11,7 @@
           @advanced-change="redoHeight"
           @submit="handleSearchSubmit"
           @reset="handleSearchReset"
-          class="search-form">
-        </BasicForm>
+          class="search-form" />
       </div>
       <div class="jnpf-content-wrapper-content">
         <BasicTable @register="registerTable" v-bind="getTableBindValue" ref="tableRef" @columns-change="handleColumnChange">
@@ -431,8 +430,8 @@
                   <ChildTableColumn
                     :data="record[item.prop]"
                     :head="item.children"
-                    @toggleExpand="toggleExpand(record, `${item.prop}Expand`)"
-                    @toDetail="toDetail"
+                    @toggle-expand="toggleExpand(record, `${item.prop}Expand`)"
+                    @to-detail="toDetail"
                     :expand="record[`${item.prop}Expand`]"
                     :showOverflow="columnData.showOverflow"
                     :key="index" />
@@ -499,18 +498,18 @@
               <a-table-summary-row>
                 <template v-if="getHasBatchBtn">
                   <a-table-summary-cell :index="0" :col-span="2">合计</a-table-summary-cell>
-                  <a-table-summary-cell :index="1" :col-span="0"></a-table-summary-cell>
+                  <a-table-summary-cell :index="1" :col-span="0" />
                   <a-table-summary-cell v-for="(item, index) in getColumnSum" :key="index" :index="index + 2" :align="getSummaryCellAlign(index)">
                     {{ item }}
                   </a-table-summary-cell>
-                  <a-table-summary-cell :index="getColumnSum.length + 2"></a-table-summary-cell>
+                  <a-table-summary-cell :index="getColumnSum.length + 2" />
                 </template>
                 <template v-else>
                   <a-table-summary-cell :index="0">合计</a-table-summary-cell>
                   <a-table-summary-cell v-for="(item, index) in getColumnSum" :key="index" :index="index + 1" :align="getSummaryCellAlign(index)">
                     {{ item }}
                   </a-table-summary-cell>
-                  <a-table-summary-cell :index="getColumnSum.length + 1"></a-table-summary-cell>
+                  <a-table-summary-cell :index="getColumnSum.length + 1" />
                 </template>
               </a-table-summary-row>
             </a-table-summary>
@@ -524,7 +523,7 @@
     <FlowParser @register="registerFlowParser" @reload="reload" />
     <ExportModal @register="registerExportModal" @download="handleDownload" />
     <ImportModal @register="registerImportModal" @reload="reload" />
-    <SuperQueryModal @register="registerSuperQueryModal" @superQuery="handleSuperQuery" />
+    <SuperQueryModal @register="registerSuperQueryModal" @super-query="handleSuperQuery" />
     <CustomForm ref="customFormRef" @reload="reload" />
     <PrintSelect @register="registerPrintSelect" @change="handleShowBrowse" />
     <PrintBrowse @register="registerPrintBrowse" />

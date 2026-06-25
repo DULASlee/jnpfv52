@@ -7,14 +7,14 @@
     :closable="false"
     :keyboard="false"
     class="jnpf-full-modal full-modal report-modal">
-    <iframe :src="state.url" width="100%" height="100%" frameborder="0" class="frame" />
+    <iframe :src="state.url" width="100%" height="100%" frameborder="0" class="frame"></iframe>
   </BasicModal>
 </template>
 <script lang="ts" setup>
   import { reactive, onMounted } from 'vue';
   import { BasicModal, useModalInner } from '/@/components/Modal';
   import { useGlobSetting } from '/@/hooks/setting';
-  import { getToken } from '/@/utils/auth';
+  import { getRawToken } from '/@/utils/auth';
 
   interface State {
     url: string;
@@ -28,7 +28,7 @@
   });
 
   function init(data) {
-    state.url = `${report}/index.html?token=${getToken()}${data.id ? '&id=' + data.id : ''}`;
+    state.url = `${report}/index.html?token=${getRawToken()}${data.id ? '&id=' + data.id : ''}`;
   }
   function handleMessage(e) {
     const data = e.data;

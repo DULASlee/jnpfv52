@@ -85,7 +85,7 @@ export const toRPN = exps => {
 export const calcRPN = rpnExps => {
   rpnExps = rpnExps.concat();
   const calc = (x, y, type) => {
-    let a1 = Number(x),
+    const a1 = Number(x),
       a2 = Number(y);
     switch (type) {
       case '+':
@@ -100,7 +100,7 @@ export const calcRPN = rpnExps => {
   };
   for (let i = 2; i < rpnExps.length; i++) {
     if ('+-×÷'.includes(rpnExps[i])) {
-      let val = calc(rpnExps[i - 2], rpnExps[i - 1], rpnExps[i]);
+      const val = calc(rpnExps[i - 2], rpnExps[i - 1], rpnExps[i]);
       rpnExps.splice(i - 2, 3, val);
       i = i - 2;
     }

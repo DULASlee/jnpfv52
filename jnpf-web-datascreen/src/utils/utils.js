@@ -38,20 +38,110 @@ export const compare = (propertyName) => {
   }
 }
 
-export const funEval = (value) => {
-  return new Function("return " + value + ";")();
+// 安全表达式求值器（替代 new Function）
+// 支持：属性访问、数学运算、三元表达式、比较运算
+function safeResolvePath(path) {
+  try {
+    // 阻止原型链攻击和危险访问
+    if (/__proto__|constructor|prototype|window|document|globalThis|import|require|fetch|eval/i.test(path)) {
+      console.warn('[safeResolvePath] 危险路径: ' + path);
+      return undefined;
+    }
+    var parts = path
+      .replace(/\[(\d+)]/g, '.$1')
+      .replace(/\['([^']+)']/g, '.$1')
+      .replace(/\["([^"]+)"]/g, '.$1')
+      .split('.');
+    var context = (typeof window !== 'undefined' && window.$glob) ? window.$glob.data : {};
+    return parts.reduce(function (obj, key) {
+      return (obj != null) ? obj[key] : undefined;
+    }, context);
+  } catch (_) {
+    return undefined;
+  }
 }
 
+function parseExpressionValue(trimmed) {
+  // 1. 字面量
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+  if (trimmed === 'null') return null;
+  if (trimmed === 'undefined') return undefined;
+  if (
+    (trimmed.startsWith("'") && trimmed.endsWith("'")) ||
+    (trimmed.startsWith('"') && trimmed.endsWith('"'))
+  ) {
+    return trimmed.slice(1, -1);
+  }
 
-export const getFunction = (fun, def) => {
+  // 2. 安全属性访问：a.b.c 或 data[0].name
+  if (/^[\w.[\]]+$/.test(trimmed)) {
+    return safeResolvePath(trimmed);
+  }
+
+  // 3. 三元表达式：condition ? a : b
+  var ternaryMatch = trimmed.match(/^(.+?)\s*\?\s*(.+?)\s*:\s*(.+)$/);
+  if (ternaryMatch) {
+    var cond = parseExpressionValue(ternaryMatch[1].trim());
+    return cond
+      ? parseExpressionValue(ternaryMatch[2].trim())
+      : parseExpressionValue(ternaryMatch[3].trim());
+  }
+
+  // 4. 比较运算
+  var compareMatch = trimmed.match(/^(.+?)\s*(===|!==|==|!=|>=|<=|>|<)\s*(.+)$/);
+  if (compareMatch) {
+    var left = parseExpressionValue(compareMatch[1].trim());
+    var right = parseExpressionValue(compareMatch[3].trim());
+    switch (compareMatch[2]) {
+      case '===': return left === right;
+      case '!==': return left !== right;
+      case '==': return left == right;  // eslint-disable-line
+      case '!=': return left != right;  // eslint-disable-line
+      case '>=': return left >= right;
+      case '<=': return left <= right;
+      case '>':  return left > right;
+      case '<':  return left < right;
+    }
+  }
+
+  // 5. 算术运算
+  var mathMatch = trimmed.match(/^(.+?)\s*([+\-*/%])\s*(.+)$/);
+  if (mathMatch) {
+    var a = Number(parseExpressionValue(mathMatch[1].trim()));
+    var b = Number(parseExpressionValue(mathMatch[3].trim()));
+    if (!isNaN(a) && !isNaN(b)) {
+      switch (mathMatch[2]) {
+        case '+': return a + b;
+        case '-': return a - b;
+        case '*': return a * b;
+        case '/': return b !== 0 ? a / b : 0;
+        case '%': return b !== 0 ? a % b : 0;
+      }
+    }
+  }
+
+  // 6. 不支持的表达式 → 安全降级（返回原始字符串，由 getFunction try-catch 兜底）
+  console.warn('[funEval] 不支持的表达式: ' + trimmed + '，返回原始字符串');
+  return trimmed;
+}
+
+export var funEval = function (value) {
+  if (!value || typeof value !== 'string') return value;
+  return parseExpressionValue(value.trim());
+};
+
+
+export var getFunction = function (fun, def) {
   if (!validatenull(fun)) {
     try {
-      return funEval(fun)
-    } catch {
-      return () => { }
+      return funEval(fun);
+    } catch (_) {
+      return function () {};
     }
-  } else if (def) return () => { }
-}
+  } else if (def) return function () {};
+};
 export const getJson = (str) => {
   if (validatenull(str)) return {};
   else if (typeof str == "string") {

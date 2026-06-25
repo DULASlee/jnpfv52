@@ -17,7 +17,7 @@
     title: { type: String, default: '' },
     size: {
       type: String,
-      validator: (v) => ['small', 'default', 'middle', undefined].includes(v),
+      validator: v => ['small', 'default', 'middle', undefined].includes(v),
       default: 'small',
     },
     bordered: { type: Boolean, default: true },
@@ -108,7 +108,7 @@
       function renderItem() {
         const { schema, data } = unref(getProps);
         return unref(schema)
-          .map((item) => {
+          .map(item => {
             const { render, field, span, show, contentMinWidth } = item;
 
             if (show && isFunction(show) && !show(data)) {
@@ -142,7 +142,7 @@
               </Descriptions.Item>
             );
           })
-          .filter((item) => !!item);
+          .filter(item => !!item);
       }
 
       const renderDesc = () => {

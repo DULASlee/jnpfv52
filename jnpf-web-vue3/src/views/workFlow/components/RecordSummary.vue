@@ -1,8 +1,8 @@
 <template>
   <div class="record-summary-container">
     <a-tabs v-model:activeKey="category" tab-position="left" class="common-left-tabs" v-loading="loading" @change="init">
-      <a-tab-pane key="1" tab="按部门汇总"></a-tab-pane>
-      <a-tab-pane key="3" tab="按岗位汇总"></a-tab-pane>
+      <a-tab-pane key="1" tab="按部门汇总" />
+      <a-tab-pane key="3" tab="按岗位汇总" />
     </a-tabs>
     <div class="record-summary-list">
       <template v-if="list.length">

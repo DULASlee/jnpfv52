@@ -1,0 +1,187 @@
+# ============================================================
+# JNPF v5.2 — 后端 App.GetService 消化进度
+# ============================================================
+# 目标: 将 Service Locator 替换为构造函数注入 (DI)
+# 阶段一目标: 19/37 (剩余 18 留给阶段二)
+# ============================================================
+
+version: "1.0"
+total_call_sites: 33
+phase_1_target: 19
+phase_1_done: 0
+
+# Sprint 1: 核心框架 (application/ + framework core)
+sprint_1:
+  target: ~8
+  done: 0
+  files:
+    - file: application/JNPF.API.Entry/Handlers/JwtHandler.cs
+      count: 3
+      status: pending
+      difficulty: medium
+      notes: "static helper methods → 改为 instance + DI"
+
+    - file: application/JNPF.API.Entry/Extensions/SqlSugarConfigureExtensions.cs
+      count: 4
+      status: pending
+      difficulty: medium
+      notes: "static extension + lambda closures; IHttpContextAccessor captured at setup time"
+
+    - file: modularity/common/JNPF.Common.CodeGen/DataParsing/ControlParsing.cs
+      count: 1
+      status: pending
+      difficulty: easy
+      notes: "IRunService, already ITransient"
+
+    - file: modularity/common/JNPF.Common/Security/JsonHelper.cs
+      count: 1
+      status: pending
+      difficulty: exempt
+      notes: "static helper, architecture decision required"
+
+    - file: modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs
+      count: 1
+      status: pending
+      difficulty: easy
+      notes: "IRunService injection"
+
+    - file: modularity/system/JNPF.Systems/Permission/RoleService.cs
+      count: 1
+      status: pending
+      difficulty: easy
+      notes: "OnlineUserService, already ITransient"
+
+    - file: framework/JNPF/DistributedIDGenerator/IDGen.cs
+      count: 2
+      status: exempt
+      notes: "static facade, App.RootServices access"
+
+    - file: framework/JNPF/FriendlyException/Oops.cs
+      count: 1
+      status: exempt
+      notes: "static facade, error code provider"
+
+    - file: framework/JNPF/InstantMessaging/IM.cs
+      count: 2
+      status: exempt
+      notes: "static facade, HubContext access"
+
+    - file: framework/JNPF/JsonSerialization/JSON.cs
+      count: 1
+      status: exempt
+      notes: "static facade, serializer provider"
+
+    - file: framework/JNPF/Localization/L.cs
+      count: 4
+      status: exempt
+      notes: "static facade, localizer factory"
+
+    - file: framework/JNPF/RemoteRequest/Http.cs
+      count: 1
+      status: exempt
+      notes: "static facade, HTTP proxy"
+
+    - file: framework/JNPF/RemoteRequest/Internal/HttpRequestPartMethods.cs
+      count: 3
+      status: exempt
+      notes: "static internal, uses scoped service resolution"
+
+    - file: framework/JNPF/ViewEngine/Internal/ViewEnginePartMethods.cs
+      count: 1
+      status: exempt
+      notes: "static internal"
+
+    - file: framework/JNPF/VirtualFileServer/FS.cs
+      count: 1
+      status: exempt
+      notes: "static facade"
+
+    - file: framework/JNPF/DataValidation/Validators/DataValidator.cs
+      count: 1
+      status: exempt
+      notes: "static validator, App.RootServices"
+
+    - file: framework/JNPF/App/Extensions/IConfigurationExtenstions.cs
+      count: 1
+      status: exempt
+      notes: "static extension, IConfiguration access"
+
+    - file: framework/JNPF/App/Native.cs
+      count: 1
+      status: exempt
+      notes: "framework native, service lifetime resolution"
+
+    - file: framework/JNPF/Options/ConnectionStringsOptions.cs
+      count: 1
+      status: exempt
+      notes: "options class, http context accessor"
+
+# Sprint 2: 数据库访问层
+sprint_2:
+  target: ~6
+  done: 0
+  files:
+    - file: framework/JNPF.Extras.DatabaseAccessor.SqlSugar/Options/ConnectionStringsOptions.cs
+      count: 1
+      status: exempt
+      notes: "options class, http context resolution"
+
+    - file: framework/JNPF.Extras.DatabaseAccessor.SqlSugar/Repositories/SqlSugarDbContextProvider.cs
+      count: 2
+      status: exempt
+      notes: "db context provider, scoped service resolution"
+
+# Sprint 3: 认证/授权层
+sprint_3:
+  target: ~5
+  done: 0
+  files:
+    - file: application/JNPF.API.Entry/Handlers/JwtHandler.cs
+      count: 3
+      status: pending
+      notes: "已计入 Sprint 1"
+
+# ============================================================
+# 豁免汇总 (架构性决策)
+# ============================================================
+exemptions:
+  - category: "static-facade"
+    files: ["L.cs", "JSON.cs", "Oops.cs", "IM.cs", "FS.cs", "IDGen.cs", "Http.cs", "JsonHelper.cs"]
+    reason: "JNPF 框架的静态 facade 模式，通过 App.RootServices 解析。这些是框架基础设施，改 DI 会打破现有 API。评估为架构性豁免，阶段二讨论。"
+
+  - category: "static-internal"
+    files: ["HttpRequestPartMethods.cs", "ViewEnginePartMethods.cs", "IConfigurationExtenstions.cs", "DataValidator.cs"]
+    reason: "框架内部静态方法，只有框架本身调用。改 DI 会增加复杂度而无实际收益。"
+
+  - category: "options-resolution"
+    files: ["ConnectionStringsOptions.cs (x2)", "Native.cs"]
+    reason: "配置/Option 类需要在非 DI 上下文中解析服务。"
+
+  - category: "db-provider"
+    files: ["SqlSugarDbContextProvider.cs"]
+    reason: "数据库上下文提供器自身就是管理租户上下文的，无法通过自身注入自身。"
+
+# ============================================================
+# 可执行清单 (Sprint 1 真实目标)
+# ============================================================
+actionable:
+  - file: application/JNPF.API.Entry/Handlers/JwtHandler.cs
+    count: 3
+    sprint: 1
+    approach: "添加 ICacheManager + IUserManager 构造注入"
+  - file: application/JNPF.API.Entry/Extensions/SqlSugarConfigureExtensions.cs
+    count: 4
+    sprint: 1
+    approach: "lambda closure 捕获 IHttpContextAccessor + IUserManager"
+  - file: modularity/common/JNPF.Common.CodeGen/DataParsing/ControlParsing.cs
+    count: 1
+    sprint: 1
+    approach: "IRunService 构造注入"
+  - file: modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs
+    count: 1
+    sprint: 1
+    approach: "IRunService 构造注入"
+  - file: modularity/system/JNPF.Systems/Permission/RoleService.cs
+    count: 1
+    sprint: 1
+    approach: "OnlineUserService 构造注入"

@@ -75,7 +75,7 @@ export function clearObsoleteStorage() {
   const shortPrefix = getStorageShortName();
 
   [localStorage, sessionStorage].forEach((item: Storage) => {
-    Object.keys(item).forEach((key) => {
+    Object.keys(item).forEach(key => {
       if (key && key.startsWith(commonPrefix) && !key.startsWith(shortPrefix)) {
         item.removeItem(key);
       }

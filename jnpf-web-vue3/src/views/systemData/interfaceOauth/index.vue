@@ -38,7 +38,7 @@
   import Empower from './components/Empower.vue';
   import UserSelect from './components/UserSelect.vue';
 
-  defineOptions({ name: 'systemData-interfaceOauth' });
+  defineOptions({ name: 'SystemDataInterfaceOauth' });
 
   const { t } = useI18n();
   const { createMessage } = useMessage();

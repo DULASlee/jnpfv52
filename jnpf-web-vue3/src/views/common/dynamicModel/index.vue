@@ -19,7 +19,7 @@
     config: any;
   }
 
-  defineOptions({ name: 'dynamicModel' });
+  defineOptions({ name: 'DynamicModel' });
   const { createMessage } = useMessage();
   const baseStore = useBaseStore();
   const { close } = useTabs();

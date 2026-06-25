@@ -19,7 +19,7 @@ export const createContextMenu = function (options: CreateContextOptions) {
   if (!isClient) {
     return;
   }
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const body = document.body;
 
     const container = document.createElement('div');

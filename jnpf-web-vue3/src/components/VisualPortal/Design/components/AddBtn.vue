@@ -13,7 +13,7 @@
             </template>
             <a-menu-item v-for="it in item.list" @click="handleAddComponent(it)">
               <span class="flex items-center">
-                <i :class="`${it.icon} mr-1`" />
+                <i :class="`${it.icon} mr-1`"></i>
                 <span>{{ it.label }}</span>
               </span>
             </a-menu-item>

@@ -1,0 +1,43 @@
+---
+description: SSE/EventSource 开发环境代理前缀铁律 — 防止 axios 有 /dev 而 EventSource 无 /dev 导致收不到流
+globs:
+  - jnpf-web-vue3/**/useSSE*.ts
+  - jnpf-web-vue3/**/sse*.ts
+  - jnpf-web-vue3/**/AiChatPanel.vue
+  - jnpf-web-vue3/**/PipelineSSEPanel.vue
+  - jnpf-web-vue3/src/utils/http/**
+alwaysApply: false
+---
+
+# SSE 开发环境代理前缀铁律
+
+> 详见 ADR：`openspec/adr/ADR-002-sse-dev-proxy-prefix.md`
+
+## 症状 vs 根因
+
+| 表象 | 错误归因 | 真实根因 |
+|------|----------|----------|
+| 后端 LLM 完成，前端「连接超时」 | 前后端 URL 不匹配 / PipelineEngineService 路由错 | **EventSource 未带 `/dev` 前缀**，请求打到 Vite 而非 :5000 |
+| execute 200，events 无数据 | 后端 SSE 没写 | Network 里 EventSource URL 缺少 `VITE_GLOB_API_URL` 前缀 |
+
+**禁止** 将 `PipelineEngineService`（`IPipelineEngine`，非 HTTP API）当作路由排查对象。HTTP 入口是 **`AIDevelopmentPipelineService`**（`api/studio/pipeline/execute`）。
+
+## 强制规则
+
+1. **禁止** 裸写 `new EventSource('/api/...')` 或 `new URL(path, window.location.origin)` 而不加 apiUrl。
+2. **必须** 使用 `buildEventSourceUrl()`（`/@/utils/http/sseUrl.ts`），与 axios 的 `useGlobSetting().apiUrl` 规则一致，并自动附加 `?token=`（EventSource 无法带 Authorization 头）。
+3. **排查顺序**：浏览器 Network → EventSource URL 是否含 `/dev` → 再查后端 channel/推送逻辑。
+
+## 正确示例
+
+```typescript
+import { buildEventSourceUrl } from '/@/utils/http/sseUrl';
+
+const url = buildEventSourceUrl(`/api/studio/pipeline/execute/${pipelineId}/events`);
+eventSource = new EventSource(url);
+// 开发环境实际请求: http://localhost:3100/dev/api/studio/pipeline/execute/{id}/events
+```
+
+## 与 R6 的关系
+
+`CLAUDE.md` R6 管 **内存泄漏**（定时器清理、重连上限）。本规则管 **路由/代理**（URL 前缀）。两者独立，写 SSE 代码时 **同时遵守**。

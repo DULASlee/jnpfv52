@@ -57,7 +57,7 @@ export function useMenuItem(instance: ComponentInternalInstance | null) {
       parent = parent.parent;
     }
     return {
-      uidList: ret.map((item) => item.uid),
+      uidList: ret.map(item => item.uid),
       list: ret,
     };
   }

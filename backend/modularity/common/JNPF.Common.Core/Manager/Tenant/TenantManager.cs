@@ -8,6 +8,7 @@ using JNPF.Extras.DatabaseAccessor.SqlSugar.Models;
 using JNPF.FriendlyException;
 using JNPF.RemoteRequest.Extensions;
 using JNPF.UnifyResult;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using SqlSugar;
 
@@ -35,18 +36,21 @@ public class TenantManager : ITenantManager, ITransient
 
     private readonly IDataBaseManager _dataBaseManager;
 
+    private readonly IConfiguration _configuration;
+
     /// <summary>
     /// 获取或设置请求头部信息.
     /// </summary>
     public Dictionary<string, object> Headers { get; set; }
 
-    public TenantManager(IOptions<SqlSugar.ConnectionStringsOptions> connectionOptions, IOptions<TenantOptions> tenantOptions, ICacheManager cacheManager, IDataBaseManager dataBaseManager)
+    public TenantManager(IOptions<SqlSugar.ConnectionStringsOptions> connectionOptions, IOptions<TenantOptions> tenantOptions, ICacheManager cacheManager, IDataBaseManager dataBaseManager, IConfiguration configuration)
     {
         _connectionStrings = connectionOptions.Value;
         _tenant = tenantOptions.Value;
         Headers = GetHeaders();
         _cacheManager = cacheManager;
         _dataBaseManager = dataBaseManager;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -144,10 +148,22 @@ public class TenantManager : ITenantManager, ITransient
     /// <returns></returns>
     public async Task<TenantInterFaceOutput> GetTenant(string tenantId)
     {
+        // ===== 开发环境本地解析（不调远程接口）=====
+        if (_configuration.GetValue<bool>("Tenant:LocalTenantResolve"))
+        {
+            return new TenantInterFaceOutput
+            {
+                tenantId = tenantId ?? "default",
+                tenantName = "默认租户",
+                dotnet = tenantId ?? "default",
+                type = 1
+            };
+        }
+
         var interFace = string.Format("{0}{1}", _tenant.MultiTenancyDBInterFace, tenantId);
         var response = await interFace.SetHeaders(Headers).GetAsStringAsync();
         var result = response.ToObject<RESTfulResult<TenantInterFaceInfo>>();
-        if (result.code != 200) throw Oops.Oh(result.msg).WithData(result.data);
+        if (result.code != 200) throw Oops.Oh(result.msg ?? $"Tenant interface error (code={result.code})").WithData(result.data);
         if (result.data.db_names == null && result.data.db_names.dotnet == null && result.data.db_names.linkList == null) throw Oops.Oh(ErrorCode.D1025);
         result.data.db_names.tenantId = tenantId;
         result.data.db_names.wl_qrcode = result.data.wl_qrcode;

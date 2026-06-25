@@ -2,7 +2,7 @@
   "JNPF_App": {
     "AesKey": "EY8WePvjM5GGwQzn",
     //系统文件路径
-    "SystemPath": "C:\\wwwroot\\Resources",
+    "SystemPath": "D:\\JNPF-v52\\FileStorage",
     //微信公众号允许上传文件类型
     "MPUploadFileType": [
       "bmp",
@@ -55,34 +55,12 @@
     ],
     //允许上传文件类型
     "AllowUploadFileType": [
-      "jpg",
-      "mp3",
-      "gif",
-      "png",
-      "bmp",
-      "jpeg",
-      "doc",
-      "docx",
-      "ppt",
-      "pptx",
-      "xls",
-      "xlsx",
-      "pdf",
-      "txt",
-      "rar",
-      "zip",
-      "csv",
-      "ogm",
-      "wmv",
-      "asx",
-      "mpg",
-      "webm",
-      "mp4",
-      "ogv",
-      "mpeg",
-      "mov",
-      "m4v",
-      "avi"
+      "jpg", "jpeg", "png", "gif", "bmp", "svg", "webp", "ico", "tiff", "tif",
+      "doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf",
+      "txt", "md", "csv", "json", "xml", "yaml", "yml", "html", "htm",
+      "rtf", "odt", "ott", "log", "sql",
+      "zip", "rar", "7z", "gz", "tar", "bz2", "xz",
+      "eml", "msg"
     ],
     //过滤上传文件名称特殊字符
     "SpecialString": [

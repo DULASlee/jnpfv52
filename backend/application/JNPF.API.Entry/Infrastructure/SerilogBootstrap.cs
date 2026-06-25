@@ -27,6 +27,7 @@ public static class SerilogBootstrap
         var loggerConfig = new LoggerConfiguration()
             .MinimumLevel.ControlledBy(LevelSwitch)
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information) // 保留端口监听日志
             .MinimumLevel.Override("System", LogEventLevel.Warning)
             .MinimumLevel.Override("SqlSugar", LogEventLevel.Warning)
             .Enrich.FromLogContext()
@@ -49,8 +50,8 @@ public static class SerilogBootstrap
                 retainedFileCountLimit: 14,
                 fileSizeLimitBytes: 50 * 1024 * 1024)
 
-            // Console
-            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
+            // Console — 包含 SourceContext 以便区分日志来源
+            .WriteTo.Console(outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}");
 
         // Seq Sink — 条件启用（默认关闭，不影响现有日志输出）
         var seqEnabled = cfg.GetValue<bool>("Logging:Seq:Enabled");

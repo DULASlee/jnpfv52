@@ -20,7 +20,7 @@ export const useGlobSetting = (): Readonly<GlobConfig> => {
     urlPrefix: VITE_GLOB_API_URL_PREFIX,
     uploadUrl: VITE_GLOB_API_URL + '/api/file/Uploader',
     webSocketUrl: VITE_GLOB_WEBSOCKET_URL,
-    cipherKey: 'EY8WePvjM5GGwQzn', // 加密key
+    cipherKey: import.meta.env.VITE_CIPHER_KEY || 'EY8WePvjM5GGwQzn', // 加密key
     aMapJsKey: '26a65601349a5ec88318721884ef81b5',
     aMapWebKey: '09485f01587712b3c04e5a9abf324237',
     aMapSecurityJsCode: '243e837c2ba077b4143b9a9dd2893992',

@@ -5,7 +5,7 @@
         <BasicTable @register="registerTable">
           <template #tableTitle>
             <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" @click="openAddModal()">{{ t('common.addText') }}</a-button>
-            <jnpf-upload-btn url="/api/workflow/Engine/flowTemplate/Actions/Import" accept=".ffe" @on-success="reload"></jnpf-upload-btn>
+            <jnpf-upload-btn url="/api/workflow/Engine/flowTemplate/Actions/Import" accept=".ffe" @on-success="reload" />
           </template>
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'enabledMark'">
@@ -37,7 +37,7 @@
   import VersionManage from './VersionManage.vue';
   import { downloadByUrl } from '/@/utils/file/download';
 
-  defineOptions({ name: 'workFlow-flowEngine' });
+  defineOptions({ name: 'WorkFlowFlowEngine' });
 
   const { createMessage } = useMessage();
   const baseStore = useBaseStore();

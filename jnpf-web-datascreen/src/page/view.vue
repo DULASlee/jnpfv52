@@ -5,7 +5,7 @@
 </template>
 <script>
 import init from '@/mixins/'
-import { getUrlParam } from "../utils/utils";
+import { getToken } from "@/utils/auth";
 export default {
   props: {
     target: String,
@@ -19,8 +19,7 @@ export default {
     }
   },
   created() {
-    const token = getUrlParam('token') || ''
-    if (token) localStorage.setItem('token', token)
+    if (!getToken()) this.$router.push('/login');
   },
 }
 </script>

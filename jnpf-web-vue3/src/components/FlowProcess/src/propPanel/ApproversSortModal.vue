@@ -12,7 +12,7 @@
                   <p class="organize" :title="element.organize">{{ element.organize }}</p>
                 </div>
                 <div class="option-drag">
-                  <i class="icon-ym icon-ym-darg" />
+                  <i class="icon-ym icon-ym-darg"></i>
                 </div>
               </div>
             </div>
