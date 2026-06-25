@@ -75,12 +75,12 @@ console.log('='.repeat(60));
 console.log('JNPF Hook 合规测试');
 console.log('='.repeat(60));
 
-// ─── guard-oa-module.mjs (R5) ────────────────────────────────
-console.log('\n[guard-oa-module.mjs — R5 模块边界]');
+// ─── R5 模块边界 (guard-write.mjs L4) ────────────────────────
+console.log('\n[R5 模块边界 — guard-write.mjs L4]');
 
 test(
   'R5-A: 写入 OA 禁用模块应 BLOCK',
-  'guard-oa-module.mjs',
+  'guard-write.mjs',
   writePayload('backend/application/JNPF.OA.API.Entry/Controllers/Foo.cs', 'x'),
   2,
   'JNPF.OA.API.Entry 是禁用模块'
@@ -88,7 +88,7 @@ test(
 
 test(
   'R5-B: scaffold IoT 不存在模块应 BLOCK',
-  'guard-oa-module.mjs',
+  'guard-write.mjs',
   writePayload('backend/modularity/iot/Services/FooService.cs', 'x'),
   2,
   'IoT 模块不存在'
@@ -96,7 +96,7 @@ test(
 
 test(
   'R5-C: scaffold MES 不存在模块应 BLOCK',
-  'guard-oa-module.mjs',
+  'guard-write.mjs',
   writePayload('backend/application/JNPF.MES.API.Entry/Foo.cs', 'x'),
   2,
   'MES 模块不存在'
@@ -104,18 +104,18 @@ test(
 
 test(
   'R5-D: 写入合法 system 模块应放行',
-  'guard-oa-module.mjs',
+  'guard-write.mjs',
   writePayload('backend/modularity/system/Services/UserService.cs', 'x'),
   0,
   'system 是合法模块'
 );
 
-// ─── guard-auth.mjs (R8) ─────────────────────────────────────
-console.log('\n[guard-auth.mjs — R8 权限声明]');
+// ─── R8 权限声明 (guard-write.mjs L7) ─────────────────────────
+console.log('\n[R8 权限声明 — guard-write.mjs L7]');
 
 test(
   'R8-A: IDynamicApiController 无权限属性应 BLOCK',
-  'guard-auth.mjs',
+  'guard-write.mjs',
   writePayload('backend/modularity/system/Services/FooService.cs',
     'public class FooService : IDynamicApiController { }'),
   2,
@@ -124,7 +124,7 @@ test(
 
 test(
   'R8-B: 带 [AllowAnonymous] 应放行',
-  'guard-auth.mjs',
+  'guard-write.mjs',
   writePayload('backend/modularity/system/Services/FooService.cs',
     '[AllowAnonymous]\npublic class FooService : IDynamicApiController { }'),
   0,
@@ -133,7 +133,7 @@ test(
 
 test(
   'R8-C: MultiEdit 无权限属性应 BLOCK',
-  'guard-auth.mjs',
+  'guard-write.mjs',
   multiEditPayload('backend/modularity/system/Services/FooService.cs', [
     { old_string: '// old', new_string: 'public class FooService : IDynamicApiController { }' },
   ]),
@@ -141,12 +141,12 @@ test(
   'MultiEdit 新增 IDynamicApiController 缺权限声明'
 );
 
-// ─── guard-sql-injection.mjs (R7) ────────────────────────────
-console.log('\n[guard-sql-injection.mjs — R7 SQL 注入]');
+// ─── R7 SQL 注入 (guard-write.mjs L6) ──────────────────────────
+console.log('\n[R7 SQL 注入 — guard-write.mjs L6]');
 
 test(
   'R7-A: DROP TABLE 字符串插值应 BLOCK',
-  'guard-sql-injection.mjs',
+  'guard-write.mjs',
   writePayload('backend/Foo.cs',
     'var sql = $"DROP TABLE {tableName}";'),
   2,
@@ -155,7 +155,7 @@ test(
 
 test(
   'R7-B: 参数化查询应放行',
-  'guard-sql-injection.mjs',
+  'guard-write.mjs',
   writePayload('backend/Foo.cs',
     'var p = new SqlSugarParameter("@id", id);'),
   0,
@@ -164,7 +164,7 @@ test(
 
 test(
   'R7-C: MultiEdit DROP TABLE 应 BLOCK',
-  'guard-sql-injection.mjs',
+  'guard-write.mjs',
   multiEditPayload('backend/Foo.cs', [
     { old_string: '// old', new_string: 'var sql = $"DROP TABLE {tableName}";' },
   ]),
@@ -172,12 +172,12 @@ test(
   'MultiEdit DROP via string interpolation'
 );
 
-// ─── guard-tenant-filter.mjs (R4) ────────────────────────────
-console.log('\n[guard-tenant-filter.mjs — R4 多租户]');
+// ─── R4 多租户 (guard-write.mjs L5) ──────────────────────────
+console.log('\n[R4 多租户 — guard-write.mjs L5]');
 
 test(
   'R4-A: DisableGlobalFilter(Tenant) 应 BLOCK',
-  'guard-tenant-filter.mjs',
+  'guard-write.mjs',
   writePayload('backend/Foo.cs',
     'db.Queryable<User>().DisableGlobalFilter("TenantFilter").ToList();'),
   2,
@@ -186,7 +186,7 @@ test(
 
 test(
   'R4-B: Updateable 无 Where 应 BLOCK',
-  'guard-tenant-filter.mjs',
+  'guard-write.mjs',
   writePayload('backend/Foo.cs',
     'db.Updateable<User>(entity).ExecuteCommand();'),
   2,
@@ -195,7 +195,7 @@ test(
 
 test(
   'R4-C: Updateable 带 Where 应放行',
-  'guard-tenant-filter.mjs',
+  'guard-write.mjs',
   writePayload('backend/Foo.cs',
     'db.Updateable<User>(entity).Where(x => x.Id == id).ExecuteCommand();'),
   0,
@@ -204,7 +204,7 @@ test(
 
 test(
   'R4-D: r4-safe 豁免标记应放行',
-  'guard-tenant-filter.mjs',
+  'guard-write.mjs',
   writePayload('backend/Foo.cs',
     'db.Updateable<User>(entity).ExecuteCommand(); // r4-safe: DBA 跨租户清理'),
   0,
@@ -213,7 +213,7 @@ test(
 
 test(
   'R4-E: MultiEdit Updateable 无 Where 应 BLOCK',
-  'guard-tenant-filter.mjs',
+  'guard-write.mjs',
   multiEditPayload('backend/Foo.cs', [
     { old_string: '// old', new_string: 'db.Updateable<User>(entity).ExecuteCommand();' },
   ]),
@@ -221,12 +221,12 @@ test(
   'MultiEdit Updateable 无 Where = 跨租户修改'
 );
 
-// ─── guard-frontend-leak.mjs (R6) ────────────────────────────
-console.log('\n[guard-frontend-leak.mjs — R6 前端泄漏]');
+// ─── R6 前端泄漏 (guard-write.mjs L8) ──────────────────────────
+console.log('\n[R6 前端泄漏 — guard-write.mjs L8]');
 
 test(
   'R6-A: setInterval 无 clear 应 BLOCK',
-  'guard-frontend-leak.mjs',
+  'guard-write.mjs',
   writePayload('jnpf-web-vue3/src/views/Foo.vue',
     '<script setup>\nsetInterval(() => {}, 1000);\n</script>'),
   2,
@@ -235,7 +235,7 @@ test(
 
 test(
   'R6-B: EventSource 无 retry cap 应 BLOCK',
-  'guard-frontend-leak.mjs',
+  'guard-write.mjs',
   writePayload('jnpf-web-vue3/src/utils/sse.js',
     'const es = new EventSource(url);\nes.onclose = () => {};'),
   2,
@@ -244,7 +244,7 @@ test(
 
 test(
   'R6-C: setTimeout + onUnmounted 应放行',
-  'guard-frontend-leak.mjs',
+  'guard-write.mjs',
   writePayload('jnpf-web-vue3/src/views/Foo.vue',
     '<script setup>\nconst t = setTimeout(()=>{}, 1000);\nonUnmounted(() => clearTimeout(t));\n</script>'),
   0,
@@ -253,7 +253,7 @@ test(
 
 test(
   'R6-D: MultiEdit setInterval 无 clear 应 BLOCK',
-  'guard-frontend-leak.mjs',
+  'guard-write.mjs',
   multiEditPayload('jnpf-web-vue3/src/views/Foo.vue', [
     { old_string: '// old', new_string: '<script setup>\nsetInterval(() => {}, 1000);\n</script>' },
   ]),
