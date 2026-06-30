@@ -31,8 +31,8 @@ project_name: "backend"
 # When using multiple languages, the first language server that supports a given file will be used for that file.
 # The first language is the default language and the respective language server will be used as a fallback.
 # Note that when using the JetBrains backend, language servers are not used and this list is correspondingly ignored.
-languages:
-- csharp
+# 子项目勿单独启 LSP；统一用根目录 JNPF-v52 项目的 csharp_omnisharp，避免双 OmniSharp
+languages: []
 
 # the encoding used by text files in the project
 # For a list of possible encodings, see https://docs.python.org/3.11/library/codecs.html#standard-encodings

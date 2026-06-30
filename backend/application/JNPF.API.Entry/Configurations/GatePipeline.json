@@ -5,6 +5,12 @@
     "MaxAttachmentCount": 10,
     "PerFileTimeoutMinutes": 2,
     "MaxConcurrentFiles": 3,
+    "SemanticMinScore": 60,
+    "MinBusinessEvents": 1,
+    "MinRoles": 1,
+    "MinDataEntities": 1,
+    "MinFieldsPerEntity": 5,
+    "SemanticProvider": "deepseek",
     "AllowedExtensions": [
       ".docx", ".doc", ".xlsx", ".xls", ".pdf", ".txt", ".csv", ".md",
       ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"

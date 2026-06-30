@@ -1,0 +1,98 @@
+  正在确定要还原的项目…
+D:\JNPF-v52\backend\application\JNPF.API.Entry\JNPF.API.Entry.csproj : warning NU1902: 包 "OpenTelemetry.Exporter.OpenTelemetryProtocol" 1.8.1 具有已知的 中 严重性漏洞，https://github.com/advisories/GHSA-4625-4j76-fww9 [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+  所有项目均是最新的，无法还原。
+  JNPF.Analyzers -> D:\JNPF-v52\backend\tools\JNPF.Analyzers\JNPF.Analyzers\bin\Debug\netstandard2.0\JNPF.Analyzers.dll
+D:\JNPF-v52\backend\application\JNPF.API.Entry\JNPF.API.Entry.csproj : warning NU1902: 包 "OpenTelemetry.Exporter.OpenTelemetryProtocol" 1.8.1 具有已知的 中 严重性漏洞，https://github.com/advisories/GHSA-4625-4j76-fww9
+  JNPF.Extras.Authentication.JwtBearer -> D:\JNPF-v52\backend\framework\JNPF.Extras.Authentication.JwtBearer\bin\Debug\net8.0\JNPF.Extras.Authentication.JwtBearer.dll
+  JNPF.Extras.ObjectMapper.Mapster -> D:\JNPF-v52\backend\framework\JNPF.Extras.ObjectMapper.Mapster\bin\Debug\net8.0\JNPF.Extras.ObjectMapper.Mapster.dll
+  JNPF.Extras.DependencyModel.CodeAnalysis -> D:\JNPF-v52\backend\framework\JNPF.Extras.DependencyModel.CodeAnalysis\bin\Debug\net8.0\JNPF.Extras.DependencyModel.CodeAnalysis.dll
+  JNPF.Extras.EventBus.RabbitMQ -> D:\JNPF-v52\backend\infrastructure\JNPF.Extras.EventBus.RabbitMQ\bin\Debug\net8.0\JNPF.Extras.EventBus.RabbitMQ.dll
+  JNPF -> D:\JNPF-v52\backend\framework\JNPF\bin\Debug\net8.0\JNPF.dll
+  JNPF.Extras.DatabaseAccessor.SqlSugar -> D:\JNPF-v52\backend\framework\JNPF.Extras.DatabaseAccessor.SqlSugar\bin\Debug\net8.0\JNPF.Extras.DatabaseAccessor.SqlSugar.dll
+  JNPF.Extras.EventBus.Outbox -> D:\JNPF-v52\backend\infrastructure\JNPF.Extras.EventBus.Outbox\bin\Debug\net8.0\JNPF.Extras.EventBus.Outbox.dll
+  JNPF.Common -> D:\JNPF-v52\backend\modularity\common\JNPF.Common\bin\Debug\net8.0\JNPF.Common.dll
+  JNPF.Extras.WebSockets -> D:\JNPF-v52\backend\infrastructure\JNPF.Extras.WebSockets\bin\Debug\net8.0\JNPF.Extras.WebSockets.dll
+  JNPF.VisualDev.Entitys -> D:\JNPF-v52\backend\modularity\visualdev\JNPF.VisualDev.Entitys\bin\Debug\net8.0\JNPF.VisualDev.Entitys.dll
+  JNPF.Message.Entitys -> D:\JNPF-v52\backend\modularity\message\JNPF.Message.Entitys\bin\Debug\net8.0\JNPF.Message.Entitys.dll
+  JNPF.VisualData.Entitys -> D:\JNPF-v52\backend\modularity\visualdata\JNPF.VisualData.Entitys\bin\Debug\net8.0\JNPF.VisualData.Entitys.dll
+  JNPF.Extend.Entitys -> D:\JNPF-v52\backend\modularity\extend\JNPF.Extend.Entitys\bin\Debug\net8.0\JNPF.Extend.Entitys.dll
+  JNPF.ZxDev.Entitys -> D:\JNPF-v52\backend\modularity\zxdev\JNPF.ZxDev.Entitys\bin\Debug\net8.0\JNPF.ZxDev.Entitys.dll
+  JNPF.TaskScheduler.Entitys -> D:\JNPF-v52\backend\modularity\taskscheduler\JNPF.TaskScheduler.Entitys\bin\Debug\net8.0\JNPF.TaskScheduler.Entitys.dll
+  JNPF.Apps.Entitys -> D:\JNPF-v52\backend\modularity\app\JNPF.Apps.Entitys\bin\Debug\net8.0\JNPF.Apps.Entitys.dll
+  JNPF.InteAssistant.Entitys -> D:\JNPF-v52\backend\modularity\inteAssistant\JNPF.InteAssistant.Entitys\bin\Debug\net8.0\JNPF.InteAssistant.Entitys.dll
+  JNPF.WorkFlow.Entitys -> D:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow.Entitys\bin\Debug\net8.0\JNPF.WorkFlow.Entitys.dll
+  JNPF.Extras.Thirdparty -> D:\JNPF-v52\backend\infrastructure\JNPF.Extras.Thirdparty\bin\Debug\net8.0\JNPF.Extras.Thirdparty.dll
+  JNPF.TaskScheduler.Interfaces -> D:\JNPF-v52\backend\modularity\taskscheduler\JNPF.TaskScheduler.Interfaces\bin\Debug\net8.0\JNPF.TaskScheduler.Interfaces.dll
+  JNPF.Engine.Entity -> D:\JNPF-v52\backend\modularity\engine\JNPF.Engine.Entity\bin\Debug\net8.0\JNPF.Engine.Entity.dll
+  JNPF.Extend.Interfaces -> D:\JNPF-v52\backend\modularity\extend\JNPF.Extend.Interfaces\bin\Debug\net8.0\JNPF.Extend.Interfaces.dll
+  JNPF.Extras.CollectiveOAuth -> D:\JNPF-v52\backend\infrastructure\JNPF.Extras.CollectiveOAuth\bin\Debug\net8.0\JNPF.Extras.CollectiveOAuth.dll
+  JNPF.Message.Interfaces -> D:\JNPF-v52\backend\modularity\message\JNPF.Message.Interfaces\bin\Debug\net8.0\JNPF.Message.Interfaces.dll
+  JNPF.Systems.Entitys -> D:\JNPF-v52\backend\modularity\system\JNPF.Systems.Entitys\bin\Debug\net8.0\JNPF.Systems.Entitys.dll
+  JNPF.VisualDev.Interfaces -> D:\JNPF-v52\backend\modularity\visualdev\JNPF.VisualDev.Interfaces\bin\Debug\net8.0\JNPF.VisualDev.Interfaces.dll
+  JNPF.WorkFlow.Interfaces -> D:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow.Interfaces\bin\Debug\net8.0\JNPF.WorkFlow.Interfaces.dll
+  JNPF.Systems.Interfaces -> D:\JNPF-v52\backend\modularity\system\JNPF.Systems.Interfaces\bin\Debug\net8.0\JNPF.Systems.Interfaces.dll
+  JNPF.Apps.Interfaces -> D:\JNPF-v52\backend\modularity\app\JNPF.Apps.Interfaces\bin\Debug\net8.0\JNPF.Apps.Interfaces.dll
+  JNPF.Common.Core -> D:\JNPF-v52\backend\modularity\common\JNPF.Common.Core\bin\Debug\net8.0\JNPF.Common.Core.dll
+  JNPF.TaskScheduler -> D:\JNPF-v52\backend\modularity\taskscheduler\JNPF.TaskScheduler\bin\Debug\net8.0\JNPF.TaskScheduler.dll
+  JNPF.InteAssistant.Engine -> D:\JNPF-v52\backend\modularity\inteAssistant\JNPF.InteAssistant.Engine\bin\Debug\net8.0\JNPF.InteAssistant.Engine.dll
+  JNPF.Message -> D:\JNPF-v52\backend\modularity\message\JNPF.Message\bin\Debug\net8.0\JNPF.Message.dll
+  JNPF.Extend -> D:\JNPF-v52\backend\modularity\extend\JNPF.Extend\bin\Debug\net8.0\JNPF.Extend.dll
+  JNPF.VisualData -> D:\JNPF-v52\backend\modularity\visualdata\JNPF.VisualData\bin\Debug\net8.0\JNPF.VisualData.dll
+  JNPF.OAuth -> D:\JNPF-v52\backend\modularity\oauth\JNPF.OAuth\bin\Debug\net8.0\JNPF.OAuth.dll
+  JNPF.VisualDev.Engine -> D:\JNPF-v52\backend\modularity\engine\JNPF.VisualDev.Engine\bin\Debug\net8.0\JNPF.VisualDev.Engine.dll
+  JNPF.Apps -> D:\JNPF-v52\backend\modularity\app\JNPF.Apps\bin\Debug\net8.0\JNPF.Apps.dll
+  JNPF.InteAssistant -> D:\JNPF-v52\backend\modularity\inteAssistant\JNPF.InteAssistant\bin\Debug\net8.0\JNPF.InteAssistant.dll
+  JNPF.WorkFlow -> D:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow\bin\Debug\net8.0\JNPF.WorkFlow.dll
+  JNPF.CodeGen -> D:\JNPF-v52\backend\modularity\codegen\JNPF.CodeGen\bin\Debug\net8.0\JNPF.CodeGen.dll
+  JNPF.VisualDev -> D:\JNPF-v52\backend\modularity\visualdev\JNPF.VisualDev\bin\Debug\net8.0\JNPF.VisualDev.dll
+  JNPF.Systems -> D:\JNPF-v52\backend\modularity\system\JNPF.Systems\bin\Debug\net8.0\JNPF.Systems.dll
+  JNPF.Common.CodeGen -> D:\JNPF-v52\backend\modularity\common\JNPF.Common.CodeGen\bin\Debug\net8.0\JNPF.Common.CodeGen.dll
+  JNPF.ZxDev -> D:\JNPF-v52\backend\modularity\zxdev\JNPF.ZxDev\bin\Debug\net8.0\JNPF.ZxDev.dll
+  JNPF.API.Entry -> D:\JNPF-v52\backend\application\JNPF.API.Entry\bin\Debug\net8.0\JNPF.API.Entry.dll
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Program.cs(12,28): warning CS8892: 方法“Program.Main()”将不会用作入口点，因为找到了同步入口点“AutoGeneratedProgram.Main(string[])”。 [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Infrastructure\OutboxSqlServerPoC.cs(18,23): warning CA2211: 非常量字段应当不可见 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2211) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Auth\JwtHandlerIntegrationTests.cs(19,23): warning CA2211: 非常量字段应当不可见 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2211) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Infrastructure\OutboxSqlServerPoC.cs(17,23): warning CA2211: 非常量字段应当不可见 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2211) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Auth\JwtHandlerIntegrationTests.cs(18,23): warning CA2211: 非常量字段应当不可见 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2211) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\GatePipelineIntegrationTests.cs(190,23): warning CA2201: 异常类型 System.Exception 不够具体 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2201) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\GatePipelineIntegrationTests.cs(220,19): warning CA2201: 异常类型 System.Exception 不够具体 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2201) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\GatePipelineIntegrationTests.cs(66,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.GatePipelineIntegrationTests.完整管道_详细需求_语义评估通过_返回完整结果() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SmokeTest.cs(31,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.SmokeTest.FakeLlmGateway_ThroughInterface() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\GatePipelineIntegrationTests.cs(88,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.GatePipelineIntegrationTests.完整管道_垃圾输入_硬规则阶段就拦截() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SmokeTest.cs(49,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.SmokeTest.Evaluator_EndToEnd_GreenPath() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\GatePipelineIntegrationTests.cs(102,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.GatePipelineIntegrationTests.空洞输入_语义评估拦截_返回结构化反馈() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SmokeTest.cs(14,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.SmokeTest.FakeLlmGateway_CanBeCalled() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\GatePipelineIntegrationTests.cs(124,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.GatePipelineIntegrationTests.附件部分损坏_正常附件继续处理() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\GatePipelineIntegrationTests.cs(150,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.GatePipelineIntegrationTests.图片全部失败_无用户文字_发出明确警告() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(40,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.详细MES需求_应该通过() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(78,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.简短需求含实体和角色_应该通过() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Auth\JwtHandlerIntegrationTests.cs(216,31): warning CA2201: 异常类型 System.Exception 不够具体 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2201) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(104,9): warning xUnit2012: Do not use Assert.True() to check if a value exists in a collection. Use Assert.Contains instead. (https://xunit.net/xunit.analyzers/rules/xUnit2012) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(112,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.仅写管理系统_应该不通过() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(142,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.有角色无业务事件_应该不通过() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(178,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.LLM返回通过但无业务事件_硬阈值覆盖为不通过() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(209,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.LLM调用失败_应该FailClosed() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(70,9): warning xUnit2012: Do not use Assert.True() to check if a value exists in a collection. Use Assert.Contains instead. (https://xunit.net/xunit.analyzers/rules/xUnit2012) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(201,9): warning xUnit2012: Do not use Assert.True() to check if a value exists in a collection. Use Assert.Contains instead. (https://xunit.net/xunit.analyzers/rules/xUnit2012) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(71,9): warning xUnit2012: Do not use Assert.True() to check if a value exists in a collection. Use Assert.Contains instead. (https://xunit.net/xunit.analyzers/rules/xUnit2012) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(72,9): warning xUnit2012: Do not use Assert.True() to check if a value exists in a collection. Use Assert.Contains instead. (https://xunit.net/xunit.analyzers/rules/xUnit2012) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(225,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.LLM返回乱码非JSON_应该FailClosed() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(240,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.LLM返回JSON缺少核心字段_应该FailClosed() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(137,9): warning xUnit2012: Do not use Assert.True() to check if a value exists in a collection. Use Assert.Contains instead. (https://xunit.net/xunit.analyzers/rules/xUnit2012) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(169,9): warning xUnit2012: Do not use Assert.True() to check if a value exists in a collection. Use Assert.Contains instead. (https://xunit.net/xunit.analyzers/rules/xUnit2012) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Infrastructure\OutboxSqlServerPoC.cs(272,19): warning CA2201: 异常类型 System.Exception 不够具体 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2201) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(255,23): warning CA1707: 从成员名称 JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.CancellationToken取消_应该FailClosed() 中删除下划线 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1707) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Program.cs(10,7): warning CA1852: 类型“Program”可以密封，因为它的包含程序集中没有子类型，并且在外部不可见 (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1852) [D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\JNPF.Tests.Gate.csproj]
+  JNPF.Tests.Gate -> D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\bin\Debug\net8.0\JNPF.Tests.Gate.dll
+D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\bin\Debug\net8.0\JNPF.Tests.Gate.dll (.NETCoreApp,Version=v8.0)的测试运行
+总共 1 个测试文件与指定模式相匹配。
+[xUnit.net 00:00:00.14]     JNPF.Tests.Gate.Gates.SmokeTest.Evaluator_EndToEnd_GreenPath [FAIL]
+  失败 JNPF.Tests.Gate.Gates.SmokeTest.Evaluator_EndToEnd_GreenPath [35 ms]
+  错误消息:
+   Expected Passed=true but got false. Score=0, Missing count=1, Guidance=需求评估服务异常，请稍后重试。
+错误代码: GATE_UNEXPECTED
+  堆栈跟踪:
+     at JNPF.Tests.Gate.Gates.SmokeTest.Evaluator_EndToEnd_GreenPath() in D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SmokeTest.cs:line 103
+--- End of stack trace from previous location ---
+
+失败!  - 失败:     1，通过:     0，已跳过:     0，总计:     1，持续时间: < 1 ms - JNPF.Tests.Gate.dll (net8.0)

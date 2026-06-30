@@ -135,6 +135,125 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         return await _pipelineEngine.StartAsync(pipelineId);
     }
 
+    // ─── SA 门控（异步事件驱动 — 缺陷4修复）───
+
+    /// <summary>
+    /// SA 门控入口 — 异步事件驱动
+    /// 前端提交 → 202 Accepted → 后台执行门控 → SSE 推送结果
+    /// </summary>
+    [HttpPost("{pipelineId:long}/sa-gate")]
+    public async Task<object> ExecuteGateAsync(
+        long pipelineId, [FromBody] SaGateRequest request)
+    {
+        var userText = request?.UserText ?? "";
+        var tenantId = TenantResolver.Resolve();
+        var userId = GetUserId();
+
+        // Step 1: 读取已持久化的附件
+        var attachments = await _db.Queryable<InteAssistantAttachment>()
+            .Where(a => a.PipelineId == pipelineId.ToString() && a.ProcessStatus == 2)
+            .ToListAsync();
+
+        var attachmentFiles = new List<AttachmentFile>();
+        foreach (var att in attachments)
+        {
+            if (!string.IsNullOrWhiteSpace(att.FileUrl))
+            {
+                attachmentFiles.Add(new AttachmentFile
+                {
+                    FileName = att.FileName,
+                    Content = Array.Empty<byte>() // 已提取文本, 不再传原始内容
+                });
+            }
+        }
+
+        // Step 2: 创建 SSE 通道
+        if (_sseChannels.TryRemove(pipelineId, out var oldChannel))
+            oldChannel.Writer.TryComplete();
+
+        var channel = Channel.CreateUnbounded<SseEvent>(new UnboundedChannelOptions
+        {
+            SingleReader = true, SingleWriter = true
+        });
+        _sseChannels[pipelineId] = channel;
+
+        // Step 3: 后台异步执行门控 (BackgroundTaskRunner + SSE)
+        var ctx = RequestContext.Capture(_httpContextAccessor);
+        var visionConfig = _configuration.GetSection("MultimodalVision");
+        var visionApiUrl = visionConfig["ApiUrl"] ?? "";
+        var visionApiKey = visionConfig["ApiKey"] ?? "";
+        var visionModel = visionConfig["Model"] ?? "";
+
+        _taskRunner.Run(
+            $"SA_Gate_{pipelineId}",
+            async (bgCtx, bgCt) =>
+            {
+                using var sse = _senderFactory.Create(pipelineId.ToString(), channel);
+                try
+                {
+                    // 通知前端: 门控开始
+                    sse.TrySend("gate_started", "");
+
+                    // 执行门控管道
+                    var gateResult = await _gatePipeline.ExecuteAsync(
+                        userText, attachmentFiles, ctx,
+                        gateContext: null,
+                        visionApiUrl, visionApiKey, visionModel, bgCt);
+
+                    if (gateResult.Passed)
+                    {
+                        // 门控通过 → 通知前端 + 自动进入 Stage 1
+                        sse.TrySend("gate_passed", JsonSerializer.Serialize(new
+                        {
+                            mergedText = gateResult.MergedText,
+                            warnings = gateResult.Warnings,
+                            semanticFitness = gateResult.SemanticFitness
+                        }));
+
+                        // 持久化门控结果
+                        await SaveMessageAsync(pipelineId.ToString(), "gate", "system",
+                            JsonSerializer.Serialize(gateResult));
+
+                        // 自动流转到 requirement 阶段
+                        await _pipelineEngine.ExecuteStageAsync(pipelineId, PipelineStage.Requirement);
+                        sse.TrySend("stage_transition", PipelineStage.Requirement);
+                    }
+                    else
+                    {
+                        // 门控不通过 → 推送结构化反馈
+                        sse.TrySend("gate_failed", JsonSerializer.Serialize(new
+                        {
+                            reason = gateResult.Reason,
+                            hint = gateResult.Hint,
+                            semanticFitness = gateResult.SemanticFitness,
+                            warnings = gateResult.Warnings
+                        }));
+                    }
+
+                    sse.Complete();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "SA 门控异常: PipelineId={Id}", pipelineId);
+                    sse.TrySend("gate_error", JsonSerializer.Serialize(new
+                    {
+                        message = "需求评估过程中发生异常，请重试。",
+                        errorCode = "GATE_INTERNAL_ERROR"
+                    }));
+                    sse.Complete();
+                }
+            },
+            timeout: TimeSpan.FromMinutes(5));
+
+        // Step 4: 立即返回 202-style 响应
+        return new
+        {
+            pipelineId,
+            status = "processing",
+            message = "需求材料正在评估中，请通过 SSE /events 监听结果..."
+        };
+    }
+
     // ─── 执行当前阶段（调 LLM 流式输出）───
 
     /// <summary>
@@ -1225,4 +1344,13 @@ public record RollbackRequest
 {
     public string TargetStage { get; init; } = "";
     public string? Reason { get; init; }
+}
+
+/// <summary>
+/// SA 门控请求
+/// </summary>
+public record SaGateRequest
+{
+    public string UserText { get; init; } = "";
+    public string? Provider { get; init; }
 }

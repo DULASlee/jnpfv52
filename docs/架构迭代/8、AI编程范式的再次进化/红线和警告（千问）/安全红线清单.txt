@@ -1,0 +1,95 @@
+======================================================================
+  JNPF v5.2 安全红线清单 — 最高优先级，违反=生产事故
+  来源: architecture-redlines.md / sql-safety.md / guard-*.mjs
+======================================================================
+
+---------------------------------------------------------------------------
+R4 — 多租户隔离（最高安全风险）
+---------------------------------------------------------------------------
+执行层: L0（Hook硬阻断） | Hook: guard-tenant-filter.mjs
+
+强制要求:
+  1. Queryable<T>() 自动附加 ITenantFilter（全局查询过滤器），正常使用即可
+  2. Ado.SqlQuery / SqlQueryable / 原生SQL → MUST手动加 WHERE TenantId = @tid
+  3. Updateable<T> / Deleteable<T> → MUST链式调用 .Where(...) 限定租户范围
+  4. NEVER 调用 DisableGlobalFilter("TenantFilter") 除非DBA级跨租户管理
+
+Hook拦截内容:
+  - DisableGlobalFilter 调用
+  - Updateable 无 .Where()
+  - Deleteable 无 .Where()
+  - 原生SQL 无 WHERE TenantId
+
+关联陷阱:
+  - Trap 7: ITenantFilter只在根Queryable自动生效，子查询/JOIN/Ado.SqlQuery不自动过滤
+  - Trap 8: Updateable/Deleteable不自动附加TenantId，无Where=跨租户修改全部数据
+  - Trap 13: 自定义Global Filter优先级可能覆盖TenantFilter
+
+后果: 查询不带TenantId → 租户A看到租户B的数据 → 数据安全事故
+
+---------------------------------------------------------------------------
+R7 — SQL注入防御
+---------------------------------------------------------------------------
+执行层: L0（Hook硬阻断） | Hook: guard-sql-injection.mjs
+
+高危模式（全部L0阻断）:
+  - $"DROP TABLE {tableName}" / $"DROP DATABASE ..." / $"TRUNCATE ..."
+  - $"DELETE FROM ..."
+  - $"SELECT ... WHERE Name = '{userInput}'"
+  - string.Format("SELECT ...", ...)
+  - Ado.SqlQuery($"...") / Ado.ExecuteCommand($"...")
+
+白名单例外: 动态表名/列名 → 白名单验证后方可拼接
+
+严重程度:
+  CRITICAL: $"DROP/DELETE/SELECT/INSERT/UPDATE" + 字符串插值 → BLOCK(exit2)
+  CRITICAL: string.Format() + SQL关键字 → BLOCK(exit2)
+  CRITICAL: Ado.SqlQuery/Ado.ExecuteCommand + $" → BLOCK(exit2)
+  HIGH: 未参数化原始SQL（无$） → WARN(exit1)
+
+后果: SQL注入 → 数据泄露/数据删除/权限提升
+
+---------------------------------------------------------------------------
+R8 — API权限声明
+---------------------------------------------------------------------------
+执行层: L0（Hook硬阻断） | Hook: guard-auth.mjs
+
+规则: 新API（IDynamicApiController实现类）MUST声明权限属性
+
+三种合法声明:
+  - [AllowAnonymous] — 公开端点（登录、健康检查）
+  - [SecurityDefine("权限码")] — 角色受限端点
+  - [Authorize] — 已认证即可访问
+
+Hook拦截: 含 IDynamicApiController 但无权限属性的 .cs 文件写入
+
+背景: JwtHandler当前bypass JWT校验（临时态）。无权限声明的API = 未认证即可访问
+后果: 新增API无权限声明 → 未认证用户可直接调用 → 越权访问
+
+---------------------------------------------------------------------------
+guard-write — 密钥/凭证文件拦截
+---------------------------------------------------------------------------
+执行层: L0 | Hook: guard-write.mjs
+
+三层守卫:
+  L1: 密钥/凭证文件拦截（.env/.pem/.key/Dockerfile/workflows）
+  L2: 空文件拦截（防止清空源文件）
+  L3: 安全扫描（硬编码密钥/eval/命令注入/SQL拼接）
+
+拦截内容:
+  - 写入 .env / .pem / .key / .pfx 等密钥文件
+  - 写入 Dockerfile / .github/workflows（需审批）
+  - 清空现有源文件内容
+  - 硬编码密码/API密钥在代码中
+
+---------------------------------------------------------------------------
+guard-bash — 危险命令拦截
+---------------------------------------------------------------------------
+执行层: L0 | Hook: guard-bash.mjs
+
+拦截内容:
+  - rm -rf /（及变体）
+  - DROP DATABASE / DROP TABLE
+  - git push --force / git reset --hard
+  - curl | bash 管道执行
+  - 系统级破坏性命令

@@ -1,0 +1,35 @@
+[
+  {
+    "timestamp": "2026-06-25T18:51:06.309734",
+    "task_id": "PROD-S-001",
+    "phase": "review",
+    "role": "reviewer",
+    "rule_id": "TRAP-002",
+    "symptom": "Mapster Adapt 未排除审计字段",
+    "root_cause": "guard-reviewer 仅扫描字符串级 Adapt",
+    "suggested_fix": ".Ignore(x => x.CreateTime)",
+    "recurrence_count": 3
+  },
+  {
+    "timestamp": "2026-06-25T18:51:24.185404",
+    "task_id": "PROD-S-001",
+    "phase": "review",
+    "role": "reviewer",
+    "rule_id": "TRAP-002",
+    "symptom": "Mapster Adapt 未排除审计字段",
+    "root_cause": "guard-reviewer 仅扫描字符串级 Adapt",
+    "suggested_fix": ".Ignore(x => x.CreateTime)",
+    "recurrence_count": 3
+  },
+  {
+    "timestamp": "2026-06-25T19:11:33.912807",
+    "task_id": "PROD-S-001",
+    "phase": "review",
+    "role": "reviewer",
+    "rule_id": "TRAP-002",
+    "symptom": "Mapster Adapt 未排除审计字段",
+    "root_cause": "guard-reviewer 仅扫描字符串级 Adapt",
+    "suggested_fix": ".Ignore(x => x.CreateTime)",
+    "recurrence_count": 3
+  }
+]

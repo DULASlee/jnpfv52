@@ -112,11 +112,11 @@
 ```
 收到任务
   │
-  ├─ 简单？(B级) → Phase 1→2→4→5→6→7 (skip Phase 3 Plan)
+  ├─ 简单？(B级) → Phase 1→2→(2.5推荐)→4→5→6→7 (skip Phase 3 Plan)
   │
-  ├─ 标准？(A级) → Phase 1→2→3→4→5→6→7
+  ├─ 标准？(A级) → Phase 1→2→2.5→3→4→5→6→7
   │
-  └─ 复杂？(S级) → Phase 1→2→3→4(subagent)→5(test-runner)→6(code-reviewer)→7
+  └─ 复杂？(S级) → Phase 1→2→2.5→3→4(subagent)→5(test-runner)→6(code-reviewer)→7
 ```
 
 > 手动触发完整审查：SP `requesting-code-review`
@@ -127,8 +127,10 @@
 
 | 阶段 | 规则文件 |
 |---|---|
-| Phase 1-2 | `architecture-redlines.md`, `jnpf-expert-traps.md` |
+| Phase 1-2 | `architecture-redlines.md`, `jnpf-expert-traps.md`, `low-code-principles.md` |
+| Phase 2.5 | `codegraph-exploration.md`（调用链探索强制规则） |
 | Phase 4 | `sql-safety.md`, `frontend-memory-leak.md` |
 | Phase 5 | `testing.md`, `engineering-laws.md` |
 | Phase 6 | `review-workflow.md`, `architecture-redlines.md` |
 | Debug | `debugging.md`, `engineering-laws.md` |
+| 全阶段 | `assertion-discipline.md`（论断标签 + 置信度 + 反谄媚 + RULES I BROKE） |

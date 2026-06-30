@@ -10,9 +10,22 @@
 
 import { execSync } from 'child_process';
 
+const MAX_DIRTY_FILES = 20;
+
 // ─── 收集变更 ────────────────────────────────────────────────────
 let changedFiles = [];
 let lineCount = 0;
+
+try {
+  const porcelain = execSync('git status --porcelain', {
+    encoding: 'utf-8', stdio: 'pipe', timeout: 2000,
+  }).trim();
+  const dirtyCount = porcelain ? porcelain.split('\n').filter(Boolean).length : 0;
+  if (dirtyCount > MAX_DIRTY_FILES) {
+    console.log(JSON.stringify({ decision: 'approve', reason: `skip: ${dirtyCount} dirty files` }));
+    process.exit(0);
+  }
+} catch { /* git 不可用，继续 */ }
 
 try {
   const unstaged = execSync('git diff --name-only', {

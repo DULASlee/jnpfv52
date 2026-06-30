@@ -31,9 +31,9 @@ project_name: "JNPF-v52"
 # When using multiple languages, the first language server that supports a given file will be used for that file.
 # The first language is the default language and the respective language server will be used as a fallback.
 # Note that when using the JetBrains backend, language servers are not used and this list is correspondingly ignored.
+# 仅 C# 符号级改动；Vue/TS 由 Cursor Volar 承担，禁止 Serena 再启 vue-language-server
 languages:
-- csharp_omnisharp
-- vue
+- csharp
 
 # the encoding used by text files in the project
 # For a list of possible encodings, see https://docs.python.org/3.11/library/codecs.html#standard-encodings
@@ -74,7 +74,12 @@ additional_workspace_folders: []
 # list of additional paths to ignore in this project.
 # Same syntax as gitignore, so you can use * and **.
 # Note: global ignored_paths from serena_config.yml are also applied additively.
-ignored_paths: []
+ignored_paths:
+  - jnpf-web-vue3/**
+  - jnpf-app-vue3/**
+  - jnpf-web-datascreen/**
+  - docs/**
+  - .claude/**
 
 # whether the project is in read-only mode
 # If set to true, all editing tools will be disabled and attempts to use them will result in an error
@@ -89,6 +94,7 @@ read_only: false
 excluded_tools:
   - get_current_config      # 调试专用，日常不用
   - search_for_pattern      # 非符号搜索用 Cursor Grep；符号搜索用 find_symbol
+  - restart_language_server # 防止误触导致多实例 OmniSharp 堆积
 
 # list of tools to include that would otherwise be disabled (particularly optional tools that are disabled by default).
 # This extends the existing inclusions (e.g. from the global configuration).

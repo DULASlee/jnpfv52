@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="ae2f09d3-6b7e-4a49-b094-c3cd1db8fdc0" name="admin@CODESOFT 2026-06-23 03:16:17" runUser="codesoft\admin" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-06-23T03:16:17.1623107+08:00" queuing="2026-06-23T03:16:17.1623109+08:00" start="2026-06-23T03:16:16.6906285+08:00" finish="2026-06-23T03:16:17.1672881+08:00" />
+  <TestSettings name="default" id="da219d74-1226-436f-9ce8-9ccc624a7b45">
+    <Deployment runDeploymentRoot="admin_CODESOFT_2026-06-23_03_16_17" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="decc041b-9052-4fa9-bc75-1b110e965d3c" testId="27f77236-cf63-0b66-df08-53282b09c6d7" testName="JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.详细MES需求_应该通过" computerName="CODESOFT" duration="00:00:00.0271128" startTime="2026-06-23T03:16:17.1002153+08:00" endTime="2026-06-23T03:16:17.1002251+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="decc041b-9052-4fa9-bc75-1b110e965d3c">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.True() Failure&#xD;
+Expected: True&#xD;
+Actual:   False</Message>
+          <StackTrace>   at JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.详细MES需求_应该通过() in D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs:line 69&#xD;
+--- End of stack trace from previous location ---</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.详细MES需求_应该通过" storage="d:\jnpf-v52\backend\tests\jnpf.tests.gate\bin\debug\net8.0\jnpf.tests.gate.dll" id="27f77236-cf63-0b66-df08-53282b09c6d7">
+      <Execution id="decc041b-9052-4fa9-bc75-1b110e965d3c" />
+      <TestMethod codeBase="D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\bin\Debug\net8.0\JNPF.Tests.Gate.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests" name="详细MES需求_应该通过" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="27f77236-cf63-0b66-df08-53282b09c6d7" executionId="decc041b-9052-4fa9-bc75-1b110e965d3c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="1" executed="1" passed="0" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 8.0.24)&#xD;
+[xUnit.net 00:00:00.05]   Discovering: JNPF.Tests.Gate&#xD;
+[xUnit.net 00:00:00.07]   Discovered:  JNPF.Tests.Gate&#xD;
+[xUnit.net 00:00:00.08]   Starting:    JNPF.Tests.Gate&#xD;
+[xUnit.net 00:00:00.14]       Assert.True() Failure&#xD;
+[xUnit.net 00:00:00.14]       Expected: True&#xD;
+[xUnit.net 00:00:00.14]       Actual:   False&#xD;
+[xUnit.net 00:00:00.14]       Stack Trace:&#xD;
+[xUnit.net 00:00:00.14]         D:\JNPF-v52\backend\tests\JNPF.Tests.Gate\Gates\SemanticFitnessValidatorTests.cs(69,0): at JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.详细MES需求_应该通过()&#xD;
+[xUnit.net 00:00:00.14]         --- End of stack trace from previous location ---&#xD;
+[xUnit.net 00:00:00.14]   Finished:    JNPF.Tests.Gate&#xD;
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="CODESOFT" outcome="Error" timestamp="2026-06-23T03:16:17.0990804+08:00">
+        <Text>[xUnit.net 00:00:00.14]     JNPF.Tests.Gate.Gates.SemanticFitnessValidatorTests.详细MES需求_应该通过 [FAIL]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>

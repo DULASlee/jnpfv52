@@ -24,6 +24,8 @@ const toolName = process.env.CLAUDE_TOOL_NAME
 
 const CODE_RE = /\.(ts|tsx|js|jsx|mjs|cjs|vue|svelte)$/;
 if (!filePath || !CODE_RE.test(filePath)) process.exit(0);
+// 自举免疫 + 禁止对 hook 脚本加载前端 eslint 配置
+if (/\.claude\//.test(filePath.replace(/\\/g, '/'))) process.exit(0);
 
 // Detect project root with node_modules（跨平台，用 Node.js API 替代 test -d）
 function findProjectRoot(filePath) {

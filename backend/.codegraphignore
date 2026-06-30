@@ -1,0 +1,39 @@
+# CodeGraph 排除规则 — 安全与噪音控制
+#
+# CodeGraph 在索引时读取此文件，跳过匹配的路径。
+# 语法: .gitignore 兼容（* ** ? [abc]）。
+# 以 # 开头的行为注释。
+
+# === 敏感配置（密钥/连接串/生产环境配置）===
+**/appsettings.Production.json
+**/appsettings.*.json
+**/ConnectionStrings.json
+**/ConnectionStrings.*.json
+**/*.pem
+**/*.key
+**/*.pfx
+**/.env
+**/.env.*
+
+# === 构建产物 ===
+**/bin/**
+**/obj/**
+**/node_modules/**
+**/packages/**
+**/.vs/**
+**/.vscode/**
+**/dist/**
+
+# === 日志与临时文件 ===
+**/logs/**
+**/*.log
+**/*.tmp
+**/*.cache
+
+# === 第三方依赖源码 ===
+**/packages/**
+**/libs/**
+**/vendor/**
+
+# === OAuth 回调配置（含第三方密钥）===
+**/CollectiveOAuth/Configs/**

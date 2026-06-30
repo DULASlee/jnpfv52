@@ -42,7 +42,7 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 
 > 插件已由项目 `settings.json` 强制启用（`superpowers@superpowers-marketplace`）。
 > SessionStart hook `superpowers-check.mjs` 验证插件激活状态。
-> PostToolUse hook `skill-reminder.mjs` 在重度变更后注入技能调用提醒。
+> 共享约束 `souls/_shared/` 在每次 Soul 加载时自动注入论断纪律 + 错题本避坑 + 调试纪律。
 
 ---
 
@@ -90,6 +90,117 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 
 ---
 
+## 论断纪律（宪法级 — 全角色强制，凌驾所有 Soul）
+
+> **完整条款：** `.claude/rules/assertion-discipline.md`（每次响应自动加载）
+> **加载位置：** `souls/_shared/assertion-discipline.md` → 所有角色 Soul 共同继承
+
+### 铁律摘要
+
+**1. 标签强制。** 所有技术论断、API 名、库名、版本号、配置项、错误码 MUST 前置标签：
+
+| 标签 | 含义 | 置信度上限 |
+|------|------|-----------|
+| `[KNOWN]` | 官方文档/源码/实际执行输出 | HIGH |
+| `[COMPUTED]` | 从 [KNOWN] 逻辑推导 | HIGH |
+| `[INFERRED]` | 经验推理，未经当前上下文验证 | MED |
+| `[COMMON]` | 社区惯例/设计模式 | MED |
+| `[FRAME]` | 语言规范/类型系统/伪代码 | **LOW** |
+| `[GUESS]` | 无依据的可能性列举 | **LOW** |
+
+未打标签的实体名 → **禁止出现**。
+
+**2. 框架≠现实。** `[FRAME]` 模型行为 ≠ 运行时行为。不得将"规范规定 X"描述为"你的环境一定会 X"。跨越时必须标注 `[FRAME→现实]` 及不确定性。
+
+**3. 不知道 = 不知道。** 无足够 [KNOWN] 或 [COMPUTED] 支撑时，回复首行："我不知道"。严禁后面接"但是"补编造信息。
+
+**4. 反谄媚。** 用户反驳后未经查证就立刻全盘认同 → 违规。无新证据不得妥协。
+
+**5. 事后归因。** 不能在事前预测的结论 → 标记 `[INFERRED, post-hoc]`。
+
+**6. 引用与修正。** 绝不编造文档链接、版本号、性能数字。已输出的错误 MUST 公开修正并标注原因，悄悄改口 = 编造。
+
+**7. 自审。** 每次响应末尾强制 `[RULES I BROKE]:` 自审。
+
+---
+
+## 角色切换（产出物驱动 — 零配置自动流转）
+
+```
+workspace/                          ← 同一时间只放一个任务
+├── requirements.md                 ← 唯一需要你手动创建的文件
+├── architecture.md                 ← 以下全部自动产出
+├── plan.md
+├── code_changes.md
+├── test_report.md
+├── review_report.md
+├── delivery_report.md
+└── debug_report.md                 ← Debugger 中断产出（非必经）
+```
+
+### 入口
+
+在 `workspace/requirements.md` 中描述任务 → 状态机自动启动。
+
+### 角色判定
+
+**每次响应前**检查 `workspace/` 目录：
+
+| 状态 | 当前角色 | 动作 |
+|------|----------|------|
+| `requirements.md` 不存在 | **Orchestrator** | 分析用户意图。若是开发任务 → 提示用户创建 `workspace/requirements.md` |
+| 缺少 `architecture.md` | **Architect** | 产出 `architecture.md` |
+| 缺少 `plan.md` | **Planner** | 产出 `plan.md` |
+| 缺少 `code_changes.md` | **Coder** | 产出 `code_changes.md` |
+| 缺少 `test_report.md` | **Tester** | 产出 `test_report.md` |
+| 缺少 `review_report.md` | **Reviewer** | 产出 `review_report.md` |
+| 全部就位 | **Reporter** | 产出 `delivery_report.md` → 归档 → 清空 workspace |
+| 编译失败 / 测试失败 / 运行时异常 / 前端无响应 / >10min 无进展 / ≥3次修复无效 | **Debugger** | 中断。产出 `debug_report.md`（根因诊断 + 修复建议）→ 返回断点继续 |
+
+### Debugger（第 8 角色 — 中断驱动）
+
+正常流水线是 7 角色线性流转。Debugger 不占流水线位置——它是**急诊医生**，只在故障时自动切入。诊断完成 → 返回中断点，不干扰正常流程。
+
+```
+Architect → Planner → Coder → Tester → Reviewer → Reporter
+                        ↓        ↓
+                    编译失败  测试失败
+                        ↓        ↓
+                     ┌──────────────┐
+                     │   Debugger   │  ← 中断：产出 debug_report.md
+                     │  根因诊断    │     然后返回断点
+                     └──────────────┘
+```
+
+### 隔离
+
+同一时间 `workspace/` 只有一个任务。开新任务前 MUST 将旧任务归档或丢弃。
+
+### 收尾
+
+Reporter 产出 `delivery_report.md` 后，自动将全部文件移入：
+
+```
+workspace/_completed/{任务名}-{YYYYMMDD-HHmm}/
+```
+
+> **归档命名规则：** 中文任务名 + 时间戳。便于回溯学习。
+> 示例：`workspace/_completed/用户登录模块重构-20260626-1430/`
+
+### 自动流转
+
+**默认全自动。** 当前角色产出物落盘后，立即检查 `workspace/` 缺哪个文件 → 自动切下一角色继续，**无需用户说"继续"**。流水线一气贯通，直到 Reporter 归档。
+
+### 人工介入
+
+| 触发方式 | 效果 |
+|----------|------|
+| 发送任意消息 | 若当前角色刚完成产出 → 自动触发下一角色；若是新指令 → 当前角色响应 |
+| "切换到 {角色}" | 忽略产出物状态，立即跳转 |
+| "重做 {阶段}" | 删除对应产出物，强制该角色重新执行 |
+
+---
+
 ## Workflow Pipeline（七阶段流水线 — Superpowers 骨架 + JNPF 约束）
 
 > 所有任务遵循以下流水线。每阶段调用 Superpowers (SP) 技能，JNPF 规则作为补充约束挂载。
@@ -125,11 +236,11 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 | 5 | 🔴 | Verify | verification-before-completion |
 | 6 | 🟣 | Review | requesting-code-review |
 | 7 | ⚫ | Complete | finishing-a-development-branch |
-| Debug | ⚡ | Debug | systematic-debugging |
+| Debug | ⚡ | Debugger（中断） | —（自动切入，不占 Phase） |
 
 ### Entry Gate（Session Start — 自动）
 - Hook: `superpowers-check.mjs` → SP 激活验证
-- Hook: `load-mistakes.mjs` → 加载最近 30 天错题
+- **共享约束自动加载：** `souls/_shared/assertion-discipline.md`（论断纪律）+ `souls/_shared/mistake-avoidance.md`（错题本避坑）→ 全角色 Soul 继承
 - SP: `using-superpowers` (自动)
 - Rule: `memory.md` → 跨会话上下文
 
@@ -152,7 +263,7 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 ### Phase 4: Build（实施）
 - **SP: `executing-plans`** / `subagent-driven-development` (S级) / `dispatching-parallel-agents` / `using-git-worktrees`
 - Hooks: 7 guard hooks (L0 自动阻断)
-- Hooks: `format-and-lint.mjs` (自动) + `skill-reminder.mjs` (提醒)
+- Hooks: `format-and-lint.mjs` (自动); 共享约束自动注入（论断+错题本+调试）
 - Rule: `sql-safety.md` (if .cs) + `frontend-memory-leak.md` (if SSE/timer)
 - todo 强制注入: `🔍 代码审查(子代理)` + `📝 错题本追加`
 
@@ -162,7 +273,7 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 - Rule: `testing.md` → 具体命令
 - Skill: `start-dev` → 启动环境
 - Skill: `playwright` → 浏览器 E2E (E1/E2/E3)
-- Hook: `post-build-verify.mjs` → build 后 30min 内未测试 = BLOCK
+- **调试纪律触发：** 遇 bug → `/trace-bug` 或 SP: `systematic-debugging`；>10min / ≥3次失败 → `/data-driven-debug`
 
 ### Phase 6: Review（审查 — max 3 cycles）
 - **SP: `requesting-code-review` → `receiving-code-review`**
@@ -183,11 +294,14 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
   - 踩过的坑 + 避免策略
   - 未写入 → `collect-summary.mjs` 无法收录 → 跨会话丢失上下文
 
-### Debug Path（中断驱动，随时切入 → 完成后返回 Phase 5）
-- **SP: `systematic-debugging`** → 4 阶段调试
-- Skill: `data-driven-debug` → 运行时数据采集 (触发: ≥3次失败 或 >10min)
-- Rule: `debugging.md` → JNPF 专项检查清单 + 返回主流程条件
-- Rule: `engineering-laws.md` L1/L4
+### Debug Path（第 8 角色 Debugger — 中断驱动，随时切入 → 完成后返回断点）
+- **自动切入：** 编译失败 / 测试失败 / 运行时异常 / 前端无响应 / ≥3次修复无效 / >10min 无进展
+- **手动切入：** `/trace-bug` 或 `/data-driven-debug`
+- **角色：** Debugger（`souls/debugger/soul.md`）— 不写代码，只诊断根因
+- **产出：** `workspace/debug_report.md` — 数据链路追踪 + 根因定位 + 单一修复建议
+- **返回：** 诊断完成 → 交还 Coder/Tester 执行修复
+- Rule: `debugging.md` → 四阶段协议 + JNPF 专项检查清单
+- Skill: `data-driven-debug` → 运行时数据采集工具箱
 
 ---
 
@@ -200,11 +314,11 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 | R1 | API Generation — NEVER 手写 Controller | L2 | code-reviewer |
 | R2 | Unified Response — Oops.Bah/Oops.Oh, NEVER raw Exception | L2 | code-reviewer |
 | R3 | Codegen Boundary — 修 `.vm` 模板, NEVER 改输出文件 | L2 | code-reviewer |
-| R4 | Multi-tenant — 漏过滤 = 跨租户泄漏 | **L0** | `guard-tenant-filter.mjs` |
-| R5 | Module Boundary — OA 禁用, IoT/MES 不存在 | **L0** | `guard-oa-module.mjs` |
-| R6 | SSE/Timer 泄漏 — 6 条铁律 → `.claude/rules/frontend-memory-leak.md` | **L0** | `guard-frontend-leak.mjs` |
-| R7 | SQL Injection — 动态 SQL 必须参数化 → `.claude/rules/sql-safety.md` | **L0** | `guard-sql-injection.mjs` |
-| R8 | API Permission — MUST 声明 `[AllowAnonymous]`/`[SecurityDefine]` | **L0** | `guard-auth.mjs` |
+| R4 | Multi-tenant — 漏过滤 = 跨租户泄漏 | **L0** | `guard-write.mjs` L5 |
+| R5 | Module Boundary — OA 禁用, IoT/MES 不存在 | **L0** | `guard-write.mjs` L4 |
+| R6 | SSE/Timer 泄漏 — 6 条铁律 → `.claude/rules/frontend-memory-leak.md` | **L0** | `guard-write.mjs` L8 |
+| R7 | SQL Injection — 动态 SQL 必须参数化 → `.claude/rules/sql-safety.md` | **L0** | `guard-write.mjs` L6 |
+| R8 | API Permission — MUST 声明 `[AllowAnonymous]`/`[SecurityDefine]` | **L0** | `guard-write.mjs` L7 |
 | R9 | Architect Fidelity — 需求提取清单 + 实现标注 | L2 | code-reviewer |
 | R10 | Bug Discovery — 结构化上报, NEVER 沉默 → `.claude/rules/engineering-laws.md` Law 1 | L2 | code-reviewer |
 
@@ -276,7 +390,7 @@ cd backend && dotnet build
 | 修改自定义页面视觉样式（非生成） | `.claude/skills/jnpf-ui-enhance/SKILL.md` |
 | 写架构文档 | `docs/architecture/ARCHITECTURE_DOC_RULES.md` |
 | 收到任何编码任务 | `.claude/rules/workflow.md`（任务分级 + 七阶段流水线映射）|
-| 遇到 bug / 测试失败 / 异常 / 编译错误 | `.claude/rules/debugging.md` + SP: `systematic-debugging` |
+| 遇到 bug / 测试失败 / 异常 / 编译错误 | **自动切 Debugger**（`souls/debugger/soul.md`）+ `.claude/rules/debugging.md` |
 | **问题 10 分钟无进展 / 3 次修复仍无效** | **`/data-driven-debug`：停止改代码，抓运行时数据定位** |
 | **前端无响应 / SSE 无数据 / 页面空白** | **Evidence Over Assumption：用 Playwright 抓网络响应体，禁止看源码猜测（详见 Core Principle）** |
 | **犯错误后** | **MUST 追加到 `.claude/memory/mistake-log.md` 错题本**（格式：日期/类别/症状/根因/修复/关键词）|
@@ -310,22 +424,15 @@ cd backend && dotnet build
 | 时机 | Hook | 作用 | 层级 |
 |---|---|---|---|
 | SessionStart | `superpowers-check.mjs` | **Superpowers 强制激活验证** + 技能可用性检查 + AI 强制性指令 | — |
-| SessionStart | `load-mistakes.mjs` | **错题本自动加载** — 注入最近 30 天错误到上下文 | — |
-| PreToolUse (Write\|Edit\|MultiEdit) | `guard-write.mjs` | **三层守卫** — L1 密钥/凭证文件拦截 / L2 空文件拦截 / L3 安全扫描 | L0 |
-| PreToolUse (Write\|Edit\|MultiEdit) | `guard-oa-module.mjs` | **R5 模块边界**拦截 OA/IoT/MES 写入 | L0 |
-| PreToolUse (Write\|Edit\|MultiEdit) | `guard-sql-injection.mjs` | **R7 SQL 注入**拦截 | L0 |
-| PreToolUse (Write\|Edit\|MultiEdit) | `guard-auth.mjs` | **R8 权限声明**拦截无授权 API | L0 |
-| PreToolUse (Write\|Edit\|MultiEdit) | `guard-tenant-filter.mjs` | **R4 多租户**拦截 | L0 |
-| PreToolUse (Write\|Edit\|MultiEdit) | `guard-frontend-leak.mjs` | **R6 前端泄漏**拦截 | L0 |
+| PreToolUse (Write\|Edit\|MultiEdit) | `guard-write.mjs` | **统一八层守卫** — L1密钥 / L2空文件 / L3安全扫描 / L4模块边界R5 / L5多租户R4 / L6注入R7 / L7权限R8 / L8前端泄漏R6 | L0 |
 | PreToolUse (Bash) | `guard-bash.mjs` | 危险命令拦截 | L0 |
 | PostToolUse (Write\|Edit\|MultiEdit) | `format-and-lint.mjs` | 自动 Prettier + ESLint | — |
-| PostToolUse (Write\|Edit\|MultiEdit) | `skill-reminder.mjs` | **Superpowers 技能触发提醒**（重度变更后注入强制性技能调用指令） | — |
 | Stop | `guard-finish.mjs` | 冒烟测试 + **E2E 证据智能阻断**（仅前端UI目录 + 4h时效 + 三级判定） | L0 |
 | Stop | `collect-summary.mjs` | 会话变更摘要（7 类分类） | — |
 
 > **Hook 分层架构：** 项目级 hooks（上表 12 个）受版本控制，全团队共享。
 > 用户级 hooks 仅 3 个个人偏好（session-start, guard-deps, rtk-rewrite）。
-> ⚠️ 禁止在用户级恢复 `guard-write`/`guard-finish`/`skill-reminder`/`collect-summary` — 功能已被项目级版本全覆盖，历史残留。
+> ⚠️ 禁止在用户级恢复 `guard-write`/`guard-finish`/`collect-summary` — 功能已被项目级版本全覆盖。已删除的独立 guard (oa/sql/auth/tenant/leak) 已合并为 guard-write L4-L8。`skill-reminder`/`load-mistakes`/`post-build-verify`/`verify-mistake-log` 已升级为 `souls/_shared/` 共享约束体系。
 > 验证命令：`node scripts/test-hooks.mjs`（28 用例）
 
 ---

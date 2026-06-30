@@ -1,0 +1,4 @@
+# Tool Search Mistake Log
+# 格式: {"timestamp":"ISO","query":"...","expected":"toolname","actual":"toolname","confidence":0.X,"note":"..."}
+# 每周检查此文件，根据误判模式调整 tool-search.mjs 中的关键词/反关键词/意图模式。
+

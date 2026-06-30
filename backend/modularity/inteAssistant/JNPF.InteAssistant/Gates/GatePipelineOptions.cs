@@ -44,4 +44,22 @@ public sealed class GatePipelineOptions
 
     /// <summary>附件并行处理数</summary>
     public int MaxConcurrentFiles { get; set; } = 3;
+
+    /// <summary>语义评估最低分数（0-100），低于此值门控拦截</summary>
+    public int SemanticMinScore { get; set; } = 60;
+
+    /// <summary>语义评估：最低业务事件数</summary>
+    public int MinBusinessEvents { get; set; } = 1;
+
+    /// <summary>语义评估：最低角色数</summary>
+    public int MinRoles { get; set; } = 1;
+
+    /// <summary>语义评估：最低数据实体数</summary>
+    public int MinDataEntities { get; set; } = 1;
+
+    /// <summary>语义评估：每个实体最低可推测字段数</summary>
+    public int MinFieldsPerEntity { get; set; } = 5;
+
+    /// <summary>语义评估使用的 LLM Provider（默认 deepseek）</summary>
+    public string SemanticProvider { get; set; } = "deepseek";
 }

@@ -89,7 +89,9 @@ public class AttachmentProcessor : ITransient
     }
 
     // ═══════════════════════════════════════════════════
-    // Excel 提取
+    // Excel 提取（修复表头检测 Bug）
+    // 原版：硬编码第 1 行为表头
+    // 修复：DetectHeaderRow 比较第 1/2 行非空单元格数量
     // ═══════════════════════════════════════════════════
 
     private string ExtractExcel(byte[] content)
@@ -114,21 +116,25 @@ public class AttachmentProcessor : ITransient
                 continue;
             }
 
-            var rowCount = Math.Min(worksheet.Dimension.End.Row, 51);  // 表头 + 50行
-            var colCount = Math.Min(worksheet.Dimension.End.Column, 20); // 最多20列
+            var colCount = Math.Min(worksheet.Dimension.End.Column, 20);
+
+            // ★ 表头行检测：比较第 1 行和第 2 行的非空单元格数量
+            int headerRow = DetectHeaderRow(worksheet, colCount);
+
+            var rowCount = Math.Min(worksheet.Dimension.End.Row, headerRow + 50);
 
             // 表头
             var headers = new List<string>();
             for (int col = 1; col <= colCount; col++)
             {
-                var val = worksheet.Cells[1, col]?.Text?.Trim();
+                var val = worksheet.Cells[headerRow, col]?.Text?.Trim();
                 headers.Add(string.IsNullOrWhiteSpace(val) ? $"列{col}" : val);
             }
             result.AppendLine(string.Join(" | ", headers));
             result.AppendLine(new string('-', headers.Sum(h => h.Length) + headers.Count * 3));
 
             // 数据行
-            for (int row = 2; row <= rowCount; row++)
+            for (int row = headerRow + 1; row <= rowCount; row++)
             {
                 var cells = new List<string>();
                 for (int col = 1; col <= colCount; col++)
@@ -138,7 +144,7 @@ public class AttachmentProcessor : ITransient
                 result.AppendLine(string.Join(" | ", cells));
             }
 
-            if (worksheet.Dimension.End.Row > 51)
+            if (worksheet.Dimension.End.Row > headerRow + 50)
             {
                 result.AppendLine($"... 共{worksheet.Dimension.End.Row}行，仅显示前50行");
             }
@@ -146,6 +152,36 @@ public class AttachmentProcessor : ITransient
         }
 
         return result.ToString();
+    }
+
+    /// <summary>
+    /// 检测表头行号
+    /// 规则：如果第 1 行只有 ≤1 个非空单元格，且第 2 行有多个非空单元格，则第 2 行是表头
+    /// </summary>
+    private static int DetectHeaderRow(ExcelWorksheet worksheet, int colCount)
+    {
+        if (worksheet.Dimension.End.Row < 2)
+            return 1; // 只有一行，就当表头
+
+        int row1NonEmpty = CountNonEmptyCells(worksheet, 1, colCount);
+        int row2NonEmpty = CountNonEmptyCells(worksheet, 2, colCount);
+
+        // 第 1 行几乎为空（标题行），第 2 行有多个单元格（真正的表头）
+        if (row1NonEmpty <= 1 && row2NonEmpty > 1)
+            return 2;
+
+        return 1;
+    }
+
+    private static int CountNonEmptyCells(ExcelWorksheet worksheet, int row, int colCount)
+    {
+        int count = 0;
+        for (int col = 1; col <= colCount; col++)
+        {
+            if (!string.IsNullOrWhiteSpace(worksheet.Cells[row, col]?.Text))
+                count++;
+        }
+        return count;
     }
 
     // ═══════════════════════════════════════════════════
