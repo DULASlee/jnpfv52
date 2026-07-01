@@ -357,6 +357,13 @@ public class PipelineOrchestratorService : IDynamicApiController, ITransient
         // 检查关联沙箱并销毁（如果存在）
         await DestroyAssociatedSandboxIfExists(pipelineId);
 
+        // 清理 AI 工作区目录
+        var tenantId = TenantResolver.Resolve();
+        StudioWorkspaceHelper.DeleteWorkspace(tenantId.ToString(), pipelineId.ToString());
+
+        // 清除 AI 开发上下文标记
+        StudioWorkspaceHelper.ClearAiDevContext();
+
         // 状态设为 Abandoned
         pipeline.StageStatus = PipelineStatus.Abandoned;
         pipeline.AbandonedAt = DateTime.Now;
