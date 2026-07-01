@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Channels;
 using JNPF.DependencyInjection;
 using JNPF.Common.Core.MultiTenancy;
+using JNPF.FriendlyException;
 using JNPF.DynamicApiController;
 using JNPF.InteAssistant.Entitys.Common;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
@@ -116,6 +117,17 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         };
         entity.Create();
         await _db.Insertable(entity).ExecuteCommandAsync();
+
+        // 初始化 AI 工作区目录
+        try
+        {
+            StudioWorkspaceHelper.EnsureDirectories(tenantId.ToString(), result.PipelineId.ToString());
+            _logger.LogInformation("工作区目录已创建: PipelineId={Id}", result.PipelineId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "创建工作区目录失败: PipelineId={Id}", result.PipelineId);
+        }
 
         // 保存用户需求消息
         await SaveMessageAsync(result.PipelineId.ToString(), PipelineStage.Requirement, "user", requirement);
@@ -289,6 +301,15 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
         // 2. 流转状态机
         var stageResult = await _pipelineEngine.ExecuteStageAsync(pipelineId, stageName);
+
+        // development 阶段：写入 AI 开发上下文标记，激活 guard-write L4 白名单
+        if (stageName == PipelineStage.Development)
+        {
+            var tenantId = TenantResolver.Resolve();
+            StudioWorkspaceHelper.EnsureDirectories(tenantId.ToString(), pipelineId.ToString());
+            StudioWorkspaceHelper.WriteAiDevContext(tenantId.ToString(), pipelineId.ToString());
+            _logger.LogInformation("AI 开发上下文已激活: PipelineId={Id}", pipelineId);
+        }
 
         // 3. 创建 SSE 通道（替换旧通道，支持重复执行）
         if (_sseChannels.TryRemove(pipelineId, out var oldChannel))
@@ -798,6 +819,35 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                 await SaveMessageAsync(db, pipelineId.ToString(), stageName, "assistant", fullResponse.ToString());
             }
 
+            // development 阶段完成后：上传 generated/ 产物到沙箱
+            if (stageName == PipelineStage.Development)
+            {
+                try
+                {
+                    var tenantId = TenantResolver.Resolve();
+                    var (_, generatedDir, _, _) = StudioWorkspaceHelper.GetPipelineSubPaths(
+                        tenantId.ToString(), pipelineId.ToString());
+                    var sandboxId = $"pipeline-{pipelineId}";
+                    var sandbox = await _sandbox.GetStatusAsync(sandboxId);
+                    if (sandbox != null && sandbox.Status == "ready")
+                    {
+                        var files = StudioWorkspaceHelper.ReadFilesFromDirectory(generatedDir);
+                        if (files.Count > 0)
+                        {
+                            sse.Token("📦 正在上传文件到沙箱...");
+                            await _sandbox.UploadFilesAsync(sandboxId, files);
+                            sse.Token($"✅ 已上传 {files.Count} 个文件到沙箱");
+                            logger.LogInformation("沙箱上传完成: {SandboxId}, {Count} 文件", sandboxId, files.Count);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "沙箱上传失败: PipelineId={Id}", pipelineId);
+                    sse.Token($"⚠️ 沙箱上传失败: {ex.Message}");
+                }
+            }
+
             // 推送阶段完成信号 → 前端显示确认按钮
             sse.TrySend("stage_complete", "");
             // 推送完成事件
@@ -1110,6 +1160,44 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         var bytes = Encoding.UTF8.GetBytes($"data: {json}\n\n");
         await response.Body.WriteAsync(bytes);
         await response.Body.FlushAsync();
+    }
+
+    /// <summary>
+    /// 交付打包：将 generated/ 目录打包为 zip 并返回下载信息
+    /// GET /api/studio/pipeline/execute/{pipelineId}/delivery-package
+    /// </summary>
+    [HttpGet("{pipelineId:long}/delivery-package")]
+    public async Task<object> GetDeliveryPackageAsync(long pipelineId)
+    {
+        var tenantId = TenantResolver.Resolve();
+        var pipeline = await _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.Id == pipelineId.ToString())
+            .FirstAsync();
+
+        if (pipeline == null)
+            throw Oops.Bah($"流水线 {pipelineId} 不存在");
+
+        try
+        {
+            var zipPath = StudioWorkspaceHelper.CreateDeliveryZip(
+                tenantId.ToString(), pipelineId.ToString());
+
+            // 清除 AI 开发上下文（退出 L4 白名单）
+            StudioWorkspaceHelper.ClearAiDevContext();
+
+            _logger.LogInformation("交付包已生成: PipelineId={Id}, Path={Path}", pipelineId, zipPath);
+
+            return new
+            {
+                downloadUrl = $"/api/file/download?path={Uri.EscapeDataString(zipPath)}",
+                fileName = Path.GetFileName(zipPath),
+                generatedAt = DateTime.Now
+            };
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw Oops.Bah(ex.Message);
+        }
     }
 
     /// <summary>
