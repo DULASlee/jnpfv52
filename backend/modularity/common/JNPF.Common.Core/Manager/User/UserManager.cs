@@ -2256,6 +2256,28 @@ public class UserManager : IUserManager, IScoped
     }
 
     /// <summary>
+    /// 获取用户已授权的资源ID集合，用于路由级权限匹配.
+    /// 查询 BASE_AUTHORIZE WHERE ObjectId IN (用户角色IDs + 用户ID).
+    /// </summary>
+    public async Task<HashSet<string>> GetAuthorizedResourceIdsAsync(string userId)
+    {
+        var objectIds = new List<string>(PermissionGroup ?? new List<string>()) { userId };
+        objectIds = objectIds.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+
+        if (objectIds.Count == 0)
+            return new HashSet<string>();
+
+        var itemIds = await _repository.AsSugarClient()
+            .Queryable<AuthorizeEntity>()
+            .Where(a => objectIds.Contains(a.ObjectId)
+                && (a.ItemType == "module" || a.ItemType == "button" || a.ItemType == "system"))
+            .Select(a => a.ItemId)
+            .ToListAsync();
+
+        return new HashSet<string>(itemIds.Where(id => !string.IsNullOrEmpty(id)));
+    }
+
+    /// <summary>
     /// 会否存在用户缓存.
     /// </summary>
     /// <param name="cacheKey"></param>
