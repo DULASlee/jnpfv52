@@ -118,6 +118,11 @@ public class SandboxConfig
     /// 沙箱暴露端口.
     /// </summary>
     public int Port { get; set; } = 8080;
+
+    /// <summary>
+    /// 预览端口（Vite dev server），容器内固定 4173.
+    /// </summary>
+    public int PreviewPort { get; set; } = 4173;
 }
 
 /// <summary>
@@ -139,6 +144,11 @@ public class SandboxInstance
     /// 沙箱访问 URL.
     /// </summary>
     public string? Url { get; set; }
+
+    /// <summary>
+    /// 预览访问 URL (Vite dev server).
+    /// </summary>
+    public string? PreviewUrl { get; set; }
 
     /// <summary>
     /// 沙箱数据库连接字符串.
@@ -184,6 +194,11 @@ public record SandboxInfo
     public int Port { get; init; }
     public string ApiUrl { get; init; } = "";
     public string FrontendUrl { get; init; } = "";
+
+    /// <summary>
+    /// 预览访问 URL (Vite dev server).
+    /// </summary>
+    public string PreviewUrl { get; init; } = "";
     public string DbConnectionString { get; init; } = "";
 }
 

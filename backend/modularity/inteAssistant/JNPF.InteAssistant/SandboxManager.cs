@@ -65,6 +65,7 @@ public sealed class SandboxManager : ISandboxManager, ISingleton
             args.Append($"--cpus={config.CpuLimit} ");
             args.Append($"--memory={config.MemoryLimit} ");
             args.Append($"-p {port}:8080 ");
+            args.Append($"-p {config.PreviewPort} ");
             args.Append($"-e ASPNETCORE_ENVIRONMENT=Sandbox ");
             args.Append($"-e ConnectionStrings__Default=\"{dbConnectionString}\" ");
             args.Append($"-e TenantId={config.TenantId} ");
@@ -82,7 +83,20 @@ public sealed class SandboxManager : ISandboxManager, ISingleton
             // 5. 记录容器 ID
             instance.ContainerId = result.Stdout.Trim();
             instance.Status = "ready";
-            instance.Url = $"http://localhost:{port}";
+
+            // 6. 查询 Docker 实际端口映射（应用端口 + 预览端口）
+            var appPortResult = await RunDockerAsync($"port {instance.ContainerId} 8080");
+            var previewPortResult = await RunDockerAsync($"port {instance.ContainerId} {config.PreviewPort}");
+
+            var appHostPort = appPortResult.ExitCode == 0
+                ? appPortResult.Stdout.Trim().Split(':').Last().Trim()
+                : port.ToString();
+            var previewHostPort = previewPortResult.ExitCode == 0
+                ? previewPortResult.Stdout.Trim().Split(':').Last().Trim()
+                : "0";
+
+            instance.Url = $"http://localhost:{appHostPort}";
+            instance.PreviewUrl = $"http://localhost:{previewHostPort}";
 
             _logger.LogInformation("沙箱 {SandboxId} 创建成功, 容器 {ContainerId}, URL: {Url}",
                 config.Id, instance.ContainerId, instance.Url);
@@ -297,6 +311,14 @@ public sealed class SandboxManager : ISandboxManager, ISingleton
         var host = result.ExitCode == 0 ? result.Stdout.Trim() : "localhost";
 
         var port = instance.Config?.Port ?? 8080;
+        var previewPort = instance.Config?.PreviewPort ?? 4173;
+
+        // 查询预览端口实际映射
+        var previewPortResult = await RunDockerAsync(
+            $"port {instance.ContainerId} {previewPort}");
+        var previewHostPort = previewPortResult.ExitCode == 0
+            ? previewPortResult.Stdout.Trim().Split(':').Last().Trim()
+            : "0";
 
         return new SandboxInfo
         {
@@ -305,6 +327,7 @@ public sealed class SandboxManager : ISandboxManager, ISingleton
             Port = port,
             ApiUrl = $"http://{host}:5000",
             FrontendUrl = $"http://{host}:3000",
+            PreviewUrl = $"http://{host}:{previewHostPort}",
             DbConnectionString = instance.DbConnectionString ?? ""
         };
     }
