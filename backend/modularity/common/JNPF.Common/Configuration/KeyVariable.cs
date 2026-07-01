@@ -41,6 +41,11 @@ public class KeyVariable
     }
 
     /// <summary>
+    /// AI 开发工作区根目录名.
+    /// </summary>
+    public const string StudioWorkspaceRoot = "StudioWorkspace";
+
+    /// <summary>
     /// 系统文件路径.
     /// </summary>
     public static string SystemPath
