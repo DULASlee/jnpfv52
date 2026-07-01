@@ -60,6 +60,13 @@ public sealed class SandboxManager : ISandboxManager, ISingleton, IDisposable
     public void Dispose()
     {
         _loopCts.Cancel();
+
+        // 清空排队请求：逐个取消，避免应用关闭时请求永久挂起
+        while (_pendingQueue.TryDequeue(out var pending))
+        {
+            pending.Tcs.TrySetCanceled();
+        }
+
         _loopCts.Dispose();
     }
 
@@ -68,9 +75,8 @@ public sealed class SandboxManager : ISandboxManager, ISingleton, IDisposable
     {
         // 检查并发容量：有空闲槽位 → 直接创建；无 → 排队
         var currentCount = Interlocked.Increment(ref _activeCount);
-        try
-        {
-            if (currentCount <= MaxConcurrent)
+
+        if (currentCount <= MaxConcurrent)
             {
                 try
                 {
@@ -78,56 +84,45 @@ public sealed class SandboxManager : ISandboxManager, ISingleton, IDisposable
                     OnInstanceReady?.Invoke(instance);
                     return instance;
                 }
-                catch
-                {
-                    throw;
-                }
                 finally
                 {
                     Interlocked.Decrement(ref _activeCount);
                 }
             }
-            else
+
+            // 超并发 → 排队
+            Interlocked.Decrement(ref _activeCount); // 回滚占用的槽位
+
+            var tcs = new TaskCompletionSource<SandboxInstance>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var pending = new PendingCreateRequest
             {
-                // 超并发 → 排队
-                Interlocked.Decrement(ref _activeCount); // 回滚占用的槽位
+                Config = config,
+                Tcs = tcs,
+                CancellationToken = ct,
+                EnqueuedAt = DateTime.UtcNow
+            };
+            _pendingQueue.Enqueue(pending);
 
-                var tcs = new TaskCompletionSource<SandboxInstance>(
-                    TaskCreationOptions.RunContinuationsAsynchronously);
-                var pending = new PendingCreateRequest
+            _logger.LogInformation(
+                "沙箱创建请求已入队: SandboxId={Id}, QueuePosition={Pos}",
+                config.Id, _pendingQueue.Count);
+
+            // 5 分钟排队超时
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                timeoutCts.Token, ct);
+
+            linkedCts.Token.Register(() =>
+            {
+                if (!tcs.Task.IsCompleted)
                 {
-                    Config = config,
-                    Tcs = tcs,
-                    CancellationToken = ct,
-                    EnqueuedAt = DateTime.UtcNow
-                };
-                _pendingQueue.Enqueue(pending);
+                    tcs.TrySetException(new TimeoutException(
+                        $"沙箱 {config.Id} 排队超时 (5min)，请稍后重试"));
+                }
+            });
 
-                _logger.LogInformation(
-                    "沙箱创建请求已入队: SandboxId={Id}, QueuePosition={Pos}",
-                    config.Id, _pendingQueue.Count);
-
-                // 5 分钟排队超时
-                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                    timeoutCts.Token, ct);
-
-                linkedCts.Token.Register(() =>
-                {
-                    if (!tcs.Task.IsCompleted)
-                    {
-                        tcs.TrySetException(new TimeoutException(
-                            $"沙箱 {config.Id} 排队超时 (5min)，请稍后重试"));
-                    }
-                });
-
-                return await tcs.Task;
-            }
-        }
-        finally
-        {
-            // 外层 finally 空置——每个分支自行管理 _activeCount
-        }
+            return await tcs.Task;
     }
 
     /// <summary>
