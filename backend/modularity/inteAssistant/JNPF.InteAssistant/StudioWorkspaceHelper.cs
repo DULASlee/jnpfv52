@@ -197,4 +197,36 @@ public static class StudioWorkspaceHelper
             // 静默处理
         }
     }
+
+    // ─── 前端文件注入（供预览工程使用）───
+
+    /// <summary>
+    /// 将 generated/ 目录下的前端文件注入到壳工程的 src/views/ 目录.
+    /// 支持 .vue / .ts / .css / .scss / .less 文件.
+    /// 保持相对路径结构.
+    /// </summary>
+    /// <param name="generatedDir">AI 生成的代码目录</param>
+    /// <param name="previewProjectDir">studio-preview 工程根目录</param>
+    public static void InjectFrontendFiles(string generatedDir, string previewProjectDir)
+    {
+        if (!Directory.Exists(generatedDir))
+            return;
+
+        var viewsDir = Path.Combine(previewProjectDir, "src", "views");
+        Directory.CreateDirectory(viewsDir);
+
+        var extensions = new[] { "*.vue", "*.ts", "*.css", "*.scss", "*.less" };
+        foreach (var pattern in extensions)
+        {
+            foreach (var file in Directory.GetFiles(generatedDir, pattern, SearchOption.AllDirectories))
+            {
+                var relativePath = Path.GetRelativePath(generatedDir, file);
+                var dest = Path.Combine(viewsDir, relativePath);
+                var destDir = Path.GetDirectoryName(dest);
+                if (!string.IsNullOrEmpty(destDir))
+                    Directory.CreateDirectory(destDir);
+                File.Copy(file, dest, overwrite: true);
+            }
+        }
+    }
 }
