@@ -1201,6 +1201,120 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     }
 
     /// <summary>
+    /// 启动前端预览：注入生成文件到壳工程 → 上传沙箱 → npm install → vite dev → SSE 推送预览 URL
+    /// POST /api/studio/pipeline/execute/{pipelineId}/preview
+    /// </summary>
+    [HttpPost("{pipelineId:long}/preview")]
+    public async Task<object> StartPreviewAsync(long pipelineId)
+    {
+        var tenantId = TenantResolver.Resolve();
+        var tenantIdStr = tenantId.ToString();
+        var pipelineIdStr = pipelineId.ToString();
+
+        var pipeline = await _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.Id == pipelineIdStr)
+            .FirstAsync();
+
+        if (pipeline == null)
+            throw Oops.Bah($"流水线 {pipelineId} 不存在");
+
+        // 1. 获取工作区路径
+        var (_, generatedDir, _, _) = StudioWorkspaceHelper.GetPipelineSubPaths(tenantIdStr, pipelineIdStr);
+
+        if (!Directory.Exists(generatedDir) || !Directory.GetFiles(generatedDir, "*.vue", SearchOption.AllDirectories).Any())
+            throw Oops.Bah("无可预览的前端文件：请先在 development 阶段生成 Vue 代码");
+
+        // 2. 定位壳工程路径
+        var previewProjectDir = _configuration.GetValue<string>("StudioPreview:ProjectPath")
+            ?? Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "studio-preview"));
+
+        if (!Directory.Exists(previewProjectDir))
+            throw Oops.Bah($"壳工程不存在: {previewProjectDir}");
+
+        // 3. 注入生成文件到壳工程
+        StudioWorkspaceHelper.InjectFrontendFiles(generatedDir, previewProjectDir);
+
+        _logger.LogInformation("预览文件已注入: PipelineId={Id}, GeneratedDir={Dir}", pipelineId, generatedDir);
+
+        // 4. 创建或获取沙箱
+        var sandboxId = $"pipeline-{pipelineId}";
+        var sandbox = await _sandbox.GetStatusAsync(sandboxId);
+
+        if (sandbox == null || sandbox.Status == "destroyed" || sandbox.Status == "error")
+        {
+            sandbox = await _sandbox.CreateAsync(new SandboxConfig
+            {
+                Id = sandboxId,
+                TenantId = tenantIdStr,
+                CpuLimit = 2,
+                MemoryLimit = "4Gi",
+                TimeoutSeconds = 600,
+                Port = 8080,
+                PreviewPort = 4173
+            });
+
+            _logger.LogInformation("沙箱已创建用于预览: SandboxId={Id}, ContainerId={Cid}",
+                sandboxId, sandbox.ContainerId);
+        }
+
+        // 5. 上传完整壳工程到沙箱
+        var projectFiles = StudioWorkspaceHelper.ReadFilesFromDirectory(previewProjectDir);
+        await _sandbox.UploadFilesAsync(sandboxId, projectFiles);
+
+        _logger.LogInformation("壳工程已上传: SandboxId={Id}, Files={Count}", sandboxId, projectFiles.Count);
+
+        // 6. 在沙箱内执行 npm install && vite dev
+        var installCmd = "cd /app && npm install --prefer-offline 2>&1 | tail -5";
+        var installResult = await _sandbox.ExecuteCommandAsync(sandboxId, installCmd);
+
+        if (installResult.ExitCode != 0)
+        {
+            _logger.LogError("npm install 失败: SandboxId={Id}, Error={Error}", sandboxId, installResult.Error);
+            throw Oops.Bah($"npm install 失败: {installResult.Error}");
+        }
+
+        // 启动 Vite dev server（后台运行）
+        var viteCmd = "cd /app && nohup npx vite --port 4173 --host > /tmp/vite.log 2>&1 &";
+        await _sandbox.ExecuteCommandAsync(sandboxId, viteCmd);
+
+        // 等待 Vite 就绪（轮询 30s）
+        var ready = false;
+        for (var i = 0; i < 15; i++)
+        {
+            await Task.Delay(2000);
+            var checkResult = await _sandbox.ExecuteCommandAsync(sandboxId, "curl -s -o /dev/null -w '%{http_code}' http://localhost:4173");
+            if (checkResult.ExitCode == 0 && checkResult.Output.Trim() == "200")
+            {
+                ready = true;
+                break;
+            }
+        }
+
+        if (!ready)
+            throw Oops.Bah("Vite dev server 启动超时（30s）");
+
+        // 7. 获取预览 URL
+        var sandboxInfo = await _sandbox.GetSandboxInfoAsync(sandboxId);
+        var previewUrl = sandboxInfo.PreviewUrl;
+
+        // 8. SSE 推送 preview_ready
+        if (_sseChannels.TryGetValue(pipelineId, out var channel))
+        {
+            var payload = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                previewUrl,
+                sandboxId,
+                status = "running"
+            });
+            channel.Writer.TryWrite(new SseEvent("preview_ready", payload));
+        }
+
+        _logger.LogInformation("预览就绪: PipelineId={Id}, Url={Url}", pipelineId, previewUrl);
+
+        return new { previewUrl, sandboxId, status = "running" };
+    }
+
+    /// <summary>
     /// SA / 外部服务调用用的租户 ID 字符串归一化（"default"/"0"/空 → "1"）。
     /// </summary>
     private static string NormalizeTenantIdString(string? tenantId)
