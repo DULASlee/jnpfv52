@@ -9,103 +9,261 @@ using Microsoft.Extensions.Logging;
 namespace JNPF.InteAssistant;
 
 /// <summary>
-/// Docker 沙箱调度器 (Phase 6 Day 3).
+/// Docker 沙箱调度器 (Phase B2: 并发队列).
 /// 使用 docker CLI 管理容器生命周期，共享 SQL Server 实例.
-/// SemaphoreSlim 限制 5 并发.
+/// 最大 5 并发，超限自动排队 + 后台调度.
 /// </summary>
-public sealed class SandboxManager : ISandboxManager, ISingleton
+public sealed class SandboxManager : ISandboxManager, ISingleton, IDisposable
 {
     private readonly ILogger<SandboxManager> _logger;
     private readonly IConfiguration _configuration;
-    private readonly SemaphoreSlim _semaphore = new(5, 5);
     private readonly ConcurrentDictionary<string, SandboxInstance> _instances = new();
+    private readonly ConcurrentQueue<PendingCreateRequest> _pendingQueue = new();
+    private readonly CancellationTokenSource _loopCts = new();
+
+    private int _activeCount;
+    private const int MaxConcurrent = 5;
 
     private const string DockerNetwork = "jnpf-sandbox-net";
     private const string DbServerHost = "host.docker.internal"; // Docker 容器访问宿主机 SQL Server
+
+    /// <summary>
+    /// 排队中的创建请求.
+    /// </summary>
+    private sealed class PendingCreateRequest
+    {
+        public SandboxConfig Config { get; init; } = null!;
+        public TaskCompletionSource<SandboxInstance> Tcs { get; init; } = null!;
+        public CancellationToken CancellationToken { get; init; }
+        public DateTime EnqueuedAt { get; init; } = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// 沙箱实例创建完成回调（用于 SSE 推送等外部通知）.
+    /// </summary>
+    public event Action<SandboxInstance>? OnInstanceReady;
 
     public SandboxManager(ILogger<SandboxManager> logger, IConfiguration configuration)
     {
         _logger = logger;
         _configuration = configuration;
+
+        // 启动后台队列处理循环
+        _ = ProcessQueueLoopAsync(_loopCts.Token);
+    }
+
+    /// <summary>
+    /// 获取当前排队中的请求数.
+    /// </summary>
+    public int QueueLength => _pendingQueue.Count;
+
+    public void Dispose()
+    {
+        _loopCts.Cancel();
+        _loopCts.Dispose();
     }
 
     /// <inheritdoc/>
     public async Task<SandboxInstance> CreateAsync(SandboxConfig config, CancellationToken ct = default)
     {
-        await _semaphore.WaitAsync(ct);
+        // 检查并发容量：有空闲槽位 → 直接创建；无 → 排队
+        var currentCount = Interlocked.Increment(ref _activeCount);
         try
         {
-            var instance = new SandboxInstance
+            if (currentCount <= MaxConcurrent)
             {
-                Id = config.Id,
-                Status = "creating",
-                CreatedAt = DateTime.UtcNow,
-                Config = config,
-            };
-
-            _instances[config.Id] = instance;
-
-            // 1. 确保 Docker 网络存在
-            await EnsureNetworkAsync();
-
-            // 2. 构建容器名
-            var containerName = $"jnpf-sandbox-{config.Id}";
-
-            // 3. 构建数据库连接字符串（共享 SQL Server，per-tenant database）
-            var dbName = $"JNPF_Sandbox_{config.TenantId}";
-            var dbConnectionString = BuildConnectionString(dbName);
-            instance.DbConnectionString = dbConnectionString;
-
-            // 4. 启动 Docker 容器
-            var port = config.Port;
-            var args = new StringBuilder();
-            args.Append("run -d --rm ");
-            args.Append($"--name {containerName} ");
-            args.Append($"--network {DockerNetwork} ");
-            args.Append($"--cpus={config.CpuLimit} ");
-            args.Append($"--memory={config.MemoryLimit} ");
-            args.Append($"-p {port}:8080 ");
-            args.Append($"-p {config.PreviewPort} ");
-            args.Append($"-e ASPNETCORE_ENVIRONMENT=Sandbox ");
-            args.Append($"-e ConnectionStrings__Default=\"{dbConnectionString}\" ");
-            args.Append($"-e TenantId={config.TenantId} ");
-            args.Append($"{config.Image}");
-
-            var result = await RunDockerAsync(args.ToString());
-
-            if (result.ExitCode != 0)
-            {
-                instance.Status = "error";
-                _logger.LogError("Docker 容器创建失败: {Error}", result.Stderr);
-                throw new InvalidOperationException($"Docker 容器创建失败: {result.Stderr}");
+                try
+                {
+                    var instance = await CreateContainerInternalAsync(config, ct);
+                    OnInstanceReady?.Invoke(instance);
+                    return instance;
+                }
+                catch
+                {
+                    throw;
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref _activeCount);
+                }
             }
+            else
+            {
+                // 超并发 → 排队
+                Interlocked.Decrement(ref _activeCount); // 回滚占用的槽位
 
-            // 5. 记录容器 ID
-            instance.ContainerId = result.Stdout.Trim();
-            instance.Status = "ready";
+                var tcs = new TaskCompletionSource<SandboxInstance>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                var pending = new PendingCreateRequest
+                {
+                    Config = config,
+                    Tcs = tcs,
+                    CancellationToken = ct,
+                    EnqueuedAt = DateTime.UtcNow
+                };
+                _pendingQueue.Enqueue(pending);
 
-            // 6. 查询 Docker 实际端口映射（应用端口 + 预览端口）
-            var appPortResult = await RunDockerAsync($"port {instance.ContainerId} 8080");
-            var previewPortResult = await RunDockerAsync($"port {instance.ContainerId} {config.PreviewPort}");
+                _logger.LogInformation(
+                    "沙箱创建请求已入队: SandboxId={Id}, QueuePosition={Pos}",
+                    config.Id, _pendingQueue.Count);
 
-            var appHostPort = appPortResult.ExitCode == 0
-                ? appPortResult.Stdout.Trim().Split(':').Last().Trim()
-                : port.ToString();
-            var previewHostPort = previewPortResult.ExitCode == 0
-                ? previewPortResult.Stdout.Trim().Split(':').Last().Trim()
-                : "0";
+                // 5 分钟排队超时
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                    timeoutCts.Token, ct);
 
-            instance.Url = $"http://localhost:{appHostPort}";
-            instance.PreviewUrl = $"http://localhost:{previewHostPort}";
+                linkedCts.Token.Register(() =>
+                {
+                    if (!tcs.Task.IsCompleted)
+                    {
+                        tcs.TrySetException(new TimeoutException(
+                            $"沙箱 {config.Id} 排队超时 (5min)，请稍后重试"));
+                    }
+                });
 
-            _logger.LogInformation("沙箱 {SandboxId} 创建成功, 容器 {ContainerId}, URL: {Url}",
-                config.Id, instance.ContainerId, instance.Url);
-
-            return instance;
+                return await tcs.Task;
+            }
         }
         finally
         {
-            _semaphore.Release();
+            // 外层 finally 空置——每个分支自行管理 _activeCount
+        }
+    }
+
+    /// <summary>
+    /// 实际创建 Docker 容器（从 CreateAsync 或队列调度中调用）.
+    /// </summary>
+    private async Task<SandboxInstance> CreateContainerInternalAsync(
+        SandboxConfig config, CancellationToken ct)
+    {
+        var instance = new SandboxInstance
+        {
+            Id = config.Id,
+            Status = "creating",
+            CreatedAt = DateTime.UtcNow,
+            Config = config,
+        };
+
+        _instances[config.Id] = instance;
+
+        // 1. 确保 Docker 网络存在
+        await EnsureNetworkAsync();
+
+        // 2. 构建容器名
+        var containerName = $"jnpf-sandbox-{config.Id}";
+
+        // 3. 构建数据库连接字符串（共享 SQL Server，per-tenant database）
+        var dbName = $"JNPF_Sandbox_{config.TenantId}";
+        var dbConnectionString = BuildConnectionString(dbName);
+        instance.DbConnectionString = dbConnectionString;
+
+        // 4. 启动 Docker 容器
+        var port = config.Port;
+        var args = new StringBuilder();
+        args.Append("run -d --rm ");
+        args.Append($"--name {containerName} ");
+        args.Append($"--network {DockerNetwork} ");
+        args.Append($"--cpus={config.CpuLimit} ");
+        args.Append($"--memory={config.MemoryLimit} ");
+        args.Append($"-p {port}:8080 ");
+        args.Append($"-p {config.PreviewPort} ");
+        args.Append($"-e ASPNETCORE_ENVIRONMENT=Sandbox ");
+        args.Append($"-e ConnectionStrings__Default=\"{dbConnectionString}\" ");
+        args.Append($"-e TenantId={config.TenantId} ");
+        args.Append($"{config.Image}");
+
+        var result = await RunDockerAsync(args.ToString(), ct);
+
+        if (result.ExitCode != 0)
+        {
+            instance.Status = "error";
+            _logger.LogError("Docker 容器创建失败: {Error}", result.Stderr);
+            throw new InvalidOperationException($"Docker 容器创建失败: {result.Stderr}");
+        }
+
+        // 5. 记录容器 ID
+        instance.ContainerId = result.Stdout.Trim();
+        instance.Status = "ready";
+
+        // 6. 查询 Docker 实际端口映射（应用端口 + 预览端口）
+        var appPortResult = await RunDockerAsync($"port {instance.ContainerId} 8080", ct);
+        var previewPortResult = await RunDockerAsync($"port {instance.ContainerId} {config.PreviewPort}", ct);
+
+        var appHostPort = appPortResult.ExitCode == 0
+            ? appPortResult.Stdout.Trim().Split(':').Last().Trim()
+            : port.ToString();
+        var previewHostPort = previewPortResult.ExitCode == 0
+            ? previewPortResult.Stdout.Trim().Split(':').Last().Trim()
+            : "0";
+
+        instance.Url = $"http://localhost:{appHostPort}";
+        instance.PreviewUrl = $"http://localhost:{previewHostPort}";
+
+        _logger.LogInformation("沙箱 {SandboxId} 创建成功, 容器 {ContainerId}, URL: {Url}",
+            config.Id, instance.ContainerId, instance.Url);
+
+        return instance;
+    }
+
+    // ─── 后台队列调度 ───
+
+    /// <summary>
+    /// 后台循环：轮询队列，有空闲槽位时取出执行.
+    /// </summary>
+    private async Task ProcessQueueLoopAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                if (Volatile.Read(ref _activeCount) < MaxConcurrent
+                    && _pendingQueue.TryDequeue(out var request))
+                {
+                    if (request.CancellationToken.IsCancellationRequested)
+                    {
+                        request.Tcs.TrySetCanceled(request.CancellationToken);
+                        continue;
+                    }
+
+                    Interlocked.Increment(ref _activeCount);
+                    _logger.LogInformation(
+                        "沙箱从队列中调度: SandboxId={Id}, RemainingQueue={Remaining}",
+                        request.Config.Id, _pendingQueue.Count);
+
+                    _ = ExecuteQueuedCreateAsync(request);
+                }
+                else
+                {
+                    await Task.Delay(500, stoppingToken);
+                }
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "队列调度循环异常");
+            }
+        }
+    }
+
+    private async Task ExecuteQueuedCreateAsync(PendingCreateRequest request)
+    {
+        try
+        {
+            var instance = await CreateContainerInternalAsync(
+                request.Config, request.CancellationToken);
+            request.Tcs.TrySetResult(instance);
+            OnInstanceReady?.Invoke(instance);
+        }
+        catch (Exception ex)
+        {
+            request.Tcs.TrySetException(ex);
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _activeCount);
         }
     }
 

@@ -1242,6 +1242,17 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
         if (sandbox == null || sandbox.Status == "destroyed" || sandbox.Status == "error")
         {
+            // 检查排队状态并推送 SSE
+            var queueLen = ((SandboxManager)_sandbox).QueueLength;
+            if (queueLen > 0)
+            {
+                PushSseEvent(pipelineId, "sandbox_queued",
+                    System.Text.Json.JsonSerializer.Serialize(new { queuePosition = queueLen + 1 }));
+
+                _logger.LogInformation("沙箱创建排队中: SandboxId={Id}, QueuePosition={Pos}",
+                    sandboxId, queueLen + 1);
+            }
+
             sandbox = await _sandbox.CreateAsync(new SandboxConfig
             {
                 Id = sandboxId,
@@ -1252,6 +1263,13 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                 Port = 8080,
                 PreviewPort = 4173
             });
+
+            // 推送排队位置更新（如果之前排过队）
+            if (queueLen > 0)
+            {
+                PushSseEvent(pipelineId, "queue_position",
+                    System.Text.Json.JsonSerializer.Serialize(new { queuePosition = 0, status = "ready" }));
+            }
 
             _logger.LogInformation("沙箱已创建用于预览: SandboxId={Id}, ContainerId={Cid}",
                 sandboxId, sandbox.ContainerId);
@@ -1308,16 +1326,12 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         var previewUrl = sandboxInfo.PreviewUrl;
 
         // 8. SSE 推送 preview_ready
-        if (_sseChannels.TryGetValue(pipelineId, out var channel))
+        PushSseEvent(pipelineId, "preview_ready", System.Text.Json.JsonSerializer.Serialize(new
         {
-            var payload = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                previewUrl,
-                sandboxId,
-                status = "running"
-            });
-            channel.Writer.TryWrite(new SseEvent("preview_ready", payload));
-        }
+            previewUrl,
+            sandboxId,
+            status = "running"
+        }));
 
         _logger.LogInformation("预览就绪: PipelineId={Id}, Url={Url}", pipelineId, previewUrl);
 
@@ -1338,6 +1352,17 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     /// 阶段名映射：支持数字(1-5)或字符串("requirement"...)
     /// 前端 currentStage.value 可能发送数字字符串
     /// </summary>
+    /// <summary>
+    /// 向 SSE 通道推送事件（非阻塞，通道满时丢弃）.
+    /// </summary>
+    private void PushSseEvent(long pipelineId, string eventType, string data)
+    {
+        if (_sseChannels.TryGetValue(pipelineId, out var channel))
+        {
+            channel.Writer.TryWrite(new SseEvent(eventType, data));
+        }
+    }
+
     private static string MapStageName(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
