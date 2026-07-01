@@ -133,4 +133,44 @@ if (!isInfraOrTestFile && SOURCE_EXT.test(filePath) && typeof content === 'strin
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// L4: AI 开发态工作区隔离 — 拦截写入主仓库路径 (exit 2)
+// ═══════════════════════════════════════════════════════════════
+// 通过文件桥接读取 AI 开发上下文（由 AIDevelopmentPipelineService 写入）
+const path = await import('path');
+const AI_DEV_CONTEXT_PATH = path.join(process.cwd(), '.claude', 'ai-dev-context.json');
+let aiDevContext = null;
+try {
+  const fs = await import('fs');
+  if (fs.existsSync(AI_DEV_CONTEXT_PATH)) {
+    const raw = fs.readFileSync(AI_DEV_CONTEXT_PATH, 'utf-8');
+    aiDevContext = JSON.parse(raw);
+  }
+} catch {
+  aiDevContext = null;
+}
+
+if (aiDevContext && aiDevContext.pipelineId) {
+  const workspacePrefix = (aiDevContext.workspacePath || '').replace(/\\/g, '/');
+
+  const allowedPatterns = [
+    /StudioWorkspace[/\\]/,           // 工作区文件
+    /\.claude[/\\]/,                  // 项目配置 + ai-dev-context
+    /docs[/\\]/,                      // 设计文档
+    /workspace[/\\]/,                 // 流水线 workspace 目录
+  ];
+
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  const isAllowed = allowedPatterns.some(p => p.test(filePath))
+    || (workspacePrefix && normalizedPath.startsWith(workspacePrefix));
+
+  if (!isAllowed) {
+    console.error(`BLOCKED: AI 开发态禁止写入主仓库路径: ${filePath}`);
+    console.error(`  当前 pipelineId: ${aiDevContext.pipelineId}`);
+    console.error(`  工作区: ${aiDevContext.workspacePath}`);
+    console.error(`  允许前缀: StudioWorkspace/, .claude/, docs/, workspace/, 工作区路径`);
+    process.exit(2);
+  }
+}
+
 process.exit(0);
