@@ -1263,9 +1263,19 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
         _logger.LogInformation("壳工程已上传: SandboxId={Id}, Files={Count}", sandboxId, projectFiles.Count);
 
-        // 6. 在沙箱内执行 npm install && vite dev
+        // 6. 在沙箱内执行 npm install（120s 超时）&& vite dev
         var installCmd = "cd /app && npm install --prefer-offline 2>&1 | tail -5";
-        var installResult = await _sandbox.ExecuteCommandAsync(sandboxId, installCmd);
+        using var npmCts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+        CommandResult installResult;
+        try
+        {
+            installResult = await _sandbox.ExecuteCommandAsync(sandboxId, installCmd, npmCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogError("npm install 超时 (120s): SandboxId={Id}", sandboxId);
+            throw Oops.Bah("npm install 超时（120s），请检查沙箱网络或镜像是否预装了依赖");
+        }
 
         if (installResult.ExitCode != 0)
         {

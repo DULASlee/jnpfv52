@@ -245,7 +245,7 @@ public sealed class SandboxManager : ISandboxManager, ISingleton
         var sw = Stopwatch.StartNew();
         // 转义单引号，避免 shell 注入
         var escapedCommand = command.Replace("'", "'\\''");
-        var result = await RunDockerAsync($"exec {instance.ContainerId} sh -c '{escapedCommand}'");
+        var result = await RunDockerAsync($"exec {instance.ContainerId} sh -c '{escapedCommand}'", ct);
         sw.Stop();
 
         return new CommandResult
@@ -352,7 +352,8 @@ public sealed class SandboxManager : ISandboxManager, ISingleton
         return template.Replace("{DB}", dbName);
     }
 
-    private static async Task<(int ExitCode, string Stdout, string Stderr)> RunDockerAsync(string arguments)
+    private static async Task<(int ExitCode, string Stdout, string Stderr)> RunDockerAsync(
+        string arguments, CancellationToken ct = default)
     {
         var psi = new ProcessStartInfo
         {
@@ -368,10 +369,10 @@ public sealed class SandboxManager : ISandboxManager, ISingleton
         if (process == null)
             throw new InvalidOperationException("无法启动 docker 进程");
 
-        var stdoutTask = process.StandardOutput.ReadToEndAsync();
-        var stderrTask = process.StandardError.ReadToEndAsync();
+        var stdoutTask = process.StandardOutput.ReadToEndAsync(ct);
+        var stderrTask = process.StandardError.ReadToEndAsync(ct);
 
-        await process.WaitForExitAsync();
+        await process.WaitForExitAsync(ct);
 
         return (process.ExitCode, await stdoutTask, await stderrTask);
     }
