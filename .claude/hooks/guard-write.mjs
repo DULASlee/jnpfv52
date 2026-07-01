@@ -161,7 +161,7 @@ if (aiDevContext && aiDevContext.pipelineId) {
   ];
 
   const normalizedPath = filePath.replace(/\\/g, '/');
-  const isAllowed = allowedPatterns.some(p => p.test(filePath))
+  const isAllowed = allowedPatterns.some(p => p.test(normalizedPath))
     || (workspacePrefix && normalizedPath.startsWith(workspacePrefix));
 
   if (!isAllowed) {
