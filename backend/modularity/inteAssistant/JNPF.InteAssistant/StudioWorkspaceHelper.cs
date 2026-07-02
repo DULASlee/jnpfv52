@@ -96,7 +96,7 @@ public static class StudioWorkspaceHelper
         if (!Directory.Exists(directoryPath))
             return files;
 
-        foreach (var filePath in Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories))
+        foreach (var filePath in Directory.EnumerateFiles(directoryPath, "*", SearchOption.AllDirectories))
         {
             var relativePath = Path.GetRelativePath(directoryPath, filePath)
                 .Replace(Path.DirectorySeparatorChar, '/');
@@ -124,7 +124,7 @@ public static class StudioWorkspaceHelper
     {
         var (_, generated, _, artifacts) = GetPipelineSubPaths(tenantId, pipelineId);
 
-        if (!Directory.Exists(generated) || Directory.GetFiles(generated).Length == 0)
+        if (!Directory.Exists(generated) || !Directory.EnumerateFileSystemEntries(generated).Any())
             throw new InvalidOperationException("无生成产物可交付");
 
         var zipFileName = $"delivery-{DateTime.Now:yyyyMMdd-HHmmss}.zip";
@@ -218,7 +218,7 @@ public static class StudioWorkspaceHelper
         var extensions = new[] { "*.vue", "*.ts", "*.css", "*.scss", "*.less" };
         foreach (var pattern in extensions)
         {
-            foreach (var file in Directory.GetFiles(generatedDir, pattern, SearchOption.AllDirectories))
+            foreach (var file in Directory.EnumerateFiles(generatedDir, pattern, SearchOption.AllDirectories))
             {
                 var relativePath = Path.GetRelativePath(generatedDir, file);
                 var dest = Path.Combine(viewsDir, relativePath);

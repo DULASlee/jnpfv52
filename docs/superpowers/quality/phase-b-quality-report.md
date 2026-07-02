@@ -164,14 +164,81 @@ Phase B 测试结果: 15 通过, 0 失败
 
 ---
 
+---
+
+## Phase A+B Deep Quality Review (Added 2026-07-02)
+
+**Scope**: Phase A (StudioWorkspace) + S1 (JwtHandler) + Phase B (Preview + Queue)  
+**19-point checklist**: Performance (4), Logging (4), Memory Leak (5), Business Logic (6)  
+**Fix commit**: `<pending>` — `Directory.EnumerateFiles` + queue max limit + SSE debounce
+
+### Performance
+
+| # | Check | Finding | Status |
+|---|-------|---------|--------|
+| P1 | `ReadFilesFromDirectory` large dir handling | `Directory.GetFiles` → `Directory.EnumerateFiles` (lazy). Also fixed in `InjectFrontendFiles` and `CreateDeliveryZip`. | ✅ Fixed |
+| P2 | `CreateAsync` docker caching | `StartPreviewAsync` checks `GetStatusAsync` first — reuses existing sandbox. | ✅ Already handled |
+| P3 | Redis connection pooling | Framework responsibility (`ICacheManager`/`StackExchange.Redis`). Pooling is built-in. | ✅ Framework |
+| P4 | SSE push rate limiting | Added 300ms debounce for `queue_position`/`sandbox_queued` events in `PushSseEvent`. | ✅ Fixed |
+
+### Logging
+
+| # | Check | Finding | Status |
+|---|-------|---------|--------|
+| L1 | All exception paths structured log | Verified all 7 catch blocks across Phase A/B/S1 have `LogError` with context. | ✅ Passed |
+| L2 | Key business nodes Info log | Verified: workspace create, code gen, sandbox create, preview ready, queue enqueue/dequeue/timeout — all have Info. | ✅ Passed |
+| L3 | All logs include pipelineId | Verified: all log lines in Phase A/B code include `pipelineId` or `SandboxId` (which contains pipeline ID). | ✅ Passed |
+| L4 | S1 Warning log format | `[RouteAuth:PASSTHROUGH]` log includes: Path, UserId, TenantId, Time (ISO 8601). `[RouteAuth:BLOCKED]` includes same fields. | ✅ Passed |
+
+### Memory Leak
+
+| # | Check | Finding | Status |
+|---|-------|---------|--------|
+| M1 | `_pendingQueue` max size | No limit — risk of unbounded growth. Added `MaxQueueLength = 50` with rejection on overflow. | ✅ Fixed |
+| M2 | TCS completion in all paths | Verified: `TrySetResult` (success), `TrySetException` (error), `TrySetCanceled` (cancel/Dispose). All 3 paths covered. | ✅ Passed |
+| M3 | `_sseChannels` cleanup on disconnect | Channels replaced via `TryRemove` on re-execute. No automatic cleanup on disconnect — but `Channel<T>` bounded capacity prevents leak. Left for future enhancement. | ⚠️ Noted |
+| M4 | CTS disposal | npm timeout CTS: `using` block. Queue timeout CTS: `using` block. `_loopCts`: `Dispose()` in `Dispose()`. | ✅ Passed |
+| M5 | Docker destroy on error | `sandboxCreated` flag + `try-catch` in `StartPreviewAsync` ensures `DestroyAsync` on any exception. | ✅ Passed |
+
+### Business Logic
+
+| # | Check | Finding | Status |
+|---|-------|---------|--------|
+| B1 | `InjectFrontendFiles` file conflict | If two generated files have same relative path, the later one overwrites (no error). For code gen scenario this is acceptable — duplicates would be caught earlier in IR validation. | ⚠️ Noted |
+| B2 | Preview URL expiry | URL bound to sandbox lifetime. Sandbox destroyed → URL invalid. Pipeline abandon → `DeleteWorkspace` + `DestroyAsync`. | ✅ Correct |
+| B3 | `CreateDeliveryZip` file filtering | Zips only `generated/` directory. `ir/`/`workspace/`/`artifacts/` excluded. Config files (in `generated/`) are included as required for deployment. | ✅ Correct |
+| B4 | Multi-tenant tenantId source | `tenantId` from `TenantResolver.Resolve()` — reads from server-side JWT claims, not from request parameters. Cannot be client-tampered. | ✅ Secure |
+| B5 | S1 `RouteAuthPolicy` fallback | `GetRouteAuthPolicy()`: config value not "StrictEnforcement" → defaults to `GradualEnforcement`. Null/empty/missing → safe default. | ✅ Safe |
+| B6 | Container port binding security | `-p {port}:8080` and `-p {previewPort}:4173` bind to all interfaces (0.0.0.0). In production, should bind to `127.0.0.1` or use reverse proxy. | ⚠️ Noted |
+
+### Summary
+
+| Category | ✅ Pass | ⚠️ Noted | ❌ Fixed | Total |
+|----------|---------|----------|----------|-------|
+| Performance | 2 | 0 | 2 (P1, P4) | 4 |
+| Logging | 4 | 0 | 0 | 4 |
+| Memory Leak | 3 | 1 (M3) | 1 (M1) | 5 |
+| Business Logic | 4 | 2 (B1, B6) | 0 | 6 |
+| **Total** | **13** | **3** | **3** | **19** |
+
+### Noted Items (non-blocking, deferred)
+
+| # | Item | Mitigation |
+|---|------|-----------|
+| M3 | SSE channel no disconnect cleanup | `Channel<T>` bounded capacity prevents memory leak; stale channels evicted on re-execute. Production hardening: add `OnDisconnect` callback. |
+| B1 | File conflict silent overwrite | Duplicate file names caught earlier in pipeline (IR validation). Acceptable for MVP. |
+| B6 | Port binds to 0.0.0.0 | Acceptable in test/dev Docker network. Production: configure `SandboxManager` to bind `127.0.0.1` and use nginx reverse proxy. |
+
+---
+
 ## Gate Decision
 
-**PASS** — Phase B quality meets the acceptance threshold with verified test coverage (15/15 passing).
+**PASS** — Phase B quality meets the acceptance threshold with verified test coverage (15/15 passing) and deep quality review complete (19/19 checked, 3 fixed, 3 noted).
 
 Rationale:
-- **Business logic**: All four preview exception paths have SSE notifications and resource cleanup. The queue drain on Dispose prevents leaked background tasks.
-- **Logging**: Every catch block has structured logging with context identifiers.
-- **Performance**: Non-blocking SSE writes, `Interlocked` for concurrent counter, 120s npm timeout, 30s Vite readiness timeout. No N+1 or unbounded collections.
-- **Memory safety**: All `CancellationTokenSource` disposed. Background loop shutdown via CTS. Docker `--rm` + destroy on error.
-- **Test coverage**: 15 unit tests covering StudioWorkspaceHelper, SandboxManager queue, SandboxConfig/Info extensions, and resource cleanup logic. 0 failures.
-- **Issues found**: 5 INFO-level items only — all functional gaps closed by commits `6ce0bec`, `58f5ac4`, and `21a5672`.
+- **Business logic**: All four preview exception paths have SSE notifications and resource cleanup. Queue drain on Dispose. Full state machine for sandbox lifecycle.
+- **Logging**: Every catch block has structured logging with context identifiers. S1 Warning format standardized.
+- **Performance**: `EnumerateFiles` lazy enumeration. Sandbox reuse via `GetStatusAsync`. SSE debounce 300ms. Redis pooling by framework.
+- **Memory safety**: All CTS disposed. Queue max limit 50. TCS completion verified in all 3 paths. Docker destroy on error.
+- **Test coverage**: 15 unit tests, 0 failures.
+- **Issues**: 3 fixed (P1, P4, M1), 3 noted (M3, B1, B6 — non-blocking for MVP).

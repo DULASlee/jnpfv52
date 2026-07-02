@@ -23,6 +23,7 @@ public sealed class SandboxManager : ISandboxManager, ISingleton, IDisposable
 
     private int _activeCount;
     private const int MaxConcurrent = 5;
+    private const int MaxQueueLength = 50;
 
     private const string DockerNetwork = "jnpf-sandbox-net";
     private const string DbServerHost = "host.docker.internal"; // Docker 容器访问宿主机 SQL Server
@@ -92,6 +93,14 @@ public sealed class SandboxManager : ISandboxManager, ISingleton, IDisposable
 
             // 超并发 → 排队
             Interlocked.Decrement(ref _activeCount); // 回滚占用的槽位
+
+            if (_pendingQueue.Count >= MaxQueueLength)
+            {
+                _logger.LogWarning("沙箱队列已满: SandboxId={Id}, QueueLength={Len}",
+                    config.Id, _pendingQueue.Count);
+                throw new InvalidOperationException(
+                    $"沙箱创建队列已满（最大 {MaxQueueLength}），请稍后重试");
+            }
 
             var tcs = new TaskCompletionSource<SandboxInstance>(
                 TaskCreationOptions.RunContinuationsAsynchronously);

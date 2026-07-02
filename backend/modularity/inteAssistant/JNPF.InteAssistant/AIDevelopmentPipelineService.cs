@@ -49,6 +49,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     /// SSE 事件通道池：按 pipelineId 隔离。/execute 写入 token，/events 读取推送给前端。
     /// </summary>
     private static readonly ConcurrentDictionary<long, Channel<SseEvent>> _sseChannels = new();
+    private static readonly ConcurrentDictionary<long, DateTime> _sseLastPush = new();
 
     public AIDevelopmentPipelineService(
         IPipelineEngine pipelineEngine,
@@ -1424,9 +1425,21 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     /// </summary>
     /// <summary>
     /// 向 SSE 通道推送事件（非阻塞，通道满时丢弃）.
+    /// 对高频事件类型（queue_position）做 300ms 防抖.
     /// </summary>
     private void PushSseEvent(long pipelineId, string eventType, string data)
     {
+        // 防抖：300ms 内同一 pipeline 的高频事件只推一次
+        if (eventType is "queue_position" or "sandbox_queued")
+        {
+            if (_sseLastPush.TryGetValue(pipelineId, out var lastPush)
+                && (DateTime.UtcNow - lastPush).TotalMilliseconds < 300)
+            {
+                return;
+            }
+            _sseLastPush[pipelineId] = DateTime.UtcNow;
+        }
+
         if (_sseChannels.TryGetValue(pipelineId, out var channel))
         {
             channel.Writer.TryWrite(new SseEvent(eventType, data));
