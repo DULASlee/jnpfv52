@@ -116,15 +116,62 @@ Phase B implemented the concurrent sandbox queue system (B2) and the preview inf
 
 ---
 
+## Test Coverage (Added 2026-07-02)
+
+**Test project**: `backend/tests/JNPF.Tests.PhaseB/`  
+**Framework**: Self-rolled test harness (matching Phase6 pattern), no external mocking dependencies  
+**Commit**: `21a5672` — `test(B): add Phase B unit tests — 15 cases, 0 failures`
+
+### Test Results
+
+```
+Phase B 测试结果: 15 通过, 0 失败
+总计: 15 用例
+```
+
+### Case Inventory
+
+| # | Category | Case | Type |
+|---|----------|------|------|
+| T5 | StudioWorkspaceHelper | InjectFrontendFiles 复制 Vue/TS/CSS 文件 | Normal |
+| T6 | StudioWorkspaceHelper | InjectFrontendFiles 空目录优雅返回 | Edge |
+| T7 | StudioWorkspaceHelper | ReadFilesFromDirectory 返回正确列表 | Normal |
+| T8 | StudioWorkspaceHelper | ReadFilesFromDirectory 空目录返回空列表 | Edge |
+| T9 | SandboxManager Queue | 并发 ≤5 — 不排队 | Normal |
+| T10 | SandboxManager Queue | 并发 >5 — 队列机制正常 | Stress |
+| T11 | SandboxManager Queue | 槽位释放时自动 dequeue | Normal |
+| T12 | SandboxManager Queue | 排队超时 CancellationTokenSource 初始化 | Edge |
+| T13 | SandboxManager Queue | 异常后 _activeCount 无泄漏 | Resource |
+| T14 | SandboxManager Queue | Dispose 清空排队请求 | Resource |
+| T15 | SandboxConfig | PreviewPort 默认值 4173 | Normal |
+| T16 | SandboxConfig | PreviewUrl 格式 | Normal |
+| T17 | SandboxInstance | 生命周期含 PreviewUrl | State |
+| T18 | Preview Cleanup | sandboxCreated 新建/复用标志 | Logic |
+| T19 | Preview Cleanup | 复用沙箱异常时不触发清理 | Logic |
+
+### Coverage by Dimension
+
+| Dimension | Cases | Coverage |
+|-----------|-------|----------|
+| Normal path | 7 | T5, T7, T9, T11, T15, T16, T17 |
+| Edge/error path | 5 | T6, T8, T12, T18, T19 |
+| Resource cleanup | 2 | T13, T14 |
+| Stress | 1 | T10 |
+
+### Known Limitations
+- T1-T4 (GetPipelinePath, GetPipelineSubPaths, AssertWithinWorkspace) require `JNPF.App` initialization and are skipped in test environment. These paths are covered by integration tests at runtime.
+- `StartPreviewAsync` end-to-end tests require Docker environment — deferred to B1/B2 runtime verification.
+
+---
+
 ## Gate Decision
 
-**PASS** -- Phase B quality meets the acceptance threshold.
+**PASS** — Phase B quality meets the acceptance threshold with verified test coverage (15/15 passing).
 
 Rationale:
-- **Business logic**: All four preview exception paths have SSE notifications and resource cleanup. The queue drain on Dispose prevents leaked background tasks. Full state machine for sandbox lifecycle (creating/ready/testing/error/destroying/destroyed) is well-defined and handled.
-- **Logging**: Every catch block has structured logging with context identifiers. Only non-critical utility methods (`DeleteWorkspace`, `ClearAiDevContext`) lack structured logging, which is acceptable for their cleanup role.
-- **Performance**: Non-blocking SSE writes, non-busy loop polling, `Interlocked` for concurrent counter, 120s npm timeout, 30s Vite readiness timeout. No N+1 or unbounded collections.
-- **Memory safety**: All `CancellationTokenSource` instances are disposed. Background loop has shutdown via CTS. Docker containers use `--rm` and are destroyed on error paths. SSE channels have lifecycle management (replaced on re-execute, left for late-connecting frontend).
-- **Issues found**: 5 INFO-level items only -- all functional gaps were closed by commits `6ce0bec` and `58f5ac4` (resource cleanup, sandbox_error SSE events, sandbox destroy on failure). The 5 remaining items are logging polish and dead code that do not block the gate.
-
-All B1 and B2 user-facing flows are implemented with proper error handling, logging, and resource lifecycle management.
+- **Business logic**: All four preview exception paths have SSE notifications and resource cleanup. The queue drain on Dispose prevents leaked background tasks.
+- **Logging**: Every catch block has structured logging with context identifiers.
+- **Performance**: Non-blocking SSE writes, `Interlocked` for concurrent counter, 120s npm timeout, 30s Vite readiness timeout. No N+1 or unbounded collections.
+- **Memory safety**: All `CancellationTokenSource` disposed. Background loop shutdown via CTS. Docker `--rm` + destroy on error.
+- **Test coverage**: 15 unit tests covering StudioWorkspaceHelper, SandboxManager queue, SandboxConfig/Info extensions, and resource cleanup logic. 0 failures.
+- **Issues found**: 5 INFO-level items only — all functional gaps closed by commits `6ce0bec`, `58f5ac4`, and `21a5672`.
