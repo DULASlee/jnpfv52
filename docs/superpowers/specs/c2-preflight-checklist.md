@@ -69,3 +69,25 @@ var ir = JsonSerializer.Deserialize<IntermediateRepresentation>(irJson);
 | Docker 环境未就绪 | 无法端到端验证生成→预览链路 | B 阶段封板阻塞，不影响 C2.1 代码实现 |
 
 **结论**：C2.1 可独立开工（IR 降级策略已就绪），不需要等 SA Service 改造。SA Service 改造可与 C2.1 并行推进，完成后切换为完整 IR 输入。
+
+---
+
+## 模糊点查清结果（2026-07-03）
+
+| # | 模糊点 | 结果 | 策略 |
+|---|--------|------|------|
+| 1 | CodeGenService 调用方式 | `ITransient` — DI 可注入，`DownloadCode(string id, DownloadCodeFormInput)` | 直接注入实例调用，不走 HTTP |
+| 2 | VisualDevEntity 完整字段 | 5 个必填 + 18 个可选，继承 3 层 | 伪代码已更新精确字段清单 |
+| 3 | Tables/FormData JSON 格式 | `DbTableRelationModel[]` + `FormDataModel` 均已有精确 schema | 最小可行 FormData: areasName + className + fields[].__config__+__vModel__ |
+| 4 | 临时记录清理 | Hangfire + IHostedService 均可用 | finally 块同步删除 + RecurringJob 兜底 |
+| 5 | HTTP Context 依赖 | `DownloadCode` **不访问** HttpContext | ✅ 完全可内部调用 |
+
+## ⚠️ 新发现的约束
+
+**`DownloadCode` 输出路径硬编码**（`CodeGenService.cs:160`）：
+```csharp
+string randPath = Path.Combine(KeyVariable.SystemPath, "CodeGenerate", fileName);
+```
+→ C2 策略调整为 **"生成后移动"**：CodeGenService → `CodeGenerate/{fileName}/` → 复制到 `StudioWorkspace/{tenantId}/{pipelineId}/generated/` → 清理临时 `CodeGenerate/` 目录
+
+**VisualDevEntity 无 TenantId 字段**（非多租户实体）。不影响 C2 — CodeGenService 通过全局 SqlSugar 过滤器处理租户隔离。
