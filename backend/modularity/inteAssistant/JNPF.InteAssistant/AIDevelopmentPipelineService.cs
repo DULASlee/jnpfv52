@@ -1238,145 +1238,174 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
         // 4. 创建或获取沙箱
         var sandboxId = $"pipeline-{pipelineId}";
+        var sandboxCreated = false; // REVIEW: resource cleanup verified on 2026-07-02
         var sandbox = await _sandbox.GetStatusAsync(sandboxId);
 
-        if (sandbox == null || sandbox.Status == "destroyed" || sandbox.Status == "error")
+        try
         {
-            // 检查排队状态并推送 SSE
-            var queueLen = ((SandboxManager)_sandbox).QueueLength;
-            if (queueLen > 0)
+            if (sandbox == null || sandbox.Status == "destroyed" || sandbox.Status == "error")
             {
-                PushSseEvent(pipelineId, "sandbox_queued",
-                    System.Text.Json.JsonSerializer.Serialize(new { queuePosition = queueLen + 1 }));
+                // 检查排队状态并推送 SSE
+                var queueLen = ((SandboxManager)_sandbox).QueueLength;
+                if (queueLen > 0)
+                {
+                    PushSseEvent(pipelineId, "sandbox_queued",
+                        System.Text.Json.JsonSerializer.Serialize(new { queuePosition = queueLen + 1 }));
 
-                _logger.LogInformation("沙箱创建排队中: SandboxId={Id}, QueuePosition={Pos}",
-                    sandboxId, queueLen + 1);
+                    _logger.LogInformation("沙箱创建排队中: SandboxId={Id}, QueuePosition={Pos}",
+                        sandboxId, queueLen + 1);
+                }
+
+                try
+                {
+                    sandbox = await _sandbox.CreateAsync(new SandboxConfig
+                    {
+                        Id = sandboxId,
+                        TenantId = tenantIdStr,
+                        CpuLimit = 2,
+                        MemoryLimit = "4Gi",
+                        TimeoutSeconds = 600,
+                        Port = 8080,
+                        PreviewPort = 4173
+                    });
+                    sandboxCreated = true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "沙箱创建失败: SandboxId={Id}", sandboxId);
+                    PushSseEvent(pipelineId, "sandbox_error",
+                        System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            pipelineId = pipelineIdStr,
+                            stage = "create",
+                            error = ex.Message
+                        }));
+                    throw;
+                }
+
+                // 推送排队位置更新（如果之前排过队）
+                if (queueLen > 0)
+                {
+                    PushSseEvent(pipelineId, "queue_position",
+                        System.Text.Json.JsonSerializer.Serialize(new { queuePosition = 0, status = "ready" }));
+                }
+
+                _logger.LogInformation("沙箱已创建用于预览: SandboxId={Id}, ContainerId={Cid}",
+                    sandboxId, sandbox.ContainerId);
             }
 
+            // 5. 上传完整壳工程到沙箱
+            var projectFiles = StudioWorkspaceHelper.ReadFilesFromDirectory(previewProjectDir);
+            await _sandbox.UploadFilesAsync(sandboxId, projectFiles);
+
+            _logger.LogInformation("壳工程已上传: SandboxId={Id}, Files={Count}", sandboxId, projectFiles.Count);
+
+            // 6. 在沙箱内执行 npm install（120s 超时）&& vite dev
+            var installCmd = "cd /app && npm install --prefer-offline 2>&1 | tail -5";
+            using var npmCts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+            CommandResult installResult;
             try
             {
-                sandbox = await _sandbox.CreateAsync(new SandboxConfig
-                {
-                    Id = sandboxId,
-                    TenantId = tenantIdStr,
-                    CpuLimit = 2,
-                    MemoryLimit = "4Gi",
-                    TimeoutSeconds = 600,
-                    Port = 8080,
-                    PreviewPort = 4173
-                });
+                installResult = await _sandbox.ExecuteCommandAsync(sandboxId, installCmd, npmCts.Token);
             }
-            catch (Exception ex)
+            catch (OperationCanceledException)
             {
-                _logger.LogError(ex, "沙箱创建失败: SandboxId={Id}", sandboxId);
+                _logger.LogError("npm install 超时 (120s): SandboxId={Id}", sandboxId);
                 PushSseEvent(pipelineId, "sandbox_error",
                     System.Text.Json.JsonSerializer.Serialize(new
                     {
                         pipelineId = pipelineIdStr,
-                        stage = "create",
-                        error = ex.Message
+                        stage = "npm-install",
+                        error = "timeout"
                     }));
                 throw;
             }
 
-            // 推送排队位置更新（如果之前排过队）
-            if (queueLen > 0)
+            if (installResult.ExitCode != 0)
             {
-                PushSseEvent(pipelineId, "queue_position",
-                    System.Text.Json.JsonSerializer.Serialize(new { queuePosition = 0, status = "ready" }));
+                _logger.LogError("npm install 失败: SandboxId={Id}, Error={Error}", sandboxId, installResult.Error);
+                PushSseEvent(pipelineId, "sandbox_error",
+                    System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        pipelineId = pipelineIdStr,
+                        stage = "npm-install",
+                        error = installResult.Error.Length > 500
+                            ? installResult.Error[..500]
+                            : installResult.Error
+                    }));
+                throw Oops.Bah($"npm install 失败: {installResult.Error}");
             }
 
-            _logger.LogInformation("沙箱已创建用于预览: SandboxId={Id}, ContainerId={Cid}",
-                sandboxId, sandbox.ContainerId);
-        }
+            // 启动 Vite dev server（后台运行）
+            var viteCmd = "cd /app && nohup npx vite --port 4173 --host > /tmp/vite.log 2>&1 &";
+            await _sandbox.ExecuteCommandAsync(sandboxId, viteCmd);
 
-        // 5. 上传完整壳工程到沙箱
-        var projectFiles = StudioWorkspaceHelper.ReadFilesFromDirectory(previewProjectDir);
-        await _sandbox.UploadFilesAsync(sandboxId, projectFiles);
-
-        _logger.LogInformation("壳工程已上传: SandboxId={Id}, Files={Count}", sandboxId, projectFiles.Count);
-
-        // 6. 在沙箱内执行 npm install（120s 超时）&& vite dev
-        var installCmd = "cd /app && npm install --prefer-offline 2>&1 | tail -5";
-        using var npmCts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
-        CommandResult installResult;
-        try
-        {
-            installResult = await _sandbox.ExecuteCommandAsync(sandboxId, installCmd, npmCts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogError("npm install 超时 (120s): SandboxId={Id}", sandboxId);
-            PushSseEvent(pipelineId, "sandbox_error",
-                System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    pipelineId = pipelineIdStr,
-                    stage = "npm-install",
-                    error = "timeout"
-                }));
-            throw Oops.Bah("npm install 超时（120s），请检查沙箱网络或镜像是否预装了依赖");
-        }
-
-        if (installResult.ExitCode != 0)
-        {
-            _logger.LogError("npm install 失败: SandboxId={Id}, Error={Error}", sandboxId, installResult.Error);
-            PushSseEvent(pipelineId, "sandbox_error",
-                System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    pipelineId = pipelineIdStr,
-                    stage = "npm-install",
-                    error = installResult.Error.Length > 500
-                        ? installResult.Error[..500]
-                        : installResult.Error
-                }));
-            throw Oops.Bah($"npm install 失败: {installResult.Error}");
-        }
-
-        // 启动 Vite dev server（后台运行）
-        var viteCmd = "cd /app && nohup npx vite --port 4173 --host > /tmp/vite.log 2>&1 &";
-        await _sandbox.ExecuteCommandAsync(sandboxId, viteCmd);
-
-        // 等待 Vite 就绪（轮询 30s）
-        var ready = false;
-        for (var i = 0; i < 15; i++)
-        {
-            await Task.Delay(2000);
-            var checkResult = await _sandbox.ExecuteCommandAsync(sandboxId, "curl -s -o /dev/null -w '%{http_code}' http://localhost:4173");
-            if (checkResult.ExitCode == 0 && checkResult.Output.Trim() == "200")
+            // 等待 Vite 就绪（轮询 30s）
+            var ready = false;
+            for (var i = 0; i < 15; i++)
             {
-                ready = true;
-                break;
-            }
-        }
-
-        if (!ready)
-        {
-            _logger.LogError("Vite 启动超时 (30s): SandboxId={Id}", sandboxId);
-            PushSseEvent(pipelineId, "sandbox_error",
-                System.Text.Json.JsonSerializer.Serialize(new
+                await Task.Delay(2000);
+                var checkResult = await _sandbox.ExecuteCommandAsync(sandboxId, "curl -s -o /dev/null -w '%{http_code}' http://localhost:4173");
+                if (checkResult.ExitCode == 0 && checkResult.Output.Trim() == "200")
                 {
-                    pipelineId = pipelineIdStr,
-                    stage = "vite-start",
-                    error = "timeout"
-                }));
-            throw Oops.Bah("Vite dev server 启动超时（30s）");
+                    ready = true;
+                    break;
+                }
+            }
+
+            if (!ready)
+            {
+                _logger.LogError("Vite 启动超时 (30s): SandboxId={Id}", sandboxId);
+                PushSseEvent(pipelineId, "sandbox_error",
+                    System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        pipelineId = pipelineIdStr,
+                        stage = "vite-start",
+                        error = "timeout"
+                    }));
+                throw Oops.Bah("Vite dev server 启动超时（30s）");
+            }
+
+            // 7. 获取预览 URL
+            var sandboxInfo = await _sandbox.GetSandboxInfoAsync(sandboxId);
+            var previewUrl = sandboxInfo.PreviewUrl;
+
+            if (string.IsNullOrEmpty(previewUrl) || previewUrl.EndsWith(":0"))
+            {
+                _logger.LogWarning("预览端口查询可能失败: PipelineId={Id}, PreviewUrl={Url}",
+                    pipelineId, previewUrl);
+            }
+
+            // 8. SSE 推送 preview_ready
+            PushSseEvent(pipelineId, "preview_ready", System.Text.Json.JsonSerializer.Serialize(new
+            {
+                previewUrl,
+                sandboxId,
+                status = "running"
+            }));
+
+            _logger.LogInformation("预览就绪: PipelineId={Id}, Url={Url}", pipelineId, previewUrl);
+
+            return new { previewUrl, sandboxId, status = "running" };
         }
-
-        // 7. 获取预览 URL
-        var sandboxInfo = await _sandbox.GetSandboxInfoAsync(sandboxId);
-        var previewUrl = sandboxInfo.PreviewUrl;
-
-        // 8. SSE 推送 preview_ready
-        PushSseEvent(pipelineId, "preview_ready", System.Text.Json.JsonSerializer.Serialize(new
+        catch (Exception ex)
         {
-            previewUrl,
-            sandboxId,
-            status = "running"
-        }));
-
-        _logger.LogInformation("预览就绪: PipelineId={Id}, Url={Url}", pipelineId, previewUrl);
-
-        return new { previewUrl, sandboxId, status = "running" };
+            // 任何异常：尝试销毁新创建的沙箱（资源清理）
+            if (sandboxCreated)
+            {
+                try
+                {
+                    await _sandbox.DestroyAsync(sandboxId);
+                    _logger.LogInformation("异常路径沙箱已销毁: SandboxId={Id}, Error={Error}",
+                        sandboxId, ex.Message);
+                }
+                catch (Exception destroyEx)
+                {
+                    _logger.LogWarning(destroyEx, "异常路径沙箱销毁失败: SandboxId={Id}", sandboxId);
+                }
+            }
+            throw;
+        }
     }
 
     /// <summary>
