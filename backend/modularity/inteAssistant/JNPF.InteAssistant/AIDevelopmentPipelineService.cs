@@ -1253,16 +1253,31 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     sandboxId, queueLen + 1);
             }
 
-            sandbox = await _sandbox.CreateAsync(new SandboxConfig
+            try
             {
-                Id = sandboxId,
-                TenantId = tenantIdStr,
-                CpuLimit = 2,
-                MemoryLimit = "4Gi",
-                TimeoutSeconds = 600,
-                Port = 8080,
-                PreviewPort = 4173
-            });
+                sandbox = await _sandbox.CreateAsync(new SandboxConfig
+                {
+                    Id = sandboxId,
+                    TenantId = tenantIdStr,
+                    CpuLimit = 2,
+                    MemoryLimit = "4Gi",
+                    TimeoutSeconds = 600,
+                    Port = 8080,
+                    PreviewPort = 4173
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "沙箱创建失败: SandboxId={Id}", sandboxId);
+                PushSseEvent(pipelineId, "sandbox_error",
+                    System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        pipelineId = pipelineIdStr,
+                        stage = "create",
+                        error = ex.Message
+                    }));
+                throw;
+            }
 
             // 推送排队位置更新（如果之前排过队）
             if (queueLen > 0)
@@ -1292,12 +1307,28 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         catch (OperationCanceledException)
         {
             _logger.LogError("npm install 超时 (120s): SandboxId={Id}", sandboxId);
+            PushSseEvent(pipelineId, "sandbox_error",
+                System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    pipelineId = pipelineIdStr,
+                    stage = "npm-install",
+                    error = "timeout"
+                }));
             throw Oops.Bah("npm install 超时（120s），请检查沙箱网络或镜像是否预装了依赖");
         }
 
         if (installResult.ExitCode != 0)
         {
             _logger.LogError("npm install 失败: SandboxId={Id}, Error={Error}", sandboxId, installResult.Error);
+            PushSseEvent(pipelineId, "sandbox_error",
+                System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    pipelineId = pipelineIdStr,
+                    stage = "npm-install",
+                    error = installResult.Error.Length > 500
+                        ? installResult.Error[..500]
+                        : installResult.Error
+                }));
             throw Oops.Bah($"npm install 失败: {installResult.Error}");
         }
 
@@ -1319,7 +1350,17 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         }
 
         if (!ready)
+        {
+            _logger.LogError("Vite 启动超时 (30s): SandboxId={Id}", sandboxId);
+            PushSseEvent(pipelineId, "sandbox_error",
+                System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    pipelineId = pipelineIdStr,
+                    stage = "vite-start",
+                    error = "timeout"
+                }));
             throw Oops.Bah("Vite dev server 启动超时（30s）");
+        }
 
         // 7. 获取预览 URL
         var sandboxInfo = await _sandbox.GetSandboxInfoAsync(sandboxId);
