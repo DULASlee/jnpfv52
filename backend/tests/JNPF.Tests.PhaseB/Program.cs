@@ -62,4 +62,16 @@ if (args.Length > 0 && args[0] == "ir3-promote")
     return 0;
 }
 
+if (args.Length > 0 && args[0] == "phase5-diff")
+{
+    await JNPF.Tests.PhaseB.IrPhase5DiffTests.RunAllAsync();
+    return 0;
+}
+
+if (args.Length > 0 && args[0] == "phase5-bugfix")
+{
+    await JNPF.Tests.PhaseB.IrPhase5BugfixTests.RunAllAsync();
+    return 0;
+}
+
 return await JNPF.Tests.PhaseB.TestRunner.Main(args);

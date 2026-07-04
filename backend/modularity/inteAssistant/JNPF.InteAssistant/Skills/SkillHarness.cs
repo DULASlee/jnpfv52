@@ -31,6 +31,8 @@ public sealed class SkillRunOptions
     public string? ProviderCode { get; init; }
     /// <summary>ArchGuard warning 级违规，供 tester-skill metadata（A3 Warning 透传）。</summary>
     public IReadOnlyList<SkillArchWarning>? ArchGuardWarnings { get; init; }
+    /// <summary>阶段五 bugfix-skill 序列点 diff。</summary>
+    public BugfixRunContext? Bugfix { get; init; }
 }
 
 public sealed class SkillArchWarning
@@ -139,6 +141,7 @@ public sealed class SkillHarness : ISkillHarness, ITransient
                 UserRequirement = requirement,
                 Snapshot = snapshot,
                 ArchGuardWarnings = options.ArchGuardWarnings,
+                Bugfix = options.Bugfix,
                 SeedMatches = seeds,
                 PromptContext = promptContext,
                 ProviderCode = options.ProviderCode,

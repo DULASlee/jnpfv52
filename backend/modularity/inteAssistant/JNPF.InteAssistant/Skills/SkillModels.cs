@@ -72,6 +72,17 @@ public sealed class SeedTemplateMatch
     public string TemplateJson { get; init; } = "{}";
 }
 
+/// <summary>阶段五 bugfix-skill 运行参数。</summary>
+public sealed class BugfixRunContext
+{
+    public int FromSequence { get; init; }
+    public int ToSequence { get; init; }
+    public string? RootCauseLayer { get; init; }
+    public string? RevisionType { get; init; }
+    public string? Description { get; init; }
+    public bool ForceUnlock { get; init; }
+}
+
 public sealed class SkillContext
 {
     public required string RunId { get; init; }
@@ -84,6 +95,8 @@ public sealed class SkillContext
     public IReadOnlyList<SeedTemplateMatch> SeedMatches { get; init; } = Array.Empty<SeedTemplateMatch>();
     public PromptContext PromptContext { get; init; } = PromptContext.Empty;
     public string? ProviderCode { get; init; }
+    /// <summary>阶段五 bugfix-skill 序列点 diff 参数。</summary>
+    public BugfixRunContext? Bugfix { get; init; }
 }
 
 public sealed class PromptContext

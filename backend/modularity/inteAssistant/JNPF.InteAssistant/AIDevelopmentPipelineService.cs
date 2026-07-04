@@ -12,6 +12,7 @@ using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Gates;
+using JNPF.InteAssistant.Infrastructure.Attachments;
 using JNPF.InteAssistant.Infrastructure.Background;
 using JNPF.InteAssistant.Infrastructure.Messaging;
 using JNPF.InteAssistant.Infrastructure.Security;
@@ -55,6 +56,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     private readonly IGeneratedProjectRegistry _generatedProjectRegistry;
     private readonly ISkillHarness _skillHarness;
     private readonly IOptionsMonitor<GatePipelineOptions> _gateOptions;
+    private readonly IPipelineAttachmentService _attachmentService;
 
     public AIDevelopmentPipelineService(
         IPipelineEngine pipelineEngine,
@@ -74,7 +76,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         IIrEventStoreService irEventStore,
         IGeneratedProjectRegistry generatedProjectRegistry,
         ISkillHarness skillHarness,
-        IOptionsMonitor<GatePipelineOptions> gateOptions)
+        IOptionsMonitor<GatePipelineOptions> gateOptions,
+        IPipelineAttachmentService attachmentService)
     {
         _pipelineEngine = pipelineEngine;
         _designOrchestrator = designOrchestrator;
@@ -94,6 +97,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         _generatedProjectRegistry = generatedProjectRegistry;
         _skillHarness = skillHarness;
         _gateOptions = gateOptions;
+        _attachmentService = attachmentService;
     }
 
     // ─── 创建流水线 ───
@@ -184,10 +188,36 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     [HttpPost("{pipelineId:long}/start")]
     public async Task<PipelineResult> StartAsync(long pipelineId)
     {
+        await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
         return await _pipelineEngine.StartAsync(pipelineId);
     }
 
     // ─── SA 门控（异步事件驱动 — 缺陷4修复）───
+
+    /// <summary>
+    /// 登记并解析附件 — 写入 inte_assistant_attachment（ProcessStatus=2 后可供门控使用）
+    /// </summary>
+    [HttpPost("{pipelineId:long}/upload-materials")]
+    public async Task<object> UploadMaterialsAsync(
+        long pipelineId, [FromBody] UploadMaterialsRequest request, CancellationToken ct)
+    {
+        await EnsurePipelineTenantAsync(pipelineId, ct);
+        var ctx = RequestContext.Capture(_httpContextAccessor);
+        var payloads = MapAttachmentItems(request?.Attachments);
+
+        var registered = await _attachmentService.RegisterAsync(pipelineId, payloads, ctx, ct);
+        var prepared = await _attachmentService.PrepareForGateAsync(pipelineId, ctx, ct);
+
+        return new
+        {
+            pipelineId,
+            registered,
+            processed = prepared.Files.Count,
+            failed = prepared.FailedCount,
+            warnings = prepared.Warnings,
+            items = prepared.Items,
+        };
+    }
 
     /// <summary>
     /// SA 门控入口 — 异步事件驱动
@@ -200,30 +230,18 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         var userText = request?.UserText ?? "";
         var tenantId = TenantResolver.Resolve();
         var userId = GetUserId();
+        await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
 
-        // Step 1: 读取已持久化的附件
-        var attachments = await _db.Queryable<InteAssistantAttachment>()
-            .Where(a => a.PipelineId == pipelineId.ToString() && a.ProcessStatus == 2)
-            .ToListAsync();
-
-        var attachmentFiles = new List<AttachmentFile>();
-        foreach (var att in attachments)
+        var ctx = RequestContext.Capture(_httpContextAccessor);
+        if (request?.Attachments?.Count > 0)
         {
-            if (!string.IsNullOrWhiteSpace(att.FileUrl))
-            {
-                attachmentFiles.Add(new AttachmentFile
-                {
-                    FileName = att.FileName,
-                    Content = Array.Empty<byte>() // 已提取文本, 不再传原始内容
-                });
-            }
+            await _attachmentService.RegisterAsync(pipelineId, MapAttachmentItems(request.Attachments), ctx);
         }
 
-        // Step 2: 创建 SSE 通道
+        // 创建 SSE 通道
         var channel = _sseHub.ReplaceChannel(pipelineId);
 
-        // Step 3: 后台异步执行门控 (BackgroundTaskRunner + SSE)
-        var ctx = RequestContext.Capture(_httpContextAccessor);
+        // 后台异步执行门控 (BackgroundTaskRunner + SSE)
         var visionConfig = _configuration.GetSection("MultimodalVision");
         var visionApiUrl = visionConfig["ApiUrl"] ?? "";
         var visionApiKey = visionConfig["ApiKey"] ?? "";
@@ -233,15 +251,60 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             $"SA_Gate_{pipelineId}",
             async (bgCtx, bgCt) =>
             {
+                using var scope = App.RootServices.CreateScope();
+                var attachmentService = scope.ServiceProvider.GetRequiredService<IPipelineAttachmentService>();
                 using var sse = _senderFactory.Create(pipelineId.ToString(), channel);
                 try
                 {
+                    sse.TrySend("attachments_processing", JsonSerializer.Serialize(new
+                    {
+                        message = "正在下载并解析附件…",
+                    }));
+
+                    var prepared = await attachmentService.PrepareForGateAsync(pipelineId, ctx, bgCt);
+                    sse.TrySend("attachments_ready", JsonSerializer.Serialize(new
+                    {
+                        processed = prepared.Files.Count,
+                        failed = prepared.FailedCount,
+                        warnings = prepared.Warnings,
+                        items = prepared.Items,
+                    }));
+
+                    if (prepared.Files.Count == 0 && string.IsNullOrWhiteSpace(userText))
+                    {
+                        sse.TrySend("gate_failed", JsonSerializer.Serialize(new
+                        {
+                            reason = "未提供文字需求且没有可用附件",
+                            hint = "请输入业务需求描述，或上传 Word/PDF/Excel 需求文档后再提交。",
+                            semanticFitness = new
+                            {
+                                passed = false,
+                                score = 0,
+                                level = "insufficient",
+                                identified = Array.Empty<object>(),
+                                missing = new[]
+                                {
+                                    new
+                                    {
+                                        category = "业务事件",
+                                        description = "无文字且无可用附件内容",
+                                        severity = "critical",
+                                        howToFix = "请描述业务场景，或上传包含需求说明的文档。",
+                                    },
+                                },
+                            },
+                            warnings = prepared.Warnings,
+                        }));
+                        sse.Complete();
+                        return;
+                    }
+
                     // 通知前端: 门控开始
                     sse.TrySend("gate_started", "");
 
-                    // 执行门控管道
+                    // 执行门控管道（AttachmentFile 含真实字节，供格式校验与多模态）
                     var gateResult = await _gatePipeline.ExecuteAsync(
-                        userText, attachmentFiles, ctx,
+                        userText, prepared.Files, ctx,
                         gateContext: null,
                         visionApiUrl, visionApiKey, visionModel, bgCt);
 
@@ -323,6 +386,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     public async Task<StageResult> ExecuteStageAsync(
         long pipelineId, [FromBody] ExecuteStageRequest request)
     {
+        await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
+
         var stageName = string.IsNullOrWhiteSpace(request.StageName)
             ? PipelineStage.Requirement : MapStageName(request.StageName);
         var message = request.Message ?? "";
@@ -435,7 +500,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             // ═══════════════════════════════════════════════════
             // SA 流水线拦截：需求分析阶段走 SA Service
             // ═══════════════════════════════════════════════════
-            if (false)  // TODO: 改回 stageName == "requirement" 即可恢复 SA
+            if (stageName == PipelineStage.Requirement)
             {
                 _logger.LogInformation("[SA] 需求分析阶段，调用 SA Service pipelineId={PipelineId}", pipelineId);
 
@@ -961,10 +1026,31 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
         try
         {
-            await foreach (var evt in channel.Reader.ReadAllAsync(ct))
+            var connectionDeadline = DateTime.UtcNow.AddMinutes(30);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            linkedCts.CancelAfter(TimeSpan.FromMinutes(30));
+
+            while (!linkedCts.Token.IsCancellationRequested && DateTime.UtcNow < connectionDeadline)
             {
-                await WriteSseAsync(response, evt);
-                if (evt.Type is "done" or "error") break;
+                var waitRead = channel.Reader.WaitToReadAsync(linkedCts.Token).AsTask();
+                var heartbeatDelay = Task.Delay(TimeSpan.FromSeconds(30), linkedCts.Token);
+                var completed = await Task.WhenAny(waitRead, heartbeatDelay);
+
+                if (completed == heartbeatDelay && !waitRead.IsCompleted)
+                {
+                    await WriteSseCommentAsync(response, "ping");
+                    continue;
+                }
+
+                if (!await waitRead)
+                    break;
+
+                while (channel.Reader.TryRead(out var evt))
+                {
+                    await WriteSseAsync(response, evt);
+                    if (evt.Type is "done" or "error")
+                        return;
+                }
             }
         }
         catch (OperationCanceledException) { }
@@ -977,6 +1063,9 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     public async Task<StageResult> ConfirmStageAsync(
         long stageId, [FromBody] StageConfirmation confirmation)
     {
+        // 前端当前传的是 pipelineId（见 PipelineEngineService.ConfirmStageAsync 兼容注释）
+        await EnsurePipelineTenantAsync(stageId, CancellationToken.None);
+
         var result = await _pipelineEngine.ConfirmStageAsync(stageId, confirmation);
         try
         {
@@ -1009,6 +1098,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     [HttpPost("{pipelineId:long}/rollback")]
     public async Task<StageResult> RollbackAsync(long pipelineId, [FromBody] RollbackRequest request)
     {
+        await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
         var target = string.IsNullOrWhiteSpace(request.TargetStage) ? PipelineStage.Requirement : request.TargetStage;
         return await _pipelineEngine.RollbackAsync(pipelineId, target, request.Reason);
     }
@@ -1018,6 +1108,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     [HttpGet("{pipelineId:long}")]
     public async Task<PipelineDetail> GetDetailAsync(long pipelineId)
     {
+        await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
         return await _pipelineEngine.GetDetailAsync(pipelineId);
     }
 
@@ -1210,6 +1301,13 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             """,
         _ => "你是一个 AI 开发助手，请用中文回复。"
     };
+
+    private static async Task WriteSseCommentAsync(HttpResponse response, string comment)
+    {
+        var bytes = Encoding.UTF8.GetBytes($": {comment}\n\n");
+        await response.Body.WriteAsync(bytes);
+        await response.Body.FlushAsync();
+    }
 
     private static async Task WriteSseAsync(HttpResponse response, SseEvent evt)
     {
@@ -1537,6 +1635,36 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         return long.TryParse(claim, out var id) ? id : 0;
     }
 
+    private async Task EnsurePipelineTenantAsync(long pipelineId, CancellationToken ct)
+    {
+        var currentTenantId = TenantResolver.Resolve();
+        if (currentTenantId < 0) return;
+
+        var pipeline = await _db.Queryable<AiPipelineEntity>()
+            .Where(p => p.Id == pipelineId.ToString() && (p.DeleteMark == null || p.DeleteMark == 0))
+            .Select(p => new { p.TenantId })
+            .FirstAsync(ct);
+
+        if (pipeline == null)
+            throw Oops.Bah($"流水线 {pipelineId} 不存在");
+
+        if (!TenantResolver.IsSuperTenant()
+            && !string.Equals(pipeline.TenantId, currentTenantId.ToString(), StringComparison.Ordinal))
+        {
+            throw Oops.Bah("无权访问该流水线");
+        }
+    }
+
+    private static IEnumerable<AttachmentRegisterItem> MapAttachmentItems(IEnumerable<AttachmentPayload>? payloads)
+    {
+        if (payloads == null) yield break;
+        foreach (var p in payloads)
+        {
+            if (string.IsNullOrWhiteSpace(p.Url)) continue;
+            yield return new AttachmentRegisterItem { Name = p.Name, Url = p.Url };
+        }
+    }
+
     // ═══════════════════════════════════════════════════
     // SA 结果格式化辅助方法
     // ═══════════════════════════════════════════════════
@@ -1727,7 +1855,13 @@ public record SaGateRequest
 {
     public string UserText { get; init; } = "";
     public string? Provider { get; init; }
+    public List<AttachmentPayload>? Attachments { get; init; }
 
     /// <summary>门控通过后自动运行 PM Skill；null 时使用 GatePipeline.json 配置</summary>
     public bool? AutoRunPm { get; init; }
+}
+
+public record UploadMaterialsRequest
+{
+    public List<AttachmentPayload>? Attachments { get; init; }
 }

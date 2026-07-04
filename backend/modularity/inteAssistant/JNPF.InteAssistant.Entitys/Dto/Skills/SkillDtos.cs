@@ -18,6 +18,18 @@ public record SkillRunRequest
     public string? ProviderCode { get; init; }
 }
 
+/// <summary>阶段五 bugfix-skill API 请求体。</summary>
+public record BugfixRunRequest
+{
+    public int FromSequence { get; init; }
+    public int ToSequence { get; init; }
+    public string? RootCauseLayer { get; init; }
+    public string? RevisionType { get; init; }
+    public string? Description { get; init; }
+    public bool ForceUnlock { get; init; }
+    public string? ProviderCode { get; init; }
+}
+
 public record ConfirmSkeletonRequest
 {
     /// <summary>确认后自动启动 analyst-skill</summary>

@@ -25,6 +25,9 @@ public sealed class RequestContext
     public string UserId { get; init; } = "";
     public string UserName { get; init; } = "";
 
+    /// <summary>原请求 Authorization，供后台任务下载 annex 附件</summary>
+    public string Authorization { get; init; } = "";
+
     /// <summary>
     /// 步骤间共享的下载缓存（internal，仅供 Infrastructure 和 Gates 内部使用）
     /// key: 文件URL, value: 文件内容
@@ -34,12 +37,15 @@ public sealed class RequestContext
     /// <summary>附件文本缓存（避免重复提取）</summary>
     internal string? ExtractedAttachmentText { get; set; }
 
-    /// <summary>获取完整基础 URL</summary>
+    /// <summary>获取完整基础 URL（后台自调用时 0.0.0.0 不可达，归一为 localhost）</summary>
     public string GetBaseUrl()
     {
         if (string.IsNullOrEmpty(Scheme) || string.IsNullOrEmpty(Host))
             return "";
-        return $"{Scheme}://{Host}";
+        var host = Host.StartsWith("0.0.0.0", StringComparison.OrdinalIgnoreCase)
+            ? Host.Replace("0.0.0.0", "localhost", StringComparison.OrdinalIgnoreCase)
+            : Host;
+        return $"{Scheme}://{host}";
     }
 
     /// <summary>
@@ -49,13 +55,26 @@ public sealed class RequestContext
     public static RequestContext Capture(IHttpContextAccessor accessor)
     {
         var http = accessor?.HttpContext;
+        var authorization = http?.Request?.Headers["Authorization"].FirstOrDefault() ?? "";
+        if (string.IsNullOrWhiteSpace(authorization))
+        {
+            var queryToken = http?.Request?.Query["token"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(queryToken))
+            {
+                authorization = queryToken.StartsWith("Bearer", StringComparison.OrdinalIgnoreCase)
+                    ? queryToken
+                    : $"Bearer {queryToken}";
+            }
+        }
+
         return new RequestContext
         {
             Scheme = http?.Request?.Scheme ?? "",
             Host = http?.Request?.Host.ToString() ?? "",
             TenantId = ResolveTenantId(accessor),
             UserId = ResolveClaim(accessor, "UserId"),
-            UserName = ResolveClaim(accessor, "UserName")
+            UserName = ResolveClaim(accessor, "UserName"),
+            Authorization = authorization,
         };
     }
 

@@ -74,6 +74,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
             IrEventTypes.CodegenBuildValidated => await MergeIr3SandboxBuildAsync(evt, ct),
             IrEventTypes.CodeGeneratedStablePromoted => await PromoteIr3CodegenAsync(evt, ct),
             IrEventTypes.TestSuiteGenerated => await UpsertIr3TestSuiteAsync(evt, ct),
+            IrEventTypes.AffectedFragmentsMarked => await ApplyAffectedFragmentsMarkedAsync(evt, ct),
             IrEventTypes.ArchViolationDetected => null,
             _ => null,
         };
@@ -374,6 +375,34 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
         return snap;
     }
 
+    private async Task<AiIrFragmentSnapshotEntity?> ApplyAffectedFragmentsMarkedAsync(
+        AiIrEventEntity evt, CancellationToken ct)
+    {
+        var invalidated = ParseFragmentIdList(evt.Payload, "invalidated");
+        AiIrFragmentSnapshotEntity? last = null;
+
+        foreach (var fragmentId in invalidated)
+        {
+            var snap = await _db.Queryable<AiIrFragmentSnapshotEntity>()
+                .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+                    && x.FragmentId == fragmentId && !x.DeleteMark)
+                .FirstAsync(ct);
+            if (snap == null)
+                continue;
+
+            if (snap.StabilityState == IrStabilityStates.Locked)
+                continue;
+
+            snap.StabilityState = IrStabilityStates.InProgress;
+            snap.LastEventId = evt.Id;
+            snap.UpdatedAt = evt.CreatedAt;
+            await _db.Updateable(snap).ExecuteCommandAsync(ct);
+            last = snap;
+        }
+
+        return last;
+    }
+
     private async Task<AiIrFragmentSnapshotEntity?> InvalidateFragmentAsync(AiIrEventEntity evt, CancellationToken ct)
     {
         var fragmentId = evt.FragmentId ?? throw new InvalidOperationException("FragmentInvalidated 缺少 fragmentId");
@@ -399,6 +428,29 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
                 && stepsEl.ValueKind == JsonValueKind.Array)
             {
                 return stepsEl.EnumerateArray()
+                    .Select(x => x.GetString())
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Select(x => x!)
+                    .ToList();
+            }
+        }
+        catch
+        {
+            /* ignore */
+        }
+
+        return new List<string>();
+    }
+
+    private static List<string> ParseFragmentIdList(string payload, string propertyName)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(payload);
+            if (doc.RootElement.TryGetProperty(propertyName, out var arr)
+                && arr.ValueKind == JsonValueKind.Array)
+            {
+                return arr.EnumerateArray()
                     .Select(x => x.GetString())
                     .Where(x => !string.IsNullOrWhiteSpace(x))
                     .Select(x => x!)

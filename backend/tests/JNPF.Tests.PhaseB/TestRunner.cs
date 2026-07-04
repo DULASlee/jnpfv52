@@ -97,6 +97,9 @@ public static class TestRunner
 
             await IrPhase5DiffTests.RunAllAsync();
             Pass("P5-B01 IrDiffEngine + fragment diff propagation");
+
+            await IrPhase5BugfixTests.RunAllAsync();
+            Pass("P5-B02 BugfixSkill + AffectedFragmentsMarked");
         }
         catch (Exception ex)
         {

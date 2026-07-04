@@ -33,6 +33,14 @@ public static class IrEventTypes
     public const string DeveloperSkillCompleted = "DeveloperSkillCompleted";
     public const string TestSuiteGenerated = "TestSuiteGenerated";
     public const string TesterSkillCompleted = "TesterSkillCompleted";
+
+    // 阶段五 Bugfix / Deploy 事件
+    public const string BugReported = "BugReported";
+    public const string BugRootCauseLocated = "BugRootCauseLocated";
+    public const string AffectedFragmentsMarked = "AffectedFragmentsMarked";
+    public const string BugFixed = "BugFixed";
+    public const string DeploymentVerified = "DeploymentVerified";
+    public const string DeploymentFailed = "DeploymentFailed";
 }
 
 public static class IrFragmentTypes
@@ -62,6 +70,16 @@ public static class DevelopmentSkillIds
 {
     public const string Developer = "developer-skill";
     public const string Tester = "tester-skill";
+}
+
+public static class BugfixSkillIds
+{
+    public const string Bugfix = "bugfix-skill";
+}
+
+public static class DeploySkillIds
+{
+    public const string Deploy = "deploy-skill";
 }
 
 public static class IrStabilityStates

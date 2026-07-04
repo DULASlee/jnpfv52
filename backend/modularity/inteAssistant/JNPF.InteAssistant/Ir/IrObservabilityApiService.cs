@@ -44,6 +44,7 @@ public class IrObservabilityApiService : IDynamicApiController, ITransient
     private readonly IAnalystAffectedStepsRerunService _rerunService;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IConstraintEngineService _constraintEngine;
+    private readonly IIrDiffEngine _diffEngine;
 
     public IrObservabilityApiService(
         ISqlSugarClient db,
@@ -56,7 +57,8 @@ public class IrObservabilityApiService : IDynamicApiController, ITransient
         IBackgroundTaskRunner taskRunner,
         IAnalystAffectedStepsRerunService rerunService,
         IHttpContextAccessor httpContextAccessor,
-        IConstraintEngineService constraintEngine)
+        IConstraintEngineService constraintEngine,
+        IIrDiffEngine diffEngine)
     {
         _db = db;
         _eventStore = eventStore;
@@ -69,6 +71,24 @@ public class IrObservabilityApiService : IDynamicApiController, ITransient
         _rerunService = rerunService;
         _httpContextAccessor = httpContextAccessor;
         _constraintEngine = constraintEngine;
+        _diffEngine = diffEngine;
+    }
+
+    /// <summary>阶段五 P5-B01 — 两序列点 IR 快照 diff。</summary>
+    [HttpGet("{pipelineId:long}/diff")]
+    public async Task<IrDiffResult> GetDiffAsync(
+        long pipelineId, [FromQuery] int from, [FromQuery] int to, [FromQuery] bool forceUnlock = false)
+    {
+        if (from >= to)
+            throw Oops.Bah("from 须小于 to");
+
+        var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
+        return await _diffEngine.CompareAsync(
+            projectId,
+            tenantId,
+            from,
+            to,
+            new IrDiffOptions { ForceUnlock = forceUnlock, PropagateDownstream = true });
     }
 
     [HttpGet("{pipelineId:long}/events")]
@@ -409,7 +429,13 @@ public class IrObservabilityApiService : IDynamicApiController, ITransient
                     context = "https://schema.jnpf.ai/ir/v1",
                     id = fragmentIdOverride ?? "formPage:phase3-sim",
                     pageName = "LeaveRequestForm",
-                    fields = new[] { new { fieldId = "id", label = "编号", component = "Input" } },
+                    fields = new[]
+                    {
+                        new { fieldId = "id", label = "编号", component = "Input" },
+                        new { fieldId = "reason", label = "请假事由", component = "Textarea" },
+                        new { fieldId = "days", label = "请假天数", component = "InputNumber" },
+                        new { fieldId = "status", label = "状态", component = "Select" },
+                    },
                     stabilityState = IrStabilityStates.Stable,
                 }, JsonOptions),
                 SkillId = DesignSkillIds.UiDesign,
@@ -422,8 +448,8 @@ public class IrObservabilityApiService : IDynamicApiController, ITransient
     {
         var fragmentId = fragmentIdOverride ?? "ddl:phase3-sim";
         var ddl = injectLayerViolation
-            ? "CREATE TABLE [dbo].[T] (F_Id NVARCHAR(50)); ALTER TABLE T ADD CONSTRAINT FK1 FOREIGN KEY (X) REFERENCES [dbo].[UserController];"
-            : "CREATE TABLE [dbo].[OA_LEAVE_REQUEST] (F_Id NVARCHAR(50) PRIMARY KEY, F_Status NVARCHAR(20));";
+            ? "CREATE TABLE [dbo].[T] ([F_Id] NVARCHAR(50)); ALTER TABLE T ADD CONSTRAINT FK1 FOREIGN KEY (X) REFERENCES [dbo].[UserController];"
+            : "CREATE TABLE [dbo].[OA_LEAVE_REQUEST] (\n  [F_Id] NVARCHAR(50) NOT NULL PRIMARY KEY,\n  [F_TenantId] NVARCHAR(50) NOT NULL,\n  [F_Reason] NVARCHAR(500) NULL,\n  [F_Days] INT NOT NULL DEFAULT 1,\n  [F_Status] NVARCHAR(20) NOT NULL DEFAULT N'draft'\n);";
 
         return new AppendIrEventRequest
         {

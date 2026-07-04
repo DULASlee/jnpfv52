@@ -55,10 +55,11 @@ flowchart LR
 
 ### 阶段 2：BugfixSkill 接入（Day3–D4 — 下一包）
 
-- [ ] 2.1 — `IrEventTypes` 增补 `BugReported` / `AffectedFragmentsMarked` / `BugFixed`
-- [ ] 2.2 — `BugfixSkillService.ReasonAsync` 调用 `IIrDiffEngine`
-- [ ] 2.3 — `POST /api/studio/skills/bugfix/{pipelineId}/run`
-- **验收标准：** 字段级 Bug 只 invalidate DDL + IR3；arch/ui 快照 hash 不变（文档 13 §6 D3）
+- [x] 2.1 — `IrEventTypes` 增补 `BugReported` / `AffectedFragmentsMarked` / `BugFixed`
+- [x] 2.2 — `BugfixSkillService.ReasonAsync` 调用 `IIrDiffEngine`
+- [x] 2.3 — `POST /api/studio/skills/bugfix/{pipelineId}/run`
+- [x] 2.4 — `GET /api/studio/ir/{pipelineId}/diff?from=&to=`（Day2 附加）
+- **验收标准：** 字段级 Bug 只 invalidate DDL + IR3；arch/ui 快照 hash 不变（文档 13 §6 D3）✅ PhaseB
 
 ### 阶段 3：DeploySkill（Day5–D6）
 
