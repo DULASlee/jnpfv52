@@ -18,4 +18,10 @@
     <ProjectReference Include="..\..\framework\JNPF\JNPF.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="TemplateRenderSamples\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

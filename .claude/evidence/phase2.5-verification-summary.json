@@ -1,0 +1,48 @@
+{
+  "generatedAt": "2026-07-04T01:55:00+08:00",
+  "strategy": "严格断言 + 保守负载（不跑 4 路完整 Analyst 长链路并行；压测前重启 backend 清 quota）",
+  "results": {
+    "phaseB_unit": { "passed": 20, "failed": 0, "includes": ["TenantPipelineQuotaGuard", "SkillRunGuard"] },
+    "phase2_5_stress": { "passed": 8, "failed": 0, "report": ".claude/evidence/phase2.5-stress-report.json" },
+    "phase2_skills_e2e": {
+      "passed": true,
+      "pipelineId": 138,
+      "saSteps": 9,
+      "analysisCompleted": true,
+      "d11Revise": true,
+      "durationSec": 487,
+      "log": ".claude/evidence/phase2-skills-e2e.log"
+    },
+    "d16_browser": {
+      "passed": true,
+      "switchCount": 10,
+      "screenshot": ".claude/evidence/phase2.5-d16-switch.png",
+      "report": ".claude/evidence/phase2.5-d16-report.json"
+    },
+    "xunit_phase2": {
+      "note": "D14/D11/D1_D7 需 fresh backend；D14 在 quota 满时 skip",
+      "quick_suite": "G2+G15 pass; D14 skip when quota saturated"
+    }
+  },
+  "g1_g8": {
+    "G1_SkillExecutionScope_runId": "PASS",
+    "G2_tenant_quota_429": "PASS (code=429 in JSON body, 3 blocked / 1 ok)",
+    "G3_sa_structured_log": "PASS",
+    "G4_sa_session_isolation": "PASS",
+    "G5_inferred_soft_block": "PARTIAL (ack API 可达; 完整 inferred→stable 需 seeded EventSpec)",
+    "G6_sse_leak_d16": "PASS (10x abort + browser 10x switch)",
+    "G7_ct_cancel": "NOT_RUN (保守跳过; 需手动画布离开页面)",
+    "G8_phase2_regression": "PASS (phase2-skills-e2e 全链路 + D11)"
+  },
+  "fixes_applied_during_test": [
+    "SkillsApiService: 同步 SkillRunGuard + Quota 检查（API 层 code 409/429）",
+    "Phase2SkillsE2ETests: PipelineId PascalCase + JNPF body.code 断言",
+    "scripts/phase2.5-stress-e2e.mjs + phase2.5-d16-browser.mjs 新增"
+  ],
+  "known_limits": [
+    "JNPF 业务错误 HTTP 200 + body.code，非 HTTP 409/429",
+    "Quota/Guard 内存态：压测后需重启 backend 再跑 full E2E",
+    "G2 压测后 D14 xUnit 可能因 quota 满返回 429（已加 skip）",
+    "start-dev.ps1 全 solution build 可能因 .xml 缺失失败，建议 dotnet build JNPF.API.Entry.csproj"
+  ]
+}

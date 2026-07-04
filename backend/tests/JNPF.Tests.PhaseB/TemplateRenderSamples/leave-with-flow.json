@@ -1,0 +1,94 @@
+{
+  "sampleId": "leave-with-flow",
+  "description": "请假 + 工作流 — EnableFlow，含 F_Flow_Id / F_Flow_Task_Id",
+  "templateProfileId": "1-SingleTable",
+  "defaults": {
+    "projectId": "sample-leave-flow",
+    "tenantId": "000000",
+    "nameSpace": "OaLeave",
+    "className": "LeaveRequest",
+    "busName": "请假审批",
+    "tableName": "OA_LEAVE_REQUEST",
+    "webType": 2,
+    "type": 1,
+    "enableFlow": true,
+    "isTenantColumn": true,
+    "primaryKeyPolicy": 1
+  },
+  "fragments": [
+    {
+      "fragmentId": "skeleton:leave-flow",
+      "fragmentType": "IR0_Skeleton",
+      "stabilityState": "stable",
+      "payload": {
+        "entityDrafts": [
+          { "entityName": "LeaveRequest", "tableName": "OA_LEAVE_REQUEST" }
+        ],
+        "businessEvents": [
+          { "eventId": "BE-FLOW", "eventName": "LeaveRequestSubmitted", "complexityHint": "workflow" }
+        ]
+      }
+    },
+    {
+      "fragmentId": "architecture:leave-flow",
+      "fragmentType": "IR2_Architecture",
+      "stabilityState": "stable",
+      "payload": {
+        "modules": [{ "name": "OaLeave", "layer": "application" }],
+        "stabilityState": "stable"
+      }
+    },
+    {
+      "fragmentId": "ddl:leave-flow",
+      "fragmentType": "IR2_DDL",
+      "stabilityState": "stable",
+      "payload": {
+        "tableNames": ["OA_LEAVE_REQUEST"],
+        "ddl": "CREATE TABLE [dbo].[OA_LEAVE_REQUEST] (\n  [F_Id] NVARCHAR(50) NOT NULL PRIMARY KEY,\n  [F_TenantId] NVARCHAR(50) NOT NULL,\n  [F_Reason] NVARCHAR(500) NULL,\n  [F_Days] INT NOT NULL,\n  [F_Status] NVARCHAR(20) NOT NULL,\n  [F_Flow_Id] NVARCHAR(50) NULL,\n  [F_Flow_Task_Id] NVARCHAR(50) NULL\n);",
+        "stabilityState": "stable"
+      }
+    },
+    {
+      "fragmentId": "formPage:leave-flow",
+      "fragmentType": "IR2_FormPageIR",
+      "stabilityState": "stable",
+      "payload": {
+        "pageName": "LeaveRequestFlowForm",
+        "fields": [
+          { "fieldId": "reason", "label": "请假事由", "component": "Textarea" },
+          { "fieldId": "days", "label": "天数", "component": "InputNumber" },
+          { "fieldId": "status", "label": "审批状态", "component": "Select" }
+        ],
+        "stabilityState": "stable"
+      }
+    },
+    {
+      "fragmentId": "systemDesign:leave-flow",
+      "fragmentType": "IR2_SystemDesign",
+      "stabilityState": "locked",
+      "payload": {
+        "context": "https://schema.jnpf.ai/ir/v1",
+        "id": "systemDesign:leave-flow",
+        "stabilityState": "locked",
+        "stateMachines": [
+          {
+            "machineId": "LeaveApprovalFlow",
+            "entityRef": "LeaveRequest",
+            "statusField": "Status",
+            "states": [
+              { "stateId": "draft", "label": "草稿", "isTerminal": false },
+              { "stateId": "pending", "label": "审批中", "isTerminal": false },
+              { "stateId": "approved", "label": "已通过", "isTerminal": true },
+              { "stateId": "rejected", "label": "已拒绝", "isTerminal": true }
+            ],
+            "transitions": [
+              { "from": "draft", "to": "pending", "event": "Submit" },
+              { "from": "pending", "to": "approved", "event": "Approve" },
+              { "from": "pending", "to": "rejected", "event": "Reject" }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

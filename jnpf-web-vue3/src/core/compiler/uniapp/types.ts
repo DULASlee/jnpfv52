@@ -84,7 +84,7 @@ export interface ExpressionIR {
   type: string;
   params: string[];
   body: string;
-  level: "empty" | "simple" | "medium" | "complex";
+  level: 'empty' | 'simple' | 'medium' | 'complex';
   isAsync: boolean;
   originalCode: string;
 }
@@ -100,7 +100,7 @@ export interface ListConfigIR {
 }
 
 export interface FormPageIR {
-  type: "form";
+  type: 'form';
   id: string;
   name: string;
   config?: Record<string, unknown>;

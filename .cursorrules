@@ -1,0 +1,92 @@
+# JNPF v5.2 — Cursor 项目规范缓存
+# 目的：减少每轮对话重复描述技术栈；细则以 CLAUDE.md / .cursor/rules/*.mdc 为准
+
+## 项目身份
+
+JNPF v5.2 低代码平台全栈 monorepo：**.NET 8 + SqlSugar + Dapper + IDynamicApiController** 后端，**Vue3 + Ant Design Vue + Vite + pnpm** PC 前端。
+
+| 组件 | 路径 | 端口 |
+|------|------|------|
+| 后端 API | `backend/application/JNPF.API.Entry` | :5000 |
+| PC 前端 | `jnpf-web-vue3/` | :3100 |
+| 数据大屏 | `jnpf-web-datascreen/` | :8100 |
+| 移动端 | `jnpf-app-vue3/` | :3800 |
+| SA 编排 | `sa-service/` | :3001 |
+
+**唯一启动入口**（禁止直接 `npm run dev` / `dotnet run`）：
+```powershell
+powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1
+```
+
+默认账号：`admin` / `123456` · API 文档：`http://localhost:5000/newapi`
+
+## 架构红线（违反即系统损坏）
+
+1. **禁止手写 Controller** — Service 实现 `IDynamicApiController` 自动映射 API
+2. **统一响应** — `RESTfulResult<T>` 自动包装；业务异常 `Oops.Bah()`，系统 `Oops.Oh()`；HTTP 600 = JWT 过期
+3. **JNPF 业务码** — 常为 HTTP 200 + `json.code`（409/429 在 body，非 status）
+4. **生成代码边界** — 模板输出 bug → 改 `.vm` 源码，不改生成物
+5. **多租户** — SqlSugar 查询必须激活 `ITenantFilter`；原生 SQL 必须参数化
+6. **模块边界** — OA 禁用勿改；IoT/MES 不存在勿 scaffold
+7. **SSE/定时器** — `setTimeout`/`EventSource`/`WebSocket` 必须 clear + 重连上限；SSE URL 用 `buildEventSourceUrl()` + `?token=`
+
+## 分层与调用链
+
+```
+application/JNPF.API.Entry → modularity/*/*Service (IDynamicApiController)
+  → framework/ (DynamicApi, DI, JWT) → SqlSugar/Dapper → SQL Server
+```
+
+- 表名：`UPPER_SNAKE` + 模块前缀（`BASE_USER`、`FLOW_TASK`）
+- 初始化 DDL：`backend/web/jnpf_sundial_init.sql`；增量：`modularity/inteAssistant/Migrations/`
+- Studio / IR / Skill：`backend/modularity/inteAssistant/JNPF.InteAssistant/`
+
+## 常用命令
+
+| 操作 | 命令 | 目录 |
+|------|------|------|
+| 后端编译 | `dotnet build application/JNPF.API.Entry/JNPF.API.Entry.csproj` | `backend/` |
+| 后端测试 | `dotnet test backend/zx_lowcode_netcore.sln` | 根目录 |
+| 前端 lint | `pnpm lint` | `jnpf-web-vue3/` |
+| 前端类型检查 | `pnpm type-check` | `jnpf-web-vue3/` |
+| API 登录 Token | `node scripts/lib/jnpf-auth.mjs --json` | 根目录 |
+| Phase2 E2E | `node scripts/phase2-skills-e2e.mjs` | 根目录 |
+
+包管理：**前端 pnpm 8.x** · **后端 NuGet**（`backend/nuget.config` 华为镜像）
+
+## 工具链职责（勿混用）
+
+| 工具 | 职责 |
+|------|------|
+| **OpenSpec** `openspec/specs/` | 知识库归档；禁止 `/opsx:apply` 驱动编码 |
+| **Superpowers** `.cursor/skills/` | 开发主流程（plan → execute → verify） |
+| **Serena MCP** | C# 符号级 rename/find-refs；不写前端 |
+| **episodic-memory** | 跨会话 WHY；编码前先 search |
+
+编码前查阅：`openspec/specs/README.md` → 相关 spec · `docs/progress-registry.yaml` 当前阶段
+
+## AI 原生全链条进度（2026-07）
+
+| 阶段 | 文档 | 状态 |
+|------|------|------|
+| 阶段一 W1-W2 | `docs/AI原生开发/.../8、` | ✅ IR 基础设施 |
+| 阶段二 W3-W4 | `docs/AI原生开发/.../9、` | 主干完成，DoD 收口中 |
+| Phase 2.5 | `docs/AI原生开发/.../10、` | 运行时加固 |
+| **阶段三 W5-W6** | `docs/AI原生开发/.../11、` | **当前推进** — 设计四 Skill + LLM Budget Guard |
+
+阶段三 Day1 阻塞项：`SkillLlmBudgetGuard` → `DesignSkillOrchestrator` → architect/db/ui/system-design Skill
+
+## 编码偏好
+
+- 最小 diff，复用现有抽象（`SkillHarness`、`IBaseSkill`、`IrEventStoreService`）
+- 注释只解释非 obvious 业务逻辑
+- 用户未要求时不主动 git commit
+- 回复使用**简体中文**
+- 浏览器 E2E 验收需 Playwright 截图至 `.claude/evidence/`（前端实质性变更）
+
+## 深度文档索引
+
+- 总规则：`CLAUDE.md` · 精简版：`AGENTS.md`
+- Cursor 规则：`.cursor/rules/*.mdc`（alwaysApply）
+- 技能：`.cursor/skills/`（项目版为唯一权威）
+- Git 铁律：先 commit+push 再切分支（见 `git-workflow.mdc`）

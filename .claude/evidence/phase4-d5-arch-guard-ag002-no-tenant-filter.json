@@ -1,0 +1,13 @@
+{
+  "profile": "ag002-no-tenant-filter",
+  "pass": true,
+  "exitCode": 0,
+  "timestamp": "2026-07-04T07:27:17.062Z",
+  "assertions": {
+    "orchestratorAborted": true,
+    "archViolationDetected": true,
+    "testSuiteGenerated": false,
+    "abortPhase": "ArchAbort"
+  },
+  "stdoutTail": "[Phase4-Q2] ArchGuard violation profiles passed (1).\r\n"
+}

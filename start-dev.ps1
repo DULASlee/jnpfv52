@@ -1,5 +1,6 @@
-# start-dev.ps1 v2.1 — JNPF v5.2 dev environment launcher
+# start-dev.ps1 v2.3 — JNPF v5.2 dev environment launcher
 # Encoding: UTF-8 with BOM (PowerShell 5.1 requirement)
+# v2.3: build API Entry 项目（非全 solution），避免 MSB3030 *.xml 并行复制竞态
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
@@ -40,17 +41,18 @@ Write-Host "[2/5] Cleaning zombie processes..." -ForegroundColor Yellow
 $zombies = 0
 $zombieFreedMB = 0
 
-# Zombie MSBuild nodes: dotnet processes not listening on any port
-Get-Process -Name 'dotnet' -ErrorAction SilentlyContinue | ForEach-Object {
-    $pid = $_.Id
-    $port = Get-NetTCPConnection -OwningProcess $pid -State Listen -ErrorAction SilentlyContinue
-    if (-not $port) {
-        $mb = [math]::Round($_.WorkingSet64 / 1MB, 0)
-        $zombieFreedMB += $mb
-        Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
-        $zombies++
+# MSBuild worker nodes only — do NOT kill all dotnet.exe (breaks IDE / dotnet run)
+Get-CimInstance Win32_Process -Filter "Name = 'dotnet.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -match 'MSBuild|VBCSCompiler' } |
+    ForEach-Object {
+        $proc = Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue
+        if ($proc) {
+            $mb = [math]::Round($proc.WorkingSet64 / 1MB, 0)
+            $zombieFreedMB += $mb
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            $zombies++
+        }
     }
-}
 
 # Old Chrome instances (Playwright test leftovers)
 Get-Process -Name 'chrome' -ErrorAction SilentlyContinue | ForEach-Object {
@@ -78,39 +80,54 @@ Write-Host "[3/5] Starting backend API..." -ForegroundColor Yellow
 
 $backendDir = Join-Path $root 'backend'
 $backendProject = 'application/JNPF.API.Entry/JNPF.API.Entry.csproj'
+$backendProjectPath = Join-Path $backendDir $backendProject
 
 # Restore packages only if obj directory is missing
 $objDir = Join-Path $backendDir 'application/JNPF.API.Entry/obj'
 if (-not (Test-Path $objDir)) {
     Write-Host "  First run: restoring NuGet packages..."
-    dotnet restore (Join-Path $backendDir $backendProject) --verbosity quiet
+    dotnet restore $backendProjectPath --verbosity quiet
+}
+
+Write-Host "  Building backend API Entry (not full solution)..."
+dotnet build $backendProjectPath -v q /nologo
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  Backend build failed — see errors above" -ForegroundColor Red
+    exit 1
 }
 
 Start-Process powershell -ArgumentList (
     '-NoExit', '-Command',
-    "cd '$backendDir'; dotnet run --project '$backendProject' --urls 'http://0.0.0.0:5000'"
+    "cd '$backendDir'; dotnet run --project '$backendProject' --no-build --urls 'http://0.0.0.0:5000'"
 ) -PassThru | Out-Null
 
 # Wait for backend to become ready
 Write-Host "  Waiting for backend :5000..."
+$backendReady = $false
 $timeout = 120
 for ($i = 0; $i -lt $timeout; $i++) {
     try {
         $resp = Invoke-WebRequest -Uri 'http://localhost:5000' -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
         if ($resp.StatusCode -eq 200 -or $resp.StatusCode -eq 403) {
             Write-Host "  Backend ready (${i}s)" -ForegroundColor Green
+            $backendReady = $true
             break
         }
     } catch {
-        if ($_.Exception.Response.StatusCode -eq 403) {
+        $statusCode = $null
+        if ($_.Exception.Response) {
+            $statusCode = [int]$_.Exception.Response.StatusCode
+        }
+        if ($statusCode -eq 403) {
             Write-Host "  Backend ready (${i}s, 403 = JWT middleware OK)" -ForegroundColor Green
+            $backendReady = $true
             break
         }
     }
-    if ($i -eq ($timeout - 1)) {
-        Write-Host "  Backend startup timed out (${timeout}s)" -ForegroundColor Red
-    }
     Start-Sleep -Seconds 1
+}
+if (-not $backendReady) {
+    Write-Host "  Backend startup timed out (${timeout}s) — check the backend window for errors" -ForegroundColor Red
 }
 
 # ================================================================
@@ -133,47 +150,38 @@ Write-Host ""
 Write-Host "[5/5] Starting frontend Vite..." -ForegroundColor Yellow
 
 $frontendDir = Join-Path $root 'jnpf-web-vue3'
+
+# Clear stale Vite dep cache (fixes 504 Outdated Optimize Dep / dynamic import failures)
+$viteCache = Join-Path $frontendDir 'node_modules\.vite'
+if (Test-Path $viteCache) {
+    Write-Host "  Clearing Vite optimize cache..."
+    Remove-Item -Recurse -Force $viteCache -ErrorAction SilentlyContinue
+}
+
 Start-Process powershell -ArgumentList (
     '-NoExit', '-Command',
-    "cd '$frontendDir'; Write-Host 'Vite starting...'; `$env:NODE_OPTIONS='--max-old-space-size=2048'; npx vite --mode development"
+    "cd '$frontendDir'; Write-Host 'Vite starting (fresh deps)...'; pnpm dev -- --force"
 )
 
-# Memory guard: restart Vite if node exceeds 2GB
-$memGuard = {
-    $limit = 2GB
-    $frontendDir = $using:frontendDir
-    while ($true) {
-        Start-Sleep -Seconds 30
-        $conn = Get-NetTCPConnection -LocalPort 3100 -State Listen -ErrorAction SilentlyContinue
-        if (-not $conn) { continue }
-        $proc = Get-Process -Id $conn.OwningProcess -ErrorAction SilentlyContinue
-        if ($proc -and $proc.WorkingSet64 -gt $limit) {
-            $gb = [math]::Round($proc.WorkingSet64 / 1GB, 1)
-            Write-Host "$(Get-Date -Format 'HH:mm:ss') node PID $($proc.Id) memory ${gb}GB > 2GB, restarting Vite..." -ForegroundColor Red
-            Stop-Process -Id $proc.Id -Force
-            Start-Sleep -Seconds 2
-            Set-Location $frontendDir
-            $env:NODE_OPTIONS = '--max-old-space-size=2048'
-            Start-Process npx -ArgumentList 'vite','--mode','development' -WindowStyle Minimized
-        }
-    }
-}
-Start-Job -ScriptBlock $memGuard -Name 'Vite-MemGuard' | Out-Null
+# 注：已移除 Vite-MemGuard 后台 Job——它在不清理 .vite 缓存的情况下重启 Vite，
+# 会导致浏览器仍请求旧 dep hash 而报 504 Outdated Optimize Dep。
 
 # Wait for frontend to become ready
 Write-Host "  Waiting for frontend :3100..."
-for ($i = 0; $i -lt 30; $i++) {
+$frontendReady = $false
+for ($i = 0; $i -lt 60; $i++) {
     try {
-        $resp = Invoke-WebRequest -Uri 'http://localhost:3100' -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
+        $resp = Invoke-WebRequest -Uri 'http://localhost:3100' -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
         if ($resp.StatusCode -eq 200) {
             Write-Host "  Frontend ready (${i}s)" -ForegroundColor Green
+            $frontendReady = $true
             break
         }
     } catch {}
-    if ($i -eq 29) {
-        Write-Host "  Frontend startup timed out (30s)" -ForegroundColor Red
-    }
     Start-Sleep -Seconds 1
+}
+if (-not $frontendReady) {
+    Write-Host "  Frontend startup timed out (60s) — check the Vite window (first start may take longer)" -ForegroundColor Yellow
 }
 
 # ================================================================

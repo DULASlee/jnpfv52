@@ -1,3 +1,10 @@
+# Windows reserved names
+nul
+
+# Codegen sandbox (NuGet packages are large and ephemeral)
+workspace/codegen-sandbox/.nuget/
+workspace/codegen-sandbox/.restore-complete
+
 # .NET / MSBuild
 .vs
 logs
@@ -25,6 +32,7 @@ docs/token.txt
 
 # Cursor / toolchain
 .cursor/logs/
+scripts/.jnpf-session.json
 .cursor/episodic/sync-status.json
 .cursor/edge-debug-profile/
 .env.toolchain

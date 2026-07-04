@@ -78,4 +78,16 @@ public class AiCallLogEntity : TenantCLDSEntityBase
     /// </summary>
     [SugarColumn(ColumnName = "F_FALLBACK_REASON")]
     public string? FallbackReason { get; set; }
+
+    /// <summary>Skill Run ID（阶段三 P3-L03）</summary>
+    [SugarColumn(ColumnName = "F_RunId", IsNullable = true)]
+    public string? RunId { get; set; }
+
+    /// <summary>Skill ID（阶段三 P3-L03）</summary>
+    [SugarColumn(ColumnName = "F_SkillId", IsNullable = true)]
+    public string? SkillId { get; set; }
+
+    /// <summary>项目 ID（阶段三 P3-L03）</summary>
+    [SugarColumn(ColumnName = "F_ProjectId", IsNullable = true)]
+    public string? ProjectId { get; set; }
 }

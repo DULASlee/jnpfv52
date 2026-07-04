@@ -1,0 +1,134 @@
+{
+  "phase": "phase3",
+  "passed": 9,
+  "total": 9,
+  "skipped": 9,
+  "results": [
+    {
+      "id": "D10",
+      "pass": true,
+      "detail": "design/run without IR-1 → status=200 code=400",
+      "pipelineId": 186,
+      "at": "2026-07-04T04:20:21.541Z"
+    },
+    {
+      "id": "D1",
+      "pass": true,
+      "detail": "design/run ok=true, ir1Stable=true",
+      "pipelineId": 187,
+      "at": "2026-07-04T04:20:21.682Z"
+    },
+    {
+      "id": "D6",
+      "pass": true,
+      "detail": "run=completed, SystemDesignLocked=true",
+      "pipelineId": 188,
+      "at": "2026-07-04T04:20:22.702Z"
+    },
+    {
+      "id": "D7",
+      "pass": true,
+      "detail": "critical=2, C-001=true, event=true",
+      "pipelineId": 189,
+      "at": "2026-07-04T04:20:22.839Z"
+    },
+    {
+      "id": "D13",
+      "pass": true,
+      "detail": "run=failed, locked=false, err=FormPageIR 片段未 stable",
+      "pipelineId": 190,
+      "at": "2026-07-04T04:20:23.779Z"
+    },
+    {
+      "id": "API-BUDGET",
+      "pass": true,
+      "detail": "budget=500000, consumed=0, canRun=true",
+      "pipelineId": 191,
+      "at": "2026-07-04T04:20:23.844Z"
+    },
+    {
+      "id": "IR2-SNAPSHOTS",
+      "pass": true,
+      "detail": "arch=true, ddl=true, ui=true",
+      "pipelineId": 192,
+      "at": "2026-07-04T04:20:23.953Z"
+    },
+    {
+      "id": "D15",
+      "pass": true,
+      "detail": "code=429, data.code=LLM_BUDGET_EXHAUSTED",
+      "pipelineId": 193,
+      "at": "2026-07-04T04:20:24.152Z"
+    },
+    {
+      "id": "D19",
+      "pass": true,
+      "detail": "ai_skill_llm_policy analyst MaxLlmCalls=0",
+      "at": "2026-07-04T04:20:24.207Z"
+    },
+    {
+      "id": "D8",
+      "pass": true,
+      "detail": "双租户隔离需第二租户账号，手工验收",
+      "skip": true,
+      "at": "2026-07-04T04:20:24.208Z"
+    },
+    {
+      "id": "D9",
+      "pass": true,
+      "detail": "手工低代码平台零影响，需人工回归",
+      "skip": true,
+      "at": "2026-07-04T04:20:24.208Z"
+    },
+    {
+      "id": "D11",
+      "pass": true,
+      "detail": "Serilog 结构化日志需查服务端日志文件",
+      "skip": true,
+      "at": "2026-07-04T04:20:24.208Z"
+    },
+    {
+      "id": "D12",
+      "pass": true,
+      "detail": "同租户 4 pipeline 并行需 phase2.5-stress-e2e",
+      "skip": true,
+      "at": "2026-07-04T04:20:24.208Z"
+    },
+    {
+      "id": "D14",
+      "pass": true,
+      "detail": "前端内存泄漏需 Playwright phase2.5-d16-browser",
+      "skip": true,
+      "at": "2026-07-04T04:20:24.208Z"
+    },
+    {
+      "id": "D16",
+      "pass": true,
+      "detail": "Skill maxCalls 需 architect ToT 第 4 次调用场景",
+      "skip": true,
+      "at": "2026-07-04T04:20:24.208Z"
+    },
+    {
+      "id": "D17",
+      "pass": true,
+      "detail": "maxTokensPerCall 需查 BASE_AI_CALL_LOG",
+      "skip": true,
+      "at": "2026-07-04T04:20:24.208Z"
+    },
+    {
+      "id": "D18",
+      "pass": true,
+      "detail": "token 累加需跑完 design 后 SQL 对账",
+      "skip": true,
+      "at": "2026-07-04T04:20:24.208Z"
+    },
+    {
+      "id": "D20",
+      "pass": true,
+      "detail": "见阶段三文档 §7 扩展项",
+      "skip": true,
+      "at": "2026-07-04T04:20:24.208Z"
+    }
+  ],
+  "at": "2026-07-04T04:20:24.208Z"
+}

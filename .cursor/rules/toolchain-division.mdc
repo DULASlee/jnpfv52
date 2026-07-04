@@ -10,6 +10,7 @@ alwaysApply: true
 | **OpenSpec** | **知识库**（`openspec/specs/` 归档真相；changes 草稿 → archive） |
 | **Superpowers** | **开发推进**（brainstorming → writing-plans → executing-plans → verification） |
 | **Serena** | **C# 符号级改动**（find_symbol / rename_symbol / replace_symbol_body） |
+| **jnpf-api-cli** | **无浏览器 API 自动测试闭环**（`scripts/jnpf-api.mjs`） |
 | **Cursor 内置** | 读写文件、Grep、Shell、`dotnet build/run` |
 | **episodic-memory** | 跨会话 WHY（hooks 自动 sync + Agent 自动 search，详见 `episodic-memory-automation.mdc`） |
 
@@ -23,6 +24,7 @@ alwaysApply: true
 - 施工包：`writing-plans` → `docs/架构迭代/` 或 `docs/architecture/`
 - 执行：`executing-plans` / `subagent-driven-development`
 - 质量：`test-driven-development` · `systematic-debugging` · `verification-before-completion`
+- **API 自动测试：** `jnpf-api-cli` → `scripts/lib/jnpf-auth.mjs` · 常驻规则 `auto-test-fix-loop.mdc`
 
 ### 技能加载机制
 

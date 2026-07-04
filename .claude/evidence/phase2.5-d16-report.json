@@ -1,0 +1,23 @@
+{
+  "switchCount": 10,
+  "pipelineIds": [
+    197,
+    198,
+    199
+  ],
+  "consoleErrors": [
+    "WebSocket connection to 'ws://localhost:5000/api/message/websocket/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOiIzNDkwNTc0MDcyMDk1NDEiLCJBY2NvdW50IjoiYWRtaW4iLCJVc2VyTmFtZSI6IueuoeeQhuWRmCIsIkFkbWluaXN0cmF0b3IiOjEsIlRlbmFudElkIjoiMCIsIk9ubGluZVRpY2tldCI6bnVsbCwiWnhTeXN0ZW1JZCI6Im1haW5TeXN0ZW0iLCJpYXQiOjE3ODMxMzk0MjIsIm5iZiI6MTc4MzEzOTQyMiwiZXhwIjoxNzgzMTkzNDIyLCJpc3MiOiJiYW9iYWJ0ZWNoIiwiYXVkIjoiYmFvYmFidGVjaCJ9.P8_aomaac-kd2QW0l_tTTKtXl9SL9xYu_25z0nS7zds' failed: Error during WebSocket handshake: Unexpected response code: 403",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "WebSocket connection to 'ws://localhost:5000/api/message/websocket/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOiIzNDkwNTc0MDcyMDk1NDEiLCJBY2NvdW50IjoiYWRtaW4iLCJVc2VyTmFtZSI6IueuoeeQhuWRmCIsIkFkbWluaXN0cmF0b3IiOjEsIlRlbmFudElkIjoiMCIsIk9ubGluZVRpY2tldCI6bnVsbCwiWnhTeXN0ZW1JZCI6Im1haW5TeXN0ZW0iLCJpYXQiOjE3ODMxMzk0MjIsIm5iZiI6MTc4MzEzOTQyMiwiZXhwIjoxNzgzMTkzNDIyLCJpc3MiOiJiYW9iYWJ0ZWNoIiwiYXVkIjoiYmFvYmFidGVjaCJ9.P8_aomaac-kd2QW0l_tTTKtXl9SL9xYu_25z0nS7zds' failed: Error during WebSocket handshake: Unexpected response code: 403",
+    "WebSocket connection to 'ws://localhost:5000/api/message/websocket/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOiIzNDkwNTc0MDcyMDk1NDEiLCJBY2NvdW50IjoiYWRtaW4iLCJVc2VyTmFtZSI6IueuoeeQhuWRmCIsIkFkbWluaXN0cmF0b3IiOjEsIlRlbmFudElkIjoiMCIsIk9ubGluZVRpY2tldCI6bnVsbCwiWnhTeXN0ZW1JZCI6Im1haW5TeXN0ZW0iLCJpYXQiOjE3ODMxMzk0MjIsIm5iZiI6MTc4MzEzOTQyMiwiZXhwIjoxNzgzMTkzNDIyLCJpc3MiOiJiYW9iYWJ0ZWNoIiwiYXVkIjoiYmFvYmFidGVjaCJ9.P8_aomaac-kd2QW0l_tTTKtXl9SL9xYu_25z0nS7zds' failed: Error during WebSocket handshake: Unexpected response code: 403",
+    "WebSocket connection to 'ws://localhost:5000/api/message/websocket/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOiIzNDkwNTc0MDcyMDk1NDEiLCJBY2NvdW50IjoiYWRtaW4iLCJVc2VyTmFtZSI6IueuoeeQhuWRmCIsIkFkbWluaXN0cmF0b3IiOjEsIlRlbmFudElkIjoiMCIsIk9ubGluZVRpY2tldCI6bnVsbCwiWnhTeXN0ZW1JZCI6Im1haW5TeXN0ZW0iLCJpYXQiOjE3ODMxMzk0MjIsIm5iZiI6MTc4MzEzOTQyMiwiZXhwIjoxNzgzMTkzNDIyLCJpc3MiOiJiYW9iYWJ0ZWNoIiwiYXVkIjoiYmFvYmFidGVjaCJ9.P8_aomaac-kd2QW0l_tTTKtXl9SL9xYu_25z0nS7zds' failed: Error during WebSocket handshake: Unexpected response code: 403",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "WebSocket connection to 'ws://localhost:5000/api/message/websocket/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOiIzNDkwNTc0MDcyMDk1NDEiLCJBY2NvdW50IjoiYWRtaW4iLCJVc2VyTmFtZSI6IueuoeeQhuWRmCIsIkFkbWluaXN0cmF0b3IiOjEsIlRlbmFudElkIjoiMCIsIk9ubGluZVRpY2tldCI6bnVsbCwiWnhTeXN0ZW1JZCI6Im1haW5TeXN0ZW0iLCJpYXQiOjE3ODMxMzk0MjIsIm5iZiI6MTc4MzEzOTQyMiwiZXhwIjoxNzgzMTkzNDIyLCJpc3MiOiJiYW9iYWJ0ZWNoIiwiYXVkIjoiYmFvYmFidGVjaCJ9.P8_aomaac-kd2QW0l_tTTKtXl9SL9xYu_25z0nS7zds' failed: Error during WebSocket handshake: Unexpected response code: 403",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "WebSocket connection to 'ws://localhost:5000/api/message/websocket/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VySWQiOiIzNDkwNTc0MDcyMDk1NDEiLCJBY2NvdW50IjoiYWRtaW4iLCJVc2VyTmFtZSI6IueuoeeQhuWRmCIsIkFkbWluaXN0cmF0b3IiOjEsIlRlbmFudElkIjoiMCIsIk9ubGluZVRpY2tldCI6bnVsbCwiWnhTeXN0ZW1JZCI6Im1haW5TeXN0ZW0iLCJpYXQiOjE3ODMxMzk0MjIsIm5iZiI6MTc4MzEzOTQyMiwiZXhwIjoxNzgzMTkzNDIyLCJpc3MiOiJiYW9iYWJ0ZWNoIiwiYXVkIjoiYmFvYmFidGVjaCJ9.P8_aomaac-kd2QW0l_tTTKtXl9SL9xYu_25z0nS7zds' failed: Error during WebSocket handshake: Unexpected response code: 403",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: net::ERR_INSUFFICIENT_RESOURCES"
+  ],
+  "pass": true,
+  "at": "2026-07-04T04:30:40.953Z"
+}

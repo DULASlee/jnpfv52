@@ -132,7 +132,16 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
       esbuildOptions: {
         target: 'es2020',
       },
-      include: ['vue', 'vue-router', 'pinia', 'ant-design-vue'],
+      include: [
+        'vue',
+        'vue-router',
+        'pinia',
+        'ant-design-vue',
+        // 预构建 locale，避免 zh_CN.ts 动态 import 触发 504 Outdated Optimize Dep
+        'ant-design-vue/es/locale/zh_CN',
+        'ant-design-vue/es/locale/en_US',
+        'ant-design-vue/es/locale/zh_TW',
+      ],
     },
   };
 };

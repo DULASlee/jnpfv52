@@ -15,12 +15,66 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 | 场景 | 错误做法 | 正确做法 |
 |---|---|---|
 | 前端无响应 | 读 .vue 源码分析数据流，反复改代码试错 | Playwright `page.on('response')` 抓 SSE 响应体，看实际返回 |
-| API 异常 | 读 Controller 源码猜路由/参数 | 浏览器 Network 面板看请求 URL、状态码、响应体 |
+| API 异常 | 读 Controller 源码猜路由/参数 | `node scripts/jnpf-api.mjs GET/POST <path>` 看实际 URL、状态码、响应体 |
 | 数据错误 | 读 SQL 拼装逻辑 | 看 SqlSugar `ToSql()` 输出的实际 SQL |
-| Token/认证失败 | 读 `getToken()` 源码 | console.log 输出 token 实际值 + JWT payload 解码 |
+| Token/认证失败 | 读 `getToken()` 源码 | `node scripts/lib/jnpf-auth.mjs --json` 看 token + JWT payload |
 | 编译通过但功能异常 | 再改源码再编译 | 在数据流边界加诊断日志，观察实际输入输出 |
 
 **排除步骤**：当一个问题耗时超过 10 分钟仍未解决，MUST 停止修改源码，切换到数据采集模式——在数据链路的关键节点采集实际值，追踪到哪个节点的输出偏离预期。修复那个节点，而非下游节点。**猜 3 次不行就停手抓数据，不要再猜第 4 次。**
+
+---
+
+## 🔄 自动测试 · 自动修复闭环（Dev-Deploy-Debug Loop）
+
+> **常驻规则：** Cursor → `.cursor/rules/auto-test-fix-loop.mdc`（`alwaysApply`）· Claude → 本节 + `.claude/skills/jnpf-api-cli/SKILL.md`
+
+**目标：** Agent 自动循环「编码 → 编译 → HTTP 断言 → 失败则修复 → 重跑」，**不依赖手点浏览器登录**（与业界 AI 低代码平台 Python 脚本模式一致）。
+
+### 标准闭环（每次改代码后）
+
+```
+1. 编译/类型
+   cd backend && dotnet build
+   cd jnpf-web-vue3 && pnpm type-check    # 若改前端
+
+2. 登录冒烟（Token 缓存 scripts/.jnpf-session.json）
+   node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser
+
+3. 领域 E2E（按模块）
+   node scripts/phase2-skills-e2e.mjs           # 阶段二 Skills/IR
+   dotnet test --filter Phase2SkillsE2E           # xUnit 等价
+
+4. FAIL → systematic-debugging → 读响应体/exit code → 修代码 → 回到 1（≤3 轮）
+5. PASS → 可声称该层验证通过
+6. 若改动了前端 UI → 补 Playwright 截图（.claude/evidence/）
+```
+
+### 工具链
+
+| 文件 | 用途 |
+|------|------|
+| `scripts/lib/jnpf-auth.mjs` | 核心库：MD5+AES 登录、Token 缓存、`apiRequest`、`pick()`（PascalCase 兼容） |
+| `scripts/jnpf-api.mjs` | CLI：`node scripts/jnpf-api.mjs GET\|POST <path> [body]` |
+| `scripts/jnpf_auth.py` | Python 版（`pip install requests pycryptodome`） |
+| `scripts/phase2-skills-e2e.mjs` | 阶段二全链路 HTTP E2E |
+| `scripts/README-api-cli.md` | 完整说明 |
+
+### 登录协议（与 PC 前端一致）
+
+```
+明文密码 → MD5(hex) → AES-128-ECB(App.json AesKey) → hex
+POST /api/oauth/Login  (application/x-www-form-urlencoded)
+Header: jnpf-origin: pc
+```
+
+环境变量：`JNPF_API_URL`（默认 `http://localhost:5000`）· `JNPF_ACCOUNT` · `JNPF_PASSWORD` · `JNPF_CIPHER_KEY`
+
+### 禁止
+
+- ❌ `/api/auth/login`（不存在）
+- ❌ 手点浏览器做 API 冒烟
+- ❌ 仅 `dotnet build` 通过就声称 Skill/IR 功能完成
+- ❌ 测试失败时不读 HTTP 响应体就改源码
 
 ---
 
@@ -35,8 +89,11 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 | S3 | Bug/异常强制调试协议 | 任何编译错误/运行时异常/测试失败 | `superpowers:systematic-debugging` |
 | S4 | 响应前检查技能 | 每条用户消息到达时 | `superpowers:using-superpowers` |
 | S5 | **数据驱动调试——禁止看源码猜测** | 同一问题修改 ≥3 次仍无效 / 耗时超 10 分钟无进展 / 编译通过但与预期行为不一致 | `/data-driven-debug` |
+| S6 | **无浏览器 API 自动测试** | 后端/API/Skill/IR 验证、需 Token 调接口、Dev-Deploy-Debug 循环 | `jnpf-api-cli` → `scripts/jnpf-api.mjs` |
 
 **违反任一 = Supreme Iron Law 验收不通过。无例外。**
+
+> S6：**禁止手点浏览器登录。** 用 `node scripts/lib/jnpf-auth.mjs` 或 `python scripts/jnpf_auth.py` 拿 Token，再 `node scripts/jnpf-api.mjs` 调接口。详见下方「自动测试·自动修复闭环」。
 
 > S5 自检：每当你准备"再改一下试试"、脑中出现"可能是 X 的问题，先改了再说"、或已经为同一个 bug 改了 2 次——STOP。调用 `/data-driven-debug`，抓运行时数据，让数据告诉你根因。
 
@@ -50,9 +107,9 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 
 ## ⬛ Supreme Iron Law — 战略对齐（最高层级，凌驾所有规则）
 
-> **浏览器端到端操作是唯一验收标准。**
+> **双轨验收：** 日常 Dev Loop 用 **无浏览器 API 脚本**；**前端 UI 变更 / 阶段交付** 用 Playwright 浏览器证据。
 >
-> 任何功能、修复、重构 MUST 产出浏览器端到端验证证据，否则一律判定为**未通过验收**。
+> 后端/API/Skill 任务：**禁止**以「没开浏览器」跳过验证——MUST 跑 `jnpf-api.mjs` 或领域 E2E 脚本。
 
 ### 硬性证据要求（三项缺一不可）
 
@@ -68,7 +125,7 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 
 | 无效声称 | 为什么无效 |
 |---|---|
-| "API 返回 200" | 非浏览器证据，服务器响应 ≠ 用户看到的 |
+| "API 返回 200"（无脚本输出/无 Playwright） | 口头声称不可审计；后端任务须附 `jnpf-api.mjs` 或 E2E 脚本 exit 0 输出 |
 | "编译 0 error" | 非浏览器证据，语法正确 ≠ 功能正确 |
 | "单元测试全绿" | 非浏览器证据，隔离测试 ≠ 集成可用 |
 | "理论上应该可以" | 非实际观察，推测 ≠ 验证 |
@@ -272,7 +329,8 @@ workspace/_completed/{任务名}-{YYYYMMDD-HHmm}/
 - **SP: `test-driven-development`** — 新逻辑
 - Rule: `testing.md` → 具体命令
 - Skill: `start-dev` → 启动环境
-- Skill: `playwright` → 浏览器 E2E (E1/E2/E3)
+- **Skill: `jnpf-api-cli`** → 无浏览器 Token + API 断言（**后端/API 主路径，S6 铁律**）
+- Skill: `playwright` → 浏览器 E2E (E1/E2/E3)（**仅前端 UI 变更 / 阶段交付**）
 - **调试纪律触发：** 遇 bug → `/trace-bug` 或 SP: `systematic-debugging`；>10min / ≥3次失败 → `/data-driven-debug`
 
 ### Phase 6: Review（审查 — max 3 cycles）
@@ -368,7 +426,8 @@ cd backend && dotnet build
 
 | 工具 | 角色 | 编码？ |
 |---|---|---|
-| superpowers skill set | 日常开发（**MANDATORY** — 违反 S1-S4 = 验收不通过） | ✅ |
+| superpowers skill set | 日常开发（**MANDATORY** — 违反 S1-S6 = 验收不通过） | ✅ |
+| **jnpf-api-cli** | 无浏览器登录 + API 自动测试闭环 | ✅（Shell） |
 | Serena | C# 符号级 rename/find-refs | ✅ |
 | OpenSpec | 知识库 | ❌ |
 | episodic-memory | 跨会话上下文 | ❌ |
@@ -385,6 +444,7 @@ cd backend && dotnet build
 | **任何编码任务（架构约束）** | `.claude/rules/architecture-redlines.md` |
 | 写后端 C# 代码 | `.claude/rules/jnpf-expert-traps.md` + `.claude/rules/sql-safety.md` |
 | 写前端 Vue3 代码 | `.claude/rules/jnpf-frontend-rules.md` |
+| **后端/API/Skill/IR 验证 · Dev Loop** | `.claude/skills/jnpf-api-cli/SKILL.md` + `scripts/jnpf-api.mjs`（**禁止手点浏览器登录**） |
 | 前端实质性变更 / 需 E2E 验证 | `.claude/skills/playwright/SKILL.md`（产出 E1 截图证据） |
 | 写 SSE / EventSource / WebSocket / setTimeout | `.claude/rules/frontend-memory-leak.md` |
 | 修改自定义页面视觉样式（非生成） | `.claude/skills/jnpf-ui-enhance/SKILL.md` |
@@ -442,6 +502,8 @@ cd backend && dotnet build
 | 命令 | 用途 |
 |---|---|
 | `/start-dev` | 一键启动开发环境 |
+| `node scripts/jnpf-api.mjs` | 无浏览器 Token 调任意 API |
+| `node scripts/phase2-skills-e2e.mjs` | 阶段二 HTTP E2E |
 | `/pre-commit` | 提交前检查 |
 | `/security-review` | 安全审查 |
 | `/spec` | 查询 OpenSpec 知识库 |

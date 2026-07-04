@@ -8,6 +8,7 @@ using JNPF.DependencyInjection;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Interfaces;
+using JNPF.InteAssistant.Llm;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SqlSugar;
@@ -811,6 +812,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
     {
         try
         {
+            var audit = LlmCallAuditContext.CurrentAudit;
             var log = new AiCallLogEntity
             {
                 Model = $"{provider}/{model}",
@@ -818,6 +820,11 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
                 ResponseBody = responseBody.Length > 4000 ? responseBody[..4000] : responseBody,
                 LatencyMs = latencyMs,
                 StatusCode = statusCode,
+                PromptTokens = tokensIn > 0 ? tokensIn : null,
+                CompletionTokens = tokensOut > 0 ? tokensOut : null,
+                RunId = audit?.RunId,
+                SkillId = audit?.SkillId,
+                ProjectId = audit?.ProjectId,
                 // GAP-3: 降级审计字段
                 Fallback = fallback,
                 OriginalModel = originalModel,
@@ -825,6 +832,9 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
                 FallbackReason = fallbackReason?.Length > 200 ? fallbackReason[..200] : fallbackReason,
             };
             log.Create();
+
+            if (audit != null && !string.IsNullOrEmpty(audit.TenantId))
+                log.TenantId = audit.TenantId;
 
             await _logRepository.AsInsertable(log)
                 .IgnoreColumns(ignoreNullColumn: true)

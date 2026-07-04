@@ -61,23 +61,32 @@ page.on('response', async (resp) => {
 | localStorage | `page.evaluate(() => localStorage.getItem('KEY'))` |
 | JS 变量值 | `page.evaluate(() => someGlobalVar)` |
 
-### 后端：HTTP 直连验证
+### 后端：HTTP 直连验证（首选 jnpf-api-cli）
 
-```bash
-# 绕过前端，直接测 API——排除前端干扰
-curl -s -X POST http://localhost:5000/api/oauth/Login \
-  -H "Content-Type: application/json" \
-  -d '{"account":"admin","password":"123456","grant_type":"password"}'
+```powershell
+# 推荐：统一 auth 库（MD5+AES 登录 + Token 缓存）
+node scripts/lib/jnpf-auth.mjs --json
+node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser
+node scripts/jnpf-api.mjs GET /api/studio/ir/42/events
 
-# 带 token 测试需要认证的端点
-curl -s http://localhost:5000/api/studio/pipeline/execute/42/events \
-  -H "Authorization: Bearer <token>" \
-  -H "Accept: text/event-stream"
+# Python 等价
+python scripts/jnpf_auth.py login
+python scripts/jnpf_auth.py GET /api/studio/ir/42/events
+```
+
+```javascript
+// Agent 脚本内
+import { login, apiRequest, isJnpfOk, jnpfData, pick } from './scripts/lib/jnpf-auth.mjs';
+const res = await apiRequest('GET', '/api/studio/ir/42/events');
 ```
 
 | 采集点 | 方法 |
 |---|---|
-| API 响应状态+体 | `curl -s -w "%{http_code}" -o /dev/null URL` |
+| API 响应状态+体 | `node scripts/jnpf-api.mjs GET <path>` 或 `apiRequest()` |
+| 登录 Token | `node scripts/lib/jnpf-auth.mjs --json` |
+| SSE 事件流 | `apiRequest` + 轮询 events API，或 Playwright `page.on('response')` |
+
+**禁止：** 使用 `/api/auth/login`；JSON body 直传明文密码。详见 `scripts/README-api-cli.md`。
 | SSE 流内容 | `curl -N -H "Accept: text/event-stream" URL` |
 | 后端日志 | 控制台输出 / Serilog 文件 |
 

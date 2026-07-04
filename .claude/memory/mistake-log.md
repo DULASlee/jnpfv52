@@ -28,6 +28,13 @@
 - **规则**：改了 if/switch/guard → 所有分支全测
 - **日期**：2026-06-26 | **关键词**：`三路径`, `正向/异常/缺失`
 
+### M032 | import type 导入运行时值 → ReferenceError
+
+- **症状**：IrObservatoryPanel IR-3 Tab 不渲染，Console 报 `ReferenceError: IR3_RELEVANT_EVENT_TYPES is not defined`
+- **根因**：`useIrObservatory.ts:11` 将 `IR3_RELEVANT_EVENT_TYPES` 和 `IR3_FRAGMENT_TYPES` 放在 `import type` 块中。`import type` 在编译时被擦除，运行时无法访问这些常量。而代码在 `new Set(IR3_RELEVANT_EVENT_TYPES)` 和 `IR3_FRAGMENT_TYPES.includes()` 中将它们作为运行时值使用
+- **修复**：将两个常量从 `import type { ... }` 移到独立的 `import { ... }` 语句
+- **日期**：2026-07-04 | **关键词**：`import type`, `ReferenceError`, `运行时值`, `类型擦除`, `Vite`
+
 ### M031 | Prompt 审计：凭感觉不逐条对照
 
 - **症状**：论断纪律改版后用户亲自对照 spec 发现缺了两条核心规则

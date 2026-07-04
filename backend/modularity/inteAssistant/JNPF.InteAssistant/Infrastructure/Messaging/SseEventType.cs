@@ -29,4 +29,16 @@ public static class SseEventType
 
     /// <summary>错误</summary>
     public const string Error = "error";
+
+    /// <summary>IR 事件写入（阶段一）</summary>
+    public const string IrEvent = "ir_event";
+
+    /// <summary>IR 片段投影更新（阶段一）</summary>
+    public const string FragmentUpdated = "fragment_updated";
+
+    /// <summary>Skill 执行进度（阶段二）</summary>
+    public const string SkillProgress = "skill_progress";
+
+    /// <summary>需求分析完成（阶段二）</summary>
+    public const string AnalysisCompleted = "analysis_completed";
 }

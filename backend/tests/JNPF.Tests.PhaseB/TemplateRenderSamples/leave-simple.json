@@ -1,0 +1,96 @@
+{
+  "sampleId": "leave-simple",
+  "description": "单表请假 MVP — 4 业务字段 + 租户列，无流程",
+  "templateProfileId": "1-SingleTable",
+  "defaults": {
+    "projectId": "sample-leave-simple",
+    "tenantId": "000000",
+    "nameSpace": "OaLeave",
+    "className": "LeaveRequest",
+    "busName": "请假申请",
+    "tableName": "OA_LEAVE_REQUEST",
+    "webType": 2,
+    "type": 1,
+    "enableFlow": false,
+    "isTenantColumn": true,
+    "primaryKeyPolicy": 1
+  },
+  "fragments": [
+    {
+      "fragmentId": "skeleton:leave-simple",
+      "fragmentType": "IR0_Skeleton",
+      "stabilityState": "stable",
+      "payload": {
+        "context": "https://schema.jnpf.ai/ir/v1",
+        "id": "skeleton:leave-simple",
+        "skeletonId": "SK-LEAVE-SIMPLE",
+        "entityDrafts": [
+          {
+            "entityName": "LeaveRequest",
+            "tableName": "OA_LEAVE_REQUEST",
+            "fields": []
+          }
+        ],
+        "businessEvents": [
+          {
+            "eventId": "BE-001",
+            "eventName": "LeaveRequestSubmitted",
+            "complexityHint": "simple"
+          }
+        ]
+      }
+    },
+    {
+      "fragmentId": "architecture:leave-simple",
+      "fragmentType": "IR2_Architecture",
+      "stabilityState": "stable",
+      "payload": {
+        "context": "https://schema.jnpf.ai/ir/v1",
+        "id": "architecture:leave-simple",
+        "pattern": "layered",
+        "modules": [{ "name": "OaLeave", "layer": "application" }],
+        "stabilityState": "stable"
+      }
+    },
+    {
+      "fragmentId": "ddl:leave-simple",
+      "fragmentType": "IR2_DDL",
+      "stabilityState": "stable",
+      "payload": {
+        "context": "https://schema.jnpf.ai/ir/v1",
+        "id": "ddl:leave-simple",
+        "dialect": "sqlserver",
+        "tableNames": ["OA_LEAVE_REQUEST"],
+        "ddl": "CREATE TABLE [dbo].[OA_LEAVE_REQUEST] (\n  [F_Id] NVARCHAR(50) NOT NULL PRIMARY KEY,\n  [F_TenantId] NVARCHAR(50) NOT NULL,\n  [F_Reason] NVARCHAR(500) NULL,\n  [F_Days] INT NOT NULL DEFAULT 1,\n  [F_Status] NVARCHAR(20) NOT NULL DEFAULT N'draft'\n);",
+        "stabilityState": "stable"
+      }
+    },
+    {
+      "fragmentId": "formPage:leave-simple",
+      "fragmentType": "IR2_FormPageIR",
+      "stabilityState": "stable",
+      "payload": {
+        "context": "https://schema.jnpf.ai/ir/v1",
+        "id": "formPage:leave-simple",
+        "pageName": "LeaveRequestForm",
+        "fields": [
+          { "fieldId": "id", "label": "编号", "component": "Input" },
+          { "fieldId": "reason", "label": "请假事由", "component": "Textarea" },
+          { "fieldId": "days", "label": "请假天数", "component": "InputNumber" },
+          { "fieldId": "status", "label": "状态", "component": "Select" }
+        ],
+        "stabilityState": "stable"
+      }
+    },
+    {
+      "fragmentId": "systemDesign:leave-simple",
+      "fragmentType": "IR2_SystemDesign",
+      "stabilityState": "locked",
+      "payload": {
+        "context": "https://schema.jnpf.ai/ir/v1",
+        "id": "systemDesign:leave-simple",
+        "stabilityState": "locked"
+      }
+    }
+  ]
+}

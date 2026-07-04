@@ -75,8 +75,19 @@ NO TASK IS COMPLETE WITHOUT RUNNING THE ACTUAL TEST COMMAND
 |---|---|---|---|
 | 后端（JNPF.API.Entry） | `dotnet build` | `dotnet build -c Release` | 修改 .cs 文件后 |
 | 前端（jnpf-web-vue3） | `vue-tsc --noEmit` | `pnpm run build` | 修改 .vue/.ts 文件后 |
+| **后端 API / Skill / IR** | `node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser` + 领域 E2E 脚本 | `dotnet test --filter *E2E*` | 修改 inteAssistant/Studio API 后 |
 | DataV（jnpf-web-datascreen） | `vue-tsc --noEmit` | `pnpm run build` | 仅当被修改时 |
 | UniApp（jnpf-app-vue3） | `vue-tsc --noEmit` | `pnpm run build` | 仅当被修改时 |
+
+**API 验证主路径（禁止手点浏览器登录）：**
+
+```powershell
+node scripts/lib/jnpf-auth.mjs --json
+node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser
+node scripts/phase2-skills-e2e.mjs          # 阶段二示例
+```
+
+详见 `scripts/README-api-cli.md` · `.cursor/rules/auto-test-fix-loop.mdc` · `.claude/skills/jnpf-api-cli/SKILL.md`
 
 **日常开发用快速验证（type-check / build），发布前跑完整 build。**
 

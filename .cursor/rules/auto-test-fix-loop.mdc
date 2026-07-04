@@ -1,0 +1,97 @@
+---
+description: 开发-测试-自动修复闭环。禁止手点浏览器登录；用 scripts/jnpf-api-cli 无浏览器 Token 调 API。所有 AI 模型常驻遵循。
+alwaysApply: true
+---
+
+# 自动测试 · 自动修复闭环（Dev-Deploy-Debug Loop）
+
+> **目标：** Agent 像其他 AI 低代码平台一样，用脚本 + Token 自动跑通开发→验证→修复循环，**禁止**依赖手点浏览器登录。
+
+## 铁律
+
+| # | 规则 |
+|---|------|
+| L1 | **禁止**手点浏览器做登录/API 冒烟——用 `scripts/lib/jnpf-auth.mjs` 或 `scripts/jnpf_auth.py` |
+| L2 | **禁止**使用 `/api/auth/login`（不存在）；正确端点 `POST /api/oauth/Login` |
+| L3 | 改代码后 **MUST** 跑验证命令，不得凭「应该可以」声称完成 |
+| L4 | 测试失败 → `systematic-debugging` → 修复 → **重跑同一命令**（最多 3 轮） |
+| L5 | ≥3 次修复无效 / >10min 无进展 → `/data-driven-debug`，抓运行时 JSON/SQL，停止盲改 |
+
+## 双轨验收
+
+| 场景 | 验收工具 | 是否开浏览器 |
+|------|----------|--------------|
+| 日常 Dev Loop（后端/API/Skill/IR） | `jnpf-api.mjs` + 领域 E2E 脚本 + `dotnet test` | ❌ |
+| 编译/类型 | `dotnet build` · `pnpm type-check` | ❌ |
+| 前端 UI 变更 · 阶段交付 · guard-finish | Playwright 截图 → `.claude/evidence/` | ✅（仅此时） |
+
+**后端/API 任务不得以「没开浏览器」为借口跳过验证。**
+
+## 标准闭环（每次编码后）
+
+```
+1. 编译/类型检查
+   cd backend && dotnet build
+   cd jnpf-web-vue3 && pnpm type-check   # 若改前端
+
+2. 服务存活（403 也视为在跑）
+   node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser
+
+3. 领域 E2E（按模块选脚本）
+   node scripts/phase2-skills-e2e.mjs     # 阶段二 Skills/IR
+   dotnet test --filter Phase2SkillsE2E   # xUnit 等价
+
+4. FAIL → 读 stderr/响应体 → 定位节点 → 改代码 → 回到 1（≤3 轮）
+5. PASS → 可声称该层验证通过
+```
+
+## 一键命令
+
+```powershell
+# Token（缓存 scripts/.jnpf-session.json）
+node scripts/lib/jnpf-auth.mjs --json
+
+# 任意 API
+node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser
+node scripts/jnpf-api.mjs POST /api/studio/skills/pm/{id}/run "{}"
+
+# Python 等价：pip install requests pycryptodome
+python scripts/jnpf_auth.py login
+python scripts/jnpf_auth.py GET /api/studio/ir/42/events
+```
+
+## Agent 脚本内复用
+
+```javascript
+import { login, apiRequest, isJnpfOk, jnpfData, pick } from './scripts/lib/jnpf-auth.mjs';
+const { token } = await login();
+const res = await apiRequest('GET', '/api/studio/ir/42/events');
+// 响应可能是 PascalCase：用 pick(obj, 'eventType', 'EventType')
+```
+
+## 登录协议（与 PC 前端一致）
+
+```
+明文密码 → MD5(hex) → AES-128-ECB(App.json AesKey) → hex
+POST /api/oauth/Login  (application/x-www-form-urlencoded)
+Header: jnpf-origin: pc
+环境变量：JNPF_API_URL · JNPF_ACCOUNT · JNPF_PASSWORD · JNPF_CIPHER_KEY
+```
+
+## 技能与文档索引
+
+| 资源 | 路径 |
+|------|------|
+| Cursor 技能 | `.cursor/skills/jnpf-api-cli/SKILL.md` |
+| Claude 技能 | `.claude/skills/jnpf-api-cli/SKILL.md` |
+| 详细说明 | `scripts/README-api-cli.md` |
+| 调试协议 | `.cursor/skills/systematic-debugging/SKILL.md` |
+| 数据驱动 | `.claude/skills/data-driven-debug/SKILL.md` |
+| 完成前验证 | `.cursor/skills/verification-before-completion/SKILL.md` |
+
+## 禁止
+
+- ❌ JSON body 直传明文密码登录
+- ❌ Authorization 重复 `Bearer Bearer`（用库内 `authHeader()`）
+- ❌ 仅 `dotnet build` 通过就声称 API/Skill 功能完成
+- ❌ 测试失败时不读响应体就改源码

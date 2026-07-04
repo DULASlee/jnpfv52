@@ -14,6 +14,7 @@ export interface SARequest {
   eventDescription?: string;         // 单事件描述(可选)
   assetLevel?: 'PROJECT' | 'EVENT' | 'PROCESS';
   userId: string;                    // 触发人
+  runId?: string;                    // C# Skill 透传，用于结构化日志关联
 }
 
 // =====================================================

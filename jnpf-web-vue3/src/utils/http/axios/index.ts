@@ -156,9 +156,7 @@ const transform: AxiosTransform = {
     if ((config as Recordable)?.requestOptions?.withToken !== false) {
       const authHeader = getAuthHeader();
       if (authHeader) {
-        (config as Recordable).headers.Authorization = options.authenticationScheme
-          ? `${options.authenticationScheme} ${getRawToken()}`
-          : authHeader;
+        (config as Recordable).headers.Authorization = options.authenticationScheme ? `${options.authenticationScheme} ${getRawToken()}` : authHeader;
       }
     }
     return config;

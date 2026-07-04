@@ -4,6 +4,7 @@
 
 using Microsoft.AspNetCore.Http;
 using System.Collections.Concurrent;
+using JNPF.Common.Core.MultiTenancy;
 
 namespace JNPF.InteAssistant.Infrastructure.Background;
 
@@ -52,7 +53,7 @@ public sealed class RequestContext
         {
             Scheme = http?.Request?.Scheme ?? "",
             Host = http?.Request?.Host.ToString() ?? "",
-            TenantId = ResolveClaim(accessor, "TenantId"),
+            TenantId = ResolveTenantId(accessor),
             UserId = ResolveClaim(accessor, "UserId"),
             UserName = ResolveClaim(accessor, "UserName")
         };
@@ -62,6 +63,16 @@ public sealed class RequestContext
     /// 从 JWT Claims 安全提取值
     /// 仅捕获 HttpContext == null 的场景，不吞 OOM 等致命异常
     /// </summary>
+    private static string ResolveTenantId(IHttpContextAccessor accessor)
+    {
+        var claim = ResolveClaim(accessor, "TenantId");
+        if (!string.IsNullOrWhiteSpace(claim))
+            return claim;
+
+        var resolved = TenantResolver.Resolve();
+        return resolved >= 0 ? resolved.ToString() : "";
+    }
+
     private static string ResolveClaim(IHttpContextAccessor accessor, string claimType)
     {
         try

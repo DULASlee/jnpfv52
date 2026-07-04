@@ -7,6 +7,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { SAOrchestrator } from './orchestrator/SAOrchestrator';
 import { InMemorySADatabase } from './orchestrator/SADatabase';
 import { ILLMClient, SARequest, SAOutput, SAConfig, DEFAULT_SA_CONFIG } from './orchestrator/orchestrator-types';
+import { logStep } from './lib/structuredLogger';
+import { tenantSessionStore } from './storage/TenantScopedSessionStore';
 
 // ═══════════════════════════════════════════════════════
 // 1. LLM 客户端适配器（桥接后端 ILlmGatewayService）
@@ -57,7 +59,7 @@ class HttpLlmClient implements ILLMClient {
     // authHeader 优先级高于 apiKey（从上游请求透传）
     if (this.authHeader) {
       if (this.apiKey) {
-        console.log('[HttpLlmClient] authHeader 覆盖 apiKey，使用上游鉴权信息');
+        logStep({ level: 'info', message: 'authHeader 覆盖 apiKey，使用上游鉴权信息' });
       }
       headers['Authorization'] = this.authHeader;
     }
@@ -168,6 +170,7 @@ const LLM_MAX_TOKENS = parseInt(process.env.LLM_MAX_TOKENS || '4096', 10);
 const DB_BACKEND = (process.env.SA_DB_BACKEND || 'inmemory').toLowerCase();
 
 const sseManager = new SSEManager();
+setInterval(() => tenantSessionStore.purgeExpired(), 5 * 60 * 1000);
 
 // 运行中的任务追踪
 const runningTasks = new Map<string, {
@@ -190,6 +193,98 @@ app.get('/api/sa/health', (_req, res) => {
     runningTasks: runningTasks.size,
     sseSessions: sseManager.getSessionCount(),
   });
+});
+
+// POST /sa/run-step — 单步 SA（C# 适配层驱动）
+// ═══════════════════════════════════════════════════════
+app.post('/sa/run-step', async (req, res) => {
+  const started = Date.now();
+  try {
+    const {
+      tenantId, projectId, eventId, agentName, irStepName,
+      requirementText, skeleton, previousSteps,
+    } = req.body;
+
+    if (!tenantId || !projectId || !eventId || !agentName) {
+      return res.status(400).json({ error: '缺少 tenantId/projectId/eventId/agentName' });
+    }
+
+    const runId = req.headers['x-skill-run-id'] as string | undefined;
+    const stepName = irStepName || agentName;
+    const sessionKey = tenantSessionStore.buildKey(String(tenantId), String(projectId), String(eventId), stepName);
+    tenantSessionStore.set(sessionKey, {
+      tenantId: String(tenantId),
+      projectId: String(projectId),
+      eventId: String(eventId),
+      stepName,
+      runId,
+      startedAt: started,
+    });
+
+    logStep({
+      level: 'info',
+      runId,
+      tenantId: String(tenantId),
+      projectId: String(projectId),
+      eventId: String(eventId),
+      stepName,
+      message: 'run-step started',
+    });
+
+    const authHeader = req.headers.authorization || '';
+    const llm = new HttpLlmClient(
+      LLM_GATEWAY_URL, LLM_API_KEY, tenantId, authHeader,
+      LLM_PROVIDER, LLM_TEMPERATURE, LLM_MAX_TOKENS,
+    );
+    const db = createDatabase(DB_BACKEND);
+    const validators = {
+      DFDValidator: null, BPMValidator: null, DictValidator: null,
+      LogicValidator: null, CrossEventConsistencyValidator: null,
+      ERValidator: null, STDValidator: null, UIValidator: null,
+    };
+    const orchestrator = new SAOrchestrator(llm, db, validators);
+
+    const output = await orchestrator.runSingleStep({
+      tenantId,
+      projectId: String(projectId),
+      eventId: String(eventId),
+      agentName,
+      irStepName: stepName,
+      requirementText: requirementText || '',
+      skeleton,
+      previousSteps: previousSteps || {},
+      runId,
+    });
+
+    tenantSessionStore.markCompleted(sessionKey);
+    logStep({
+      level: 'info',
+      runId,
+      tenantId: String(tenantId),
+      projectId: String(projectId),
+      eventId: String(eventId),
+      stepName,
+      elapsedMs: Date.now() - started,
+      message: 'run-step completed',
+    });
+
+    res.json({ output, durationMs: Date.now() - started, agentName, irStepName: stepName });
+  } catch (error: any) {
+    logStep({
+      level: 'error',
+      message: error?.message || 'run-step failed',
+      extra: { stack: error?.stack },
+    });
+    res.status(500).json({ error: error.message || 'run-step failed' });
+  }
+});
+
+// Dev only: 查看租户隔离 session keys
+app.get('/sa/debug/sessions', (_req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'not found' });
+  }
+  res.json({ keys: tenantSessionStore.listKeys() });
 });
 
 // ═══════════════════════════════════════════════════════
@@ -287,7 +382,7 @@ app.post('/api/sa/run', async (req, res) => {
       validationStats: result.metadata?.validationStats,
     });
   } catch (error: any) {
-    console.error('[SA Service] runSA 失败:', error);
+    logStep({ level: 'error', message: error?.message || 'runSA failed', extra: { stack: error?.stack } });
     res.status(500).json({
       error: 'SA 流水线执行失败',
       message: error.message,
@@ -334,17 +429,16 @@ app.get('/api/sa/tasks/:taskId', (req, res) => {
 // 启动
 // ═══════════════════════════════════════════════════════
 app.listen(PORT, () => {
-  // 启动校验
   if (!LLM_GATEWAY_URL) {
-    console.error('[SA Service] ⚠️  LLM_GATEWAY_URL 未设置！请配置环境变量后重启。');
+    logStep({ level: 'error', message: 'LLM_GATEWAY_URL 未设置，请配置环境变量后重启' });
   }
   if (DB_BACKEND === 'inmemory') {
-    console.warn('[SA Service] ⚠️  使用 InMemory 数据库（数据重启即丢失）。生产环境请设置 SA_DB_BACKEND=sqlserver');
+    logStep({ level: 'warn', message: '使用 InMemory 数据库（数据重启即丢失）。生产环境请设置 SA_DB_BACKEND=sqlserver' });
   }
-  console.log(`[SA Service] 启动完成 → 端口:${PORT}, DB:${DB_BACKEND}, Provider:${LLM_PROVIDER}`);
-  if (LLM_GATEWAY_URL) {
-    console.log(`[SA Service] LLM Gateway → ${LLM_GATEWAY_URL}`);
-  }
+  logStep({
+    level: 'info',
+    message: `SA Service 启动完成 port=${PORT} db=${DB_BACKEND} provider=${LLM_PROVIDER} gateway=${LLM_GATEWAY_URL || '(unset)'}`,
+  });
 });
 
 // ── DB 工厂 ──

@@ -14,7 +14,7 @@ import {
 import { runWithRetry, RetryResult } from './RetryLoop';
 import { decideSteps, runScopeStep, classifyEvent } from './StepRouter';
 import { DKEEFacade } from '../dkee';
-import { BaseAgent } from './BaseAgent';
+import { logStep } from '../lib/structuredLogger';
 
 // =====================================================
 // 注入的 Validator(从 @your-org/sa-validators 包)
@@ -59,13 +59,95 @@ export class SAOrchestrator {
   }
 
   // ============================================================
+  // 单步执行（C# Analyst Skill 逐步驱动）
+  // ============================================================
+  async runSingleStep(params: {
+    tenantId: string;
+    projectId: string;
+    eventId: string;
+    agentName: string;
+    irStepName: string;
+    requirementText: string;
+    skeleton?: any;
+    previousSteps?: Record<string, any>;
+    runId?: string;
+  }): Promise<any> {
+    const start = Date.now();
+    const ctx: SAContext = {
+      tenantId: params.tenantId,
+      projectId: Number(params.projectId) || 0,
+      requirementId: 0,
+      requirementText: params.requirementText,
+      eventId: Number(params.eventId.replace(/\D/g, '')) || 1,
+      eventDescription: params.eventId,
+      assetLevel: 'EVENT',
+      kgPatterns: [],
+      domainModel: await this.db.getDomainModel('general'),
+      previousSteps: { ...(params.previousSteps || {}), skeleton: params.skeleton },
+      userId: 'analyst-skill',
+      startTime: start,
+      currentEventId: params.eventId,
+    };
+
+    const tableMap: Record<string, string> = {
+      ScopeAgent: 'sa_scope',
+      DFDAgent: 'sa_dfd',
+      BPMAgent: 'sa_business_process',
+      DictAgent: 'sa_data_dictionary',
+      PSpecAgent: 'sa_pspec',
+      DecisionTableAgent: 'sa_decision_table',
+      ERAgent: 'sa_er',
+      StateMachineAgent: 'sa_state_machine',
+      UIAgent: 'sa_ui',
+    };
+
+    const agentName = params.agentName;
+    const tableName = tableMap[agentName] || 'sa_step';
+
+    if (agentName === 'ScopeAgent') {
+      return await runScopeStep(this, ctx);
+    }
+
+    const agent = this.agents.get(agentName);
+    if (!agent) throw new Error(`Agent ${agentName} not found`);
+
+    const output = await runWithRetry<any>(
+      tableName,
+      ctx,
+      this.db,
+      { maxRetries: this.config.maxRetries, retryDelayMs: this.config.retryDelayMs },
+      async () => await agent.generate(ctx),
+      (out) => this.runDefaultValidator(agentName, out, ctx),
+    );
+
+    logStep({
+      level: 'info',
+      runId: params.runId,
+      tenantId: params.tenantId,
+      projectId: params.projectId,
+      eventId: params.eventId,
+      stepName: params.irStepName,
+      elapsedMs: Date.now() - start,
+      message: `${agentName} step completed`,
+    });
+
+    return output.output;
+  }
+
+  // ============================================================
   // 主入口:后端调用（3-Tier 架构：Project → Event → Process）
   // ============================================================
   async runSA(req: SARequest): Promise<SAOutput> {
     const startTime = Date.now();
     const validationStats: any[] = [];
 
-    console.log(`[SA] 开始需求分析: project=${req.projectId} tenant=${req.tenantId}`);
+    logStep({
+      level: 'info',
+      runId: req.runId,
+      tenantId: req.tenantId,
+      projectId: String(req.projectId),
+      message: 'SA run started',
+    });
 
     // 解析 Context(注入 KG 模式 + 领域模型)
     const ctx = await this.resolveContext(req);
@@ -109,7 +191,13 @@ export class SAOrchestrator {
     ctx.previousSteps['stateMachine'] = stateMachine;
     validationStats.push({ step: 'StateMachine', attempts: 1, passed: true });
 
-    console.log(`[SA] Project 级完成: DFD/BPM/Dict/ER/STD 已生成`);
+    logStep({
+      level: 'info',
+      runId: req.runId,
+      tenantId: req.tenantId,
+      projectId: String(req.projectId),
+      message: 'SA project-level steps completed',
+    });
 
     // ═══════════════════════════════════════
     // Phase 2 & 3: EVENT / PROCESS 级（逐事件）
@@ -125,7 +213,14 @@ export class SAOrchestrator {
         ctx.assetLevel = tierDecision.assetLevel;
         ctx.currentEventId = event.id;
 
-        console.log(`[SA] 事件 "${event.name}" → ${tierDecision.assetLevel}: ${tierDecision.reason}`);
+        logStep({
+          level: 'info',
+          runId: req.runId,
+          tenantId: req.tenantId,
+          projectId: String(req.projectId),
+          eventId: event.id,
+          message: `Event "${event.name}" → ${tierDecision.assetLevel}: ${tierDecision.reason}`,
+        });
 
         // PROCESS 级：复杂事件深度推演
         if (tierDecision.assetLevel === 'PROCESS') {
@@ -153,7 +248,14 @@ export class SAOrchestrator {
           validationStats.push({ step: 'UI', attempts: 1, passed: true });
         }
       } catch (e) {
-        console.error(`[SA] 事件 "${event.name}" (id=${event.id}) 处理失败，跳过并继续:`, e);
+        logStep({
+          level: 'error',
+          runId: req.runId,
+          tenantId: req.tenantId,
+          projectId: String(req.projectId),
+          eventId: event.id,
+          message: `Event "${event.name}" failed: ${(e as Error).message}`,
+        });
         validationStats.push({ step: `Event_${event.id}`, attempts: 1, passed: false, error: (e as Error).message });
         // 重置事件级 context 增量字段，避免污染下一个事件
         ctx.previousSteps['pspec'] = undefined;
@@ -170,7 +272,15 @@ export class SAOrchestrator {
     }
 
     const totalDuration = Date.now() - startTime;
-    console.log(`[SA] 完成: ${totalDuration}ms, 步骤统计:`, validationStats);
+    logStep({
+      level: 'info',
+      runId: req.runId,
+      tenantId: req.tenantId,
+      projectId: String(req.projectId),
+      elapsedMs: totalDuration,
+      message: 'SA run completed',
+      extra: { validationStats },
+    });
 
     return {
       projectId: ctx.projectId,

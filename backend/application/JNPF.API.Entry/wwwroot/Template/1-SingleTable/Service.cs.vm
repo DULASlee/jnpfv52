@@ -61,6 +61,7 @@ namespace JNPF.@(Model.NameSpace)@(Model.Type == 3 ? ".WorkFlowForm" : "");
 
 /// <summary>
 /// 业务实现：@(Model.BusName).
+/// R4 多租户：@(Model.ClassName)Entity 实现 ITenantFilter，Repository 查询自动绑定 TenantId。
 /// </summary>
 [ApiDescriptionSettings(Tag = "@(Model.Type == 3 ? Model.NameSpace + "Form" : Model.NameSpace)", Name = "@Model.ClassName", Order = 200)]
 [Route("api/@(Model.Type == 3 ? Model.NameSpace+ "/Form" : Model.NameSpace)/[controller]")]

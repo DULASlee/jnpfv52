@@ -2,5 +2,6 @@
     "specstory.cloudSync.enabled": "never",
     "dotnet.defaultSolution": "disable",
     "dotnet.server.useOmnisharp": false,
-    "csharp.server.useOmnisharp": false
+    "csharp.server.useOmnisharp": false,
+    "git.ignoreLimitWarning": true
 }

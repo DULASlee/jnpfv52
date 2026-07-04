@@ -7,8 +7,14 @@
         <CodeAnalysisRuleSet>$(MSBuildThisFileDirectory)dotnet.ruleset</CodeAnalysisRuleSet>
         <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
         <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- 本地默认不生成 XML 文档：避免 ProjectReference 并行复制 *.xml 触发 MSB3030/NU5026 -->
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
         <NoDefaultExcludes>true</NoDefaultExcludes>
+    </PropertyGroup>
+
+    <!-- CI / Release 门禁：生成 API 文档 + StyleCop/Roslynator（见 CI_BUILD 门控） -->
+    <PropertyGroup Condition="'$(CI_BUILD)' == 'true'">
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
     <!-- 本地开发关闭第三方分析器，CI 通过 CI_BUILD=true 开启 -->
@@ -41,11 +47,11 @@
     </ItemGroup>
 
 
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+	<PropertyGroup Condition="'$(CI_BUILD)' == 'true' And '$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
 		<DocumentationFile>bin\Debug\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
 	</PropertyGroup>
 
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+	<PropertyGroup Condition="'$(CI_BUILD)' == 'true' And '$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
 		<DocumentationFile>bin\Release\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
 	</PropertyGroup>
 </Project>

@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using JNPF.Tests.Gate.Auth;
 using Xunit;
 
 namespace JNPF.Tests.Gate.E2E;
@@ -39,16 +40,7 @@ public class SAGateE2ETests
     /// 获取 Bearer token (admin/123456)
     /// </summary>
     private static async Task<string> GetTokenAsync()
-    {
-        var loginResp = await _client.PostAsJsonAsync("/api/auth/login", new
-        {
-            account = "admin",
-            password = "123456"
-        });
-        loginResp.EnsureSuccessStatusCode();
-        var body = await loginResp.Content.ReadFromJsonAsync<JsonElement>();
-        return body.GetProperty("data").GetProperty("token").GetString() ?? "";
-    }
+        => await JnpfTestAuthHelper.GetTokenAsync(_client);
 
     private void SetAuthHeader(string token)
     {

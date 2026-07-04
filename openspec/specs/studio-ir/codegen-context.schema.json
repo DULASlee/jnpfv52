@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.jnpf.ai/ir/v1/codegen-context",
+  "title": "Ir2CodegenContext",
+  "description": "IR-2 → JNPF .vm TemplateContext 强类型契约（阶段四 A5）",
+  "type": "object",
+  "required": [
+    "projectId",
+    "tenantId",
+    "sampleId",
+    "templateProfileId",
+    "nameSpace",
+    "className",
+    "busName",
+    "originalMainTableName",
+    "tableField"
+  ],
+  "properties": {
+    "projectId": { "type": "string" },
+    "tenantId": { "type": "string" },
+    "sampleId": { "type": "string" },
+    "templateProfileId": {
+      "type": "string",
+      "enum": ["1-SingleTable"],
+      "description": "锁定的模板族 ID"
+    },
+    "nameSpace": { "type": "string" },
+    "className": { "type": "string" },
+    "busName": { "type": "string" },
+    "originalMainTableName": { "type": "string" },
+    "primaryKey": { "type": "string", "default": "Id" },
+    "originalPrimaryKey": { "type": "string", "default": "F_Id" },
+    "primaryKeyPolicy": { "type": "integer", "enum": [1, 2] },
+    "webType": { "type": "integer" },
+    "type": { "type": "integer" },
+    "enableFlow": { "type": "boolean" },
+    "isTenantColumn": { "type": "boolean" },
+    "isLogicalDelete": { "type": "boolean" },
+    "concurrencyLock": { "type": "boolean" },
+    "tableField": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/tableColumn" },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "tableColumn": {
+      "type": "object",
+      "required": ["columnName", "originalColumnName", "netType"],
+      "properties": {
+        "columnName": { "type": "string" },
+        "originalColumnName": { "type": "string", "pattern": "^F_" },
+        "columnComment": { "type": "string" },
+        "netType": { "type": "string" },
+        "primaryKey": { "type": "boolean" },
+        "jnpfKey": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

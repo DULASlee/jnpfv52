@@ -3,6 +3,7 @@ using static JNPF.Tests.PhaseB.StudioWorkspaceHelperTests;
 using static JNPF.Tests.PhaseB.SandboxQueueTests;
 using static JNPF.Tests.PhaseB.SandboxConfigTests;
 using static JNPF.Tests.PhaseB.PreviewResourceCleanupTests;
+using static JNPF.Tests.PhaseB.IrPhase1Tests;
 
 namespace JNPF.Tests.PhaseB;
 
@@ -46,6 +47,53 @@ public static class TestRunner
             // ── 工作区 4: 资源清理逻辑 ──
             await T18_SandboxCreated_FlagSetOnSuccess();
             await T19_SandboxNotCreated_OnExistingSandbox();
+
+            // ── 工作区 5: 阶段一 IR 基础设施 ──
+            await T20_SchemaValidator_RejectsMissingBusinessEvents();
+            await T21_SchemaValidator_AcceptsValidSkeleton();
+            await T22_StabilityGate_TriggersAtNineSteps();
+            await T23_Rebuild_100Events_Under200ms();
+
+            // ── 工作区 6: 阶段二 Skill Harness ──
+            IrPhase2SkillTests.RunAll();
+            Pass("P2 SkillRunGuard + PmSkill smoke");
+
+            // ── 工作区 7: 阶段三 Design Skills + LLM Guard ──
+            IrPhase3Tests.RunAll();
+            Pass("P3 SkillLlmBudgetGuard + DesignSkillIds smoke");
+
+            // ── 工作区 8: 阶段四 A5 TemplateContext + 样本渲染 ──
+            TemplateRenderSamplesTests.RunAll();
+            Pass("A5 Ir2CodegenContext + 3 leave IR-2 render samples");
+
+            TemplateContextBuilderTests.RunAll();
+            Pass("A5 TemplateContextBuilder strict negative tests");
+
+            // ── 工作区 9: 阶段四 D3 sandbox dotnet build ──
+            await CodegenSandboxGateTests.RunAllAsync();
+            Pass("D3 leave-simple sandbox dotnet build");
+
+            // ── 工作区 10: 阶段四 D4 DeveloperSkill ──
+            await IrPhase4DeveloperTests.RunAllAsync();
+            Pass("D4 DeveloperSkillService + CodeGenerated draft");
+
+            await IrPhase4OrchestratorTests.RunAllAsync();
+            Pass("D5 DeveloperSkillOrchestrator + sandbox build chain");
+
+            await IrPhase4ArchGuardTests.RunAllAsync();
+            Pass("D6 ArchGuardService + yaml AG-000～003");
+
+            await IrPhase4PromoteTests.RunAllAsync();
+            Pass("D7 CodeGeneratedStablePromoted + IR3 promote stable");
+
+            await IrPhase4TesterTests.RunAllAsync();
+            Pass("D8 TesterSkillService + TestSuiteGenerated + IR3_TestSuite");
+
+            await IrPhase4ArchGuardQ2Tests.RunAllAsync();
+            Pass("D10 ArchGuard Q2 violation profiles (ag001/ag002)");
+
+            await CodegenHostDemoTests.RunAllAsync();
+            Pass("D11-D12 codegen-host-demo inject (full build: phase4-d11-host-build.mjs)");
         }
         catch (Exception ex)
         {

@@ -1,13 +1,37 @@
 # JNPF V5.2 Progress Registry
 # Canonical reference for all completed milestones and current state.
 
-version: "7.1"
-last_updated: "2026-06-15"
-current_phase: "阶段二（F-6b）启动前"
+version: "8.8"
+last_updated: "2026-07-04"
+current_phase: "阶段四 v2.1 — D14-D16 脚本 ✅；Green path / DoD 待跑通"
 current_focus:
-  - "Sprint 0-C（V7.1 POC-A~F）"
-  - "阶段二 F-6b 3D 数字孪生"
-  - "数据轨 DS-0 预研（35 号）"
+  - "D14 ✅ phase4-green-path.mjs（IR-2 locked → developer → promote + TestSuite）"
+  - "D15-D16 ✅ phase4-dod-verify.mjs（D3/D5/D11/D14/PhaseB/Q4 聚合）"
+  - "运行 node scripts/phase4-dod-verify.mjs exit 0 收口"
+  - "阶段三 §12.1 实习生签字（阻塞 D16 正式归档）"
+
+phase4_schedule:
+  anchor_doc: "docs/AI原生开发/1、多用户多任务并行/12、全链条第四阶段开发计划.md"
+  version: "v2.1"
+  completed:
+    - "D0-D1 A5 Ir2CodegenContext + Hash + PhaseB 23/23"
+    - "D1-D2 A1 codegen-partial-class.md"
+    - "D1-D2 Q1 tester-skill-input.schema.json"
+    - "D2-D3 A2 arch-guard-rules.yaml"
+    - "D3 CodeSandboxService + CodegenWorkspaceWriter + sandbox-gate 25/25"
+    - "D4 DeveloperSkillService + CodeGenerated draft + DeveloperSkillsApiService"
+    - "D5 DeveloperSkillOrchestrator + AbortSkillChainException + IR3 投影"
+    - "D6 ArchGuardService + ArchViolationDetected + Service.cs.vm AG-002 合规"
+    - "D7 CodeGeneratedStablePromoted + IrProjectionEngine promote stable"
+    - "D8 TesterSkillService + TestCaseDeriver + TestSuiteGenerated + Orchestrator tester 链接"
+    - "D10 phase4-d5-arch-guard.mjs + ArchGuardViolationProfiles + ag001/ag002 Q2 模板"
+    - "D11-D12 codegen-host-demo + codegen-inject-host.mjs + phase4-d11-host-build.mjs"
+    - "D13 IrObservatoryPanel IR-3 Tab + useIrObservatory SSE payload hydrate + Ir3SnapshotTab summary"
+    - "D14 phase4-green-path.mjs + scripts/lib/phase4-api.mjs"
+    - "D15-D16 phase4-dod-verify.mjs"
+  current_day: "D16"
+  next_gate: "phase4-dod-verify.mjs exit 0 + G3 签字 + progress-registry 收口"
+  coding_unlock: "D3-GATE + A1 架构师签字 → D4 DeveloperSkill"
 
 canonical_tests:
   frontend_total: 158

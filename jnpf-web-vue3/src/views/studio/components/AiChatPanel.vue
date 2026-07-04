@@ -34,6 +34,17 @@
       </div>
     </div>
 
+    <!-- 交付验证阶段：预览 + 源码包 -->
+    <div v-if="currentStage >= 5 && pipelineId > 0" class="delivery-bar">
+      <span class="delivery-label">交付验证</span>
+      <a-button size="small" type="primary" :loading="deliveryLoading" @click="triggerDeliveryArtifacts">
+        {{ deliveryArtifacts?.previewUrl ? '重新生成交付物' : '生成预览与源码包' }}
+      </a-button>
+      <a-button v-if="deliveryArtifacts?.previewUrl" size="small" @click="openUrl(deliveryArtifacts.previewUrl)"> 打开试用链接 </a-button>
+      <a-button v-if="deliveryArtifacts?.downloadUrl" size="small" @click="openUrl(deliveryArtifacts.downloadUrl)"> 下载源码 ZIP </a-button>
+      <span v-if="deliveryError" class="delivery-error">{{ deliveryError }}</span>
+    </div>
+
     <!-- ====== 中间：对话流（核心区域，占满全部空间） ====== -->
     <div class="chat-stream" ref="chatStreamRef" @scroll="handleScroll">
       <!-- 欢迎界面 -->
@@ -122,6 +133,13 @@
         </div>
       </template>
 
+      <IrSkeletonConfirmCard
+        v-if="showSkeletonConfirm"
+        :visible="showSkeletonConfirm"
+        :payload="skeletonPayload"
+        :confirm-loading="skeletonConfirmLoading"
+        @confirm="handleConfirmSkeleton" />
+
       <!-- AI 正在思考 -->
       <div v-if="loading" class="msg-card ai-card">
         <div class="card-avatar ai-card-avatar">🤖</div>
@@ -179,11 +197,18 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+  import { ref, computed, onMounted, onUnmounted, nextTick, watch, inject } from 'vue';
+  import { IR_OBSERVATORY_KEY } from '../composables/useIrObservatory';
+  import { PM_SKILL_KEY } from '../composables/usePmSkill';
+  import { ANALYST_SKILL_KEY } from '../composables/useAnalystSkill';
+  import { DESIGN_SKILL_KEY } from '../composables/useDesignSkills';
+  import type { SseAnalysisCompletedPayload, SseFragmentUpdatedPayload, SseIrEventPayload, SseSkillProgressPayload } from '../types/ir';
   import { PlusOutlined, SendOutlined, PauseOutlined, UpOutlined, DownOutlined } from '@ant-design/icons-vue';
-  import { message as antMessage } from 'ant-design-vue';
+  import { message as antMessage, Modal } from 'ant-design-vue';
   import { defHttp } from '/@/utils/http/axios';
+  import { getDeliveryPackage, startPreview } from '../api/studio/pipeline';
   import IrPreviewCard from './chat/IrPreviewCard.vue';
+  import IrSkeletonConfirmCard from './ir/IrSkeletonConfirmCard.vue';
   import { buildFetchSseUrl } from '/@/utils/http/sseUrl';
   import { getAuthHeader, getTenantId } from '/@/utils/auth';
   import { marked } from 'marked';
@@ -230,9 +255,41 @@
     }
   }
 
+  function parseSseJsonPayload(raw: unknown): Record<string, any> | null {
+    if (!raw) return null;
+    if (typeof raw === 'string') {
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+    return raw as Record<string, any>;
+  }
+
   // ====== Props / Emits ======
   const props = withDefaults(defineProps<{ pipelineId?: number; initialMessage?: string }>(), { pipelineId: 0, initialMessage: '' });
-  const emit = defineEmits(['pipeline-complete', 'new-chat']);
+  const emit = defineEmits(['pipeline-complete', 'new-chat', 'pipeline-id-change']);
+
+  const irObservatory = inject(IR_OBSERVATORY_KEY, null);
+  const pmSkill = inject(PM_SKILL_KEY, null);
+  const analystSkill = inject(ANALYST_SKILL_KEY, null);
+  const designSkill = inject(DESIGN_SKILL_KEY, null);
+
+  const showSkeletonConfirm = computed(() => pmSkill?.needsConfirmation.value ?? false);
+  const skeletonPayload = computed(() => pmSkill?.skeletonSnapshot.value?.payload);
+  const skeletonConfirmLoading = computed(() => pmSkill?.confirmLoading.value ?? false);
+
+  async function handleConfirmSkeleton(autoRunAnalyst: boolean) {
+    if (!pmSkill) return;
+    try {
+      await pmSkill.confirmAndProceed(autoRunAnalyst);
+      antMessage.success(autoRunAnalyst ? '骨架已确认，Analyst 已启动' : '骨架已确认');
+      await irObservatory?.refreshAll();
+    } catch (e: any) {
+      antMessage.error(e?.response?.data?.msg ?? e?.message ?? '确认失败');
+    }
+  }
 
   // ====== 状态 ======
   const currentStage = ref(1);
@@ -246,6 +303,20 @@
   const selectedStrategy = ref(-1);
   const abortController = ref<AbortController | null>(null);
   const pipelineId = ref(props.pipelineId || 0);
+
+  watch(
+    pipelineId,
+    (id, prevId) => {
+      if (prevId !== undefined && prevId !== id) {
+        abortController.value?.abort();
+        abortController.value = null;
+        loading.value = false;
+      }
+      emit('pipeline-id-change', id);
+    },
+    { immediate: true },
+  );
+
   const chatStreamRef = ref<HTMLElement>();
   const textareaRef = ref();
   const showScrollUp = ref(false);
@@ -260,6 +331,26 @@
     { stage: 4, name: '自动开发', code: 'development', status: 'pending' },
     { stage: 5, name: '交付验证', code: 'delivery', status: 'pending' },
   ]);
+
+  const STAGE_CODE_INDEX: Record<string, number> = {
+    requirement: 1,
+    architecture: 2,
+    design: 3,
+    development: 4,
+    delivery: 5,
+  };
+
+  function stageCodeToNum(code: string | number | undefined): number {
+    if (typeof code === 'number') return code;
+    if (!code) return 1;
+    if (STAGE_CODE_INDEX[code]) return STAGE_CODE_INDEX[code];
+    const n = parseInt(String(code), 10);
+    return Number.isFinite(n) ? n : 1;
+  }
+
+  const deliveryArtifacts = ref<{ previewUrl?: string; downloadUrl?: string; fileName?: string } | null>(null);
+  const deliveryLoading = ref(false);
+  const deliveryError = ref('');
 
   const quickPrompts = ['我需要一个进销存管理系统', '帮我做一个审批工作流平台', '设计一个设备巡检系统', '我想要一个客户管理 CRM'];
 
@@ -302,6 +393,7 @@
   });
 
   onUnmounted(() => {
+    abortController.value?.abort();
     // 释放所有 Blob URL，防止内存泄漏
     for (const url of blobUrls) {
       URL.revokeObjectURL(url);
@@ -322,8 +414,9 @@
     if (!pipelineId.value) return;
     try {
       const res = await defHttp.get({ url: '/api/studio/pipeline/execute/' + pipelineId.value });
-      currentStage.value = res.currentStage || 1;
-      messages.value = (res.messages || []).map((m: any) => ({
+      const data = (res as any)?.data ?? res;
+      currentStage.value = stageCodeToNum(data?.currentStage);
+      messages.value = (data?.messages || []).map((m: any) => ({
         id: m.id || Date.now(),
         role: m.role,
         content: m.content || '',
@@ -337,6 +430,9 @@
       }));
       updateStageStatus();
       scrollToBottom();
+      if (currentStage.value >= 5) {
+        void triggerDeliveryArtifacts(false);
+      }
     } catch (e) {
       console.error('加载状态失败', e);
     }
@@ -452,6 +548,46 @@
                 case 'ir':
                   msg.ir = data.data || data.ir;
                   break;
+                case 'ir_event': {
+                  const irPayload = parseSseJsonPayload(data.data) as SseIrEventPayload | null;
+                  if (irPayload) {
+                    irObservatory?.onIrEvent(irPayload);
+                    irObservatory?.onIr3PipelineEvent(irPayload);
+                    if (irPayload.fragmentType?.startsWith('IR0')) {
+                      msg.ir = irPayload.payloadPreview;
+                    }
+                    if (irPayload.fragmentType?.startsWith('IR2') || irPayload.eventType?.includes('Design')) {
+                      void designSkill?.refreshDesignContext();
+                    }
+                    if (irPayload.eventType === 'ConstraintViolationReported') {
+                      designSkill?.applyConstraintEvent(irPayload.payloadPreview);
+                    }
+                  }
+                  break;
+                }
+                case 'fragment_updated': {
+                  const fragPayload = parseSseJsonPayload(data.data) as SseFragmentUpdatedPayload | null;
+                  if (fragPayload) irObservatory?.onFragmentUpdated(fragPayload);
+                  break;
+                }
+                case 'skill_progress': {
+                  const progress = parseSseJsonPayload(data.data) as SseSkillProgressPayload | null;
+                  if (progress) {
+                    analystSkill?.handleSkillProgress(progress);
+                    designSkill?.handleSkillProgress(progress);
+                  }
+                  break;
+                }
+                case 'analysis_completed': {
+                  const done = parseSseJsonPayload(data.data) as SseAnalysisCompletedPayload | null;
+                  analystSkill?.markAnalysisCompleted();
+                  void designSkill?.refreshDesignContext();
+                  if (done) {
+                    antMessage.success(`需求分析完成：${done.eventSpecCount} 个 EventSpec 已 stable`);
+                    void irObservatory?.refreshAll();
+                  }
+                  break;
+                }
                 case 'stage_complete':
                   msg.stageConfirmable = true;
                   // 从已有内容生成文档下载链接
@@ -578,6 +714,9 @@
         content: '✅ 已进入阶段 ' + currentStage.value + ': ' + stages.value[currentStage.value - 1]?.name,
       });
       scrollToBottom();
+      if (currentStage.value >= 5) {
+        void triggerDeliveryArtifacts(true);
+      }
       sendMessage('请开始阶段 ' + currentStage.value + '：' + stages.value[currentStage.value - 1]?.name);
     } catch (e: any) {
       antMessage.error('确认失败: ' + (e?.message || ''));
@@ -598,13 +737,78 @@
   }
 
   function handleNewChat() {
+    if (pipelineId.value > 0 && messages.value.length > 0) {
+      Modal.confirm({
+        title: '开启新任务？',
+        content: '当前流水线已保存，可在左侧「我的任务」或「已生成系统」中恢复。确定开启新对话？',
+        okText: '开启新任务',
+        cancelText: '取消',
+        onOk: () => resetChat(),
+      });
+      return;
+    }
+    resetChat();
+  }
+
+  function resetChat() {
     pipelineId.value = 0;
     messages.value = [];
     inputText.value = '';
     attachments.value = [];
     currentStage.value = 1;
+    deliveryArtifacts.value = null;
+    deliveryError.value = '';
     updateStageStatus();
     emit('new-chat');
+  }
+
+  async function switchPipeline(id: number) {
+    if (!id || loading.value) return;
+    abortController.value?.abort();
+    abortController.value = null;
+    loading.value = false;
+    pipelineId.value = id;
+    messages.value = [];
+    deliveryArtifacts.value = null;
+    deliveryError.value = '';
+    await loadPipelineState();
+  }
+
+  async function triggerDeliveryArtifacts(showToast = true) {
+    if (!pipelineId.value) return;
+    deliveryLoading.value = true;
+    deliveryError.value = '';
+    try {
+      let previewUrl = '';
+      let downloadUrl = '';
+      let fileName = '';
+      try {
+        const preview = await startPreview(pipelineId.value);
+        const p = (preview as any)?.data ?? preview;
+        previewUrl = p?.previewUrl || '';
+      } catch (e: any) {
+        deliveryError.value = '预览：' + (e?.message || 'generated/ 目录可能为空，需先完成自动开发');
+      }
+      try {
+        const pkg = await getDeliveryPackage(pipelineId.value);
+        const d = (pkg as any)?.data ?? pkg;
+        downloadUrl = d?.downloadUrl || '';
+        fileName = d?.fileName || 'delivery.zip';
+      } catch (e: any) {
+        deliveryError.value = (deliveryError.value ? deliveryError.value + '；' : '') + 'ZIP：' + (e?.message || '打包失败');
+      }
+      if (previewUrl || downloadUrl) {
+        deliveryArtifacts.value = { previewUrl, downloadUrl, fileName };
+        if (showToast) antMessage.success('交付物已生成');
+      }
+    } finally {
+      deliveryLoading.value = false;
+    }
+  }
+
+  function openUrl(url: string) {
+    if (!url) return;
+    window.open(url.startsWith('http') ? url : window.location.origin + url, '_blank');
   }
 
   function handleProviderChange(code: string) {
@@ -638,9 +842,39 @@
     showScrollButtons.value = showScrollUp.value || showScrollDown.value;
     autoScroll.value = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
   }
+
+  defineExpose({
+    pipelineId,
+    currentStage,
+    stages,
+    switchPipeline,
+  });
 </script>
 
 <style scoped lang="less">
+  .delivery-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #f6ffed;
+    border-bottom: 1px solid #b7eb8f;
+    flex-shrink: 0;
+
+    .delivery-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #389e0d;
+    }
+
+    .delivery-error {
+      font-size: 11px;
+      color: #cf1322;
+      flex: 1;
+      min-width: 200px;
+    }
+  }
   .ai-chat-panel {
     display: flex;
     flex-direction: column;

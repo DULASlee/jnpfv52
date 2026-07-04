@@ -48,7 +48,28 @@ Kills stale dotnet/node processes, frees ports 3100+5000, then launches frontend
 
 **CI gate order:** `lint → type-check → test:unit → build`
 
-## Monorepo Layout
+## Auto Test-Fix Loop（无浏览器 — 所有 Agent 必遵）
+
+**禁止手点浏览器登录。** 后端/API/Skill/IR 验证 MUST 用脚本 + Token：
+
+```powershell
+node scripts/lib/jnpf-auth.mjs --json                              # 登录，Token 缓存
+node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser               # 冒烟
+node scripts/phase2-skills-e2e.mjs                                 # 领域 E2E
+python scripts/jnpf_auth.py GET /api/studio/ir/42/events          # Python 等价
+```
+
+**闭环：** 编码 → `dotnet build` → API 脚本 → FAIL 则 `systematic-debugging` 修复 → 重跑（≤3 轮）。
+
+| 场景 | 工具 |
+|------|------|
+| 日常 Dev Loop（后端/API） | `jnpf-api.mjs` + 领域 E2E 脚本 |
+| 前端 UI 交付 | Playwright → `.claude/evidence/` |
+
+常驻规则：`.cursor/rules/auto-test-fix-loop.mdc` · 完整说明：`CLAUDE.md`「自动测试·自动修复闭环」· `scripts/README-api-cli.md`
+
+登录：`POST /api/oauth/Login`（form-urlencoded，MD5+AES）· **不是** `/api/auth/login`
+
 
 ```
 backend/              .NET 8 solution (zx_lowcode_netcore.sln)

@@ -46,7 +46,23 @@ public class GeneratedProjectService : IDynamicApiController, ITransient
         var items = await query.OrderByDescending(p => p.F_ModifyTime ?? p.F_CreatorTime)
             .ToPageListAsync(page, pageSize, total);
 
-        return new { total = total.Value, items };
+        return new
+        {
+            total = total.Value,
+            items = items.Select(p => new
+            {
+                id = p.F_Id,
+                projectName = p.F_ProjectName,
+                description = p.F_Description,
+                currentStage = p.F_CurrentStage,
+                pipelineStatus = p.F_PipelineStatus,
+                sandboxUrl = p.F_SandboxUrl,
+                sourceZipUrl = p.F_SourceZipUrl,
+                createTime = p.F_CreatorTime,
+                updateCount = p.F_UpdateCount,
+                isRead = p.F_IsRead,
+            }).ToList(),
+        };
     }
 
     /// <summary>

@@ -8,18 +8,24 @@ using JNPF.FriendlyException;
 using JNPF.DynamicApiController;
 using JNPF.InteAssistant.Entitys.Common;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
+using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Entity;
+using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Gates;
 using JNPF.InteAssistant.Infrastructure.Background;
 using JNPF.InteAssistant.Infrastructure.Messaging;
 using JNPF.InteAssistant.Infrastructure.Security;
 using JNPF.InteAssistant.Interfaces;
+using JNPF.InteAssistant.Ir;
+using JNPF.InteAssistant.Skills;
+using JNPF.InteAssistant.Studio;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SqlSugar;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
 
 namespace JNPF.InteAssistant;
@@ -44,12 +50,11 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     private readonly ISseSenderFactory _senderFactory;
     private readonly ITenantGuard _tenantGuard;
     private readonly IGatePipeline _gatePipeline;
-
-    /// <summary>
-    /// SSE 事件通道池：按 pipelineId 隔离。/execute 写入 token，/events 读取推送给前端。
-    /// </summary>
-    private static readonly ConcurrentDictionary<long, Channel<SseEvent>> _sseChannels = new();
-    private static readonly ConcurrentDictionary<long, DateTime> _sseLastPush = new();
+    private readonly IPipelineSseChannelHub _sseHub;
+    private readonly IIrEventStoreService _irEventStore;
+    private readonly IGeneratedProjectRegistry _generatedProjectRegistry;
+    private readonly ISkillHarness _skillHarness;
+    private readonly IOptionsMonitor<GatePipelineOptions> _gateOptions;
 
     public AIDevelopmentPipelineService(
         IPipelineEngine pipelineEngine,
@@ -64,7 +69,12 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         IBackgroundTaskRunner taskRunner,
         ISseSenderFactory senderFactory,
         ITenantGuard tenantGuard,
-        IGatePipeline gatePipeline)
+        IGatePipeline gatePipeline,
+        IPipelineSseChannelHub sseHub,
+        IIrEventStoreService irEventStore,
+        IGeneratedProjectRegistry generatedProjectRegistry,
+        ISkillHarness skillHarness,
+        IOptionsMonitor<GatePipelineOptions> gateOptions)
     {
         _pipelineEngine = pipelineEngine;
         _designOrchestrator = designOrchestrator;
@@ -79,6 +89,11 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         _senderFactory = senderFactory;
         _tenantGuard = tenantGuard;
         _gatePipeline = gatePipeline;
+        _sseHub = sseHub;
+        _irEventStore = irEventStore;
+        _generatedProjectRegistry = generatedProjectRegistry;
+        _skillHarness = skillHarness;
+        _gateOptions = gateOptions;
     }
 
     // ─── 创建流水线 ───
@@ -133,6 +148,30 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         // 保存用户需求消息
         await SaveMessageAsync(result.PipelineId.ToString(), PipelineStage.Requirement, "user", requirement);
 
+        // IR：注册 ai_projects + ProjectCreated 事件（pipelineId ≡ projectId）
+        try
+        {
+            await _irEventStore.EnsureProjectAsync(
+                result.PipelineId.ToString(),
+                tenantId.ToString(),
+                name,
+                userId.ToString());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "IR 项目注册失败（表可能未迁移）: PipelineId={Id}", result.PipelineId);
+        }
+
+        try
+        {
+            await _generatedProjectRegistry.UpsertFromPipelineAsync(
+                result.PipelineId, tenantId.ToString(), userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "已生成系统索引同步失败: PipelineId={Id}", result.PipelineId);
+        }
+
         _logger.LogInformation("流水线创建: Id={Id}, Name={Name}", result.PipelineId, name);
         return result;
     }
@@ -181,14 +220,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         }
 
         // Step 2: 创建 SSE 通道
-        if (_sseChannels.TryRemove(pipelineId, out var oldChannel))
-            oldChannel.Writer.TryComplete();
-
-        var channel = Channel.CreateUnbounded<SseEvent>(new UnboundedChannelOptions
-        {
-            SingleReader = true, SingleWriter = true
-        });
-        _sseChannels[pipelineId] = channel;
+        var channel = _sseHub.ReplaceChannel(pipelineId);
 
         // Step 3: 后台异步执行门控 (BackgroundTaskRunner + SSE)
         var ctx = RequestContext.Capture(_httpContextAccessor);
@@ -230,6 +262,20 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                         // 自动流转到 requirement 阶段
                         await _pipelineEngine.ExecuteStageAsync(pipelineId, PipelineStage.Requirement);
                         sse.TrySend("stage_transition", PipelineStage.Requirement);
+
+                        // P2-B14：门控通过后可选自动触发 PM Skill
+                        var autoRunPm = request?.AutoRunPm ?? _gateOptions.CurrentValue.AutoRunPmSkillOnGatePass;
+                        if (autoRunPm)
+                        {
+                            sse.TrySend("pm_skill_started", JsonSerializer.Serialize(new { pipelineId, source = "gate_pass" }));
+                            await _skillHarness.RunAsync(
+                                "pm-skill",
+                                pipelineId,
+                                tenantId.ToString(),
+                                pipelineId.ToString(),
+                                new SkillRunOptions { UserRequirement = gateResult.MergedText ?? userText },
+                                bgCt);
+                        }
                     }
                     else
                     {
@@ -313,15 +359,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         }
 
         // 3. 创建 SSE 通道（替换旧通道，支持重复执行）
-        if (_sseChannels.TryRemove(pipelineId, out var oldChannel))
-            oldChannel.Writer.TryComplete();
-
-        var channel = Channel.CreateUnbounded<SseEvent>(new UnboundedChannelOptions
-        {
-            SingleReader = true,
-            SingleWriter = true
-        });
-        _sseChannels[pipelineId] = channel;
+        var channel = _sseHub.ReplaceChannel(pipelineId);
 
         // 4. 启动后台 LLM 流式任务（BackgroundTaskRunner 自动捕获上下文 + 管理 CTS 生命周期）
         _taskRunner.Run(
@@ -911,7 +949,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         // 最长等待 10 秒（100 × 100ms），覆盖慢 DB 查询
         for (int i = 0; i < 100 && channel == null && !ct.IsCancellationRequested; i++)
         {
-            _sseChannels.TryGetValue(pipelineId, out channel);
+            _sseHub.TryGetChannel(pipelineId, out channel);
             if (channel == null) await Task.Delay(100, ct);
         }
 
@@ -939,7 +977,33 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     public async Task<StageResult> ConfirmStageAsync(
         long stageId, [FromBody] StageConfirmation confirmation)
     {
-        return await _pipelineEngine.ConfirmStageAsync(stageId, confirmation);
+        var result = await _pipelineEngine.ConfirmStageAsync(stageId, confirmation);
+        try
+        {
+            var pipeline = await _db.Queryable<AiPipelineEntity>()
+                .FirstAsync(x => x.Id == stageId.ToString());
+            var tenantId = pipeline?.TenantId ?? TenantResolver.Resolve().ToString();
+
+            await _irEventStore.AppendAsync(stageId.ToString(), tenantId, new AppendIrEventRequest
+            {
+                EventType = IrEventTypes.StageConfirmed,
+                Payload = JsonSerializer.Serialize(new
+                {
+                    pipelineId = stageId,
+                    stageName = result.StageName,
+                    approved = confirmation.Approved,
+                    nextStage = result.StageName,
+                }),
+            });
+
+            var userId = GetUserId();
+            await _generatedProjectRegistry.UpsertFromPipelineAsync(stageId, tenantId, userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "StageConfirmed IR 事件写入失败: PipelineId={Id}", stageId);
+        }
+        return result;
     }
 
     [HttpPost("{pipelineId:long}/rollback")]
@@ -1186,11 +1250,15 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             // 清除 AI 开发上下文（退出 L4 白名单）
             StudioWorkspaceHelper.ClearAiDevContext();
 
+            var downloadUrl = $"/api/file/download?path={Uri.EscapeDataString(zipPath)}";
+
+            await _generatedProjectRegistry.UpdateDeliveryArtifactsAsync(pipelineId, null, downloadUrl);
+
             _logger.LogInformation("交付包已生成: PipelineId={Id}, Path={Path}", pipelineId, zipPath);
 
             return new
             {
-                downloadUrl = $"/api/file/download?path={Uri.EscapeDataString(zipPath)}",
+                downloadUrl,
                 fileName = Path.GetFileName(zipPath),
                 generatedAt = DateTime.Now
             };
@@ -1387,6 +1455,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
             _logger.LogInformation("预览就绪: PipelineId={Id}, Url={Url}", pipelineId, previewUrl);
 
+            await _generatedProjectRegistry.UpdateDeliveryArtifactsAsync(pipelineId, previewUrl, null);
+
             return new { previewUrl, sandboxId, status = "running" };
         }
         catch (Exception ex)
@@ -1428,23 +1498,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     /// 对高频事件类型（queue_position）做 300ms 防抖.
     /// </summary>
     private void PushSseEvent(long pipelineId, string eventType, string data)
-    {
-        // 防抖：300ms 内同一 pipeline 的高频事件只推一次
-        if (eventType is "queue_position" or "sandbox_queued")
-        {
-            if (_sseLastPush.TryGetValue(pipelineId, out var lastPush)
-                && (DateTime.UtcNow - lastPush).TotalMilliseconds < 300)
-            {
-                return;
-            }
-            _sseLastPush[pipelineId] = DateTime.UtcNow;
-        }
-
-        if (_sseChannels.TryGetValue(pipelineId, out var channel))
-        {
-            channel.Writer.TryWrite(new SseEvent(eventType, data));
-        }
-    }
+        => _sseHub.TryPush(pipelineId, eventType, data);
 
     private static string MapStageName(string input)
     {
@@ -1673,4 +1727,7 @@ public record SaGateRequest
 {
     public string UserText { get; init; } = "";
     public string? Provider { get; init; }
+
+    /// <summary>门控通过后自动运行 PM Skill；null 时使用 GatePipeline.json 配置</summary>
+    public bool? AutoRunPm { get; init; }
 }

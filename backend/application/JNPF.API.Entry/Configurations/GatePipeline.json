@@ -11,6 +11,7 @@
     "MinDataEntities": 1,
     "MinFieldsPerEntity": 5,
     "SemanticProvider": "deepseek",
+    "AutoRunPmSkillOnGatePass": true,
     "AllowedExtensions": [
       ".docx", ".doc", ".xlsx", ".xls", ".pdf", ".txt", ".csv", ".md",
       ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"

@@ -18,6 +18,11 @@ public class PipelineSchedulingModule : JnpfModule
 {
     public override void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
+        services.AddHttpClient("SaService", client =>
+        {
+            client.Timeout = TimeSpan.FromMinutes(5);
+        });
+
         // SignalR（提供 IHubContext<PipelineHub>，供 Quartz/Hangfire 任务推送实时事件）
         services.AddSignalR();
 

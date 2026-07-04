@@ -1,0 +1,144 @@
+<h2>认知技能生态系统：8 个 Skills 全局视图</h2>
+<p class="subtitle">从需求分析到 Bug 修复的完整软件开发生命周期</p>
+
+<div class="section">
+  <h3>📐 当前已有基础设施</h3>
+  <div style="background: var(--surface-card); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
+    <p style="margin: 0 0 12px 0;"><strong>已存在的组件：</strong></p>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+      <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 16px; font-size: 13px;">9 SA Agents (后端)</span>
+      <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 16px; font-size: 13px;">6 Frontend Agents</span>
+      <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 16px; font-size: 13px;">IR Model (FormPageIR)</span>
+      <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 16px; font-size: 13px;">LLM Gateway (6 Provider)</span>
+      <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 16px; font-size: 13px;">Pipeline Orchestrator</span>
+      <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 16px; font-size: 13px;">MCP Servers (3)</span>
+      <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 16px; font-size: 13px;">Agent/Skills/MCP UI</span>
+      <span style="background: #e8f5e9; color: #2e7d32; padding: 4px 12px; border-radius: 16px; font-size: 13px;">DKEE 知识引擎</span>
+      <span style="background: #fff3e0; color: #e65100; padding: 4px 12px; border-radius: 16px; font-size: 13px;">sa_skeleton 表(仅设计)</span>
+      <span style="background: #fff3e0; color: #e65100; padding: 4px 12px; border-radius: 16px; font-size: 13px;">sa_event_spec 表(仅设计)</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>🏗️ 8 个 Skills 在 SDLC 中的位置</h3>
+  <div class="mockup">
+    <div class="mockup-header">软件开发生命周期 (SDLC) — Skills 映射</div>
+    <div class="mockup-body">
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px;">
+
+        <!-- Phase 1: 需求分析 -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="background: #1976d2; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 700; min-width: 120px; text-align: center; font-size: 13px;">Phase 1<br>需求分析</div>
+          <div style="display: flex; gap: 8px; flex: 1;">
+            <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 16px; border-radius: 8px; flex: 1; text-align: center;">
+              <div style="font-weight: 700; font-size: 14px;">🥇 产品经理 Skill</div>
+              <div style="font-size: 11px; opacity: 0.85;">已深度设计 · 文档完备</div>
+            </div>
+            <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 10px 16px; border-radius: 8px; flex: 1; text-align: center;">
+              <div style="font-weight: 700; font-size: 14px;">🥈 系统需求分析师 Skill</div>
+              <div style="font-size: 11px; opacity: 0.85;">已深度设计 · 文档完备</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 2: 架构设计 -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="background: #388e3c; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 700; min-width: 120px; text-align: center; font-size: 13px;">Phase 2<br>架构设计</div>
+          <div style="display: flex; gap: 8px; flex: 1;">
+            <div style="background: #f5f5f5; border: 2px dashed #9e9e9e; padding: 10px 16px; border-radius: 8px; flex: 1; text-align: center;">
+              <div style="font-weight: 700; font-size: 14px; color: #616161;">🥉 架构分析 Skill</div>
+              <div style="font-size: 11px; color: #9e9e9e;">待设计</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 3: 总体设计 -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="background: #f57c00; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 700; min-width: 120px; text-align: center; font-size: 13px;">Phase 3<br>总体设计</div>
+          <div style="display: flex; gap: 8px; flex: 1;">
+            <div style="background: #f5f5f5; border: 2px dashed #9e9e9e; padding: 10px 16px; border-radius: 8px; flex: 1; text-align: center;">
+              <div style="font-weight: 700; font-size: 14px; color: #616161;">🏅 数据库设计 Skill</div>
+              <div style="font-size: 11px; color: #9e9e9e;">待设计</div>
+            </div>
+            <div style="background: #f5f5f5; border: 2px dashed #9e9e9e; padding: 10px 16px; border-radius: 8px; flex: 1; text-align: center;">
+              <div style="font-weight: 700; font-size: 14px; color: #616161;">🏅 UI设计 Skill</div>
+              <div style="font-size: 11px; color: #9e9e9e;">待设计</div>
+            </div>
+            <div style="background: #f5f5f5; border: 2px dashed #9e9e9e; padding: 10px 16px; border-radius: 8px; flex: 1; text-align: center;">
+              <div style="font-weight: 700; font-size: 14px; color: #616161;">🏅 总体设计 Skill</div>
+              <div style="font-size: 11px; color: #9e9e9e;">待设计</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 4-5: 开发/测试部署 -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="background: #c62828; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 700; min-width: 120px; text-align: center; font-size: 13px;">Phase 4-5<br>开发交付</div>
+          <div style="display: flex; gap: 8px; flex: 1;">
+            <div style="background: #f5f5f5; border: 2px dashed #9e9e9e; padding: 10px 16px; border-radius: 8px; flex: 1; text-align: center;">
+              <div style="font-weight: 700; font-size: 14px; color: #616161;">🏅 开发 Skill</div>
+              <div style="font-size: 11px; color: #9e9e9e;">待设计</div>
+            </div>
+            <div style="background: #f5f5f5; border: 2px dashed #9e9e9e; padding: 10px 16px; border-radius: 8px; flex: 1; text-align: center;">
+              <div style="font-weight: 700; font-size: 14px; color: #616161;">🏅 测试部署 Skill</div>
+              <div style="font-size: 11px; color: #9e9e9e;">待设计</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 6: Bug修复(跨阶段) -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="background: #6a1b9a; color: white; padding: 8px 16px; border-radius: 8px; font-weight: 700; min-width: 120px; text-align: center; font-size: 13px;">跨阶段</div>
+          <div style="display: flex; gap: 8px; flex: 1;">
+            <div style="background: #f5f5f5; border: 2px dashed #9e9e9e; padding: 10px 16px; border-radius: 8px; flex: 1; text-align: center;">
+              <div style="font-weight: 700; font-size: 14px; color: #616161;">🐛 Bug修复 Skill</div>
+              <div style="font-size: 11px; color: #9e9e9e;">待设计 · 可随时切入</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>🔑 第一个关键决策：Skills 的组织模型</h3>
+  <p style="color: #666; margin-bottom: 16px;">继承文档中"A2A协议 + 事件溯源 + MCP工具生态 + 统一IR"的设计范式，但需要决定 Skills 之间如何组织。</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>严格流水线模型</h3>
+      <p>8 个 Skills 按 SDLC 阶段严格串行，前一个完成才触发下一个。类似于现有的 5 阶段 Pipeline Orchestrator。</p>
+      <div class="pros-cons" style="margin-top: 8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>流程清晰可控</li><li>IR 单向演进，无冲突</li><li>实现简单，心智负担低</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Bug修复需要"回退"到早期阶段</li><li>无法并行（如 UI + DB 同时设计）</li><li>灵活性差，变更成本高</li></ul></div>
+      </div>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>事件驱动 + DAG 依赖图</h3>
+      <p>每个 Skill 是独立 Agent，通过 A2A 事件总线通信。Skills 之间声明数据依赖（DAG），满足依赖即自动触发，不强制串行顺序。</p>
+      <div class="pros-cons" style="margin-top: 8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>最大并行度（UI + DB + 架构可同时进行）</li><li>Bug修复自然融入（修改事件触发下游重算）</li><li>与文档中 A2A 设计范式完美对齐</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>需要依赖图引擎（拓扑排序 + 变更传播）</li><li>并发写入 IR 需要冲突解决</li><li>调试复杂度较高</li></ul></div>
+      </div>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>分层 + 子流水线混合</h3>
+      <p>将 8 个 Skills 分为 3 层（认知层/设计层/执行层），每层内用 DAG 并行，层间严格串行。Bug修复 Skill 可跨层切入。</p>
+      <div class="pros-cons" style="margin-top: 8px;">
+        <div class="pros"><h4>Pros</h4><ul><li>兼顾可控性和灵活性</li><li>层间明确的质量门（gate）</li><li>每层可以独立迭代升级</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>层间串行可能成为瓶颈</li><li>分层粒度需要仔细权衡</li><li>设计决策多一层抽象</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
