@@ -16,7 +16,7 @@ public static class TestRunner
     static int _passed;
     static int _failed;
 
-    public static async Task<int> Main()
+    public static async Task<int> Main(string[] args)
     {
         Console.WriteLine("═══════════════════════════════════════════════");
         Console.WriteLine("  Phase B — Unit Tests");
@@ -94,6 +94,9 @@ public static class TestRunner
 
             await CodegenHostDemoTests.RunAllAsync();
             Pass("D11-D12 codegen-host-demo inject (full build: phase4-d11-host-build.mjs)");
+
+            await IrPhase5DiffTests.RunAllAsync();
+            Pass("P5-B01 IrDiffEngine + fragment diff propagation");
         }
         catch (Exception ex)
         {

@@ -1,14 +1,14 @@
 # JNPF V5.2 Progress Registry
 # Canonical reference for all completed milestones and current state.
 
-version: "8.8"
-last_updated: "2026-07-04"
-current_phase: "阶段四 v2.1 — D14-D16 脚本 ✅；Green path / DoD 待跑通"
+version: "8.9"
+last_updated: "2026-07-05"
+current_phase: "阶段五 W9 D1 — P5-B01 IrDiffEngine 启动"
 current_focus:
-  - "D14 ✅ phase4-green-path.mjs（IR-2 locked → developer → promote + TestSuite）"
-  - "D15-D16 ✅ phase4-dod-verify.mjs（D3/D5/D11/D14/PhaseB/Q4 聚合）"
-  - "运行 node scripts/phase4-dod-verify.mjs exit 0 收口"
-  - "阶段三 §12.1 实习生签字（阻塞 D16 正式归档）"
+  - "P5-B01 IrDiffEngine + PhaseB 单元测试"
+  - "P5-B02 BugfixSkillService（D3-D4）"
+  - "P5-B03 DeploySkillService（D5-D6）"
+  next_gate: "phase5-fullchain-e2e.mjs / 文档 17 预检"
 
 phase4_schedule:
   anchor_doc: "docs/AI原生开发/1、多用户多任务并行/12、全链条第四阶段开发计划.md"
@@ -29,8 +29,8 @@ phase4_schedule:
     - "D13 IrObservatoryPanel IR-3 Tab + useIrObservatory SSE payload hydrate + Ir3SnapshotTab summary"
     - "D14 phase4-green-path.mjs + scripts/lib/phase4-api.mjs"
     - "D15-D16 phase4-dod-verify.mjs"
-  current_day: "D16"
-  next_gate: "phase4-dod-verify.mjs exit 0 + G3 签字 + progress-registry 收口"
+  current_day: "D16 ✅"
+  next_gate: "docs/17 全链条复检 或 阶段五 W7"
   coding_unlock: "D3-GATE + A1 架构师签字 → D4 DeveloperSkill"
 
 canonical_tests:

@@ -44,6 +44,30 @@ public record IrRebuildResultDto
     public bool? PassedPerformanceGate { get; init; }
 }
 
+/// <summary>阶段五 P5-B01 — IrDiffEngine 选项。</summary>
+public sealed class IrDiffOptions
+{
+    /// <summary>locked 片段是否允许进入 changed/invalidated。</summary>
+    public bool ForceUnlock { get; init; }
+
+    /// <summary>changed 片段是否向下游传播 invalidated。</summary>
+    public bool PropagateDownstream { get; init; } = true;
+}
+
+/// <summary>阶段五 P5-B01 — 两序列点 IR 快照 diff 结果。</summary>
+public sealed class IrDiffResult
+{
+    public string ProjectId { get; init; } = string.Empty;
+    public string TenantId { get; init; } = string.Empty;
+    public int FromSequence { get; init; }
+    public int ToSequence { get; init; }
+    public IReadOnlyList<string> Added { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Changed { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> Invalidated { get; init; } = Array.Empty<string>();
+    public long ElapsedMs { get; init; }
+    public bool IsEmpty => Added.Count == 0 && Changed.Count == 0 && Invalidated.Count == 0;
+}
+
 public record ConstraintViolationDto
 {
     public string RuleId { get; init; } = string.Empty;
