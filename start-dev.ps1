@@ -1,197 +1,323 @@
-# start-dev.ps1 v2.3 — JNPF v5.2 dev environment launcher
+# start-dev.ps1 v3.1 — JNPF v5.2 全栈开发环境一键启动
 # Encoding: UTF-8 with BOM (PowerShell 5.1 requirement)
-# v2.3: build API Entry 项目（非全 solution），避免 MSB3030 *.xml 并行复制竞态
+# 启动：PC 前端 :3100 | 数字大屏 :3102 | UniApp H5 :3800 | 后端 :5000 | SA :3001
+param(
+    [switch]$CleanupOnly
+)
+
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-Write-Host "=== JNPF v5.2 Dev Startup ===" -ForegroundColor Cyan
+# 端口规范见 docs/conventions/ports.md
+$script:DevPorts = @(3100, 3102, 3800, 5000, 3001)
 
-# ================================================================
-# Step 1/5: Free ports (kill only processes on our ports)
-# ================================================================
-Write-Host "[1/5] Freeing ports..." -ForegroundColor Yellow
+function Invoke-BackendBuild {
+    param([string]$ProjectPath)
+    # -v q + RunAnalyzers=false：开发启动只关心 error，避免 1 万条 CA/SA 警告淹没 MSB4166/MSB3027
+    dotnet build $ProjectPath `
+        -v q /nologo `
+        /nodeReuse:false `
+        -m:1 `
+        -p:BuildInParallel=false `
+        -p:UseSharedCompilation=false `
+        -p:RunAnalyzers=false
+    return $LASTEXITCODE
+}
 
-$ports = @(
-    @{Port=3100; Name='Vite frontend'},
-    @{Port=5000; Name='Backend API'},
-    @{Port=3001; Name='SA Service'}
-)
+function Write-Step([string]$Num, [string]$Total, [string]$Msg) {
+    Write-Host "[$Num/$Total] $Msg" -ForegroundColor Yellow
+}
 
-foreach ($p in $ports) {
-    $conn = Get-NetTCPConnection -LocalPort $p.Port -State Listen -ErrorAction SilentlyContinue
-    if ($conn) {
-        $conn | ForEach-Object {
-            $proc = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue
-            if ($proc) {
-                Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue
-                Write-Host "  Port $($p.Port) freed (was $($p.Name) PID $($_.OwningProcess))"
+function Clear-DevEnvironment {
+    $prevErr = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+
+    $freedPorts = 0
+    $zombies = 0
+    $freedMB = 0
+
+    foreach ($port in $script:DevPorts) {
+        $listeners = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty OwningProcess -Unique
+        foreach ($procId in $listeners) {
+            $name = (Get-Process -Id $procId -ErrorAction SilentlyContinue).ProcessName
+            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+            Write-Host "  Port $port freed (PID $procId $name)"
+            $freedPorts++
+        }
+    }
+
+    $dotnetProcs = Get-CimInstance Win32_Process -Filter "Name = 'dotnet.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -match 'MSBuild|VBCSCompiler|dotnet\.dll run|JNPF\.API\.Entry' }
+    foreach ($item in $dotnetProcs) {
+        $p = Get-Process -Id $item.ProcessId -ErrorAction SilentlyContinue
+        if ($null -eq $p) { continue }
+        $freedMB += [math]::Round($p.WorkingSet64 / 1MB, 0)
+        Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+        Write-Host "  Killed dotnet PID $($p.Id)"
+        $zombies++
+    }
+
+    $nodeProcs = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -match 'jnpf|JNPF|vite|tsx|sa-service|uni-app|3800|3100|3102' }
+    foreach ($item in $nodeProcs) {
+        $p = Get-Process -Id $item.ProcessId -ErrorAction SilentlyContinue
+        if ($null -eq $p) { continue }
+        $freedMB += [math]::Round($p.WorkingSet64 / 1MB, 0)
+        Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+        Write-Host "  Killed node PID $($p.Id)"
+        $zombies++
+    }
+
+    $pyFilter = "Name = 'python.exe' OR Name = 'python3.exe'"
+    $pyProcs = Get-CimInstance Win32_Process -Filter $pyFilter -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -match 'proxy_server\.py' }
+    foreach ($item in $pyProcs) {
+        $p = Get-Process -Id $item.ProcessId -ErrorAction SilentlyContinue
+        if ($null -eq $p) { continue }
+        $freedMB += [math]::Round($p.WorkingSet64 / 1MB, 0)
+        Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+        Write-Host "  Killed python PID $($p.Id)"
+        $zombies++
+    }
+
+    $browsers = Get-Process -Name 'chrome', 'msedge', 'chromium' -ErrorAction SilentlyContinue |
+        Where-Object { $_.MainWindowTitle -eq '' -or $_.Path -match 'playwright|chrome-win' }
+    foreach ($p in $browsers) {
+        $freedMB += [math]::Round($p.WorkingSet64 / 1MB, 0)
+        Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+        $zombies++
+    }
+
+    [System.GC]::Collect()
+    [System.GC]::WaitForPendingFinalizers()
+    Start-Sleep -Seconds 2
+
+    $stillBusy = @()
+    foreach ($port in $script:DevPorts) {
+        if (Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue) {
+            $stillBusy += $port
+        }
+    }
+    if ($stillBusy.Count -gt 0) {
+        $busyList = $stillBusy -join ', '
+        Write-Host "  WARN: ports still in use: $busyList - retrying..." -ForegroundColor DarkYellow
+        foreach ($port in $stillBusy) {
+            $pids = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
+                Select-Object -ExpandProperty OwningProcess -Unique
+            foreach ($procId in $pids) {
+                Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
             }
         }
-    } else {
-        Write-Host "  Port $($p.Port) is free"
+        Start-Sleep -Seconds 1
     }
+
+    Write-Host "  Cleanup done: ports=$freedPorts processes=$zombies approx ${freedMB}MB" -ForegroundColor Green
+    $ErrorActionPreference = $prevErr
 }
-Start-Sleep -Seconds 1
 
-# ================================================================
-# Step 2/5: Clean zombie processes (MSBuild nodes, old Chrome)
-# ================================================================
-Write-Host "[2/5] Cleaning zombie processes..." -ForegroundColor Yellow
-
-$zombies = 0
-$zombieFreedMB = 0
-
-# MSBuild worker nodes only — do NOT kill all dotnet.exe (breaks IDE / dotnet run)
-Get-CimInstance Win32_Process -Filter "Name = 'dotnet.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -match 'MSBuild|VBCSCompiler' } |
-    ForEach-Object {
-        $proc = Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue
-        if ($proc) {
-            $mb = [math]::Round($proc.WorkingSet64 / 1MB, 0)
-            $zombieFreedMB += $mb
-            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-            $zombies++
+function Wait-HttpReady {
+    param(
+        [string]$Url,
+        [int]$TimeoutSec = 120,
+        [int[]]$OkStatus = @(200, 403),
+        [string]$Label = 'Service'
+    )
+    for ($i = 0; $i -lt $TimeoutSec; $i++) {
+        try {
+            $resp = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+            if ($OkStatus -contains $resp.StatusCode) {
+                Write-Host "  $Label ready (${i}s)" -ForegroundColor Green
+                return $true
+            }
+        } catch {
+            $code = $null
+            if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
+            if ($code -and ($OkStatus -contains $code)) {
+                Write-Host "  $Label ready (${i}s, HTTP $code)" -ForegroundColor Green
+                return $true
+            }
         }
+        Start-Sleep -Seconds 1
     }
-
-# Old Chrome instances (Playwright test leftovers)
-Get-Process -Name 'chrome' -ErrorAction SilentlyContinue | ForEach-Object {
-    $mb = [math]::Round($_.WorkingSet64 / 1MB, 0)
-    $zombieFreedMB += $mb
-    Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
-    $zombies++
+    Write-Host "  $Label startup timed out (${TimeoutSec}s)" -ForegroundColor Red
+    return $false
 }
 
-# Force GC
-[System.GC]::Collect()
-[System.GC]::WaitForPendingFinalizers()
+function Ensure-EnvFile {
+    param([string]$Dir, [string]$ExampleName = '.env.example', [string]$TargetName = '.env')
+    $example = Join-Path $Dir $ExampleName
+    $target = Join-Path $Dir $TargetName
+    if (-not (Test-Path $target) -and (Test-Path $example)) {
+        Copy-Item $example $target
+        Write-Host "  Created $TargetName from $ExampleName" -ForegroundColor DarkYellow
+    }
+}
 
-if ($zombies -gt 0) {
-    Write-Host "  Cleaned $zombies zombies, freed ~$zombieFreedMB MB" -ForegroundColor Green
-} else {
-    Write-Host "  System is clean" -ForegroundColor Green
+function Start-DevWindow {
+    param([string]$Title, [string]$WorkDir, [string]$Command)
+    $cmd = "cd '$WorkDir'; `$Host.UI.RawUI.WindowTitle = '$Title'; $Command"
+    Start-Process powershell -ArgumentList @('-NoExit', '-Command', $cmd) | Out-Null
+}
+
+Write-Host "=== JNPF v5.2 Dev Startup (v3.1) ===" -ForegroundColor Cyan
+
+# ================================================================
+# Step 1/7: 清理端口与僵尸进程（内联，确保编译前无 DLL 锁）
+# ================================================================
+Write-Step '1' '7' 'Cleaning ports and zombie processes...'
+Clear-DevEnvironment
+
+if ($CleanupOnly) {
+    Write-Host 'Cleanup-only mode - exiting.' -ForegroundColor Cyan
+    exit 0
 }
 
 # ================================================================
-# Step 3/5: Start backend API
+# Step 2/7: 编译后端（单线程避免 MSB4166）
 # ================================================================
-Write-Host ""
-Write-Host "[3/5] Starting backend API..." -ForegroundColor Yellow
+Write-Host ''
+Write-Step '2' '7' 'Building backend API Entry...'
 
 $backendDir = Join-Path $root 'backend'
 $backendProject = 'application/JNPF.API.Entry/JNPF.API.Entry.csproj'
 $backendProjectPath = Join-Path $backendDir $backendProject
+$backendDll = Join-Path $backendDir 'application/JNPF.API.Entry/bin/Debug/net8.0/JNPF.API.Entry.dll'
 
-# Restore packages only if obj directory is missing
 $objDir = Join-Path $backendDir 'application/JNPF.API.Entry/obj'
 if (-not (Test-Path $objDir)) {
-    Write-Host "  First run: restoring NuGet packages..."
+    Write-Host '  First run: restoring NuGet packages...'
     dotnet restore $backendProjectPath --verbosity quiet
+    if ($LASTEXITCODE -ne 0) { exit 1 }
 }
 
-Write-Host "  Building backend API Entry (not full solution)..."
-dotnet build $backendProjectPath -v q /nologo
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "  Backend build failed — see errors above" -ForegroundColor Red
+Write-Host '  dotnet build (quiet, single-thread, analyzers off)...'
+$buildExit = Invoke-BackendBuild $backendProjectPath
+if ($buildExit -ne 0) {
+    Write-Host '  First build failed - cleaning zombies and retrying once...' -ForegroundColor DarkYellow
+    Clear-DevEnvironment
+    $buildExit = Invoke-BackendBuild $backendProjectPath
+}
+if ($buildExit -ne 0) {
+    Write-Host '  Backend build failed - re-run with verbose log:' -ForegroundColor Red
+    Write-Host "    cd backend; dotnet build $backendProject -v minimal /nodeReuse:false -m:1" -ForegroundColor Yellow
     exit 1
 }
 
-Start-Process powershell -ArgumentList (
-    '-NoExit', '-Command',
-    "cd '$backendDir'; dotnet run --project '$backendProject' --no-build --urls 'http://0.0.0.0:5000'"
-) -PassThru | Out-Null
-
-# Wait for backend to become ready
-Write-Host "  Waiting for backend :5000..."
-$backendReady = $false
-$timeout = 120
-for ($i = 0; $i -lt $timeout; $i++) {
-    try {
-        $resp = Invoke-WebRequest -Uri 'http://localhost:5000' -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
-        if ($resp.StatusCode -eq 200 -or $resp.StatusCode -eq 403) {
-            Write-Host "  Backend ready (${i}s)" -ForegroundColor Green
-            $backendReady = $true
-            break
-        }
-    } catch {
-        $statusCode = $null
-        if ($_.Exception.Response) {
-            $statusCode = [int]$_.Exception.Response.StatusCode
-        }
-        if ($statusCode -eq 403) {
-            Write-Host "  Backend ready (${i}s, 403 = JWT middleware OK)" -ForegroundColor Green
-            $backendReady = $true
-            break
-        }
-    }
-    Start-Sleep -Seconds 1
+if (-not (Test-Path $backendDll)) {
+    Write-Host "  Backend build incomplete: missing $backendDll" -ForegroundColor Red
+    exit 1
 }
+Write-Host "  Build OK: $(Split-Path $backendDll -Leaf)" -ForegroundColor Green
+
+# ================================================================
+# Step 3/7: 启动后端
+# ================================================================
+Write-Host ''
+Write-Step '3' '7' 'Starting backend API...'
+
+Start-DevWindow -Title 'JNPF Backend :5000' -WorkDir $backendDir -Command `
+    "dotnet run --project '$backendProject' --no-build --urls 'http://0.0.0.0:5000'"
+
+$backendReady = Wait-HttpReady -Url 'http://127.0.0.1:5000' -Label 'Backend :5000'
 if (-not $backendReady) {
-    Write-Host "  Backend startup timed out (${timeout}s) — check the backend window for errors" -ForegroundColor Red
+    Write-Host '  Check the Backend window for startup errors' -ForegroundColor Red
+    exit 1
 }
 
 # ================================================================
-# Step 4/5: Start SA Service
+# Step 4/7: 启动 SA Service
 # ================================================================
-Write-Host ""
-Write-Host "[4/5] Starting SA Service..." -ForegroundColor Yellow
+Write-Host ''
+Write-Step '4' '7' 'Starting SA Service...'
 
 $saDir = Join-Path $root 'sa-service'
-Start-Process powershell -ArgumentList (
-    '-NoExit', '-Command',
-    "cd '$saDir'; `$env:SA_SERVICE_PORT='3001'; `$env:SA_DB_BACKEND='inmemory'; `$env:LLM_GATEWAY_URL='http://localhost:5000/api/LlmGateway/ChatAsync'; Write-Host 'SA Service starting...'; npx tsx src/server.ts"
-)
-Write-Host "  SA Service launched in new window" -ForegroundColor Green
+Start-DevWindow -Title 'JNPF SA :3001' -WorkDir $saDir -Command `
+    "`$env:SA_SERVICE_PORT='3001'; `$env:SA_DB_BACKEND='inmemory'; `$env:LLM_GATEWAY_URL='http://127.0.0.1:5000/api/LlmGateway/ChatAsync'; Write-Host 'SA Service starting...'; npx tsx src/server.ts"
+Write-Host '  SA Service launched' -ForegroundColor Green
 
 # ================================================================
-# Step 5/5: Start frontend Vite
+# Step 5/7: 启动 PC 前端
 # ================================================================
-Write-Host ""
-Write-Host "[5/5] Starting frontend Vite..." -ForegroundColor Yellow
+Write-Host ''
+Write-Step '5' '7' 'Starting PC frontend (Vite)...'
 
 $frontendDir = Join-Path $root 'jnpf-web-vue3'
-
-# Clear stale Vite dep cache (fixes 504 Outdated Optimize Dep / dynamic import failures)
 $viteCache = Join-Path $frontendDir 'node_modules\.vite'
 if (Test-Path $viteCache) {
-    Write-Host "  Clearing Vite optimize cache..."
+    Write-Host '  Clearing Vite optimize cache...'
     Remove-Item -Recurse -Force $viteCache -ErrorAction SilentlyContinue
 }
 
-Start-Process powershell -ArgumentList (
-    '-NoExit', '-Command',
-    "cd '$frontendDir'; Write-Host 'Vite starting (fresh deps)...'; pnpm dev -- --force"
-)
+Start-DevWindow -Title 'JNPF PC :3100' -WorkDir $frontendDir -Command `
+    "Write-Host 'Vite PC starting...'; pnpm dev -- --force"
 
-# 注：已移除 Vite-MemGuard 后台 Job——它在不清理 .vite 缓存的情况下重启 Vite，
-# 会导致浏览器仍请求旧 dep hash 而报 504 Outdated Optimize Dep。
+$null = Wait-HttpReady -Url 'http://127.0.0.1:3100' -TimeoutSec 90 -Label 'PC frontend :3100'
 
-# Wait for frontend to become ready
-Write-Host "  Waiting for frontend :3100..."
-$frontendReady = $false
-for ($i = 0; $i -lt 60; $i++) {
-    try {
-        $resp = Invoke-WebRequest -Uri 'http://localhost:3100' -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
-        if ($resp.StatusCode -eq 200) {
-            Write-Host "  Frontend ready (${i}s)" -ForegroundColor Green
-            $frontendReady = $true
+# ================================================================
+# Step 6/7: 启动数字大屏
+# ================================================================
+Write-Host ''
+Write-Step '6' '7' 'Starting DataScreen (DataV)...'
+
+$datascreenDir = Join-Path $root 'jnpf-web-datascreen'
+Ensure-EnvFile -Dir $datascreenDir
+
+if (-not (Test-Path (Join-Path $datascreenDir 'node_modules'))) {
+    Write-Host '  Installing datascreen dependencies (first run)...'
+    Push-Location $datascreenDir
+    pnpm install
+    Pop-Location
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host '  datascreen pnpm install failed' -ForegroundColor Red
+    }
+}
+
+Start-DevWindow -Title 'JNPF DataV :3102' -WorkDir $datascreenDir -Command `
+    "Write-Host 'DataScreen starting on :3102...'; pnpm dev"
+
+$null = Wait-HttpReady -Url 'http://127.0.0.1:3102/DataV/' -TimeoutSec 90 -Label 'DataScreen :3102'
+
+# ================================================================
+# Step 7/7: 启动 UniApp H5（小程序 Web 预览）
+# ================================================================
+Write-Host ''
+Write-Step '7' '7' 'Starting UniApp H5...'
+
+$appDir = Join-Path $root 'jnpf-app-vue3'
+$h5Root = Join-Path $appDir 'unpackage/dist/build/web'
+$proxyScript = Join-Path $appDir 'scripts/proxy_server.py'
+
+if (Test-Path (Join-Path $h5Root 'index.html')) {
+    $python = $null
+    foreach ($cmd in @('python', 'python3', 'py')) {
+        if (Get-Command $cmd -ErrorAction SilentlyContinue) {
+            $python = $cmd
             break
         }
-    } catch {}
-    Start-Sleep -Seconds 1
-}
-if (-not $frontendReady) {
-    Write-Host "  Frontend startup timed out (60s) — check the Vite window (first start may take longer)" -ForegroundColor Yellow
+    }
+    if ($python) {
+        Start-DevWindow -Title 'JNPF H5 :3800' -WorkDir $appDir -Command `
+            "Write-Host 'UniApp H5 proxy on :3800...'; & '$python' scripts/proxy_server.py"
+        $null = Wait-HttpReady -Url 'http://127.0.0.1:3800' -TimeoutSec 30 -Label 'UniApp H5 :3800'
+    } else {
+        Write-Host '  Python not found - skip H5 proxy (install Python 3 or use HBuilderX)' -ForegroundColor Yellow
+    }
+} else {
+    Write-Host '  H5 build not found: unpackage/dist/build/web' -ForegroundColor Yellow
+    Write-Host '  Build in HBuilderX: 发行 -> 网站-H5, then rerun start-dev.ps1' -ForegroundColor Yellow
 }
 
 # ================================================================
 # Done
 # ================================================================
-Write-Host ""
-Write-Host "=== Dev environment ready ===" -ForegroundColor Green
-Write-Host "  Backend:  http://localhost:5000" -ForegroundColor Cyan
-Write-Host "  Frontend: http://localhost:3100" -ForegroundColor Cyan
-Write-Host "  SA:       http://localhost:3001" -ForegroundColor Cyan
-Write-Host "  Login:    admin / 123456" -ForegroundColor White
-Write-Host ""
-Write-Host "Open http://localhost:3100 to start" -ForegroundColor White
+Write-Host ''
+Write-Host '=== Dev environment ready ===' -ForegroundColor Green
+Write-Host '  Backend:    http://127.0.0.1:5000' -ForegroundColor Cyan
+Write-Host '  PC:         http://127.0.0.1:3100' -ForegroundColor Cyan
+Write-Host '  DataScreen: http://127.0.0.1:3102/DataV/' -ForegroundColor Cyan
+Write-Host '  UniApp H5:  http://127.0.0.1:3800' -ForegroundColor Cyan
+Write-Host '  SA:         http://127.0.0.1:3001' -ForegroundColor Cyan
+Write-Host '  Login:      admin / 123456' -ForegroundColor White
+Write-Host ''
+Write-Host 'Open http://127.0.0.1:3100 to start' -ForegroundColor White

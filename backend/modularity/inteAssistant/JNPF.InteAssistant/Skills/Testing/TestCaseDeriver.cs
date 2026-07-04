@@ -63,6 +63,17 @@ public static class TestCaseDeriver
             });
         }
 
+        foreach (var field in required.Where(f => !string.Equals(f.Type, "int", StringComparison.OrdinalIgnoreCase)))
+        {
+            cases.Add(new DerivedTestCase
+            {
+                CaseId = $"invalid-empty-{field.Name.ToLowerInvariant()}",
+                Rule = "F-REQ",
+                Kind = "invalid",
+                Description = $"必填字段 {field.Name} 为空字符串",
+            });
+        }
+
         foreach (var field in fields.Where(f => f.Type == "int"))
         {
             cases.Add(new DerivedTestCase

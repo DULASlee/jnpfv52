@@ -15,9 +15,11 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildPhaseB, PHASEB_DIR, runPhaseBCli } from './lib/dotnet-build.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const phaseBDir = path.join(repoRoot, 'backend', 'tests', 'JNPF.Tests.PhaseB');
+const phaseBDir = PHASEB_DIR;
+const NO_BUILD = process.argv.includes('--no-build');
 const evidenceDir = path.join(repoRoot, '.claude', 'evidence');
 
 const DEFAULT_PROFILES = ['ag001-ddl-controller-ref', 'ag002-no-tenant-filter'];
@@ -34,11 +36,10 @@ function parseArgs(argv) {
 
 function runProfile(profile) {
   console.log(`\n[D10-Q2] profile=${profile}`);
-  const gate = spawnSync(
-    'dotnet',
-    ['run', '--no-build', '--', 'arch-guard-q2', '--profile', profile],
-    { cwd: phaseBDir, stdio: 'pipe', shell: true, encoding: 'utf8' },
-  );
+  const gate = runPhaseBCli(['arch-guard-q2', '--profile', profile], {
+    cwd: phaseBDir,
+    inherit: false,
+  });
 
   const stdout = gate.stdout || '';
   const stderr = gate.stderr || '';
@@ -68,13 +69,13 @@ function runProfile(profile) {
   return pass;
 }
 
-console.log('[D10-Q2] building PhaseB test host...');
-const build = spawnSync('dotnet', ['build', '-v', 'q'], {
-  cwd: phaseBDir,
-  stdio: 'inherit',
-  shell: true,
-});
-if (build.status !== 0) process.exit(build.status ?? 1);
+if (!NO_BUILD) {
+  console.log('[D10-Q2] building PhaseB test host...');
+  const build = buildPhaseB({ inherit: true, retries: 1 });
+  if (!build.pass) process.exit(build.exitCode ?? 1);
+} else {
+  console.log('[D10-Q2] skip build (--no-build)');
+}
 
 const profiles = parseArgs(process.argv);
 let failed = 0;

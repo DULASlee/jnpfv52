@@ -1,3 +1,15 @@
+if (args.Length > 0 && args[0] == "phase3-maxcalls")
+{
+    JNPF.Tests.PhaseB.IrPhase3Tests.RunMaxCallsOnly();
+    return 0;
+}
+
+if (args.Length > 0 && args[0] == "phase3-tenant-isolation")
+{
+    JNPF.Tests.PhaseB.IrPhase3TenantTests.RunTenantGuardIsolation();
+    return 0;
+}
+
 if (args.Length > 0 && args[0] == "generate-hashes")
     return JNPF.Tests.PhaseB.TemplateRenderSamplesTests.GenerateExpectedHashes();
 
@@ -50,4 +62,4 @@ if (args.Length > 0 && args[0] == "ir3-promote")
     return 0;
 }
 
-return await JNPF.Tests.PhaseB.TestRunner.Main();
+return await JNPF.Tests.PhaseB.TestRunner.Main(args);

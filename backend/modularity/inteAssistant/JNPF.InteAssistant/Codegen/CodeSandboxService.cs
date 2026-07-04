@@ -126,7 +126,7 @@ public sealed class CodeSandboxService : ICodeSandboxService, ITransient
 
         var sw = Stopwatch.StartNew();
         var (exitCode, stdout, stderr) = await RunDotnetAsync(
-            $"build \"{csproj}\" --no-restore -v q /p:RestorePackagesPath=\"{_nugetPackagesDir}\"",
+            $"build \"{csproj}\" --no-restore -v q /nodeReuse:false -m:1 -p:BuildInParallel=false -p:RestorePackagesPath=\"{_nugetPackagesDir}\"",
             _buildTimeoutSeconds,
             ct);
         sw.Stop();

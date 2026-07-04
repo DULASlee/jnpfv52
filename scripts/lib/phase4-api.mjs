@@ -52,6 +52,14 @@ export async function setupIr1Stable(session, pipelineId) {
     eventType: 'EventSpecConfirmed',
     fragmentId: 'eventspec:BE-001',
   });
+  // developer-skill TemplateContext 要求 IR0_Skeleton stable（非 draft）
+  const confirm = await apiRequest('POST', `/api/studio/skills/pm/${pipelineId}/confirm-skeleton`, {
+    body: { autoRunAnalyst: false },
+    session,
+  });
+  if (!isJnpfOk(confirm)) {
+    throw new Error(`confirm-skeleton: ${JSON.stringify(confirm.json)}`);
+  }
 }
 
 export async function setupIr2Clean(session, pipelineId) {
@@ -236,9 +244,34 @@ export function assertGeneratedArtifacts(backendRoot) {
 }
 
 /** Q4 — 生成 Service.cs 须含租户过滤痕迹（AG-002/AG-003 抽样） */
-export function scanGeneratedSqlForTenantFilter(generatedRoot = path.join(REPO_ROOT, 'workspace', 'generated')) {
-  if (!fs.existsSync(generatedRoot)) {
-    return { pass: true, scanned: 0, issues: [], detail: 'no workspace/generated yet' };
+export function resolveQ4ScanRoots(greenEvidence = null) {
+  // Green path 产物优先（developer 链输出含 R4 注释；D3 leave-simple 可能是旧模板快照）
+  if (greenEvidence?.pass && greenEvidence?.tenantId != null && greenEvidence?.projectId) {
+    const greenBackend = path.join(
+      REPO_ROOT,
+      'workspace',
+      'generated',
+      String(greenEvidence.tenantId),
+      String(greenEvidence.projectId),
+      'backend',
+    );
+    if (fs.existsSync(greenBackend)) return [greenBackend];
+  }
+
+  const leaveSimple = path.join(REPO_ROOT, 'workspace', 'generated', '_d3-gate', 'leave-simple', 'backend');
+  if (fs.existsSync(leaveSimple)) return [leaveSimple];
+
+  return [];
+}
+
+export function scanGeneratedSqlForTenantFilter(generatedRootOrRoots = path.join(REPO_ROOT, 'workspace', 'generated')) {
+  const roots = Array.isArray(generatedRootOrRoots)
+    ? generatedRootOrRoots
+    : [generatedRootOrRoots];
+
+  const existing = roots.filter(r => fs.existsSync(r));
+  if (existing.length === 0) {
+    return { pass: true, scanned: 0, issues: [], detail: 'no scan roots on disk', roots: [] };
   }
 
   const issues = [];
@@ -249,10 +282,13 @@ export function scanGeneratedSqlForTenantFilter(generatedRoot = path.join(REPO_R
       const full = path.join(dir, name);
       const st = fs.statSync(full);
       if (st.isDirectory()) {
+        if (name === 'bin' || name === 'obj') continue;
         walk(full);
         continue;
       }
-      if (!name.endsWith('Service.cs') || name.endsWith('.custom.cs')) continue;
+      // 只扫 Services/*Service.cs，排除 ILeaveRequestService 等接口误匹配
+      if (!full.includes(`${path.sep}Services${path.sep}`)) continue;
+      if (!name.endsWith('Service.cs') || name.startsWith('I') || name.endsWith('.custom.cs')) continue;
       scanned++;
       const content = fs.readFileSync(full, 'utf8');
       const hasTenantFilter =
@@ -264,14 +300,19 @@ export function scanGeneratedSqlForTenantFilter(generatedRoot = path.join(REPO_R
     }
   }
 
-  walk(generatedRoot);
+  for (const root of existing) {
+    walk(root);
+  }
+
+  const scopeLabel = existing.map(r => path.relative(REPO_ROOT, r)).join(', ');
   return {
     pass: issues.length === 0,
     scanned,
     issues,
+    roots: existing.map(r => path.relative(REPO_ROOT, r)),
     detail: issues.length === 0
-      ? `${scanned} Service.cs scanned, all contain tenant markers`
-      : `${issues.length} issue(s) in ${scanned} files`,
+      ? `${scanned} Service.cs in [${scopeLabel}] — tenant markers ok`
+      : `${issues.length} issue(s) in ${scanned} files under [${scopeLabel}]`,
   };
 }
 

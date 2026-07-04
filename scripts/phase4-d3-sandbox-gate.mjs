@@ -3,28 +3,20 @@
  * D3-GATE — leave-simple 渲染产物 sandbox dotnet build
  * 等价于: cd backend/tests/JNPF.Tests.PhaseB && dotnet run -- sandbox-gate
  */
-import { spawnSync } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { buildPhaseB, runPhaseBCli } from './lib/dotnet-build.mjs';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const phaseBDir = path.join(repoRoot, 'backend', 'tests', 'JNPF.Tests.PhaseB');
+const NO_BUILD = process.argv.includes('--no-build');
 
-console.log('[D3-GATE] building PhaseB test host...');
-const build = spawnSync('dotnet', ['build', '-v', 'q'], {
-  cwd: phaseBDir,
-  stdio: 'inherit',
-  shell: true,
-});
-if (build.status !== 0) process.exit(build.status ?? 1);
+if (!NO_BUILD) {
+  console.log('[D3-GATE] building PhaseB test host...');
+  const build = buildPhaseB({ inherit: true, retries: 1 });
+  if (!build.pass) process.exit(build.exitCode ?? 1);
+} else {
+  console.log('[D3-GATE] skip build (--no-build, caller already built PhaseB)');
+}
 
 console.log('[D3-GATE] running sandbox-gate...');
-const gate = spawnSync('dotnet', ['run', '--no-build', '--', 'sandbox-gate'], {
-  cwd: phaseBDir,
-  stdio: 'inherit',
-  shell: true,
-  env: { ...process.env },
-});
+const gate = runPhaseBCli(['sandbox-gate'], { inherit: true });
 
 if (gate.status === 0) {
   console.log('[D3-GATE] PASS — leave-simple sandbox dotnet build exit 0');

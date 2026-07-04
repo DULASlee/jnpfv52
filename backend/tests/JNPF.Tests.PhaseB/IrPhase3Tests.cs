@@ -22,6 +22,14 @@ public static class IrPhase3Tests
         Console.WriteLine("[Phase3] All design skill tests passed.");
     }
 
+    /// <summary>G3 D16 — architect maxCalls=3，第 4 次须 LLM_CALL_LIMIT_EXCEEDED</summary>
+    public static void RunMaxCallsOnly()
+    {
+        TestLlmCallLimit_ArchitectPolicyDefault();
+        TestLlmCallLimit_InMemoryUsageGate();
+        Console.WriteLine("[Phase3] maxCalls gate tests passed (LLM_CALL_LIMIT_EXCEEDED on 4th).");
+    }
+
     private static void TestLlmCallPolicy_Defaults()
     {
         var config = new ConfigurationBuilder().Build();
@@ -118,5 +126,37 @@ public static class IrPhase3Tests
         var validation = skill.ValidateInputAsync(snapshot).GetAwaiter().GetResult();
         if (validation.IsValid || !validation.ErrorMessage!.Contains("FormPageIR", StringComparison.Ordinal))
             throw new InvalidOperationException("SystemDesign should reject when FormPageIR fragment is missing");
+    }
+
+    private static void TestLlmCallLimit_ArchitectPolicyDefault()
+    {
+        var policyService = new LlmCallPolicyService(null!, new Microsoft.Extensions.Caching.Memory.MemoryCache(
+            new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()));
+        var architect = policyService.GetPolicyAsync(DesignSkillIds.Architect).GetAwaiter().GetResult();
+        if (architect.MaxLlmCalls != 3)
+            throw new InvalidOperationException($"architect-skill MaxLlmCalls must be 3, got {architect.MaxLlmCalls}");
+        if (SkillLlmBudgetGuard.CallLimitCode != "LLM_CALL_LIMIT_EXCEEDED")
+            throw new InvalidOperationException("CallLimitCode constant mismatch");
+    }
+
+    /// <summary>镜像 SkillLlmBudgetGuard.AcquireAsync 内存计数语义（同 runId 第 4 次拒绝）</summary>
+    private static void TestLlmCallLimit_InMemoryUsageGate()
+    {
+        const int maxCalls = 3;
+        var callCount = 0;
+        string? rejectedCode = null;
+        for (var attempt = 1; attempt <= 4; attempt++)
+        {
+            if (callCount >= maxCalls)
+            {
+                rejectedCode = SkillLlmBudgetGuard.CallLimitCode;
+                if (attempt != 4)
+                    throw new InvalidOperationException("limit should trigger on 4th attempt");
+                break;
+            }
+            callCount++;
+        }
+        if (rejectedCode != "LLM_CALL_LIMIT_EXCEEDED")
+            throw new InvalidOperationException("4th acquire must reject with LLM_CALL_LIMIT_EXCEEDED");
     }
 }

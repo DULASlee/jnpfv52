@@ -243,23 +243,13 @@ public sealed class IrEventStoreService : IIrEventStoreService, ITransient
 
         if (evt == null) return null;
 
-        object? payload = null;
-        try
-        {
-            payload = JsonSerializer.Deserialize<object>(evt.Payload);
-        }
-        catch
-        {
-            payload = evt.Payload;
-        }
-
         return new IrFragmentSnapshotDto
         {
             FragmentId = fragmentId,
             FragmentType = evt.FragmentType ?? IrFragmentTypes.Skeleton,
             StabilityState = IrStabilityStates.Draft,
             CurrentVersion = evt.FragmentVersion,
-            Payload = payload,
+            Payload = ParseIrContentPayload(evt.Payload),
             UpdatedAt = evt.CreatedAt,
         };
     }
@@ -366,16 +356,6 @@ public sealed class IrEventStoreService : IIrEventStoreService, ITransient
 
     private static IrFragmentSnapshotDto ToSnapshotDto(AiIrFragmentSnapshotEntity snap)
     {
-        object? payload = null;
-        try
-        {
-            payload = JsonSerializer.Deserialize<object>(snap.IrContent);
-        }
-        catch
-        {
-            payload = snap.IrContent;
-        }
-
         return new IrFragmentSnapshotDto
         {
             FragmentId = snap.FragmentId,
@@ -383,10 +363,40 @@ public sealed class IrEventStoreService : IIrEventStoreService, ITransient
             StabilityState = snap.StabilityState,
             CurrentVersion = snap.CurrentVersion,
             SaStepsCompleted = ParseSteps(snap.SaStepsCompleted).ToArray(),
-            Payload = payload,
+            Payload = ParseIrContentPayload(snap.IrContent),
             UpdatedAt = snap.UpdatedAt,
         };
     }
+
+    /// <summary>
+    /// Newtonsoft 序列化 JsonElement 会退化为 { ValueKind }；转为 Dictionary/List 基元树。
+    /// </summary>
+    private static object? ParseIrContentPayload(string? irContent)
+    {
+        if (string.IsNullOrWhiteSpace(irContent)) return null;
+        try
+        {
+            var element = JsonSerializer.Deserialize<JsonElement>(irContent);
+            return ConvertJsonElement(element);
+        }
+        catch
+        {
+            return irContent;
+        }
+    }
+
+    private static object? ConvertJsonElement(JsonElement element) => element.ValueKind switch
+    {
+        JsonValueKind.Object => element.EnumerateObject()
+            .ToDictionary(p => p.Name, p => ConvertJsonElement(p.Value)),
+        JsonValueKind.Array => element.EnumerateArray().Select(ConvertJsonElement).ToList(),
+        JsonValueKind.String => element.GetString(),
+        JsonValueKind.Number => element.TryGetInt64(out var n) ? n : element.GetDouble(),
+        JsonValueKind.True => true,
+        JsonValueKind.False => false,
+        JsonValueKind.Null or JsonValueKind.Undefined => null,
+        _ => null,
+    };
 
     private static List<string> ParseSteps(string? json)
     {
