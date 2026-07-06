@@ -28,13 +28,18 @@
 
 ## 发现的 Bug 及根因（即使已提交也要摘要）
 
-### ISSUE-002：guard-write.mjs 八层守卫合并未完成（P1，pre-existing）
+### ISSUE-002：guard-write.mjs 八层守卫合并未完成（P1，pre-existing → ✅ 同会话修复）
 
 - **症状**：`node scripts/test-hooks.mjs` 28 用例全 FAIL，统一"期望 2 实际 1"
-- **根因**：旧独立 guard（oa/sql/auth/tenant/leak）已删除，但合并到 guard-write.mjs **从未完成**——文件实际仅 L1/L2/L3/L4（L4 还是工作区隔离，非 R5）。CLAUDE.md Hooks 表"L1-L8 八层"是**虚假承诺**。test-hooks.mjs 仍引用旧文件名 → MODULE_NOT_FOUND → exit 1
-- **影响**：R4/R5/R6/R8 四条 L0 红线无 hook 防护（R7 部分覆盖），仅靠 AI 自觉（L2）
-- **处理**：记入 `pending-issues.md` ISSUE-002，待审批后另起任务修复
-- **与本会话无关**：pre-existing。我本会话只改 .md 文档 + gitignored settings.local.json，不可能导致 hook MODULE_NOT_FOUND
+- **根因**（比初判更大）：不只是 R4-R8 未合并。实际**整个项目 hook 系统从未注册**——`.claude/settings.json` 不存在，`.gitignore` 还显式忽略它，7 个项目 hook 文件全是孤儿。`cf5ac57d` 删旧独立 guard 后，"合并 + 注册"两步都被跳过
+- **修复**（commit `9cd4fd3f`）：
+  1. guard-write.mjs 补 L4-L8（R5/R4/R7/R8/R6，逻辑从 `cf5ac57d^` 恢复，无新发明）+ 保留 L1/L2/L3 + L9 工作区隔离
+  2. 新建 `.claude/settings.json` 注册 6 个项目 hook（PreToolUse Write/Bash/Skill + PostToolUse Write + Stop + SessionStart），`$CLAUDE_PROJECT_DIR` 可移植
+  3. `.gitignore` 取消忽略 settings.json（保留 settings.local.json 忽略）——否则团队共享无效
+  4. test-hooks.mjs 5 个旧文件名 → guard-write.mjs
+  5. CLAUDE.md Hooks 表订正（删 3 个不存在 hook，补 3 个真实 hook）
+- **回归**：`node scripts/test-hooks.mjs` → **28/28 PASS**（含 9 个放行用例验证无误报）
+- **生效条件**：hooks 在会话启动时加载，**本会话不生效，下一会话起作用**（与子 agent 同样的会话级注册机制）
 
 ## 踩过的坑 + 避免策略
 
