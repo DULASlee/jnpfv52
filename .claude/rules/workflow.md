@@ -59,6 +59,8 @@
 
 ## Phase 5 Verify — Supreme Iron Law（E2E 证据）
 
+**子 agent dispatch：** 后端/API/Skill/IR 验证 → `subagent_type: jnpf-tester`（Dev Loop：dotnet build / jnpf-api.mjs / pnpm test:api，返回 fugu/test-report-v1 JSON）。前端 UI 变更仍用 playwright 技能产出 E1 截图。`verdict: FAIL` 且 suggested_fix 不明确 → dispatch `jnpf-debugger`。
+
 - **⬛ 浏览器端到端操作是唯一验收标准**
 - 使用 `playwright` 技能打开浏览器
 - 产出截图至 `.claude/evidence/`（E1 证据）
