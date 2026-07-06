@@ -33,11 +33,13 @@ docs/token.txt
 # Cursor / toolchain
 .cursor/logs/
 scripts/.jnpf-session.json
+api-tests/http/http-client.env.json
 .cursor/episodic/sync-status.json
 .cursor/edge-debug-profile/
 .env.toolchain
-# Claude Code — ignore all settings (contains tokens / local paths)
-.claude/settings.json
+# Claude Code settings — 区分团队共享与个人本地
+# settings.json = 团队共享 hook 注册（无密钥，入版本控制）
+# settings.local.json = 个人覆盖（含 token / 本地路径，保持忽略）
 .claude/settings.local.json
 .claude/projects/
 .claude/*.log

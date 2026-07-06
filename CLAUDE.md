@@ -415,6 +415,7 @@ workspace/_completed/{任务名}-{YYYYMMDD-HHmm}/
 | R9 | Architect Fidelity — 需求提取清单 + 实现标注 | L2 | code-reviewer |
 | R10 | Bug Discovery — 结构化上报, NEVER 沉默 → `.claude/rules/engineering-laws.md` Law 1 | L2 | code-reviewer |
 | R11 | S2 Compile — compile 默认 + confirm 后 C# 物化；禁止 S2 写九表 / sa-service 写主库 | L2 | code-reviewer · ADR-004 |
+| R12 | Triple-Key — `(tenantId, projectId, pipelineId)` 三元组在所有层 MUST 完整独立可分离；多用户/多项目/多对话/fork/冻结拉起的存在前提 | L2 | code-reviewer · 宪法级 |
 
 > **合规测试：** `node scripts/test-hooks.mjs`（28 用例覆盖 R4/R5/R6/R7/R8 + 基础守卫 + MultiEdit）
 
@@ -459,6 +460,7 @@ cd backend && dotnet build
 - **连接串：** `backend/application/JNPF.API.Entry/Configurations/ConnectionStrings.json`（gitignored）
 - **Studio S2（ADR-004）：** compile 默认 → `SaNineViewCompiler` 九视图；confirm 后 C# `SaMaterializer` 写 `sa_*` 九表；**compile 主链不需 sa-service**。见 `openspec/specs/studio-s2-compile/spec.md` · `.cursor/rules/studio-s2-compile.mdc`
 - **交互式澄清问答（ADR-005）：** 需求分析/架构设计/总体设计三阶段，LLM 产出结构化选择题（单选/多选/文本，每轮 3-5 题，末项恒为"其他"+文本框）让用户逐条细化需求；关键题（required）硬门控推进；完整 IR 事件化（`ClarificationRequested`/`ClarificationAnswered`）；默认 3-7 轮（`Clarification:MaxRounds`），可"全部跳过"。见 `openspec/specs/studio-clarification/spec.md` · `.cursor/rules/studio-clarification.mdc`
+- **三元组铁律（R12 · 宪法级）：** AI 原生开发一切数据/IR/路径/SkillContext MUST 携带 `(tenantId, projectId, pipelineId)`，三者完整、独立、可分离。1 tenant → N projects → M pipelines（greenfield/bugfix/enhancement，可 fork/freeze/resume）。违反 = 多用户多项目多对话功能形同虚设。见 `.cursor/rules/triple-key-iron-law.mdc` · `.claude/rules/triple-key-iron-law.md` · `architecture-redlines.md` §R12
 
 ---
 
@@ -484,6 +486,7 @@ cd backend && dotnet build
 | 触发条件 | 读取文件 |
 |---|---|
 | **任何编码任务（架构约束）** | `.claude/rules/architecture-redlines.md` |
+| **改 AiPipelineEntity / IR 投影 / Studio 路径 / Skill 入口 / SkillContext** | `.claude/rules/triple-key-iron-law.md`（R12 宪法级，三元组铁律） |
 | 写后端 C# 代码 | `.claude/rules/jnpf-expert-traps.md` + `.claude/rules/sql-safety.md` |
 | 写前端 Vue3 代码 | `.claude/rules/jnpf-frontend-rules.md` |
 | **前端类型检查 / Dev Loop 验证** | `.cursor/rules/frontend-typecheck.mdc`（`pnpm type-check`；禁止裸 `vue-tsc`） |
@@ -528,17 +531,16 @@ cd backend && dotnet build
 
 | 时机 | Hook | 作用 | 层级 |
 |---|---|---|---|
-| SessionStart | `superpowers-check.mjs` | **Superpowers 强制激活验证** + 技能可用性检查 + AI 强制性指令 | — |
-| PreToolUse (Write\|Edit\|MultiEdit) | `guard-write.mjs` | **统一八层守卫** — L1密钥 / L2空文件 / L3安全扫描 / L4模块边界R5 / L5多租户R4 / L6注入R7 / L7权限R8 / L8前端泄漏R6 | L0 |
-| PreToolUse (Bash) | `guard-bash.mjs` | 危险命令拦截 | L0 |
-| PostToolUse (Write\|Edit\|MultiEdit) | `format-and-lint.mjs` | 自动 Prettier + ESLint | — |
+| SessionStart | `session-scheduler.mjs` | 智能调度入口（superpowers 激活验证 + 技能可用性 + 错题本注入 + AI 强制指令） | — |
+| PreToolUse (Write\|Edit\|MultiEdit) | `guard-write.mjs` | **统一九层守卫** — L1密钥 / L2空文件 / L3安全扫描(eval/命令注入/XSS/弱加密) / L4模块边界R5 / L5多租户R4 / L6注入R7 / L7权限R8 / L8前端泄漏R6 / L9工作区隔离 | L0 |
+| PreToolUse (Bash) | `guard-bash.mjs` | 危险命令拦截（rm -rf / DROP / git push --force 等） | L0 |
+| PreToolUse (Skill) | `guard-skill-load.mjs` | Skill 限速，防 Skill 风暴 | — |
+| PostToolUse (Write\|Edit\|MultiEdit) | `guard-reviewer.mjs` | Reviewer L0 预筛选（生成 `.claude/review/flags/` 标志供 Reviewer L1 读取） | — |
 | Stop | `guard-finish.mjs` | 冒烟测试 + **E2E 证据智能阻断**（仅前端UI目录 + 4h时效 + 三级判定） | L0 |
-| Stop | `collect-summary.mjs` | 会话变更摘要（7 类分类） | — |
 
-> **Hook 分层架构：** 项目级 hooks（上表 12 个）受版本控制，全团队共享。
-> 用户级 hooks 仅 3 个个人偏好（session-start, guard-deps, rtk-rewrite）。
-> ⚠️ 禁止在用户级恢复 `guard-write`/`guard-finish`/`collect-summary` — 功能已被项目级版本全覆盖。已删除的独立 guard (oa/sql/auth/tenant/leak) 已合并为 guard-write L4-L8。`skill-reminder`/`load-mistakes`/`post-build-verify`/`verify-mistake-log` 已升级为 `souls/_shared/` 共享约束体系。
-> 验证命令：`node scripts/test-hooks.mjs`（28 用例）
+> **Hook 注册：** 项目 hooks 注册在 `.claude/settings.json`（版本控制、团队共享），命令用 `$CLAUDE_PROJECT_DIR` 定位。用户级 `~/.claude/settings.json` 仅 3 个个人偏好（session-start, guard-deps, rtk-rewrite），与项目 hooks 合并运行（不冲突）。
+> **guard-write 九层：** L1-L3 通用防护 + L4-L8 五条 L0 红线（R5/R4/R7/R8/R6）+ L9 AI 开发态工作区隔离。独立 guard（oa/sql/auth/tenant/leak）已合并为 L4-L8（2026-07-07 完成，原 cf5ac57d 删除后未迁移的缺口已补）。
+> 验证命令：`node scripts/test-hooks.mjs`（28 用例：R5(4)+R8(3)+R7(3)+R4(5)+R6(4)+GW(6)+GB(3)）
 
 ---
 
