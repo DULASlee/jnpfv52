@@ -11,10 +11,10 @@
   <div v-show="!isSso && !ssoLoading">
     <Form class="enter-x" :model="formData" :rules="getFormRules" ref="formRef" v-show="activeTab == 1">
       <FormItem name="account" class="enter-x">
-        <Input size="large" v-model:value="formData.account" :placeholder="t('sys.login.username')" class="fix-auto-fill" @blur="onAccountChange" />
+        <Input size="large" v-model:value="formData.account" :placeholder="t('sys.login.username')" class="fix-auto-fill" data-testid="login-account-input" @blur="onAccountChange" />
       </FormItem>
       <FormItem name="password" class="enter-x">
-        <InputPassword size="large" v-model:value="formData.password" :placeholder="t('sys.login.password')" />
+        <InputPassword size="large" v-model:value="formData.password" :placeholder="t('sys.login.password')" data-testid="login-password-input" />
       </FormItem>
       <FormItem name="code" class="enter-x" v-if="state.needCode">
         <a-row type="flex" justify="space-between">
@@ -30,7 +30,7 @@
       </FormItem>
       <div class="pt-10px">
         <FormItem class="enter-x">
-          <Button type="primary" size="large" block @click="handleLogin" :loading="loading">
+          <Button type="primary" size="large" block data-testid="login-submit-btn" @click="handleLogin" :loading="loading">
             {{ t('sys.login.loginButton') }}
           </Button>
         </FormItem>

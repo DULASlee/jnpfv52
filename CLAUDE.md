@@ -22,6 +22,30 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 
 **排除步骤**：当一个问题耗时超过 10 分钟仍未解决，MUST 停止修改源码，切换到数据采集模式——在数据链路的关键节点采集实际值，追踪到哪个节点的输出偏离预期。修复那个节点，而非下游节点。**猜 3 次不行就停手抓数据，不要再猜第 4 次。**
 
+### 🔧 Data-Driven Debug 工具链（四件套 + Phase B 增强）
+
+> **完整技能：** `data-driven-debug`（`/data-driven-debug` 或 S5 铁律自动触发）
+> **执行手册：** `.claude/rules/testing-toolchain.md` §场景 D
+
+| 症状 | 工具 | 命令 |
+|------|------|------|
+| **前端白屏/无响应/样式错乱** | full-fidelity-debug | `node scripts/lib/full-fidelity-debug.mjs --login --url=...` |
+| **快速录 GIF 给 D爷看** | visual-debug | `node scripts/lib/visual-debug.mjs --login --url=... --duration=15` |
+| **API 返回 500/数据不对** | agent-probe | `node scripts/lib/probe.mjs --trace-sql GET /api/...` |
+| **后端运行时变量值/调用栈** | netcoredbg-mcp | Agent 直接 attach 到 JNPF 进程 |
+| **任何异常自动记录** | DiagnosticsLog | `cat backend/.claude/diagnostics/session-*.jsonl` |
+| **不确定是否老问题** | **mistake-rag** (新) | `node scripts/lib/mistake-rag.mjs "错误关键词"` |
+| **测试失败匹配历史修复** | **mistake-rag** (新) | `cat error.log \| node scripts/lib/mistake-rag.mjs --stdin` |
+| **需要完整 HAR + DOM + 步骤链路** | **full-fidelity-debug** (新) | 5 层数据一次性采集，Agent 不重跑即可诊断 |
+
+**数据采集优先级：** full-fidelity-debug（最全） > visual-debug（轻量录屏） > mistake-rag（历史匹配） > agent-probe（API 诊断） > netcoredbg-mcp（进程内调试）
+
+**错误发生后 MUST 先查错题本：**
+```powershell
+node scripts/lib/mistake-rag.mjs "具体错误信息"        # 交互式
+node scripts/lib/mistake-rag.mjs --json "ReferenceError" # JSON 供 Agent 消费
+```
+
 ---
 
 ## 🔄 自动测试 · 自动修复闭环（Dev-Deploy-Debug Loop）
@@ -35,28 +59,36 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 ```
 1. 编译/类型
    cd backend && dotnet build
-   cd jnpf-web-vue3 && pnpm type-check    # 若改前端
+   cd jnpf-web-vue3 && pnpm type-check    # 若改前端（Studio 默认；legacy 用 type-check:full）
 
 2. 登录冒烟（Token 缓存 scripts/.jnpf-session.json）
    node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser
 
-3. 领域 E2E（按模块）
-   node scripts/phase2-skills-e2e.mjs           # 阶段二 Skills/IR
-   dotnet test --filter Phase2SkillsE2E           # xUnit 等价
+3. 快 API 断言（秒级 — **首选**）
+   E2E_PIPELINE_ID=<id> pnpm test:api
 
-4. FAIL → systematic-debugging → 读响应体/exit code → 修代码 → 回到 1（≤3 轮）
-5. PASS → 可声称该层验证通过
-6. 若改动了前端 UI → 补 Playwright 截图（.claude/evidence/）
+4. 长链 / evidence（分钟级 — **按需**，Skill watch / 新建 pipeline）
+   node scripts/phase-sup-s2-e2e.mjs <分步>
+   node scripts/phase-sup-s34-e2e.mjs / phase4-green-path.mjs 等
+
+5. FAIL → systematic-debugging → 读响应体/exit code → 修代码 → 回到 1（≤3 轮）
+6. PASS → 可声称该层验证通过
+7. 若改动了前端 UI → 补 Playwright 截图（.claude/evidence/）
 ```
+
+> **工具选型唯一信源：** `.cursor/rules/testing-toolchain.mdc`
+> **AI 模型执行手册（场景驱动）：** `.claude/rules/testing-toolchain.md`
+> **知识库：** `openspec/specs/studio-e2e-toolchain/spec.md`
 
 ### 工具链
 
 | 文件 | 用途 |
 |------|------|
-| `scripts/lib/jnpf-auth.mjs` | 核心库：MD5+AES 登录、Token 缓存、`apiRequest`、`pick()`（PascalCase 兼容） |
-| `scripts/jnpf-api.mjs` | CLI：`node scripts/jnpf-api.mjs GET\|POST <path> [body]` |
-| `scripts/jnpf_auth.py` | Python 版（`pip install requests pycryptodome`） |
-| `scripts/phase2-skills-e2e.mjs` | 阶段二全链路 HTTP E2E |
+| `tests/api/studio-s2.test.mjs` | Vitest 结构化断言（`pnpm test:api`） |
+| `api-tests/http/*.http` | REST Client 快探（`pnpm sync:http-env`） |
+| `scripts/lib/jnpf-auth.mjs` | 核心库：MD5+AES 登录、Token 缓存 |
+| `scripts/jnpf-api.mjs` | CLI 任意 API |
+| `scripts/phase-sup-s2-e2e.mjs` | 长链分步 + evidence（**非日常默认**） |
 | `scripts/README-api-cli.md` | 完整说明 |
 
 ### 登录协议（与 PC 前端一致）
@@ -74,7 +106,10 @@ Header: jnpf-origin: pc
 - ❌ `/api/auth/login`（不存在）
 - ❌ 手点浏览器做 API 冒烟
 - ❌ 仅 `dotnet build` 通过就声称 Skill/IR 功能完成
+- ❌ **日常仅跑慢速 mjs、跳过 `pnpm test:api`**
+- ❌ `node scripts/phase2-skills-e2e.mjs`（已废弃 exit 1）
 - ❌ 测试失败时不读 HTTP 响应体就改源码
+- ❌ 前端类型检查用 `npx vue-tsc --noEmit`（全量 src OOM；必须用 `pnpm type-check`，见 `.cursor/rules/frontend-typecheck.mdc`）
 
 ---
 
@@ -379,6 +414,7 @@ workspace/_completed/{任务名}-{YYYYMMDD-HHmm}/
 | R8 | API Permission — MUST 声明 `[AllowAnonymous]`/`[SecurityDefine]` | **L0** | `guard-write.mjs` L7 |
 | R9 | Architect Fidelity — 需求提取清单 + 实现标注 | L2 | code-reviewer |
 | R10 | Bug Discovery — 结构化上报, NEVER 沉默 → `.claude/rules/engineering-laws.md` Law 1 | L2 | code-reviewer |
+| R11 | S2 Compile — compile 默认 + confirm 后 C# 物化；禁止 S2 写九表 / sa-service 写主库 | L2 | code-reviewer · ADR-004 |
 
 > **合规测试：** `node scripts/test-hooks.mjs`（28 用例覆盖 R4/R5/R6/R7/R8 + 基础守卫 + MultiEdit）
 
@@ -419,6 +455,8 @@ cd backend && dotnet build
 - **事件总线：** Channel（进程内）/ RabbitMQ（跨进程）
 - **前端：** jnpf-web-vue3（PC, :3100）、jnpf-web-datascreen（DataV, :8100）、jnpf-app-vue3（Mobile, :3800）
 - **连接串：** `backend/application/JNPF.API.Entry/Configurations/ConnectionStrings.json`（gitignored）
+- **Studio S2（ADR-004）：** compile 默认 → `SaNineViewCompiler` 九视图；confirm 后 C# `SaMaterializer` 写 `sa_*` 九表；**compile 主链不需 sa-service**。见 `openspec/specs/studio-s2-compile/spec.md` · `.cursor/rules/studio-s2-compile.mdc`
+- **交互式澄清问答（ADR-005）：** 需求分析/架构设计/总体设计三阶段，LLM 产出结构化选择题（单选/多选/文本，每轮 3-5 题，末项恒为"其他"+文本框）让用户逐条细化需求；关键题（required）硬门控推进；完整 IR 事件化（`ClarificationRequested`/`ClarificationAnswered`）；默认 3-7 轮（`Clarification:MaxRounds`），可"全部跳过"。见 `openspec/specs/studio-clarification/spec.md` · `.cursor/rules/studio-clarification.mdc`
 
 ---
 
@@ -444,6 +482,7 @@ cd backend && dotnet build
 | **任何编码任务（架构约束）** | `.claude/rules/architecture-redlines.md` |
 | 写后端 C# 代码 | `.claude/rules/jnpf-expert-traps.md` + `.claude/rules/sql-safety.md` |
 | 写前端 Vue3 代码 | `.claude/rules/jnpf-frontend-rules.md` |
+| **前端类型检查 / Dev Loop 验证** | `.cursor/rules/frontend-typecheck.mdc`（`pnpm type-check`；禁止裸 `vue-tsc`） |
 | **后端/API/Skill/IR 验证 · Dev Loop** | `.claude/skills/jnpf-api-cli/SKILL.md` + `scripts/jnpf-api.mjs`（**禁止手点浏览器登录**） |
 | 前端实质性变更 / 需 E2E 验证 | `.claude/skills/playwright/SKILL.md`（产出 E1 截图证据） |
 | 写 SSE / EventSource / WebSocket / setTimeout | `.claude/rules/frontend-memory-leak.md` |
@@ -456,6 +495,8 @@ cd backend && dotnet build
 | **犯错误后** | **MUST 追加到 `.claude/memory/mistake-log.md` 错题本**（格式：日期/类别/症状/根因/修复/关键词）|
 | **编码前** | Grep `.claude/memory/mistake-log.md` 搜索当前任务关键词，避免重复错误 |
 | 代码修改完成 / 准备声称"完成" | `.claude/rules/testing.md`（测试 Gate Function） |
+| **任何测试行为（用什么工具、跑什么命令）** | **`.claude/rules/testing-toolchain.md`（AI 模型执行手册，场景驱动）** |
+| 遇到 Bug / 测试失败 / 不知用什么工具排查 | `.claude/rules/testing-toolchain.md` §场景 D（Bug 诊断）+ §场景 B（前端） |
 | 任何编码任务（工程铁律） | `.claude/rules/engineering-laws.md`（Law 1-4） |
 | 涉及 2+ 文件或 20+ 行变更 | `.claude/rules/review-workflow.md` + SP: `requesting-code-review` |
 | 用户要求 "review" / "审查" / "跑测试" | `.claude/rules/review-workflow.md` + SP: `requesting-code-review` |

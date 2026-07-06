@@ -1,0 +1,210 @@
+---
+description: 测试工具选型与命令唯一信源。按场景选 Vitest/REST Client/Playwright/promptfoo/dotnet/mjs，禁止重复造轮子。所有 AI 模型常驻遵循。
+alwaysApply: true
+---
+
+# 测试工具链（Testing Toolchain — 唯一信源）
+
+> **职责划分：** 本文件定 **用什么工具、跑什么命令**；`.cursor/rules/auto-test-fix-loop.mdc` 定 **闭环铁律（L1–L5）**；`.cursor/rules/business-first-iron-law.mdc` 定 **业务验收锚点**。
+>
+> **知识库详表：** `api-tests/README.md` · `e2e/README.md` · `scripts/README-api-cli.md`
+
+## 核心原则
+
+1. **快测优先于慢链** — 已有 pipeline 的断言 **MUST** 先 `pnpm test:api`（~10s）；**禁止**默认只跑 `phase-sup-*.mjs verify`。
+2. **一个场景一种主工具** — 禁止为同一断言新建 `.mjs`；复用 Vitest / `.http` / `scripts/lib/*.mjs`。
+3. **鉴权唯一入口** — `scripts/lib/jnpf-auth.mjs`（MD5+AES）；`.http` / Vitest / mjs **不得**手写登录。
+4. **分层验收** — L0 编译 → **L1 Vitest**（秒级）→ L2 mjs 分步（分钟级，仅 Skill watch / 新建 pipeline）→ L3 UI / L4 LLM / L5 sqlcmd。
+5. **S2 compile 物化** — C# `SaMaterializer` 直连主库；**不需要** sa-service（仅 agent 九步回归需要 `SA_DB_BACKEND=inmemory`）。
+
+> **知识库：** `openspec/specs/studio-e2e-toolchain/spec.md` · **2026-07-06 分层 E2E 变更**
+
+---
+
+## 选型决策树（误用拦截）
+
+| 你要做什么 | ✅ 正确工具 | ❌ 禁止误用 |
+|-----------|------------|------------|
+| 断言 00/01/02、IR、物化（**已有 pipeline**） | `E2E_PIPELINE_ID=<id> pnpm test:api` | 只跑 `phase-sup-s2-e2e verify` |
+| 手工调 API、看 Response | `pnpm sync:http-env` + `.http` | 写新 mjs 或手点浏览器 |
+| 等 gate/pm/analyst Skill 跑完 | `phase-sup-s2-e2e.mjs <分步>` | Vitest（无 watch） |
+| 从零 create 全链 + evidence | mjs 分步 `create→…→verify` | blind `all` 或 Vitest 代替 |
+| 新断言逻辑 | 加 `tests/api/*.test.mjs` | 新 `.mjs` 脚本 |
+| API 存活冒烟 | `jnpf-api.mjs GET /api/oauth/CurrentUser` | 长链 mjs |
+
+---
+
+## 工具选型矩阵（Agent 必查）
+
+| 你要验证什么 | 主工具 | 命令 | 耗时 | 浏览器 |
+|-------------|--------|------|------|--------|
+| 编译/语法 | dotnet / pnpm | `dotnet build` · `pnpm type-check` | 秒–分 | ❌ |
+| API 存活 | jnpf-api-cli | `node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser` | <5s | ❌ |
+| 手工调 API、看 Response | **REST Client `.http`** | `pnpm sync:http-env` → `api-tests/http/studio-s2-chain.http` | 秒级 | ❌ |
+| 交付物/IR/物化 **结构化断言** | **Vitest（根目录）** | `E2E_PIPELINE_ID=311 pnpm test:api` | ~10s | ❌ |
+| S0→S2 **长链 + Skill 等待 + evidence** | 分步 mjs | `node scripts/phase-sup-s2-e2e.mjs <step>` | 分–十分 | ❌ |
+| **S3→S4 设计四 Skill 断言** | **Vitest** | `E2E_PIPELINE_ID=<id> pnpm test:api` | ~10s | ❌ |
+| S3→S4 **驱动**（stage confirm + 等 LLM） | **Vitest** `E2E_DRIVE_S34=1` 或 **`.http`** | 见 `studio-s34-chain.http` | 分–十分 | ❌ |
+| 单接口冒烟 | dotnet xUnit | `dotnet test backend/tests/JNPF.Tests.Gate --filter StudioApiSmokeTests` | 秒级 | ❌ |
+| Phase B 全量 | dotnet xUnit | `dotnet test backend/tests/JNPF.Tests.PhaseB` | 秒–分 | ❌ |
+| SA Service 逻辑 | Vitest（sa-service） | `cd sa-service && npm test` | <5s | ❌ |
+| SA Agent **提示词质量**（9 Agent） | promptfoo | `npx promptfoo@latest eval -c promptfoo/promptfooconfig.yaml` | 分 | ❌ |
+| Studio **页面/门控 UI** | Playwright | `pnpm e2e:studio:gate` 等 | 分 | ✅ headless |
+| Studio Vue **组件** | Vitest Browser | `cd jnpf-web-vue3 && pnpm test:browser` | 分 | ✅ headless |
+| **九表数据**审计 | sqlcmd | `sa-nine-tables-audit.sql`（SSMS/sqlcmd） | 秒 | ❌ |
+| 阶段交付 Supreme 证据 | Playwright 截图 | `.claude/evidence/` | — | ✅ |
+| **前端无响应诊断** | full-fidelity-debug | `node scripts/lib/full-fidelity-debug.mjs --login --url=...` | 分 | ✅ |
+| **快速录屏诊断** | visual-debug | `node scripts/lib/visual-debug.mjs --login --url=...` | 分 | ✅ |
+| **Bug 历史匹配** | mistake-rag | `node scripts/lib/mistake-rag.mjs "关键词"` | <1s | ❌ |
+| **API 合约验证** | Pact | `cd tests/contract && npm test` | 分 | ❌ |
+| **性能冒烟** (<3s) | k6 | `k6 run --env SMOKE=1 scripts/load/studio-pipeline.js` | 分 | ❌ |
+| **性能负载** (p95<5s) | k6 | `k6 run scripts/load/studio-pipeline.js` | 分 | ❌ |
+| **声明式负载** | artillery | `npx artillery@latest run scripts/load/studio-gate.yml` | 分 | ❌ |
+
+---
+
+## 三层 Dev Loop（日常默认顺序）
+
+```powershell
+# 0. 环境
+powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1
+
+# 1. 编译
+cd backend && dotnet build
+cd jnpf-web-vue3 && pnpm type-check   # legacy 见 frontend-typecheck.mdc
+
+# 2. 快 API（秒级 — 优先于写新 mjs）
+node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser
+$env:E2E_PIPELINE_ID="311"
+pnpm test:api
+
+# 3. 长链 / 阶段 evidence（分钟级 — 仅必要时）
+node scripts/phase-sup-s2-e2e.mjs probe
+node scripts/phase-sup-s2-e2e.mjs gate    # 分步，禁止 blind all
+node scripts/phase-sup-s2-e2e.mjs verify
+```
+
+---
+
+## 各工具命令速查
+
+### REST Client（`.http`）
+
+```powershell
+node scripts/lib/jnpf-auth.mjs --json
+pnpm sync:http-env
+# VS Code REST Client → api-tests/http/studio-s2-chain.http（环境 dev）
+```
+
+- Token 写入 `api-tests/http/http-client.env.json`（gitignore）
+- **禁止**在 `.http` 里用 JSON body 登录（JNPF 非标准登录）
+
+### Vitest API（根目录 `tests/api/`）
+
+```powershell
+pnpm test:api              # run once
+pnpm test:api:watch        # 开发断言
+```
+
+- 共享库：`scripts/lib/jnpf-auth.mjs` · `scripts/lib/phase-sup-api.mjs`
+- 无 `E2E_PIPELINE_ID` 且无 `.sup-e2e-state.json` 时仅跑 API 冒烟
+
+### phase-sup-s2-e2e.mjs（长链分步）
+
+```powershell
+node scripts/phase-sup-s2-e2e.mjs probe|create|gate|pm|confirm|analyst|verify|diagnose
+```
+
+| 步骤 | 需要 sa-service |
+|------|-----------------|
+| gate / pm / confirm | ❌ |
+| analyst（compile 模式） | ❌ |
+| analyst（agent 模式） | ✅ `SA_DB_BACKEND=inmemory` |
+| confirm 物化 | ❌（C# SaMaterializer） |
+
+状态：`scripts/.sup-e2e-state.json` · evidence：`.claude/evidence/`
+
+### Playwright（`e2e/`）
+
+```powershell
+pnpm e2e:login
+pnpm e2e:studio:layout
+pnpm e2e:studio:gate
+$env:E2E_PIPELINE_ID="294"; pnpm e2e:studio:deliverables
+```
+
+详见 `e2e/README.md` — **禁止** `scripts/studio-e2e.mjs` 全链。
+
+### promptfoo
+
+```powershell
+npx promptfoo@latest eval -c promptfoo/promptfooconfig.yaml
+npx promptfoo@latest view
+```
+
+改 SA Agent 提示词后 **MUST** 跑 eval。
+
+### dotnet 快测
+
+```powershell
+dotnet test backend/tests/JNPF.Tests.Gate --filter "FullyQualifiedName~StudioApiSmokeTests"
+dotnet test backend/tests/JNPF.Tests.Gate --filter "FullyQualifiedName~McpTools"
+$env:E2E_PIPELINE_ID="311"; dotnet test ... --filter Deliverables
+```
+
+### sqlcmd / 九表审计
+
+```powershell
+node scripts/run-inte-migration.mjs   # DDL 迁移
+# SSMS 打开 backend/modularity/inteAssistant/Migrations/scripts/sa-nine-tables-audit.sql
+# 设 @PipelineId = 311
+```
+
+---
+
+## 共享库（禁止复制粘贴）
+
+| 库 | 用途 |
+|----|------|
+| `scripts/lib/jnpf-auth.mjs` | 登录、Token 缓存、`apiRequest`、`pick()` |
+| `scripts/lib/phase-sup-api.mjs` | S2 业务 API、watch、diagnose、evidence |
+| `scripts/lib/e2e-runner.mjs` | 重试、锁、poll-once（Playwright/legacy 用） |
+| `scripts/jnpf-api.mjs` | CLI 任意 API |
+
+新测试 **MUST** import 上述库，不得重写 MD5+AES 或 PascalCase 解析。
+
+---
+
+## 禁止（L0）
+
+| ❌ | 原因 |
+|----|------|
+| 手点浏览器登录/API 冒烟 | 用 `jnpf-auth.mjs` |
+| `POST /api/auth/login` | 不存在；用 `/api/oauth/Login` |
+| `node scripts/phase2-skills-e2e.mjs` | 已废弃 exit 1 |
+| 裸 `npx vue-tsc --noEmit` | OOM；见 `frontend-typecheck.mdc` |
+| 为每个 API 写新 `.mjs` 断言 | 用 Vitest 或 `.http` |
+| **日常 Dev Loop 仅跑 mjs verify、跳过 `pnpm test:api`** | 快测优先；mjs 仅 watch/新建/evidence |
+| `.http` 替代 Skill 分钟级 watch | 无轮询能力 |
+| 仅 `dotnet build` 声称 Skill/IR 完成 | 须 `pnpm test:api` 或 phase-sup 分步 |
+| 改 prompt 不跑 promptfoo | 回归盲区 |
+| sa-service 写业务库做物化 | 已迁至 C# `SaMaterializer` |
+| **CSS class 选择器** `.input-bar .send-btn` | 用 `data-testid` 或 `getByRole` |
+| **Bug 2 次修不好继续猜** | 用 `full-fidelity-debug` / `mistake-rag` 抓数据 |
+
+---
+
+## 文档索引
+
+| 文档 | 内容 |
+|------|------|
+| **`.claude/rules/testing-toolchain.md`** | **AI 模型执行手册（场景驱动，必读）** |
+| **`openspec/specs/studio-e2e-toolchain/spec.md`** | **分层 E2E 知识库（决策树 + 禁止项）** |
+| `api-tests/README.md` | 工具对照 + 迁移路径 |
+| `e2e/README.md` | Playwright 按页测 |
+| `scripts/README-api-cli.md` | jnpf-api-cli 详解 |
+| `.cursor/rules/auto-test-fix-loop.mdc` | L1–L5 闭环 |
+| `.claude/rules/testing.md` | Gate Function 5 步 |
+| `.claude/skills/jnpf-api-cli/SKILL.md` | API 自动测试技能 |
+| `scripts/load/` | k6 + artillery 负载测试 |
+| `tests/contract/` | Pact 消费者契约测试 |

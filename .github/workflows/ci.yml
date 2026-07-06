@@ -201,3 +201,52 @@ jobs:
             exit 1
           fi
           echo ".env.example exists and is valid"
+
+  # ---------------------------------------------------------------------------
+  # Promptfoo LLM Quality Regression (requires sa-service)
+  # ---------------------------------------------------------------------------
+  promptfoo-eval:
+    name: LLM Prompt Quality Regression
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: [backend]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run promptfoo eval (ScopeAgent + UIAgent smoke)
+        run: |
+          npx promptfoo@latest eval -c promptfoo/promptfooconfig.yaml \
+            --filter "ScopeAgent" \
+            --filter "UIAgent" \
+            --max-concurrency 2 \
+            --output .claude/evidence/promptfoo-results.json
+        continue-on-error: true
+
+  # ---------------------------------------------------------------------------
+  # API Performance Baseline (smoke only — full load test is manual trigger)
+  # ---------------------------------------------------------------------------
+  perf-baseline:
+    name: API Performance Smoke
+    runs-on: ubuntu-latest
+    needs: [backend]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: k6 smoke test
+        run: |
+          npx k6 run --env SMOKE=1 --env PIPELINE_ID=311 scripts/load/studio-pipeline.js
+        continue-on-error: true

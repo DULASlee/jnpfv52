@@ -1,14 +1,15 @@
 <template>
   <div class="submit-requirement-page">
     <div class="page-body">
-      <aside class="panel-left">
-        <StageNavSidebar :stages="stageList" :current-stage="currentStageNum" :pipeline-id="activePipelineId" />
+      <aside class="panel-left" data-testid="panel-left">
         <PipelineTaskList ref="taskListRef" :active-pipeline-id="activePipelineId" @select="onSelectPipeline" />
       </aside>
       <main class="panel-center">
-        <AiChatPanel ref="chatPanelRef" @pipeline-id-change="onPipelineIdChange" @new-chat="onNewChat" />
+        <AiChatPanel ref="chatPanelRef" :show-observatory-toggle="ENABLE_OBSERVATORY" @pipeline-id-change="onPipelineIdChange" @new-chat="onNewChat" />
       </main>
-      <IrObservatoryPanel :collapsed="observatoryCollapsed" @toggle-collapse="observatoryCollapsed = !observatoryCollapsed" />
+      <aside v-if="ENABLE_OBSERVATORY" v-show="!panelCollapsed" class="panel-right" data-testid="panel-right">
+        <IrObservatoryPanel :current-stage="currentStageNum" />
+      </aside>
     </div>
   </div>
 </template>
@@ -18,36 +19,33 @@
   import { useRoute, useRouter } from 'vue-router';
   import AiChatPanel from '../../components/AiChatPanel.vue';
   import IrObservatoryPanel from '../../components/IrObservatoryPanel.vue';
-  import StageNavSidebar from '../../components/StageNavSidebar.vue';
   import PipelineTaskList from '../../components/PipelineTaskList.vue';
   import { useIrObservatory, IR_OBSERVATORY_KEY } from '../../composables/useIrObservatory';
+  import { usePipelineMaterials, PIPELINE_MATERIALS_KEY } from '../../composables/usePipelineMaterials';
   import { usePmSkill, PM_SKILL_KEY } from '../../composables/usePmSkill';
   import { useAnalystSkill, ANALYST_SKILL_KEY } from '../../composables/useAnalystSkill';
   import { useDesignSkills, DESIGN_SKILL_KEY } from '../../composables/useDesignSkills';
-
-  const DEFAULT_STAGES = [
-    { stage: 1, name: '需求分析', code: 'requirement' },
-    { stage: 2, name: '架构设计', code: 'architecture' },
-    { stage: 3, name: '总体设计', code: 'design' },
-    { stage: 4, name: '自动开发', code: 'development' },
-    { stage: 5, name: '交付验证', code: 'delivery' },
-  ];
+  import { useDeveloperSkill, DEVELOPER_SKILL_KEY } from '../../composables/useDeveloperSkill';
+  const ENABLE_OBSERVATORY = false;
 
   const route = useRoute();
   const router = useRouter();
   const irObservatory = useIrObservatory();
   provide(IR_OBSERVATORY_KEY, irObservatory);
   provide(PM_SKILL_KEY, usePmSkill(irObservatory.pipelineId, irObservatory.snapshots, irObservatory.refreshAll));
-  provide(ANALYST_SKILL_KEY, useAnalystSkill(irObservatory.pipelineId, irObservatory.snapshots, irObservatory.refreshAll));
+  provide(ANALYST_SKILL_KEY, useAnalystSkill(irObservatory.pipelineId, irObservatory.snapshots, irObservatory.refreshAll, irObservatory.events));
   provide(DESIGN_SKILL_KEY, useDesignSkills(irObservatory.pipelineId, irObservatory.snapshots, irObservatory.refreshAll));
+  provide(DEVELOPER_SKILL_KEY, useDeveloperSkill(irObservatory.pipelineId, irObservatory.snapshots, irObservatory.refreshAll));
 
   const chatPanelRef = ref<InstanceType<typeof AiChatPanel> | null>(null);
   const taskListRef = ref<InstanceType<typeof PipelineTaskList> | null>(null);
-  const observatoryCollapsed = ref(false);
 
-  const stageList = computed(() => chatPanelRef.value?.stages ?? DEFAULT_STAGES);
   const currentStageNum = computed(() => chatPanelRef.value?.currentStage ?? 1);
   const activePipelineId = computed(() => chatPanelRef.value?.pipelineId ?? 0);
+  const panelCollapsed = computed(() => irObservatory.panelCollapsed.value);
+
+  const pipelineMaterials = usePipelineMaterials(irObservatory.pipelineId, currentStageNum);
+  provide(PIPELINE_MATERIALS_KEY, pipelineMaterials);
 
   function onPipelineIdChange(id: number) {
     irObservatory.setPipelineId(id);
@@ -102,8 +100,14 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    min-height: 0;
     background: #fafafa;
     border-right: 1px solid #f0f0f0;
+
+    :deep(.pipeline-task-list) {
+      flex: 1;
+      min-height: 0;
+    }
   }
 
   .panel-center {
@@ -114,15 +118,33 @@
     flex-direction: column;
   }
 
+  .panel-right {
+    width: 340px;
+    min-width: 340px;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
   @media (max-width: 1439px) {
     .panel-left {
       width: 200px;
       min-width: 200px;
     }
+
+    .panel-right {
+      width: 300px;
+      min-width: 300px;
+    }
   }
 
   @media (max-width: 1024px) {
     .panel-left {
+      display: none;
+    }
+
+    .panel-right {
       display: none;
     }
   }

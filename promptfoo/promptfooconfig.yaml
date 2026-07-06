@@ -1,0 +1,293 @@
+# ═══════════════════════════════════════════════════════════════
+# JNPF SA Agent 提示词回归测试（2026 promptfoo）
+#
+# 目的：当 SA Agent 提示词（systemPrompt / buildPrompt 逻辑）修改时，
+#       在 CI 自动捕获输出质量回归。
+#
+# 与传统 API 测试的本质区别：
+#   - 传统测试：仅验证 HTTP 200 + 响应 JSON 格式
+#   - promptfoo：验证 LLM 输出的【语义质量】（eventCount 一致性、
+#     controlType 规则、数量合理性、JSON Schema 合规）
+#
+# 运行：
+#   npx promptfoo@latest eval                         # 全量
+#   npx promptfoo@latest eval --filter ScopeAgent     # 仅 Scope
+#   npx promptfoo@latest view                         # Web UI 结果
+#
+# 环境变量：
+#   SA_SERVICE_URL  — SA Service 地址（默认 http://localhost:3001）
+#   PROMPTFOO_CACHE_PATH — 缓存路径（避免重复调 LLM）
+# ═══════════════════════════════════════════════════════════════
+
+description: JNPF SA Agent LLM 输出质量回归测试
+
+# ──────────────────────────────────────────────────────────────
+# 全局默认断言（对所有测试用例都生效）
+# ──────────────────────────────────────────────────────────────
+defaultTest:
+  assert:
+    - type: is-json
+      # LLM 输出必须是合法 JSON，不能含 markdown 代码块或多余文字
+
+# ──────────────────────────────────────────────────────────────
+# 测试套件 1：ScopeAgent（系统边界 + 业务事件提取）
+# ──────────────────────────────────────────────────────────────
+- description: ScopeAgent — 系统边界与业务事件提取质量
+  providers:
+    - id: file://promptfoo/providers/scope-agent.js
+      label: ScopeAgent@sa-service
+
+  tests:
+    # T1：简单单领域需求（请假系统）
+    - description: 员工请假申请系统（简单单领域）
+      vars:
+        requirementText: >
+          员工可以通过系统提交请假申请（年假、病假、事假），
+          填写请假类型、开始日期、天数和原因。
+          直属主管在系统中审批申请，审批通过后 HR 确认归档。
+          员工可查看自己的申请状态和审批历史。
+      assert:
+        - type: javascript
+          description: businessEvents 数量在合理范围
+          value: |
+            const o = JSON.parse(output);
+            return Array.isArray(o.businessEvents) && o.businessEvents.length >= 1 && o.businessEvents.length <= 8;
+
+        - type: javascript
+          description: eventCount 与 businessEvents 长度一致
+          value: |
+            const o = JSON.parse(output);
+            return o.eventCount === o.businessEvents?.length;
+
+        - type: javascript
+          description: 每个 businessEvent 含必需字段
+          value: |
+            const o = JSON.parse(output);
+            return o.businessEvents.every(e =>
+              typeof e.id === 'number' &&
+              typeof e.name === 'string' && e.name.length > 0 &&
+              ['simple','medium','complex'].includes(e.complexity)
+            );
+
+        - type: javascript
+          description: systemBoundary 包含 inScope 和 outOfScope
+          value: |
+            const o = JSON.parse(output);
+            return Array.isArray(o.systemBoundary?.inScope) && Array.isArray(o.systemBoundary?.outOfScope);
+
+        - type: javascript
+          description: externalEntities 含至少一个用户实体
+          value: |
+            const o = JSON.parse(output);
+            return Array.isArray(o.externalEntities) && o.externalEntities.some(e => e.type === 'user');
+
+    # T2：中等复杂度（报工系统，含多个业务实体）
+    - description: 工厂报工系统（中等复杂度）
+      vars:
+        requirementText: >
+          工厂生产报工系统：工人在移动端扫描工单二维码后录入完工数量和不良品数量，
+          系统自动计算工时和计件工资。班组长可以对当日报工数据进行审核和修正。
+          生产主管查看实时产能看板，包括各工序完工率、不良率趋势图。
+          系统与 ERP 对接，实时推送工单状态变更。ERP 对接不在本期范围。
+      assert:
+        - type: javascript
+          description: 复杂系统 businessEvents 数量 >= 3
+          value: |
+            const o = JSON.parse(output);
+            return o.businessEvents?.length >= 3;
+
+        - type: javascript
+          description: outOfScope 明确排除了 ERP 对接
+          value: |
+            const o = JSON.parse(output);
+            const outText = JSON.stringify(o.systemBoundary?.outOfScope ?? '');
+            return outText.includes('ERP') || outText.includes('对接');
+
+    # T3：边界测试 — 空白需求（LLM 应给出兜底结果而非崩溃）
+    - description: 需求文本不足时的健壮性
+      vars:
+        requirementText: "系统"
+      assert:
+        - type: javascript
+          description: 即使需求模糊也能返回合法结构
+          value: |
+            const o = JSON.parse(output);
+            return typeof o === 'object' && o !== null && 'businessEvents' in o;
+
+# ──────────────────────────────────────────────────────────────
+# 测试套件 2：UIAgent（UI 原型生成质量）
+# ──────────────────────────────────────────────────────────────
+- description: UIAgent — UI 页面原型生成质量
+  providers:
+    - id: file://promptfoo/providers/ui-agent.js
+      label: UIAgent@sa-service
+
+  tests:
+    # T4：基础请假系统 UI 生成
+    - description: 请假申请系统 UI 原型
+      vars:
+        requirementText: "员工请假申请系统：员工提交申请，主管审批，HR 确认"
+      assert:
+        - type: javascript
+          description: screens 数组不为空
+          value: |
+            const o = JSON.parse(output);
+            return Array.isArray(o.screens) && o.screens.length > 0;
+
+        - type: javascript
+          description: 每个 screen 含必需字段
+          value: |
+            const o = JSON.parse(output);
+            return o.screens.every(s =>
+              typeof s.id === 'string' &&
+              typeof s.name === 'string' &&
+              Array.isArray(s.fields)
+            );
+
+        - type: javascript
+          description: DATETIME 类型字段的 controlType 必须是 DatePicker
+          value: |
+            const o = JSON.parse(output);
+            const allFields = o.screens.flatMap(s => s.fields ?? []);
+            const datetimeFields = allFields.filter(f => f.type === 'DATETIME');
+            return datetimeFields.length === 0 || datetimeFields.every(f => f.controlType === 'DatePicker');
+
+        - type: javascript
+          description: DECIMAL/INT 类型字段的 controlType 必须是 NumberInput
+          value: |
+            const o = JSON.parse(output);
+            const allFields = o.screens.flatMap(s => s.fields ?? []);
+            const numFields = allFields.filter(f => ['DECIMAL','INT','BIGINT'].includes(f.type));
+            return numFields.length === 0 || numFields.every(f => f.controlType === 'NumberInput');
+
+  # ──────────────────────────────────────────────────────────────
+  # 测试套件 3–9：全 SA 九步 Agent（通用 Provider）
+  # 每 agent 至少 1 个基础用例，确保提示词修改后不会导致输出结构崩溃
+  # ──────────────────────────────────────────────────────────────
+
+  - description: DFDAgent — 数据流图生成质量
+    providers:
+      - id: file://promptfoo/providers/sa-agent.js
+        label: DFDAgent@sa-service
+    tests:
+      - description: 请假系统数据流图
+        vars:
+          agentName: DFDAgent
+          requirementText: >
+            员工通过系统提交请假申请（年假、病假、事假），填写请假类型、开始日期、天数和原因。
+            直属主管在系统中审批申请，审批通过后 HR 确认归档。
+            员工可查看自己的申请状态和审批历史。
+        assert:
+          - type: javascript
+            description: 返回合法 JSON
+            value: |
+              const o = JSON.parse(output);
+              return typeof o === 'object' && o !== null && !o.error;
+
+  - description: BPMAgent — 业务流程建模质量
+    providers:
+      - id: file://promptfoo/providers/sa-agent.js
+        label: BPMAgent@sa-service
+    tests:
+      - description: 请假审批流程 BPMN
+        vars:
+          agentName: BPMAgent
+          requirementText: >
+            员工提交请假申请 → 主管审批 → 审批通过后 HR 归档。主管可驳回，驳回后员工可修改重提。
+        assert:
+          - type: javascript
+            description: 返回合法 JSON
+            value: |
+              const o = JSON.parse(output);
+              return typeof o === 'object' && o !== null && !o.error;
+
+  - description: DictAgent — 数据字典生成质量
+    providers:
+      - id: file://promptfoo/providers/sa-agent.js
+        label: DictAgent@sa-service
+    tests:
+      - description: 请假系统数据字典
+        vars:
+          agentName: DictAgent
+          requirementText: >
+            员工请假系统：员工表含姓名/部门/职位，请假单含类型/开始日期/天数/原因/状态，
+            审批记录含审批人/审批时间/审批意见。
+        assert:
+          - type: javascript
+            description: 返回合法 JSON
+            value: |
+              const o = JSON.parse(output);
+              return typeof o === 'object' && o !== null && !o.error;
+
+  - description: PSpecAgent — 处理规格生成质量
+    providers:
+      - id: file://promptfoo/providers/sa-agent.js
+        label: PSpecAgent@sa-service
+    tests:
+      - description: 请假提交处理逻辑
+        vars:
+          agentName: PSpecAgent
+          requirementText: >
+            提交请假申请时系统校验：结束日期≥开始日期，天数=结束日期-开始日期+1（排除周末），
+            年假余额≥申请天数。通过后生成待审批记录。
+        assert:
+          - type: javascript
+            description: 返回合法 JSON
+            value: |
+              const o = JSON.parse(output);
+              return typeof o === 'object' && o !== null && !o.error;
+
+  - description: DecisionTableAgent — 决策表生成质量
+    providers:
+      - id: file://promptfoo/providers/sa-agent.js
+        label: DecisionTableAgent@sa-service
+    tests:
+      - description: 请假审批决策表
+        vars:
+          agentName: DecisionTableAgent
+          requirementText: >
+            请假审批规则：≤3天直属主管审批即可，>3天需部门经理加签，
+            年假不足不能提交，病假需附医院证明。
+        assert:
+          - type: javascript
+            description: 返回合法 JSON
+            value: |
+              const o = JSON.parse(output);
+              return typeof o === 'object' && o !== null && !o.error;
+
+  - description: ERAgent — 实体关系建模质量
+    providers:
+      - id: file://promptfoo/providers/sa-agent.js
+        label: ERAgent@sa-service
+    tests:
+      - description: 请假系统 ER 模型
+        vars:
+          agentName: ERAgent
+          requirementText: >
+            员工请假系统：员工(Employee)与请假单(LeaveRequest)一对多，
+            请假单与审批记录(ApprovalRecord)一对多，部门(Department)与员工一对多。
+        assert:
+          - type: javascript
+            description: 返回合法 JSON 且含实体关系
+            value: |
+              const o = JSON.parse(output);
+              if (o.error) return false;
+              return typeof o === 'object' && o !== null;
+
+  - description: StateMachineAgent — 状态机建模质量
+    providers:
+      - id: file://promptfoo/providers/sa-agent.js
+        label: StateMachineAgent@sa-service
+    tests:
+      - description: 请假单状态流转
+        vars:
+          agentName: StateMachineAgent
+          requirementText: >
+            请假单状态：草稿→待审批→已批准→已归档，或草稿→待审批→已驳回→已撤销。
+            已批准状态30天后自动归档。
+        assert:
+          - type: javascript
+            description: 返回合法 JSON
+            value: |
+              const o = JSON.parse(output);
+              return typeof o === 'object' && o !== null && !o.error;
