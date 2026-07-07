@@ -90,6 +90,7 @@ scripts/.jnpf-*.json
 
 # Playwright / vitest runner output
 test-output/
+test-results/
 
 # Analysis artifacts (regenerable)
 ureport2-analysis/

@@ -165,7 +165,7 @@ public class FailureCollectionReport
 /// P7-E04 记忆遗忘 API（触发失败 trace 收集 + IR event 计数校验）。
 /// </summary>
 [ApiDescriptionSettings(Tag = "Studio", Name = "SkillMemory", Order = 204)]
-[Route("api/studio/skills/memory")]
+[Route("api/studio/skill-memory")]
 public class SkillMemoryApiService : IDynamicApiController, ITransient
 {
     private readonly IMemoryRetentionService _retention;

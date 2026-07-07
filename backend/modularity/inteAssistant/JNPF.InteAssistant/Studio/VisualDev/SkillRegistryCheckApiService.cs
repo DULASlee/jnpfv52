@@ -14,7 +14,7 @@ namespace JNPF.InteAssistant.Studio.VisualDev;
 /// 验证 10 个 Skill（+ 1 bonus clarification）全部注册可 GetRequired。
 /// </summary>
 [ApiDescriptionSettings(Tag = "Studio", Name = "SkillRegistryCheck", Order = 206)]
-[Route("api/studio/skills/registry-check")]
+[Route("api/studio/registry-check")]
 public class SkillRegistryCheckApiService : IDynamicApiController, ITransient
 {
     /// <summary>10 个核心 Skill + 1 bonus clarification 的预期清单</summary>

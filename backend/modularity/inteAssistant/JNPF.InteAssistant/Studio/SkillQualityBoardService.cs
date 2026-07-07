@@ -20,7 +20,7 @@ namespace JNPF.InteAssistant.Studio;
 ///   - 展示在 IR 观测台新 Tab「Skill 质量」【前端 P7-F01】
 /// </summary>
 [ApiDescriptionSettings(Tag = "Studio", Name = "SkillQuality", Order = 203)]
-[Route("api/studio/skills/quality-board")]
+[Route("api/studio/skill-quality")]
 public class SkillQualityBoardService : IDynamicApiController, ITransient
 {
     private readonly ISqlSugarClient _db;

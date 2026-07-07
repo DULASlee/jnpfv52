@@ -28,7 +28,7 @@ export interface QualityBoardResult {
 
 export function getSkillQualityBoard(sinceDays = 30) {
   return defHttp.get<QualityBoardResult>({
-    url: '/api/studio/skills/quality-board',
+    url: '/api/studio/skill-quality',
     params: { sinceDays },
   });
 }
@@ -65,7 +65,7 @@ export interface ReviewListResult {
 
 export function getSkillReviews(skillRunId: string) {
   return defHttp.get<ReviewListResult>({
-    url: `/api/studio/skills/review/${skillRunId}`,
+    url: `/api/studio/skill-review/${skillRunId}`,
   });
 }
 
@@ -76,7 +76,7 @@ export function submitSkillReview(data: {
   evalRunId?: number;
 }) {
   return defHttp.post<{ ok: boolean; reviewId: number; verdict: string }>({
-    url: '/api/studio/skills/review',
+    url: '/api/studio/skill-review',
     data,
   });
 }

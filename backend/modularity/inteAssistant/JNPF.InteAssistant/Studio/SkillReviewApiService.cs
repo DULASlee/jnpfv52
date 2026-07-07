@@ -25,7 +25,7 @@ namespace JNPF.InteAssistant.Studio;
 ///   - 评分二元口径与 Judge 对齐（Score≥60 → PASS）
 /// </summary>
 [ApiDescriptionSettings(Tag = "Studio", Name = "SkillReview", Order = 202)]
-[Route("api/studio/skills/review")]
+[Route("api/studio/skill-review")]
 public class SkillReviewApiService : IDynamicApiController, ITransient
 {
     private const int PassThreshold = 60;  // 与 Judge 对齐：Score≥60 → PASS
