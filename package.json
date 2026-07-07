@@ -13,6 +13,7 @@
     "e2e:studio:deliverables": "playwright test -c e2e/playwright.config.ts e2e/studio/03-submit-requirement-deliverables.spec.ts",
     "e2e:studio:gate": "playwright test -c e2e/playwright.config.ts e2e/studio/04-submit-requirement-gate.spec.ts",
     "e2e:studio": "playwright test -c e2e/playwright.config.ts e2e/studio",
+    "e2e:admin:system-switch": "playwright test -c e2e/playwright.config.ts e2e/admin/01-system-switch.spec.ts",
     "test:api": "vitest run -c tests/api/vitest.config.mjs",
     "test:api:watch": "vitest -c tests/api/vitest.config.mjs",
     "sync:http-env": "node scripts/sync-http-env.mjs"

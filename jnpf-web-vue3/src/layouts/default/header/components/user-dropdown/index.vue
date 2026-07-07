@@ -9,6 +9,13 @@
     <template #overlay>
       <Menu @click="handleMenuClick">
         <MenuItem key="profile" :text="t('layout.header.profile')" icon="icon-ym icon-ym-header-userInfo" />
+        <MenuItem
+          key="switchSystem"
+          :text="t('layout.header.systemChange')"
+          icon="icon-ym icon-ym-systemToggle"
+          data-testid="user-dropdown-switch-system"
+          v-if="getUserInfo.systemIds && getUserInfo.systemIds.length > 1 && !getJnpfAppId()"
+        />
         <MenuItem key="feedBack" :text="t('layout.header.feedback')" icon="icon-ym icon-ym-header-feedBack" />
         <MenuItem key="about" :text="t('layout.header.about')" icon="icon-ym icon-ym-header-about" />
         <MenuItem key="statement" :text="t('layout.header.statement')" icon="icon-ym icon-ym-generator-card" />
@@ -39,6 +46,7 @@
   import AboutModal from '../AboutModal.vue';
   import StatementModal from '../StatementModal.vue';
   import { useGo } from '/@/hooks/web/usePage';
+  import { getJnpfAppId } from '/@/utils/jnpf';
 
   export default defineComponent({
     name: 'UserDropdown',
@@ -54,7 +62,8 @@
     props: {
       theme: propTypes.oneOf(['dark', 'light']),
     },
-    setup() {
+    emits: ['switch-system'],
+    setup(props, { emit }) {
       const globSetting = useGlobSetting();
       const apiUrl = globSetting.apiUrl;
       const { prefixCls } = useDesign('header-user-dropdown');
@@ -76,6 +85,7 @@
         if (e.key === 'feedBack') return openFeedBack();
         if (e.key === 'statement') return openStatementModal(true);
         if (e.key === 'about') return openAboutModal(true);
+        if (e.key === 'switchSystem') return emit('switch-system');
       }
       function handleLock() {
         lockStore.setLockInfo({
@@ -99,6 +109,7 @@
         getUserInfo,
         handleMenuClick,
         getUseLockPage,
+        getJnpfAppId,
         registerAboutModal,
         registerStatementModal,
       };

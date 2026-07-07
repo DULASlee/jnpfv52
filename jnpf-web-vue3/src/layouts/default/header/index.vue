@@ -43,7 +43,7 @@
 
       <AppLocalePicker v-if="getShowLocalePicker" :showText="false" :class="`${prefixCls}-action__item`" />
 
-      <UserDropDown :theme="getHeaderTheme" />
+      <UserDropDown :theme="getHeaderTheme" @switch-system="openSystemTriggerDrawer(true, { list: getUserInfo.systemIds })" />
 
       <SettingDrawer v-if="getShowSetting" :class="`${prefixCls}-action__item`" />
       <ChatDrawer @register="registerChatDrawer" @toggle-twinkle="toggleTwinkle" />

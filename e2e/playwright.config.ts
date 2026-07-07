@@ -4,7 +4,7 @@ const baseURL = process.env.JNPF_WEB_URL || 'http://localhost:3100';
 
 export default defineConfig({
   testDir: '.',
-  testMatch: 'studio/**/*.spec.ts',
+  testMatch: '**/*.spec.ts',
   timeout: 60_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
