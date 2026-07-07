@@ -16,6 +16,9 @@
     "node_modules",
     "dist",
     "**/*.{broken,bak,old}",
-    "src/core/compiler/**"
+    "src/core/compiler/**",
+    "src/**/__tests__/**",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts"
   ]
 }
