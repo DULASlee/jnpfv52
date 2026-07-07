@@ -1,0 +1,48 @@
+# Studio S0→S2 API 链 — REST Client / Thunder Client
+#
+# 前置（JNPF 登录非 JSON，须脚本取 Token）：
+#   node scripts/lib/jnpf-auth.mjs --json
+#   node scripts/sync-http-env.mjs
+#
+# 在 VS Code 安装 REST Client 扩展后，点击每个请求上方的 "Send Request"
+# 环境变量来自同目录 http-client.env.json（gitignore，由 sync-http-env 生成）
+
+@baseUrl = {{baseUrl}}
+@token = {{token}}
+@pipelineId = {{pipelineId}}
+
+### 0. 冒烟 — CurrentUser
+GET {{baseUrl}}/api/oauth/CurrentUser
+Authorization: Bearer {{token}}
+jnpf-origin: pc
+
+### 1. 诊断 — 交付物列表
+GET {{baseUrl}}/api/studio/pipeline/execute/{{pipelineId}}/deliverables
+Authorization: Bearer {{token}}
+
+### 2. 诊断 — IR 事件（查 AnalysisCompleted / SaMaterializationCompleted）
+GET {{baseUrl}}/api/studio/ir/{{pipelineId}}/events
+Authorization: Bearer {{token}}
+
+### 3. 诊断 — Skill 运行状态
+GET {{baseUrl}}/api/studio/skills/{{pipelineId}}/runs
+Authorization: Bearer {{token}}
+
+### 4. S2 确认 — 触发 C# SaMaterializer 物化（compile 模式无需 sa-service）
+POST {{baseUrl}}/api/studio/skills/analyst/{{pipelineId}}/confirm-requirement-spec
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "autoRunDesign": false
+}
+
+### 5. 创建 pipeline（新链路时用；会写入 scripts/.sup-e2e-state.json 需另跑 create 脚本）
+# POST {{baseUrl}}/api/studio/pipeline/execute/create
+# Authorization: Bearer {{token}}
+# Content-Type: application/json
+#
+# {
+#   "name": "HTTP-TEST-{{$timestamp}}",
+#   "userRequirement": "员工请假：申请、审批、归档。角色：员工/主管/HR。"
+# }

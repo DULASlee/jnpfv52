@@ -40,13 +40,18 @@ Kills stale dotnet/node processes, frees ports 3100+5000, then launches frontend
 | Backend CI build (with analyzers) | `dotnet build /p:CI_BUILD=true` | `backend/` |
 | Backend tests | `dotnet test backend/zx_lowcode_netcore.sln` | repo root |
 | Frontend lint | `pnpm lint` | `jnpf-web-vue3/` |
-| Frontend type-check | `pnpm type-check` | `jnpf-web-vue3/` |
+| Frontend type-check (Studio, default) | `pnpm type-check` | `jnpf-web-vue3/` |
+| Frontend type-check (full / legacy) | `pnpm type-check:full` | `jnpf-web-vue3/` |
 | Frontend unit tests | `pnpm test:unit` | `jnpf-web-vue3/` |
 | Frontend build | `pnpm build` | `jnpf-web-vue3/` |
 | Toolchain verify | `node scripts/verify-toolchain.mjs` | repo root |
+| API 快测（Vitest） | `E2E_PIPELINE_ID=311 pnpm test:api` | repo root |
+| S0→S2 长链 | `node scripts/phase-sup-s2-e2e.mjs verify` | repo root |
 | Git hooks enable (after clone) | `git config core.hooksPath .githooks` | repo root |
 
 **CI gate order:** `lint → type-check → test:unit → build`
+
+**Frontend type-check:** Never run bare `npx vue-tsc --noEmit` (OOM on full `src`). Use `pnpm type-check` (Studio scoped, `tsconfig.typecheck.json`); use `pnpm type-check:full` when editing legacy modules. See `.cursor/rules/frontend-typecheck.mdc`.
 
 ## Auto Test-Fix Loop（无浏览器 — 所有 Agent 必遵）
 
@@ -54,19 +59,22 @@ Kills stale dotnet/node processes, frees ports 3100+5000, then launches frontend
 
 ```powershell
 node scripts/lib/jnpf-auth.mjs --json                              # 登录，Token 缓存
+E2E_PIPELINE_ID=311 pnpm test:api                                  # Vitest 快断言
 node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser               # 冒烟
-node scripts/phase2-skills-e2e.mjs                                 # 领域 E2E
+node scripts/phase-sup-s2-e2e.mjs verify                             # S0→S2 长链
 python scripts/jnpf_auth.py GET /api/studio/ir/42/events          # Python 等价
 ```
 
-**闭环：** 编码 → `dotnet build` → API 脚本 → FAIL 则 `systematic-debugging` 修复 → 重跑（≤3 轮）。
+**闭环：** 编码 → `dotnet build` → **`pnpm test:api`（首选）** → FAIL 则修复 → 重跑（≤3 轮）。
 
 | 场景 | 工具 |
 |------|------|
-| 日常 Dev Loop（后端/API） | `jnpf-api.mjs` + 领域 E2E 脚本 |
+| **日常 Dev Loop（后端/API）** | **`E2E_PIPELINE_ID=311 pnpm test:api`** + `jnpf-api.mjs` |
+| 长链 Skill watch / evidence | `phase-sup-s2-e2e.mjs` 分步（**非默认**） |
+| 手工调 API | `pnpm sync:http-env` + `api-tests/http/*.http` |
 | 前端 UI 交付 | Playwright → `.claude/evidence/` |
 
-常驻规则：`.cursor/rules/auto-test-fix-loop.mdc` · 完整说明：`CLAUDE.md`「自动测试·自动修复闭环」· `scripts/README-api-cli.md`
+**E2E 知识库：** `openspec/specs/studio-e2e-toolchain/spec.md` · **规则：** `.cursor/rules/testing-toolchain.mdc`
 
 登录：`POST /api/oauth/Login`（form-urlencoded，MD5+AES）· **不是** `/api/auth/login`
 
@@ -92,6 +100,64 @@ jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
 - **Multi-tenant:** Every SqlSugar query MUST verify `ITenantFilter` is active. Missing filter = cross-tenant data leak.
 - **OA module is disabled** — never modify. IoT/MES modules don't exist — never scaffold.
 - **Database:** SqlSugar (SQL Server) + Dapper. Table names: `UPPER_SNAKE_CASE` with module prefix (`BASE_USER`, `FLOW_TASK`). C# code: PascalCase.
+
+## Triple-Key Iron Law (R12 — 宪法级, 永远生效)
+
+**AI 原生开发一切数据/IR/路径/SkillContext MUST 携带三元组 `(tenantId, projectId, pipelineId)`，三者完整、独立、可分离。**
+
+- 关系：`1 tenant → N projects → M pipelines`（WorkMode: greenfield / bugfix / enhancement）
+- 支持 fork（二次开发）/ freeze（冻结）/ resume（拉起）— 走标准 API，禁止手改 DB
+- 路径公式：`{SystemPath}/StudioWorkspace/{tenantId}/{projectId}/{pipelineId}/`（四层）
+- IR 投影 WHERE MUST 含三元组 + FragmentId（缺 PipelineId = 撞唯一键）
+- `ResolveProjectAsync` MUST 返回真实 ProjectId（非 pipelineId）
+- 创建 pipeline MUST 写 `F_CREATOR_USER_ID`（同租户用户隔离）
+
+**主文件：** `.cursor/rules/triple-key-iron-law.mdc` · `.claude/rules/triple-key-iron-law.md` · `architecture-redlines.md` §R12
+
+**违反后果：** IR 投影覆盖数据 / fork 无法继承代码 / 三元组血缘断裂 / 同租户越权 — "多用户多项目多对话"形同虚设。
+
+## Studio S2 架构（2026-07-06 — ADR-004）
+
+**两大变更：** ① SA 九步 Agent 从生产主链分离，默认 **compile** → `SaNineViewCompiler`；② **`sa_*` 九表物化迁至 C# `SaMaterializer`**（用户 confirm 后），不再经 sa-service 写主库。
+
+| 模式 | 需要 sa-service | S2 写九表 |
+|------|-----------------|-----------|
+| compile（默认） | **否** | **否**（confirm 后 C# 物化） |
+| agent（回归） | 是 | legacy（禁止主链） |
+
+**文档：** `openspec/specs/studio-s2-compile/spec.md` · `.cursor/rules/studio-s2-compile.mdc`  
+**验收（快测优先）：** `E2E_PIPELINE_ID=311 pnpm test:api` · mjs verify 仅 evidence/长链
+
+## 交互式澄清问答（2026-07-06 — ADR-005）
+
+需求分析/架构设计/总体设计三阶段，LLM 产出**结构化选择题**（单选/多选/文本，每轮 3-5 题，末项恒为"其他"+文本框）让用户逐条细化需求，而非直接输出 markdown 待确认事项。
+
+| 阶段 | 提问入口 | 暂停/恢复 | 答案注入 |
+|------|---------|-----------|---------|
+| 需求分析 | `RequirementGateService` 复用成熟度评估 LLM | sa-gate 对话流 | 对话历史→下一轮 maturity |
+| 架构设计 | `ArchitectSkillService` 阶段一 BudgetGuard LLM | 两阶段 Skill 重跑 | answersText→ToT userPrompt |
+| 总体设计 | `SystemDesignClarificationSkill` 阶段一 BudgetGuard LLM | 两阶段 Skill 重跑 | answersText→SystemDesignLocked.assumptions |
+
+**关键题硬门控**：`ClarificationQuestion.Required=true` 必答才推进（`Oops.Bah` 拒绝）。**逃生口**："全部跳过直接分析"始终可见。**IR 事件**：`ClarificationRequested`(in-progress) / `ClarificationAnswered`(stable)，可审计回放。
+
+**文档：** `openspec/specs/studio-clarification/spec.md` · `.cursor/rules/studio-clarification.mdc`
+
+## Eval Pipeline 四层评估（2026-07-08 — 阶段七）
+
+Skill 质量评估管线：L1 组件/L2 轨迹/L3 任务**确定性**（无 LLM，fail-fast 跳过 L4）→ L4 `LlmJudgeService` 经 `SkillLlmBudgetGuard` fast tier 路由**跨家族 mimo**（生成 deepseek / Judge mimo，避免自偏好），**pass/fail 二元**（非 1-5 分制）；`JudgeCalibrationService` 月度 Cohen's kappa 校准（<0.6 降级 advisory）；人工抽检双写表+IR事件；失败 trace 回写 GoldenSet。
+
+| 层 | LLM | 实现 |
+|----|-----|------|
+| L1 组件 / L2 轨迹 / L3 任务 | 否（确定性） | `EvalPipelineRunner` |
+| L4 业务 | 是 fast（跨家族 mimo） | `LlmJudgeService` |
+
+**验收（快测优先）：** `node scripts/phase7-eval-verify.mjs`（23 项 DoD）· `dotnet build` InteAssistant 0 错误
+
+**文档：** `openspec/specs/studio-eval-pipeline/spec.md` · `.cursor/rules/studio-eval-pipeline.mdc`
+
+## E2E 分层工具链（2026-07-06）
+
+**禁止**日常仅依赖慢速 `.mjs`。见 `openspec/specs/studio-e2e-toolchain/spec.md` · `.cursor/rules/testing-toolchain.mdc`。
 
 ## Frontend SSE/Timer Rules (memory leak prevention)
 

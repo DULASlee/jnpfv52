@@ -1,19 +1,19 @@
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
 using JNPF.DependencyInjection;
+using JNPF.FriendlyException;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Llm;
-using Microsoft.Extensions.Logging;
+using JNPF.InteAssistant.Skills.Cognitive;
 
 namespace JNPF.InteAssistant.Skills;
 
 /// <summary>
-/// DB 设计 Skill MVP（P3-B03）— DDL 生成 + 语法骨架校验
+/// DB 设计 Skill（R3 认知模具版）— DDL 经 BudgetGuard 生成 + 语法校验；禁止 fallback。
 /// </summary>
-public sealed class DbDesignSkillService : IBaseSkill, ITransient
+public sealed class DbDesignSkillService : CognitiveSkill, ITransient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -22,29 +22,32 @@ public sealed class DbDesignSkillService : IBaseSkill, ITransient
     };
 
     private readonly ISkillLlmBudgetGuard _budgetGuard;
-    private readonly ILogger<DbDesignSkillService> _logger;
 
-    public DbDesignSkillService(ISkillLlmBudgetGuard budgetGuard, ILogger<DbDesignSkillService> logger)
+    public DbDesignSkillService(
+        ICognitiveSkillToolkit toolkit,
+        ISkillLlmBudgetGuard budgetGuard)
+        : base(toolkit)
     {
         _budgetGuard = budgetGuard;
-        _logger = logger;
     }
 
-    public string SkillId => DesignSkillIds.DbDesign;
-    public string Version => "1.0.0-mvp";
+    public override string SkillId => DesignSkillIds.DbDesign;
+    public override string Version => "2.0.0-cognitive";
+    public override SkillLayer Layer => SkillLayer.Refinement;
+    public override SkillMission Mission => SkillMission.GenerateArtifact;
 
-    public SkillInformationNeeds InformationNeeds { get; } = new()
+    public override SkillInformationNeeds InformationNeeds { get; } = new()
     {
         IrFragmentTypes = new[] { IrFragmentTypes.EventSpec },
         RequiredStability = IrStabilityStates.Stable,
     };
 
-    public SkillOutputDeclaration Outputs { get; } = new()
+    public override SkillOutputDeclaration Outputs { get; } = new()
     {
         IrEventTypes = new[] { IrEventTypes.DDLStabilized },
     };
 
-    public Task<SkillValidationResult> ValidateInputAsync(IrSnapshot snapshot, CancellationToken ct = default)
+    public override Task<SkillValidationResult> ValidateInputAsync(IrSnapshot snapshot, CancellationToken ct = default)
     {
         if (snapshot.Find(IrFragmentTypes.EventSpec, IrStabilityStates.Stable) == null)
             return Task.FromResult(SkillValidationResult.Fail("IR-1 未 stable"));
@@ -55,23 +58,22 @@ public sealed class DbDesignSkillService : IBaseSkill, ITransient
         return Task.FromResult(SkillValidationResult.Ok());
     }
 
-    public async IAsyncEnumerable<AppendIrEventRequest> ReasonAsync(
-        SkillContext context,
-        [EnumeratorCancellation] CancellationToken ct = default)
+    public override Task<SkillValidationResult> ValidateOutputAsync(
+        IReadOnlyList<AppendIrEventRequest> events, CancellationToken ct = default)
     {
+        if (events.Count != 1 || events[0].EventType != IrEventTypes.DDLStabilized)
+            return Task.FromResult(SkillValidationResult.Fail("必须产出 1 条 DDLStabilized"));
+
+        return Task.FromResult(SkillValidationResult.Ok());
+    }
+
+    protected override async IAsyncEnumerable<AppendIrEventRequest> ThinkAsync(
+        SkillPerception perception,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        var context = perception.Context;
         var fragmentId = $"ddl:{context.ProjectId}";
-        string ddl;
-
-        try
-        {
-            ddl = await GenerateDdlAsync(context, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "DB Design Skill LLM 失败，使用规则回退");
-            ddl = BuildFallbackDdl(context);
-        }
-
+        var ddl = await GenerateDdlAsync(context, ct);
         ValidateDdlSyntax(ddl);
 
         var payload = JsonSerializer.Serialize(new
@@ -91,16 +93,7 @@ public sealed class DbDesignSkillService : IBaseSkill, ITransient
             FragmentType = IrFragmentTypes.DDL,
             FragmentVersion = 1,
             Payload = payload,
-            SkillId = SkillId,
         };
-    }
-
-    public Task<SkillValidationResult> ValidateOutputAsync(IReadOnlyList<AppendIrEventRequest> events, CancellationToken ct = default)
-    {
-        if (events.Count != 1 || events[0].EventType != IrEventTypes.DDLStabilized)
-            return Task.FromResult(SkillValidationResult.Fail("必须产出 1 条 DDLStabilized"));
-
-        return Task.FromResult(SkillValidationResult.Ok());
     }
 
     private async Task<string> GenerateDdlAsync(SkillContext context, CancellationToken ct)
@@ -111,6 +104,7 @@ public sealed class DbDesignSkillService : IBaseSkill, ITransient
 
         var response = await _budgetGuard.ExecuteAsync(slot, new ChatCompletionRequest
         {
+            ProviderCode = context.ProviderCode ?? string.Empty,
             SystemPrompt = "你是 SQL Server DDL 专家。根据 entityDrafts 生成可执行 CREATE TABLE 脚本，只输出 SQL。",
             Messages = new List<ChatMessage>
             {
@@ -122,28 +116,12 @@ public sealed class DbDesignSkillService : IBaseSkill, ITransient
         }, ct);
 
         if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
-            throw new InvalidOperationException(response.Error ?? "LLM 返回空");
+            throw Oops.Bah(response.Error ?? "DB Design Skill LLM 返回空");
 
         return response.Content.Trim();
     }
 
-    private static string BuildFallbackDdl(SkillContext context)
-    {
-        var sb = new StringBuilder();
-        foreach (var table in ExtractTableNames(context))
-        {
-            sb.AppendLine($"CREATE TABLE [dbo].[{table}] (");
-            sb.AppendLine("    [F_Id] NVARCHAR(50) NOT NULL PRIMARY KEY,");
-            sb.AppendLine("    [F_TenantId] NVARCHAR(50) NOT NULL,");
-            sb.AppendLine("    [F_CreatorTime] DATETIME2(7) NOT NULL DEFAULT GETUTCDATE()");
-            sb.AppendLine(");");
-            sb.AppendLine();
-        }
-
-        return sb.ToString();
-    }
-
-    private static IReadOnlyList<string> ExtractTableNames(SkillContext context)
+    public static IReadOnlyList<string> ExtractTableNames(SkillContext context)
     {
         var skeleton = context.Snapshot.Find(IrFragmentTypes.Skeleton, IrStabilityStates.Stable)
             ?? context.Snapshot.Find(IrFragmentTypes.Skeleton);
@@ -167,20 +145,20 @@ public sealed class DbDesignSkillService : IBaseSkill, ITransient
                 if (names.Count > 0) return names;
             }
         }
-        catch
+        catch (JsonException)
         {
-            // ignore parse errors
+            // 骨架 JSON 非法由上游 Skill 保证；此处回退默认表名
         }
 
         return new[] { $"AI_PROJ_{context.ProjectId}" };
     }
 
-    private static void ValidateDdlSyntax(string ddl)
+    public static void ValidateDdlSyntax(string ddl)
     {
         if (string.IsNullOrWhiteSpace(ddl))
-            throw new InvalidOperationException("DDL 为空");
+            throw Oops.Bah("DDL 为空");
 
         if (!ddl.Contains("CREATE TABLE", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("DDL 缺少 CREATE TABLE");
+            throw Oops.Bah("DDL 缺少 CREATE TABLE");
     }
 }

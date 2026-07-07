@@ -1,9 +1,9 @@
 ---
 name: data-driven-debug
-description: 数据驱动调试——禁止看源码猜测，必须抓取运行时数据定位问题。当问题耗时超过 10 分钟仍无进展时强制触发。
+description: 数据驱动调试——禁止看源码猜测，必须抓取运行时数据定位问题。当问题耗时超过 10 分钟仍无进展时强制触发。v2 集成 visual-debug / agent-probe / DiagnosticsLog / netcoredbg-mcp 四大新工具。
 ---
 
-# Data-Driven Debug: Evidence Over Assumption
+# Data-Driven Debug v2: Evidence Over Assumption
 
 ## 核心铁律
 
@@ -36,131 +36,218 @@ description: 数据驱动调试——禁止看源码猜测，必须抓取运行�
 🛑 切换到数据采集模式。停止修改源码，开始抓取运行时数据。
 ```
 
-## 数据采集工具箱
+---
+
+## 🔧 Debug 工具链 v2（四件套）
+
+### 快速决策：用什么工具？
+
+| 症状 | 用哪个 | 命令 |
+|------|--------|------|
+| UI 错位/白屏/动效异常 | **visual-debug** | `node scripts/lib/visual-debug.mjs --login --url=...` |
+| API 返回 500/数据不对 | **agent-probe** | `node scripts/lib/probe.mjs --trace-sql GET /api/...` |
+| 后端运行时状态（变量值/调用栈） | **netcoredbg-mcp** | Agent 直接 attach 到 JNPF 进程 |
+| 任何异常（自动记录） | **DiagnosticsLog** | `cat backend/.claude/diagnostics/session-*.jsonl` |
+| 快速回归验证 | **pnpm test:api** | `E2E_PIPELINE_ID=311 pnpm test:api` |
+
+### 1. Visual Debug（录屏分析）
+
+**用途：** UI 层问题——页面白屏、组件不渲染、样式错乱、交互无响应。
+
+**产出：** 截图 PNG + 诊断 JSON（console errors / network errors / WebSocket events）
+
+```bash
+# PC 端录屏（带登录）
+node scripts/lib/visual-debug.mjs --login --url "http://localhost:3100/#/onlineDev/webDesign" --duration 10
+
+# 移动端录屏
+node scripts/lib/visual-debug.mjs --login --mobile --url "http://localhost:3800/#/pages/index/message"
+
+# 指定输出名
+node scripts/lib/visual-debug.mjs --login --url "..." --output my-bug
+```
+
+**Agent 用法：**
+```
+1. 运行 visual-debug 生成 .json 诊断文件
+2. Read 诊断 JSON → 看 consoleErrors / networkErrors / wsEvents
+3. 看截图确认 UI 实际状态
+4. 根据错误信息定位根因
+```
+
+### 2. agent-probe（诊断探针注入）
+
+**用途：** API 层问题——返回 500、数据不对、SQL 异常。对单个请求注入 TRACE 级别诊断。
+
+```bash
+# 基础注入
+node scripts/lib/probe.mjs --category my-debug GET "/api/visualdev/Base?type=1"
+
+# 追踪 SQL
+node scripts/lib/probe.mjs --trace-sql --category sql-debug GET "/api/visualdev/Base?type=1"
+
+# POST 请求带 body
+node scripts/lib/probe.mjs --category create-debug POST "/api/visualdev/Base" '{"fullName":"test"}'
+```
+
+**机制：** 发请求时带 `X-Diagnostics` header → 后端 `RequestActionFilter` 识别 → 为该请求开启详细日志 → 写入 `backend/.claude/diagnostics/session-*.jsonl`
+
+**Agent 用法：**
+```
+1. 运行 probe 触发诊断
+2. cat backend/.claude/diagnostics/session-*.jsonl | jq 'select(.category=="my-debug")'
+3. 根据日志中的 SQL / 参数 / 返回值定位问题
+```
+
+### 3. DiagnosticsLog（统一诊断日志）
+
+**用途：** 所有后端异常和诊断事件自动记录到 `.claude/diagnostics/session-*.jsonl`。Agent 可以直接 Read + jq 分析。
+
+**位置：** `backend/.claude/diagnostics/session-{启动时间}.jsonl`
+
+**Agent 用法：**
+```bash
+# 查看当前 session 所有日志
+cat backend/.claude/diagnostics/session-*.jsonl | jq .
+
+# 按分类过滤
+cat backend/.claude/diagnostics/session-*.jsonl | jq 'select(.category=="IM")'
+
+# 只看 error
+cat backend/.claude/diagnostics/session-*.jsonl | jq 'select(.level=="error")'
+
+# 看最新的 5 条
+ls -t backend/.claude/diagnostics/session-*.jsonl | head -1 | xargs tail -5
+```
+
+**代码集成：**
+```csharp
+// 记录事件
+DiagnosticsLog.Log("IM", "SendMessage", new { toUserId, content });
+
+// 记录异常
+DiagnosticsLog.Error("IM", "SendMessage", ex, new { toUserId });
+
+// 记录 SQL
+DiagnosticsLog.Sql("UserQuery", sql, parameters);
+```
+
+### 4. netcoredbg-mcp（.NET 运行时调试）
+
+**用途：** 需要查看运行时变量值、调用栈、单步执行时使用。Agent 通过 MCP 直接 attach 到 JNPF 进程。
+
+**前置：** 后端必须运行中。Agent 通过 `mcp.json` 中配置的 wrapper 自动发现进程 PID。
+
+**Agent 用法：**
+```
+1. 确认后端在运行（localhost:5000）
+2. 使用 netcoredbg MCP 工具：
+   - set_breakpoint: 在指定文件:行号设断点
+   - get_variables: 查看当前栈帧的变量值
+   - get_stack_trace: 查看调用栈
+   - continue: 继续执行
+```
+
+---
+
+## 经典数据采集通道
 
 ### 前端：Playwright 网络抓包
 
 ```javascript
-// 最常用：捕获特定请求的响应体
+// 捕获特定请求的响应体
 page.on('response', async (resp) => {
-  const url = resp.url();
-  if (url.includes('/events')) {
-    const body = await resp.text();
+  if (resp.url().includes('/events')) {
     console.log('Status:', resp.status());
-    console.log('Body:', body.substring(0, 500));
+    console.log('Body:', await resp.text());
   }
 });
+// 推荐直接用 visual-debug，自动收集 console + network + WS
 ```
 
-| 采集点 | Playwright API |
-|---|---|
-| SSE 响应体 | `page.on('response', ...)` + `resp.text()` |
-| fetch URL | `page.on('request', r => console.log(r.url(), r.postData()))` |
-| 前端 console | `page.on('console', msg => console.log(msg.text()))` |
-| DOM 状态 | `page.textContent('body')` |
-| localStorage | `page.evaluate(() => localStorage.getItem('KEY'))` |
-| JS 变量值 | `page.evaluate(() => someGlobalVar)` |
+### 后端：HTTP 直连验证
 
-### 后端：HTTP 直连验证（首选 jnpf-api-cli）
-
-```powershell
-# 推荐：统一 auth 库（MD5+AES 登录 + Token 缓存）
-node scripts/lib/jnpf-auth.mjs --json
+```bash
+# 快速探 API
 node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser
-node scripts/jnpf-api.mjs GET /api/studio/ir/42/events
 
-# Python 等价
-python scripts/jnpf_auth.py login
-python scripts/jnpf_auth.py GET /api/studio/ir/42/events
+# 结构化断言（日常默认）
+cd D:/JNPF-v52 && E2E_PIPELINE_ID=311 pnpm test:api
+
+# 带诊断注入
+node scripts/lib/probe.mjs --trace-sql GET /api/visualdev/Base?type=1
 ```
 
-```javascript
-// Agent 脚本内
-import { login, apiRequest, isJnpfOk, jnpfData, pick } from './scripts/lib/jnpf-auth.mjs';
-const res = await apiRequest('GET', '/api/studio/ir/42/events');
+### SQL：输出实际 SQL
+
+```csharp
+// SqlSugar 输出生成的 SQL — 加到可疑查询前
+var sql = db.Queryable<T>().Where(...).ToSqlString();
+DiagnosticsLog.Sql("SuspectQuery", sql);
 ```
-
-| 采集点 | 方法 |
-|---|---|
-| API 响应状态+体 | `node scripts/jnpf-api.mjs GET <path>` 或 `apiRequest()` |
-| 登录 Token | `node scripts/lib/jnpf-auth.mjs --json` |
-| SSE 事件流 | `apiRequest` + 轮询 events API，或 Playwright `page.on('response')` |
-
-**禁止：** 使用 `/api/auth/login`；JSON body 直传明文密码。详见 `scripts/README-api-cli.md`。
-| SSE 流内容 | `curl -N -H "Accept: text/event-stream" URL` |
-| 后端日志 | 控制台输出 / Serilog 文件 |
 
 ### 浏览器：F12 Network 面板
 
 | 采集点 | 操作 |
 |---|---|
-| 请求 URL | Network → 点击请求 → Headers → Request URL |
-| 请求体 | Network → 点击请求 → Payload |
-| 响应状态 | Network → Status 列 |
-| 响应体 | Network → 点击请求 → Response 标签 |
-| SSE 事件 | Network → 点击 `/events` → EventStream 标签 |
+| 请求 URL / 响应体 | Network → 点击请求 → Headers / Response |
+| SSE 事件流 | Network → 点击 `/events` → EventStream |
+| WebSocket 消息 | Network → WS → Messages |
 
-### SQL：输出实际 SQL
-
-```csharp
-// SqlSugar 输出生成的 SQL
-var sql = db.Queryable<T>().Where(...).ToSql();
-_logger.LogInformation("Generated SQL: {Sql}", sql);
-```
+---
 
 ## 故障定位流程
 
-### Step 1: 画数据链路
+### Step 1: 视觉先行
 
-```
-[浏览器] → fetch() → [Vite 代理] → [后端 API] → [LLM Gateway] → [DeepSeek]
-    ↑                      ↑              ↑               ↑
-  检查点1                检查点2        检查点3         检查点4
-```
+**UI 问题 → visual-debug 录屏。** 先确认页面实际渲染了什么。大部分"后端问题"其实是前端没渲染。
 
-### Step 2: 从两端向中间收缩
-
-1. **检查点 1（浏览器）**：Network 面板看请求发了没，URL 对不对
-2. **检查点 3（后端）**：后端日志看请求到了没，处理了没
-3. 如果 1 和 3 都对 → 问题在网络链路（CORS、代理、Token）
-4. 如果 3 不对 → 从后端日志向上追溯
-5. 如果 1 不对 → 从浏览器向下追溯
-
-### Step 3: 在故障节点采集实际值
-
-```javascript
-// 示例：怀疑 Authorization header 不对
-const token = getToken();
-console.log('Token:', token);                           // 输出: "Bearer eyJ..."
-console.log('Has prefix:', token.startsWith('Bearer')); // 输出: true
-const header = `Bearer ${token}`;
-console.log('Final header:', header);                   // 输出: "Bearer Bearer eyJ..." ← BINGO
+```bash
+node scripts/lib/visual-debug.mjs --login --url "问题页面URL" --output bug-01
 ```
 
-### Step 4: 最小化修复
+### Step 2: 探针定位
+
+**API 问题 → agent-probe 注入。** 对可疑 API 开启 TRACE 日志，看完整请求/响应/SQL。
+
+```bash
+node scripts/lib/probe.mjs --trace-sql --category bug-01 GET "/api/可疑路径"
+```
+
+### Step 3: 诊断分析
+
+**看 DiagnosticsLog。** 如果问题已经触发过异常，日志已在 `.claude/diagnostics/` 中。
+
+```bash
+cat backend/.claude/diagnostics/session-*.jsonl | jq 'select(.level=="error")'
+```
+
+### Step 4: 运行时下沉
+
+**需要看变量/调用栈 → netcoredbg-mcp。** Agent attach 到进程设断点。
+
+### Step 5: 最小化修复
 
 只修改导致偏差的那个节点，不动上下游。
 
-## 常见数据链路及检查点
+### Step 6: 回归验证
 
-| 场景 | 链路 | 关键检查点 |
-|---|---|---|
-| AI 无回复 | 前端 sendMessage → POST /execute → Channel → GET /events → SSE → 前端渲染 | `/events` 响应体是 SSE 还是 JSON 错误？`getToken()` 实际返回值？ |
-| 登录失败 | 前端 → POST /login → JWT 生成 → localStorage | JWT payload 中 TenantId 是 "0" 还是 "default"？ |
-| 数据不对 | 前端 → API → SqlSugar → SQL → DB | `ToSql()` 输出的 SQL 是否包含 TenantId？ |
-| 页面空白 | 前端 → Vite → Vue Router → 组件渲染 | Console 有无 JS 错误？Vue Router 是否匹配到路由？ |
-
-## 修复后验证
-
-修复后 MUST 用同样的数据采集方式验证：
-
+```bash
+cd D:/JNPF-v52 && E2E_PIPELINE_ID=311 pnpm test:api   # 1 秒出结果
 ```
-修复前采集的数据（异常） → 修复后采集的数据（正常） → 对比确认差异消失
-```
+
+---
 
 ## 与 trace-bug 配合
 
 - `trace-bug`：提供调试流程框架（四阶段：复现→假设→插桩→修复）
-- `data-driven-debug`：提供数据采集具体方法（Playwright/curl/SQL/Network）
+- `data-driven-debug`：提供数据采集具体方法（visual-debug / probe / DiagnosticsLog / netcoredbg）
 
 当 `trace-bug` 进入阶段 3（插桩验证）时，使用本 skill 的工具箱采集数据。
+
+## 与 systematic-debugging 配合
+
+- `systematic-debugging`：四阶段强制流程（根因调查→模式分析→假设检验→实现修复）
+- `data-driven-debug`：在 Phase 1（根因调查）和 Phase 3（假设检验）中提供数据采集手段
+
+当 `systematic-debugging` 要求"read error messages"、"reproduce"、"gather evidence" 时 → 用本 skill 的工具箱。

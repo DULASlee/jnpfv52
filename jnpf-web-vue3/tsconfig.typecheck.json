@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.cache/vue-tsc/typecheck.tsbuildinfo"
+  },
+  "include": [
+    "src/views/studio/**/*.vue",
+    "src/views/studio/**/*.ts",
+    "src/views/studio/**/*.tsx",
+    "types/**/*.ts",
+    "types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.{broken,bak,old}",
+    "src/core/compiler/**"
+  ]
+}

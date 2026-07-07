@@ -97,8 +97,12 @@
   import { useGeneratorStore } from '/@/store/modules/generator';
   import formValidate from '/@/utils/formValidate';
   import TableModal from './components/TableModal.vue';
-  import { FormGenerator } from '/@/components/FormGenerator';
-  import { BasicColumnDesign } from '/@/components/ColumnDesign';
+  import { useLazyComponent } from '/@/hooks/web/useLazyComponent';
+
+  // 设计器组件仅在对应步骤渲染时按需加载
+  const MODULE = 'onlineDev/webDesign/Form';
+  const { component: FormGenerator } = useLazyComponent(() => import('/@/components/FormGenerator/src/FormGenerator.vue'), MODULE);
+  const { component: BasicColumnDesign } = useLazyComponent(() => import('/@/components/ColumnDesign/src/BasicColumnDesign.vue'), MODULE);
 
   interface State {
     activeStep: number;

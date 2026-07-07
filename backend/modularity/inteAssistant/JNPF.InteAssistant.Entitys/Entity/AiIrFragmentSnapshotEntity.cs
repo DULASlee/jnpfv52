@@ -14,6 +14,10 @@ public class AiIrFragmentSnapshotEntity
     [SugarColumn(ColumnName = "F_ProjectId")]
     public string ProjectId { get; set; } = string.Empty;
 
+    /// <summary>流水线 ID(三元组补全,NOT NULL DEFAULT '')</summary>
+    [SugarColumn(ColumnName = "F_PIPELINE_ID")]
+    public string PipelineId { get; set; } = string.Empty;
+
     [SugarColumn(ColumnName = "F_TenantId")]
     public string TenantId { get; set; } = string.Empty;
 

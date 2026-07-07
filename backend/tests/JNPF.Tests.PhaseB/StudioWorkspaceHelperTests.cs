@@ -75,6 +75,56 @@ public static class StudioWorkspaceHelperTests
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// T9: R12 自锚定（projectId == pipelineId）走老三层路径.
+    /// </summary>
+    public static Task T9_SelfAnchored_UsesLegacyThreeLayerPath()
+    {
+        if (!AppInitialized)
+        {
+            TestRunner.Skip("T9: App 配置未初始化，跳过");
+            return Task.CompletedTask;
+        }
+
+        var path = JNPF.InteAssistant.StudioWorkspaceHelper.GetPipelinePath("0", "311", "311");
+        if (path.Contains($"{Path.DirectorySeparatorChar}311{Path.DirectorySeparatorChar}311"))
+        {
+            TestRunner.Fail("T9", $"自锚定不应出现双 311 层: {path}");
+            return Task.CompletedTask;
+        }
+        if (!path.EndsWith($"{Path.DirectorySeparatorChar}311"))
+        {
+            TestRunner.Fail("T9", $"自锚定路径应以 pipelineId 结尾: {path}");
+            return Task.CompletedTask;
+        }
+
+        TestRunner.Pass("T9: 自锚定走老三层路径");
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// T10: R12 非自锚定（bugfix/enhancement）走新四层路径.
+    /// </summary>
+    public static Task T10_NonSelfAnchored_UsesFourLayerPath()
+    {
+        if (!AppInitialized)
+        {
+            TestRunner.Skip("T10: App 配置未初始化，跳过");
+            return Task.CompletedTask;
+        }
+
+        var path = JNPF.InteAssistant.StudioWorkspaceHelper.GetPipelinePath("0", "100", "101");
+        var expectedSegment = $"100{Path.DirectorySeparatorChar}101";
+        if (!path.Contains(expectedSegment))
+        {
+            TestRunner.Fail("T10", $"非自锚定应含 projectId/pipelineId 层: {path}");
+            return Task.CompletedTask;
+        }
+
+        TestRunner.Pass("T10: 非自锚定走新四层路径");
+        return Task.CompletedTask;
+    }
+
     // ── 路径安全校验 ──
 
     /// <summary>

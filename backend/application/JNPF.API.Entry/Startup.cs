@@ -1,3 +1,4 @@
+using JNPF.Common.Core.Diagnostics;
 using JNPF.Extras.DatabaseAccessor.SqlSugar.TenantContext;
 using JNPF.InteAssistant;
 using JNPF.Modules;
@@ -43,13 +44,12 @@ public class Startup : AppStartup
         // 目的：启动时断言关键中间件顺序正确，防止部署/重构时误改
         AssertMiddlewarePipeline(app);
 
-        // 租户上下文中间件（ADR-003 铁律：try/finally 清除 AsyncLocal）
-        app.UseMiddleware<TenantMiddleware>();
-
         // 创始人认证守卫（Sprint 0-B 地桩 #5，Phase 0 = /api/founder → 404）
         app.UseMiddleware<FounderGuardMiddleware>();
 
         // 按拓扑顺序调用各模块的 Configure
+        // 注：AuthenticationModule 在 pipeline 中注册 UseAuthentication/UseAuthorization
+        //     TenantMiddleware 在 Authorization 之后执行（见 AuthenticationModule）
         app.UseJnpfModules(_modules);
     }
 
@@ -93,7 +93,11 @@ public class Startup : AppStartup
         // 断言 2：记录当前中间件管道顺序（审计用）
         var envName = app.ApplicationServices.GetRequiredService<IWebHostEnvironment>().EnvironmentName;
         logger.LogInformation(
-            "[MiddlewareAssert] Pipeline order verified: TenantMiddleware → FounderGuardMiddleware → JnpfModules. Environment: {Env}",
+            "[MiddlewareAssert] Pipeline order: FounderGuard → JnpfModules(Auth→AuthZ→Tenant→Endpoints). Environment: {Env}",
             envName);
+
+        // 初始化诊断日志（agent-probe + visual-debug 基础设施）
+        DiagnosticsLog.Log("startup", "backend_ready", new { env = envName, dir = DiagnosticsLog.CurrentSessionFile });
+        logger.LogInformation("[DiagnosticsLog] Ready: {Path}", DiagnosticsLog.CurrentSessionFile);
     }
 }

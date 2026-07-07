@@ -30,11 +30,27 @@ export function loadDbConfig() {
     database: cfg.DBName ?? cfg.DbName ?? cfg.dbName,
     user: cfg.UserName ?? cfg.DbUser ?? cfg.user,
     password: cfg.Password ?? cfg.DbPwd ?? cfg.password,
+    defaultConnection: raw.ConnectionStrings?.DefaultConnection
+      ?? cfg.ConnectionString
+      ?? cfg.connectionString,
   };
   if (!cachedConfig.server || !cachedConfig.database) {
     throw new Error('Incomplete database config');
   }
   return cachedConfig;
+}
+
+/** sa-service / mssql 驱动用 ADO 连接串（优先 DefaultConnection，命名实例兼容） */
+export function loadSaConnectionString() {
+  const cfg = loadDbConfig();
+  if (cfg.defaultConnection) return cfg.defaultConnection;
+
+  let server = String(cfg.server);
+  // sqlcmd 用 (local)\INSTANCE；tedious 需 主机名\INSTANCE（SQL Browser 解析）
+  if (/^\(local\)/i.test(server)) {
+    server = `${process.env.COMPUTERNAME || 'localhost'}${server.replace(/^\(local\)/i, '')}`;
+  }
+  return `Server=${server};Database=${cfg.database};User Id=${cfg.user};Password=${cfg.password};TrustServerCertificate=True;Encrypt=False`;
 }
 
 export function runSqlQuery(sql, { timeoutMs = 60_000 } = {}) {
@@ -65,6 +81,7 @@ export function runSqlFile(filePath, { timeoutMs = 120_000 } = {}) {
     '-d', cfg.database,
     '-U', cfg.user,
     '-P', cfg.password,
+    '-I',
     '-i', abs,
     '-b',
   ], { encoding: 'utf8', timeout: timeoutMs, stdio: ['ignore', 'pipe', 'pipe'] });

@@ -37,7 +37,8 @@ git diff --name-only | grep -E "\.vue$|\.ts$|\.tsx$|\.js$"
 
 如果有前端变更：
 ```bash
-cd jnpf-web-vue3 && npx vue-tsc --noEmit
+cd jnpf-web-vue3 && pnpm type-check
+# legacy 模块：pnpm type-check:full（见 .cursor/rules/frontend-typecheck.mdc）
 ```
 预期：无输出（0 errors）
 

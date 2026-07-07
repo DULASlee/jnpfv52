@@ -1,0 +1,90 @@
+{
+  "phase": "phase4-dod",
+  "version": "v2-orchestration",
+  "passed": 9,
+  "total": 9,
+  "skipped": 1,
+  "flags": {
+    "skipHost": false,
+    "skipGreen": true,
+    "forceGreen": false,
+    "noCleanup": true,
+    "greenReuseReason": "flag --skip-green"
+  },
+  "results": [
+    {
+      "id": "ENV-CLEANUP",
+      "pass": true,
+      "detail": "skipped (--no-cleanup); build 可能与 :5000 后端竞争",
+      "skip": true,
+      "at": "2026-07-04T21:12:21.912Z"
+    },
+    {
+      "id": "PHASEB-BUILD",
+      "pass": true,
+      "detail": "shared PhaseB build ok",
+      "at": "2026-07-04T21:13:12.853Z"
+    },
+    {
+      "id": "D3-GATE",
+      "pass": true,
+      "detail": "sandbox-gate exit 0",
+      "stdoutTail": "[D3-GATE] skip build (--no-build, caller already built PhaseB)\n[D3-GATE] running sandbox-gate...\n  leave-simple sandbox build OK (74.5s) → D:\\JNPF-v52\\workspace\\generated\\_d3-gate\\leave-simple\\backend\r\n[D3] CodegenSandboxGate: leave-simple dotnet build PASS\r\n[D3-GATE] PASS — leave-simple sandbox dotnet build exit 0\n",
+      "at": "2026-07-04T21:14:31.615Z"
+    },
+    {
+      "id": "D5-Q2",
+      "pass": true,
+      "detail": "arch-guard Q2 profiles exit 0",
+      "stdoutTail": "[D10-Q2] skip build (--no-build)\n\n[D10-Q2] profile=ag001-ddl-controller-ref\n[Phase4-Q2] ArchGuard violation profiles passed (1).\r\n[D10-Q2] evidence → D:\\JNPF-v52\\.claude\\evidence\\phase4-d5-arch-guard-ag001-ddl-controller-ref.json\n\n[D10-Q2] profile=ag002-no-tenant-filter\n[Phase4-Q2] ArchGuard violation profiles passed (1).\r\n[D10-Q2] evidence → D:\\JNPF-v52\\.claude\\evidence\\phase4-d5-arch-guard-ag002-no-tenant-filter.json\n\n[D10-Q2] PASS — 2 profile(s) exit 0\n",
+      "at": "2026-07-04T21:14:57.221Z"
+    },
+    {
+      "id": "D11-D12",
+      "pass": true,
+      "detail": "host-demo full build exit 0",
+      "stdoutTail": "[D11-GATE] inject leave-simple...\n[host-inject] copy D:\\JNPF-v52\\workspace\\generated\\_d3-gate\\leave-simple\\backend → D:\\JNPF-v52\\workspace\\codegen-host-demo\\Modules\\Generated\n[host-inject] injected 4 .cs file(s)\n[host-inject] --skip-build set, done.\n[D11-GATE] skip PhaseB build (--no-build)\n[D11-GATE] host-demo full build...\n  host-demo full build OK → D:\\JNPF-v52\\workspace\\codegen-host-demo\\JNPF.Codegen.HostDemo.sln\r\n[D11-GATE] PASS — codegen-host-demo full build exit 0\n",
+      "at": "2026-07-04T21:15:05.366Z"
+    },
+    {
+      "id": "PHASEB",
+      "pass": true,
+      "detail": "PhaseB 0 failures",
+      "stdoutTail": "[Phase4-Q2] ArchGuard violation profiles passed (2).\r\n  ✅ PASS: D10 ArchGuard Q2 violation profiles (ag001/ag002)\r\n  host inject OK (4 cs) → D:\\JNPF-v52\\workspace\\codegen-host-demo\\Modules\\Generated\r\n[Phase4] Host demo inject passed (full build: scripts/phase4-d11-host-build.mjs).\r\n  ✅ PASS: D11-D12 codegen-host-demo inject (full build: phase4-d11-host-build.mjs)\r\n\r\n  Phase B 测试结果: 31 通过, 0 失败\r\n  总计: 31 用例\r\n\r\n",
+      "at": "2026-07-04T21:15:58.859Z"
+    },
+    {
+      "id": "Q4-TENANT-SQL",
+      "pass": true,
+      "detail": "1 Service.cs in [workspace\\generated\\0\\220\\backend] — tenant markers ok",
+      "scanned": 1,
+      "issues": [],
+      "roots": [
+        "workspace\\generated\\0\\220\\backend"
+      ],
+      "at": "2026-07-04T21:15:58.863Z"
+    },
+    {
+      "id": "D14-GREEN",
+      "pass": true,
+      "detail": "flag --skip-green",
+      "pipelineId": 220,
+      "autoReuse": false,
+      "at": "2026-07-04T21:15:58.863Z"
+    },
+    {
+      "id": "API-SMOKE",
+      "pass": true,
+      "detail": "CurrentUser status=200",
+      "account": "admin",
+      "at": "2026-07-04T21:15:59.371Z"
+    },
+    {
+      "id": "G3",
+      "pass": true,
+      "detail": "phase3-g3-verify 7/7 signed",
+      "at": "2026-07-04T21:15:59.372Z"
+    }
+  ],
+  "at": "2026-07-04T21:15:59.373Z"
+}

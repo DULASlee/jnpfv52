@@ -22,6 +22,7 @@ powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1
 
 ## 架构红线（违反即系统损坏）
 
+0. **三元组铁律（R12 · 宪法级，凌驾 R1-R11）** — AI 原生开发一切数据/IR/路径/SkillContext MUST 携带 `(tenantId, projectId, pipelineId)`，三者完整、独立、可分离。详见 `.cursor/rules/triple-key-iron-law.mdc`
 1. **禁止手写 Controller** — Service 实现 `IDynamicApiController` 自动映射 API
 2. **统一响应** — `RESTfulResult<T>` 自动包装；业务异常 `Oops.Bah()`，系统 `Oops.Oh()`；HTTP 600 = JWT 过期
 3. **JNPF 业务码** — 常为 HTTP 200 + `json.code`（409/429 在 body，非 status）
@@ -48,9 +49,20 @@ application/JNPF.API.Entry → modularity/*/*Service (IDynamicApiController)
 | 后端编译 | `dotnet build application/JNPF.API.Entry/JNPF.API.Entry.csproj` | `backend/` |
 | 后端测试 | `dotnet test backend/zx_lowcode_netcore.sln` | 根目录 |
 | 前端 lint | `pnpm lint` | `jnpf-web-vue3/` |
-| 前端类型检查 | `pnpm type-check` | `jnpf-web-vue3/` |
+| 前端类型检查（默认 Studio） | `pnpm type-check` | `jnpf-web-vue3/` |
+| 前端类型检查（全量 legacy） | `pnpm type-check:full` | `jnpf-web-vue3/` |
 | API 登录 Token | `node scripts/lib/jnpf-auth.mjs --json` | 根目录 |
-| Phase2 E2E | `node scripts/phase2-skills-e2e.mjs` | 根目录 |
+| API 快测（Vitest） | `E2E_PIPELINE_ID=311 pnpm test:api` | 根目录 |
+| REST Client 环境 | `pnpm sync:http-env` | 根目录 |
+| S0→S2 长链（分步） | `node scripts/phase-sup-s2-e2e.mjs verify` | 根目录 |
+| S2 快断言 | `E2E_PIPELINE_ID=311 pnpm test:api` | 根目录 |
+
+**S2 架构（2026-07-06 · R11）：** ① 九步 Agent 与主链分离 → compile + `SaNineViewCompiler`；② 物化迁至 C# `SaMaterializer`（confirm 后）。**compile 不需 sa-service**。规则：`.cursor/rules/studio-s2-compile.mdc` · ADR-004 · `openspec/specs/studio-s2-compile/spec.md`
+
+**三元组铁律（R12 · 宪法级）：** AI 原生开发一切数据/IR/路径/SkillContext MUST 携带 `(tenantId, projectId, pipelineId)`，三者完整、独立、可分离。支持多用户/多项目/多对话/fork/冻结拉起。违反 = 多用户多项目多对话功能形同虚设。规则：`.cursor/rules/triple-key-iron-law.mdc`
+| Playwright 门控 | `pnpm e2e:studio:gate` | 根目录 |
+
+**测试工具唯一信源：** `.cursor/rules/testing-toolchain.mdc` · `openspec/specs/studio-e2e-toolchain/spec.md`
 
 包管理：**前端 pnpm 8.x** · **后端 NuGet**（`backend/nuget.config` 华为镜像）
 
@@ -88,5 +100,6 @@ application/JNPF.API.Entry → modularity/*/*Service (IDynamicApiController)
 
 - 总规则：`CLAUDE.md` · 精简版：`AGENTS.md`
 - Cursor 规则：`.cursor/rules/*.mdc`（alwaysApply）
+- 前端类型检查：`.cursor/rules/frontend-typecheck.mdc`（禁止裸 `vue-tsc` 全量）
 - 技能：`.cursor/skills/`（项目版为唯一权威）
 - Git 铁律：先 commit+push 再切分支（见 `git-workflow.mdc`）

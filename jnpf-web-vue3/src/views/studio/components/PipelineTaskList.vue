@@ -1,10 +1,10 @@
 <template>
   <div class="pipeline-task-list">
     <div class="list-header">
-      <span>我的任务</span>
+      <span>我的任务{{ tasks.length > 0 ? ` (${tasks.length})` : '' }}</span>
       <a-button type="link" size="small" :loading="loading" @click="loadTasks">刷新</a-button>
     </div>
-    <div v-if="tasks.length === 0" class="list-empty">暂无进行中的流水线</div>
+    <div v-if="tasks.length === 0" class="list-empty">暂无任务</div>
     <ul v-else class="task-items">
       <li v-for="t in tasks" :key="t.id" class="task-item" :class="{ active: t.id === activePipelineId }" @click="$emit('select', t.id)">
         <div class="task-name">{{ t.name || '未命名' }}</div>
@@ -24,7 +24,15 @@
   defineProps<{ activePipelineId?: number }>();
   defineEmits<{ select: [pipelineId: number] }>();
 
-  const tasks = ref<PipelineSummaryItem[]>([]);
+  type TaskItem = {
+    id: number;
+    name: string;
+    currentStage: string;
+    status: string;
+    updatedAt?: string;
+  };
+
+  const tasks = ref<TaskItem[]>([]);
   const loading = ref(false);
 
   const STAGE_LABELS: Record<string, string> = {
@@ -39,11 +47,33 @@
     return STAGE_LABELS[code] || code || '进行中';
   }
 
+  function normalizeTasks(payload: any): TaskItem[] {
+    const rawList = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.data?.data)
+      ? payload.data.data
+      : Array.isArray(payload?.list)
+      ? payload.list
+      : [];
+
+    return rawList
+      .map((x: any) => ({
+        id: Number(x.id ?? x.Id ?? 0),
+        name: String(x.name ?? x.Name ?? ''),
+        currentStage: String(x.currentStage ?? x.CurrentStage ?? ''),
+        status: String(x.status ?? x.Status ?? ''),
+        updatedAt: x.updatedAt ?? x.UpdatedAt,
+      }))
+      .filter(x => x.id > 0);
+  }
+
   async function loadTasks() {
     loading.value = true;
     try {
-      const res = await getPipelineList(0, 20);
-      tasks.value = Array.isArray(res) ? res : (res as any)?.data ?? [];
+      const res = await getPipelineList(0, 200);
+      tasks.value = normalizeTasks(res);
     } catch {
       tasks.value = [];
     } finally {
@@ -58,11 +88,12 @@
 
 <style scoped lang="less">
   .pipeline-task-list {
-    border-top: 1px solid #f0f0f0;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
     padding: 12px 8px;
-    flex-shrink: 0;
-    max-height: 240px;
-    overflow-y: auto;
+    overflow: hidden;
 
     .list-header {
       display: flex;
@@ -83,6 +114,9 @@
     }
 
     .task-items {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
       list-style: none;
       margin: 0;
       padding: 0;

@@ -28,8 +28,8 @@ export const useGlobSetting = (): Readonly<GlobConfig> => {
     filePreviewServer: isDevMode() ? 'http://localhost:30090/FileServer' : VITE_GLOB_API_URL + '/FileServer',
     // 大屏应用前端路径
     dataVUrl: isDevMode() ? 'http://localhost:3102/DataV/' : prodUrlPrefix + '/DataV/',
-    // 数据报表接口
-    reportServer: isDevMode() ? 'http://localhost:30007' : VITE_GLOB_API_URL + '/ReportServer',
+    // 数据报表接口 — 已集成到主 .NET 后端，不再需要独立 Java 服务
+    reportServer: '/ReportServer',
     // 报表前端路径
     report: isDevMode() ? 'http://localhost:8200' : VITE_GLOB_API_URL + '/Report',
   };

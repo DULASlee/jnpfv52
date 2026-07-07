@@ -46,6 +46,9 @@
                 "enableIrCheck": true,
                 "enableTypeCheck": true
             }
+        },
+        "SkillRun": {
+            "TimeoutMinutes": 15
         }
     }
 }

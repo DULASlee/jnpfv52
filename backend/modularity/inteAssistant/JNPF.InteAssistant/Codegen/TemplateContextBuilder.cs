@@ -49,9 +49,9 @@ public sealed class TemplateContextBuilder : ITransient
         if (options.StrictMode && string.IsNullOrWhiteSpace(ddlText))
             throw new TemplateContextBuildException($"[{options.SampleId}] IR2_DDL 片段缺少 ddl 文本，无法构建 TemplateContext");
 
-        var columns = string.IsNullOrWhiteSpace(ddlText)
-            ? BuildColumnsFromFormPage(fieldLabels, options)
-            : ParseColumnsFromDdl(ddlText, fieldLabels, options);
+        var columns = ParseColumnsFromDdl(ddlText, fieldLabels, options);
+        if (columns.Count == 0)
+            columns = BuildColumnsFromFormPage(fieldLabels, options);
 
         if (columns.Count == 0)
         {
@@ -253,12 +253,14 @@ public sealed class TemplateContextBuilder : ITransient
             {
                 using var doc = JsonDocument.Parse(architecture.Payload);
                 if (doc.RootElement.TryGetProperty("modules", out var modules)
-                    && modules.ValueKind == JsonValueKind.Array
-                    && modules.GetArrayLength() > 0)
+                    && modules.ValueKind == JsonValueKind.Array)
                 {
-                    var first = modules[0];
-                    if (first.TryGetProperty("name", out var name) && !string.IsNullOrWhiteSpace(name.GetString()))
-                        return name.GetString()!;
+                    foreach (var module in modules.EnumerateArray())
+                    {
+                        var ns = ExtractModuleNameSpace(module);
+                        if (!string.IsNullOrWhiteSpace(ns))
+                            return ns;
+                    }
                 }
             }
             catch
@@ -273,6 +275,42 @@ public sealed class TemplateContextBuilder : ITransient
         return entityName.Contains("Leave", StringComparison.OrdinalIgnoreCase) ? "OaLeave" : "Generated";
     }
 
+    private static string? ExtractModuleNameSpace(JsonElement module)
+    {
+        if (module.ValueKind == JsonValueKind.String)
+        {
+            var raw = module.GetString();
+            return string.IsNullOrWhiteSpace(raw) ? null : ToPascalNameSpace(raw);
+        }
+
+        if (module.ValueKind != JsonValueKind.Object)
+            return null;
+
+        foreach (var prop in new[] { "name", "Name", "moduleName", "ModuleName", "code", "Code" })
+        {
+            if (module.TryGetProperty(prop, out var name) && name.ValueKind == JsonValueKind.String)
+            {
+                var raw = name.GetString();
+                if (!string.IsNullOrWhiteSpace(raw))
+                    return ToPascalNameSpace(raw);
+            }
+        }
+
+        return null;
+    }
+
+    private static string ToPascalNameSpace(string raw)
+    {
+        var parts = raw.Split(new[] { '-', '_', ' ', '.' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+            return "Generated";
+
+        return string.Concat(parts.Select(p =>
+            p.Length == 1
+                ? char.ToUpperInvariant(p[0]).ToString()
+                : char.ToUpperInvariant(p[0]) + p[1..].ToLowerInvariant()));
+    }
+
     private static string ExtractDdlText(IrSnapshotFragment? ddl)
     {
         if (ddl == null) return string.Empty;
@@ -281,7 +319,7 @@ public sealed class TemplateContextBuilder : ITransient
         {
             using var doc = JsonDocument.Parse(ddl.Payload);
             if (doc.RootElement.TryGetProperty("ddl", out var ddlProp))
-                return ddlProp.GetString() ?? string.Empty;
+                return NormalizeDdlText(ddlProp.GetString() ?? string.Empty);
         }
         catch
         {
@@ -289,6 +327,26 @@ public sealed class TemplateContextBuilder : ITransient
         }
 
         return string.Empty;
+    }
+
+    private static string NormalizeDdlText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return string.Empty;
+
+        var trimmed = text.Trim();
+        if (!trimmed.StartsWith("```", StringComparison.Ordinal))
+            return trimmed;
+
+        var firstNewline = trimmed.IndexOf('\n');
+        if (firstNewline >= 0)
+            trimmed = trimmed[(firstNewline + 1)..];
+
+        var lastFence = trimmed.LastIndexOf("```", StringComparison.Ordinal);
+        if (lastFence >= 0)
+            trimmed = trimmed[..lastFence];
+
+        return trimmed.Trim();
     }
 
     private static Dictionary<string, string> ExtractFormFieldLabels(IrSnapshotFragment? formPage)
@@ -299,15 +357,19 @@ public sealed class TemplateContextBuilder : ITransient
         try
         {
             using var doc = JsonDocument.Parse(formPage.Payload);
-            if (!doc.RootElement.TryGetProperty("fields", out var fields) || fields.ValueKind != JsonValueKind.Array)
-                return map;
-
-            foreach (var field in fields.EnumerateArray())
+            if (doc.RootElement.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
             {
-                var fieldId = field.TryGetProperty("fieldId", out var fid) ? fid.GetString() : null;
-                var label = field.TryGetProperty("label", out var lbl) ? lbl.GetString() : null;
-                if (!string.IsNullOrWhiteSpace(fieldId) && !string.IsNullOrWhiteSpace(label))
-                    map[fieldId] = label!;
+                CollectFieldLabels(fields, map);
+                return map;
+            }
+
+            if (doc.RootElement.TryGetProperty("pages", out var pages) && pages.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var page in pages.EnumerateArray())
+                {
+                    if (page.TryGetProperty("fields", out var pageFields) && pageFields.ValueKind == JsonValueKind.Array)
+                        CollectFieldLabels(pageFields, map);
+                }
             }
         }
         catch
@@ -316,6 +378,28 @@ public sealed class TemplateContextBuilder : ITransient
         }
 
         return map;
+    }
+
+    private static void CollectFieldLabels(JsonElement fields, Dictionary<string, string> map)
+    {
+        foreach (var field in fields.EnumerateArray())
+        {
+            var fieldId = TryGetJsonString(field, "fieldId", "FieldId", "id", "Id");
+            var label = TryGetJsonString(field, "label", "Label");
+            if (!string.IsNullOrWhiteSpace(fieldId) && !string.IsNullOrWhiteSpace(label) && !map.ContainsKey(fieldId))
+                map[fieldId] = label!;
+        }
+    }
+
+    private static string? TryGetJsonString(JsonElement element, params string[] propertyNames)
+    {
+        foreach (var name in propertyNames)
+        {
+            if (element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String)
+                return value.GetString();
+        }
+
+        return null;
     }
 
     private static List<TableColumnConfigModel> ParseColumnsFromDdl(
@@ -395,18 +479,7 @@ public sealed class TemplateContextBuilder : ITransient
             });
         }
 
-        if (options.IsTenantColumn && list.All(c => !c.ColumnName.Equals("TenantId", StringComparison.Ordinal)))
-        {
-            list.Add(new TableColumnConfigModel
-            {
-                ColumnName = "TenantId",
-                OriginalColumnName = "F_TenantId",
-                ColumnComment = "租户",
-                NetType = "string",
-                jnpfKey = "input",
-            });
-        }
-
+        // IsTenantColumn 时 Entity.cs.vm 末尾注入 F_Tenant_Id，此处不得重复添加 TenantId
         return list;
     }
 

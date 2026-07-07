@@ -17,6 +17,10 @@ public class InteAssistantAttachment
     [SugarColumn(ColumnName = "F_PipelineId")]
     public string PipelineId { get; set; } = "";
 
+    /// <summary>项目 ID(三元组补全,FK → ai_projects.F_Id,NOT NULL DEFAULT '')</summary>
+    [SugarColumn(ColumnName = "F_PROJECT_ID")]
+    public string ProjectId { get; set; } = "";
+
     /// <summary>文件名</summary>
     [SugarColumn(ColumnName = "F_FileName")]
     public string FileName { get; set; } = "";
@@ -72,6 +76,7 @@ public class InteAssistantAttachment
     [SugarColumn(ColumnName = "F_DeleteMark")]
     public bool DeleteMark { get; set; }
 
-    [SugarColumn(ColumnName = "F_TenantId", IsNullable = true)]
-    public string? TenantId { get; set; }
+    /// <summary>租户 ID(fail-closed 安全铁律,NOT NULL)</summary>
+    [SugarColumn(ColumnName = "F_TenantId")]
+    public string TenantId { get; set; } = "";
 }

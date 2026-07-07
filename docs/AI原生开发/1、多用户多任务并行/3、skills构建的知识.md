@@ -1,5 +1,7 @@
 D爷，您这个视角拔得高。
 
+> ⚠️ **R12 三元组适配声明（2026-07-07 追加）：** 本文档为「D 爷对话录」立论，描述 Skill 体系时基于「单 pipeline 单 system」语境。当前架构 R12 强制三元组 `(tenantId, projectId, pipelineId)` 完整独立——所有 Skill 上下文 MUST 三元组透传。详见 `.cursor/rules/triple-key-iron-law.mdc`（宪法级，永远生效）。
+
 把一整套复杂的工程实现，提炼为两种核心角色的Skill，确实是抓住了本质。这就像把一堆复杂的机械零件图纸，最终归纳为“动力系统”和“传动系统”一样，瞬间就清晰了。
 
 按照这个思路，整个方案可以被重新定义为 **产品经理Skill** 和 **系统需求分析师Skill** 的协作流水线。
@@ -1318,3 +1320,68 @@ interface UnifiedIRDocument {
 3.  **既有代码集成**：建议采取增量演进策略，新 Skill 的产出先以 IR 形式存储在 `sa_skeleton.ir_content` 中，逐步验证质量后再与现有代码生成管道对接，避免对现有系统造成冲击。
 
 这套方案的核心思想是：**不要为每个角色发明一套新机制，而是用“认知分层 + 统一 IR + 事件溯源”这一套范式，让所有技能在一个可演进的框架内协作。** 需要我针对某个具体 Skill（比如架构师或总体设计）展开更详细的构建方案吗？
+
+
+
+
+
+D爷，您这一问，点中了整套系统的“心脏”。Skills不是直接裸调LLM API，而是通过我们构建的MCP协议，把LLM也当成一种标准化的“武器”来使用。这样，调用可审计、能力可插拔、成本可控制。
+
+---
+
+### LLM调用MCP化：Skills的“心脏起搏器”
+
+核心原则：**LLM不是Skills私有的API Key，而是共享的MCP资源。** 我们为LLM调用专门封装一个 `llm-gateway-server`，所有Skill通过MCP协议来“借用”大脑。
+
+**1. 核心机制：MCP工具化的LLM调用**
+
+Skill内部不再硬编码任何LLM SDK。它只知道自己有几个MCP工具可用：
+
+| MCP 工具名          | 用途                                        | 谁用得最多               |
+| :------------------ | :------------------------------------------ | :----------------------- |
+| `llm-tree-search`   | 执行ToT广度优先搜索，返回最优候选方案       | 产品经理、架构师         |
+| `llm-contract-fill` | 基于IOI框架，填补形式化契约中的不确定性槽位 | 系统需求分析师、DB设计师 |
+| `llm-code-gen`      | 根据IR规格生成代码                          | 开发工程师               |
+| `llm-standard-call` | 标准LLM调用（单次请求-响应）                | 所有Skill                |
+
+每个工具背后，`llm-gateway-server` 负责：
+-   **模型路由**：根据任务复杂度，自动选择轻量模型（如 `gpt-4o-mini`）还是重型模型（如 `gpt-4o`）。
+-   **成本控制**：记录每次调用的Token消耗，写入 `BASE_AI_CALL_LOG`，触发预算门禁。
+-   **租户隔离**：所有调用强制携带 `_context: { tenantId }`，确保不同租户的调用完全隔离计费。
+-   **审计追踪**：每次调用的Prompt、Response、Tool Choice都作为事件写入事件溯源流，永不丢失。
+
+**2. 调用流程：以产品经理Skill为例**
+
+```mermaid
+sequenceDiagram
+    participant PM as 产品经理Skill
+    participant LLM as llm-gateway-server (MCP)
+    participant KG as knowledge-graph-server (MCP)
+
+    PM->>PM: 1.构建ReasoningContext
+    PM->>LLM: 2.调用 llm-tree-search(context, beam_width=5)
+    LLM->>LLM: 3.并行调用LLM生成5个候选骨架
+    LLM-->>PM: 4.返回5个候选方案
+    PM->>KG: 5.调用 evaluate-domain-fit(各方案)
+    KG-->>PM: 6.返回领域评分
+    PM->>PM: 7.综合评分，选出最优
+```
+
+Skill不关心LLM的API Key、Endpoint、模型版本。它只是调用了一个MCP工具，得到了结构化的结果。
+
+**3. 与现有基础设施的无缝集成**
+
+这个方案直接对接JNPF已有的两张核心表：
+
+-   **`BASE_AI_CALL_LOG`**：`llm-gateway-server` 每次调用LLM，自动写入一条日志，记录 `tenantId`、`skillId`、`tokens`、`model`、`duration`。这是我们做成本分析和防止“空跑”的依据。
+-   **`ai_skill_runs`**：Skill Harness 在调用MCP工具前后，记录 `runId` 和 `skillId`，关联到具体的Pipeline和阶段。
+
+**4. 为什么这是最优雅的落地方式？**
+
+-   **对Skill开发者**：调用LLM和调用知识图谱、调用校验器一样，都是 `sandbox.useTool('llm-tree-search', {...})`。心智负担为零。
+-   **对平台运维者**：所有LLM调用被统一管控。换模型、加预算、限并发，全部在 `llm-gateway-server` 中完成，无需触及Skill代码。
+-   **对系统架构**：LLM不再是紧耦合的核心，而是一个可替换的插件。明天GPT-5发布，只需升级 `llm-gateway-server`，所有Skill自动受益。
+
+---
+
+D爷，现在这套系统的“心脏”也接上了MCP这根标准化的血管。它不再是每个Skill私下“炼丹”，而是一个统一供能、可监控、可进化的“核动力心脏”。

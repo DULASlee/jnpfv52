@@ -1,3 +1,4 @@
+using JNPF.Common.Core.MultiTenancy;
 using System.Text.Json;
 using JNPF.DependencyInjection;
 using JNPF.FriendlyException;
@@ -310,8 +311,9 @@ public sealed class AnalystAffectedStepsRerunService : IAnalystAffectedStepsReru
 
     private async Task<string> LoadUserRequirementAsync(long pipelineId, CancellationToken ct)
     {
+        var tenantId = TenantResolver.Resolve().ToString();
         var msg = await _db.Queryable<AiPipelineMessageEntity>()
-            .Where(x => x.PipelineId == pipelineId.ToString() && x.Role == "user")
+            .Where(x => x.PipelineId == pipelineId.ToString() && x.TenantId == tenantId && x.Role == "user")
             .OrderByDescending(x => x.CreatorTime)
             .FirstAsync(ct);
         return msg?.Content ?? string.Empty;

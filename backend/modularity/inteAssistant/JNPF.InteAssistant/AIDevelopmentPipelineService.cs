@@ -10,6 +10,7 @@ using JNPF.InteAssistant.Entitys.Common;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Entity;
+using JNPF.InteAssistant.Entitys.Enum;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Gates;
 using JNPF.InteAssistant.Infrastructure.Attachments;
@@ -18,7 +19,10 @@ using JNPF.InteAssistant.Infrastructure.Messaging;
 using JNPF.InteAssistant.Infrastructure.Security;
 using JNPF.InteAssistant.Interfaces;
 using JNPF.InteAssistant.Ir;
+using JNPF.InteAssistant.Llm;
 using JNPF.InteAssistant.Skills;
+using JNPF.InteAssistant.Skills.Bugfix;
+using JNPF.InteAssistant.Pipeline;
 using JNPF.InteAssistant.Studio;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -38,6 +42,11 @@ namespace JNPF.InteAssistant;
 [Route("api/studio/pipeline/execute")]
 public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 {
+    private static readonly JsonSerializerOptions JsonCamelOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+
     private readonly IPipelineEngine _pipelineEngine;
     private readonly DetailedDesignOrchestrator _designOrchestrator;
     private readonly ILlmGatewayService _llmGateway;
@@ -57,6 +66,11 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     private readonly ISkillHarness _skillHarness;
     private readonly IOptionsMonitor<GatePipelineOptions> _gateOptions;
     private readonly IPipelineAttachmentService _attachmentService;
+    private readonly IPipelineDeliverableService _deliverableService;
+    private readonly ISkillLlmBudgetGuard _budgetGuard;
+    private readonly IStageConfirmSkillTrigger _stageConfirmSkillTrigger;
+    private readonly IDeliverableRebuildService _deliverableRebuild;
+    private readonly IBugfixSkillOrchestrator _bugfixOrchestrator;
 
     public AIDevelopmentPipelineService(
         IPipelineEngine pipelineEngine,
@@ -77,7 +91,12 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         IGeneratedProjectRegistry generatedProjectRegistry,
         ISkillHarness skillHarness,
         IOptionsMonitor<GatePipelineOptions> gateOptions,
-        IPipelineAttachmentService attachmentService)
+        IPipelineAttachmentService attachmentService,
+        IPipelineDeliverableService deliverableService,
+        ISkillLlmBudgetGuard budgetGuard,
+        IStageConfirmSkillTrigger stageConfirmSkillTrigger,
+        IDeliverableRebuildService deliverableRebuild,
+        IBugfixSkillOrchestrator bugfixOrchestrator)
     {
         _pipelineEngine = pipelineEngine;
         _designOrchestrator = designOrchestrator;
@@ -98,6 +117,11 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         _skillHarness = skillHarness;
         _gateOptions = gateOptions;
         _attachmentService = attachmentService;
+        _deliverableService = deliverableService;
+        _budgetGuard = budgetGuard;
+        _stageConfirmSkillTrigger = stageConfirmSkillTrigger;
+        _deliverableRebuild = deliverableRebuild;
+        _bugfixOrchestrator = bugfixOrchestrator;
     }
 
     // ─── 创建流水线 ───
@@ -112,54 +136,96 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         var userId = GetUserId();
 
         var requirement = input.Requirement ?? input.UserRequirement ?? "";
+        var workMode = PipelineWorkMode.Normalize(input.WorkMode);
         var name = string.IsNullOrWhiteSpace(input.Name)
             ? (requirement.Length > 50 ? requirement[..50] : requirement)
             : input.Name;
         if (string.IsNullOrWhiteSpace(name)) name = "未命名流水线";
 
+        AiPipelineEntity? sourceEntity = null;
+        if (workMode != PipelineWorkMode.Greenfield)
+        {
+            if (input.SourcePipelineId is null or <= 0)
+                throw Oops.Bah("Debug/二次开发须选择已生成系统");
+
+            sourceEntity = await _db.Queryable<AiPipelineEntity>()
+                .FirstAsync(x => x.Id == input.SourcePipelineId.ToString()
+                    && x.TenantId == tenantId.ToString()
+                    && (x.DeleteMark == null || x.DeleteMark == 0));
+
+            if (sourceEntity == null)
+                throw Oops.Bah($"源流水线 {input.SourcePipelineId} 不存在");
+
+            if (workMode == PipelineWorkMode.Bugfix && string.IsNullOrWhiteSpace(input.TargetPageRoute))
+                throw Oops.Bah("Debug 修复须选择要修改的页面/路由");
+        }
+
         var request = new PipelineCreateRequest
         {
             Name = name,
-            UserRequirement = requirement
+            UserRequirement = requirement,
+            PipelineType = workMode,
         };
 
         var result = await _pipelineEngine.CreateAsync(request, tenantId, userId);
 
-        // 落库 BASE_AI_PIPELINE（用 engine 的 pipelineId 作为主键，保持前后端 ID 一致）
+        var inheritedProjectId = sourceEntity?.ProjectId ?? result.PipelineId.ToString();
+        var initialStage = workMode switch
+        {
+            PipelineWorkMode.Bugfix => PipelineStage.Development,
+            PipelineWorkMode.Enhancement => PipelineStage.Requirement,
+            _ => PipelineStage.Requirement,
+        };
+
         var entity = new AiPipelineEntity
         {
             Id = result.PipelineId.ToString(),
             Name = name,
-            CurrentStage = PipelineStage.Requirement,
-            Status = "draft",
+            CurrentStage = initialStage,
+            Status = workMode == PipelineWorkMode.Greenfield ? "draft" : "active",
             StartedTime = DateTime.Now,
-            TenantId = tenantId.ToString()
+            TenantId = tenantId.ToString(),
+            ProjectId = inheritedProjectId,
+            WorkMode = workMode,
+            SourcePipelineId = sourceEntity?.Id,
+            TargetPageRoute = input.TargetPageRoute?.Trim(),
+            TargetPageLabel = input.TargetPageLabel?.Trim(),
         };
         entity.Create();
         await _db.Insertable(entity).ExecuteCommandAsync();
 
-        // 初始化 AI 工作区目录
         try
         {
-            StudioWorkspaceHelper.EnsureDirectories(tenantId.ToString(), result.PipelineId.ToString());
-            _logger.LogInformation("工作区目录已创建: PipelineId={Id}", result.PipelineId);
+            // R12 三元组：bugfix/enhancement 必须走新四层路径（projectId != pipelineId）
+            StudioWorkspaceHelper.EnsureDirectories(tenantId.ToString(), inheritedProjectId, result.PipelineId.ToString());
+            _logger.LogInformation("工作区目录已创建: PipelineId={Id}, ProjectId={ProjectId}, SelfAnchored={SelfAnchored}",
+                result.PipelineId, inheritedProjectId, StudioWorkspaceHelper.IsSelfAnchored(inheritedProjectId, result.PipelineId.ToString()));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "创建工作区目录失败: PipelineId={Id}", result.PipelineId);
         }
 
-        // 保存用户需求消息
-        await SaveMessageAsync(result.PipelineId.ToString(), PipelineStage.Requirement, "user", requirement);
+        await SaveMessageAsync(result.PipelineId.ToString(), inheritedProjectId, initialStage, "user", requirement);
 
-        // IR：注册 ai_projects + ProjectCreated 事件（pipelineId ≡ projectId）
         try
         {
-            await _irEventStore.EnsureProjectAsync(
-                result.PipelineId.ToString(),
-                tenantId.ToString(),
-                name,
-                userId.ToString());
+            if (workMode == PipelineWorkMode.Greenfield)
+            {
+                await _irEventStore.EnsureProjectAsync(
+                    result.PipelineId.ToString(),
+                    tenantId.ToString(),
+                    name,
+                    userId.ToString());
+            }
+            else
+            {
+                await _irEventStore.EnsureProjectAsync(
+                    inheritedProjectId,
+                    tenantId.ToString(),
+                    sourceEntity!.Name ?? name,
+                    userId.ToString());
+            }
         }
         catch (Exception ex)
         {
@@ -176,8 +242,178 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             _logger.LogWarning(ex, "已生成系统索引同步失败: PipelineId={Id}", result.PipelineId);
         }
 
-        _logger.LogInformation("流水线创建: Id={Id}, Name={Name}", result.PipelineId, name);
-        return result;
+        _logger.LogInformation(
+            "流水线创建: Id={Id}, Name={Name}, WorkMode={Mode}, Source={Source}",
+            result.PipelineId, name, workMode, sourceEntity?.Id);
+
+        return new PipelineResult
+        {
+            PipelineId = result.PipelineId,
+            Name = name,
+            CurrentStage = initialStage,
+            Status = entity.Status ?? "draft",
+        };
+    }
+
+    /// <summary>源系统可修改页面/路由列表（Debug 快路径选页）</summary>
+    [HttpGet("{pipelineId:long}/page-routes")]
+    public async Task<object> GetPageRoutesAsync(long pipelineId)
+    {
+        await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
+        var entity = await _db.Queryable<AiPipelineEntity>()
+            .FirstAsync(x => x.Id == pipelineId.ToString());
+        var projectId = entity?.ProjectId ?? pipelineId.ToString();
+        var tenantId = entity?.TenantId ?? TenantResolver.Resolve().ToString();
+
+        var routes = await _db.Queryable<AiRouteTableEntity>()
+            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId)
+            .ToListAsync();
+
+        var items = routes
+            .Where(r => !string.IsNullOrWhiteSpace(r.EtcdKey))
+            .Select(r => new
+            {
+                route = r.EtcdKey,
+                label = string.IsNullOrWhiteSpace(r.SandboxEndpoint) ? r.EtcdKey : r.SandboxEndpoint,
+            })
+            .ToList();
+
+        if (items.Count == 0)
+        {
+            items.Add(new { route = "/api/", label = "后端 API（默认）" });
+            items.Add(new { route = "/home", label = "首页（默认）" });
+        }
+
+        return new { pipelineId, projectId, items };
+    }
+
+    /// <summary>Debug 快路径 — bugfix-skill 增量重算，跳过 SA 门控全链</summary>
+    [HttpPost("{pipelineId:long}/quick-bugfix")]
+    public async Task<object> QuickBugfixAsync(long pipelineId, [FromBody] QuickTaskRequest request)
+    {
+        await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
+        await EnsureNotFrozenAsync(pipelineId, CancellationToken.None);
+
+        var entity = await _db.Queryable<AiPipelineEntity>()
+            .FirstAsync(x => x.Id == pipelineId.ToString())
+            ?? throw Oops.Bah("流水线不存在");
+
+        if (entity.WorkMode != PipelineWorkMode.Bugfix)
+            throw Oops.Bah("当前流水线不是 Debug 修复模式");
+
+        var tenantId = entity.TenantId;
+        var projectId = entity.ProjectId;
+        var (fromSeq, toSeq) = await ResolveBugfixSequenceRangeAsync(projectId, tenantId);
+
+        var description = BuildQuickTaskDescription(request.Message, entity);
+        await SaveMessageAsync(pipelineId.ToString(), projectId, PipelineStage.Development, "user", request.Message ?? description);
+
+        var runId = Guid.NewGuid().ToString("N");
+        var taskName = $"quick-bugfix:{pipelineId}:{runId}";
+
+        _taskRunner.Run(taskName, async (_, ct) =>
+        {
+            await _bugfixOrchestrator.RunAsync(
+                pipelineId,
+                tenantId,
+                projectId,
+                new BugfixRunContext
+                {
+                    FromSequence = fromSeq,
+                    ToSequence = toSeq,
+                    Description = description,
+                    RootCauseLayer = BugfixRootCauseClassifier.LayerIr3,
+                },
+                ct);
+        });
+
+        return new
+        {
+            status = "started",
+            skillId = BugfixSkillIds.Bugfix,
+            fromSequence = fromSeq,
+            toSequence = toSeq,
+            targetPageRoute = entity.TargetPageRoute,
+            message = "Debug 修复已启动，将增量重算受影响 Skill（≤3）",
+        };
+    }
+
+    /// <summary>二次开发快路径 — 继承 IR，跳过 SA 门控，按 IR 状态调度 Skill</summary>
+    [HttpPost("{pipelineId:long}/quick-enhancement")]
+    public async Task<object> QuickEnhancementAsync(long pipelineId, [FromBody] QuickTaskRequest request)
+    {
+        await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
+        await EnsureNotFrozenAsync(pipelineId, CancellationToken.None);
+
+        var entity = await _db.Queryable<AiPipelineEntity>()
+            .FirstAsync(x => x.Id == pipelineId.ToString())
+            ?? throw Oops.Bah("流水线不存在");
+
+        if (entity.WorkMode != PipelineWorkMode.Enhancement)
+            throw Oops.Bah("当前流水线不是二次开发模式");
+
+        var tenantId = entity.TenantId;
+        var projectId = entity.ProjectId;
+        var message = request.Message ?? "";
+        await SaveMessageAsync(pipelineId.ToString(), projectId, PipelineStage.Requirement, "user", message);
+
+        var snapshots = await _irEventStore.ListSnapshotsAsync(projectId, tenantId);
+        var hasStableEventSpec = snapshots.Any(s =>
+            s.FragmentType == IrFragmentTypes.EventSpec
+            && (s.StabilityState == IrStabilityStates.Stable || s.StabilityState == IrStabilityStates.Locked));
+        var hasStableSkeleton = snapshots.Any(s =>
+            (s.FragmentType == IrFragmentTypes.Skeleton || s.FragmentId?.StartsWith("skeleton:", StringComparison.Ordinal) == true)
+            && (s.StabilityState == IrStabilityStates.Stable || s.StabilityState == IrStabilityStates.Locked));
+
+        var skillId = hasStableEventSpec
+            ? "analyst-skill"
+            : hasStableSkeleton
+                ? "pm-skill"
+                : null;
+
+        if (skillId == null)
+            throw Oops.Bah("源系统 IR 未就绪（无 stable 骨架/EventSpec），请先用全量开发完成至少 S1");
+
+        var runId = Guid.NewGuid().ToString("N");
+        _taskRunner.Run($"quick-enhancement:{pipelineId}:{runId}", async (_, ct) =>
+        {
+            await _skillHarness.RunAsync(
+                skillId,
+                pipelineId,
+                tenantId,
+                projectId,
+                new SkillRunOptions { UserRequirement = message },
+                ct);
+        });
+
+        return new
+        {
+            status = "started",
+            skillId,
+            message = $"二次开发已启动，调度 {skillId}（已跳过 SA 门控）",
+        };
+    }
+
+    private static string BuildQuickTaskDescription(string? message, AiPipelineEntity entity)
+    {
+        var page = string.IsNullOrWhiteSpace(entity.TargetPageLabel)
+            ? entity.TargetPageRoute
+            : $"{entity.TargetPageLabel} ({entity.TargetPageRoute})";
+        return string.IsNullOrWhiteSpace(page)
+            ? (message ?? "Debug 修复")
+            : $"[{page}] {message}".Trim();
+    }
+
+    private async Task<(int From, int To)> ResolveBugfixSequenceRangeAsync(string projectId, string tenantId)
+    {
+        var maxSeq = await _db.Queryable<AiIrEventEntity>()
+            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId)
+            .MaxAsync(x => (int?)x.Sequence);
+
+        if (maxSeq is null or <= 1)
+            return (1, 2);
+
+        return (1, maxSeq.Value);
     }
 
     // ─── 启动流水线 ───
@@ -189,6 +425,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     public async Task<PipelineResult> StartAsync(long pipelineId)
     {
         await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
+        await EnsureNotFrozenAsync(pipelineId, CancellationToken.None);
         return await _pipelineEngine.StartAsync(pipelineId);
     }
 
@@ -202,6 +439,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         long pipelineId, [FromBody] UploadMaterialsRequest request, CancellationToken ct)
     {
         await EnsurePipelineTenantAsync(pipelineId, ct);
+        await EnsureNotFrozenAsync(pipelineId, ct);
         var ctx = RequestContext.Capture(_httpContextAccessor);
         var payloads = MapAttachmentItems(request?.Attachments);
 
@@ -219,6 +457,92 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         };
     }
 
+    /// <summary>列出 Pipeline 已登记的需求附件（含解析状态与下载链接）</summary>
+    [HttpGet("{pipelineId:long}/attachments")]
+    public async Task<object> ListAttachmentsAsync(long pipelineId, CancellationToken ct)
+    {
+        await EnsurePipelineTenantAsync(pipelineId, ct);
+        var items = await _attachmentService.ListByPipelineAsync(pipelineId, ct);
+        return new { pipelineId, count = items.Count, items };
+    }
+
+    /// <summary>下载附件原文件</summary>
+    [HttpGet("{pipelineId:long}/attachments/{attachmentId}/download")]
+    public async Task<IActionResult> DownloadAttachmentOriginalAsync(
+        long pipelineId, string attachmentId, CancellationToken ct)
+    {
+        await EnsurePipelineTenantAsync(pipelineId, ct);
+        var ctx = RequestContext.Capture(_httpContextAccessor);
+        var (content, fileName, contentType) = await _attachmentService.DownloadOriginalAsync(
+            pipelineId, attachmentId, ctx, ct);
+        return new FileContentResult(content, contentType) { FileDownloadName = fileName };
+    }
+
+    /// <summary>下载附件解析文本</summary>
+    [HttpGet("{pipelineId:long}/attachments/{attachmentId}/extracted")]
+    public async Task<IActionResult> DownloadAttachmentExtractedAsync(
+        long pipelineId, string attachmentId, CancellationToken ct)
+    {
+        await EnsurePipelineTenantAsync(pipelineId, ct);
+        var text = await _attachmentService.GetExtractedTextAsync(pipelineId, attachmentId, ct);
+        if (string.IsNullOrWhiteSpace(text))
+            throw Oops.Bah("附件尚未解析完成或无可导出文本");
+
+        var tenantId = TenantResolver.Resolve().ToString();
+        var att = await _db.Queryable<InteAssistantAttachment>()
+            .Where(a => a.F_Id == attachmentId && a.PipelineId == pipelineId.ToString() && a.TenantId == tenantId)
+            .FirstAsync(ct);
+        var baseName = Path.GetFileNameWithoutExtension(att?.FileName ?? "attachment");
+        var bytes = Encoding.UTF8.GetBytes(text);
+        return new FileContentResult(bytes, "text/plain; charset=utf-8")
+        {
+            FileDownloadName = $"{baseName}-extracted.txt",
+        };
+    }
+
+    /// <summary>列出 Pipeline 阶段交付物（deliverables/ 索引）</summary>
+    [HttpGet("{pipelineId:long}/deliverables")]
+    public async Task<object> ListDeliverablesAsync(
+        long pipelineId, [FromQuery] string? stageCode, CancellationToken ct)
+    {
+        await EnsurePipelineTenantAsync(pipelineId, ct);
+        var items = await _deliverableService.ListByPipelineAsync(pipelineId, stageCode, ct);
+        return new { pipelineId, count = items.Count, items };
+    }
+
+    /// <summary>下载 deliverables/ 下文件</summary>
+    [HttpGet("{pipelineId:long}/deliverables/content")]
+    public async Task<IActionResult> DownloadDeliverableAsync(
+        long pipelineId, [FromQuery] string relativePath, CancellationToken ct)
+    {
+        await EnsurePipelineTenantAsync(pipelineId, ct);
+        if (string.IsNullOrWhiteSpace(relativePath))
+            throw Oops.Bah("relativePath 不能为空");
+
+        var (absolute, contentType, fileName) = await _deliverableService.ResolveDeliverableAsync(
+            pipelineId, relativePath, ct);
+        var bytes = await System.IO.File.ReadAllBytesAsync(absolute, ct);
+        return new FileContentResult(bytes, contentType) { FileDownloadName = fileName };
+    }
+
+    /// <summary>
+    /// 从 IR 快照/事件重建 deliverables/（Skill 已跑但落盘缺失时补建，SUP-01c）。
+    /// </summary>
+    [HttpPost("{pipelineId:long}/deliverables/rebuild")]
+    public async Task<object> RebuildDeliverablesAsync(
+        long pipelineId,
+        [FromQuery] string? stages,
+        CancellationToken ct)
+    {
+        await EnsurePipelineTenantAsync(pipelineId, ct);
+        var tenantId = TenantResolver.Resolve().ToString();
+        IReadOnlyList<string>? stageList = string.IsNullOrWhiteSpace(stages)
+            ? null
+            : stages.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var result = await _deliverableRebuild.RebuildAsync(pipelineId, tenantId, stageList, ct);
+        return new { result.PipelineId, result.Written, result.Skipped, count = result.Written.Count };
+    }
+
     /// <summary>
     /// SA 门控入口 — 异步事件驱动
     /// 前端提交 → 202 Accepted → 后台执行门控 → SSE 推送结果
@@ -231,6 +555,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         var tenantId = TenantResolver.Resolve();
         var userId = GetUserId();
         await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
+        await EnsureNotFrozenAsync(pipelineId, CancellationToken.None);
 
         var ctx = RequestContext.Capture(_httpContextAccessor);
         if (request?.Attachments?.Count > 0)
@@ -319,8 +644,12 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                         }));
 
                         // 持久化门控结果
-                        await SaveMessageAsync(pipelineId.ToString(), "gate", "system",
+                        await SaveMessageAsync(pipelineId.ToString(), pipelineId.ToString(), "gate", "system",
                             JsonSerializer.Serialize(gateResult));
+
+                        var deliverableService = scope.ServiceProvider.GetRequiredService<IPipelineDeliverableService>();
+                        await deliverableService.SaveGateDeliverablesAsync(
+                            tenantId.ToString(), pipelineId, gateResult, prepared.Items, bgCt);
 
                         // 自动流转到 requirement 阶段
                         await _pipelineEngine.ExecuteStageAsync(pipelineId, PipelineStage.Requirement);
@@ -350,6 +679,13 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                             semanticFitness = gateResult.SemanticFitness,
                             warnings = gateResult.Warnings
                         }));
+
+                        // ★ 失败时也落盘门控报告，便于前端/E2E 立即拿到失败原因与语义评估
+                        //   （MergedText 为空时 SaveGateDeliverablesAsync 内部已做保护，仅写 00-gate-report.json）
+                        //   原 bug：失败时不落盘 → E2E 等不到任何交付物 → 干等超时报 "timeout: deliverable"
+                        var failDeliverableService = scope.ServiceProvider.GetRequiredService<IPipelineDeliverableService>();
+                        await failDeliverableService.SaveGateDeliverablesAsync(
+                            tenantId.ToString(), pipelineId, gateResult, prepared.Items, bgCt);
                     }
 
                     sse.Complete();
@@ -387,6 +723,16 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         long pipelineId, [FromBody] ExecuteStageRequest request)
     {
         await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
+        await EnsureNotFrozenAsync(pipelineId, CancellationToken.None);
+
+        // 查询 projectId(三元组血缘):历史数据 projectId≡pipelineId,新数据从 pipeline.ProjectId 读取
+        var pipelineEntity = await _db.Queryable<AiPipelineEntity>()
+            .Where(p => p.Id == pipelineId.ToString())
+            .Select(p => new { p.ProjectId })
+            .FirstAsync();
+        var projectId = string.IsNullOrWhiteSpace(pipelineEntity?.ProjectId)
+            ? pipelineId.ToString()  // 兜底:历史数据或异常情况
+            : pipelineEntity.ProjectId;
 
         var stageName = string.IsNullOrWhiteSpace(request.StageName)
             ? PipelineStage.Requirement : MapStageName(request.StageName);
@@ -408,7 +754,28 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         // 1. 保存用户消息到数据库
         if (!string.IsNullOrWhiteSpace(message))
         {
-            await SaveMessageAsync(pipelineId.ToString(), stageName, "user", message);
+            await SaveMessageAsync(pipelineId.ToString(), projectId, stageName, "user", message);
+        }
+
+        // P1-4: 流式 LLM 预算预检(防绕过 SkillLlmBudgetGuard)
+        // 主流程的 StreamLlmResponseAsync 直连 LLM Gateway,需在此校验项目 Token 预算
+        try
+        {
+            var tenantIdForBudget = TenantResolver.Resolve();
+            if (tenantIdForBudget >= 0)
+            {
+                await _budgetGuard.ValidateProjectBudgetAsync(
+                    projectId, tenantIdForBudget.ToString(), 0.95, default);
+            }
+        }
+        catch (JNPF.FriendlyException.AppFriendlyException)
+        {
+            throw;  // 预算耗尽(Oops.Oh/429)向上传播,阻断执行
+        }
+        catch (Exception ex)
+        {
+            // 非预算类异常(如表未迁移)不阻断,仅记录
+            _logger.LogWarning(ex, "LLM 预算预检异常(非阻断): PipelineId={Id}", pipelineId);
         }
 
         // 2. 流转状态机
@@ -418,9 +785,11 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         if (stageName == PipelineStage.Development)
         {
             var tenantId = TenantResolver.Resolve();
-            StudioWorkspaceHelper.EnsureDirectories(tenantId.ToString(), pipelineId.ToString());
-            StudioWorkspaceHelper.WriteAiDevContext(tenantId.ToString(), pipelineId.ToString());
-            _logger.LogInformation("AI 开发上下文已激活: PipelineId={Id}", pipelineId);
+            var tenantIdStr = tenantId.ToString();
+            var pipelineIdStr = pipelineId.ToString();
+            StudioWorkspaceHelper.EnsureDirectories(tenantIdStr, projectId, pipelineIdStr);
+            StudioWorkspaceHelper.WriteAiDevContext(tenantIdStr, projectId, pipelineIdStr);
+            _logger.LogInformation("AI 开发上下文已激活: PipelineId={Id}, ProjectId={ProjectId}", pipelineId, projectId);
         }
 
         // 3. 创建 SSE 通道（替换旧通道，支持重复执行）
@@ -435,7 +804,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                 try
                 {
                     await StreamLlmResponseAsync(
-                        pipelineId, stageName, provider, authHeader, sse,
+                        pipelineId, projectId, stageName, provider, authHeader, sse,
                         request.Attachments, ctx, ct);
                 }
                 catch (OperationCanceledException)
@@ -464,13 +833,15 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     /// 后台执行 LLM 流式调用，token 写入 Channel 供 /events 读取。
     /// 从根 ServiceProvider 创建独立 scope，避免请求结束后 DI 服务被释放。
     /// </summary>
-    private async Task StreamLlmResponseAsync(long pipelineId, string stageName, string provider, string authHeader, SseSender sse, List<AttachmentPayload>? requestAttachments, RequestContext ctx, CancellationToken ct)
+    private async Task StreamLlmResponseAsync(long pipelineId, string projectId, string stageName, string provider, string authHeader, SseSender sse, List<AttachmentPayload>? requestAttachments, RequestContext ctx, CancellationToken ct)
     {
         // 创建独立 DI scope，确保 _db/_llmGateway 在请求结束后仍可用
         using var scope = App.RootServices.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ISqlSugarClient>();
         var llmGateway = scope.ServiceProvider.GetRequiredService<ILlmGatewayService>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<AIDevelopmentPipelineService>>();
+        // P1-4: 从 scope 解析 budgetGuard,确保后台任务使用独立实例(避免 Transient 字段跨 scope 问题)
+        var budgetGuard = scope.ServiceProvider.GetRequiredService<ISkillLlmBudgetGuard>();
 
         var fullResponse = new StringBuilder();
         try
@@ -478,9 +849,9 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             logger.LogInformation("LLM 流式任务开始: PipelineId={Id}, Stage={Stage}, Provider={Provider}",
                 pipelineId, stageName, provider);
 
-            // 读取历史消息（构建上下文）
+            // 读取历史消息（构建上下文）—— 后台线程用 ctx.TenantId（TenantResolver 在后台 HttpContext 为空）
             var history = await db.Queryable<AiPipelineMessageEntity>()
-                .Where(x => x.PipelineId == pipelineId.ToString() && (x.DeleteMark == 0 || x.DeleteMark == null))
+                .Where(x => x.PipelineId == pipelineId.ToString() && x.TenantId == ctx.TenantId && (x.DeleteMark == 0 || x.DeleteMark == null))
                 .OrderBy(x => x.CreatorTime)
                 .ToListAsync();
 
@@ -497,147 +868,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                 return;
             }
 
-            // ═══════════════════════════════════════════════════
-            // SA 流水线拦截：需求分析阶段走 SA Service
-            // ═══════════════════════════════════════════════════
-            if (stageName == PipelineStage.Requirement)
-            {
-                _logger.LogInformation("[SA] 需求分析阶段，调用 SA Service pipelineId={PipelineId}", pipelineId);
-
-                // 从历史消息中提取用户需求文本
-                var requirementText = chatMessages
-                    .Where(m => m.Role == "user")
-                    .Select(m => m.Content)
-                    .LastOrDefault() ?? "";
-
-                if (string.IsNullOrWhiteSpace(requirementText))
-                {
-                    sse.Error("未找到用户需求文本");
-                return;
-                }
-
-                // 推送 SSE：SA 流水线开始
-                sse.Thinking("正在启动 SA 结构化分析流水线...");
-
-                try
-                {
-                    var saServiceUrl = _configuration.GetValue<string>("SA:ServiceUrl");
-                    if (string.IsNullOrWhiteSpace(saServiceUrl))
-                    {
-                        logger.LogError("[SA] SA:ServiceUrl 未配置，无法调用 SA Service");
-                        sse.Error("SA Service URL 未配置，请联系管理员设置 SA:ServiceUrl");
-                return;
-                    }
-
-                    var httpClient = _httpClientFactory.CreateClient();
-                    httpClient.Timeout = TimeSpan.FromMinutes(5);
-
-                    // 从 pipeline 记录获取 tenantId 和行业信息
-                    var pipeline = await db.Queryable<AiPipelineEntity>()
-                        .FirstAsync(p => p.Id == pipelineId.ToString());
-                    var tenantId = NormalizeTenantIdString(pipeline?.TenantId);
-                    // 行业从配置获取，不再硬编码（可通过 AiPipelineEntity 扩展字段或 SA:DefaultIndustry 配置）
-                    var industry = _configuration.GetValue<string>("SA:DefaultIndustry") ?? "general";
-
-                    var saRequest = new
-                    {
-                        tenantId = tenantId,
-                        projectId = pipelineId,
-                        requirementText = requirementText,
-                        userId = "system",
-                        industry = industry,
-                        authHeader = authHeader,
-                        providerCode = string.IsNullOrWhiteSpace(provider) ? "deepseek" : provider
-                    };
-
-                    // 使用 HttpRequestMessage 避免 DefaultRequestHeaders 并发竞态
-                    var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{saServiceUrl}/api/sa/run");
-                    httpRequest.Content = JsonContent.Create(saRequest);
-                    httpRequest.Headers.Add("X-Tenant-Id", tenantId);
-
-                    sse.Thinking("正在执行 3-Tier SA 流水线（Scope → DFD → BPM → Dict → ER → STD）...");
-
-                    var saResponse = await httpClient.SendAsync(httpRequest);
-
-                    if (!saResponse.IsSuccessStatusCode)
-                    {
-                        var errorBody = await saResponse.Content.ReadAsStringAsync();
-                        logger.LogError("[SA] SA Service 返回错误: {StatusCode} {Body}", saResponse.StatusCode, errorBody);
-                        sse.Error($"SA Service 调用失败: {saResponse.StatusCode}");
-                return;
-                    }
-
-                    var saResult = await saResponse.Content.ReadFromJsonAsync<SAResultDto>();
-
-                    // 推送 Scope 结果
-                    if (saResult?.Result?.Scope != null)
-                    {
-                        sse.Thinking("✅ 边界提取完成");
-                    }
-
-                    // 推送 DFD 结果
-                    if (saResult?.Result?.Dfd != null)
-                    {
-                        sse.Thinking("✅ DFD 数据流图生成完成");
-                    }
-
-                    // 推送 BPM 结果
-                    if (saResult?.Result?.Bpm != null)
-                    {
-                        sse.Thinking("✅ 业务流程图生成完成");
-                    }
-
-                    // 推送数据字典结果
-                    if (saResult?.Result?.Dict != null)
-                    {
-                        sse.Thinking("✅ 数据字典生成完成");
-                    }
-
-                    // 推送 ER 图结果
-                    if (saResult?.Result?.Er != null)
-                    {
-                        sse.Thinking("✅ ER 图生成完成");
-                    }
-
-                    // 推送状态机结果
-                    if (saResult?.Result?.Std != null)
-                    {
-                        sse.Thinking("✅ 状态机生成完成");
-                    }
-
-                    // 推送完整 SA 结果作为 Markdown token
-                    var saContent = FormatSAResultAsMarkdown(saResult);
-                    fullResponse.Append(saContent);
-                    await sse.TokenAsync(saContent, ct);
-
-                    // 推送 IR 数据（结构化 JSON）
-                    if (saResult?.Result != null)
-                    {
-                        var irJson = JsonSerializer.Serialize(saResult.Result);
-                        sse.TrySend("ir", irJson);
-                    }
-
-                    // 推送阶段完成信号
-                    sse.TrySend("stage_complete", "");
-
-                    // 保存 assistant 消息到数据库
-                    await SaveMessageAsync(db, pipelineId.ToString(), stageName, "assistant", saContent);
-
-                    _logger.LogInformation("[SA] 需求分析完成 pipelineId={PipelineId}", pipelineId);
-                    // SA 成功 → 推送完成并返回，不走 LLM 降级
-                    sse.Complete();
-                return;
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "[SA] SA Service 调用异常，降级为纯 LLM 分析 pipelineId={PipelineId}", pipelineId);
-                    sse.TrySend("info", "SA 结构化流水线暂不可用，降级为 LLM 直接分析...");
-                    // 不 return，fallthrough 到下方 LLM 直接调用
-                }
-            }
-            // ═══════════════════════════════════════════════════
-            // LLM 直接调用（含 SA 失败降级路径）
-            // ═══════════════════════════════════════════════════
+            // R2（SUP-04）：需求分析不再走 bulk /api/sa/run 旁路，统一由 analyst-skill + /sa/run-step 主链承担。
+            // Requirement 阶段 SSE 流仅负责门控评估与用户交互；结构化分析请通过 SkillsApiService 触发 analyst-skill。
 
             string? systemPrompt = null;
 
@@ -645,13 +877,17 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             // 需求门控：附件持久化 + 缓存 + 硬规则校验 + 成熟度评估
             // （仅 requirement 阶段触发，其他阶段走默认 SystemPrompt）
             // ═══════════════════════════════════════════════════
-            if (true) // 门控在所有阶段生效（不含SA拦截块，SA走单独路径）
+            if (stageName == PipelineStage.Requirement)
             {
                 try
                 {
                     var gateService = scope.ServiceProvider.GetRequiredService<RequirementGateService>();
                     var attachmentProcessor = scope.ServiceProvider.GetRequiredService<AttachmentProcessor>();
                     var http = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient();
+                    // 健壮性修复：默认 HttpClient 无超时会无限挂起；附件下载自调用需带 Authorization + 超时
+                    http.Timeout = TimeSpan.FromSeconds(30);
+                    if (!string.IsNullOrWhiteSpace(ctx.Authorization))
+                        http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ctx.Authorization.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase));
                     var tenantId = ctx.TenantId;
 
                     // ── 第1步：将请求带的新附件保存到数据库 ──
@@ -670,6 +906,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                             {
                                 F_Id = Guid.NewGuid().ToString("N"),
                                 PipelineId = pipelineId.ToString(),
+                                ProjectId = projectId,
                                 FileName = att.Name,
                                 FileUrl = att.Url,
                                 FileSize = 0,
@@ -713,7 +950,12 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                             var fileUrl = att.FileUrl;
                             if (!fileUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                             {
-                                fileUrl = $"{ctx.Scheme}://{ctx.Host}{fileUrl}";
+                                var baseUrl = ctx.GetBaseUrl();
+                                if (string.IsNullOrEmpty(baseUrl))
+                                {
+                                    throw new InvalidOperationException($"无法解析附件下载基 URL（ctx.Host 为空），跳过附件 {att.FileName}");
+                                }
+                                fileUrl = $"{baseUrl}{fileUrl}";
                             }
                             var bytes = await http.GetByteArrayAsync(fileUrl, ct);
                             var fileHash = ComputeSha256(bytes);
@@ -752,8 +994,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     }
 
                     var attachmentText = string.Join("\n\n", attachmentTexts);
-                    _logger.LogInformation("附件处理完成: 文件数={Count}, 新解析={New}, 提取文本长度={Len}",
-                        existingAttachments.Count, processedCount, attachmentText.Length);
+                    _logger.LogInformation("附件处理完成: 文件数={Count}, 提取文本长度={Len}",
+                        existingAttachments.Count, attachmentText.Length);
 
                     // ── 第3步：合并用户文字 + 附件提取内容 ──
                     var lastUserMsg = chatMessages.LastOrDefault(m => m.Role == "user")?.Content ?? "";
@@ -805,6 +1047,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     else
                     {
                         var maturity = await gateService.EvaluateMaturity(chatMessages, provider, ct);
+                        _logger.LogInformation("需求成熟度评估: score={Score} mode={Mode} clarifications={Count} pipelineId={Id}",
+                            maturity.Score, maturity.Mode, maturity.Clarifications?.Count ?? 0, pipelineId);
                         var modeLabel = maturity.Mode switch
                         {
                             "explore" => "探索模式 — 需要补充更多信息",
@@ -814,6 +1058,49 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                         };
                         sse.TrySend("info", $"\n\n> 📊 需求成熟度：{maturity.Score}/100（{modeLabel}）\n\n");
                         systemPrompt = gateService.GetSystemPrompt(maturity.Mode, maturity);
+
+                        // ── ADR-005 交互式澄清问答：explore/confirm 模式向用户发结构化选择题 ──
+                        // refine 模式信息已充分，直接进入深度分析（保持既有行为）。
+                        if (maturity.Mode is "explore" or "confirm")
+                        {
+                            var maxRounds = _configuration.GetValue<int?>("Clarification:MaxRounds") ?? 7;
+                            if (maxRounds < 1) maxRounds = 7;
+                            if (maxRounds > 20) maxRounds = 20;
+
+                            var clarificationRound = Math.Min(assistantMsgCount / 2 + 1, maxRounds);
+
+                            // 轮次触顶则强制进入 refine（保持既有 ForceRefine 语义，避免无限提问）
+                            if (clarificationRound >= maxRounds)
+                            {
+                                _logger.LogInformation("澄清提问已达上限 {Max} 轮，强制 refine pipelineId={Id}", maxRounds, pipelineId);
+                                systemPrompt = gateService.GetSystemPrompt("refine", maturity);
+                            }
+                            else
+                            {
+                                var clarificationSet = gateService.BuildClarificationSet(maturity, clarificationRound);
+                                var fragmentId = $"clarification:{ClarificationStages.Requirement}:{projectId}";
+
+                                await _irEventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
+                                {
+                                    EventType = IrEventTypes.ClarificationRequested,
+                                    FragmentId = fragmentId,
+                                    FragmentType = IrFragmentTypes.Clarification,
+                                    FragmentVersion = clarificationRound,
+                                    Payload = JsonSerializer.Serialize(clarificationSet, JsonCamelOptions),
+                                    SkillId = "requirement-gate",
+                                }, ct);
+
+                                // 显式推 clarification_requested（AppendAsync 内部的 ir_event 仅供观测台，前端聊天面板靠此事件名渲染问卷卡）
+                                sse.TrySend("clarification_requested", JsonSerializer.Serialize(clarificationSet, JsonCamelOptions));
+                                _logger.LogInformation(
+                                    "已发出澄清提问 round={Round} questions={Count} pipelineId={Id}",
+                                    clarificationRound, clarificationSet.Questions.Count, pipelineId);
+
+                                // 本轮结束：暂停流式 LLM，等待用户作答（POST /skills/clarification/{id}/answer）
+                                sse.Complete();
+                                return;
+                            }
+                        }
                     }
 
                     // ── 图片附件提取（多模态）──
@@ -839,7 +1126,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                                 {
                                     var imgUrl = att.FileUrl;
                                     if (!imgUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                                        imgUrl = $"{ctx.Scheme}://{ctx.Host}{imgUrl}";
+                                        imgUrl = $"{ctx.GetBaseUrl()}{imgUrl}";
                                     var imgBytes = await http.GetByteArrayAsync(imgUrl, ct);
                                     imageFiles.Add(new AttachmentFile { FileName = att.FileName, Content = imgBytes });
                                 }
@@ -920,7 +1207,30 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             // 保存 AI 完整回复到数据库
             if (fullResponse.Length > 0)
             {
-                await SaveMessageAsync(db, pipelineId.ToString(), stageName, "assistant", fullResponse.ToString());
+                await SaveMessageAsync(db, pipelineId.ToString(), projectId, stageName, "assistant", fullResponse.ToString());
+
+                // P1-4: 流式 token 记账(估算值,因 ChatStreamAsync 不返回 usage)
+                // 粗估公式:输入(chatMessages 字符数/4)+ 输出(fullResponse 字符数/4)
+                // 行业标准粗估,后续可改为解析流式最后一条 chunk 的 usage
+                try
+                {
+                    var estimatedInputTokens = chatMessages.Sum(m => m.Content.Length) / 4;
+                    var estimatedOutputTokens = fullResponse.Length / 4;
+                    var estimatedTotal = estimatedInputTokens + estimatedOutputTokens;
+                    if (estimatedTotal > 0 && !string.IsNullOrEmpty(ctx.TenantId))
+                    {
+                        await budgetGuard.AccumulateProjectTokensAsync(
+                            projectId, ctx.TenantId, estimatedTotal, ct);
+                        logger.LogInformation(
+                            "流式 Token 记账(估算): PipelineId={Id}, Input≈{In}, Output≈{Out}",
+                            pipelineId, estimatedInputTokens, estimatedOutputTokens);
+                    }
+                }
+                catch (Exception budgetEx)
+                {
+                    // 记账失败不应影响主流式响应
+                    logger.LogWarning(budgetEx, "流式 Token 记账失败(非阻断): PipelineId={Id}", pipelineId);
+                }
             }
 
             // development 阶段完成后：上传 generated/ 产物到沙箱
@@ -930,7 +1240,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                 {
                     var tenantId = TenantResolver.Resolve();
                     var (_, generatedDir, _, _) = StudioWorkspaceHelper.GetPipelineSubPaths(
-                        tenantId.ToString(), pipelineId.ToString());
+                        tenantId.ToString(), projectId, pipelineId.ToString());
                     var sandboxId = $"pipeline-{pipelineId}";
                     var sandbox = await _sandbox.GetStatusAsync(sandboxId);
                     if (sandbox != null && sandbox.Status == "ready")
@@ -1065,13 +1375,38 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     {
         // 前端当前传的是 pipelineId（见 PipelineEngineService.ConfirmStageAsync 兼容注释）
         await EnsurePipelineTenantAsync(stageId, CancellationToken.None);
+        await EnsureNotFrozenAsync(stageId, CancellationToken.None);
+
+        var pipeline = await _db.Queryable<AiPipelineEntity>()
+            .FirstAsync(x => x.Id == stageId.ToString());
+        if (pipeline == null)
+            throw Oops.Bah($"流水线 {stageId} 不存在");
+
+        var confirmedStage = string.IsNullOrWhiteSpace(pipeline.CurrentStage)
+            ? PipelineStage.Requirement
+            : pipeline.CurrentStage;
 
         var result = await _pipelineEngine.ConfirmStageAsync(stageId, confirmation);
+
+        StageConfirmTriggerResult? triggerResult = null;
+        if (confirmation.Approved)
+        {
+            try
+            {
+                var tenantId = pipeline.TenantId ?? TenantResolver.Resolve().ToString();
+                triggerResult = await _stageConfirmSkillTrigger.TriggerAfterConfirmAsync(
+                    stageId, tenantId, confirmedStage, result.StageName, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "阶段确认后 Skill 触发失败: PipelineId={Id}, Stage={Stage}",
+                    stageId, confirmedStage);
+            }
+        }
+
         try
         {
-            var pipeline = await _db.Queryable<AiPipelineEntity>()
-                .FirstAsync(x => x.Id == stageId.ToString());
-            var tenantId = pipeline?.TenantId ?? TenantResolver.Resolve().ToString();
+            var tenantId = pipeline.TenantId ?? TenantResolver.Resolve().ToString();
 
             await _irEventStore.AppendAsync(stageId.ToString(), tenantId, new AppendIrEventRequest
             {
@@ -1079,9 +1414,10 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                 Payload = JsonSerializer.Serialize(new
                 {
                     pipelineId = stageId,
-                    stageName = result.StageName,
+                    stageName = confirmedStage,
                     approved = confirmation.Approved,
                     nextStage = result.StageName,
+                    triggeredSkillIds = triggerResult?.TriggeredSkillIds ?? Array.Empty<string>(),
                 }),
             });
 
@@ -1092,15 +1428,48 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         {
             _logger.LogWarning(ex, "StageConfirmed IR 事件写入失败: PipelineId={Id}", stageId);
         }
-        return result;
+
+        return result with
+        {
+            ConfirmedStage = confirmedStage,
+            TriggeredSkillIds = triggerResult?.TriggeredSkillIds,
+            BackgroundTaskNames = triggerResult?.BackgroundTaskNames,
+        };
     }
 
     [HttpPost("{pipelineId:long}/rollback")]
     public async Task<StageResult> RollbackAsync(long pipelineId, [FromBody] RollbackRequest request)
     {
         await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
+        await EnsureNotFrozenAsync(pipelineId, CancellationToken.None);
         var target = string.IsNullOrWhiteSpace(request.TargetStage) ? PipelineStage.Requirement : request.TargetStage;
         return await _pipelineEngine.RollbackAsync(pipelineId, target, request.Reason);
+    }
+
+    // ─── P1-3: 冻结/恢复(开发任务对话冻结与重新拉起)───
+
+    /// <summary>
+    /// 冻结流水线(全量 checkpoint:状态机 + 最近消息 + IR 版本)
+    /// 用途:用户离开、BUG 修复中途暂停、等待人工介入
+    /// </summary>
+    [HttpPost("{pipelineId:long}/freeze")]
+    public async Task<PipelineResult> FreezeAsync(
+        long pipelineId, [FromBody] FreezeRequest? request, CancellationToken ct)
+    {
+        await EnsurePipelineTenantAsync(pipelineId, ct);
+        var userId = GetUserId();
+        return await _pipelineEngine.FreezeAsync(pipelineId, request?.Reason, userId.ToString(), ct);
+    }
+
+    /// <summary>
+    /// 恢复流水线(从 checkpoint 重建状态,生成新会话)
+    /// 用途:重新拉起之前冻结的开发任务对话
+    /// </summary>
+    [HttpPost("{pipelineId:long}/resume")]
+    public async Task<PipelineResult> ResumeAsync(long pipelineId, CancellationToken ct)
+    {
+        await EnsurePipelineTenantAsync(pipelineId, ct);
+        return await _pipelineEngine.ResumeAsync(pipelineId, ct);
     }
 
     // ─── 获取流水线详情 ───
@@ -1144,6 +1513,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     public async Task<DetailedDesignResult> ExecuteDetailedDesignAsync(
         long pipelineId, CancellationToken ct)
     {
+        await EnsurePipelineTenantAsync(pipelineId, ct);
+        await EnsureNotFrozenAsync(pipelineId, ct);
         var pipeline = await _pipelineEngine.GetDetailAsync(pipelineId);
         if (pipeline?.CurrentStage != PipelineStage.Design)
             throw new InvalidOperationException("当前阶段不是总体设计阶段");
@@ -1163,6 +1534,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     [HttpGet("{pipelineId:long}/ir")]
     public async Task<object> GetPipelineIRAsync(long pipelineId)
     {
+        await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
         var pid = pipelineId.ToString();
         var dt = await _db.Ado.GetDataTableAsync(
             "SELECT TOP 1 F_IR_SNAPSHOT, F_VERSION, F_DIFF, F_CHANGE_SUMMARY, F_VALIDATION_RESULT, F_SNAPSHOT_AT FROM BASE_IR_VERSION WHERE F_PIPELINE_ID = @pid ORDER BY F_VERSION DESC",
@@ -1186,11 +1558,12 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
     // ─── 辅助方法 ───
 
-    private async Task SaveMessageAsync(string pipelineId, string stage, string role, string content)
+    private async Task SaveMessageAsync(string pipelineId, string projectId, string stage, string role, string content)
     {
         var msg = new AiPipelineMessageEntity
         {
             PipelineId = pipelineId,
+            ProjectId = projectId,
             Stage = stage,
             Role = role,
             Content = content,
@@ -1202,11 +1575,12 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     }
 
     private static async Task SaveMessageAsync(
-        ISqlSugarClient db, string pipelineId, string stage, string role, string content)
+        ISqlSugarClient db, string pipelineId, string projectId, string stage, string role, string content)
     {
         var msg = new AiPipelineMessageEntity
         {
             PipelineId = pipelineId,
+            ProjectId = projectId,
             Stage = stage,
             Role = role,
             Content = content,
@@ -1225,8 +1599,10 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     private static async Task<int> GetNextSequenceAsync(
         ISqlSugarClient db, string pipelineId, string stage)
     {
+        // 后台线程 TenantResolver 可能返回 -1，与写入时 Creator() 注入的 TenantId 来源一致
+        var tenantId = TenantResolver.Resolve().ToString();
         var maxSeq = await db.Queryable<AiPipelineMessageEntity>()
-            .Where(x => x.PipelineId == pipelineId && x.Stage == stage)
+            .Where(x => x.PipelineId == pipelineId && x.TenantId == tenantId && x.Stage == stage)
             .MaxAsync(x => (int?)x.Sequence) ?? 0;
         return maxSeq + 1;
     }
@@ -1332,6 +1708,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     [HttpGet("{pipelineId:long}/delivery-package")]
     public async Task<object> GetDeliveryPackageAsync(long pipelineId)
     {
+        await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
         var tenantId = TenantResolver.Resolve();
         var pipeline = await _db.Queryable<AiPipelineEntity>()
             .Where(x => x.Id == pipelineId.ToString())
@@ -1342,8 +1719,11 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
         try
         {
+            var projectId = string.IsNullOrWhiteSpace(pipeline.ProjectId)
+                ? pipelineId.ToString()
+                : pipeline.ProjectId;
             var zipPath = StudioWorkspaceHelper.CreateDeliveryZip(
-                tenantId.ToString(), pipelineId.ToString());
+                tenantId.ToString(), projectId, pipelineId.ToString());
 
             // 清除 AI 开发上下文（退出 L4 白名单）
             StudioWorkspaceHelper.ClearAiDevContext();
@@ -1374,6 +1754,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     [HttpPost("{pipelineId:long}/preview")]
     public async Task<object> StartPreviewAsync(long pipelineId)
     {
+        await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
+        await EnsureNotFrozenAsync(pipelineId, CancellationToken.None);
         var tenantId = TenantResolver.Resolve();
         var tenantIdStr = tenantId.ToString();
         var pipelineIdStr = pipelineId.ToString();
@@ -1385,8 +1767,10 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         if (pipeline == null)
             throw Oops.Bah($"流水线 {pipelineId} 不存在");
 
-        // 1. 获取工作区路径
-        var (_, generatedDir, _, _) = StudioWorkspaceHelper.GetPipelineSubPaths(tenantIdStr, pipelineIdStr);
+        var projectId = string.IsNullOrWhiteSpace(pipeline.ProjectId) ? pipelineIdStr : pipeline.ProjectId;
+
+        // 1. 获取工作区路径（R12 三元组）
+        var (_, generatedDir, _, _) = StudioWorkspaceHelper.GetPipelineSubPaths(tenantIdStr, projectId, pipelineIdStr);
 
         if (!Directory.Exists(generatedDir) || !Directory.GetFiles(generatedDir, "*.vue", SearchOption.AllDirectories).Any())
             throw Oops.Bah("无可预览的前端文件：请先在 development 阶段生成 Vue 代码");
@@ -1655,6 +2039,21 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         }
     }
 
+    /// <summary>
+    /// 冻结状态守卫(P1-3):冻结的流水线拒绝写操作(执行阶段/确认/回退/上传)。
+    /// 读操作(GetDetail/events/IR 查询)允许,用户需先 POST /resume 解冻。
+    /// </summary>
+    private async Task EnsureNotFrozenAsync(long pipelineId, CancellationToken ct)
+    {
+        var pipeline = await _db.Queryable<AiPipelineEntity>()
+            .Where(p => p.Id == pipelineId.ToString())
+            .Select(p => new { p.Frozen })
+            .FirstAsync(ct);
+
+        if (pipeline is { Frozen: true })
+            throw Oops.Bah($"流水线 {pipelineId} 已冻结,请先调用 /resume 恢复后再操作");
+    }
+
     private static IEnumerable<AttachmentRegisterItem> MapAttachmentItems(IEnumerable<AttachmentPayload>? payloads)
     {
         if (payloads == null) yield break;
@@ -1826,6 +2225,23 @@ public record CreatePipelineInput
     public string? Requirement { get; init; }
     public string? Name { get; init; }
     public string? UserRequirement { get; init; }
+
+    /// <summary>greenfield | bugfix | enhancement</summary>
+    public string? WorkMode { get; init; }
+
+    /// <summary>关联源流水线 ID（bugfix / enhancement 必填）</summary>
+    public long? SourcePipelineId { get; init; }
+
+    /// <summary>Debug 目标页面路由</summary>
+    public string? TargetPageRoute { get; init; }
+
+    /// <summary>Debug 目标页面显示名</summary>
+    public string? TargetPageLabel { get; init; }
+}
+
+public record QuickTaskRequest
+{
+    public string? Message { get; init; }
 }
 
 public record ExecuteStageRequest
@@ -1845,6 +2261,15 @@ public record AttachmentPayload
 public record RollbackRequest
 {
     public string TargetStage { get; init; } = "";
+    public string? Reason { get; init; }
+}
+
+/// <summary>
+/// 冻结流水线请求(P1-3: 开发任务对话冻结)
+/// </summary>
+public record FreezeRequest
+{
+    /// <summary>冻结原因(可选,如"用户离开""等待人工介入""BUG修复中途暂停")</summary>
     public string? Reason { get; init; }
 }
 

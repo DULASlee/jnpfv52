@@ -39,8 +39,8 @@
         <AdditionalFiles Include="$(MSBuildThisFileDirectory).editorconfig" Link="Properties\.editorconfig" />
     </ItemGroup>
 
-    <!-- JNPF 自定义分析器 — 排除自身项目和测试项目 -->
-    <ItemGroup Condition="'$(MSBuildProjectName)' != 'JNPF.Analyzers' And '$(MSBuildProjectName)' != 'JNPF.Analyzers.Tests'">
+    <!-- JNPF 自定义分析器 — 仅 CI 启用（与 Roslynator/StyleCop 一致），排除自身项目和测试项目 -->
+    <ItemGroup Condition="'$(CI_BUILD)' == 'true' And '$(MSBuildProjectName)' != 'JNPF.Analyzers' And '$(MSBuildProjectName)' != 'JNPF.Analyzers.Tests'">
         <ProjectReference Include="$(MSBuildThisFileDirectory)tools\JNPF.Analyzers\JNPF.Analyzers\JNPF.Analyzers.csproj"
                           ReferenceOutputAssembly="false"
                           OutputItemType="Analyzer" />

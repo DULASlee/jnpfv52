@@ -1,5 +1,20 @@
 {
   "dependencies": {
     "playwright": "^1.61.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.0",
+    "typescript": "^5.4.0",
+    "vitest": "^4.1.9"
+  },
+  "scripts": {
+    "e2e:login": "playwright test -c e2e/playwright.config.ts e2e/studio/01-login.spec.ts",
+    "e2e:studio:layout": "playwright test -c e2e/playwright.config.ts e2e/studio/02-submit-requirement-layout.spec.ts",
+    "e2e:studio:deliverables": "playwright test -c e2e/playwright.config.ts e2e/studio/03-submit-requirement-deliverables.spec.ts",
+    "e2e:studio:gate": "playwright test -c e2e/playwright.config.ts e2e/studio/04-submit-requirement-gate.spec.ts",
+    "e2e:studio": "playwright test -c e2e/playwright.config.ts e2e/studio",
+    "test:api": "vitest run -c tests/api/vitest.config.mjs",
+    "test:api:watch": "vitest -c tests/api/vitest.config.mjs",
+    "sync:http-env": "node scripts/sync-http-env.mjs"
   }
 }

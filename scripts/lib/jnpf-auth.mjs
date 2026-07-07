@@ -123,8 +123,8 @@ export async function login(options = {}) {
   return session;
 }
 
-/** 带 Bearer 的 fetch；401 时可选重登一次 */
-export async function apiRequest(method, urlPath, { body, token, session, retry = true } = {}) {
+/** 带 Bearer 的 fetch；401 时可选重登一次；timeoutMs 默认 60s */
+export async function apiRequest(method, urlPath, { body, token, session, retry = true, timeoutMs = 60_000 } = {}) {
   const cfg = { ...DEFAULTS };
   let sess = session || loadCachedSession();
   if (!sess?.token) sess = await login(cfg);
@@ -143,10 +143,21 @@ export async function apiRequest(method, urlPath, { body, token, session, retry 
     payload = typeof body === 'string' ? body : JSON.stringify(body);
   }
 
-  const res = await fetch(url, { method, headers, body: payload });
-  if (res.status === 401 && retry) {
+  const res = await fetch(url, {
+    method,
+    headers,
+    body: payload,
+    signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
+  });
+  if ((res.status === 401 || res.status === 600) && retry) {
     const fresh = await login({ ...cfg, force: true });
-    return apiRequest(method, urlPath, { body, token: fresh.token, session: fresh, retry: false });
+    return apiRequest(method, urlPath, {
+      body,
+      token: fresh.token,
+      session: fresh,
+      retry: false,
+      timeoutMs,
+    });
   }
 
   const text = await res.text();

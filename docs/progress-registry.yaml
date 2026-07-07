@@ -1,13 +1,43 @@
 # JNPF V5.2 Progress Registry
 # Canonical reference for all completed milestones and current state.
 
-version: "8.10"
-last_updated: "2026-07-05"
-current_phase: "阶段五 W9 D3 — P5-B02 BugfixSkill 完成"
+version: "8.11"
+last_updated: "2026-07-06"
+current_phase: "22号五步计划 — 第1步 S0→S2 ✅ · 第2步 S3→S4 ✅ · 第3步待推进"
 current_focus:
-  - "P5-B03 DeploySkillService（D5-D6）"
-  - "phase5-fullchain-e2e.mjs（D7-D8）"
-  next_gate: "DeploySkill + fullchain E2E"
+  - "第3步 S5 developer/tester/codegen（pipeline 220 或新 pipeline）"
+  - "P5-B03 DeploySkillService + phase5-fullchain-e2e"
+  next_gate: "第3步 S5 E2E 全绿"
+
+skills_five_step_plan:
+  anchor_doc: "docs/AI原生开发/1、多用户多任务并行/22、Skills全链路装配审计与五步推进计划.md"
+  step1_s0_s2:
+    status: completed
+    pipeline_id: 311
+    evidence: ".claude/evidence/phase-sup-s2-e2e.json"
+    architecture: "ADR-004 · openspec/specs/studio-s2-compile/spec.md"
+    e2e_default: "E2E_PIPELINE_ID=311 pnpm test:api"
+    e2e_toolchain: "openspec/specs/studio-e2e-toolchain/spec.md"
+    pending: "materialize-wait 纳入 phase-sup-s2-e2e.mjs"
+  step2_s3_s4:
+    status: completed
+    pipeline_id: 311
+    evidence: ".claude/evidence/phase-sup-s34-e2e.json"
+    e2e_default: "E2E_PIPELINE_ID=311 pnpm test:api (studio-s34.test.mjs)"
+    e2e_drive: "E2E_DRIVE_S34=1 E2E_PIPELINE_ID=311 pnpm test:api"
+    http: "api-tests/http/studio-s34-chain.http"
+    deprecated: "scripts/phase-sup-s34-e2e.mjs"
+  step3_s5:
+    status: completed
+    pipeline_id: 311
+    evidence: ".claude/evidence/phase4-d14-green-path.json"
+    e2e_default: "E2E_PIPELINE_ID=311 pnpm test:api (studio-s5.test.mjs)"
+    e2e_long: "node scripts/phase4-green-path.mjs --pipeline-id 311"
+    fixes: "TemplateContextBuilder string-modules + nested FormPageIR + TenantId dedupe; phase4 skip re-run if green"
+  step4_deploy:
+    status: pending
+  step5_deliverables_07_09:
+    status: pending
 
 phase4_schedule:
   anchor_doc: "docs/AI原生开发/1、多用户多任务并行/12、全链条第四阶段开发计划.md"
@@ -50,6 +80,7 @@ milestones:
   ADR-016: { status: completed, description: "模块化单体架构决策" }
   ADR-017: { status: completed, description: "新旧代码生成器共存" }
   ADR-018: { status: completed, description: "UniApp UI 库选型" }
+  ADR-004: { status: completed, description: "S2 compile + C# SaMaterializer 九表物化" }
 
 sprint_0a:
   status: completed

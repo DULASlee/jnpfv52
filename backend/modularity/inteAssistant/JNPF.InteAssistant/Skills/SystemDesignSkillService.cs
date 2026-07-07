@@ -1,18 +1,20 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using JNPF.DependencyInjection;
+using JNPF.FriendlyException;
 using JNPF.InteAssistant.Constraints;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Ir;
-using JNPF.FriendlyException;
+using JNPF.InteAssistant.Skills.Cognitive;
 using Microsoft.Extensions.Logging;
 
 namespace JNPF.InteAssistant.Skills;
 
 /// <summary>
-/// 总体设计 Skill（P3-B05）— 三片段 stable 后 SystemDesignLocked；critical 约束违规时拒绝锁定。
+/// 总体设计 Skill（R3 认知模具版）— 三片段 stable 后 SystemDesignLocked；
+/// critical 约束违规时拒绝锁定（无 LLM、无 fallback）。
 /// </summary>
-public sealed class SystemDesignSkillService : IBaseSkill, ITransient
+public sealed class SystemDesignSkillService : CognitiveSkill, ITransient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -23,17 +25,21 @@ public sealed class SystemDesignSkillService : IBaseSkill, ITransient
     private readonly ILogger<SystemDesignSkillService> _logger;
 
     public SystemDesignSkillService(
+        ICognitiveSkillToolkit toolkit,
         IConstraintEngineService constraintEngine,
         ILogger<SystemDesignSkillService> logger)
+        : base(toolkit)
     {
         _constraintEngine = constraintEngine;
         _logger = logger;
     }
 
-    public string SkillId => DesignSkillIds.SystemDesign;
-    public string Version => "1.0.0-mvp";
+    public override string SkillId => DesignSkillIds.SystemDesign;
+    public override string Version => "2.0.0-cognitive";
+    public override SkillLayer Layer => SkillLayer.Refinement;
+    public override SkillMission Mission => SkillMission.RefineSpecification;
 
-    public SkillInformationNeeds InformationNeeds { get; } = new()
+    public override SkillInformationNeeds InformationNeeds { get; } = new()
     {
         IrFragmentTypes = new[]
         {
@@ -44,7 +50,7 @@ public sealed class SystemDesignSkillService : IBaseSkill, ITransient
         RequiredStability = IrStabilityStates.Stable,
     };
 
-    public SkillOutputDeclaration Outputs { get; } = new()
+    public override SkillOutputDeclaration Outputs { get; } = new()
     {
         IrEventTypes = new[]
         {
@@ -53,7 +59,7 @@ public sealed class SystemDesignSkillService : IBaseSkill, ITransient
         },
     };
 
-    public Task<SkillValidationResult> ValidateInputAsync(IrSnapshot snapshot, CancellationToken ct = default)
+    public override Task<SkillValidationResult> ValidateInputAsync(IrSnapshot snapshot, CancellationToken ct = default)
     {
         if (snapshot.Find(IrFragmentTypes.Architecture, IrStabilityStates.Stable) == null)
             return Task.FromResult(SkillValidationResult.Fail("架构片段未 stable"));
@@ -70,10 +76,23 @@ public sealed class SystemDesignSkillService : IBaseSkill, ITransient
         return Task.FromResult(SkillValidationResult.Ok());
     }
 
-    public async IAsyncEnumerable<AppendIrEventRequest> ReasonAsync(
-        SkillContext context,
-        [EnumeratorCancellation] CancellationToken ct = default)
+    public override Task<SkillValidationResult> ValidateOutputAsync(
+        IReadOnlyList<AppendIrEventRequest> events, CancellationToken ct = default)
     {
+        if (events.Any(e => e.EventType == IrEventTypes.SystemDesignLocked))
+            return Task.FromResult(SkillValidationResult.Ok());
+
+        if (events.Any(e => e.EventType == IrEventTypes.ConstraintViolationReported))
+            return Task.FromResult(SkillValidationResult.Fail("critical 约束违规，未产出 SystemDesignLocked"));
+
+        return Task.FromResult(SkillValidationResult.Fail("必须产出 SystemDesignLocked 或 ConstraintViolationReported"));
+    }
+
+    protected override async IAsyncEnumerable<AppendIrEventRequest> ThinkAsync(
+        SkillPerception perception,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        var context = perception.Context;
         var fragmentId = $"systemDesign:{context.ProjectId}";
         var arch = context.Snapshot.Find(IrFragmentTypes.Architecture, IrStabilityStates.Stable)!;
         var ddl = context.Snapshot.Find(IrFragmentTypes.DDL, IrStabilityStates.Stable)!;
@@ -85,14 +104,10 @@ public sealed class SystemDesignSkillService : IBaseSkill, ITransient
             context.ProjectId, check.CriticalCount, check.WarningCount);
 
         if (check.Violations.Count > 0)
-        {
             yield return BuildViolationEvent(context.ProjectId, check);
-        }
 
         if (check.CriticalCount > 0)
-        {
             throw Oops.Bah($"存在 {check.CriticalCount} 条 critical 约束违规，SystemDesignLocked 已拒绝");
-        }
 
         var payload = JsonSerializer.Serialize(new
         {
@@ -120,21 +135,9 @@ public sealed class SystemDesignSkillService : IBaseSkill, ITransient
             FragmentType = IrFragmentTypes.SystemDesign,
             FragmentVersion = 1,
             Payload = payload,
-            SkillId = SkillId,
         };
 
         await Task.CompletedTask;
-    }
-
-    public Task<SkillValidationResult> ValidateOutputAsync(IReadOnlyList<AppendIrEventRequest> events, CancellationToken ct = default)
-    {
-        if (events.Any(e => e.EventType == IrEventTypes.SystemDesignLocked))
-            return Task.FromResult(SkillValidationResult.Ok());
-
-        if (events.Any(e => e.EventType == IrEventTypes.ConstraintViolationReported))
-            return Task.FromResult(SkillValidationResult.Fail("critical 约束违规，未产出 SystemDesignLocked"));
-
-        return Task.FromResult(SkillValidationResult.Fail("必须产出 SystemDesignLocked 或 ConstraintViolationReported"));
     }
 
     private static AppendIrEventRequest BuildViolationEvent(string projectId, ConstraintCheckResult check)

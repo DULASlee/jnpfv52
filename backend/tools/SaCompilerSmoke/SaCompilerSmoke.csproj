@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>SaCompilerSmoke</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\modularity\inteAssistant\JNPF.InteAssistant\JNPF.InteAssistant.csproj" />
+  </ItemGroup>
+</Project>

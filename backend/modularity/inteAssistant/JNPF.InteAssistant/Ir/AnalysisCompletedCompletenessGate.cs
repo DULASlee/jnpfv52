@@ -2,7 +2,9 @@ using System.Text.Json;
 using JNPF.DependencyInjection;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
+using JNPF.InteAssistant.Sa;
 using JNPF.InteAssistant.Skills;
+using Microsoft.Extensions.Options;
 using SqlSugar;
 
 namespace JNPF.InteAssistant.Ir;
@@ -28,8 +30,13 @@ public sealed class AnalysisCompletedCompletenessGate : IAnalysisCompletedComple
     };
 
     private readonly ISqlSugarClient _db;
+    private readonly SaPipelineOptions _pipelineOptions;
 
-    public AnalysisCompletedCompletenessGate(ISqlSugarClient db) => _db = db;
+    public AnalysisCompletedCompletenessGate(ISqlSugarClient db, IOptions<SaPipelineOptions> pipelineOptions)
+    {
+        _db = db;
+        _pipelineOptions = pipelineOptions.Value;
+    }
 
     public async Task<SkillValidationResult> ValidateAsync(
         string tenantId,
@@ -71,14 +78,88 @@ public sealed class AnalysisCompletedCompletenessGate : IAnalysisCompletedComple
                 return SkillValidationResult.Fail($"EventSpec 未 stable: {fragmentId}");
 
             var completed = snap.SaStepsCompleted.ToHashSet(StringComparer.Ordinal);
-            foreach (var step in IrSaSteps.All)
+            var requiredSteps = ParseSaStepsFromPayload(snap.Payload);
+            if (requiredSteps.Count == 0)
+                return SkillValidationResult.Fail($"EventSpec {eventId} payload 缺少 saStepsCompleted");
+
+            if (completed.Count == 0)
+                completed = requiredSteps.ToHashSet(StringComparer.Ordinal);
+
+            foreach (var step in requiredSteps)
             {
                 if (!completed.Contains(step))
                     return SkillValidationResult.Fail($"EventSpec {eventId} 缺 SA 步骤: {step}");
             }
         }
 
+        if (_pipelineOptions.IsCompileMode && _db != null)
+        {
+            var reviewVerdicts = await _db.Queryable<AiIrEventEntity>()
+                .Where(x => x.ProjectId == projectId && x.TenantId == tenantId
+                    && x.EventType == IrEventTypes.SkillReviewRecorded)
+                .OrderByDescending(x => x.Sequence)
+                .Take(50)
+                .ToListAsync(ct);
+
+            var verdicts = reviewVerdicts
+                .Select(ParseReviewVerdict)
+                .Where(v => !string.IsNullOrEmpty(v))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (!verdicts.Contains("pm-s2-pass"))
+                return SkillValidationResult.Fail("S2 compile 缺少 pm-s2-pass 双审");
+            if (!verdicts.Contains("analyst-s2-pass"))
+                return SkillValidationResult.Fail("S2 compile 缺少 analyst-s2-pass 双审");
+        }
+
         return SkillValidationResult.Ok();
+    }
+
+    private static string? ParseReviewVerdict(AiIrEventEntity evt)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(evt.Payload ?? "{}");
+            if (doc.RootElement.TryGetProperty("verdict", out var v))
+                return v.GetString();
+        }
+        catch
+        {
+            /* ignore */
+        }
+
+        return null;
+    }
+
+    private static List<string> ParseSaStepsFromPayload(object? payload)
+    {
+        var list = new List<string>();
+        try
+        {
+            var json = payload switch
+            {
+                string s => s,
+                null => "{}",
+                _ => JsonSerializer.Serialize(payload, JsonOptions),
+            };
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("saStepsCompleted", out var steps)
+                && steps.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var step in steps.EnumerateArray())
+                {
+                    var name = step.GetString();
+                    if (!string.IsNullOrWhiteSpace(name))
+                        list.Add(name);
+                }
+            }
+        }
+        catch
+        {
+            /* ignore */
+        }
+
+        return list;
     }
 
     private static List<string> ParseBusinessEventIds(string skeletonJson)

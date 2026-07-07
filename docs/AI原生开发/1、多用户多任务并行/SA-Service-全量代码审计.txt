@@ -1,4 +1,5 @@
 === SA Service 全量代码审计包 ===
+> ⚠️ R12 三元组适配声明（2026-07-07 追加）：本审计包涉及的 sa-service 仅适用于 S2 agent 模式回归测试（ADR-004）；compile 主链与 C# SaMaterializer 物化不依赖 sa-service。所有数据/IR/路径 MUST 三元组 `(tenantId, projectId, pipelineId)` 完整独立。详见 `.cursor/rules/triple-key-iron-law.mdc`。
 生成时间: Sun Jun 21 03:21:32     2026
 文件数量: 44
 

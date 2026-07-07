@@ -33,6 +33,31 @@ python D:\JNPF-v52\scripts\jnpf_auth.py GET /api/studio/ir/1/events
 | `JNPF_CIPHER_KEY` | `EY8WePvjM5GGwQzn`（与 `App.json` 一致） |
 | `JNPF_ORIGIN` | `pc` |
 
+## 领域 E2E（分步执行，避免卡死）
+
+**主入口：** `scripts/studio-e2e.mjs`
+
+```powershell
+node scripts/studio-e2e.mjs init
+node scripts/studio-e2e.mjs step s0-gate --skip-if-done    # 幂等：已完成则跳过
+node scripts/studio-e2e.mjs step s2-wait --poll-once       # 探针，不阻塞
+node scripts/studio-e2e.mjs status --json                  # 含 suggestedNext + stepTimings
+```
+
+**稳定性特性：**
+- API 45s 超时 + 3 次指数退避（502/503/504/429/网络错误）
+- `status` 并行拉取 events / runs / deliverables
+- 长等待自适应降频（1.5s → 5s），减轻 backend 压力
+- `--skip-if-done` 步骤幂等；409 冲突自动视为「已在运行」
+- `.e2e-lock.json` 防同一 pipeline 并发 E2E（`--no-lock` 可跳过）
+
+状态：`scripts/.e2e-state.json` · 锁：`scripts/.e2e-lock.json`
+
+| 兼容脚本 | 说明 |
+|----------|------|
+| `phase2-skills-e2e.mjs` | 转发 studio-e2e |
+| `business-p0-e2e.mjs` | P0 门控+PM |
+
 ## 在 Agent / CI 脚本里复用
 
 ```javascript
@@ -70,7 +95,16 @@ SKIP 项：D8–D9、D11–D14、D16–D18、D20。
 
 ## 阶段四 Green path / DoD（D14–D16）
 
+**Python（推荐）：**
+
 ```powershell
+pip install requests pycryptodome
+python scripts/phase4_diagnose.py 209          # 失败时先诊断
+python scripts/phase4_green_path.py            # D14 全链路
+python scripts/phase4_green_path.py --pipeline-id 209
+```
+
+**Node 等价：**
 # D14 leave-simple 端到端（需 :5000 存活，developer 编排含 sandbox build，默认 30min 超时）
 node D:\JNPF-v52\scripts\phase4-green-path.mjs
 node D:\JNPF-v52\scripts\phase4-green-path.mjs --pipeline-id 123

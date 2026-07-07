@@ -3121,7 +3121,7 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
     /// 递归获取手动添加的省市区,Id处理成树形结构.
     /// </summary>
     /// <param name="addressEntityList"></param>
-    private string GetAddressIdByPList(List<ProvinceEntity> addressEntityList, ProvinceEntity pEntity)
+    private static string GetAddressIdByPList(List<ProvinceEntity> addressEntityList, ProvinceEntity pEntity)
     {
         if (pEntity.ParentId == null || pEntity.ParentId.Equals("-1"))
         {

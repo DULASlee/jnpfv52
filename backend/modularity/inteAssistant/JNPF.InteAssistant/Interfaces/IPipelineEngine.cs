@@ -1,5 +1,7 @@
 namespace JNPF.InteAssistant.Interfaces;
 
+using JNPF.InteAssistant.Entitys.Enum;
+
 /// <summary>
 /// 五阶段 AI 流水线引擎
 /// 阶段: requirement → architecture → design → development → delivery
@@ -37,6 +39,17 @@ public interface IPipelineEngine
         long pipelineId, string targetStage, string? reason = null, CancellationToken ct = default);
 
     /// <summary>
+    /// 冻结流水线(全量 checkpoint:状态机 + 最近消息 ID + IR 版本号)
+    /// </summary>
+    Task<PipelineResult> FreezeAsync(
+        long pipelineId, string? reason = null, string? frozenBy = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// 恢复流水线(从 checkpoint 重建状态,生成新会话)
+    /// </summary>
+    Task<PipelineResult> ResumeAsync(long pipelineId, CancellationToken ct = default);
+
+    /// <summary>
     /// 获取流水线详情
     /// </summary>
     Task<PipelineDetail> GetDetailAsync(long pipelineId, CancellationToken ct = default);
@@ -71,6 +84,11 @@ public record PipelineDetail
     public string Name { get; init; } = "";
     public string CurrentStage { get; init; } = "";
     public string Status { get; init; } = "";
+    public string WorkMode { get; init; } = PipelineWorkMode.Greenfield;
+    public long? SourcePipelineId { get; init; }
+    public string? TargetPageRoute { get; init; }
+    public string? TargetPageLabel { get; init; }
+    public string? ProjectId { get; init; }
     public List<StageInfo> Stages { get; init; } = new();
     public List<PipelineMessageInfo> Messages { get; init; } = new();
 }
@@ -100,6 +118,15 @@ public record StageResult
     public string StageName { get; init; } = "";
     public string Status { get; init; } = "";
     public string? Output { get; init; }
+
+    /// <summary>SUP-01a：用户确认通过时的阶段（推进前）</summary>
+    public string? ConfirmedStage { get; init; }
+
+    /// <summary>SUP-01a：确认后已调度触发的 SkillId 列表</summary>
+    public IReadOnlyList<string>? TriggeredSkillIds { get; init; }
+
+    /// <summary>SUP-01a：后台任务名（便于日志/诊断）</summary>
+    public IReadOnlyList<string>? BackgroundTaskNames { get; init; }
 }
 
 public record PipelineMessageInfo

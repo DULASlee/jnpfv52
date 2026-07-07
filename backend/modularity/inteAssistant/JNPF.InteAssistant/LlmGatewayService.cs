@@ -9,6 +9,7 @@ using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Interfaces;
 using JNPF.InteAssistant.Llm;
+using JNPF.InteAssistant.Skills.Cognitive;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SqlSugar;
@@ -242,10 +243,15 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
             retryCount++;
             IncrementFailureCount(currentProvider);
 
-            // GAP-1: 主Provider连续失败 >= 3次 → 切换到备用Provider
-            if (retryCount >= maxRetries && currentProvider == originalProvider
-                && !string.IsNullOrEmpty(_fallbackProvider)
-                && Providers.ContainsKey(_fallbackProvider))
+            // GAP-1: 主Provider连续失败 >= maxRetries → 切换到备用Provider
+            // ★ 修复死循环：fallback == original 时不应"降级到自身"，否则 retryCount 被无限重置，
+            //   while(true) 永远到不了下方 return，最终只能靠调用方 CancellationToken 在 5min 后强杀。
+            //   （典型场景：GatePipeline.SemanticProvider == AI.FallbackProvider == "deepseek"）
+            var canFallback = !string.IsNullOrEmpty(_fallbackProvider)
+                && Providers.ContainsKey(_fallbackProvider)
+                && !string.Equals(_fallbackProvider, originalProvider, StringComparison.OrdinalIgnoreCase);
+
+            if (retryCount >= maxRetries && currentProvider == originalProvider && canFallback)
             {
                 _logger.LogWarning(
                     "LLM降级: {Original}连续失败{Count}次 → 切换至{Fallback}",
@@ -255,7 +261,8 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
                 continue;
             }
 
-            // GAP-1: 备用Provider也用完重试次数 → 全部失败
+            // GAP-1: 备用Provider也用完重试次数，或无可用备用Provider → 全部失败立即返回
+            // ★ 这是终止 while(true) 的唯一正常出口（除成功外），必须在无 fallback 时也立即返回
             if (retryCount >= maxRetries)
             {
                 _logger.LogError(
@@ -279,6 +286,60 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
             var delay = TimeSpan.FromSeconds(Math.Pow(2, retryCount - 1));
             await Task.Delay(delay, ct);
         }
+    }
+
+    // ─── CognitiveSkill R0: Tree-of-Thought 多路候选生成（施工包 21 §3.5）───
+
+    /// <inheritdoc/>
+    public async Task<TreeSearchResult> TreeSearchAsync(TreeSearchRequest request, CancellationToken ct = default)
+    {
+        var schedule = TreeSearchPlanner.BuildTemperatureSchedule(
+            request.BranchCount, request.BaseTemperature, request.TemperatureStep);
+
+        var branchTasks = schedule.Select((temperature, index) => RunBranchAsync(request, index, temperature, ct));
+        var candidates = (await Task.WhenAll(branchTasks)).ToList();
+
+        var anySuccess = candidates.Any(c => c.IsSuccess);
+        return new TreeSearchResult
+        {
+            IsSuccess = anySuccess,
+            Candidates = candidates,
+            Error = anySuccess
+                ? null
+                : "TreeSearch 全部分支失败: " + string.Join(" | ",
+                    candidates.Select(c => $"[{c.BranchIndex}@{c.Temperature}] {c.Error}")),
+        };
+    }
+
+    private async Task<TreeSearchCandidate> RunBranchAsync(
+        TreeSearchRequest request, int branchIndex, double temperature, CancellationToken ct)
+    {
+        // 每路走标准 ChatAsync：独立审计入 BASE_AI_CALL_LOG、独立重试/降级
+        var response = await ChatAsync(new ChatCompletionRequest
+        {
+            ProviderCode = request.ProviderCode,
+            ModelCode = request.ModelCode,
+            SystemPrompt = request.SystemPrompt,
+            Messages = request.Messages,
+            Temperature = temperature,
+            MaxTokens = request.MaxTokens,
+            ResponseFormat = request.ResponseFormat,
+            MaxRetries = 1,
+            TimeoutMs = request.TimeoutMs,
+        }, ct);
+
+        return new TreeSearchCandidate
+        {
+            BranchIndex = branchIndex,
+            Temperature = temperature,
+            IsSuccess = response.IsSuccess,
+            Content = response.Content,
+            ModelUsed = response.ModelUsed,
+            TokensIn = response.TokensIn,
+            TokensOut = response.TokensOut,
+            LatencyMs = response.LatencyMs,
+            Error = response.Error,
+        };
     }
 
     // ─── I-07: 5 级降级链（配置化）───
@@ -825,6 +886,8 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
                 RunId = audit?.RunId,
                 SkillId = audit?.SkillId,
                 ProjectId = audit?.ProjectId,
+                // 三元组血缘:PipelineId 从 audit 透传
+                PipelineId = audit?.PipelineId ?? "",
                 // GAP-3: 降级审计字段
                 Fallback = fallback,
                 OriginalModel = originalModel,

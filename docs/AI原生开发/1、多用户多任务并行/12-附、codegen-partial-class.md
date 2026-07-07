@@ -1,5 +1,7 @@
 # 代码生成 Partial Class 物理隔离策略（A1）
 
+> ⚠️ **R12 三元组适配声明（2026-07-07 追加）：** 本文档涉及的所有生成物路径 MUST 四层 `StudioWorkspace/{tenantId}/{projectId}/{pipelineId}/generated/`（R12 Layer 4）。详见 `.cursor/rules/triple-key-iron-law.mdc`（宪法级，永远生效）。
+
 > 文档编号：12-附 | 版本：v1.0 | 阶段四 D2 阻断项  
 > 上级：[`12、全链条第四阶段开发计划.md`](./12、全链条第四阶段开发计划.md) §4.1、§4.6  
 > 关联：`Ir2CodegenContext` · `VmTemplateRenderer` · `ArchGuardService` · `CodeSandboxService`
@@ -41,7 +43,7 @@ flowchart LR
 根路径（gitignore）：
 
 ```
-workspace/generated/{tenantId}/{projectId}/backend/
+StudioWorkspace/{tenantId}/{projectId}/{pipelineId}/generated/backend/    （R12 四层路径，2026-07-07 修订）
 ├── Entities/
 │   └── {ClassName}Entity.cs              ← 通道 A，[GeneratedCode]
 ├── Entitys/Dto/{ClassName}/              ← 通道 A，.vm 渲染（CrInput 等）
@@ -159,7 +161,7 @@ sequenceDiagram
 {
   "context": "https://schema.jnpf.ai/ir/v1",
   "stabilityState": "draft",
-  "artifactRoot": "workspace/generated/{tenantId}/{projectId}/backend",
+  "artifactRoot": "StudioWorkspace/{tenantId}/{projectId}/{pipelineId}/generated/backend",  // R12 四层路径
   "templateVersions": [
     {
       "templateId": "1-SingleTable/Entity.cs.vm",

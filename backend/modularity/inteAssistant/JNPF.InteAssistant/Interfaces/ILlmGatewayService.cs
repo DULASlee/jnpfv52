@@ -54,4 +54,14 @@ public interface ILlmGatewayService
     /// <param name="providerCode">Provider 代码</param>
     /// <returns>Provider 信息</returns>
     Task<ProviderInfo> GetProviderInfoAsync(string providerCode);
+
+    /// <summary>
+    /// Tree-of-Thought 多路候选生成（施工包 21 §3.5）：
+    /// 同一 prompt 按温度梯度并行发 N 路 ChatAsync，每路独立审计入 BASE_AI_CALL_LOG。
+    /// 只生成候选不做裁决；全部分支失败时 IsSuccess=false，禁止降级编造内容。
+    /// </summary>
+    /// <param name="request">ToT 请求（分支数、温度梯度）</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>候选集合</returns>
+    Task<TreeSearchResult> TreeSearchAsync(TreeSearchRequest request, CancellationToken ct = default);
 }

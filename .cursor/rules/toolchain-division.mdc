@@ -7,6 +7,7 @@ alwaysApply: true
 
 | 工具 | 唯一职责 |
 |------|----------|
+| **testing-toolchain** | **测试工具选型与命令**（`.cursor/rules/testing-toolchain.mdc` · `openspec/specs/studio-e2e-toolchain/spec.md`） |
 | **OpenSpec** | **知识库**（`openspec/specs/` 归档真相；changes 草稿 → archive） |
 | **Superpowers** | **开发推进**（brainstorming → writing-plans → executing-plans → verification） |
 | **Serena** | **C# 符号级改动**（find_symbol / rename_symbol / replace_symbol_body） |

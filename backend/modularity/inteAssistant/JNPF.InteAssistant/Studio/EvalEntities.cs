@@ -49,4 +49,24 @@ public class EvalRunEntity
     [SugarColumn(ColumnName = "F_Details")] public string? F_Details { get; set; }
     [SugarColumn(ColumnName = "F_CreatorTime")] public DateTime F_CreatorTime { get; set; }
     [SugarColumn(ColumnName = "F_CreatorUserId")] public long? F_CreatorUserId { get; set; }
+
+    // ─── P7-E01 Phase7 扩展（2026-07-08）───
+    /// <summary>三元组 R12：租户隔离</summary>
+    [SugarColumn(ColumnName = "F_TenantId")] public string F_TenantId { get; set; } = string.Empty;
+    /// <summary>三元组 R12：项目隔离</summary>
+    [SugarColumn(ColumnName = "F_ProjectId")] public string F_ProjectId { get; set; } = string.Empty;
+    /// <summary>三元组 R12：流水线隔离</summary>
+    [SugarColumn(ColumnName = "F_PipelineId")] public string F_PipelineId { get; set; } = string.Empty;
+    /// <summary>关联具体测试用例（pass^k 一致性按 case 聚合）</summary>
+    [SugarColumn(ColumnName = "F_CaseId", IsNullable = true)] public long? F_CaseId { get; set; }
+    /// <summary>四层评估结果 JSON {l1,l2,l3,l4}</summary>
+    [SugarColumn(ColumnName = "F_LayerResults", IsNullable = true)] public string? F_LayerResults { get; set; }
+    /// <summary>L1-L3 综合通过（fail-fast 后的整体结论）</summary>
+    [SugarColumn(ColumnName = "F_OverallPassed", IsNullable = true)] public bool? F_OverallPassed { get; set; }
+    /// <summary>L4 Judge 与人工的 Cohen's kappa（P7-E02 校准写入，P7-E01 预留）</summary>
+    [SugarColumn(ColumnName = "F_JudgeKappa", IsNullable = true)] public decimal? F_JudgeKappa { get; set; }
+    /// <summary>pass^k 一致性（首版 k=1，预留扩展点）</summary>
+    [SugarColumn(ColumnName = "F_Consistency", IsNullable = true)] public decimal? F_Consistency { get; set; }
+    /// <summary>eval run 状态：pending/running/completed/failed</summary>
+    [SugarColumn(ColumnName = "F_Status")] public string F_Status { get; set; } = "pending";
 }

@@ -38,7 +38,8 @@ public class SemanticFitnessValidator : ITransient
 
     static SemanticFitnessValidator()
     {
-        s_jsonOptions.Converters.Add(new JsonStringEnumConverter());
+        // LLM prompt 要求 sufficient|partial|insufficient（小写），须 CamelCase 反序列化
+        s_jsonOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: true));
     }
 
     public SemanticFitnessValidator(
@@ -64,11 +65,14 @@ public class SemanticFitnessValidator : ITransient
                 ProviderCode = options.SemanticProvider,
                 SystemPrompt = systemPrompt,
                 Messages = new List<ChatMessage> { new() { Role = "user", Content = text } },
-                MaxTokens = 1500,
+                MaxTokens = 3000,
                 Temperature = 0.1,
                 ResponseFormat = "json",
-                MaxRetries = 2,
-                TimeoutMs = 45000
+                // ★ 收紧重试预算：语义评估是门控前置步骤，不应吞掉整个 5min 后台预算
+                //   单次 30s × 1 次（无 fallback 自循环）= 最坏 30s 内 fail-closed 返回
+                //   原值 MaxRetries=2 + TimeoutMs=45000 在 LLM 故障时最坏耗 ~3min，逼近后台超时
+                MaxRetries = 1,
+                TimeoutMs = 30000
             }, ct);
 
             if (!response.IsSuccess)
@@ -82,6 +86,12 @@ public class SemanticFitnessValidator : ITransient
             try
             {
                 json = ExtractJson(response.Content);
+            }
+            catch (JsonException ex)
+            {
+                // LLM 输出截断/格式异常（JsonReaderException 等）→ fail-closed，避免 GATE_UNEXPECTED
+                _logger.LogWarning("JSON 提取失败（LLM 输出可能截断）: {Message}", ex.Message);
+                return FailClosed("需求评估结果格式异常，请稍后重试。", "GATE_JSON_ERR");
             }
             catch (InvalidOperationException ex)
             {
@@ -111,7 +121,7 @@ public class SemanticFitnessValidator : ITransient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "语义评估未预期异常");
+            _logger.LogError(ex, "语义评估未预期异常: {Message}", ex.Message);
             return FailClosed("需求评估服务异常，请稍后重试。", "GATE_UNEXPECTED");
         }
     }

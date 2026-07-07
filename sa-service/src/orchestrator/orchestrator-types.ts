@@ -5,16 +5,27 @@ import { ValidationError } from '../validators/types';
 // =====================================================
 // 客户需求
 // =====================================================
+export interface SkeletonBusinessEvent {
+  eventId: string;
+  eventName: string;
+  complexityHint?: 'simple' | 'medium' | 'complex';
+  description?: string;
+}
+
 export interface SARequest {
   tenantId: string;
   projectId: number;
+  /** Studio 流水线实例 ID（三元组）；缺省时与 projectId 相同（历史兼容） */
+  pipelineId?: number;
   requirementId: number;
   requirementText: string;          // 客户原始需求
-  eventId?: number;                  // 单事件模式(可选)
-  eventDescription?: string;         // 单事件描述(可选)
+  /** PM 已确认骨架中的 businessEvents — 有则跳过 ScopeAgent 重切，直接驱动 SA */
+  skeletonBusinessEvents?: SkeletonBusinessEvent[];
+  eventId?: number;
+  eventDescription?: string;
   assetLevel?: 'PROJECT' | 'EVENT' | 'PROCESS';
-  userId: string;                    // 触发人
-  runId?: string;                    // C# Skill 透传，用于结构化日志关联
+  userId: string;
+  runId?: string;
 }
 
 // =====================================================
@@ -25,6 +36,7 @@ export interface ScopeOutput {
   externalEntities: Array<{ name: string; type: string; description: string }>;
   businessEvents: Array<{
     id: number;
+    irEventId?: string;
     name: string;
     description: string;
     complexity: 'simple' | 'medium' | 'complex';
@@ -106,6 +118,25 @@ export interface UIOutput {
 // =====================================================
 // SA 总产出
 // =====================================================
+
+/**
+ * 单个业务事件的分析结果。
+ * steps 以 IR 步骤名为 key（匹配 C# SaStepMapping），便于 C# 直接投影 IR 事件。
+ * PROJECT 级步骤（DomainModel/AggregateDesign/EventCatalog/CommandQuery/DataModel/UISpec）
+ * 在所有事件中共享；事件级步骤（IntegrationPoints/WorkflowSpec/DeliveryChecklist）
+ * 按 complexity 按需存在。
+ */
+export interface SAEventResult {
+  /** IR 侧 eventId（如 BE-001），与 PM 骨架对齐 */
+  eventId: string;
+  eventName: string;
+  complexity: 'simple' | 'medium' | 'complex';
+  /** IR 步骤名 → 产出对象；缺失表示该步骤未执行（按复杂度裁剪） */
+  steps: Record<string, any>;
+  /** 非空表示该事件处理失败，steps 可能不完整 */
+  error?: string;
+}
+
 export interface SAOutput {
   projectId: number;
   tenantId: string;
@@ -113,11 +144,10 @@ export interface SAOutput {
   dfd?: DFDOutput;
   bpm?: BPMOutput;
   dict?: DictOutput;
-  pspec?: PSpecOutput;
-  decisionTable?: DecisionTableOutput;
   er?: EROutput;
   stateMachine?: StateMachineOutput;
-  ui?: UIOutput;
+  /** 每个业务事件的分析结果（含 PROJECT 级共享步骤 + 事件级专属步骤） */
+  eventResults: SAEventResult[];
   metadata: {
     totalDuration: number;
     totalRetries: number;
@@ -131,6 +161,8 @@ export interface SAOutput {
 export interface SAContext {
   tenantId: string;
   projectId: number;
+  /** 流水线实例 ID（三元组，落库 sa_* 表 pipeline_id 列） */
+  pipelineId: number;
   requirementId: number;
   requirementText: string;
   eventId?: number;
@@ -222,6 +254,7 @@ export interface ISADatabase {
 export interface ValidationLogRecord {
   tenantId: string;
   projectId: number;
+  pipelineId?: number;
   saTableName: string;
   saRecordId?: number;
   validatorName: string;

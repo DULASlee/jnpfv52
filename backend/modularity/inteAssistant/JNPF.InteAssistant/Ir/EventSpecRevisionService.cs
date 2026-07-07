@@ -3,6 +3,7 @@ using JNPF.DependencyInjection;
 using JNPF.FriendlyException;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Ir;
+using JNPF.InteAssistant.Skills.Cognitive;
 
 namespace JNPF.InteAssistant.Ir;
 
@@ -24,8 +25,13 @@ public sealed class EventSpecRevisionService : IEventSpecRevisionService, ITrans
     };
 
     private readonly IIrEventStoreService _eventStore;
+    private readonly IExperienceRecorder _experience;
 
-    public EventSpecRevisionService(IIrEventStoreService eventStore) => _eventStore = eventStore;
+    public EventSpecRevisionService(IIrEventStoreService eventStore, IExperienceRecorder experience)
+    {
+        _eventStore = eventStore;
+        _experience = experience;
+    }
 
     public async Task<ReviseEventSpecResult> ReviseAsync(
         string projectId,
@@ -55,6 +61,7 @@ public sealed class EventSpecRevisionService : IEventSpecRevisionService, ITrans
         var previousCompleted = snap.SaStepsCompleted ?? Array.Empty<string>();
         var retainedSteps = EventSpecRevisionPlanner.TrimCompletedSteps(previousCompleted, affectedSteps);
         var newVersion = snap.CurrentVersion + 1;
+        var beforeJson = PayloadToJson(snap.Payload);
 
         var mergedPayload = MergePayload(snap.Payload, input.PayloadPatch, input.RevisionType, affectedSteps);
 
@@ -83,6 +90,12 @@ public sealed class EventSpecRevisionService : IEventSpecRevisionService, ITrans
             SkillId = "analyst-skill",
         });
 
+        await _experience.RecordHumanCorrectionAsync(
+            projectId, tenantId, "analyst-skill", fragmentId,
+            beforeJson, mergedPayload,
+            input.RevisionType ?? "manual-revision",
+            ct);
+
         return new ReviseEventSpecResult
         {
             EventId = revised.Id,
@@ -105,13 +118,16 @@ public sealed class EventSpecRevisionService : IEventSpecRevisionService, ITrans
         var baseObj = existingPayload switch
         {
             null => new Dictionary<string, object>(),
-            JsonElement el => JsonSerializer.Deserialize<Dictionary<string, object>>(el.GetRawText()) ?? new(),
-            _ => JsonSerializer.Deserialize<Dictionary<string, object>>(JsonSerializer.Serialize(existingPayload)) ?? new(),
+            JsonElement el => JsonSerializer.Deserialize<Dictionary<string, object>>(el.GetRawText(), JsonOptions) ?? new(),
+            string s when !string.IsNullOrWhiteSpace(s) =>
+                JsonSerializer.Deserialize<Dictionary<string, object>>(s, JsonOptions) ?? new(),
+            _ => JsonSerializer.Deserialize<Dictionary<string, object>>(
+                JsonSerializer.Serialize(existingPayload, JsonOptions), JsonOptions) ?? new(),
         };
 
         if (!string.IsNullOrWhiteSpace(patchJson))
         {
-            var patch = JsonSerializer.Deserialize<Dictionary<string, object>>(patchJson);
+            var patch = JsonSerializer.Deserialize<Dictionary<string, object>>(patchJson, JsonOptions);
             if (patch != null)
             {
                 foreach (var kv in patch)
@@ -124,4 +140,12 @@ public sealed class EventSpecRevisionService : IEventSpecRevisionService, ITrans
         baseObj["revisedAt"] = DateTime.UtcNow.ToString("O");
         return JsonSerializer.Serialize(baseObj, JsonOptions);
     }
+
+    private static string PayloadToJson(object? payload) => payload switch
+    {
+        null => "{}",
+        string s => s,
+        JsonElement el => el.GetRawText(),
+        _ => JsonSerializer.Serialize(payload, JsonOptions),
+    };
 }

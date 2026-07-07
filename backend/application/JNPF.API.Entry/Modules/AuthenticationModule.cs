@@ -28,26 +28,32 @@ public class AuthenticationModule : JnpfModule
                 OnMessageReceived = context =>
                 {
                     var httpContext = context.HttpContext;
+                    var token = (string?)null;
 
+                    // 1. Query string: ?token=xxx
                     if (httpContext.Request.Query.ContainsKey("token"))
                     {
-                        var token = httpContext.Request.Query["token"].ToString();
-
-                        switch (token.StartsWith("Bearer") || token.StartsWith("bearer"))
+                        token = httpContext.Request.Query["token"].ToString();
+                    }
+                    // 2. URL path segment: /api/message/websocket/{token}
+                    else
+                    {
+                        var path = httpContext.Request.Path.Value ?? "";
+                        if (path.StartsWith("/api/message/websocket/", StringComparison.OrdinalIgnoreCase))
                         {
-                            case true:
-                                token = token.Replace("Bearer", string.Empty).Replace("bearer", string.Empty);
-                                break;
+                            token = path["/api/message/websocket/".Length..];
                         }
+                    }
 
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        // Strip Bearer prefix if present
+                        if (token.StartsWith("Bearer", StringComparison.OrdinalIgnoreCase))
+                            token = token["Bearer".Length..];
                         token = token.TrimStart();
-                        switch (token.StartsWith("%20"))
-                        {
-                            case true:
-                                token = token.Replace("%20", string.Empty);
-                                break;
-                        }
-
+                        // Strip URL-encoded leading space (%20)
+                        if (token.StartsWith("%20", StringComparison.OrdinalIgnoreCase))
+                            token = token["%20".Length..];
                         context.Token = token;
                     }
 
@@ -86,6 +92,10 @@ public class AuthenticationModule : JnpfModule
         app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
+
+        // 租户上下文（ADR-003）：MUST 在 Authorization 之后执行，
+        // 此时 HttpContext.User 已由 JWT 中间件填充，可从 claims 提取 TenantId
+        app.UseMiddleware<JNPF.Extras.DatabaseAccessor.SqlSugar.TenantContext.TenantMiddleware>();
 
         // 任务调度看板
         app.UseScheduleUI();

@@ -34,6 +34,37 @@ public record ConfirmSkeletonRequest
 {
     /// <summary>确认后自动启动 analyst-skill</summary>
     public bool AutoRunAnalyst { get; init; }
+
+    /// <summary>关联的 PM Skill runId（可选，用于 SkillReviewRecorded 血缘）</summary>
+    public string? RunId { get; init; }
+}
+
+public record ConfirmRequirementSpecRequest
+{
+    /// <summary>确认后自动启动设计 Skill（architect-skill）</summary>
+    public bool AutoRunDesign { get; init; }
+
+    public string? RunId { get; init; }
+}
+
+/// <summary>Skill 产物人工/Guard 评审（R4 进化层）。</summary>
+public record SkillReviewInput
+{
+    public string SkillId { get; init; } = string.Empty;
+    public string Verdict { get; init; } = "approved";
+    public string? DetailJson { get; init; }
+    public string? RunId { get; init; }
+}
+
+/// <summary>经验事件列表项（SkillReviewRecorded / SkillFailureRecorded / HumanCorrectionRecorded）。</summary>
+public record SkillExperienceEventDto
+{
+    public string EventId { get; init; } = string.Empty;
+    public string EventType { get; init; } = string.Empty;
+    public string? SkillId { get; init; }
+    public string? FragmentId { get; init; }
+    public string Payload { get; init; } = "{}";
+    public DateTime CreatedAt { get; init; }
 }
 
 public record SeedTemplateDto

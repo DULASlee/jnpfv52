@@ -34,6 +34,9 @@ import {
   Progress,
   Image,
   Upload,
+  Pagination,
+  Spin,
+  Modal,
 } from 'ant-design-vue';
 
 import { BasicHelp, BasicCaption } from '/@/components/Basic';
@@ -123,6 +126,9 @@ export function registerGlobComp(app: App) {
     .use(Progress)
     .use(Image)
     .use(Upload)
+    .use(Pagination)
+    .use(Spin)
+    .use(Modal)
     .use(BasicHelp)
     .use(JnpfAlert)
     .use(JnpfRate)

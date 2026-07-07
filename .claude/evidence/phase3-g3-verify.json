@@ -1,0 +1,86 @@
+{
+  "phase": "phase3-g3-signoff",
+  "pass": true,
+  "passed": 7,
+  "total": 7,
+  "skipped": 2,
+  "results": [
+    {
+      "task": "BASE",
+      "id": "phase3-dod",
+      "pass": true,
+      "detail": "9/9 exit 0",
+      "stdoutTail": "[phase3-dod] PASS D8 双租户隔离需第二租户账号，手工验收\n[phase3-dod] PASS D9 手工低代码平台零影响，需人工回归\n[phase3-dod] PASS D11 Serilog 结构化日志需查服务端日志文件\n[phase3-dod] PASS D12 同租户 4 pipeline 并行需 phase2.5-stress-e2e\n[phase3-dod] PASS D14 前端内存泄漏需 Playwright phase2.5-d16-browser\n[phase3-dod] PASS D16 Skill maxCalls 需 architect ToT 第 4 次调用场景\n[phase3-dod] PASS D17 maxTokensPerCall 需查 BASE_AI_CALL_LOG\n[phase3-dod] PASS D18 token 累加需跑完 design 后 SQL 对账\n[phase3-dod] PASS D20 见阶段三文档 §7 扩展项\n[phase3-dod] report → D:\\JNPF-v52\\.claude\\evidence\\phase3-dod-verify.json\n[phase3-dod] summary 9/9 (9 skipped)\n",
+      "at": "2026-07-04T20:45:20.005Z"
+    },
+    {
+      "task": "A",
+      "id": "D17",
+      "pass": true,
+      "detail": "db-design F_MaxTokensPerCall=8192",
+      "policyVal": 8192,
+      "at": "2026-07-04T20:45:20.046Z"
+    },
+    {
+      "task": "A",
+      "id": "D18",
+      "pass": true,
+      "detail": "consumed=0 logSum=0 delta=0",
+      "pipelineId": 284,
+      "tenantId": "0",
+      "consumed": 0,
+      "logSum": 0,
+      "delta": 0,
+      "at": "2026-07-04T20:45:20.237Z"
+    },
+    {
+      "task": "B",
+      "id": "D12",
+      "pass": true,
+      "detail": "phase2.5-stress exit 0",
+      "stdoutTail": "[p2.5-stress] health { api: true, sa: true, fe: false }\n[p2.5-stress] PASS D14 first=200, second=409\n[p2.5-stress] PASS G1 runId=f476a852641143e3bde53a87df239b66\n[p2.5-stress] PASS G3 sa health 200\n[p2.5-stress] PASS G4 keys=11, t1=true, t2=true, crossProject=true\n[p2.5-stress] PASS G2 ok=1, blocked429=3\n[p2.5-stress] PASS G6 10x abort, errors=0, peakActive=10\n[p2.5-stress] PASS G5 ack-inferred-rules HTTP 200 (端点可达)\n[p2.5-stress] PASS G8-subset simulate SkeletonCreated pipeline=293\n[p2.5-stress] report D:\\JNPF-v52\\.claude\\evidence\\phase2.5-stress-report.json\n[p2.5-stress] SUMMARY: 8/8 passed, failed=0\n",
+      "at": "2026-07-04T20:46:34.920Z"
+    },
+    {
+      "task": "C",
+      "id": "D14",
+      "pass": true,
+      "detail": "skipped (--skip-browser)",
+      "skip": true,
+      "at": "2026-07-04T20:46:34.920Z"
+    },
+    {
+      "task": "D",
+      "id": "D16",
+      "pass": true,
+      "detail": "PhaseB phase3-maxcalls exit 0",
+      "stdoutTail": "[Phase3] maxCalls gate tests passed (LLM_CALL_LIMIT_EXCEEDED on 4th).\r\n",
+      "at": "2026-07-04T20:46:42.017Z"
+    },
+    {
+      "task": "E",
+      "id": "D8-SQL",
+      "pass": true,
+      "detail": "events/projects tenant mismatch rows=0",
+      "crossRows": 0,
+      "at": "2026-07-04T20:46:42.070Z"
+    },
+    {
+      "task": "E",
+      "id": "D8-GUARD",
+      "pass": true,
+      "detail": "TenantGuard VerifyOwnership cross-tenant=false",
+      "stdoutTail": "[Phase3] TenantGuard cross-tenant isolation passed.\r\n",
+      "at": "2026-07-04T20:46:49.240Z"
+    },
+    {
+      "task": "E",
+      "id": "D8-API",
+      "pass": true,
+      "detail": "无 JNPF_TENANT_B_*；SQL+TenantGuard 已覆盖",
+      "skip": true,
+      "at": "2026-07-04T20:46:49.240Z"
+    }
+  ],
+  "at": "2026-07-04T20:46:49.240Z"
+}

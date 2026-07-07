@@ -75,8 +75,16 @@ public class PortalService : IDynamicApiController, ITransient
     [HttpGet("")]
     public async Task<dynamic> GetList([FromQuery] PortalListQueryInput input)
     {
-        var systemList = await _repository.AsSugarClient().Queryable<SystemEntity>().Where(it => it.DeleteMark == null).ToListAsync();
+        // ── 顺序预加载引用数据（避免 N+1 子查询） ──
+        // 注意：SqlSugar ISqlSugarClient 非线程安全，禁止并发查询（Task.Run / Task.WhenAll）。
+        var refClient = _repository.AsSugarClient();
+        var systems = await refClient.Queryable<SystemEntity>().Where(s => s.DeleteMark == null).ToListAsync();
+        var modules = await refClient.Queryable<ModuleEntity>().Where(m => m.DeleteMark == null).ToListAsync();
+        var dicts = await refClient.Queryable<DictionaryDataEntity>().Where(d => d.DeleteMark == null).ToListAsync();
+        var users = await refClient.Queryable<UserEntity>().Where(u => u.DeleteMark == null).ToListAsync();
+        var portals = await refClient.Queryable<PortalManageEntity>().Where(pm => pm.DeleteMark == null).ToListAsync();
 
+        // ── 主查询：分页列表（不含子查询，单次 SQL） ──
         var data = await _repository.AsQueryable()
            .WhereIF(input.keyword.IsNotEmptyOrNull(), p => p.FullName.Contains(input.keyword) || p.EnCode.Contains(input.keyword))
            .WhereIF(input.category.IsNotEmptyOrNull(), p => p.Category == input.category)
@@ -93,9 +101,7 @@ public class PortalService : IDynamicApiController, ITransient
                fullName = p.FullName,
                enCode = p.EnCode,
                deleteMark = SqlFunc.ToString(p.DeleteMark),
-               category = SqlFunc.Subqueryable<DictionaryDataEntity>().Where(it => it.Id.Equals(p.Category)).Select(it => it.FullName),
                creatorTime = p.CreatorTime,
-               creatorUser = SqlFunc.Subqueryable<UserEntity>().Where(it => it.Id.Equals(p.CreatorUserId)).Select(it => SqlFunc.MergeString(it.RealName, "/", it.Account)),
                lastModifyTime = p.LastModifyTime,
                state = p.State,
                isRelease = p.State,
@@ -103,57 +109,125 @@ public class PortalService : IDynamicApiController, ITransient
                type = p.Type,
                sortCode = p.SortCode,
                platformRelease = p.PlatformRelease,
-               pcIsRelease = SqlFunc.Subqueryable<ModuleEntity>().Where(it => it.DeleteMark == null && systemList.Select(s => s.Id).Contains(it.SystemId) && it.Category.Equals("Web") && it.PropertyJson.Contains(p.Id)).Any() ? 1 : 0,
-               appIsRelease = SqlFunc.Subqueryable<ModuleEntity>().Where(it => it.DeleteMark == null && systemList.Select(s => s.Id).Contains(it.SystemId) && it.Category.Equals("App") && it.PropertyJson.Contains(p.Id)).Any() ? 1 : 0,
-               pcPortalIsRelease = SqlFunc.Subqueryable<PortalManageEntity>().Where(it => it.DeleteMark == null && systemList.Select(s => s.Id).Contains(it.SystemId) && it.Platform.Equals("Web") && it.PortalId.Equals(p.Id)).Any() ? 1 : 0,
-               appPortalIsRelease = SqlFunc.Subqueryable<PortalManageEntity>().Where(it => it.DeleteMark == null && systemList.Select(s => s.Id).Contains(it.SystemId) && it.Platform.Equals("App") && it.PortalId.Equals(p.Id)).Any() ? 1 : 0
+               category = p.Category, // 暂存 ID，后处理替换为名称
+               creatorUser = p.CreatorUserId, // 暂存 ID，后处理替换为名称
            })
            .ToPagedListAsync(input.currentPage, input.pageSize);
 
-        var moduleList = await _repository.AsSugarClient().Queryable<ModuleEntity>().Where(it => it.DeleteMark == null).ToListAsync();
-        var pcModuleList = moduleList.Where(it => it.Category.Equals("Web")).ToList();
-        var appModuleList = moduleList.Where(it => it.Category.Equals("App")).ToList();
-        var portalManageList = await _repository.AsSugarClient().Queryable<PortalManageEntity>().Where(it => it.DeleteMark == null).ToListAsync();
+        // ── 内存拼接引用数据（O(1) 字典查找替代 6 个相关子查询） ──
+
+        var dictMap = dicts.ToDictionary(d => d.Id, d => d.FullName);
+        var userMap = users.ToDictionary(u => u.Id, u => $"{u.RealName}/{u.Account}");
+        var sysDict = systems.ToDictionary(s => s.Id, s => s.FullName);
+        var systemIds = new HashSet<string>(systems.Select(s => s.Id));
+
+        // 构建 module→路径名 的一次性递归映射
+        var modDict = modules.ToDictionary(m => m.Id);
+        var modPathCache = new Dictionary<string, string>();
+        string BuildModulePath(ModuleEntity m)
+        {
+            if (modPathCache.TryGetValue(m.Id, out var cached)) return cached;
+            if (m.ParentId == "-1")
+            {
+                var sysName = sysDict.TryGetValue(m.SystemId ?? string.Empty, out var sn) ? sn : string.Empty;
+                modPathCache[m.Id] = string.IsNullOrEmpty(sysName) ? m.FullName : $"{sysName}/{m.FullName}";
+                return modPathCache[m.Id];
+            }
+            if (modDict.TryGetValue(m.ParentId ?? string.Empty, out var parent))
+            {
+                modPathCache[m.Id] = $"{BuildModulePath(parent)}/{m.FullName}";
+                return modPathCache[m.Id];
+            }
+            modPathCache[m.Id] = m.FullName;
+            return m.FullName;
+        }
+        foreach (var mod in modules) BuildModulePath(mod);
+
+        // 构建 module→itemId 反向索引
+        var pcModules = modules.Where(m => m.Category == "Web" && systemIds.Contains(m.SystemId ?? string.Empty)).ToList();
+        var appModules = modules.Where(m => m.Category == "App" && systemIds.Contains(m.SystemId ?? string.Empty)).ToList();
+        var pcPortalManages = portals.Where(pm => pm.Platform == "Web" && systemIds.Contains(pm.SystemId ?? string.Empty)).ToList();
+        var appPortalManages = portals.Where(pm => pm.Platform == "App" && systemIds.Contains(pm.SystemId ?? string.Empty)).ToList();
+
+        var itemIds = new HashSet<string>(data.list.Select(i => i.id));
+
+        // 为每个 portal item 预计算发布名称
+        var pcReleaseMap = BuildReleaseNameMap(pcModules, itemIds, modPathCache);
+        var appReleaseMap = BuildReleaseNameMap(appModules, itemIds, modPathCache);
+        var pcPortalMap = BuildPortalNameMap(pcPortalManages, sysDict);
+        var appPortalMap = BuildPortalNameMap(appPortalManages, sysDict);
+
         foreach (var item in data.list)
         {
-            var pcList = new List<string>();
-            foreach (var module in pcModuleList.Where(it => it.PropertyJson.Contains(item.id)))
-            {
-                GetReleaseName(pcList, pcModuleList, systemList, module, string.Empty);
-            }
-            item.pcReleaseName = string.Join("；", pcList);
+            // category 字段暂存了 Category ID，替换为名称
+            var catId = item.category ?? string.Empty;
+            item.category = dictMap.TryGetValue(catId, out var catName) ? catName : string.Empty;
 
-            var appList = new List<string>();
-            foreach (var module in appModuleList.Where(it => it.PropertyJson.Contains(item.id)))
-            {
-                GetReleaseName(appList, appModuleList, systemList, module, string.Empty);
-            }
-            item.appReleaseName = string.Join("；", appList);
+            // creatorUser 字段暂存了 CreatorUserId，替换为名称
+            var cuid = item.creatorUser ?? string.Empty;
+            item.creatorUser = userMap.TryGetValue(cuid, out var cuName) ? cuName : string.Empty;
 
-            var pcPortalList = new List<string>();
-            foreach (var pm in portalManageList.Where(it => it.Platform.Equals("Web") && it.PortalId.Equals(item.id)))
+            if (pcReleaseMap.TryGetValue(item.id, out var pcPaths) && pcPaths.Count > 0)
             {
-                var sys = systemList.Find(it => it.Id.Equals(pm.SystemId));
-                if (sys.IsNotEmptyOrNull())
-                {
-                    pcPortalList.Add(sys.FullName);
-                }
+                item.pcReleaseName = string.Join("；", pcPaths);
+                item.pcIsRelease = 1;
             }
-            item.pcPortalReleaseName = string.Join("；", pcPortalList);
-
-            var appPortalList = new List<string>();
-            foreach (var pm in portalManageList.Where(it => it.Platform.Equals("App") && it.PortalId.Equals(item.id)))
+            if (appReleaseMap.TryGetValue(item.id, out var appPaths) && appPaths.Count > 0)
             {
-                var sys = systemList.Find(it => it.Id.Equals(pm.SystemId));
-                if (sys.IsNotEmptyOrNull())
-                {
-                    appPortalList.Add(sys.FullName);
-                }
+                item.appReleaseName = string.Join("；", appPaths);
+                item.appIsRelease = 1;
             }
-            item.appPortalReleaseName = string.Join("；", appPortalList);
+            if (pcPortalMap.TryGetValue(item.id, out var pcPortals) && pcPortals.Count > 0)
+            {
+                item.pcPortalReleaseName = string.Join("；", pcPortals);
+                item.pcPortalIsRelease = 1;
+            }
+            if (appPortalMap.TryGetValue(item.id, out var appPortals) && appPortals.Count > 0)
+            {
+                item.appPortalReleaseName = string.Join("；", appPortals);
+                item.appPortalIsRelease = 1;
+            }
         }
 
         return PageResult<PortalListOutput>.SqlSugarPageResult(data);
+    }
+
+    private static Dictionary<string, HashSet<string>> BuildReleaseNameMap(
+        List<ModuleEntity> modules, HashSet<string> itemIds, Dictionary<string, string> pathCache)
+    {
+        var map = new Dictionary<string, HashSet<string>>();
+        foreach (var m in modules)
+        {
+            if (string.IsNullOrEmpty(m.PropertyJson)) continue;
+            var path = pathCache.TryGetValue(m.Id, out var p) ? p : m.FullName;
+            foreach (var itemId in itemIds)
+            {
+                if (m.PropertyJson.Contains(itemId))
+                {
+                    if (!map.TryGetValue(itemId, out var set))
+                        map[itemId] = set = new HashSet<string>();
+                    set.Add(path);
+                    break;
+                }
+            }
+        }
+        return map;
+    }
+
+    private static Dictionary<string, HashSet<string>> BuildPortalNameMap(
+        List<PortalManageEntity> portals, Dictionary<string, string> sysDict)
+    {
+        var map = new Dictionary<string, HashSet<string>>();
+        foreach (var pm in portals)
+        {
+            if (pm.PortalId.IsNullOrEmpty()) continue;
+            var sysName = sysDict.TryGetValue(pm.SystemId ?? string.Empty, out var sn) ? sn : string.Empty;
+            if (string.IsNullOrEmpty(sysName)) continue;
+            if (!map.TryGetValue(pm.PortalId, out var set))
+                map[pm.PortalId] = set = new HashSet<string>();
+            set.Add(sysName);
+        }
+        return map;
     }
 
     /// <summary>

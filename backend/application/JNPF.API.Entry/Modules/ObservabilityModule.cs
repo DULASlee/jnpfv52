@@ -45,6 +45,7 @@ public class ObservabilityModule : JnpfModule
                     options.RecordException = true;
                 })
                 .AddSource("JNPF.EventBus")
+                .AddSource("JNPF.Studio")  // P6-O01 InteAssistant Studio 埋点（skill.run/llm.call/ir.append）
                 .AddOtlpExporter(options =>
                 {
                     options.Endpoint = new Uri(otlpEndpoint);

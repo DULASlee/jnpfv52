@@ -224,6 +224,9 @@ public sealed class ConstraintEngineService : IConstraintEngineService, ITransie
             {
                 foreach (var mod in modules.EnumerateArray())
                 {
+                    if (mod.ValueKind != JsonValueKind.Object)
+                        continue;
+
                     if (mod.TryGetProperty("layer", out var layerEl))
                     {
                         var layer = layerEl.GetString();

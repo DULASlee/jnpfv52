@@ -1,0 +1,23 @@
+{
+  "pipelineId": 307,
+  "at": "2026-07-05T21:06:11.756Z",
+  "saServiceUp": true,
+  "skillRuns": [],
+  "deliverableFiles": [
+    "step1-leave-requirement-extracted.txt",
+    "00-gate-report.json"
+  ],
+  "eventSpecCount": 0,
+  "skeletonStable": false,
+  "recentEvents": [
+    {
+      "type": "ProjectCreated",
+      "skillId": null,
+      "saStep": null,
+      "at": 1783256730823,
+      "preview": "{\"projectId\":\"307\",\"projectName\":\"SUP-S2-1783285530709\"}"
+    }
+  ],
+  "failureEvents": [],
+  "hasAnalysisCompleted": false
+}

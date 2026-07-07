@@ -1,5 +1,7 @@
 # Phase3 实习生验收清单（D8 / D12 / D14 / D16 / D17–D18）
 
+> ⚠️ **R12 三元组适配声明（2026-07-07 追加）：** 本清单涉及的所有日志、事件、SQL MUST 含三元组 `(tenantId, projectId, pipelineId)`；原文 L25 验收点「每条 Skill 步骤含 runId+tenantId+projectId」缺 pipelineId 已废除。详见 `.cursor/rules/triple-key-iron-law.mdc`。
+
 > **文档定位**：阶段三 DoD 剩余条目的**操作 SOP + 提交物模板**。  
 > **权威 DoD 定义**：[`11、全链条第三阶段开发计划.md`](./11、全链条第三阶段开发计划.md) §7  
 > **已自动化（勿重复劳动）**：`node scripts/phase3-dod-verify.mjs` 已覆盖 D1/D6/D7/D10/D13/D15/D19 等 9 项。

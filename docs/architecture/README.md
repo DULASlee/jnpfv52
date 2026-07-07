@@ -25,3 +25,11 @@
 ## 操作手册
 
 [`../架构迭代/6、培训与操作手册/5、JNPF-v5.2操作手册使用指引.md`](../架构迭代/6、培训与操作手册/5、JNPF-v5.2操作手册使用指引.md)
+
+## AI 原生 Studio（2026-07）
+
+| 文档 | 主题 |
+|------|------|
+| [`studio-s2-compile-materialize.md`](studio-s2-compile-materialize.md) | S2 compile + C# 九表物化（ADR-004 As-Built） |
+| [`../api-tests/README.md`](../api-tests/README.md) | E2E 分层工具对照（Vitest / `.http` / mjs / Playwright） |
+| OpenSpec [`studio-e2e-toolchain`](../openspec/specs/studio-e2e-toolchain/spec.md) | E2E 决策树与禁止项（知识库） |

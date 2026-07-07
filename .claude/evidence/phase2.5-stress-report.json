@@ -1,48 +1,49 @@
 {
-  "generatedAt": "2026-07-04T04:31:22.594Z",
+  "generatedAt": "2026-07-04T20:46:34.913Z",
   "api": "http://localhost:5000",
   "sa": "http://localhost:3001",
   "health": {
     "api": true,
     "sa": true,
-    "fe": true
+    "fe": false
   },
   "results": [
     {
       "id": "D14",
       "pass": true,
       "detail": "first=200, second=409",
-      "at": "2026-07-04T04:30:05.588Z"
+      "at": "2026-07-04T20:45:21.515Z"
     },
     {
       "id": "G1",
       "pass": true,
-      "detail": "runId=0e7c19a208b24a349355e522cc3e78c3",
-      "at": "2026-07-04T04:30:05.643Z"
+      "detail": "runId=f476a852641143e3bde53a87df239b66",
+      "at": "2026-07-04T20:45:21.581Z"
     },
     {
       "id": "G3",
       "pass": true,
       "detail": "sa health 200",
-      "at": "2026-07-04T04:30:05.646Z"
+      "at": "2026-07-04T20:45:21.583Z"
     },
     {
       "id": "G4",
       "pass": true,
-      "detail": "keys=10, t1=true, t2=true, crossProject=true",
+      "detail": "keys=11, t1=true, t2=true, crossProject=true",
       "keys": [
-        "0:195:BE-001:DomainModel",
+        "0:285:BE-001:DomainModel",
         "1:101:BE-001:DomainModel",
-        "0:196:BE-001:DomainModel",
-        "0:195:BE-001:AggregateDesign",
-        "0:196:BE-001:AggregateDesign",
+        "0:286:BE-001:DomainModel",
         "1:102:BE-001:DomainModel",
+        "0:285:BE-001:AggregateDesign",
+        "0:286:BE-001:AggregateDesign",
         "2:101:BE-001:DomainModel",
-        "0:195:BE-001:EventCatalog",
+        "0:285:BE-001:EventCatalog",
         "2:102:BE-001:DomainModel",
-        "0:195:BE-001:CommandQuery"
+        "0:286:BE-001:EventCatalog",
+        "0:285:BE-001:CommandQuery"
       ],
-      "at": "2026-07-04T04:31:19.117Z"
+      "at": "2026-07-04T20:46:31.503Z"
     },
     {
       "id": "G2",
@@ -54,26 +55,26 @@
         429,
         429
       ],
-      "at": "2026-07-04T04:31:19.411Z"
+      "at": "2026-07-04T20:46:31.773Z"
     },
     {
       "id": "G6",
       "pass": true,
       "detail": "10x abort, errors=0, peakActive=10",
-      "at": "2026-07-04T04:31:22.508Z"
+      "at": "2026-07-04T20:46:34.838Z"
     },
     {
       "id": "G5",
       "pass": true,
       "detail": "ack-inferred-rules HTTP 200 (端点可达)",
       "note": "完整 soft-block 需 seeded inferred EventSpec",
-      "at": "2026-07-04T04:31:22.547Z"
+      "at": "2026-07-04T20:46:34.873Z"
     },
     {
       "id": "G8-subset",
       "pass": true,
-      "detail": "simulate SkeletonCreated pipeline=206",
-      "at": "2026-07-04T04:31:22.593Z"
+      "detail": "simulate SkeletonCreated pipeline=293",
+      "at": "2026-07-04T20:46:34.913Z"
     }
   ],
   "failed": 0,

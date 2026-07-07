@@ -76,8 +76,59 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
             IrEventTypes.TestSuiteGenerated => await UpsertIr3TestSuiteAsync(evt, ct),
             IrEventTypes.AffectedFragmentsMarked => await ApplyAffectedFragmentsMarkedAsync(evt, ct),
             IrEventTypes.ArchViolationDetected => null,
+            // ADR-005 交互式澄清问答：Requested→in-progress，Answered→stable（两阶段 Skill 模式的基石）
+            IrEventTypes.ClarificationRequested => await UpsertClarificationAsync(evt, IrStabilityStates.InProgress, ct),
+            IrEventTypes.ClarificationAnswered => await UpsertClarificationAsync(evt, IrStabilityStates.Stable, ct),
+            // ADR-005 P3：总体设计澄清完成事件，仅留痕（不更新 fragment 状态，SystemDesignLocked 才更新）
+            IrEventTypes.SystemDesignClarificationCompleted => null,
             _ => null,
         };
+    }
+
+    /// <summary>
+    /// 澄清问答片段投影（ADR-005）。
+    /// ClarificationRequested → fragment=in-progress（等待用户作答）；
+    /// ClarificationAnswered → fragment=stable（已作答，下游 Skill 可读取答案继续）。
+    /// fragmentId 形如 clarification:{stage}:{projectId}，按 stage 区分需求/架构/总体设计。
+    /// </summary>
+    private async Task<AiIrFragmentSnapshotEntity?> UpsertClarificationAsync(
+        AiIrEventEntity evt, string stabilityState, CancellationToken ct)
+    {
+        var fragmentId = evt.FragmentId ?? throw new InvalidOperationException($"{evt.EventType} 缺少 fragmentId");
+        var existing = await _db.Queryable<AiIrFragmentSnapshotEntity>()
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+                && x.FragmentId == fragmentId && !x.DeleteMark)
+            .FirstAsync(ct);
+
+        if (existing != null)
+        {
+            existing.IrContent = evt.Payload;
+            existing.CurrentVersion = evt.FragmentVersion;
+            existing.FragmentType = evt.FragmentType ?? IrFragmentTypes.Clarification;
+            existing.StabilityState = stabilityState;
+            existing.LastEventId = evt.Id;
+            existing.UpdatedAt = evt.CreatedAt;
+            await _db.Updateable(existing).ExecuteCommandAsync(ct);
+            return existing;
+        }
+
+        var snap = new AiIrFragmentSnapshotEntity
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            ProjectId = evt.ProjectId,
+            PipelineId = evt.PipelineId,
+            TenantId = evt.TenantId,
+            FragmentId = fragmentId,
+            FragmentType = evt.FragmentType ?? IrFragmentTypes.Clarification,
+            CurrentVersion = evt.FragmentVersion,
+            StabilityState = stabilityState,
+            IrContent = evt.Payload,
+            SaStepsCompleted = "[]",
+            LastEventId = evt.Id,
+            UpdatedAt = evt.CreatedAt,
+        };
+        await _db.Insertable(snap).ExecuteCommandAsync(ct);
+        return snap;
     }
 
     private async Task<AiIrFragmentSnapshotEntity?> UpsertIr2FragmentAsync(
@@ -105,6 +156,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
         {
             Id = Guid.NewGuid().ToString("N"),
             ProjectId = evt.ProjectId,
+            PipelineId = evt.PipelineId,
             TenantId = evt.TenantId,
             FragmentId = fragmentId,
             FragmentType = evt.FragmentType ?? IrFragmentTypes.Architecture,
@@ -144,6 +196,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
         {
             Id = Guid.NewGuid().ToString("N"),
             ProjectId = evt.ProjectId,
+            PipelineId = evt.PipelineId,
             TenantId = evt.TenantId,
             FragmentId = fragmentId,
             FragmentType = IrFragmentTypes.GeneratedCode,
@@ -259,6 +312,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
         {
             Id = Guid.NewGuid().ToString("N"),
             ProjectId = evt.ProjectId,
+            PipelineId = evt.PipelineId,
             TenantId = evt.TenantId,
             FragmentId = fragmentId,
             FragmentType = IrFragmentTypes.TestSuite,
@@ -296,6 +350,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
         {
             Id = Guid.NewGuid().ToString("N"),
             ProjectId = evt.ProjectId,
+            PipelineId = evt.PipelineId,
             TenantId = evt.TenantId,
             FragmentId = fragmentId,
             FragmentType = evt.FragmentType ?? IrFragmentTypes.Skeleton,
@@ -324,6 +379,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
             {
                 Id = Guid.NewGuid().ToString("N"),
                 ProjectId = evt.ProjectId,
+            PipelineId = evt.PipelineId,
                 TenantId = evt.TenantId,
                 FragmentId = fragmentId,
                 FragmentType = evt.FragmentType ?? IrFragmentTypes.Skeleton,
@@ -480,6 +536,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
             existing.LastEventId = evt.Id;
             existing.UpdatedAt = evt.CreatedAt;
             existing.StabilityState = IrStabilityStates.Stable;
+            existing.SaStepsCompleted = JsonSerializer.Serialize(ParseSaStepsFromPayload(evt.Payload));
             await _db.Updateable(existing).ExecuteCommandAsync(ct);
             return existing;
         }
@@ -488,13 +545,14 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
         {
             Id = Guid.NewGuid().ToString("N"),
             ProjectId = evt.ProjectId,
+            PipelineId = evt.PipelineId,
             TenantId = evt.TenantId,
             FragmentId = fragmentId,
             FragmentType = IrFragmentTypes.EventSpec,
             CurrentVersion = evt.FragmentVersion,
             StabilityState = IrStabilityStates.Stable,
             IrContent = evt.Payload,
-            SaStepsCompleted = JsonSerializer.Serialize(IrSaSteps.All.ToList()),
+            SaStepsCompleted = JsonSerializer.Serialize(ParseSaStepsFromPayload(evt.Payload)),
             LastEventId = evt.Id,
             UpdatedAt = evt.CreatedAt,
         };
@@ -516,6 +574,37 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
         snap.UpdatedAt = evt.CreatedAt;
         await _db.Updateable(snap).ExecuteCommandAsync(ct);
         return snap;
+    }
+
+    private static List<string> ParseSaStepsFromPayload(object? payload)
+    {
+        var list = new List<string>();
+        try
+        {
+            var json = payload switch
+            {
+                string s => s,
+                null => "{}",
+                _ => JsonSerializer.Serialize(payload),
+            };
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("saStepsCompleted", out var steps)
+                && steps.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var step in steps.EnumerateArray())
+                {
+                    var name = step.GetString();
+                    if (!string.IsNullOrWhiteSpace(name))
+                        list.Add(name);
+                }
+            }
+        }
+        catch
+        {
+            /* ignore */
+        }
+
+        return list;
     }
 
     private static List<string> ParseSteps(string? json)

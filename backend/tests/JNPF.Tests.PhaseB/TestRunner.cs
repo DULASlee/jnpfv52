@@ -100,6 +100,24 @@ public static class TestRunner
 
             await IrPhase5BugfixTests.RunAllAsync();
             Pass("P5-B02 BugfixSkill + AffectedFragmentsMarked");
+
+            PmSkillR1Tests.RunAll();
+            Pass("R1 PmSkill 认知模具 (ToT Top-1/无 fallback)");
+
+            AnalystSkillR2Tests.RunAll();
+            Pass("R2 AnalystSkill 认知模具 (无 seed-auto/无 SA fallback)");
+
+            SaNineViewCompilerTests.RunAll();
+            Pass("S2 SaNineViewCompiler 预分析→九步视图 (无 LLM)");
+
+            DesignSkillR3Tests.RunAll();
+            Pass("R3 设计四 Skill 认知模具 (无 fallback/BudgetGuard ToT)");
+
+            ExperienceR4Tests.RunAll();
+            Pass("R4 进化层经验回流 (Failure/Review/HumanCorrection)");
+
+            await CognitiveSkillR0Tests.RunAllAsync();
+            Pass("R0 CognitiveSkill 模具契约 (温度梯度/盖戳/白名单/MCP路由)");
         }
         catch (Exception ex)
         {

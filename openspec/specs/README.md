@@ -8,6 +8,10 @@
 | iot-capability-phase1 | [`iot-capability-phase1/spec.md`](iot-capability-phase1/spec.md) | Capability: iot-capability-phase1 | 2026-05-28 |
 | jnpf-v52-workspace | [`jnpf-v52-workspace/spec.md`](jnpf-v52-workspace/spec.md) | jnpf-v52-workspace | 2026-05-28 |
 | pipeline-sse-dev-proxy | [`pipeline-sse-dev-proxy/spec.md`](pipeline-sse-dev-proxy/spec.md) | pipeline-sse-dev-proxy Specification | 2026-06-25 |
+| studio-clarification | [`studio-clarification/spec.md`](studio-clarification/spec.md) | studio-clarification | 2026-07-06 |
+| studio-e2e-toolchain | [`studio-e2e-toolchain/spec.md`](studio-e2e-toolchain/spec.md) | Capability: studio-e2e-toolchain | 2026-07-06 |
+| studio-eval-pipeline | [`studio-eval-pipeline/spec.md`](studio-eval-pipeline/spec.md) | Capability: studio-eval-pipeline | 2026-07-06 |
+| studio-s2-compile | [`studio-s2-compile/spec.md`](studio-s2-compile/spec.md) | Capability: studio-s2-compile | 2026-07-06 |
 
 ## 维护规则
 

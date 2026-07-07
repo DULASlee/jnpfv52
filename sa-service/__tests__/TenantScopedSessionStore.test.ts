@@ -32,14 +32,14 @@ describe('TenantScopedSessionStore', () => {
   });
 
   it('purgeExpired removes expired sessions', () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const store = new TenantScopedSessionStore();
     const key = store.buildKey('1', '100', 'BE-001', 'DomainModel');
     store.set(key, { tenantId: '1', projectId: '100', startedAt: Date.now() }, 1000);
 
-    jest.advanceTimersByTime(1500);
+    vi.advanceTimersByTime(1500);
     expect(store.purgeExpired()).toBe(1);
     expect(store.get(key)).toBeUndefined();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 });

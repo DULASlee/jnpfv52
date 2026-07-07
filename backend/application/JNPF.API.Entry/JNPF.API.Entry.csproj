@@ -346,6 +346,7 @@
 		<ProjectReference Include="..\..\modularity\taskscheduler\JNPF.TaskScheduler\JNPF.TaskScheduler.csproj" />
 		<ProjectReference Include="..\..\modularity\visualdata\JNPF.VisualData\JNPF.VisualData.csproj" />
 		<ProjectReference Include="..\..\modularity\visualdev\JNPF.VisualDev\JNPF.VisualDev.csproj" />
+		<ProjectReference Include="..\..\modularity\report\JNPF.Report\JNPF.Report.csproj" />
 		<ProjectReference Include="..\..\modularity\workflow\JNPF.WorkFlow\JNPF.WorkFlow.csproj" />
 		<ProjectReference Include="..\..\modularity\zxdev\JNPF.ZxDev\JNPF.ZxDev.csproj" />
 		<ProjectReference Include="..\..\infrastructure\JNPF.Extras.EventBus.Outbox\JNPF.Extras.EventBus.Outbox.csproj" />

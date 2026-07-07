@@ -147,24 +147,38 @@ const Socket = {
 		} catch (e) {}
 	},
 	sendMsg(data) {
-		if (socketTask === false) return Socket.reConnect()
+		if (!socketTask || socketTask === false) return Socket.reConnect()
 		let content = data;
-		socketTask.send({
-			data: content,
-			complete(e) {}
-		})
+		try {
+			socketTask.send({
+				data: content,
+				fail(e) { console.warn('[chat] sendMsg fail:', e.errMsg); },
+				complete(e) {}
+			})
+		} catch (e) {
+			console.warn('[chat] sendMsg error:', e);
+		}
 	},
 	//重连
 	reConnect() {
+		if (socketTask && socketTask !== false) {
+			try { socketTask.close({}); } catch (e) {}
+			socketTask = false;
+			chatStore.setSocket(null);
+		}
 		Socket.initSocket()
 	},
 	close() {
-		socketTask.close({
-			complete(e) {
-				socketTask = false
-				chatStore.setSocket(null)
-			}
-		})
+		if (!socketTask || socketTask === false) return;
+		try {
+			socketTask.close({
+				success() { socketTask = false; chatStore.setSocket(null); },
+				fail() { socketTask = false; chatStore.setSocket(null); }
+			})
+		} catch (e) {
+			socketTask = false;
+			chatStore.setSocket(null);
+		}
 	}
 };
 

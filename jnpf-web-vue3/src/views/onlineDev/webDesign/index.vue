@@ -40,15 +40,19 @@
   import { useModal } from '/@/components/Modal';
   import { usePopup } from '/@/components/Popup';
   import { useBaseStore } from '/@/store/modules/base';
-  import Form from './Form.vue';
-  import ViewForm from './ViewForm.vue';
-  import AddModal from './components/AddModal.vue';
-  import ReleaseModal from './components/ReleaseModal.vue';
-  import ShortLinkModal from './components/ShortLinkModal.vue';
-  import VersionManage from '/@/views/workFlow/flowEngine/VersionManage.vue';
-  import EngineForm from '/@/views/workFlow/flowEngine/Form.vue';
   import { downloadByUrl } from '/@/utils/file/download';
-  import { PreviewModal } from '/@/components/CommonModal';
+  import { useLazyComponent } from '/@/hooks/web/useLazyComponent';
+
+  // 弹窗组件按需异步加载 — 减少首屏 bundle 体积
+  const MODULE = 'onlineDev/webDesign';
+  const { component: Form } = useLazyComponent(() => import('./Form.vue'), MODULE);
+  const { component: ViewForm } = useLazyComponent(() => import('./ViewForm.vue'), MODULE);
+  const { component: AddModal } = useLazyComponent(() => import('./components/AddModal.vue'), MODULE);
+  const { component: ReleaseModal } = useLazyComponent(() => import('./components/ReleaseModal.vue'), MODULE);
+  const { component: ShortLinkModal } = useLazyComponent(() => import('./components/ShortLinkModal.vue'), MODULE);
+  const { component: VersionManage } = useLazyComponent(() => import('/@/views/workFlow/flowEngine/VersionManage.vue'), MODULE);
+  const { component: EngineForm } = useLazyComponent(() => import('/@/views/workFlow/flowEngine/Form.vue'), MODULE);
+  const { component: PreviewModal } = useLazyComponent(() => import('/@/components/CommonModal/src/PreviewModal.vue'), MODULE);
 
   defineOptions({ name: 'OnlineDevWebDesign' });
 

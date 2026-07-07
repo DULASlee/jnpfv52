@@ -1,6 +1,6 @@
 import { computed, ref, watch, type InjectionKey, type Ref } from 'vue';
-import type { IrFragmentSnapshot } from '../types/ir';
-import { runAnalystSkill, type SkillRunResult } from '../api/studio/skills';
+import type { IrEventRecord, IrFragmentSnapshot } from '../types/ir';
+import { confirmRequirementSpec, runAnalystSkill, type SkillRunResult } from '../api/studio/skills';
 
 export interface EventSaProgress {
   eventId: string;
@@ -24,9 +24,23 @@ const SA_STEPS = [
   'DeliveryChecklist',
 ];
 
-export function useAnalystSkill(pipelineId: Ref<number>, snapshots: Ref<IrFragmentSnapshot[]>, refreshAll: () => Promise<void>) {
+function isS2StageConfirmed(events: IrEventRecord[]) {
+  return events.some(e => {
+    if (e.eventType !== 'StageConfirmed') return false;
+    try {
+      const raw = e.payloadPreview ?? '';
+      const p = typeof raw === 'string' && raw.startsWith('{') ? JSON.parse(raw) : { stage: raw };
+      return p?.stage === 'S2';
+    } catch {
+      return false;
+    }
+  });
+}
+
+export function useAnalystSkill(pipelineId: Ref<number>, snapshots: Ref<IrFragmentSnapshot[]>, refreshAll: () => Promise<void>, events?: Ref<IrEventRecord[]>) {
   const analystLoading = ref(false);
   const analysisCompleted = ref(false);
+  const confirmLoading = ref(false);
   let abortController: AbortController | null = null;
 
   watch(pipelineId, () => {
@@ -34,7 +48,12 @@ export function useAnalystSkill(pipelineId: Ref<number>, snapshots: Ref<IrFragme
     abortController = null;
     analystLoading.value = false;
     analysisCompleted.value = false;
+    confirmLoading.value = false;
   });
+
+  const s2Confirmed = computed(() => (events?.value ? isS2StageConfirmed(events.value) : false));
+
+  const needsRequirementSpecConfirmation = computed(() => analysisCompleted.value && !s2Confirmed.value);
 
   const eventProgressList = computed<EventSaProgress[]>(() => {
     const specs = snapshots.value.filter(s => s.fragmentType === 'IR1_EventSpec' || s.fragmentId?.startsWith('eventspec:'));
@@ -71,6 +90,17 @@ export function useAnalystSkill(pipelineId: Ref<number>, snapshots: Ref<IrFragme
     }
   }
 
+  async function confirmAndProceed(autoRunDesign = true): Promise<void> {
+    if (!pipelineId.value || confirmLoading.value) return;
+    confirmLoading.value = true;
+    try {
+      await confirmRequirementSpec(pipelineId.value, { autoRunDesign });
+      await refreshAll();
+    } finally {
+      confirmLoading.value = false;
+    }
+  }
+
   function markAnalysisCompleted() {
     analysisCompleted.value = true;
     analystLoading.value = false;
@@ -86,9 +116,13 @@ export function useAnalystSkill(pipelineId: Ref<number>, snapshots: Ref<IrFragme
     SA_STEPS,
     analystLoading,
     analysisCompleted,
+    confirmLoading,
+    s2Confirmed,
+    needsRequirementSpecConfirmation,
     eventProgressList,
     totalProgress,
     runAnalyst,
+    confirmAndProceed,
     markAnalysisCompleted,
     handleSkillProgress,
   };

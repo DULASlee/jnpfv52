@@ -2,7 +2,7 @@
   "profile": "ag001-ddl-controller-ref",
   "pass": true,
   "exitCode": 0,
-  "timestamp": "2026-07-04T07:27:09.048Z",
+  "timestamp": "2026-07-04T21:14:44.045Z",
   "assertions": {
     "orchestratorAborted": true,
     "archViolationDetected": true,

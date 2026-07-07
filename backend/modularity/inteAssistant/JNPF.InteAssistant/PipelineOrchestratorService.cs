@@ -357,9 +357,12 @@ public class PipelineOrchestratorService : IDynamicApiController, ITransient
         // 检查关联沙箱并销毁（如果存在）
         await DestroyAssociatedSandboxIfExists(pipelineId);
 
-        // 清理 AI 工作区目录
+        // 清理 AI 工作区目录（R12 三元组）
         var tenantId = TenantResolver.Resolve();
-        StudioWorkspaceHelper.DeleteWorkspace(tenantId.ToString(), pipelineId.ToString());
+        var projectId = string.IsNullOrWhiteSpace(pipeline.ProjectId)
+            ? pipelineId.ToString()
+            : pipeline.ProjectId;
+        StudioWorkspaceHelper.DeleteWorkspace(tenantId.ToString(), projectId, pipelineId.ToString());
 
         // 清除 AI 开发上下文标记
         StudioWorkspaceHelper.ClearAiDevContext();
@@ -524,6 +527,8 @@ public class PipelineOrchestratorService : IDynamicApiController, ITransient
         var message = new AiPipelineMessageEntity
         {
             PipelineId = pipelineId,
+            // 三元组血缘:ProjectId 兜底为 pipelineId
+            ProjectId = pipelineId,
             Stage = stage,
             Role = role,
             Content = $"[{reviewerRole}] {content}",
@@ -559,6 +564,8 @@ public class PipelineOrchestratorService : IDynamicApiController, ITransient
         var entity = new IrVersionEntity
         {
             PipelineId = pipelineId,
+            // 三元组血缘:ProjectId 兜底为 pipelineId
+            ProjectId = pipelineId,
             Version = latestVersion + 1,
             TriggeredBy = triggeredBy,
             ChangeSummary = summary,

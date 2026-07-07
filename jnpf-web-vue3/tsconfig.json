@@ -28,6 +28,18 @@
       "/#/*": ["types/*"]
     }
   },
-  "include": ["src", "types", "build", "mock", "vite.config.ts"],
-  "exclude": ["node_modules", "tests/server/**/*.ts", "dist", "**/*.js", "src/core/compiler/**/templates/**"]
+  "include": ["src", "types", "vite.config.ts"],
+  "exclude": [
+    "node_modules",
+    "tests/server/**/*.ts",
+    "dist",
+    "**/*.js",
+    "**/*.{broken,bak,old}",
+    "mock/**",
+    "build/**",
+    "src/core/compiler/**/templates/**",
+    "src/core/compiler/**",
+    "src/core/**/__tests__/**",
+    "src/core/e2e/**"
+  ]
 }

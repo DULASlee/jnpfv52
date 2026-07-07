@@ -56,6 +56,14 @@ public class AiProjectEntity
     [SugarColumn(ColumnName = "F_DesignCompletedAt", IsNullable = true)]
     public DateTime? DesignCompletedAt { get; set; }
 
+    /// <summary>阶段五 P5-B03：deploy-skill 验证通过时间。</summary>
+    [SugarColumn(ColumnName = "F_DeploymentVerifiedAt", IsNullable = true)]
+    public DateTime? DeploymentVerifiedAt { get; set; }
+
+    /// <summary>阶段五 P5-B02：bugfix-skill 最近一次修复时间。</summary>
+    [SugarColumn(ColumnName = "F_LastBugfixAt", IsNullable = true)]
+    public DateTime? LastBugfixAt { get; set; }
+
     [SugarColumn(ColumnName = "F_LlmBudgetStatus")]
     public string LlmBudgetStatus { get; set; } = "green";
 }

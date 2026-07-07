@@ -1,10 +1,12 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using JNPF.Common.Core.Manager.Files;
+using JNPF.Common.Core.MultiTenancy;
 using JNPF.DependencyInjection;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Gates;
 using JNPF.InteAssistant.Infrastructure.Background;
+using JNPF.InteAssistant.Studio;
 using Microsoft.Extensions.Logging;
 using SqlSugar;
 
@@ -19,11 +21,44 @@ public interface IPipelineAttachmentService
         RequestContext ctx,
         CancellationToken ct = default);
 
-    /// <summary>下载、解析并更新 ProcessStatus；返回门控可用的 AttachmentFile（含字节）</summary>
+    /// <summary>下载、解析并更新 ProcessStatus；返回门控可用的 AttachmentFile（含字节与缓存文本）</summary>
     Task<AttachmentPrepareResult> PrepareForGateAsync(
         long pipelineId,
         RequestContext ctx,
         CancellationToken ct = default);
+
+    /// <summary>列出 Pipeline 已登记附件（含解析状态）</summary>
+    Task<IReadOnlyList<PipelineAttachmentListItem>> ListByPipelineAsync(
+        long pipelineId,
+        CancellationToken ct = default);
+
+    /// <summary>下载附件原文件字节</summary>
+    Task<(byte[] Content, string FileName, string ContentType)> DownloadOriginalAsync(
+        long pipelineId,
+        string attachmentId,
+        RequestContext ctx,
+        CancellationToken ct = default);
+
+    /// <summary>获取附件解析文本（DB 缓存）</summary>
+    Task<string?> GetExtractedTextAsync(
+        long pipelineId,
+        string attachmentId,
+        CancellationToken ct = default);
+}
+
+public sealed record PipelineAttachmentListItem
+{
+    public string Id { get; init; } = "";
+    public string FileName { get; init; } = "";
+    public string FileUrl { get; init; } = "";
+    public string FileType { get; init; } = "";
+    public long FileSize { get; init; }
+    public int ProcessStatus { get; init; }
+    public int ExtractedLength { get; init; }
+    public string? ProcessError { get; init; }
+    public DateTime CreateTime { get; init; }
+    public string DownloadOriginalUrl { get; init; } = "";
+    public string DownloadExtractedUrl { get; init; } = "";
 }
 
 public sealed record AttachmentPrepareResult
@@ -57,6 +92,7 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IFileManager _fileManager;
     private readonly AttachmentProcessor _attachmentProcessor;
+    private readonly IPipelineDeliverableService _deliverableService;
     private readonly ILogger<PipelineAttachmentService> _logger;
 
     public PipelineAttachmentService(
@@ -64,12 +100,14 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
         IHttpClientFactory httpClientFactory,
         IFileManager fileManager,
         AttachmentProcessor attachmentProcessor,
+        IPipelineDeliverableService deliverableService,
         ILogger<PipelineAttachmentService> logger)
     {
         _db = db;
         _httpClientFactory = httpClientFactory;
         _fileManager = fileManager;
         _attachmentProcessor = attachmentProcessor;
+        _deliverableService = deliverableService;
         _logger = logger;
     }
 
@@ -111,6 +149,8 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
             {
                 F_Id = Guid.NewGuid().ToString("N"),
                 PipelineId = pipelineKey,
+                // 三元组血缘:ProjectId 兜底为 pipelineId(历史数据 projectId≡pipelineId)
+                ProjectId = pipelineKey,
                 FileName = string.IsNullOrWhiteSpace(att.Name) ? Path.GetFileName(att.Url) : att.Name,
                 FileUrl = att.Url,
                 FileSize = 0,
@@ -203,6 +243,12 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
                     att.ProcessStatus = 2;
                     att.ExtractedText = extracted;
                     att.FileSize = bytes.Length;
+
+                    if (!string.IsNullOrWhiteSpace(extracted) && !string.IsNullOrWhiteSpace(ctx.TenantId))
+                    {
+                        await _deliverableService.SaveAttachmentExtractAsync(
+                            ctx.TenantId, pipelineId, att.F_Id, att.FileName, extracted, ct);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -228,7 +274,13 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
                     .ExecuteCommandAsync(ct);
             }
 
-            files.Add(new AttachmentFile { FileName = att.FileName, Content = bytes });
+            files.Add(new AttachmentFile
+            {
+                FileName = att.FileName,
+                Content = bytes,
+                PreExtractedText = att.ExtractedText,
+                AttachmentId = att.F_Id,
+            });
             items.Add(new AttachmentItemSummary
             {
                 Id = att.F_Id,
@@ -244,6 +296,91 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
             Items = items,
             Warnings = warnings,
             FailedCount = failed,
+        };
+    }
+
+    public async Task<IReadOnlyList<PipelineAttachmentListItem>> ListByPipelineAsync(
+        long pipelineId,
+        CancellationToken ct = default)
+    {
+        var pipelineKey = pipelineId.ToString();
+        var tenantId = TenantResolver.Resolve().ToString();
+        var rows = await _db.Queryable<InteAssistantAttachment>()
+            .Where(a => a.PipelineId == pipelineKey && a.TenantId == tenantId && a.DeleteMark == false)
+            .OrderBy(a => a.CreateTime)
+            .ToListAsync(ct);
+
+        return rows.Select(a => new PipelineAttachmentListItem
+        {
+            Id = a.F_Id,
+            FileName = a.FileName,
+            FileUrl = a.FileUrl,
+            FileType = a.FileType,
+            FileSize = a.FileSize,
+            ProcessStatus = a.ProcessStatus,
+            ExtractedLength = a.ExtractedText?.Length ?? 0,
+            ProcessError = a.ProcessError,
+            CreateTime = a.CreateTime,
+            DownloadOriginalUrl = $"/api/studio/pipeline/execute/{pipelineId}/attachments/{a.F_Id}/download",
+            DownloadExtractedUrl = a.ProcessStatus == 2 && !string.IsNullOrWhiteSpace(a.ExtractedText)
+                ? $"/api/studio/pipeline/execute/{pipelineId}/attachments/{a.F_Id}/extracted"
+                : "",
+        }).ToList();
+    }
+
+    public async Task<(byte[] Content, string FileName, string ContentType)> DownloadOriginalAsync(
+        long pipelineId,
+        string attachmentId,
+        RequestContext ctx,
+        CancellationToken ct = default)
+    {
+        var att = await GetAttachmentOrThrowAsync(pipelineId, attachmentId, ct);
+        var http = _httpClientFactory.CreateClient();
+        var bytes = await DownloadAsync(http, ctx, att.FileUrl, ct);
+        var contentType = GuessContentType(att.FileName);
+        return (bytes, att.FileName, contentType);
+    }
+
+    public async Task<string?> GetExtractedTextAsync(
+        long pipelineId,
+        string attachmentId,
+        CancellationToken ct = default)
+    {
+        var att = await GetAttachmentOrThrowAsync(pipelineId, attachmentId, ct);
+        if (att.ProcessStatus != 2 || string.IsNullOrWhiteSpace(att.ExtractedText))
+            return null;
+        return att.ExtractedText;
+    }
+
+    private async Task<InteAssistantAttachment> GetAttachmentOrThrowAsync(
+        long pipelineId, string attachmentId, CancellationToken ct)
+    {
+        var tenantId = TenantResolver.Resolve().ToString();
+        var att = await _db.Queryable<InteAssistantAttachment>()
+            .Where(a => a.F_Id == attachmentId
+                        && a.PipelineId == pipelineId.ToString()
+                        && a.TenantId == tenantId
+                        && a.DeleteMark == false)
+            .FirstAsync(ct);
+
+        if (att == null)
+            throw new InvalidOperationException($"附件不存在: {attachmentId}");
+        return att;
+    }
+
+    private static string GuessContentType(string fileName)
+    {
+        var ext = Path.GetExtension(fileName)?.ToLowerInvariant();
+        return ext switch
+        {
+            ".pdf" => "application/pdf",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".txt" => "text/plain; charset=utf-8",
+            ".md" => "text/markdown; charset=utf-8",
+            _ => "application/octet-stream",
         };
     }
 

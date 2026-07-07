@@ -89,7 +89,16 @@ public sealed class GatePipeline : IGatePipeline, ITransient
 
             try
             {
-                var text = await _attachmentProcessor.ProcessAttachmentsAsync(new List<AttachmentFile> { file });
+                string text;
+                if (!string.IsNullOrWhiteSpace(file.PreExtractedText))
+                {
+                    text = file.PreExtractedText;
+                }
+                else
+                {
+                    text = await _attachmentProcessor.ProcessAttachmentsAsync(new List<AttachmentFile> { file });
+                }
+
                 if (!string.IsNullOrWhiteSpace(text))
                     attachmentTexts.Add(text);
             }

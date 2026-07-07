@@ -34,6 +34,7 @@ public sealed class LlmCallPolicyService : ILlmCallPolicyService, ITransient
         [DesignSkillIds.SystemDesign] = new() { SkillId = DesignSkillIds.SystemDesign, MaxLlmCalls = 1, MaxTokensPerCall = 4096, MaxTotalTokens = 20_000, ModelTier = "strong" },
         ["pm-skill"] = new() { SkillId = "pm-skill", MaxLlmCalls = 3, MaxTokensPerCall = 8192, MaxTotalTokens = 40_000, ModelTier = "strong" },
         ["analyst-skill"] = new() { SkillId = "analyst-skill", MaxLlmCalls = 0, MaxTokensPerCall = 0, MaxTotalTokens = 0, ModelTier = "strong", TimeoutMs = 0 },
+        [DeploySkillIds.Deploy] = new() { SkillId = DeploySkillIds.Deploy, MaxLlmCalls = 0, MaxTokensPerCall = 0, MaxTotalTokens = 0, ModelTier = "fast", TimeoutMs = 0 },
     };
 
     private readonly ISqlSugarClient _db;

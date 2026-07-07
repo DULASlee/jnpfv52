@@ -35,12 +35,16 @@
   import { useI18n } from '/@/hooks/web/useI18n';
   import { useModal } from '/@/components/Modal';
   import { useBaseStore } from '/@/store/modules/base';
-  import Form from './Form.vue';
-  import PortalDesign from '/@/components/VisualPortal/Design/index.vue';
-  import ReleaseModal from './components/ReleaseModal.vue';
   import { downloadByUrl } from '/@/utils/file/download';
-  import Preview from '/@/components/VisualPortal/Design/components/Preview.vue';
-  import { PreviewModal } from '/@/components/CommonModal';
+  import { useLazyComponent } from '/@/hooks/web/useLazyComponent';
+
+  // 弹窗/设计器组件按需异步加载 — 减少首屏 bundle 体积
+  const MODULE = 'onlineDev/visualPortal';
+  const { component: Form } = useLazyComponent(() => import('./Form.vue'), MODULE);
+  const { component: PortalDesign } = useLazyComponent(() => import('/@/components/VisualPortal/Design/index.vue'), MODULE);
+  const { component: ReleaseModal } = useLazyComponent(() => import('./components/ReleaseModal.vue'), MODULE);
+  const { component: Preview } = useLazyComponent(() => import('/@/components/VisualPortal/Design/components/Preview.vue'), MODULE);
+  const { component: PreviewModal } = useLazyComponent(() => import('/@/components/CommonModal/src/PreviewModal.vue'), MODULE);
 
   defineOptions({ name: 'OnlineDevWebDesign' });
 

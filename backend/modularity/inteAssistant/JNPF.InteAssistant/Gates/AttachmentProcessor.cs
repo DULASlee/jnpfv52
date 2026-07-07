@@ -264,4 +264,7 @@ public class AttachmentFile
 {
     public string FileName { get; set; } = "";
     public byte[] Content { get; set; } = Array.Empty<byte>();
+    /// <summary>PrepareForGate 已解析文本；有值时 GatePipeline 不再重复解析</summary>
+    public string? PreExtractedText { get; set; }
+    public string? AttachmentId { get; set; }
 }

@@ -2,7 +2,7 @@
   "profile": "ag002-no-tenant-filter",
   "pass": true,
   "exitCode": 0,
-  "timestamp": "2026-07-04T07:27:17.062Z",
+  "timestamp": "2026-07-04T21:14:57.208Z",
   "assertions": {
     "orchestratorAborted": true,
     "archViolationDetected": true,

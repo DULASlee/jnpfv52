@@ -17,7 +17,8 @@ description: JNPF 无浏览器登录与 API 自动测试闭环。scripts/lib/jnp
 ```
 编码 → dotnet build [/ pnpm type-check]
      → node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser
-     → node scripts/phase2-skills-e2e.mjs  (或领域脚本)
+     → E2E_PIPELINE_ID=<id> pnpm test:api          # 快断言（~10s，首选）
+     → [按需] phase-sup-s2-e2e.mjs <分步> / .http / Playwright
      → FAIL: systematic-debugging → 修 → 重跑 (≤3)
      → PASS: 声称该层验证通过
 ```
@@ -50,11 +51,13 @@ import { login, apiRequest, isJnpfOk, jnpfData, pick } from '../scripts/lib/jnpf
 
 `POST /api/oauth/Login` · form-urlencoded · 密码 = AES(MD5(pwd)) · Header `jnpf-origin: pc`
 
-详见 `scripts/README-api-cli.md` · 常驻规则 `.cursor/rules/auto-test-fix-loop.mdc`
-
 ## 禁止
 
 - ❌ `/api/auth/login`（不存在）
 - ❌ JSON body 直传明文密码
 - ❌ 重复 `Bearer Bearer`
 - ❌ 测试失败不读响应体就改代码
+- ❌ `node scripts/phase2-skills-e2e.mjs`（已废弃）
+- ❌ 日常仅跑慢速 mjs、跳过 `pnpm test:api`
+
+详见 `.cursor/rules/testing-toolchain.mdc` · `openspec/specs/studio-e2e-toolchain/spec.md` · `scripts/README-api-cli.md`

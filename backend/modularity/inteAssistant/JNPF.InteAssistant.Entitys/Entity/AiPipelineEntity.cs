@@ -29,6 +29,14 @@ public class AiPipelineEntity : TenantCLDSEntityBase
     public string CurrentStage { get; set; }
 
     /// <summary>
+    /// 项目 ID(FK → ai_projects.F_Id)
+    /// 解除 pipeline≡project 绑定,支持一个 Project 下多个 Pipeline(迭代/BUG 修复)
+    /// 首次创建时 ProjectId = PipelineId(自锚定);二次开发时继承原始 PipelineId
+    /// </summary>
+    [SugarColumn(ColumnName = "F_PROJECT_ID")]
+    public string ProjectId { get; set; } = "";
+
+    /// <summary>
     /// 运行状态（字符串，兼容旧逻辑）
     /// running / completed / failed
     /// </summary>
@@ -108,4 +116,53 @@ public class AiPipelineEntity : TenantCLDSEntityBase
     /// </summary>
     [SugarColumn(ColumnName = "F_STALE_AT")]
     public DateTime? StaleAt { get; set; }
+
+    // ─── 冻结/恢复(checkpoint)— 支持开发任务对话冻结与重新拉起 ───
+
+    /// <summary>是否已冻结(0=运行中,1=已冻结)</summary>
+    [SugarColumn(ColumnName = "F_FROZEN")]
+    public bool Frozen { get; set; } = false;
+
+    /// <summary>冻结时间</summary>
+    [SugarColumn(ColumnName = "F_FROZEN_AT")]
+    public DateTime? FrozenAt { get; set; }
+
+    /// <summary>冻结操作人</summary>
+    [SugarColumn(ColumnName = "F_FROZEN_BY")]
+    public string? FrozenBy { get; set; }
+
+    /// <summary>冻结原因(如"用户离开""BUG修复中途暂停""等待人工介入")</summary>
+    [SugarColumn(ColumnName = "F_FROZEN_REASON")]
+    public string? FrozenReason { get; set; }
+
+    /// <summary>累计恢复次数(运维指标)</summary>
+    [SugarColumn(ColumnName = "F_RESUME_COUNT")]
+    public int ResumeCount { get; set; } = 0;
+
+    /// <summary>最后恢复时间</summary>
+    [SugarColumn(ColumnName = "F_LAST_RESUMED_AT")]
+    public DateTime? LastResumedAt { get; set; }
+
+    /// <summary>
+    /// 全量 checkpoint JSON。结构:{currentStage, stages[], lastMessageIds[], irVersion, irSnapshot}
+    /// 冻结时序列化,恢复时反序列化重建内存状态
+    /// </summary>
+    [SugarColumn(ColumnName = "F_CHECKPOINT", ColumnDataType = "nvarchar(max)", IsNullable = true)]
+    public string? Checkpoint { get; set; }
+
+    /// <summary>任务意图：greenfield / bugfix / enhancement</summary>
+    [SugarColumn(ColumnName = "F_WORK_MODE")]
+    public string WorkMode { get; set; } = PipelineWorkMode.Greenfield;
+
+    /// <summary>关联源流水线（bugfix / 二次开发）</summary>
+    [SugarColumn(ColumnName = "F_SOURCE_PIPELINE_ID", IsNullable = true)]
+    public string? SourcePipelineId { get; set; }
+
+    /// <summary>Debug 目标页面路由</summary>
+    [SugarColumn(ColumnName = "F_TARGET_PAGE_ROUTE", IsNullable = true)]
+    public string? TargetPageRoute { get; set; }
+
+    /// <summary>Debug 目标页面显示名</summary>
+    [SugarColumn(ColumnName = "F_TARGET_PAGE_LABEL", IsNullable = true)]
+    public string? TargetPageLabel { get; set; }
 }

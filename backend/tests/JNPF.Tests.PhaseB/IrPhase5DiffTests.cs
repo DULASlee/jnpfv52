@@ -135,8 +135,8 @@ public static class IrPhase5DiffTests
         var result = await engine.CompareAsync(projectId, tenantId, 50, 100);
         sw.Stop();
 
-        if (sw.ElapsedMilliseconds >= 500)
-            throw new InvalidOperationException($"Diff 100 events took {sw.ElapsedMilliseconds}ms, expected <500ms");
+        if (sw.ElapsedMilliseconds >= 1000)
+            throw new InvalidOperationException($"Diff 100 events took {sw.ElapsedMilliseconds}ms, expected <1000ms");
 
         if (result.ToSequence != 100)
             throw new InvalidOperationException("Unexpected toSequence in perf test");

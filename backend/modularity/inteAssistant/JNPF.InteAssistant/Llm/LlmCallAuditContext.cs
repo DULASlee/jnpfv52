@@ -9,10 +9,10 @@ public static class LlmCallAuditContext
 
     public static LlmCallAudit? CurrentAudit => Current.Value;
 
-    public static IDisposable Begin(string runId, string skillId, string projectId, string tenantId)
+    public static IDisposable Begin(string runId, string skillId, string projectId, string tenantId, string? pipelineId = null)
     {
         var previous = Current.Value;
-        Current.Value = new LlmCallAudit(runId, skillId, projectId, tenantId);
+        Current.Value = new LlmCallAudit(runId, skillId, projectId, tenantId, pipelineId ?? projectId);
         return new Scope(previous);
     }
 
@@ -24,4 +24,4 @@ public static class LlmCallAuditContext
     }
 }
 
-public sealed record LlmCallAudit(string RunId, string SkillId, string ProjectId, string TenantId);
+public sealed record LlmCallAudit(string RunId, string SkillId, string ProjectId, string TenantId, string PipelineId);

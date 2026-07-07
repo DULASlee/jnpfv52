@@ -1,0 +1,186 @@
+{
+  "pipelineId": 309,
+  "at": "2026-07-05T21:22:59.813Z",
+  "saServiceUp": true,
+  "skillRuns": [
+    {
+      "skillId": "analyst-skill",
+      "status": "completed",
+      "error": "",
+      "startedAt": 1783257157910,
+      "completedAt": 1783257700077
+    },
+    {
+      "skillId": "analyst-skill",
+      "status": "failed",
+      "error": "IR-0 骨架未 stable，请先确认骨架",
+      "startedAt": 1783257122143,
+      "completedAt": 1783257122170
+    },
+    {
+      "skillId": "pm-skill",
+      "status": "completed",
+      "error": "",
+      "startedAt": 1783257041137,
+      "completedAt": 1783257096823
+    }
+  ],
+  "deliverableFiles": [
+    "step1-leave-requirement-extracted.txt",
+    "00-gate-report.json",
+    "00-merged-requirement.md",
+    "01-skeleton.md",
+    "02-requirement-spec.md"
+  ],
+  "eventSpecCount": 14,
+  "skeletonStable": true,
+  "recentEvents": [
+    {
+      "type": "AnalysisCompleted",
+      "skillId": "analyst-skill",
+      "saStep": null,
+      "at": 1783257700050,
+      "preview": "{\"projectId\":\"309\",\"eventSpecCount\":14,\"allStable\":true}"
+    },
+    {
+      "type": "EventSpecConfirmed",
+      "skillId": "analyst-skill",
+      "saStep": null,
+      "at": 1783257700000,
+      "preview": "{\"eventId\":\"EV-014\",\"eventName\":\"AD\\u7528\\u6237\\u8BA4\\u8BC1\\u96C6\\u6210\",\"complexityHint\":\"\\u4E2D\\u7B49\",\"version\":1,\"co"
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "DeliveryChecklist",
+      "at": 1783257699987,
+      "preview": "{\"eventId\":\"EV-014\",\"step\":\"DeliveryChecklist\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\""
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "UISpec",
+      "at": 1783257699973,
+      "preview": "{\"eventId\":\"EV-014\",\"step\":\"UISpec\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\"{\\n  \\u0022"
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "DataModel",
+      "at": 1783257699963,
+      "preview": "{\"eventId\":\"EV-014\",\"step\":\"DataModel\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\"{\\n  \\u0"
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "CommandQuery",
+      "at": 1783257699950,
+      "preview": "{\"eventId\":\"EV-014\",\"step\":\"CommandQuery\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\"\",\"is"
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "EventCatalog",
+      "at": 1783257699937,
+      "preview": "{\"eventId\":\"EV-014\",\"step\":\"EventCatalog\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\"\",\"is"
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "AggregateDesign",
+      "at": 1783257699920,
+      "preview": "{\"eventId\":\"EV-014\",\"step\":\"AggregateDesign\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\"\","
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "DomainModel",
+      "at": 1783257699900,
+      "preview": "{\"eventId\":\"EV-014\",\"step\":\"DomainModel\",\"output\":{\"systemBoundary\":{\"inScope\":[\"\\u63D0\\u4EA4\\u8BF7\\u5047\\u7533\\u8BF7\",\""
+    },
+    {
+      "type": "EventSpecConfirmed",
+      "skillId": "analyst-skill",
+      "saStep": null,
+      "at": 1783257699883,
+      "preview": "{\"eventId\":\"EV-013\",\"eventName\":\"\\u64CD\\u4F5C\\u7559\\u75D5\\u8BB0\\u5F55\",\"complexityHint\":\"\\u4E2D\\u7B49\",\"version\":1,\"conf"
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "DeliveryChecklist",
+      "at": 1783257699867,
+      "preview": "{\"eventId\":\"EV-013\",\"step\":\"DeliveryChecklist\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\""
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "UISpec",
+      "at": 1783257699853,
+      "preview": "{\"eventId\":\"EV-013\",\"step\":\"UISpec\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\"{\\n  \\u0022"
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "DataModel",
+      "at": 1783257699837,
+      "preview": "{\"eventId\":\"EV-013\",\"step\":\"DataModel\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\"{\\n  \\u0"
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "CommandQuery",
+      "at": 1783257699820,
+      "preview": "{\"eventId\":\"EV-013\",\"step\":\"CommandQuery\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\"\",\"is"
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "EventCatalog",
+      "at": 1783257699803,
+      "preview": "{\"eventId\":\"EV-013\",\"step\":\"EventCatalog\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\"\",\"is"
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "AggregateDesign",
+      "at": 1783257699787,
+      "preview": "{\"eventId\":\"EV-013\",\"step\":\"AggregateDesign\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\"\","
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "DomainModel",
+      "at": 1783257699767,
+      "preview": "{\"eventId\":\"EV-013\",\"step\":\"DomainModel\",\"output\":{\"systemBoundary\":{\"inScope\":[\"\\u63D0\\u4EA4\\u8BF7\\u5047\\u7533\\u8BF7\",\""
+    },
+    {
+      "type": "EventSpecConfirmed",
+      "skillId": "analyst-skill",
+      "saStep": null,
+      "at": 1783257699747,
+      "preview": "{\"eventId\":\"EV-012\",\"eventName\":\"\\u5458\\u5DE5\\u5047\\u671F\\u4F59\\u989D\\u8C03\\u6574\",\"complexityHint\":\"\\u4E2D\\u7B49\",\"vers"
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "DeliveryChecklist",
+      "at": 1783257699730,
+      "preview": "{\"eventId\":\"EV-012\",\"step\":\"DeliveryChecklist\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\""
+    },
+    {
+      "type": "SA_Step_Completed",
+      "skillId": "analyst-skill",
+      "saStep": "UISpec",
+      "at": 1783257699713,
+      "preview": "{\"eventId\":\"EV-012\",\"step\":\"UISpec\",\"output\":{\"code\":200,\"msg\":\"\\u64CD\\u4F5C\\u6210\\u529F\",\"data\":{\"content\":\"{\\n  \\u0022"
+    }
+  ],
+  "failureEvents": [
+    {
+      "type": "SkillFailureRecorded",
+      "preview": "{\"runId\":\"59fcc32c0c8542a599d51f32246e778c\",\"errorKind\":\"business\",\"message\":\"IR-0 \\u9AA8\\u67B6\\u672A stable\\uFF0C\\u8BF7\\u5148\\u786E\\u8BA4\\u9AA8\\u67B6\",\"recordedAt\":\"2026-07-05T21:12:02.1759909Z\"}"
+    }
+  ],
+  "hasAnalysisCompleted": true
+}

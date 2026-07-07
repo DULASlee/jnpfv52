@@ -1,4 +1,4 @@
-import { ref, shallowRef, type InjectionKey, type Ref } from 'vue';
+import { computed, ref, shallowRef, type InjectionKey, type Ref } from 'vue';
 import type {
   IrEventRecord,
   IrFragmentSnapshot,
@@ -9,15 +9,7 @@ import type {
   SseIrEventPayload,
 } from '../types/ir';
 import { IR3_FRAGMENT_TYPES, IR3_RELEVANT_EVENT_TYPES } from '../types/ir';
-import {
-  getIrDiagnostics,
-  getIrEvents,
-  getIrSnapshotAtVersion,
-  getIrSnapshots,
-  getIrStability,
-  rebuildIrProject,
-  simulateIrEvent,
-} from '../api/studio/ir';
+import { getIrDiagnostics, getIrEvents, getIrSnapshotAtVersion, getIrSnapshots, getIrStability, rebuildIrProject, simulateIrEvent } from '../api/studio/ir';
 
 export interface IrObservatoryContext {
   pipelineId: Ref<number>;
@@ -29,6 +21,14 @@ export interface IrObservatoryContext {
   error: Ref<string | null>;
   /** IR-3 事件到达时建议切换的观测台 Tab（如 ir3） */
   preferredObservatoryTab: Ref<string | null>;
+  /** SSE 心跳时间戳（R1 30s ping） */
+  lastHeartbeat: Ref<string | null>;
+  /** 右侧观测台折叠（窄屏默认折叠） */
+  panelCollapsed: Ref<boolean>;
+  togglePanel: () => void;
+  /** @deprecated 兼容旧调用，等同 togglePanel */
+  drawerOpen: Ref<boolean>;
+  toggleDrawer: () => void;
   setPipelineId: (id: number) => void;
   loadEvents: () => Promise<void>;
   loadSnapshots: () => Promise<void>;
@@ -37,6 +37,7 @@ export interface IrObservatoryContext {
   onIrEvent: (payload: SseIrEventPayload) => void;
   onFragmentUpdated: (payload: SseFragmentUpdatedPayload) => void;
   onIr3PipelineEvent: (payload: SseIrEventPayload) => void;
+  onSseHeartbeat: () => void;
   simulate: (eventType: SimulateEventType, extra?: { saStepName?: string; useInvalidPayload?: boolean }) => Promise<void>;
   simulateAllSaSteps: () => Promise<void>;
   rebuildProject: () => Promise<IrRebuildResult | null>;
@@ -53,6 +54,16 @@ export function useIrObservatory(): IrObservatoryContext {
   const connected = ref(false);
   const error = ref<string | null>(null);
   const preferredObservatoryTab = ref<string | null>(null);
+  const lastHeartbeat = ref<string | null>(null);
+  const panelCollapsed = ref(false);
+
+  function togglePanel() {
+    panelCollapsed.value = !panelCollapsed.value;
+  }
+
+  function toggleDrawer() {
+    togglePanel();
+  }
 
   const ir3EventTypeSet = new Set<string>(IR3_RELEVANT_EVENT_TYPES);
 
@@ -262,6 +273,18 @@ export function useIrObservatory(): IrObservatoryContext {
     }
   }
 
+  function onSseHeartbeat() {
+    connected.value = true;
+    lastHeartbeat.value = new Date().toLocaleTimeString();
+  }
+
+  const drawerOpen = computed({
+    get: () => !panelCollapsed.value,
+    set: (v: boolean) => {
+      panelCollapsed.value = !v;
+    },
+  });
+
   return {
     pipelineId,
     events,
@@ -271,6 +294,11 @@ export function useIrObservatory(): IrObservatoryContext {
     connected,
     error,
     preferredObservatoryTab,
+    lastHeartbeat,
+    panelCollapsed,
+    togglePanel,
+    drawerOpen,
+    toggleDrawer,
     setPipelineId,
     loadEvents,
     loadSnapshots,
@@ -279,6 +307,7 @@ export function useIrObservatory(): IrObservatoryContext {
     onIrEvent,
     onFragmentUpdated,
     onIr3PipelineEvent,
+    onSseHeartbeat,
     simulate,
     simulateAllSaSteps,
     rebuildProject,

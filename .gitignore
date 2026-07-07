@@ -68,3 +68,28 @@ DB/*.BAK
 backend/.claude/
 DB/*
 DB/
+
+# Runtime storage (AI pipeline deliverables, attachments, generated artifacts)
+FileStorage/
+
+# Pipeline workspace generated output (per-pipeline id dirs, runtime)
+workspace/generated/[0-9]*/
+
+# Python bytecode cache (recursive — covers scripts/ and scripts/lib/)
+**/__pycache__/
+*.pyc
+
+# Backup files with date/version suffix (e.g. CLAUDE.md.bak.20260707)
+*.bak.*
+*.bak-*
+
+# E2E / debug runner transient state
+scripts/.e2e-state.json
+scripts/.events-*.txt
+scripts/.jnpf-*.json
+
+# Playwright / vitest runner output
+test-output/
+
+# Analysis artifacts (regenerable)
+ureport2-analysis/

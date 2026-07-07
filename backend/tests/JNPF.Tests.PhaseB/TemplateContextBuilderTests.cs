@@ -15,6 +15,8 @@ public static class TemplateContextBuilderTests
         TestMissingDdlFragment_ThrowsBah();
         TestEmptyDdlText_ThrowsBah();
         TestMissingArchitectureModule_ThrowsBahWithoutOverride();
+        TestStringArchitectureModules_ResolvesNameSpace();
+        TestNestedFormPageFields_BuildsColumns();
         Console.WriteLine("[A5] TemplateContextBuilder strict negative tests passed.");
     }
 
@@ -75,6 +77,66 @@ public static class TemplateContextBuilderTests
         };
 
         AssertBah(() => Build(snapshot), "NameSpace");
+    }
+
+    private static void TestStringArchitectureModules_ResolvesNameSpace()
+    {
+        var snapshot = new IrSnapshot
+        {
+            Fragments = new[]
+            {
+                Fragment(IrFragmentTypes.Skeleton, stable: true),
+                new IrSnapshotFragment
+                {
+                    FragmentId = "architecture:string-modules",
+                    FragmentType = IrFragmentTypes.Architecture,
+                    StabilityState = IrStabilityStates.Stable,
+                    Payload = """{"modules":["leave-application","approval"]}""",
+                },
+                Fragment(IrFragmentTypes.DDL, stable: true, withDdl: true),
+                Fragment(IrFragmentTypes.FormPageIR, stable: true),
+            },
+        };
+
+        var ctx = Build(snapshot);
+        if (!string.Equals(ctx.NameSpace, "LeaveApplication", StringComparison.Ordinal))
+            throw new InvalidOperationException($"expected LeaveApplication, got {ctx.NameSpace}");
+    }
+
+    private static void TestNestedFormPageFields_BuildsColumns()
+    {
+        var snapshot = new IrSnapshot
+        {
+            Fragments = new[]
+            {
+                Fragment(IrFragmentTypes.Skeleton, stable: true),
+                new IrSnapshotFragment
+                {
+                    FragmentId = "architecture:string-modules",
+                    FragmentType = IrFragmentTypes.Architecture,
+                    StabilityState = IrStabilityStates.Stable,
+                    Payload = """{"modules":["leave-application"]}""",
+                },
+                new IrSnapshotFragment
+                {
+                    FragmentId = "ddl:markdown",
+                    FragmentType = IrFragmentTypes.DDL,
+                    StabilityState = IrStabilityStates.Stable,
+                    Payload = """{"tableNames":["LeaveRequest"],"ddl":"```sql\nCREATE TABLE LeaveRequest (RequestID INT PRIMARY KEY);\n```"}""",
+                },
+                new IrSnapshotFragment
+                {
+                    FragmentId = "form:pages",
+                    FragmentType = IrFragmentTypes.FormPageIR,
+                    StabilityState = IrStabilityStates.Stable,
+                    Payload = """{"pages":[{"fields":[{"id":"reason","label":"事由"},{"id":"days","label":"天数"}]}]}""",
+                },
+            },
+        };
+
+        var ctx = Build(snapshot);
+        if (ctx.TableField.Count < 3)
+            throw new InvalidOperationException($"expected >=3 columns from nested form page, got {ctx.TableField.Count}");
     }
 
     private static Ir2CodegenContext Build(IrSnapshot snapshot)

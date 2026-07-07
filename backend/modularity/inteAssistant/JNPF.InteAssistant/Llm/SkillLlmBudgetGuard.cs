@@ -21,6 +21,12 @@ public interface ISkillLlmBudgetGuard
     Task<LlmCallSlot> AcquireAsync(string projectId, string skillId, string runId, string tenantId, long pipelineId, CancellationToken ct = default);
     Task<ChatCompletionResponse> ExecuteAsync(LlmCallSlot slot, ChatCompletionRequest request, CancellationToken ct = default);
     void ReleaseRun(string runId, string skillId);
+
+    /// <summary>
+    /// 累加项目 Token 消耗(供流式 LLM 路径在调用完成后记账)。
+    /// 非流式路径由 ExecuteAsync 内部调用,流式路径需外部显式调用。
+    /// </summary>
+    Task AccumulateProjectTokensAsync(string projectId, string tenantId, long delta, CancellationToken ct = default);
 }
 
 public sealed class LlmCallSlot
@@ -77,9 +83,13 @@ public sealed class SkillLlmBudgetGuard : ISkillLlmBudgetGuard, ITransient
         string projectId, string tenantId, double reserveRatio = 0.95, CancellationToken ct = default)
     {
         var project = await LoadProjectAsync(projectId, tenantId, ct);
-        var threshold = (long)(project.TokenBudget * reserveRatio);
-        if (project.TokenConsumed >= threshold)
-            ThrowBudgetExhausted(project, pipelineId: 0, skillId: null, reason: "pre-check");
+        // P6-L01 四级降级：fuse 拒绝，red/yellow/green 放行（red 仅 warn 不阻断）
+        var tier = TokenBudgetTierService.ComputeTier(project.TokenConsumed, project.TokenBudget);
+        if (tier == TokenBudgetTierService.Fuse)
+            ThrowBudgetExhausted(project, pipelineId: 0, skillId: null, reason: $"budget fuse (tier={tier})");
+        if (tier == TokenBudgetTierService.Red)
+            _logger.LogWarning("项目 {ProjectId} budget tier=red（{Consumed}/{Budget}），strong Skill 将降级为 fast",
+                projectId, project.TokenConsumed, project.TokenBudget);
     }
 
     public async Task<LlmCallSlot> AcquireAsync(
@@ -91,8 +101,14 @@ public sealed class SkillLlmBudgetGuard : ISkillLlmBudgetGuard, ITransient
                 $"Skill {skillId} 禁止直连 LLM Gateway（MaxLlmCalls=0）");
 
         var project = await LoadProjectAsync(projectId, tenantId, ct);
-        if (project.TokenConsumed >= project.TokenBudget)
-            ThrowBudgetExhausted(project, pipelineId, skillId, runId, "project budget exhausted");
+        // P6-L01 四级降级：fuse 硬熔断；red 强制 tier=fast（降级路由）；yellow/green 保留 policy tier
+        var budgetTier = TokenBudgetTierService.ComputeTier(project.TokenConsumed, project.TokenBudget);
+        if (budgetTier == TokenBudgetTierService.Fuse)
+            ThrowBudgetExhausted(project, pipelineId, skillId, runId, $"budget fuse (tier={budgetTier})");
+
+        var effectiveModelTier = TokenBudgetTierService.ShouldDegradeToFast(budgetTier)
+            ? "fast"   // red/fuse 已在前面拦截 fuse，此处 red 触发 strong→fast 降级
+            : policy.ModelTier;
 
         var usageKey = UsageKey(runId, skillId);
         var usage = RunUsage.GetOrAdd(usageKey, _ => new SkillRunLlmUsage());
@@ -105,7 +121,7 @@ public sealed class SkillLlmBudgetGuard : ISkillLlmBudgetGuard, ITransient
             ThrowCallRejected(pipelineId, skillId, runId, SkillTokenLimitCode,
                 $"Skill {skillId} 已达 maxTotalTokens={policy.MaxTotalTokens}");
 
-        var provider = ResolveProvider(policy.ModelTier, null);
+        var provider = ResolveProvider(effectiveModelTier, null);
         return new LlmCallSlot
         {
             RunId = runId,
@@ -130,9 +146,15 @@ public sealed class SkillLlmBudgetGuard : ISkillLlmBudgetGuard, ITransient
             "LlmCallStart RunId={RunId} SkillId={SkillId} ProjectId={ProjectId} Call={Call}",
             slot.RunId, slot.SkillId, slot.ProjectId, usage.CallCount + 1);
 
+        var providerCode = !string.IsNullOrWhiteSpace(request.ProviderCode)
+            ? request.ProviderCode
+            : !string.IsNullOrWhiteSpace(slot.ProviderCode)
+                ? slot.ProviderCode
+                : _configuration.GetValue("AI:DefaultProvider", "mimo")!;
+
         var adjusted = request with
         {
-            ProviderCode = string.IsNullOrEmpty(request.ProviderCode) ? slot.ProviderCode : request.ProviderCode,
+            ProviderCode = providerCode,
             MaxTokens = request.MaxTokens > 0
                 ? Math.Min(request.MaxTokens, slot.MaxTokens)
                 : slot.MaxTokens,
@@ -175,25 +197,48 @@ public sealed class SkillLlmBudgetGuard : ISkillLlmBudgetGuard, ITransient
         return project;
     }
 
-    private async Task AccumulateProjectTokensAsync(string projectId, string tenantId, long delta, CancellationToken ct)
+    public async Task AccumulateProjectTokensAsync(string projectId, string tenantId, long delta, CancellationToken ct = default)
     {
         var project = await LoadProjectAsync(projectId, tenantId, ct);
         var newConsumed = project.TokenConsumed + delta;
-        var budgetStatus = newConsumed >= project.TokenBudget
-            ? "exhausted"
-            : newConsumed >= (long)(project.TokenBudget * 0.95)
-                ? "yellow"
-                : project.LlmBudgetStatus;
+        // P6-L01 四级降级：用 TokenBudgetTierService 计算 tier（替代原二态判定）
+        var newTier = TokenBudgetTierService.ComputeTier(newConsumed, project.TokenBudget);
+        var oldTier = project.LlmBudgetStatus;
 
         await _db.Updateable<AiProjectEntity>()
             .SetColumns(x => new AiProjectEntity
             {
                 TokenConsumed = x.TokenConsumed + delta,
-                LlmBudgetStatus = budgetStatus,
+                LlmBudgetStatus = newTier,
                 LastModifyTime = DateTime.UtcNow,
             })
             .Where(x => x.Id == projectId && x.TenantId == tenantId)
             .ExecuteCommandAsync(ct);
+
+        // P6-L01 tier 变更审计：tier 变化时投递 BudgetTierChanged IR 事件 + 推送 SSE BudgetDegraded
+        if (!string.Equals(oldTier, newTier, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation(
+                "Budget tier 变更 project={ProjectId} {Old}→{New} consumed={Consumed}/{Budget}",
+                projectId, oldTier, newTier, newConsumed, project.TokenBudget);
+
+            try
+            {
+                // 推送 SSE budget_tier_changed（供前端实时展示降级状态）
+                if (long.TryParse(projectId, out var pid))
+                {
+                    _sseHub?.TryPush(pid, "budget_tier_changed", System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        projectId, tenantId, fromTier = oldTier, toTier = newTier,
+                        tokenConsumed = newConsumed, tokenBudget = project.TokenBudget,
+                    }));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Budget tier 变更通知失败（非阻断）");
+            }
+        }
     }
 
     private string ResolveProvider(string modelTier, string? overrideProvider)
@@ -205,7 +250,10 @@ public sealed class SkillLlmBudgetGuard : ISkillLlmBudgetGuard, ITransient
             return _configuration.GetValue("LlmRouting:FastProvider", "mimo")!;
 
         var strong = _configuration.GetValue<string>("LlmRouting:StrongProvider");
-        return string.IsNullOrWhiteSpace(strong) ? string.Empty : strong;
+        if (!string.IsNullOrWhiteSpace(strong))
+            return strong;
+
+        return _configuration.GetValue("AI:DefaultProvider", "mimo")!;
     }
 
     private void ThrowBudgetExhausted(

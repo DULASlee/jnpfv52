@@ -4,8 +4,8 @@
 import express from 'express';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
-import { SAOrchestrator } from './orchestrator/SAOrchestrator';
 import { InMemorySADatabase } from './orchestrator/SADatabase';
+import { SqlServerSADatabase } from './orchestrator/SqlServerSADatabase';
 import { ILLMClient, SARequest, SAOutput, SAConfig, DEFAULT_SA_CONFIG } from './orchestrator/orchestrator-types';
 import { logStep } from './lib/structuredLogger';
 import { tenantSessionStore } from './storage/TenantScopedSessionStore';
@@ -68,6 +68,7 @@ class HttpLlmClient implements ILLMClient {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(90_000),  // 90s 单次 LLM 硬上限，防止无限挂起
     });
 
     if (!response.ok) {
@@ -172,14 +173,15 @@ const DB_BACKEND = (process.env.SA_DB_BACKEND || 'inmemory').toLowerCase();
 const sseManager = new SSEManager();
 setInterval(() => tenantSessionStore.purgeExpired(), 5 * 60 * 1000);
 
-// 运行中的任务追踪
-const runningTasks = new Map<string, {
+// 运行中的任务追踪（含完整 SA 产出，供 C# 轮询 /api/sa/tasks/:taskId 获取）
+interface SATask {
   status: 'running' | 'completed' | 'failed';
   result?: SAOutput;
   error?: string;
   startedAt: Date;
   completedAt?: Date;
-}>();
+}
+const runningTasks = new Map<string, SATask>();
 
 // ═══════════════════════════════════════════════════════
 // 健康检查
@@ -391,6 +393,86 @@ app.post('/api/sa/run', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════
+// POST /api/sa/run-async — 异步 SA（立即返回 taskId，C# 轮询）
+// 正确入口：C# AnalystSkillService 调此接口，SA 内部走玛维斯算法+事件并行
+// ═══════════════════════════════════════════════════════
+app.post('/api/sa/run-async', (req, res) => {
+  const {
+    tenantId, projectId, pipelineId, requirementId, requirementText,
+    userId, runId, authHeader: reqAuthHeader, providerCode: reqProvider,
+    skeletonBusinessEvents,
+  } = req.body;
+
+  if (!requirementText || !tenantId || !projectId) {
+    return res.status(400).json({ error: '缺少必要参数: tenantId, projectId, requirementText' });
+  }
+
+  const projectIdNum = Number(projectId);
+  const pipelineIdNum = pipelineId != null ? Number(pipelineId) : projectIdNum;
+
+  const taskId = uuidv4();
+  runningTasks.set(taskId, { status: 'running', startedAt: new Date() });
+
+  // 立即返回 taskId，不阻塞
+  res.json({ taskId, status: 'running' });
+
+  const authHeader = reqAuthHeader || req.headers.authorization || '';
+  const providerCode = reqProvider || LLM_PROVIDER;
+
+  // 后台异步执行（不 await）
+  (async () => {
+    const task = runningTasks.get(taskId)!;
+    try {
+      const llm = new HttpLlmClient(
+        LLM_GATEWAY_URL, LLM_API_KEY,
+        String(tenantId), authHeader,
+        providerCode, LLM_TEMPERATURE, LLM_MAX_TOKENS,
+      );
+      const db = createDatabase(DB_BACKEND);
+      const validators = {
+        DFDValidator: null, BPMValidator: null, DictValidator: null,
+        LogicValidator: null, CrossEventConsistencyValidator: null,
+        ERValidator: null, STDValidator: null, UIValidator: null,
+      };
+      const orchestrator = new SAOrchestrator(llm, db, validators);
+
+      const saRequest: SARequest = {
+        tenantId: String(tenantId),
+        projectId: projectIdNum,
+        pipelineId: pipelineIdNum,
+        requirementId: requirementId || 0,
+        requirementText: String(requirementText),
+        skeletonBusinessEvents: skeletonBusinessEvents ?? undefined,
+        userId: userId || 'analyst-skill',
+        runId: runId || undefined,
+      };
+
+      const result = await orchestrator.runSA(saRequest);
+
+      task.status = 'completed';
+      task.result = result;
+      task.completedAt = new Date();
+
+      logStep({
+        level: 'info',
+        runId,
+        tenantId: String(tenantId),
+        projectId: String(projectId),
+        elapsedMs: task.completedAt.getTime() - task.startedAt.getTime(),
+        message: `SA async task completed taskId=${taskId} events=${result.eventResults?.length ?? 0}`,
+      });
+    } catch (error: any) {
+      task.status = 'failed';
+      task.error = error?.message ?? 'SA async task failed';
+      task.completedAt = new Date();
+      logStep({ level: 'error', message: `SA async task failed taskId=${taskId}: ${task.error}` });
+    }
+  })();
+});
+
+// sa_* 九表物化由 JNPF C# SaMaterializer 直连主库；sa-service 不写业务库。
+
+// ═══════════════════════════════════════════════════════
 // GET /api/sa/events — SSE 事件流
 // ═══════════════════════════════════════════════════════
 app.get('/api/sa/events', (req, res) => {
@@ -407,14 +489,14 @@ app.get('/api/sa/events', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════
-// GET /api/sa/tasks/:taskId — 查询任务状态
+// GET /api/sa/tasks/:taskId — 查询任务状态（completed 时含完整 SA 产出）
 // ═══════════════════════════════════════════════════════
 app.get('/api/sa/tasks/:taskId', (req, res) => {
   const task = runningTasks.get(req.params.taskId);
   if (!task) {
     return res.status(404).json({ error: '任务不存在' });
   }
-  res.json({
+  const resp: Record<string, any> = {
     taskId: req.params.taskId,
     status: task.status,
     startedAt: task.startedAt,
@@ -422,34 +504,46 @@ app.get('/api/sa/tasks/:taskId', (req, res) => {
     duration: task.completedAt
       ? task.completedAt.getTime() - task.startedAt.getTime()
       : Date.now() - task.startedAt.getTime(),
-  });
+  };
+  if (task.status === 'completed' && task.result) {
+    // 完整产出：C# 侧读取 eventResults 投影 IR 事件
+    resp.result = task.result;
+  }
+  if (task.status === 'failed') {
+    resp.error = task.error;
+  }
+  res.json(resp);
 });
 
 // ═══════════════════════════════════════════════════════
-// 启动
+// 启动（测试环境 SA_TEST=1 时不监听端口，supertest 自行绑定）
 // ═══════════════════════════════════════════════════════
-app.listen(PORT, () => {
-  if (!LLM_GATEWAY_URL) {
-    logStep({ level: 'error', message: 'LLM_GATEWAY_URL 未设置，请配置环境变量后重启' });
-  }
-  if (DB_BACKEND === 'inmemory') {
-    logStep({ level: 'warn', message: '使用 InMemory 数据库（数据重启即丢失）。生产环境请设置 SA_DB_BACKEND=sqlserver' });
-  }
-  logStep({
-    level: 'info',
-    message: `SA Service 启动完成 port=${PORT} db=${DB_BACKEND} provider=${LLM_PROVIDER} gateway=${LLM_GATEWAY_URL || '(unset)'}`,
+if (process.env.SA_TEST !== '1') {
+  app.listen(PORT, () => {
+    if (!LLM_GATEWAY_URL) {
+      logStep({ level: 'error', message: 'LLM_GATEWAY_URL 未设置，请配置环境变量后重启' });
+    }
+    if (DB_BACKEND === 'inmemory') {
+      logStep({ level: 'warn', message: '使用 InMemory 数据库（数据重启即丢失）。生产环境请设置 SA_DB_BACKEND=sqlserver' });
+    }
+    logStep({
+      level: 'info',
+      message: `SA Service 启动完成 port=${PORT} db=${DB_BACKEND} provider=${LLM_PROVIDER} gateway=${LLM_GATEWAY_URL || '(unset)'}`,
+    });
   });
-});
+}
 
 // ── DB 工厂 ──
 import { ISADatabase } from './orchestrator/orchestrator-types';
 
 function createDatabase(backend: string): ISADatabase {
   if (backend === 'sqlserver') {
-    // 生产环境：此处应返回 SqlServerSADatabase 实例
-    throw new Error('SA_DB_BACKEND=sqlserver 尚未实现，请提供 SqlServerSADatabase 实现或联系开发团队');
+    const cs = process.env.SA_DB_CONNECTION_STRING;
+    if (!cs) {
+      throw new Error('SA_DB_BACKEND=sqlserver 需要设置 SA_DB_CONNECTION_STRING（与 JNPF SQL Server 相同库）');
+    }
+    return new SqlServerSADatabase(cs);
   }
-  // 默认：InMemory（开发/测试）
   return new InMemorySADatabase();
 }
 

@@ -334,11 +334,23 @@ export default {
       return list.includes(id);
     },
     getCategory() {
-      getCategory().then((res) => {
-        const data = res.data.data;
-        this.typeList = data;
-        this.activeName = (data[0] || {}).categoryValue;
-        this.getList();
+      this.loading = true;
+      this.list = [];
+      // 并行加载分类和列表，消除串行瀑布
+      Promise.all([
+        getCategory(),
+        getList({ title: this.search.name, category: this.activeName, current: this.page.page, size: this.page.size })
+      ]).then(([catRes, listRes]) => {
+        this.loading = false;
+        const catData = catRes.data.data;
+        this.typeList = catData;
+        this.activeName = (catData[0] || {}).categoryValue;
+        const listData = listRes.data.data;
+        this.page.total = listData.total;
+        (listData.records || []).forEach(ele => ele._menu = false);
+        this.list = listData.records || [];
+      }).catch(() => {
+        this.loading = false;
       });
     },
     handleExport(item) {

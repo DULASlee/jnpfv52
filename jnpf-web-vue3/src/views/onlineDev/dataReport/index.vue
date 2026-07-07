@@ -35,9 +35,13 @@
   import { downloadByUrl } from '/@/utils/file/download';
   import { useGlobSetting } from '/@/hooks/setting';
   import { getRawToken } from '/@/utils/auth';
-  import { PreviewModal } from '/@/components/CommonModal';
-  import Form from './Form.vue';
-  import PreviewPopup from './PreviewPopup.vue';
+  import { useLazyComponent } from '/@/hooks/web/useLazyComponent';
+
+  // 弹窗/预览组件按需异步加载 — 减少首屏 bundle 体积
+  const MODULE = 'onlineDev/dataReport';
+  const { component: PreviewModal } = useLazyComponent(() => import('/@/components/CommonModal/src/PreviewModal.vue'), MODULE);
+  const { component: Form } = useLazyComponent(() => import('./Form.vue'), MODULE);
+  const { component: PreviewPopup } = useLazyComponent(() => import('./PreviewPopup.vue'), MODULE);
 
   defineOptions({ name: 'OnlineDevWebDesign' });
 
@@ -61,11 +65,13 @@
   const { reportServer } = useGlobSetting();
   const currRow = ref<any>({});
   const categoryList = ref<any[]>([]);
+  // 预构建 category id→name 映射，避免 afterFetch 中 O(n×m) filter
+  const categoryMap = ref<Map<string, string>>(new Map());
   const [registerTable, { reload, getForm }] = useTable({
     api: getDataReportList,
     columns,
     useSearchForm: true,
-    immediate: false,
+    immediate: true,
     formConfig: {
       schemas: [
         {
@@ -106,16 +112,12 @@
       dataIndex: 'action',
     },
     afterFetch: data => {
-      const list = data.map(o => {
-        let category = '';
-        const arr = categoryList.value.filter(category => category.id == o.categoryId);
-        if (arr.length) {
-          const item = arr[0];
-          category = item && item.fullName ? item.fullName : '';
-        }
-        return { ...o, category };
-      });
-      return list;
+      const map = categoryMap.value;
+      if (map.size === 0) return data;
+      return data.map(o => ({
+        ...o,
+        category: map.get(o.categoryId) || o.category || '',
+      }));
     },
   });
   function getTableActions(record): ActionItem[] {
@@ -199,10 +201,16 @@
     downloadByUrl({ url });
   }
   async function getOptions() {
-    const res = await baseStore.getDictionaryData('ReportSort');
-    categoryList.value = res as any[];
+    const res = (await baseStore.getDictionaryData('ReportSort')) as any[];
+    categoryList.value = res;
+    // 预构建 O(1) 查找映射
+    const map = new Map<string, string>();
+    for (const item of res) {
+      if (item.id && item.fullName) map.set(item.id, item.fullName);
+    }
+    categoryMap.value = map;
     getForm().updateSchema({ field: 'category', componentProps: { options: res } });
-    reload();
+    // immediate:true 已触发首次 fetch，此处无需 reload
   }
   function handleRelease(record) {
     release(record.id).then(res => {

@@ -2,6 +2,9 @@ using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Llm;
 using JNPF.InteAssistant.Constraints;
 using JNPF.InteAssistant.Skills;
+using JNPF.InteAssistant.Interfaces;
+using JNPF.InteAssistant.Skills.Cognitive;
+using JNPF.InteAssistant.Skills.Cognitive.Mcp;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 
@@ -122,10 +125,18 @@ public static class IrPhase3Tests
             },
         };
 
-        var skill = new SystemDesignSkillService(new ConstraintEngineService(null!), null!);
+        var skill = new SystemDesignSkillService(new FakeDesignToolkit(), new ConstraintEngineService(null!), null!);
         var validation = skill.ValidateInputAsync(snapshot).GetAwaiter().GetResult();
         if (validation.IsValid || !validation.ErrorMessage!.Contains("FormPageIR", StringComparison.Ordinal))
             throw new InvalidOperationException("SystemDesign should reject when FormPageIR fragment is missing");
+    }
+
+    private sealed class FakeDesignToolkit : ICognitiveSkillToolkit
+    {
+        public ILlmGatewayService Llm => null!;
+        public IMcpClient Mcp => null!;
+        public IEventStream Events => null!;
+        public IExperienceRecorder Experience => null!;
     }
 
     private static void TestLlmCallLimit_ArchitectPolicyDefault()

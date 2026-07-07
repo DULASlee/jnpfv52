@@ -62,7 +62,9 @@ public class WebSocketMiddleware
         }
         var token = new JsonWebToken(tokenPart);
         var httpContext = (DefaultHttpContext)context;
-        httpContext.Request.Headers["Authorization"] = HttpUtility.UrlDecode(context.Request.Path.ToString().TrimStart('/'), Encoding.UTF8);
+        // Authorization header MUST be \"Bearer {token}\"，not the full URL path.
+        // GetJwtBearerToken() checks StartsWith(\"Bearer \") — full path breaks this.
+        httpContext.Request.Headers["Authorization"] = "Bearer " + tokenPart;
         UserAgent userAgent = new UserAgent(httpContext);
         if (!JWTEncryption.ValidateJwtBearerToken(httpContext, out token))
         {

@@ -1,18 +1,19 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using JNPF.DependencyInjection;
+using JNPF.FriendlyException;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Llm;
-using Microsoft.Extensions.Logging;
+using JNPF.InteAssistant.Skills.Cognitive;
 
 namespace JNPF.InteAssistant.Skills;
 
 /// <summary>
-/// UI 设计 Skill MVP（P3-B04）— FormPageIR 产出
+/// UI 设计 Skill（R3 认知模具版）— FormPageIR 经 BudgetGuard 生成；禁止 fallback。
 /// </summary>
-public sealed class UiDesignSkillService : IBaseSkill, ITransient
+public sealed class UiDesignSkillService : CognitiveSkill, ITransient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -21,29 +22,32 @@ public sealed class UiDesignSkillService : IBaseSkill, ITransient
     };
 
     private readonly ISkillLlmBudgetGuard _budgetGuard;
-    private readonly ILogger<UiDesignSkillService> _logger;
 
-    public UiDesignSkillService(ISkillLlmBudgetGuard budgetGuard, ILogger<UiDesignSkillService> logger)
+    public UiDesignSkillService(
+        ICognitiveSkillToolkit toolkit,
+        ISkillLlmBudgetGuard budgetGuard)
+        : base(toolkit)
     {
         _budgetGuard = budgetGuard;
-        _logger = logger;
     }
 
-    public string SkillId => DesignSkillIds.UiDesign;
-    public string Version => "1.0.0-mvp";
+    public override string SkillId => DesignSkillIds.UiDesign;
+    public override string Version => "2.0.0-cognitive";
+    public override SkillLayer Layer => SkillLayer.Refinement;
+    public override SkillMission Mission => SkillMission.GenerateArtifact;
 
-    public SkillInformationNeeds InformationNeeds { get; } = new()
+    public override SkillInformationNeeds InformationNeeds { get; } = new()
     {
         IrFragmentTypes = new[] { IrFragmentTypes.EventSpec },
         RequiredStability = IrStabilityStates.Stable,
     };
 
-    public SkillOutputDeclaration Outputs { get; } = new()
+    public override SkillOutputDeclaration Outputs { get; } = new()
     {
         IrEventTypes = new[] { IrEventTypes.UIDesignStabilized },
     };
 
-    public Task<SkillValidationResult> ValidateInputAsync(IrSnapshot snapshot, CancellationToken ct = default)
+    public override Task<SkillValidationResult> ValidateInputAsync(IrSnapshot snapshot, CancellationToken ct = default)
     {
         if (snapshot.Find(IrFragmentTypes.EventSpec, IrStabilityStates.Stable) == null)
             return Task.FromResult(SkillValidationResult.Fail("IR-1 未 stable"));
@@ -54,22 +58,22 @@ public sealed class UiDesignSkillService : IBaseSkill, ITransient
         return Task.FromResult(SkillValidationResult.Ok());
     }
 
-    public async IAsyncEnumerable<AppendIrEventRequest> ReasonAsync(
-        SkillContext context,
-        [EnumeratorCancellation] CancellationToken ct = default)
+    public override Task<SkillValidationResult> ValidateOutputAsync(
+        IReadOnlyList<AppendIrEventRequest> events, CancellationToken ct = default)
     {
-        var fragmentId = $"formPage:{context.ProjectId}";
-        string payload;
+        if (events.Count != 1 || events[0].EventType != IrEventTypes.UIDesignStabilized)
+            return Task.FromResult(SkillValidationResult.Fail("必须产出 1 条 UIDesignStabilized"));
 
-        try
-        {
-            payload = await GenerateFormPageIrAsync(context, fragmentId, ct);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "UI Design Skill LLM 失败，使用规则回退");
-            payload = BuildFallbackFormPageIr(context, fragmentId);
-        }
+        return Task.FromResult(SkillValidationResult.Ok());
+    }
+
+    protected override async IAsyncEnumerable<AppendIrEventRequest> ThinkAsync(
+        SkillPerception perception,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        var context = perception.Context;
+        var fragmentId = $"formPage:{context.ProjectId}";
+        var payload = await GenerateFormPageIrAsync(context, fragmentId, ct);
 
         yield return new AppendIrEventRequest
         {
@@ -78,16 +82,7 @@ public sealed class UiDesignSkillService : IBaseSkill, ITransient
             FragmentType = IrFragmentTypes.FormPageIR,
             FragmentVersion = 1,
             Payload = payload,
-            SkillId = SkillId,
         };
-    }
-
-    public Task<SkillValidationResult> ValidateOutputAsync(IReadOnlyList<AppendIrEventRequest> events, CancellationToken ct = default)
-    {
-        if (events.Count != 1 || events[0].EventType != IrEventTypes.UIDesignStabilized)
-            return Task.FromResult(SkillValidationResult.Fail("必须产出 1 条 UIDesignStabilized"));
-
-        return Task.FromResult(SkillValidationResult.Ok());
     }
 
     private async Task<string> GenerateFormPageIrAsync(SkillContext context, string fragmentId, CancellationToken ct)
@@ -97,6 +92,7 @@ public sealed class UiDesignSkillService : IBaseSkill, ITransient
 
         var response = await _budgetGuard.ExecuteAsync(slot, new ChatCompletionRequest
         {
+            ProviderCode = context.ProviderCode ?? string.Empty,
             SystemPrompt = """
                 你是 JNPF UI 设计 Skill。输出 FormPageIR JSON（pages 数组，每页含 fields）。
                 字段需含 id、label、componentType。只输出 JSON。
@@ -112,53 +108,21 @@ public sealed class UiDesignSkillService : IBaseSkill, ITransient
         }, ct);
 
         if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
-            throw new InvalidOperationException(response.Error ?? "LLM 返回空");
+            throw Oops.Bah(response.Error ?? "UI Design Skill LLM 返回空");
 
-        using var doc = JsonDocument.Parse(ExtractJson(response.Content));
+        using var doc = JsonDocument.Parse(PmSkillService.ExtractJson(response.Content));
+        if (!doc.RootElement.TryGetProperty("pages", out var pages)
+            || pages.ValueKind != JsonValueKind.Array
+            || pages.GetArrayLength() == 0)
+        {
+            throw Oops.Bah("UI Design Skill 产出缺少非空 pages 数组");
+        }
+
         var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(doc.RootElement.GetRawText(), JsonOptions)
             ?? new Dictionary<string, JsonElement>();
         dict["@context"] = JsonSerializer.SerializeToElement("https://schema.jnpf.ai/ir/v1");
         dict["@id"] = JsonSerializer.SerializeToElement(fragmentId);
         dict["stabilityState"] = JsonSerializer.SerializeToElement(IrStabilityStates.Stable);
         return JsonSerializer.Serialize(dict, JsonOptions);
-    }
-
-    private static string BuildFallbackFormPageIr(SkillContext context, string fragmentId)
-    {
-        var obj = new
-        {
-            @context = "https://schema.jnpf.ai/ir/v1",
-            @id = fragmentId,
-            pages = new[]
-            {
-                new
-                {
-                    pageId = "main-list",
-                    title = "业务列表",
-                    layout = "list",
-                    fields = new[]
-                    {
-                        new { id = "name", label = "名称", componentType = "input" },
-                        new { id = "status", label = "状态", componentType = "select" },
-                    },
-                },
-            },
-            stabilityState = IrStabilityStates.Stable,
-        };
-        return JsonSerializer.Serialize(obj, JsonOptions);
-    }
-
-    private static string ExtractJson(string content)
-    {
-        var trimmed = content.Trim();
-        if (trimmed.StartsWith("```"))
-        {
-            var start = trimmed.IndexOf('{');
-            var end = trimmed.LastIndexOf('}');
-            if (start >= 0 && end > start)
-                return trimmed[start..(end + 1)];
-        }
-
-        return trimmed;
     }
 }

@@ -167,6 +167,13 @@ export async function getDeveloperStatus(session, pipelineId) {
   return jnpfData(res) || res.json?.data || res.json || {};
 }
 
+export async function isDeveloperGreen(session, pipelineId) {
+  const types = (await getEvents(session, pipelineId)).map(
+    e => pick(e, 'eventType', 'EventType'),
+  );
+  return types.includes('CodeGeneratedStablePromoted') && types.includes('TestSuiteGenerated');
+}
+
 export async function waitDeveloperGreen(session, pipelineId, timeoutMs) {
   let lastTypes = [];
   return waitFor(async () => {
@@ -175,15 +182,16 @@ export async function waitDeveloperGreen(session, pipelineId, timeoutMs) {
     );
     lastTypes = types;
 
-    if (types.some(t => GREEN_FAIL_EVENTS.includes(t))) {
-      return { ok: false, reason: 'CodegenFailed', types };
-    }
-
     const hasPromote = types.includes('CodeGeneratedStablePromoted');
     const hasTestSuite = types.includes('TestSuiteGenerated');
     if (hasPromote && hasTestSuite) {
       return { ok: true, types };
     }
+
+    if (types.some(t => GREEN_FAIL_EVENTS.includes(t)) && !hasPromote) {
+      return { ok: false, reason: 'CodegenFailed', types };
+    }
+
     return null;
   }, 'developer green (promote + TestSuite)', timeoutMs, 2000).catch(err => {
     err.lastEventTypes = lastTypes;

@@ -1,5 +1,7 @@
 # Phase 2.5 运行时加固施工包
 
+> ⚠️ **R12 三元组适配声明（2026-07-07 追加）：** 本文档 L78 `TenantScopedSessionStore` Key 含 `tenantId + projectId` 是正确的，但 sa-service 仅适用于 agent 模式回归测试（ADR-004）；compile 主链 + C# SaMaterializer 不依赖 sa-service。SessionStore Key MUST 含三元组 `(tenantId, projectId, pipelineId)`，详见 `.cursor/rules/triple-key-iron-law.mdc`。
+
 > 文档编号：10 | 版本：v1.0 | 周期：**3～5 个工作日**（条件触发，非固定排期）  
 > 上级总体计划：[`7、skills构建方案.md`](./7、skills构建方案.md) §2 阶段二 / §2 阶段六  
 > 前置依赖：[`9、全链条第二阶段开发计划.md`](./9、全链条第二阶段开发计划.md) — 阶段二功能主干 + **§14 质量红线**（P2-R01～R04）  

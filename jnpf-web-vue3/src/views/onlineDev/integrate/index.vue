@@ -49,13 +49,17 @@
   import { useI18n } from '/@/hooks/web/useI18n';
   import { useModal } from '/@/components/Modal';
   import { usePopup } from '/@/components/Popup/src/usePopup';
-  import { IntegrateProcess } from '/@/components/IntegrateProcess';
   import { downloadByUrl } from '/@/utils/file/download';
   import { DownOutlined } from '@ant-design/icons-vue';
   import { useDrawer } from '/@/components/Drawer';
-  import Form from './Form.vue';
-  import ExecutionQueue from './components/ExecutionQueue.vue';
-  import Log from './components/Log.vue';
+  import { useLazyComponent } from '/@/hooks/web/useLazyComponent';
+
+  // 弹窗/设计器组件按需异步加载 — 减少首屏 bundle 体积
+  const MODULE = 'onlineDev/integrate';
+  const { component: Form } = useLazyComponent(() => import('./Form.vue'), MODULE);
+  const { component: IntegrateProcess } = useLazyComponent(() => import('/@/components/IntegrateProcess/src/index.vue'), MODULE);
+  const { component: ExecutionQueue } = useLazyComponent(() => import('./components/ExecutionQueue.vue'), MODULE);
+  const { component: Log } = useLazyComponent(() => import('./components/Log.vue'), MODULE);
 
   defineOptions({ name: 'OnlineDevIntegrate' });
 

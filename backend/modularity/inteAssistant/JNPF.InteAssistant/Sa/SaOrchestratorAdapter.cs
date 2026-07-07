@@ -1,14 +1,21 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using JNPF.DependencyInjection;
+using JNPF.FriendlyException;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Ir;
 using JNPF.InteAssistant.Runtime;
+using JNPF.InteAssistant.Skills;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace JNPF.InteAssistant.Sa;
+
+/// <summary>
+/// PM 骨架中的业务事件（传给 sa-service skeletonBusinessEvents）。
+/// </summary>
+public sealed record SaSkeletonEventInput(string EventId, string EventName, string ComplexityHint);
 
 public interface ISaOrchestratorAdapter
 {
@@ -22,6 +29,19 @@ public interface ISaOrchestratorAdapter
         IReadOnlyDictionary<string, object> previousSteps,
         string? runId,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// 调 /api/sa/run-async（玛维斯算法 + 事件并行），轮询至完成并返回全量 SA 产出。
+    /// projectId = 逻辑项目；pipelineId = 流水线实例（三元组落库）。
+    /// </summary>
+    Task<SaProjectResult> RunProjectAsync(
+        string tenantId,
+        string projectId,
+        long pipelineId,
+        string requirementText,
+        IReadOnlyList<SaSkeletonEventInput>? skeletonEvents,
+        string? runId,
+        CancellationToken ct = default);
 }
 
 public sealed class SaStepResult
@@ -29,10 +49,38 @@ public sealed class SaStepResult
     public string IrStepName { get; init; } = string.Empty;
     public string AgentName { get; init; } = string.Empty;
     public object Output { get; init; } = new { };
-    public bool UsedFallback { get; init; }
     public int DurationMs { get; init; }
 }
 
+/// <summary>
+/// SA 全量产出（对应 /api/sa/tasks/:taskId 的 result 字段）。
+/// </summary>
+public sealed class SaProjectResult
+{
+    /// <summary>
+    /// 每个业务事件的分析结果，按 Scope.businessEvents 顺序排列。
+    /// </summary>
+    public required IReadOnlyList<SaEventResult> EventResults { get; init; }
+
+    public int TotalDurationMs { get; init; }
+}
+
+/// <summary>
+/// 单个业务事件的分析结果，steps 以 IR 步骤名为 key（匹配 SaStepMapping）。
+/// </summary>
+public sealed class SaEventResult
+{
+    public string EventId { get; init; } = string.Empty;
+    public string EventName { get; init; } = string.Empty;
+    public string Complexity { get; init; } = "simple";
+    /// <summary>IR 步骤名 → 产出 JSON 字符串。</summary>
+    public IReadOnlyDictionary<string, object> Steps { get; init; } = new Dictionary<string, object>();
+    public string? Error { get; init; }
+}
+
+/// <summary>
+/// sa-service 逐步调用适配器（R2：失败直接抛，禁止 BuildFallbackOutput 假产出）。
+/// </summary>
 public sealed class SaOrchestratorAdapter : ISaOrchestratorAdapter, ITransient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -72,9 +120,8 @@ public sealed class SaOrchestratorAdapter : ISaOrchestratorAdapter, ITransient
         runId ??= SkillExecutionScope.CurrentScope?.RunId;
         var agentName = SaStepMapping.ToAgentName(irStepName);
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        object output;
-        var usedFallback = false;
 
+        object output;
         try
         {
             output = await CallSaServiceAsync(
@@ -83,9 +130,8 @@ public sealed class SaOrchestratorAdapter : ISaOrchestratorAdapter, ITransient
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "sa-service 调用失败，使用本地回退: {Step} event={EventId}", irStepName, eventId);
-            output = BuildFallbackOutput(irStepName, eventId);
-            usedFallback = true;
+            _logger.LogError(ex, "sa-service 调用失败: {Step} event={EventId}", irStepName, eventId);
+            throw Oops.Bah($"sa-service 步骤 {irStepName} 失败 (event={eventId}): {ex.Message}");
         }
 
         sw.Stop();
@@ -96,7 +142,6 @@ public sealed class SaOrchestratorAdapter : ISaOrchestratorAdapter, ITransient
             step = irStepName,
             agent = agentName,
             output,
-            usedFallback,
         }, JsonOptions);
 
         await _irEventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
@@ -114,7 +159,6 @@ public sealed class SaOrchestratorAdapter : ISaOrchestratorAdapter, ITransient
             IrStepName = irStepName,
             AgentName = agentName,
             Output = output,
-            UsedFallback = usedFallback,
             DurationMs = (int)sw.ElapsedMilliseconds,
         };
     }
@@ -149,8 +193,149 @@ public sealed class SaOrchestratorAdapter : ISaOrchestratorAdapter, ITransient
         var response = await client.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadFromJsonAsync<SaRunStepResponse>(JsonOptions, ct)
-            ?? throw new InvalidOperationException("sa-service 返回空响应");
+            ?? throw Oops.Oh("sa-service 返回空响应");
         return body.Output ?? new { };
+    }
+
+    // ============================================================
+    // RunProjectAsync — 玛维斯算法正确入口
+    // 调 /api/sa/run-async（立即返回 taskId），轮询 /api/sa/tasks/:taskId
+    // 直至 completed 或 failed（最多 30 分钟）。
+    // ============================================================
+    public async Task<SaProjectResult> RunProjectAsync(
+        string tenantId,
+        string projectId,
+        long pipelineId,
+        string requirementText,
+        IReadOnlyList<SaSkeletonEventInput>? skeletonEvents,
+        string? runId,
+        CancellationToken ct)
+    {
+        var projectIdNum = long.TryParse(projectId, out var p) ? p : pipelineId;
+        var baseUrl = _configuration["SaService:BaseUrl"] ?? "http://localhost:3001";
+        var client = _httpClientFactory.CreateClient("SaService");
+        client.Timeout = TimeSpan.FromSeconds(30); // 单次 HTTP 请求超时（非整体超时）
+
+        // ── 1. 发起异步 SA 任务 ──
+        using var startReq = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl.TrimEnd('/')}/api/sa/run-async");
+        startReq.Headers.TryAddWithoutValidation("X-Tenant-Id", tenantId);
+        if (!string.IsNullOrEmpty(runId))
+            startReq.Headers.TryAddWithoutValidation("X-Skill-Run-Id", runId);
+
+        startReq.Content = JsonContent.Create(new
+        {
+            tenantId,
+            projectId = projectIdNum,
+            pipelineId,
+            requirementText,
+            skeletonBusinessEvents = skeletonEvents?.Select(e => new
+            {
+                eventId = e.EventId,
+                eventName = e.EventName,
+                complexityHint = e.ComplexityHint,
+            }).ToList(),
+            userId = "analyst-skill",
+            runId,
+        }, options: JsonOptions);
+
+        var startResp = await client.SendAsync(startReq, ct);
+        startResp.EnsureSuccessStatusCode();
+        var startBody = await startResp.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
+        var taskId = startBody.GetProperty("taskId").GetString()
+            ?? throw Oops.Oh("sa-service run-async 未返回 taskId");
+
+        _logger.LogInformation("SA 异步任务已启动 taskId={TaskId} project={ProjectId}", taskId, projectId);
+
+        // ── 2. 轮询直到完成（最多 30 分钟，每 15s 一次）──
+        var deadline = DateTimeOffset.UtcNow.AddMinutes(30);
+        var pollUrl = $"{baseUrl.TrimEnd('/')}/api/sa/tasks/{taskId}";
+
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            ct.ThrowIfCancellationRequested();
+            await Task.Delay(TimeSpan.FromSeconds(15), ct);
+
+            JsonElement pollBody;
+            try
+            {
+                var pollResp = await client.GetAsync(pollUrl, ct);
+                if (!pollResp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("SA 轮询返回 {Status}，继续等待", pollResp.StatusCode);
+                    continue;
+                }
+                pollBody = await pollResp.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "SA 轮询请求失败，继续等待");
+                continue;
+            }
+
+            var status = pollBody.TryGetProperty("status", out var s) ? s.GetString() : null;
+
+            if (status == "completed")
+            {
+                _logger.LogInformation("SA 任务完成 taskId={TaskId}", taskId);
+                return ParseSaProjectResult(pollBody);
+            }
+            if (status == "failed")
+            {
+                var errMsg = pollBody.TryGetProperty("error", out var e) ? e.GetString() : "SA 流水线失败";
+                throw Oops.Bah($"SA 分析失败 (taskId={taskId}): {errMsg}");
+            }
+
+            _logger.LogDebug("SA 任务运行中 taskId={TaskId} status={Status}", taskId, status);
+        }
+
+        throw Oops.Bah($"SA 分析超时（30分钟）taskId={taskId} project={projectId}");
+    }
+
+    private SaProjectResult ParseSaProjectResult(JsonElement pollBody)
+    {
+        var result = pollBody.TryGetProperty("result", out var r) ? r : pollBody;
+        var durationMs = result.TryGetProperty("metadata", out var meta)
+            && meta.TryGetProperty("totalDuration", out var dur)
+            ? dur.GetInt32() : 0;
+
+        var eventResults = new List<SaEventResult>();
+
+        if (result.TryGetProperty("eventResults", out var eventsEl)
+            && eventsEl.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var ev in eventsEl.EnumerateArray())
+            {
+                var eventId = ev.TryGetProperty("eventId", out var eid) ? eid.ToString() : "";
+                var eventName = ev.TryGetProperty("eventName", out var en) ? en.GetString() ?? "" : "";
+                var complexity = ev.TryGetProperty("complexity", out var cx) ? cx.GetString() ?? "simple" : "simple";
+                var error = ev.TryGetProperty("error", out var err) && err.ValueKind != JsonValueKind.Null
+                    ? err.GetString() : null;
+
+                var steps = new Dictionary<string, object>(StringComparer.Ordinal);
+                if (ev.TryGetProperty("steps", out var stepsEl) && stepsEl.ValueKind == JsonValueKind.Object)
+                {
+                    foreach (var prop in stepsEl.EnumerateObject())
+                    {
+                        steps[prop.Name] = JsonSerializer.Deserialize<object>(prop.Value.GetRawText(), JsonOptions) ?? new { };
+                    }
+                }
+
+                eventResults.Add(new SaEventResult
+                {
+                    EventId = eventId,
+                    EventName = eventName,
+                    Complexity = complexity,
+                    Steps = steps,
+                    Error = error,
+                });
+            }
+        }
+
+        return new SaProjectResult
+        {
+            EventResults = eventResults,
+            TotalDurationMs = durationMs,
+        };
     }
 
     private static object? TryParseJson(string json)
@@ -158,20 +343,6 @@ public sealed class SaOrchestratorAdapter : ISaOrchestratorAdapter, ITransient
         try { return JsonSerializer.Deserialize<object>(json, JsonOptions); }
         catch { return json; }
     }
-
-    private static object BuildFallbackOutput(string irStepName, string eventId) => irStepName switch
-    {
-        "DomainModel" => new { eventId, domain = "general", entities = new[] { eventId } },
-        "AggregateDesign" => new { eventId, aggregates = new[] { new { name = eventId, root = true } } },
-        "EventCatalog" => new { eventId, events = new[] { new { name = eventId, trigger = "user" } } },
-        "CommandQuery" => new { eventId, commands = Array.Empty<object>(), queries = Array.Empty<object>() },
-        "IntegrationPoints" => new { eventId, integrations = Array.Empty<object>() },
-        "WorkflowSpec" => new { eventId, states = new[] { "Draft", "Approved" }, transitions = Array.Empty<object>() },
-        "UISpec" => new { eventId, screens = new[] { new { name = $"{eventId}Form", fields = Array.Empty<object>() } } },
-        "DataModel" => new { eventId, tables = new[] { new { name = eventId, columns = Array.Empty<object>() } } },
-        "DeliveryChecklist" => new { eventId, checklist = new[] { "spec-complete", "ioi-passed" } },
-        _ => new { eventId, step = irStepName, stub = true },
-    };
 
     private sealed class SaRunStepResponse
     {

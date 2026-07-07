@@ -82,6 +82,11 @@ public class DesignSkillsApiService : IDynamicApiController, ITransient
     public Task<object> RunSystemDesignAsync(long pipelineId, [FromBody] SkillRunRequest? request)
         => RunSingleSkillAsync(DesignSkillIds.SystemDesign, pipelineId, request);
 
+    /// <summary>ADR-005 P3：总体设计澄清 Skill（两阶段，提问 + 阶段二约束引擎锁定）。</summary>
+    [HttpPost("system-design-clarification/{pipelineId:long}/run")]
+    public Task<object> RunSystemDesignClarificationAsync(long pipelineId, [FromBody] SkillRunRequest? request)
+        => RunSingleSkillAsync(DesignSkillIds.SystemDesignClarification, pipelineId, request);
+
     private async Task<object> RunOrchestratorAsync(long pipelineId, SkillRunRequest? request)
     {
         var runId = Guid.NewGuid().ToString("N");

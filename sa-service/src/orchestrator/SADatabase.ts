@@ -28,7 +28,8 @@ export class InMemorySADatabase implements ISADatabase {
   // ========================================================
   async saveScope(scope: ScopeOutput, ctx: SAContext): Promise<{ id: number }> {
     const id = this.nextId++;
-    this.scopes.set(id, { id, ...scope, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    const pipelineId = ctx.pipelineId ?? ctx.projectId;
+    this.scopes.set(id, { id, ...scope, projectId: ctx.projectId, pipelineId, tenantId: ctx.tenantId });
     return { id };
   }
 
@@ -62,7 +63,8 @@ export class InMemorySADatabase implements ISADatabase {
   }
 
   async saveDecisionTable(dt: DecisionTableOutput, ctx: SAContext, pspecId: number, dictId: number): Promise<{ id: number }> {
-    if (!this.pspecs.has(pspecId)) throw new Error(`强外键违规: sa_pspec(${pspecId}) 不存在`);
+    // pspecId=0 表示"独立 DecisionTable，无关联 PSpec"（complex 事件并发运行时允许）
+    if (pspecId !== 0 && !this.pspecs.has(pspecId)) throw new Error(`强外键违规: sa_pspec(${pspecId}) 不存在`);
     const id = this.nextId++;
     this.decisionTables.set(id, { id, ...dt, pspecId, dictId, projectId: ctx.projectId, tenantId: ctx.tenantId });
     return { id };

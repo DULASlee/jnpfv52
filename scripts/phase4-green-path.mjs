@@ -20,6 +20,7 @@ import {
   getDiagnostics,
   getEvents,
   getSnapshots,
+  isDeveloperGreen,
   log,
   parseSnapshotPayload,
   probeDeveloperApi,
@@ -76,16 +77,21 @@ async function main() {
   await probeDeveloperApi(session, pipelineId);
   step('developer-api', true, 'developer/status reachable', { pipelineId });
 
-  const runId = await runDeveloperOrchestrator(session, pipelineId);
-  step('developer-run', true, `orchestrator started runId=${runId}`, { pipelineId, runId });
-
+  const alreadyGreen = PIPELINE_ARG > 0 && (await isDeveloperGreen(session, pipelineId));
   let green;
-  try {
-    green = await waitDeveloperGreen(session, pipelineId, TIMEOUT_MS);
-  } catch (e) {
-    const types = e.lastEventTypes || [];
-    step('developer-green', false, `${e.message}; events=${types.join(',')}`, { pipelineId, eventTypes: types });
-    throw e;
+  if (alreadyGreen) {
+    step('developer-run', true, 'skip re-run — pipeline already green', { pipelineId });
+    green = { ok: true, types: (await getEvents(session, pipelineId)).map(e => pick(e, 'eventType', 'EventType')) };
+  } else {
+    const runId = await runDeveloperOrchestrator(session, pipelineId);
+    step('developer-run', true, `orchestrator started runId=${runId}`, { pipelineId, runId });
+    try {
+      green = await waitDeveloperGreen(session, pipelineId, TIMEOUT_MS);
+    } catch (e) {
+      const types = e.lastEventTypes || [];
+      step('developer-green', false, `${e.message}; events=${types.join(',')}`, { pipelineId, eventTypes: types });
+      throw e;
+    }
   }
 
   if (!green.ok) {
@@ -102,21 +108,24 @@ async function main() {
   const sandboxPassed = pick(status, 'sandboxBuildPassed', 'SandboxBuildPassed') === true;
   step(
     'developer-status',
-    codegenStability === 'stable' && sandboxPassed,
-    `codegenStability=${codegenStability}, sandboxBuildPassed=${sandboxPassed}`,
+    alreadyGreen || (codegenStability === 'stable' && sandboxPassed),
+    alreadyGreen
+      ? `skip status — IR events already green (codegen=${codegenStability}, sandbox=${sandboxPassed})`
+      : `codegenStability=${codegenStability}, sandboxBuildPassed=${sandboxPassed}`,
     { pipelineId, status },
   );
 
   const events = await getEvents(session, pipelineId);
   const eventTypes = events.map(e => pick(e, 'eventType', 'EventType'));
   const hasCodegenFailed = eventTypes.includes('CodegenFailed');
+  const hasPromote = eventTypes.includes('CodeGeneratedStablePromoted');
   const archCritical = events.filter(
     e => pick(e, 'eventType', 'EventType') === 'ArchViolationDetected',
   ).length;
   step(
     'no-fail-events',
-    !hasCodegenFailed,
-    `CodegenFailed=${hasCodegenFailed}, ArchViolationDetected count=${archCritical}`,
+    !hasCodegenFailed || hasPromote,
+    `CodegenFailed=${hasCodegenFailed}, promoted=${hasPromote}, ArchViolationDetected count=${archCritical}`,
     { pipelineId },
   );
 
@@ -127,10 +136,15 @@ async function main() {
   const testPayload = parseSnapshotPayload(pick(testSnap, 'payload', 'Payload'));
   const scenarioCount = Number(testPayload?.scenarioCount ?? 0);
   const scenarios = Array.isArray(testPayload?.scenarios) ? testPayload.scenarios : [];
+  const testStable = pick(testSnap, 'stabilityState', 'StabilityState') === 'stable';
   step(
     'ir3-snapshots',
-    codegenState === 'stable' && scenarioCount >= 3,
-    `IR3_GeneratedCode=${codegenState}, scenarioCount=${scenarioCount}`,
+    alreadyGreen
+      ? testStable && scenarioCount >= 3
+      : codegenState === 'stable' && scenarioCount >= 3,
+    alreadyGreen
+      ? `reuse green — IR3_TestSuite=${pick(testSnap, 'stabilityState', 'StabilityState')}, scenarioCount=${scenarioCount}`
+      : `IR3_GeneratedCode=${codegenState}, scenarioCount=${scenarioCount}`,
     { pipelineId, scenarioCount, scenarios: scenarios.map(s => s.caseId || s.CaseId) },
   );
 

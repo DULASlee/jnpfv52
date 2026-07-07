@@ -11,6 +11,7 @@ export { decideSteps, runScopeStep, StepDecision, EventComplexity } from './Step
 export { BaseAgent } from './BaseAgent';
 
 export { InMemorySADatabase } from './SADatabase';
+export { SqlServerSADatabase } from './SqlServerSADatabase';
 
 export {
   SARequest, SAOutput, SAContext, SAConfig, DEFAULT_SA_CONFIG,

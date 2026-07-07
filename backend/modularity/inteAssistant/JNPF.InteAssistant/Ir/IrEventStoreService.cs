@@ -1,9 +1,11 @@
 using System.Text.Json;
 using JNPF.DependencyInjection;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
+using JNPF.InteAssistant.Infrastructure.Telemetry;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Infrastructure.Messaging;
+using JNPF.InteAssistant.Runtime;
 using Microsoft.Extensions.Logging;
 using SqlSugar;
 
@@ -114,11 +116,15 @@ public sealed class IrEventStoreService : IIrEventStoreService, ITransient
         bool evaluateStabilityGate,
         CancellationToken ct)
     {
+        // P6-O01 ir.append OTel Span
+        using var activity = StudioActivitySource.StartIrAppend(request.EventType, request.FragmentId);
         var evt = new AiIrEventEntity
         {
             Id = Guid.NewGuid().ToString("N"),
             ProjectId = projectId,
             TenantId = tenantId,
+            // 三元组血缘:PipelineId 从 SkillExecutionScope 透传（历史兜底 projectId）
+            PipelineId = SkillExecutionScope.CurrentScope?.PipelineId.ToString() ?? projectId,
             EventType = request.EventType,
             FragmentId = request.FragmentId,
             FragmentType = request.FragmentType,
@@ -256,9 +262,18 @@ public sealed class IrEventStoreService : IIrEventStoreService, ITransient
 
     private async Task EnsureRouteAsync(string projectId, string tenantId, CancellationToken ct)
     {
-        var exists = await _db.Queryable<AiRouteTableEntity>()
-            .AnyAsync(x => x.ProjectId == projectId && x.TenantId == tenantId, ct);
-        if (exists) return;
+        var existing = await _db.Queryable<AiRouteTableEntity>()
+            .FirstAsync(x => x.ProjectId == projectId && x.TenantId == tenantId, ct);
+
+        if (existing != null)
+        {
+            // P6-R01 心跳更新（替代 etcd，务实版：每次 IR 事件追加时刷新 LastHeartbeat）
+            await _db.Updateable<AiRouteTableEntity>()
+                .SetColumns(x => x.LastHeartbeat == DateTime.UtcNow)
+                .Where(x => x.Id == existing.Id)
+                .ExecuteCommandAsync(ct);
+            return;
+        }
 
         await _db.Insertable(new AiRouteTableEntity
         {
@@ -269,8 +284,10 @@ public sealed class IrEventStoreService : IIrEventStoreService, ITransient
             SandboxType = "shared",
             SandboxStatus = "creating",
             EtcdKey = $"/ai/{tenantId}/{projectId}/sandbox",
-            SandboxEndpoint = StudioWorkspaceHelper.GetPipelinePath(tenantId, projectId),
+            // greenfield 自锚定：project 创建时 pipelineId ≡ projectId
+            SandboxEndpoint = StudioWorkspaceHelper.GetPipelinePath(tenantId, projectId, projectId),
             CreatedAt = DateTime.UtcNow,
+            LastHeartbeat = DateTime.UtcNow,
         }).ExecuteCommandAsync(ct);
     }
 

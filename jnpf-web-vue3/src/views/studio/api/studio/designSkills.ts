@@ -95,6 +95,14 @@ export function runSystemDesignSkill(pipelineId: number, data?: { providerCode?:
   });
 }
 
+/** ADR-005 P3：总体设计澄清 Skill（两阶段，提问 + 阶段二约束引擎锁定）。 */
+export function runSystemDesignClarificationSkill(pipelineId: number, data?: { providerCode?: string }) {
+  return defHttp.post<DesignRunResult>({
+    url: `/api/studio/skills/system-design-clarification/${pipelineId}/run`,
+    data: data ?? {},
+  });
+}
+
 export function getLlmBudget(projectId: string) {
   return defHttp.get<LlmBudgetInfo>({
     url: `/api/studio/llm/budget/${projectId}`,

@@ -59,5 +59,8 @@ public class WebComponent : IWebComponent
         // 门控管道配置（支持热重载）
         builder.Services.Configure<JNPF.InteAssistant.Gates.GatePipelineOptions>(
             builder.Configuration.GetSection(JNPF.InteAssistant.Gates.GatePipelineOptions.SectionName));
+
+        builder.Services.Configure<JNPF.InteAssistant.Sa.SaPipelineOptions>(
+            builder.Configuration.GetSection(JNPF.InteAssistant.Sa.SaPipelineOptions.SectionName));
     }
 }

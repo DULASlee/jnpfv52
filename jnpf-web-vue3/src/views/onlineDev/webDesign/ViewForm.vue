@@ -96,10 +96,14 @@
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
   import formValidate from '/@/utils/formValidate';
-  import { BasicColumnDesign } from '/@/components/ColumnDesign';
-  import { InterfaceModal } from '/@/components/CommonModal';
   import { getDataInterfaceInfo } from '/@/api/systemData/dataInterface';
   import { sourceTypeOptions, interfaceSystemOptions } from '/@/components/FlowProcess/src/helper/define';
+  import { useLazyComponent } from '/@/hooks/web/useLazyComponent';
+
+  // 设计器组件仅在对应步骤渲染时按需加载
+  const MODULE = 'onlineDev/webDesign/ViewForm';
+  const { component: BasicColumnDesign } = useLazyComponent(() => import('/@/components/ColumnDesign/src/BasicColumnDesign.vue'), MODULE);
+  const { component: InterfaceModal } = useLazyComponent(() => import('/@/components/CommonModal/src/InterfaceModal.vue'), MODULE);
 
   interface State {
     activeStep: number;

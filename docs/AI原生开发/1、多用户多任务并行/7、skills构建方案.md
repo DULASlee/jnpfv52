@@ -1,5 +1,7 @@
 # JNPF-AI 低代码平台：十大 Skill 完整落地计划
 
+> ⚠️ **R12 三元组适配声明（2026-07-07 追加）：** 本文档涉及的所有 Skill 上下文 MUST 携带三元组 `(tenantId, projectId, pipelineId)`；Skill 接口签名中 `projectId` 与 `pipelineId` 是不同语义字段，不可混用。详见 `.cursor/rules/triple-key-iron-law.mdc`（宪法级，永远生效）。
+
 > 版本：v1.0 | 日期：2026-07-03 | 作者：技术架构组
 >
 > 本文档基于以下四份核心设计文档的全量共识编写：
@@ -381,13 +383,13 @@ bugfix-skill 订阅 BugReported
 | 加固项 | 具体措施 |
 |---|---|
 | Token Budget | 实现四级降级策略（绿/黄/红/熔断），按租户设置每日配额 |
-| 四层 Eval Pipeline | 实现组件评估 + 轨迹评估 + 任务完成度 + 端到端业务效果评估 |
+| 四层 Eval Pipeline | 实现组件评估 + 轨迹评估 + 任务完成度 + 端到端业务效果评估 ✅ **已落地（阶段七，[doc 15](./15、全链条第七阶段开发计划.md)）**：`EvalPipelineRunner` L1-L3 确定性 + fail-fast；`LlmJudgeService` L4 跨家族 mimo pass/fail 二元；`JudgeCalibrationService` Cohen's kappa 月度校准 |
 | 可观测性 | 接入 OpenTelemetry，每个 Skill 调用 + 每个 IR 事件 + 每个 SA 步骤全链路 Trace（**承接** [`9、全链条第二阶段开发计划.md`](./9、全链条第二阶段开发计划.md) §14.2 的 `runId` 关联 ID，扩展为 W3C traceparent 跨进程传播） |
 | 模型路由优化 | 分类/摘要用小模型，核心推理用强模型，动态切换 |
-| 记忆遗忘机制 | 基于访问频次 + 重要性计算保留分数，低分记忆压缩或删除 |
+| 记忆遗忘机制 | 基于访问频次 + 重要性计算保留分数，低分记忆压缩或删除 ✅ **已落地（阶段七务实版）**：`MemoryRetentionService` 失败 trace 回写 GoldenSet（生产 trace→eval 闭环），不删 IR events |
 | 沙箱自动扩缩容 | 基于队列深度自动扩容 Skill Worker 实例（初始：每租户最多 3 并发项目；**Phase 2.5** 先落地静态配额，阶段六升级为动态扩缩容） |
-| 人工抽检 | 建立 Skill 产出的人工评审通道，校准 LLM-as-Judge 偏差 |
-| Skill 质量排行榜 | 统计每个 Skill 的成功率、平均 token 消耗、用户满意度，指导模型和 Prompt 优化 |
+| 人工抽检 | 建立 Skill 产出的人工评审通道，校准 LLM-as-Judge 偏差 ✅ **已落地（阶段七）**：`SkillReviewApiService` 双写 `BASE_AI_SKILL_REVIEW` + `SkillReviewRecorded` IR 事件；inter-rater 争议识别 |
+| Skill 质量排行榜 | 统计每个 Skill 的成功率、平均 token 消耗、用户满意度，指导模型和 Prompt 优化 ✅ **已落地（阶段七）**：`SkillQualityBoardService` SQL 聚合 grade A/B/C/D；IR 观测台 Tab「Skill 质量」 |
 
 **验收标准：**
 1. 10 个并发项目同时运行，系统稳定无崩溃，Token 总消耗在预算内
@@ -1959,7 +1961,7 @@ IR事件流触发 → Skill激活（按信息需求声明判定）
 | 代码路径 | `backend/modularity/`（禁止 AI 修改） | `backend/modularity/JNPF.AI/`（AI 专属模块） | Phase A A3 Hook 白名单 |
 | 前端路由 | `/jnpf/` 路由（手工功能） | `/jnpf/ai/` 路由（AI 功能） | Vue Router 命名空间 |
 | API 路由 | `/api/{module}/` | `/api/ai/` | ASP.NET 路由前缀 |
-| 文件路径 | `{SystemPath}/CodeGenerate/` | `{SystemPath}/StudioWorkspace/{tenantId}/{pipelineId}/` | Phase A A2 路径切换 |
+| 文件路径 | `{SystemPath}/CodeGenerate/` | `{SystemPath}/StudioWorkspace/{tenantId}/{projectId}/{pipelineId}/`（R12 四层，2026-07-07 修订） | Phase A A2 路径切换 |
 | 功能开关 | 始终开启 | `Features:AIEnabled` Feature Flag 控制 | `appsettings.json` |
 
 手工平台回归测试门控：每次 AI 模块变更后，必须执行以下验证：

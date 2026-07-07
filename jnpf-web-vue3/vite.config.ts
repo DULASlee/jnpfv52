@@ -8,7 +8,6 @@ import { createProxy } from './build/vite/proxy';
 import { wrapperEnv } from './build/utils';
 import { createVitePlugins } from './build/vite/plugin';
 import { OUTPUT_DIR } from './build/constant';
-import { visualizer } from 'rollup-plugin-visualizer';
 
 function pathResolve(dir: string) {
   return resolve(process.cwd(), '.', dir);
@@ -77,27 +76,57 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
       target: 'es2015',
       cssTarget: 'chrome80',
       outDir: OUTPUT_DIR,
-      minify: 'terser',
-      terserOptions: {
-        compress: {
-          keep_infinity: true,
-          // Used to delete console in production environment
-          drop_console: VITE_DROP_CONSOLE,
-          drop_debugger: true,
-        },
-      },
+      // esbuild 压缩速度比 terser 快 10-100×，内存占用低一个数量级
+      minify: 'esbuild',
+      // 关闭 sourcemap — 生成 sourcemap 让 Rollup 内存翻倍
+      sourcemap: false,
       // Turning off reportCompressedSize display can slightly reduce packaging time
       reportCompressedSize: false,
-      chunkSizeWarningLimit: 2000,
+      chunkSizeWarningLimit: 500,
       rollupOptions: {
         input: {
           index: pathResolve('index.html'),
         },
-        // 静态资源分类打包
+        // 限制并行文件操作数，避免 IO 竞争导致内存峰值
+        maxParallelFileOps: 8,
         output: {
           chunkFileNames: 'static/js/[name]-[hash].js',
           entryFileNames: 'static/js/[name]-[hash].js',
           assetFileNames: 'static/[ext]/[name]-[hash].[ext]',
+          // 禁止 Rollup 生成大型内联 asset（如图片 base64），减少内存占用
+          inlineDynamicImports: false,
+          // 手动分包策略：将第三方库与业务代码分离，避免巨型 chunk 撑爆内存
+          manualChunks: (id) => {
+            if (id.includes('node_modules')) {
+              // Vue 生态
+              if (id.includes('/vue/') || id.includes('/pinia/') || id.includes('/vue-router/') || id.includes('/vue-i18n/') || id.includes('/@vue/')) {
+                return 'vendor-vue';
+              }
+              // Ant Design Vue (核心组件库 ~600KB)
+              if (id.includes('/ant-design-vue/')) {
+                return 'vendor-antd';
+              }
+              // @ant-design/icons-vue (独立于 antd 的图标库，~500KB 打包后)
+              if (id.includes('/@ant-design/')) {
+                return 'vendor-icons';
+              }
+              // ECharts + ZRender (图表引擎，~1MB)
+              if (id.includes('/echarts/') || id.includes('/zrender/')) {
+                return 'vendor-echarts';
+              }
+              // 通用工具库
+              if (id.includes('/lodash/') || id.includes('/dayjs/') || id.includes('/axios/') || id.includes('/moment/')) {
+                return 'vendor-utils';
+              }
+              // VueUse (按需加载的大型工具库)
+              if (id.includes('/@vueuse/')) {
+                return 'vendor-vueuse';
+              }
+              // 其余 node_modules 适度收敛，避免碎片化
+              return 'vendor-common';
+            }
+            // 业务代码由 Rollup 基于动态 import() 自动代码分割
+          },
         },
       },
     },
@@ -117,16 +146,8 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
     },
 
     // The vite plugin used by the project. The quantity is large, so it is separately extracted and managed
-    plugins: [
-      ...createVitePlugins(viteEnv, isBuild),
-      // P0-3: 分析 entry chunk 组成
-      visualizer({
-        open: false,
-        filename: 'stats.json',
-        gzipSize: true,
-        json: true,
-      }),
-    ],
+    // visualizer 已由 configVisualizerConfig() 在 REPORT 模式下按需激活，不在此处常驻
+    plugins: [...createVitePlugins(viteEnv, isBuild)],
 
     optimizeDeps: {
       esbuildOptions: {

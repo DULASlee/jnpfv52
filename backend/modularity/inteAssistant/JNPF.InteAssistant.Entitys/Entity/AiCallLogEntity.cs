@@ -90,4 +90,8 @@ public class AiCallLogEntity : TenantCLDSEntityBase
     /// <summary>项目 ID（阶段三 P3-L03）</summary>
     [SugarColumn(ColumnName = "F_ProjectId", IsNullable = true)]
     public string? ProjectId { get; set; }
+
+    /// <summary>流水线 ID(三元组补全,NOT NULL DEFAULT '')</summary>
+    [SugarColumn(ColumnName = "F_PIPELINE_ID")]
+    public string PipelineId { get; set; } = "";
 }

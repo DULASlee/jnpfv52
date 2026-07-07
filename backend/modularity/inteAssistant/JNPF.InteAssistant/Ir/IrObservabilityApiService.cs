@@ -144,7 +144,7 @@ public class IrObservabilityApiService : IDynamicApiController, ITransient
             PipelineId = pipelineId,
             ProjectId = projectId,
             TenantId = tenantId,
-            WorkspacePath = StudioWorkspaceHelper.GetPipelinePath(tenantId, projectId),
+            WorkspacePath = StudioWorkspaceHelper.GetPipelinePath(tenantId, projectId, pipelineId.ToString()),
             RouteTable = routes.Select(r => new IrRouteEntryDto
             {
                 Path = r.EtcdKey,
@@ -291,7 +291,12 @@ public class IrObservabilityApiService : IDynamicApiController, ITransient
             && !TenantResolver.IsSuperTenant())
             throw Oops.Oh("跨租户访问被拒绝");
 
-        return (pipelineId.ToString(), pipelineTenantId);
+        // projectId 解析与 PipelineTripleResolver 保持一致：
+        // pipeline.ProjectId 为空时回退到 pipelineId（历史数据 projectId≡pipelineId）
+        var projectId = string.IsNullOrWhiteSpace(pipeline.ProjectId)
+            ? pipelineId.ToString()
+            : pipeline.ProjectId;
+        return (projectId, pipelineTenantId);
     }
 
     private void EnsureDevToolsEnabled()

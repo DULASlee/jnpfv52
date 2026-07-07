@@ -1,3 +1,5 @@
+using JNPF.InteAssistant.Infrastructure.Telemetry;
+using JNPF.Common.Core.MultiTenancy;
 using System.Diagnostics;
 using System.Text.Json;
 using JNPF.DependencyInjection;
@@ -8,6 +10,8 @@ using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Infrastructure.Messaging;
 using JNPF.InteAssistant.Ir;
 using JNPF.InteAssistant.Runtime;
+using JNPF.InteAssistant.Skills.Cognitive;
+using JNPF.InteAssistant.Studio;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using SqlSugar;
@@ -54,6 +58,9 @@ public sealed class SkillRunResult
 
 public sealed class SkillHarness : ISkillHarness, ITransient
 {
+    /// <summary>SqlSugar InitMappingInfo 非线程安全；并行 stage-confirm Skill 落 run 记录时需串行。</summary>
+    private static readonly SemaphoreSlim InsertRunLock = new(1, 1);
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -68,6 +75,8 @@ public sealed class SkillHarness : ISkillHarness, ITransient
     private readonly ISkillRunGuard _runGuard;
     private readonly IPipelineSseChannelHub _sseHub;
     private readonly ISqlSugarClient _db;
+    private readonly IExperienceRecorder _experience;
+    private readonly ISkillDeliverableCoordinator _deliverableCoordinator;
     private readonly ILogger<SkillHarness> _logger;
 
     public SkillHarness(
@@ -80,6 +89,8 @@ public sealed class SkillHarness : ISkillHarness, ITransient
         ISkillRunGuard runGuard,
         IPipelineSseChannelHub sseHub,
         ISqlSugarClient db,
+        IExperienceRecorder experience,
+        ISkillDeliverableCoordinator deliverableCoordinator,
         ILogger<SkillHarness> logger)
     {
         _registry = registry;
@@ -91,6 +102,8 @@ public sealed class SkillHarness : ISkillHarness, ITransient
         _runGuard = runGuard;
         _sseHub = sseHub;
         _db = db;
+        _experience = experience;
+        _deliverableCoordinator = deliverableCoordinator;
         _logger = logger;
     }
 
@@ -108,6 +121,8 @@ public sealed class SkillHarness : ISkillHarness, ITransient
                 .StatusCode(StatusCodes.Status409Conflict);
 
         var sw = Stopwatch.StartNew();
+        // P6-O01 skill.run OTel Span（零依赖，ActivitySource 未注册时返回 null，无开销）
+        using var activity = StudioActivitySource.StartSkillRun(skillId, runId, projectId, tenantId, pipelineId);
         using var execScope = SkillExecutionScope.Begin(
             runId, tenantId, projectId, pipelineId, skillId, ct);
         using var logScope = _skillLogger.BeginScope(runId, tenantId, projectId, pipelineId, skillId);
@@ -115,7 +130,7 @@ public sealed class SkillHarness : ISkillHarness, ITransient
         var collected = new List<AppendIrEventRequest>();
         long tokenConsumed = 0;
 
-        await InsertRunAsync(runId, tenantId, projectId, skillId, ct);
+        await InsertRunAsync(runId, tenantId, projectId, pipelineId, skillId, ct);
 
         try
         {
@@ -169,6 +184,8 @@ public sealed class SkillHarness : ISkillHarness, ITransient
             _skillLogger.LogPhase("ValidateOutput", "passed", sw.ElapsedMilliseconds);
 
             await CompleteRunAsync(runId, "completed", tokenConsumed, collected.Count, null, ct);
+            await _deliverableCoordinator.AfterSkillCompletedAsync(
+                skillId, tenantId, pipelineId, projectId, collected, ct);
             PushSkillProgress(pipelineId, skillId, runId, "completed", 100, "Skill 完成");
 
             return new SkillRunResult
@@ -189,6 +206,7 @@ public sealed class SkillHarness : ISkillHarness, ITransient
                 ex.Phase);
             _skillLogger.LogPhase("RunAborted", ex.Phase, sw.ElapsedMilliseconds, message: ex.Message);
             await CompleteRunAsync(runId, "aborted", tokenConsumed, collected.Count, ex.Message, ct);
+            await TryRecordFailureAsync(projectId, tenantId, skillId, runId, ex, ct);
             PushSkillProgress(pipelineId, skillId, runId, "aborted", 100, ex.Message);
             throw;
         }
@@ -197,6 +215,7 @@ public sealed class SkillHarness : ISkillHarness, ITransient
             _logger.LogError(ex, "Skill run failed: {SkillId} pipeline={PipelineId}", skillId, pipelineId);
             _skillLogger.LogPhase("RunFailed", "error", sw.ElapsedMilliseconds, message: ex.Message);
             await CompleteRunAsync(runId, "failed", tokenConsumed, collected.Count, ex.Message, ct);
+            await TryRecordFailureAsync(projectId, tenantId, skillId, runId, ex, ct);
             PushSkillProgress(pipelineId, skillId, runId, "failed", 100, ex.Message);
             throw;
         }
@@ -204,6 +223,8 @@ public sealed class SkillHarness : ISkillHarness, ITransient
         {
             _skillLogger.LogPhase("RunFailed", "cancelled", sw.ElapsedMilliseconds);
             await CompleteRunAsync(runId, "cancelled", tokenConsumed, collected.Count, "cancelled", ct);
+            await TryRecordFailureAsync(projectId, tenantId, skillId, runId,
+                new OperationCanceledException("Skill run cancelled"), ct);
             throw;
         }
         finally
@@ -228,24 +249,34 @@ public sealed class SkillHarness : ISkillHarness, ITransient
 
     private async Task<string> LoadUserRequirementAsync(long pipelineId, CancellationToken ct)
     {
+        var tenantId = TenantResolver.Resolve().ToString();
         var msg = await _db.Queryable<AiPipelineMessageEntity>()
-            .Where(x => x.PipelineId == pipelineId.ToString() && x.Role == "user")
+            .Where(x => x.PipelineId == pipelineId.ToString() && x.TenantId == tenantId && x.Role == "user")
             .OrderByDescending(x => x.CreatorTime)
             .FirstAsync(ct);
         return msg?.Content ?? string.Empty;
     }
 
-    private async Task InsertRunAsync(string runId, string tenantId, string projectId, string skillId, CancellationToken ct)
+    private async Task InsertRunAsync(string runId, string tenantId, string projectId, long pipelineId, string skillId, CancellationToken ct)
     {
-        await _db.Insertable(new AiSkillRunEntity
+        await InsertRunLock.WaitAsync(ct);
+        try
         {
-            Id = runId,
-            TenantId = tenantId,
-            ProjectId = projectId,
-            SkillId = skillId,
-            Status = "running",
-            StartedAt = DateTime.UtcNow,
-        }).ExecuteCommandAsync(ct);
+            await _db.Insertable(new AiSkillRunEntity
+            {
+                Id = runId,
+                TenantId = tenantId,
+                ProjectId = projectId,
+                PipelineId = pipelineId.ToString(),
+                SkillId = skillId,
+                Status = "running",
+                StartedAt = DateTime.UtcNow,
+            }).ExecuteCommandAsync(ct);
+        }
+        finally
+        {
+            InsertRunLock.Release();
+        }
     }
 
     private async Task CompleteRunAsync(
@@ -262,6 +293,23 @@ public sealed class SkillHarness : ISkillHarness, ITransient
             })
             .Where(x => x.Id == runId)
             .ExecuteCommandAsync(ct);
+    }
+
+    private async Task TryRecordFailureAsync(
+        string projectId, string tenantId, string skillId, string runId, Exception ex, CancellationToken ct)
+    {
+        try
+        {
+            await _experience.RecordFailureAsync(
+                projectId, tenantId, skillId, runId,
+                SkillExperienceClassifier.Classify(ex),
+                ex.Message,
+                ct);
+        }
+        catch (Exception recordEx)
+        {
+            _logger.LogWarning(recordEx, "SkillFailureRecorded 写入失败（非阻断） runId={RunId}", runId);
+        }
     }
 
     private void PushSkillProgress(long pipelineId, string skillId, string runId, string phase, int percent, string message)

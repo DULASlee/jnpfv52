@@ -3,6 +3,9 @@ using JNPF.InteAssistant.Ir;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Sa;
 using JNPF.InteAssistant.Runtime;
+using JNPF.InteAssistant.Interfaces;
+using JNPF.InteAssistant.Skills.Cognitive;
+using JNPF.InteAssistant.Skills.Cognitive.Mcp;
 using Microsoft.Extensions.Configuration;
 
 namespace JNPF.Tests.PhaseB;
@@ -114,7 +117,7 @@ public static class IrPhase2SkillTests
 
     private static void TestPmSkill_ValidateOutput()
     {
-        var pm = new PmSkillService(null!, null!, null!);
+        var pm = new PmSkillService(new FakePmToolkit(), null!);
         var result = pm.ValidateOutputAsync(new[]
         {
             new JNPF.InteAssistant.Entitys.Dto.Ir.AppendIrEventRequest
@@ -126,6 +129,14 @@ public static class IrPhase2SkillTests
 
         if (!result.IsValid)
             throw new InvalidOperationException("PmSkill ValidateOutput failed");
+    }
+
+    private sealed class FakePmToolkit : ICognitiveSkillToolkit
+    {
+        public ILlmGatewayService Llm => null!;
+        public IMcpClient Mcp => null!;
+        public IEventStream Events => null!;
+        public IExperienceRecorder Experience => null!;
     }
 
     private static void TestCompletenessGate_ExcludesCurrentRun()

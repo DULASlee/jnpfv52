@@ -35,7 +35,7 @@ public class DocumentMergerService : IDocumentMerger, ITransient
     /// <inheritdoc/>
     public Task<MergedDocument> MergeAsync(
         string projectName,
-        Dictionary<string, SubAgentResult> subAgentResults,
+        IReadOnlyDictionary<string, SubAgentResult> subAgentResults,
         CancellationToken ct = default)
     {
         var chapters = new Dictionary<string, string>();

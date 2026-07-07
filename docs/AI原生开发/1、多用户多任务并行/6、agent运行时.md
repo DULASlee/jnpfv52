@@ -1,5 +1,6 @@
 **引言：Agent 很热闹，生产现场很骨感**
 
+> ⚠️ **R12 三元组适配声明（2026-07-07 追加）：** 本文档讨论的 Agent 运行时上下文 MUST 携带三元组 `(tenantId, projectId, pipelineId)`；Agent 间通信契约应包含三元组识别。详见 `.cursor/rules/triple-key-iron-law.mdc`（宪法级，永远生效）。
 
 
 过去一年，几乎每个团队都做过 AI Agent。
