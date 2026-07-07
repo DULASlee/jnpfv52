@@ -22,94 +22,15 @@ JNPF v5.2 低代码平台全栈工程师。 技术栈：.NET 8 + SqlSugar + Dapp
 
 **排除步骤**：当一个问题耗时超过 10 分钟仍未解决，MUST 停止修改源码，切换到数据采集模式——在数据链路的关键节点采集实际值，追踪到哪个节点的输出偏离预期。修复那个节点，而非下游节点。**猜 3 次不行就停手抓数据，不要再猜第 4 次。**
 
-### 🔧 Data-Driven Debug 工具链（四件套 + Phase B 增强）
+### Data-Driven Debug 工具链 → souls/debugger/soul.md
 
-> **完整技能：** `data-driven-debug`（`/data-driven-debug` 或 S5 铁律自动触发）
-> **执行手册：** `.claude/rules/testing-toolchain.md` §场景 D
-
-| 症状 | 工具 | 命令 |
-|------|------|------|
-| **前端白屏/无响应/样式错乱** | full-fidelity-debug | `node scripts/lib/full-fidelity-debug.mjs --login --url=...` |
-| **快速录 GIF 给 D爷看** | visual-debug | `node scripts/lib/visual-debug.mjs --login --url=... --duration=15` |
-| **API 返回 500/数据不对** | agent-probe | `node scripts/lib/probe.mjs --trace-sql GET /api/...` |
-| **后端运行时变量值/调用栈** | netcoredbg-mcp | Agent 直接 attach 到 JNPF 进程 |
-| **任何异常自动记录** | DiagnosticsLog | `cat backend/.claude/diagnostics/session-*.jsonl` |
-| **不确定是否老问题** | **mistake-rag** (新) | `node scripts/lib/mistake-rag.mjs "错误关键词"` |
-| **测试失败匹配历史修复** | **mistake-rag** (新) | `cat error.log \| node scripts/lib/mistake-rag.mjs --stdin` |
-| **需要完整 HAR + DOM + 步骤链路** | **full-fidelity-debug** (新) | 5 层数据一次性采集，Agent 不重跑即可诊断 |
-
-**数据采集优先级：** full-fidelity-debug（最全） > visual-debug（轻量录屏） > mistake-rag（历史匹配） > agent-probe（API 诊断） > netcoredbg-mcp（进程内调试）
-
-**错误发生后 MUST 先查错题本：**
-```powershell
-node scripts/lib/mistake-rag.mjs "具体错误信息"        # 交互式
-node scripts/lib/mistake-rag.mjs --json "ReferenceError" # JSON 供 Agent 消费
-```
+四件套（full-fidelity-debug / visual-debug / agent-probe / netcoredbg-mcp）+ mistake-rag + 采集优先级 + 错题本查询详见 `.claude/souls/debugger/soul.md` §10。
 
 ---
 
-## 🔄 自动测试 · 自动修复闭环（Dev-Deploy-Debug Loop）
+## 🔄 自动测试闭环 → souls/tester/soul.md
 
-> **常驻规则：** Cursor → `.cursor/rules/auto-test-fix-loop.mdc`（`alwaysApply`）· Claude → 本节 + `.claude/skills/jnpf-api-cli/SKILL.md`
-
-**目标：** Agent 自动循环「编码 → 编译 → HTTP 断言 → 失败则修复 → 重跑」，**不依赖手点浏览器登录**（与业界 AI 低代码平台 Python 脚本模式一致）。
-
-### 标准闭环（每次改代码后）
-
-```
-1. 编译/类型
-   cd backend && dotnet build
-   cd jnpf-web-vue3 && pnpm type-check    # 若改前端（Studio 默认；legacy 用 type-check:full）
-
-2. 登录冒烟（Token 缓存 scripts/.jnpf-session.json）
-   node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser
-
-3. 快 API 断言（秒级 — **首选**）
-   E2E_PIPELINE_ID=<id> pnpm test:api
-
-4. 长链 / evidence（分钟级 — **按需**，Skill watch / 新建 pipeline）
-   node scripts/phase-sup-s2-e2e.mjs <分步>
-   node scripts/phase-sup-s34-e2e.mjs / phase4-green-path.mjs 等
-
-5. FAIL → systematic-debugging → 读响应体/exit code → 修代码 → 回到 1（≤3 轮）
-6. PASS → 可声称该层验证通过
-7. 若改动了前端 UI → 补 Playwright 截图（.claude/evidence/）
-```
-
-> **工具选型唯一信源：** `.cursor/rules/testing-toolchain.mdc`
-> **AI 模型执行手册（场景驱动）：** `.claude/rules/testing-toolchain.md`
-> **知识库：** `openspec/specs/studio-e2e-toolchain/spec.md`
-
-### 工具链
-
-| 文件 | 用途 |
-|------|------|
-| `tests/api/studio-s2.test.mjs` | Vitest 结构化断言（`pnpm test:api`） |
-| `api-tests/http/*.http` | REST Client 快探（`pnpm sync:http-env`） |
-| `scripts/lib/jnpf-auth.mjs` | 核心库：MD5+AES 登录、Token 缓存 |
-| `scripts/jnpf-api.mjs` | CLI 任意 API |
-| `scripts/phase-sup-s2-e2e.mjs` | 长链分步 + evidence（**非日常默认**） |
-| `scripts/README-api-cli.md` | 完整说明 |
-
-### 登录协议（与 PC 前端一致）
-
-```
-明文密码 → MD5(hex) → AES-128-ECB(App.json AesKey) → hex
-POST /api/oauth/Login  (application/x-www-form-urlencoded)
-Header: jnpf-origin: pc
-```
-
-环境变量：`JNPF_API_URL`（默认 `http://localhost:5000`）· `JNPF_ACCOUNT` · `JNPF_PASSWORD` · `JNPF_CIPHER_KEY`
-
-### 禁止
-
-- ❌ `/api/auth/login`（不存在）
-- ❌ 手点浏览器做 API 冒烟
-- ❌ 仅 `dotnet build` 通过就声称 Skill/IR 功能完成
-- ❌ **日常仅跑慢速 mjs、跳过 `pnpm test:api`**
-- ❌ `node scripts/phase2-skills-e2e.mjs`（已废弃 exit 1）
-- ❌ 测试失败时不读 HTTP 响应体就改源码
-- ❌ 前端类型检查用 `npx vue-tsc --noEmit`（全量 src OOM；必须用 `pnpm type-check`，见 `.cursor/rules/frontend-typecheck.mdc`）
+Dev-Deploy-Debug Loop（`dotnet build` → `node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser` → `E2E_PIPELINE_ID=311 pnpm test:api`）+ 登录协议（MD5+AES → `/api/oauth/Login`）+ 工具链 + 禁止清单详见 `.claude/souls/tester/soul.md` §7-8。编码侧引用见 `.claude/souls/coder/soul.md` §9。
 
 ---
 
@@ -182,114 +103,50 @@ Header: jnpf-origin: pc
 
 ---
 
-## 论断纪律（宪法级 — 全角色强制，凌驾所有 Soul）
+## 论断纪律（宪法级 — 速记卡）
 
-> **完整条款：** `.claude/rules/assertion-discipline.md`（每次响应自动加载）
-> **加载位置：** `souls/_shared/assertion-discipline.md` → 所有角色 Soul 共同继承
+> **完整条款（自动加载）：** `.claude/rules/assertion-discipline.md`
+> **souls 加载指针：** `.claude/souls/_shared/assertion-discipline.md`
 
-### 铁律摘要
-
-**1. 标签强制。** 所有技术论断、API 名、库名、版本号、配置项、错误码 MUST 前置标签：
-
-| 标签 | 含义 | 置信度上限 |
-|------|------|-----------|
-| `[KNOWN]` | 官方文档/源码/实际执行输出 | HIGH |
-| `[COMPUTED]` | 从 [KNOWN] 逻辑推导 | HIGH |
-| `[INFERRED]` | 经验推理，未经当前上下文验证 | MED |
-| `[COMMON]` | 社区惯例/设计模式 | MED |
-| `[FRAME]` | 语言规范/类型系统/伪代码 | **LOW** |
-| `[GUESS]` | 无依据的可能性列举 | **LOW** |
-
-未打标签的实体名 → **禁止出现**。
-
-**2. 框架≠现实。** `[FRAME]` 模型行为 ≠ 运行时行为。不得将"规范规定 X"描述为"你的环境一定会 X"。跨越时必须标注 `[FRAME→现实]` 及不确定性。
-
-**3. 不知道 = 不知道。** 无足够 [KNOWN] 或 [COMPUTED] 支撑时，回复首行："我不知道"。严禁后面接"但是"补编造信息。
-
-**4. 反谄媚。** 用户反驳后未经查证就立刻全盘认同 → 违规。无新证据不得妥协。
-
-**5. 事后归因。** 不能在事前预测的结论 → 标记 `[INFERRED, post-hoc]`。
-
-**6. 引用与修正。** 绝不编造文档链接、版本号、性能数字。已输出的错误 MUST 公开修正并标注原因，悄悄改口 = 编造。
-
-**7. 自审。** 每次响应末尾强制 `[RULES I BROKE]:` 自审。
+**9 条铁律一句话：**
+1. 打标签 — API/库/类/版本 MUST 前置 [KNOWN]/[COMPUTED]/[INFERRED]/[COMMON]/[FRAME]/[GUESS]
+2. 定置信度 — HIGH≥80% / MED 50-80% / LOW 20-50% / VERY LOW <20% / UNKNOWN
+3. 硬上限 — [FRAME] 和 [GUESS] 置信度上限 LOW
+4. [FRAME→现实] 跨越必标注假设
+5. 不知道 = "我不知道。"（不接"但是"）
+6. 反谄媚 — 用户反驳 ≠ 你错，无新证据不妥协
+7. 不编造引用 / 有错必改（公开修正，悄悄改口 = 编造）
+8. 事后归因标 [INFERRED, post-hoc]
+9. 每次响应末尾 `[RULES I BROKE]:` 自审
 
 ---
 
-## 角色切换（产出物驱动 — 零配置自动流转）
+## 角色体系入口（souls + skills 活性注入）
+
+工作流角色定义存放于 `.claude/souls/{role}/soul.md`（8 角色：orchestrator/architect/planner/coder/tester/reviewer/reporter/debugger）。souls 不自动加载 — 按下表触发条件 **主动调用对应 skill 或 dispatch agent**。
+
+### 活性注入路由表
+
+| 触发条件 | 角色 | 注入方式 |
+|---|---|---|
+| 写/改 `.cs` `.vue` `.ts` 代码 | Coder | 调用 `coder-mode` skill |
+| 收到新需求 / 设计架构 / 产出 architecture.md | Architect | 调用 `architect-mode` skill |
+| 产出 plan.md / 任务分级 / 需求提取清单 | Planner | 调用 `planner-mode` skill |
+| 主 Claude 自审代码 / 3+ 文件变更 / 提 PR | Reviewer | 调用 `reviewer-mode` skill（隔离审查走 dispatch `code-reviewer`，prompt 含 Read soul）|
+| 产出 delivery_report.md / 会话收尾 / 归档 | Reporter | 调用 `reporter-mode` skill |
+| 后端/API/Skill/IR 验证 · Dev Loop | Tester | dispatch `jnpf-tester` agent |
+| 编译失败/测试失败/≥3次修复无效/>10min 无进展 | Debugger | dispatch `jnpf-debugger` agent 或 `/data-driven-debug` |
+| 任务流转判定（缺哪个产出物）| Orchestrator | Read `souls/orchestrator/soul.md`（主 Claude 默认扮演）|
+
+### workspace/ 产出物流转
 
 ```
-workspace/                          ← 同一时间只放一个任务
-├── requirements.md                 ← 唯一需要你手动创建的文件
-├── architecture.md                 ← 以下全部自动产出
-├── plan.md
-├── code_changes.md
-├── test_report.md
-├── review_report.md
-├── delivery_report.md
-└── debug_report.md                 ← Debugger 中断产出（非必经）
+requirements.md → architecture.md → plan.md → code_changes.md → test_report.md → review_report.md → delivery_report.md → _completed/{任务名}-{时间戳}/
 ```
 
-### 入口
+任一阶段编译失败/测试失败/运行时异常 → 切 Debugger（产出 debug_report.md）→ 返回断点。
 
-在 `workspace/requirements.md` 中描述任务 → 状态机自动启动。
-
-### 角色判定
-
-**每次响应前**检查 `workspace/` 目录：
-
-| 状态 | 当前角色 | 动作 |
-|------|----------|------|
-| `requirements.md` 不存在 | **Orchestrator** | 分析用户意图。若是开发任务 → 提示用户创建 `workspace/requirements.md` |
-| 缺少 `architecture.md` | **Architect** | 产出 `architecture.md` |
-| 缺少 `plan.md` | **Planner** | 产出 `plan.md` |
-| 缺少 `code_changes.md` | **Coder** | 产出 `code_changes.md` |
-| 缺少 `test_report.md` | **Tester** | 产出 `test_report.md` |
-| 缺少 `review_report.md` | **Reviewer** | 产出 `review_report.md` |
-| 全部就位 | **Reporter** | 产出 `delivery_report.md` → 归档 → 清空 workspace |
-| 编译失败 / 测试失败 / 运行时异常 / 前端无响应 / >10min 无进展 / ≥3次修复无效 | **Debugger** | 中断。产出 `debug_report.md`（根因诊断 + 修复建议）→ 返回断点继续 |
-
-### Debugger（第 8 角色 — 中断驱动）
-
-正常流水线是 7 角色线性流转。Debugger 不占流水线位置——它是**急诊医生**，只在故障时自动切入。诊断完成 → 返回中断点，不干扰正常流程。
-
-```
-Architect → Planner → Coder → Tester → Reviewer → Reporter
-                        ↓        ↓
-                    编译失败  测试失败
-                        ↓        ↓
-                     ┌──────────────┐
-                     │   Debugger   │  ← 中断：产出 debug_report.md
-                     │  根因诊断    │     然后返回断点
-                     └──────────────┘
-```
-
-### 隔离
-
-同一时间 `workspace/` 只有一个任务。开新任务前 MUST 将旧任务归档或丢弃。
-
-### 收尾
-
-Reporter 产出 `delivery_report.md` 后，自动将全部文件移入：
-
-```
-workspace/_completed/{任务名}-{YYYYMMDD-HHmm}/
-```
-
-> **归档命名规则：** 中文任务名 + 时间戳。便于回溯学习。
-> 示例：`workspace/_completed/用户登录模块重构-20260626-1430/`
-
-### 自动流转
-
-**默认全自动。** 当前角色产出物落盘后，立即检查 `workspace/` 缺哪个文件 → 自动切下一角色继续，**无需用户说"继续"**。流水线一气贯通，直到 Reporter 归档。
-
-### 人工介入
-
-| 触发方式 | 效果 |
-|----------|------|
-| 发送任意消息 | 若当前角色刚完成产出 → 自动触发下一角色；若是新指令 → 当前角色响应 |
-| "切换到 {角色}" | 忽略产出物状态，立即跳转 |
-| "重做 {阶段}" | 删除对应产出物，强制该角色重新执行 |
+> 角色切换状态机详情（workspace/ 结构 / 角色判定表 / 隔离 / 收尾 / 自动流转 / 人工介入）：`.claude/souls/orchestrator/soul.md` §7-8
 
 ---
 
@@ -330,71 +187,22 @@ workspace/_completed/{任务名}-{YYYYMMDD-HHmm}/
 | 7 | ⚫ | Complete | finishing-a-development-branch |
 | Debug | ⚡ | Debugger（中断） | —（自动切入，不占 Phase） |
 
-### Entry Gate（Session Start — 自动）
-- Hook: `superpowers-check.mjs` → SP 激活验证
-- **共享约束自动加载：** `souls/_shared/assertion-discipline.md`（论断纪律）+ `souls/_shared/mistake-avoidance.md`（错题本避坑）→ 全角色 Soul 继承
-- SP: `using-superpowers` (自动)
-- Rule: `memory.md` → 跨会话上下文
+### Phase 明细 → 各角色 soul
 
-### Phase 1: Align（理解任务）
-- 动作: 重述任务、S/A/B 分级、确认范围
-- Rule: `architecture-redlines.md` → 约束预加载
-- Skill: `spec` → 知识库查询 (可选)
+| Phase | 颜色 | SP 技能 | 明细位置 |
+|---|---|---|---|
+| Entry | — | using-superpowers (auto) | `souls/architect/soul.md` §7 |
+| 1 | 🔵 | Align — using-superpowers | `souls/architect/soul.md` §8 |
+| 2 | 🟡 | Brainstorm — brainstorming（S1 铁律） | `souls/architect/soul.md` §9 |
+| 3 | 🟠 | Plan — writing-plans | `souls/planner/soul.md` §7 |
+| 4 | 🟢 | Build — executing-plans | `souls/coder/soul.md` §7 |
+| 5 | 🔴 | Verify — verification-before-completion | `souls/tester/soul.md` §8 |
+| 6 | 🟣 | Review — requesting-code-review | `souls/reviewer/soul.md` §8 |
+| 7 | ⚫ | Complete — finishing-a-development-branch | `souls/reporter/soul.md` §7 |
+| Debug | ⚡ | systematic-debugging / data-driven-debug | `souls/debugger/soul.md` §10-11 |
 
-### Phase 2: Brainstorm（头脑风暴 — **ALL 级别强制不可跳过**）
-- **SP: `brainstorming`** — S1 铁律
-- Rule: `jnpf-expert-traps.md` → 陷阱预检
-- Grep: `mistake-log.md` → 关键词避坑
-
-### Phase 3: Plan（计划 — S/A 级）
-- **SP: `writing-plans`**
-- Rule: `workflow.md` → 需求提取清单
-- Rule: `jnpf-frontend-rules.md` (按需)
-- B 级跳过此 Phase，直接进入 Phase 4
-
-### Phase 4: Build（实施）
-- **SP: `executing-plans`** / `subagent-driven-development` (S级) / `dispatching-parallel-agents` / `using-git-worktrees`
-- Hooks: 7 guard hooks (L0 自动阻断)
-- Hooks: `format-and-lint.mjs` (自动); 共享约束自动注入（论断+错题本+调试）
-- Rule: `sql-safety.md` (if .cs) + `frontend-memory-leak.md` (if SSE/timer)
-- todo 强制注入: `🔍 代码审查(子代理)` + `📝 错题本追加`
-
-### Phase 5: Verify（测试 + E2E）
-- **SP: `verification-before-completion`** — Gate Function 5 步
-- **SP: `test-driven-development`** — 新逻辑
-- Rule: `testing.md` → 具体命令
-- Skill: `start-dev` → 启动环境
-- **Skill: `jnpf-api-cli`** → 无浏览器 Token + API 断言（**后端/API 主路径，S6 铁律**）
-- Skill: `playwright` → 浏览器 E2E (E1/E2/E3)（**仅前端 UI 变更 / 阶段交付**）
-- **调试纪律触发：** 遇 bug → `/trace-bug` 或 SP: `systematic-debugging`；>10min / ≥3次失败 → `/data-driven-debug`
-
-### Phase 6: Review（审查 — max 3 cycles）
-- **SP: `requesting-code-review` → `receiving-code-review`**
-- Rule: `review-workflow.md` → 子代理编排 + 审查维度 (含错题本纪律)
-- Rule: `architecture-redlines.md` → R1-R10 合规
-- Skill: `security-review` (可选)
-- Check: `📝错题本追加` todo 条目必须 completed
-
-### Phase 7: Complete（报告 + 提交）
-- **SP: `finishing-a-development-branch`**
-- Skill: `pre-commit` → 提交前检查
-- Hook: `guard-finish.mjs` → 冒烟测试 + E2E 证据 + 错题本验证
-- Hook: `collect-summary.mjs` → 会话摘要
-- Rule: `workflow.md` → 报告模板
-- **🟠 强制写入 `session-key-points.md`** — 本阶段 MUST 将以下内容写入 `.claude/memory/session-key-points.md`：
-  - 本次关键技术决策 + 理由
-  - 发现的 Bug 及其根因分析（即使已提交也要摘要记录）
-  - 踩过的坑 + 避免策略
-  - 未写入 → `collect-summary.mjs` 无法收录 → 跨会话丢失上下文
-
-### Debug Path（第 8 角色 Debugger — 中断驱动，随时切入 → 完成后返回断点）
-- **自动切入：** 编译失败 / 测试失败 / 运行时异常 / 前端无响应 / ≥3次修复无效 / >10min 无进展
-- **手动切入：** `/trace-bug` 或 `/data-driven-debug`
-- **角色：** Debugger（`souls/debugger/soul.md`）— 不写代码，只诊断根因
-- **产出：** `workspace/debug_report.md` — 数据链路追踪 + 根因定位 + 单一修复建议
-- **返回：** 诊断完成 → 交还 Coder/Tester 执行修复
-- Rule: `debugging.md` → 四阶段协议 + JNPF 专项检查清单
-- Skill: `data-driven-debug` → 运行时数据采集工具箱
+> 每 Phase 的 Rule / Skill / Hook 明细见对应 soul。Phase 抬头声明模板见各角色 soul 顶部。
+> 本节上方的「强制抬头声明」+「颜色/阶段对应」总表保留为全局骨架；明细全部下沉各 soul。
 
 ---
 
@@ -421,17 +229,9 @@ workspace/_completed/{任务名}-{YYYYMMDD-HHmm}/
 
 ---
 
-## Review Gate（不可绕过）
+## Review Gate → souls/orchestrator/soul.md + souls/reviewer/soul.md
 
-每次 Write/Edit 操作后，审查计数器 +1。计数器 ≥ 2 时，MUST 在 Step 6 触发 code-reviewer 子代理审查，否则不得进入 Step 7。计数器在 Step 7 完成后重置。
-
-**不计入计数器：** 仅修改 `.md` / `.json` / 配置文件 / 单行（需显式声明理由）。
-
-**子 agent dispatch 指向：** Phase 5 验证 → `subagent_type: jnpf-tester`；Debug Path / ≥3 次失败 / >10min 无进展 → `subagent_type: jnpf-debugger`（详见 `.claude/rules/review-workflow.md`）。
-
-**todo_write 强制注入：** 每次开始编码时，todo_write 中 MUST 包含 `🔍 代码审查 (子代理)` 条目。该条目在 Phase 6 Review (code-reviewer 返回 PASS) 之前 MUST 保持 pending。Phase 7 报告前，如该条目仍为 pending → 流程阻塞，MUST NOT 声称完成。
-
-**🟠 错题本强制注入：** todo_write 中 MUST 包含 `📝 错题本追加` 条目。Phase 6 Review 时检查：本次 session 有 fix/bug 性质的改动？有 → 追加 `.claude/memory/mistake-log.md` → 标记 completed。无 → 标记为 N/A。Phase 7 报告前该条目仍为 pending → 流程阻塞。
+审查计数器（Write/Edit ≥2 触发 code-reviewer）+ 子代理 dispatch 路由（Phase 5 → `jnpf-tester`，Debug → `jnpf-debugger`）+ todo 强制注入（🔍 代码审查 + 📝 错题本追加）详见 `.claude/souls/orchestrator/soul.md` §8 + `.claude/souls/reviewer/soul.md` §9。
 
 ---
 
@@ -460,6 +260,7 @@ cd backend && dotnet build
 - **连接串：** `backend/application/JNPF.API.Entry/Configurations/ConnectionStrings.json`（gitignored）
 - **Studio S2（ADR-004）：** compile 默认 → `SaNineViewCompiler` 九视图；confirm 后 C# `SaMaterializer` 写 `sa_*` 九表；**compile 主链不需 sa-service**。见 `openspec/specs/studio-s2-compile/spec.md` · `.cursor/rules/studio-s2-compile.mdc`
 - **交互式澄清问答（ADR-005）：** 需求分析/架构设计/总体设计三阶段，LLM 产出结构化选择题（单选/多选/文本，每轮 3-5 题，末项恒为"其他"+文本框）让用户逐条细化需求；关键题（required）硬门控推进；完整 IR 事件化（`ClarificationRequested`/`ClarificationAnswered`）；默认 3-7 轮（`Clarification:MaxRounds`），可"全部跳过"。见 `openspec/specs/studio-clarification/spec.md` · `.cursor/rules/studio-clarification.mdc`
+- **Eval Pipeline 四层评估（阶段七）：** L1 组件/L2 轨迹/L3 任务 确定性（无 LLM，fail-fast 跳过 L4）；L4 `LlmJudgeService` 经 `SkillLlmBudgetGuard` fast tier 路由**跨家族 mimo**（生成走 deepseek），pass/fail 二元；`JudgeCalibrationService` 月度 Cohen's kappa 校准（<0.6 降级 advisory）；人工抽检双写 `BASE_AI_SKILL_REVIEW` + `SkillReviewRecorded` IR 事件；质量榜 SQL 聚合 grade A/B/C/D；失败 trace 回写 GoldenSet（生产 trace→eval 闭环）。见 `openspec/specs/studio-eval-pipeline/spec.md` · `.cursor/rules/studio-eval-pipeline.mdc`
 - **三元组铁律（R12 · 宪法级）：** AI 原生开发一切数据/IR/路径/SkillContext MUST 携带 `(tenantId, projectId, pipelineId)`，三者完整、独立、可分离。1 tenant → N projects → M pipelines（greenfield/bugfix/enhancement，可 fork/freeze/resume）。违反 = 多用户多项目多对话功能形同虚设。见 `.cursor/rules/triple-key-iron-law.mdc` · `.claude/rules/triple-key-iron-law.md` · `architecture-redlines.md` §R12
 
 ---
@@ -482,6 +283,8 @@ cd backend && dotnet build
 ---
 
 ## On-Demand Rules（触发条件满足时 MUST 读取对应文件）
+
+> 🆕 **角色 soul 活性注入路由**：见上方「角色体系入口」节 — coder/architect/planner/reviewer/reporter 调 `*-mode` skill；tester/debugger dispatch agent。下表触发条件与之联动。
 
 | 触发条件 | 读取文件 |
 |---|---|
