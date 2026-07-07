@@ -120,6 +120,43 @@ Phase 4: 实现修复 — 输出 debug_report.md → 交还调用方
 ✅ 调试完成，返回 [Coder/Tester/原调用方]
 → 根因: [文件:行号] — [一句话]
 → 修复建议: [一句话]
-→ 错题本: [Mxxx 已匹配 / 新 Mxxx 待追加]
+→ 锏题本: [Mxxx 已匹配 / 新 Mxxx 待追加]
 → debug_report.md 已生成
 ```
+
+---
+
+## 10. Data-Driven Debug 工具链（四件套 + Phase B 增强）
+
+> **完整技能：** `data-driven-debug`（`/data-driven-debug` 或 S5 铁律自动触发）
+> **执行手册：** `.claude/rules/testing-toolchain.md` §场景 D
+
+| 症状 | 工具 | 命令 |
+|------|------|------|
+| **前端白屏/无响应/样式错乱** | full-fidelity-debug | `node scripts/lib/full-fidelity-debug.mjs --login --url=...` |
+| **快速录 GIF 给 D爷看** | visual-debug | `node scripts/lib/visual-debug.mjs --login --url=... --duration=15` |
+| **API 返回 500/数据不对** | agent-probe | `node scripts/lib/probe.mjs --trace-sql GET /api/...` |
+| **后端运行时变量值/调用栈** | netcoredbg-mcp | Agent 直接 attach 到 JNPF 进程 |
+| **任何异常自动记录** | DiagnosticsLog | `cat backend/.claude/diagnostics/session-*.jsonl` |
+| **不确定是否老问题** | mistake-rag | `node scripts/lib/mistake-rag.mjs "错误关键词"` |
+| **测试失败匹配历史修复** | mistake-rag | `cat error.log \| node scripts/lib/mistake-rag.mjs --stdin` |
+| **需要完整 HAR + DOM + 步骤链路** | full-fidelity-debug | 5 层数据一次性采集，Agent 不重跑即可诊断 |
+
+**数据采集优先级：** full-fidelity-debug（最全） > visual-debug（轻量录屏） > mistake-rag（历史匹配） > agent-probe（API 诊断） > netcoredbg-mcp（进程内调试）
+
+**错误发生后 MUST 先查错题本：**
+
+```powershell
+node scripts/lib/mistake-rag.mjs "具体错误信息"         # 交互式
+node scripts/lib/mistake-rag.mjs --json "ReferenceError" # JSON 供 Agent 消费
+```
+
+## 11. Debug Path（中断驱动 — 自动/手动切入 → 完成后返回断点）
+
+- **自动切入：** 编译失败 / 测试失败 / 运行时异常 / 前端无响应 / ≥3 次修复无效 / >10min 无进展
+- **手动切入：** `/trace-bug` 或 `/data-driven-debug`
+- **角色：** Debugger（本 soul）— 不写代码，只诊断根因
+- **产出：** `workspace/debug_report.md` — 数据链路追踪 + 根因定位 + 单一修复建议
+- **返回：** 诊断完成 → 交还 Coder/Tester 执行修复（ Debugger 不修代码）
+- **Rule：** `.claude/rules/debugging.md` → 四阶段协议 + JNPF 专项检查清单
+- **Skill：** `data-driven-debug` → 运行时数据采集工具箱（§10）
