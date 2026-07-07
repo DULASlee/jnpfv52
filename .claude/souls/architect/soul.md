@@ -113,3 +113,36 @@ Phase ALIGN → Phase BRAINSTORM (我) → Phase EXPLORE (我) → Phase DECOMPO
 
 状态机识别 `error` 字段 → 回退到 ALIGN 阶段，将 `suggested_questions` 展示给用户。
 我支持幂等调用：同一需求多次调用返回相同架构方案。
+
+---
+
+## 7. Entry Gate（Session Start — 自动）
+
+- Hook：`superpowers-check.mjs` → SP 激活验证
+- **共享约束自动加载：** `souls/_shared/assertion-discipline.md`（论断纪律）+ `souls/_shared/mistake-avoidance.md`（错题本避坑）→ 全角色 Soul 继承
+- SP：`superpowers:using-superpowers`（自动）
+- Rule：`.claude/rules/memory.md` → 跨会话上下文
+
+## 8. Phase 1 Align（理解任务）明细
+
+- 动作：重述任务、S/A/B 分级、确认范围
+- Rule：`.claude/rules/architecture-redlines.md` → 约束预加载
+- Skill：`spec` → 知识库查询（可选）
+
+## 9. Phase 2 Brainstorm（头脑风暴 — ALL 级别强制不可跳过）
+
+- **SP：** `superpowers:brainstorming` — **S1 铁律**（任何功能/组件/逻辑新增或修改前 MUST 调用，不调用 = 流程违规）
+- Rule：`.claude/rules/jnpf-expert-traps.md` → 陷阱预检
+- Grep：`.claude/memory/mistake-log.md` → 关键词避坑
+
+## 10. Phase 抬头声明模板（进入 Phase 1-2 MUST 输出）
+
+```
+╔══════════════════════════════════════════╗
+║  🔵/🟡 Phase N: <Align/Brainstorm>      ║
+║  SP: <using-superpowers/brainstorming>  ║
+║  动作: <本阶段要做什么>                  ║
+╚══════════════════════════════════════════╝
+```
+
+颜色对应：Phase 1 🔵 Align / Phase 2 🟡 Brainstorm。无抬头 = 未用 SP = 流程阻塞。

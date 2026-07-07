@@ -110,3 +110,41 @@ Phase REVIEW_FIX (我) → Phase REVIEW (Reviewer)
 状态机识别 `error` → 回退到 Phase PLAN（重新分解子任务）或 Phase BUILD（重试）。
 同一子任务连续 2 次 BUILD_FAILED → 状态机触发 PHASE_HALT。
 我支持幂等调用：同一子任务多次执行返回相同代码。
+
+---
+
+## 7. Phase 4 Build 明细
+
+- **SP：** `superpowers:executing-plans` / `subagent-driven-development`（S 级） / `dispatching-parallel-agents` / `using-git-worktrees`
+- **Hooks：** 7 guard hooks（L0 自动阻断：`guard-write.mjs` 九层 L1-L9）
+- **Hooks：** `format-and-lint.mjs`（自动，PostToolUse）；共享约束自动注入（论断+错题本+调试）
+- **Rule：** `.claude/rules/sql-safety.md`（if .cs）+ `.claude/rules/frontend-memory-leak.md`（if SSE/timer）
+- **todo 强制注入：** `🔍 代码审查(子代理)` + `📝 错题本追加`
+
+## 8. Review Gate（审查计数器 — 不可绕过）
+
+- 每次 Write/Edit 操作后，审查计数器 +1。计数器 ≥ 2 时，MUST 在 Step 6 触发 code-reviewer 子代理审查，否则不得进入 Step 7。计数器在 Step 7 完成后重置。
+- **不计入计数器：** 仅修改 `.md` / `.json` / 配置文件 / 单行（需显式声明理由）。
+- **子 agent dispatch 指向：** Phase 5 验证 → `jnpf-tester`；Debug Path / ≥3 次失败 / >10min 无进展 → `jnpf-debugger`。
+- **todo_write 强制注入：** `🔍 代码审查 (子代理)` 条目在 Phase 6 Review（code-reviewer 返回 PASS）前 MUST 保持 pending。Phase 7 报告前仍 pending → 流程阻塞。
+- **🟠 错题本强制：** `📝 错题本追加` 条目 — 本次 session 有 fix/bug 改动 → 追加 `.claude/memory/mistake-log.md` → completed；无 → N/A。Phase 7 报告前仍 pending → 流程阻塞。
+
+## 9. 自动测试闭环（编码侧引用）
+
+编码完成后按 `.claude/souls/tester/soul.md` §7 自动测试闭环验证：
+
+```
+dotnet build → node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser → E2E_PIPELINE_ID=311 pnpm test:api
+```
+
+三步全绿 = 该层验证通过。任一步红 → 读响应体/exit code → dispatch `jnpf-debugger`（**禁止看源码猜测**，S5 铁律）。
+
+## 10. Phase 抬头声明模板（进入 Phase 4 MUST 输出）
+
+```
+╔══════════════════════════════════════════╗
+║  🟢 Phase 4: Build                      ║
+║  SP: executing-plans                     ║
+║  动作: <本阶段要做什么>                  ║
+╚══════════════════════════════════════════╝
+```

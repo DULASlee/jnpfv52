@@ -120,3 +120,40 @@ Markdown 格式的交付报告（写入 `workspace/{task_id}/delivery_report.md`
 
 状态机识别缺失文件 → 仍推进到 Phase END（不阻塞），但在报告中标注缺失。
 我支持幂等调用：同一任务多次调用返回相同报告。
+
+---
+
+## 7. Phase 7 Complete（报告 + 提交）明细
+
+- **SP：** `superpowers:finishing-a-development-branch`
+- **Skill：** `pre-commit` → 提交前检查
+- **Hook：** `guard-finish.mjs` → 冒烟测试 + E2E 证据 + 错题本验证
+- **Hook：** `collect-summary.mjs` → 会话摘要
+- **Rule：** `.claude/rules/workflow.md` → 报告模板
+
+## 8. 🟠 强制写入 session-key-points.md
+
+本阶段 MUST 将以下内容写入 `.claude/memory/session-key-points.md`：
+
+- 本次关键技术决策 + 理由
+- 发现的 Bug 及其根因分析（即使已提交也要摘要记录）
+- 踩过的坑 + 避免策略
+
+未写入 → `collect-summary.mjs` 无法收录 → 跨会话丢失上下文。
+
+## 9. E2E 证据门控（Supreme Iron Law — guard-finish.mjs）
+
+- E1：Playwright 截图（≥1 张关键操作 PNG，存 `.claude/evidence/`）
+- E2：操作路径记录（端到端步骤）
+- E3：实际输出确认（实际 UI 状态描述）
+- 无 E1/E2/E3 → `guard-finish.mjs` BLOCK；截图 mtime > 30min / < 5KB → BLOCK
+
+## 10. Phase 抬头声明模板（进入 Phase 7 MUST 输出）
+
+```
+╔══════════════════════════════════════════╗
+║  ⚫ Phase 7: Complete                    ║
+║  SP: finishing-a-development-branch      ║
+║  动作: <本阶段要做什么>                  ║
+╚══════════════════════════════════════════╝
+```

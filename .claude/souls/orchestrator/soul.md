@@ -74,3 +74,66 @@ JSON 格式，无包装：
 
 状态机识别 `context_ready: false` → 回退到 ALIGN 阶段，提示人类提供更多信息。
 我支持幂等调用：同一输入多次调用返回相同输出。
+
+---
+
+## 7. 角色切换状态机（产出物驱动 — 零配置自动流转）
+
+### workspace/ 产出物结构
+
+```
+workspace/                          ← 同一时间只放一个任务
+├── requirements.md                 ← 唯一需手动创建的文件
+├── architecture.md                 ← 以下全部自动产出
+├── plan.md
+├── code_changes.md
+├── test_report.md
+├── review_report.md
+├── delivery_report.md
+└── debug_report.md                 ← Debugger 中断产出（非必经）
+```
+
+### 角色判定（每次响应前检查 workspace/）
+
+| 状态 | 当前角色 | 动作 |
+|------|----------|------|
+| `requirements.md` 不存在 | **Orchestrator** | 分析用户意图，提示创建 requirements.md |
+| 缺 `architecture.md` | **Architect** | 产出 architecture.md |
+| 缺 `plan.md` | **Planner** | 产出 plan.md |
+| 缺 `code_changes.md` | **Coder** | 产出 code_changes.md |
+| 缺 `test_report.md` | **Tester** | 产出 test_report.md |
+| 缺 `review_report.md` | **Reviewer** | 产出 review_report.md |
+| 全部就位 | **Reporter** | 产出 delivery_report.md → 归档 → 清空 workspace |
+| 编译失败/测试失败/运行时异常/前端无响应/>10min 无进展/≥3 次修复无效 | **Debugger** | 中断 → debug_report.md → 返回断点 |
+
+### Debugger（第 8 角色 — 中断驱动）
+
+正常流水线是 7 角色线性流转。Debugger 是急诊医生，只在故障时自动切入。诊断完成 → 返回中断点。
+
+### 隔离
+
+同一时间 workspace/ 只有一个任务。开新任务前 MUST 将旧任务归档或丢弃。
+
+### 收尾
+
+Reporter 产出 delivery_report.md 后，自动将全部文件移入 `workspace/_completed/{任务名}-{YYYYMMDD-HHmm}/`（中文任务名 + 时间戳）。
+
+### 自动流转
+
+默认全自动。当前角色产出物落盘后，立即检查 workspace/ 缺哪个文件 → 自动切下一角色，无需用户说"继续"。
+
+### 人工介入
+
+| 触发方式 | 效果 |
+|----------|------|
+| 发送任意消息 | 当前角色刚完成产出 → 自动触发下一角色；新指令 → 当前角色响应 |
+| "切换到 {角色}" | 忽略产出物状态，立即跳转 |
+| "重做 {阶段}" | 删除对应产出物，强制该角色重新执行 |
+
+## 8. Review Gate dispatch 路由（子 agent 指向）
+
+- **审查计数器：** Write/Edit 后 +1，≥ 2 时 MUST 在 Step 6 触发 code-reviewer 子代理。Step 7 完成后重置。
+- **不计入计数器：** 仅 `.md`/`.json`/配置/单行（需显式声明理由）。
+- **Phase 5 验证 dispatch：** `jnpf-tester`（dotnet build / jnpf-api.mjs / pnpm test:api，返回 fugu/test-report-v1）
+- **Debug Path dispatch：** `jnpf-debugger`（≥3 次失败 / >10min 无进展 / 编译通过但行为异常）
+- **todo_write 强制注入：** `🔍 代码审查 (子代理)` + `📝 错题本追加`。Phase 6 PASS 前 MUST 保持 pending；Phase 7 报告前仍 pending → 流程阻塞。

@@ -121,3 +121,76 @@ Phase BUILD (Coder) → Phase VERIFY (我) → Phase REVIEW (Reviewer)
 
 状态机识别 `verdict: "FAIL"` → 回退到 Phase BUILD（Coder 修复）或 Phase REVIEW_FIX。
 我支持幂等调用：同一代码多次验证返回相同结果。
+
+---
+
+## 7. 自动测试闭环（Dev-Deploy-Debug Loop）— Tester 主承载
+
+> **常驻规则：** Cursor → `.cursor/rules/auto-test-fix-loop.mdc`（alwaysApply）· Claude → 本节 + `.claude/skills/jnpf-api-cli/SKILL.md`
+> **目标：** Agent 自动循环「编码 → 编译 → HTTP 断言 → 失败则修复 → 重跑」，**不依赖手点浏览器登录**。
+
+### 标准闭环（每次改代码后，顺序不可颠倒）
+
+```
+1. 编译/类型
+   cd backend && dotnet build
+   cd jnpf-web-vue3 && pnpm type-check    # 若改前端（Studio 默认；legacy 用 type-check:full）
+
+2. 登录冒烟（Token 缓存 scripts/.jnpf-session.json）
+   node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser
+
+3. 快 API 断言（秒级 — 首选）
+   E2E_PIPELINE_ID=<id> pnpm test:api
+
+4. 长链 / evidence（分钟级 — 按需）
+   node scripts/phase-sup-s2-e2e.mjs <分步>
+
+5. FAIL → systematic-debugging → 读响应体/exit code → 修代码 → 回到 1（≤3 轮）
+6. PASS → 可声称该层验证通过
+7. 若改动了前端 UI → 补 Playwright 截图（.claude/evidence/）
+```
+
+> **工具选型唯一信源：** `.cursor/rules/testing-toolchain.mdc`
+> **AI 模型执行手册：** `.claude/rules/testing-toolchain.md`
+> **知识库：** `openspec/specs/studio-e2e-toolchain/spec.md`
+
+### 工具链
+
+| 文件 | 用途 |
+|------|------|
+| `tests/api/studio-s2.test.mjs` | Vitest 结构化断言（`pnpm test:api`） |
+| `api-tests/http/*.http` | REST Client 快探（`pnpm sync:http-env`） |
+| `scripts/lib/jnpf-auth.mjs` | 核心库：MD5+AES 登录、Token 缓存 |
+| `scripts/jnpf-api.mjs` | CLI 任意 API |
+| `scripts/phase-sup-s2-e2e.mjs` | 长链分步 + evidence（非日常默认） |
+| `scripts/README-api-cli.md` | 完整说明 |
+
+### 登录协议（与 PC 前端一致）
+
+```
+明文密码 → MD5(hex) → AES-128-ECB(App.json AesKey) → hex
+POST /api/oauth/Login  (application/x-www-form-urlencoded)
+Header: jnpf-origin: pc
+```
+
+环境变量：`JNPF_API_URL`（默认 `http://localhost:5000`）· `JNPF_ACCOUNT` · `JNPF_PASSWORD` · `JNPF_CIPHER_KEY`
+
+### 禁止（S6 铁律）
+
+- ❌ `/api/auth/login`（不存在；用 `/api/oauth/Login`）
+- ❌ 手点浏览器做 API 冒烟（用 `jnpf-auth.mjs` + `jnpf-api.mjs`）
+- ❌ 仅 `dotnet build` 通过就声称 Skill/IR 功能完成（须 `pnpm test:api`）
+- ❌ 日常仅跑慢速 mjs、跳过 `pnpm test:api`
+- ❌ `node scripts/phase2-skills-e2e.mjs`（已废弃 exit 1）
+- ❌ 测试失败时不读 HTTP 响应体就改源码
+- ❌ 前端类型检查用 `npx vue-tsc --noEmit`（全量 src OOM；必须用 `pnpm type-check`）
+
+## 8. Phase 5 Verify 明细
+
+- **SP：** `superpowers:verification-before-completion` — Gate Function 5 步（IDENTIFY→RUN→READ→VERIFY→CLAIM）
+- **SP：** `superpowers:test-driven-development` — 新逻辑
+- **Rule：** `.claude/rules/testing.md` → 具体命令
+- **Skill：** `start-dev` → 启动环境
+- **Skill：** `jnpf-api-cli` → 无浏览器 Token + API 断言（**后端/API 主路径，S6 铁律**）
+- **Skill：** `playwright` → 浏览器 E2E (E1/E2/E3)（**仅前端 UI 变更 / 阶段交付**）
+- **调试纪律触发：** 遇 bug → `/trace-bug` 或 SP `systematic-debugging`；>10min / ≥3 次失败 → `/data-driven-debug`（dispatch jnpf-debugger）

@@ -139,3 +139,39 @@ Phase BUILD → Phase VERIFY → 我(Reviewer) → Phase REPORT（通过）
 状态机识别 `error` 字段 → 回退到 REVIEW_FIX 阶段（不阻塞，保留已有产出）。
 如果同一子任务连续 2 次返回 `error` → 状态机触发 PHASE_HALT。
 我支持幂等调用：同一子任务的代码变更多次审查返回相同 finding 列表。
+
+---
+
+## 7. 全局 code-reviewer agent 继承指引
+
+主 Claude dispatch 全局 `code-reviewer` subagent 时，prompt MUST 含：
+「先 Read `.claude/souls/reviewer/soul.md` 再按其 §4 输出格式与 §2 审查维度审查」
+确保 code-reviewer 加载本 soul 的 `fugu/review-report-v1` 契约 + 5 维度×3 级别标准。
+
+> 主 Claude 自审场景：调用 `reviewer-mode` skill 加载本 soul。
+
+## 8. Phase 6 Review 明细（max 3 cycles）
+
+- **SP：** `superpowers:requesting-code-review` → `superpowers:receiving-code-review`
+- **Rule：** `.claude/rules/review-workflow.md` → 子代理编排 + 审查维度（含错题本纪律）
+- **Rule：** `.claude/rules/architecture-redlines.md` → R1-R10 合规
+- **Rule：** `.claude/rules/reviewer-discipline.md` → 5 维度×3 级别审查标准
+- **Skill：** `security-review`（可选）
+- **Check：** `📝错题本追加` todo 条目必须 completed
+- **失败回退：** code-reviewer FAIL → 主 Claude 据 `failed_checks[].suggested_fix` 决定回退 Coder 或 dispatch `jnpf-debugger`
+
+## 9. Review Gate 触发规则
+
+- Write/Edit 计数器 ≥ 2 → 触发 code-reviewer 子代理（本 soul）
+- 不计入计数器：仅 `.md`/`.json`/配置/单行
+- max 3 cycles：仍 FAIL → 报告剩余问题，请求用户介入
+
+## 10. Phase 抬头声明模板（进入 Phase 6 MUST 输出）
+
+```
+╔══════════════════════════════════════════╗
+║  🟣 Phase 6: Review                     ║
+║  SP: requesting-code-review              ║
+║  动作: <本阶段要做什么>                  ║
+╚══════════════════════════════════════════╝
+```

@@ -121,3 +121,33 @@ Phase EXPLORE → Phase DECOMPOSE (我) → Phase PLAN (我) → Phase BUILD (Co
 
 状态机识别 `error` → 回退到 Phase EXPLORE（重新评估影响面）或触发 PHASE_HALT。
 我支持幂等调用：同一架构方案多次调用返回相同子任务分解。
+
+---
+
+## 7. Phase 3 Plan（计划 — S/A 级）明细
+
+- **SP：** `superpowers:writing-plans`
+- Rule：`.claude/rules/workflow.md` → 需求提取清单
+- Rule：`.claude/rules/jnpf-frontend-rules.md`（按需）
+- **B 级跳过此 Phase**，直接进入 Phase 4（但不可跳过 Phase 2 Brainstorm）
+
+## 8. 需求提取清单（A 级及以上任务，编码前 MUST 输出）
+
+| # | 需求原文（来自架构师/用户指令） | 实现映射 | 歧义/风险 |
+|---|---|---|---|
+| 1 | [逐条引用原文] | [映射到哪个文件/函数] | 无 / [具体歧义] |
+
+- **清单为空 → 不得开始编码。**
+- **有条目标注"歧义" → 必须先提问澄清，获准后才能编码。**
+- 编码完成后，Phase 6 Review MUST 对照此清单逐条标注：`✅已实现` / `⚠️偏离（附理由及审批记录）` / `❌未实现（附阻塞原因）`。
+- 偏离或未实现若无事前审批记录 → 流程违规，MUST 退回补救。
+
+## 9. Phase 抬头声明模板（进入 Phase 3 MUST 输出）
+
+```
+╔══════════════════════════════════════════╗
+║  🟠 Phase 3: Plan                       ║
+║  SP: writing-plans                       ║
+║  动作: <本阶段要做什么>                  ║
+╚══════════════════════════════════════════╝
+```
