@@ -34,8 +34,10 @@ public class SqlSugarDbContextProvider : ISqlSugarDbContextProvider
         var context = ResolveTenantConnection();
 
         // 第二步：应用租户字段隔离查询过滤器
+        // r4-safe: 超管跨租户管理，豁免 ITenantFilter（方案 A，详见 AdminBypassGuard）
         if (_tenantContext.IsMultiTenant && !_tenantContext.IsDefaultTenant()
-            && _tenantContext.IsolationType == 1)
+            && _tenantContext.IsolationType == 1
+            && !AdminBypassGuard.IsAdministrator())
         {
             var fieldValue = _tenantContext.IsolationFieldValue;
             if (!string.IsNullOrEmpty(fieldValue))

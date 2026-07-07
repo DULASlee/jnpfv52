@@ -293,7 +293,14 @@ public class UserManager : IUserManager, IScoped
     /// </summary>
     public string UserOrigin
     {
-        get => _httpContext?.Request.Headers["jnpf-origin"] ?? "pc";
+        get
+        {
+            // Headers[key] 返回 StringValues（struct），key 不存在时为 StringValues.Empty（非 null），
+            // 故 "?? \"pc\"" 不会触发；StringValues.Empty 隐式转 string 得 null，会导致 .Equals NRE。
+            // 必须显式 IsNullOrEmpty 判断（修 admin CurrentUser NRE，2026-07-08）。
+            var origin = _httpContext?.Request.Headers["jnpf-origin"].ToString();
+            return string.IsNullOrEmpty(origin) ? "pc" : origin;
+        }
     }
 
     /// <summary>
