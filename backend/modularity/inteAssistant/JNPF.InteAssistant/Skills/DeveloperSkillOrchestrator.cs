@@ -100,7 +100,7 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
         CancellationToken ct)
     {
         var orchestratorRunId = Guid.NewGuid().ToString("N");
-        var snapshot = await LoadSnapshotAsync(tenantId, projectId, ct);
+        var snapshot = await LoadSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
         await ValidatePreconditionsAsync(snapshot, ct);
 
         var projectLock = ProjectLocks.GetOrAdd(projectId, _ => new SemaphoreSlim(1, 1));
@@ -248,7 +248,7 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
         string projectId,
         CancellationToken ct)
     {
-        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, ct);
+        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString(), ct);
         var ir3 = snapshots.FirstOrDefault(s => s.FragmentType == IrFragmentTypes.GeneratedCode);
         var designLocked = snapshots.Any(s =>
             s.FragmentType == IrFragmentTypes.SystemDesign
@@ -296,9 +296,9 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
         };
     }
 
-    private async Task<IrSnapshot> LoadSnapshotAsync(string tenantId, string projectId, CancellationToken ct)
+    private async Task<IrSnapshot> LoadSnapshotAsync(string tenantId, string projectId, string pipelineId, CancellationToken ct)
     {
-        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, ct);
+        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId, ct);
         return new IrSnapshot
         {
             Fragments = snapshots.Select(s => new IrSnapshotFragment

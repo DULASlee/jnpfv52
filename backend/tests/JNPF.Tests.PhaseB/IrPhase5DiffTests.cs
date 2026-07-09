@@ -206,13 +206,15 @@ public static class IrPhase5DiffTests
         string? saStep = null)
     {
         var id = Guid.NewGuid().ToString("N");
+        const string pipelineId = "pipe-diff";
         await db.Ado.ExecuteCommandAsync(
-            "INSERT INTO ai_ir_events (F_Id,F_ProjectId,F_TenantId,F_EventType,F_FragmentId,F_FragmentType,F_FragmentVersion,F_Payload,F_SAStepName,F_Sequence,F_CreatedAt,F_IsRollback) VALUES (@id,@pid,@tid,@etype,@fid,@ftype,@fver,@payload,@sa,@seq,@at,0)",
+            "INSERT INTO ai_ir_events (F_Id,F_ProjectId,F_TenantId,F_PIPELINE_ID,F_EventType,F_FragmentId,F_FragmentType,F_FragmentVersion,F_Payload,F_SAStepName,F_Sequence,F_CreatedAt,F_IsRollback) VALUES (@id,@pid,@tid,@pplid,@etype,@fid,@ftype,@fver,@payload,@sa,@seq,@at,0)",
             new[]
             {
                 new SugarParameter("@id", id),
                 new SugarParameter("@pid", projectId),
                 new SugarParameter("@tid", tenantId),
+                new SugarParameter("@pplid", pipelineId),
                 new SugarParameter("@etype", eventType),
                 new SugarParameter("@fid", fragmentId),
                 new SugarParameter("@ftype", fragmentType),
@@ -239,6 +241,7 @@ public static class IrPhase5DiffTests
                 F_Id TEXT PRIMARY KEY,
                 F_ProjectId TEXT NOT NULL,
                 F_TenantId TEXT NOT NULL,
+                F_PIPELINE_ID TEXT NOT NULL DEFAULT '',
                 F_EventType TEXT NOT NULL,
                 F_FragmentType TEXT,
                 F_FragmentId TEXT,
@@ -254,6 +257,7 @@ public static class IrPhase5DiffTests
                 F_Id TEXT PRIMARY KEY,
                 F_ProjectId TEXT NOT NULL,
                 F_TenantId TEXT NOT NULL,
+                F_PIPELINE_ID TEXT NOT NULL DEFAULT '',
                 F_FragmentId TEXT NOT NULL,
                 F_FragmentType TEXT NOT NULL,
                 F_CurrentVersion INTEGER NOT NULL,

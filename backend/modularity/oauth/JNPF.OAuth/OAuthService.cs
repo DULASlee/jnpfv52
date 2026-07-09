@@ -928,7 +928,7 @@ public class OAuthService : IDynamicApiController, ITransient
                     { ClaimConst.CLAINMADMINISTRATOR, userAnyPwd.IsAdministrator },
                     { ClaimConst.TENANTID, ResolveLoginTenantId(userAnyPwd, tenantId) },
                     { ClaimConst.OnlineTicket, input.online_ticket },
-                    { ClaimConst.ZXSYSTEMID, userAnyPwd.BizSystemId }
+                    { ClaimConst.ZXSYSTEMID, userAnyPwd.SystemId }
                     }, tokenTimeout);
 
             string configId = _sqlSugarClient.CurrentConnectionConfig.ConfigId.ToString();

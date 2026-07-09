@@ -742,6 +742,10 @@ public class UsersCurrentService : IUsersCurrentService, IDynamicApiController, 
             it.BizSystemId,
         }).IgnoreColumns(ignoreAllNullColumns: true).ExecuteCommandAsync();
         if (!(isOk > 0)) throw Oops.Oh(ErrorCode.D5020);
+
+        // 清除 CurrentUser 缓存，确保系统切换后立即生效
+        await _cacheManager.DelAsync($"CurrentUser:{_userManager.TenantId}:{_userManager.UserId}:Web");
+        await _cacheManager.DelAsync($"CurrentUser:{_userManager.TenantId}:{_userManager.UserId}:App");
     }
 
     /// <summary>

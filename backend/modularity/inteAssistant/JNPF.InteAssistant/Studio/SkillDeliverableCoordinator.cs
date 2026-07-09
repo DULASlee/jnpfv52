@@ -118,7 +118,7 @@ public sealed class SkillDeliverableCoordinator : ISkillDeliverableCoordinator, 
     private async Task SaveRequirementSpecAsync(
         string tenantId, long pipelineId, string projectId, CancellationToken ct)
     {
-        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, ct);
+        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString(), ct);
         var eventSpecs = snapshots
             .Where(s => string.Equals(s.FragmentType, IrFragmentTypes.EventSpec, StringComparison.Ordinal))
             .ToList();

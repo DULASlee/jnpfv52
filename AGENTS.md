@@ -53,6 +53,19 @@ Kills stale dotnet/node processes, frees ports 3100+5000, then launches frontend
 
 **Frontend type-check:** Never run bare `npx vue-tsc --noEmit` (OOM on full `src`). Use `pnpm type-check` (Studio scoped, `tsconfig.typecheck.json`); use `pnpm type-check:full` when editing legacy modules. See `.cursor/rules/frontend-typecheck.mdc`.
 
+## Code Search Rules（强制性 — 所有 Agent 必遵）
+
+**使用 MCP 工具做代码搜索，禁止逐文件 grep/find 遍历：**
+
+| 搜索目标 | 工具 | 说明 |
+|---------|------|------|
+| C# 符号（类/方法/接口/引用） | **Serena MCP** `mcp__serena__find_symbol` / `find_referencing_symbols` | 语义级精确搜索 |
+| C# 文件结构概览 | **Serena MCP** `mcp__serena__get_symbols_overview` | 一眼看清文件内容 |
+| 项目架构/领域知识查询 | **Knowledge Graph MCP** `mcp__knowledge-graph__search_nodes` | 知识图谱语义查询 |
+| 文本内容搜索 | Grep / `git grep` | 仅限上述工具不适用时 |
+
+> Serena 和 Knowledge Graph 已配置于 `.zcode/config.json`。详见 [CLAUDE.md](./CLAUDE.md) §Agent Toolchain。
+
 ## Auto Test-Fix Loop（无浏览器 — 所有 Agent 必遵）
 
 **禁止手点浏览器登录。** 后端/API/Skill/IR 验证 MUST 用脚本 + Token：
@@ -100,6 +113,21 @@ jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
 - **Multi-tenant:** Every SqlSugar query MUST verify `ITenantFilter` is active. Missing filter = cross-tenant data leak.
 - **OA module is disabled** — never modify. IoT/MES modules don't exist — never scaffold.
 - **Database:** SqlSugar (SQL Server) + Dapper. Table names: `UPPER_SNAKE_CASE` with module prefix (`BASE_USER`, `FLOW_TASK`). C# code: PascalCase.
+
+## 实现完整性铁律（宪法级, 永远生效, 2026-07-08 立）
+
+**实现驱动测试，不是测试驱动实现。为通过测试而降低业务实现质量 = 系统性作弊。**
+
+**主文件：** `.claude/rules/implementation-integrity-iron-law.md` · `CLAUDE.md` §实现完整性铁律
+
+**五禁令（违反任一 = 立即停工）：**
+1. **禁止给门控开逃逸通道** — Gate/Validator 的设计意图不可被实现层豁免绕过
+2. **禁止为唯一解析器引入第二源** — 计划写"唯一源"处，不得加 fallback/兜底
+3. **禁止改测试断言凑新行为** — 测试失败先核对实现，非先改测试
+4. **禁止用快照重生成替代内容审查** — 重生成 hash/golden 前必须逐文件审查内容
+5. **禁止跳过验收标准核心项** — 声称"完成"前逐条列验收+证据，弱项不替代强项
+
+**节点审批门禁：** 从第一个小功能起，每个功能节点完成后 MUST 暂停，提交"业务实现+质量自检+功能证据+验收对照"，**未经用户审批不得进入下一节点。** 沉默 ≠ 审批。
 
 ## Triple-Key Iron Law (R12 — 宪法级, 永远生效)
 

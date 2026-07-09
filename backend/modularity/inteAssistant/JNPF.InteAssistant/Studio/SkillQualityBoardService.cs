@@ -38,7 +38,7 @@ public class SkillQualityBoardService : IDynamicApiController, ITransient
     /// GET /api/studio/skills/quality-board?sinceDays=30
     /// 单条 SQL 聚合 + tier 分级 + 三元组过滤。
     /// </summary>
-    [HttpGet]
+    [HttpGet("board")]
     public async Task<object> GetBoard([FromQuery] int sinceDays = 30, CancellationToken ct = default)
     {
         var since = DateTime.UtcNow.AddDays(-sinceDays);

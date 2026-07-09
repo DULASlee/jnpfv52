@@ -113,7 +113,7 @@ public class SkillsApiService : IDynamicApiController, ITransient
     public async Task<object> ConfirmSkeletonAsync(long pipelineId, [FromBody] ConfirmSkeletonRequest? request)
     {
         var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
-        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId);
+        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString());
         var skeleton = snapshots.FirstOrDefault(s =>
             s.FragmentType == IrFragmentTypes.Skeleton || s.FragmentId?.StartsWith("skeleton:", StringComparison.Ordinal) == true);
 
@@ -174,7 +174,7 @@ public class SkillsApiService : IDynamicApiController, ITransient
     public async Task<object> ConfirmRequirementSpecAsync(long pipelineId, [FromBody] ConfirmRequirementSpecRequest? request)
     {
         var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
-        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId);
+        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString());
         var eventSpecs = snapshots
             .Where(s => s.FragmentType == IrFragmentTypes.EventSpec && s.StabilityState is IrStabilityStates.Stable or IrStabilityStates.Locked)
             .ToList();
@@ -238,7 +238,7 @@ public class SkillsApiService : IDynamicApiController, ITransient
             throw Oops.Bah("SetId 不能为空");
 
         // 1. 取回原始 ClarificationSet（按 setId 从 IR 事件流定位）— skipAll 也需要它来判定 stage
-        var set = await LoadClarificationSetAsync(projectId, tenantId, request.SetId);
+        var set = await LoadClarificationSetAsync(projectId, tenantId, pipelineId.ToString(), request.SetId);
         if (set == null)
             throw Oops.Bah($"未找到提问集合 {request.SetId}，可能已过期或已作答");
 
@@ -384,12 +384,12 @@ public class SkillsApiService : IDynamicApiController, ITransient
 
     /// <summary>从 IR 事件流按 setId 加载原始 ClarificationSet（ClarificationRequested 事件 payload）。</summary>
     private async Task<ClarificationSet?> LoadClarificationSetAsync(
-        string projectId, string tenantId, string setId)
+        string projectId, string tenantId, string pipelineId, string setId)
     {
         // 从 IR fragment snapshot 加载（payload 完整，不受 IrEventDto.PayloadPreview 500 字符截断影响）。
         // ClarificationRequested 事件投递后，IrProjectionEngine.UpsertClarificationAsync 把完整
         // ClarificationSet JSON 存到了 IR1_Clarification fragment 的 IrContent。
-        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId);
+        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId);
         foreach (var snap in snapshots.Where(s => s.FragmentType == IrFragmentTypes.Clarification))
         {
             var payloadJson = snap.Payload is string s ? s : JsonSerializer.Serialize(snap.Payload ?? "{}");
@@ -499,7 +499,7 @@ public class SkillsApiService : IDynamicApiController, ITransient
     public async Task<List<SkillExperienceEventDto>> ListExperienceEventsAsync(long pipelineId)
     {
         var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
-        var events = await _eventStore.ListEventsAsync(projectId, tenantId);
+        var events = await _eventStore.ListEventsAsync(projectId, tenantId, pipelineId.ToString());
         var experienceTypes = new HashSet<string>(StringComparer.Ordinal)
         {
             IrEventTypes.SkillReviewRecorded,

@@ -94,7 +94,7 @@ public sealed class BugfixSkillOrchestrator : IBugfixSkillOrchestrator, ITransie
         using var logScope = _skillLogger.BeginScope(
             orchestratorRunId, tenantId, projectId, pipelineId, BugfixSkillIds.Bugfix);
 
-        var snapshotsBefore = await _eventStore.ListSnapshotsAsync(projectId, tenantId, ct);
+        var snapshotsBefore = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString(), ct);
         var payloadHashesBefore = BuildPayloadHashMap(snapshotsBefore);
 
         _skillLogger.LogPhase("DiffCompute", "start", sw.ElapsedMilliseconds);
@@ -225,7 +225,7 @@ public sealed class BugfixSkillOrchestrator : IBugfixSkillOrchestrator, ITransie
             }
         }
 
-        var snapshotsAfter = await _eventStore.ListSnapshotsAsync(projectId, tenantId, ct);
+        var snapshotsAfter = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString(), ct);
         VerifyPreservedDeliverables(payloadHashesBefore, snapshotsAfter, plan.PreservedFragmentTypes);
 
         var bugFixedEvt = await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest

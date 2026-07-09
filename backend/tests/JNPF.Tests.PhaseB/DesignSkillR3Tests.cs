@@ -25,8 +25,8 @@ public static class DesignSkillR3Tests
         var toolkit = new FakeDesignToolkit();
         var skills = new CognitiveSkill[]
         {
-            new ArchitectSkillService(toolkit, null!, null!),
-            new DbDesignSkillService(toolkit, null!),
+            new ArchitectSkillService(toolkit, null!, null!, null!),
+            new DbDesignSkillService(toolkit, null!, null!),
             new UiDesignSkillService(toolkit, null!),
             new SystemDesignSkillService(toolkit, new JNPF.InteAssistant.Constraints.ConstraintEngineService(null!), null!),
         };
@@ -56,35 +56,35 @@ public static class DesignSkillR3Tests
 
     private static void T3_DbDesign_ExtractTableNames_FromSkeleton()
     {
-        var ctx = new SkillContext
+        // S4 改造：ExtractTableNames 已删除，改为测试 EntityDesignProjector 投影
+        var snapshot = new IrSnapshot
         {
-            RunId = "r",
-            TenantId = "t",
-            ProjectId = "p",
-            PipelineId = 1,
-            UserRequirement = "test",
-            Snapshot = new IrSnapshot
+            Fragments = new[]
             {
-                Fragments = new[]
+                new IrSnapshotFragment
                 {
-                    new IrSnapshotFragment
-                    {
-                        FragmentId = "sk",
-                        FragmentType = IrFragmentTypes.Skeleton,
-                        StabilityState = IrStabilityStates.Stable,
-                        Payload = """{"entityDrafts":[{"tableName":"OA_LEAVE"}]}""",
-                    },
+                    FragmentId = "sk",
+                    FragmentType = IrFragmentTypes.Skeleton,
+                    StabilityState = IrStabilityStates.Stable,
+                    Payload = """{"entityDrafts":[{"entityName":"Leave","tableName":"OA_LEAVE","fields":[{"name":"id","type":"string","primaryKey":true}]}]}""",
                 },
             },
         };
-        var tables = DbDesignSkillService.ExtractTableNames(ctx);
+        var projection = JNPF.InteAssistant.Codegen.EntityDesign.EntityDesignProjector.Project(
+            snapshot, new JNPF.InteAssistant.Codegen.EntityDesign.EntityDesignProjectionOptions
+            {
+                TenantId = "t",
+                ProjectId = "p",
+                PipelineId = "1",
+            });
+        var tables = projection.TableNames();
         if (tables.Count != 1 || tables[0] != "OA_LEAVE")
-            throw new Exception($"T3 表名提取失败: {string.Join(",", tables)}");
+            throw new Exception($"T3 表名投影失败: {string.Join(",", tables)}");
     }
 
     private static void T4_Architect_ValidateInput_RejectsMissingIr1()
     {
-        var skill = new ArchitectSkillService(new FakeDesignToolkit(), null!, null!);
+        var skill = new ArchitectSkillService(new FakeDesignToolkit(), null!, null!, null!);
         var result = skill.ValidateInputAsync(IrSnapshot.Empty).GetAwaiter().GetResult();
         if (result.IsValid)
             throw new Exception("T4 无 IR-1 应校验失败");

@@ -57,6 +57,36 @@ public record ClarificationQuestion
 
     /// <summary>可选项（3-5 个，末项必须 freeText=true）。</summary>
     public List<ClarificationOption> Options { get; init; } = new();
+
+    // ── P9 需求分析子链重构新增字段（26 号 §4）──
+
+    /// <summary>为什么问这个问题（减少用户困惑，提高回答质量）。</summary>
+    public string? ContextHint { get; init; }
+
+    /// <summary>合理默认值（option id）。PM 能定的行业惯例自动设为默认值。</summary>
+    public string? DefaultOption { get; init; }
+
+    /// <summary>问题格式枚举：SINGLE / MULTI / MATRIX_SINGLE / MATRIX_MULTI。</summary>
+    public string QuestionFormat { get; init; } = "SINGLE";
+
+    /// <summary>矩阵子项（矩阵题专用：每行一个事件/实体，独立选择）。</summary>
+    public List<MatrixSubItem>? MatrixSubItems { get; init; }
+}
+
+/// <summary>矩阵题子项——每行对应一个事件或实体，用户独立选择。</summary>
+public record MatrixSubItem
+{
+    /// <summary>行标识（事件 ID 或实体名）。</summary>
+    public string RowId { get; init; } = string.Empty;
+
+    /// <summary>行标签（事件名/实体名，展示给用户）。</summary>
+    public string RowLabel { get; init; } = string.Empty;
+
+    /// <summary>用户选择的选项 ID。</summary>
+    public string? SelectedOption { get; init; }
+
+    /// <summary>用户在文本框中的补充。</summary>
+    public string? FreeText { get; init; }
 }
 
 /// <summary>问题选项。</summary>

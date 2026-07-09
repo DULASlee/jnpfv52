@@ -204,7 +204,7 @@ public sealed class DesignSkillOrchestrator : IDesignSkillOrchestrator, ITransie
     public async Task<DesignOrchestratorStatus> GetStatusAsync(
         long pipelineId, string tenantId, string projectId, CancellationToken ct)
     {
-        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, ct);
+        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString(), ct);
         var ir1Stable = snapshots.Any(s =>
             s.FragmentType == IrFragmentTypes.EventSpec
             && s.StabilityState is IrStabilityStates.Stable or IrStabilityStates.Locked);
@@ -290,7 +290,7 @@ public sealed class DesignSkillOrchestrator : IDesignSkillOrchestrator, ITransie
 
     private async Task ValidatePreconditionsAsync(long pipelineId, string tenantId, string projectId, CancellationToken ct)
     {
-        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, ct);
+        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString(), ct);
         var hasAnalysis = snapshots.Any(s =>
             s.FragmentType == IrFragmentTypes.EventSpec
             && s.StabilityState is IrStabilityStates.Stable or IrStabilityStates.Locked);

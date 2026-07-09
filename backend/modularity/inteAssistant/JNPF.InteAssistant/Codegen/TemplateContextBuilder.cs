@@ -1,8 +1,9 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using JNPF.Engine.Entity.Model.CodeGen;
+using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Codegen.TemplateContext;
 using JNPF.InteAssistant.Entitys.Ir;
+using JNPF.InteAssistant.Entitys.Ir.Naming;
 using JNPF.InteAssistant.Skills;
 using JNPF.DependencyInjection;
 
@@ -10,6 +11,9 @@ namespace JNPF.InteAssistant.Codegen;
 
 /// <summary>
 /// 从 IR-2 快照构建 <see cref="Ir2CodegenContext"/>（A5 TemplateContext 契约）。
+///
+/// P9-S4：列定义来源从 DDL 正则解析切换为 EntityDesignProjector 确定性投影。
+/// 消灭 ParseColumnsFromDdl/BuildColumnsFromFormPage/BuildMinimalLeaveColumns 三套兜底。
 /// </summary>
 public sealed class TemplateContextBuilder : ITransient
 {
@@ -18,10 +22,6 @@ public sealed class TemplateContextBuilder : ITransient
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true,
     };
-
-    private static readonly Regex ColumnLineRegex = new(
-        @"\[\s*(?<col>F_\w+)\s*\]\s+(?<sqlType>\w+)(?<rest>[^,\n]*)",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public Ir2CodegenContext Build(IrSnapshot snapshot, Ir2CodegenBuildOptions options)
     {
@@ -35,34 +35,38 @@ public sealed class TemplateContextBuilder : ITransient
             ?? snapshot.Find(IrFragmentTypes.Skeleton);
         var ddl = snapshot.Find(IrFragmentTypes.DDL, IrStabilityStates.Stable)
             ?? snapshot.Find(IrFragmentTypes.DDL);
-        var formPage = snapshot.Find(IrFragmentTypes.FormPageIR, IrStabilityStates.Stable)
-            ?? snapshot.Find(IrFragmentTypes.FormPageIR);
         var architecture = snapshot.Find(IrFragmentTypes.Architecture, IrStabilityStates.Stable)
             ?? snapshot.Find(IrFragmentTypes.Architecture);
 
         var entityName = ResolveEntityName(skeleton, options);
         var tableName = ResolveTableName(skeleton, ddl, options, entityName);
         var nameSpace = ResolveNameSpace(architecture, options, entityName);
-        var ddlText = ExtractDdlText(ddl);
-        var fieldLabels = ExtractFormFieldLabels(formPage);
 
-        if (options.StrictMode && string.IsNullOrWhiteSpace(ddlText))
-            throw new TemplateContextBuildException($"[{options.SampleId}] IR2_DDL 片段缺少 ddl 文本，无法构建 TemplateContext");
+        // P9-S4：列定义从 EntityDesignProjector 确定性投影获取（契约主权 — 宪法一）
+        List<TableColumnConfigModel> columns;
+        if (options.Projection != null)
+        {
+            var entityFields = options.Projection.ForEntity(entityName);
+            columns = MapProjectionToColumns(entityFields, options);
+        }
+        else
+        {
+            columns = new List<TableColumnConfigModel>();
+        }
 
-        var columns = ParseColumnsFromDdl(ddlText, fieldLabels, options);
-        if (columns.Count == 0)
-            columns = BuildColumnsFromFormPage(fieldLabels, options);
-
+        // 宪法三：投影无字段 = 显式失败（无兜底）
         if (columns.Count == 0)
         {
             if (options.StrictMode)
-                throw new TemplateContextBuildException($"[{options.SampleId}] 无法从 DDL/FormPageIR 解析任何列定义");
+                throw new TemplateContextBuildException(
+                    $"[{options.SampleId}] 实体 '{entityName}' 的投影无字段定义（Skeleton entityDrafts 可能缺少 fields 或 DDL 未解析出列）");
 
-            columns = BuildMinimalLeaveColumns(options);
+            // 非严格模式：构建仅含主键的最小列集合
+            columns = BuildMinimalFallbackColumns(options);
         }
 
         var primary = columns.FirstOrDefault(c => c.PrimaryKey)
-            ?? throw new TemplateContextBuildException($"[{options.SampleId}] DDL 未定义主键列");
+            ?? throw new TemplateContextBuildException($"[{options.SampleId}] 投影未定义主键列（实体 '{entityName}'）");
 
         return new Ir2CodegenContext
         {
@@ -72,7 +76,7 @@ public sealed class TemplateContextBuilder : ITransient
             TemplateProfileId = options.TemplateProfileId ?? VmTemplateIds.ProfileSingleTable,
             NameSpace = nameSpace,
             ClassName = entityName,
-            BusName = options.BusName ?? "请假申请",
+            BusName = options.BusName ?? Ir2CodegenDefaults.FallbackBusName,
             OriginalMainTableName = tableName,
             PrimaryKey = primary.ColumnName,
             OriginalPrimaryKey = primary.OriginalColumnName,
@@ -107,6 +111,14 @@ public sealed class TemplateContextBuilder : ITransient
         var snapshot = new IrSnapshot { Fragments = fragments };
         var defaults = fixture.Defaults ?? new Ir2SampleDefaults();
 
+        // P9-S4：样本 JSON 也走确定性投影
+        var projectionOptions = new EntityDesignProjectionOptions
+        {
+            TenantId = defaults.TenantId ?? "000000",
+            ProjectId = defaults.ProjectId ?? fixture.SampleId,
+            PipelineId = "0", // 样本数据无真实 pipeline
+        };
+
         return Build(snapshot, new Ir2CodegenBuildOptions
         {
             ProjectId = defaults.ProjectId ?? fixture.SampleId,
@@ -125,19 +137,230 @@ public sealed class TemplateContextBuilder : ITransient
             IsLogicalDelete = defaults.IsLogicalDelete,
             ConcurrencyLock = defaults.ConcurrencyLock,
             StrictMode = true,
+            Projection = EntityDesignProjector.Project(snapshot, projectionOptions),
         });
     }
 
     /// <summary>从 Skill 上下文构建 TemplateContext（IR-2 stable 片段 → Ir2CodegenContext）。</summary>
     public Ir2CodegenContext BuildFromSkillContext(SkillContext context)
     {
+        var projectionOptions = new EntityDesignProjectionOptions
+        {
+            TenantId = context.TenantId,
+            ProjectId = context.ProjectId,
+            PipelineId = context.PipelineId.ToString(),
+        };
+
         return Build(context.Snapshot, new Ir2CodegenBuildOptions
         {
             ProjectId = context.ProjectId,
             TenantId = context.TenantId,
             SampleId = context.ProjectId,
             StrictMode = true,
+            Projection = EntityDesignProjector.Project(context.Snapshot, projectionOptions),
         });
+    }
+
+    /// <summary>
+    /// P9-S2：多实体编译入口 — 遍历 skeleton 所有 entityDrafts，为每个实体构建 Ir2CodegenContext。
+    /// 替代单实体的 BuildFromSkillContext（保留向后兼容）。
+    /// 这是确定性编译器的核心：从 IR 派生所有实体的代码生成上下文，零 LLM。
+    ///
+    /// P9-S4：投影计算提升到循环外（一次 Project，N 次 ForEntity）。
+    /// P9-S5：支持外部预计算投影（DeveloperSkillService 计算一次 → 持久化 + 编译复用）。
+    /// </summary>
+    /// <param name="context">Skill 上下文</param>
+    /// <param name="prebuiltProjection">
+    /// 可选：外部预计算的投影。不为 null 时跳过内部计算（DeveloperSkillService 计算一次后
+    /// 先持久化到 ai_entity_field，再传给此处编译复用）。
+    /// </param>
+    public IReadOnlyList<Ir2CodegenContext> BuildAllFromSkillContext(
+        SkillContext context,
+        EntityDesignProjection? prebuiltProjection = null)
+    {
+        var skeleton = context.Snapshot.Find(IrFragmentTypes.Skeleton, IrStabilityStates.Stable)
+            ?? context.Snapshot.Find(IrFragmentTypes.Skeleton);
+
+        if (skeleton == null)
+            throw new TemplateContextBuildException($"[{context.ProjectId}] 缺少 Skeleton，无法多实体编译");
+
+        // P9-S4/S5：一次投影，多次消费。外部预计算优先（避免重复解析 Skeleton+DDL）
+        var projection = prebuiltProjection;
+        if (projection == null)
+        {
+            var projectionOptions = new EntityDesignProjectionOptions
+            {
+                TenantId = context.TenantId,
+                ProjectId = context.ProjectId,
+                PipelineId = context.PipelineId.ToString(),
+            };
+            projection = EntityDesignProjector.Project(context.Snapshot, projectionOptions);
+        }
+
+        // 解析所有 entityDrafts
+        List<(string entityName, string tableName)> entities;
+        try
+        {
+            using var doc = JsonDocument.Parse(skeleton.Payload);
+            entities = new List<(string, string)>();
+            if (doc.RootElement.TryGetProperty("entityDrafts", out var drafts) && drafts.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var d in drafts.EnumerateArray())
+                {
+                    var entityName = GetString(d, "entityName") ?? "";
+                    var tableName = GetString(d, "tableName") ?? "";
+                    if (!string.IsNullOrWhiteSpace(entityName))
+                        entities.Add((entityName, tableName));
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            throw new TemplateContextBuildException($"[{context.ProjectId}] Skeleton 解析失败，无法多实体编译");
+        }
+
+        if (entities.Count == 0)
+            throw new TemplateContextBuildException($"[{context.ProjectId}] Skeleton 无 entityDrafts，无法多实体编译");
+
+        // 为每个实体构建上下文（复用 Build，传入 ClassName/TableName 避免取 drafts[0]）
+        var contexts = new List<Ir2CodegenContext>();
+        foreach (var (entityName, tableName) in entities)
+        {
+            try
+            {
+                var ctx = Build(context.Snapshot, new Ir2CodegenBuildOptions
+                {
+                    ProjectId = context.ProjectId,
+                    TenantId = context.TenantId,
+                    SampleId = context.ProjectId,
+                    StrictMode = false,  // 多实体模式宽容：单个实体缺列不阻断整体
+                    ClassName = entityName,
+                    TableName = !string.IsNullOrWhiteSpace(tableName) ? tableName : EntityNamingPolicy.ToSnakeUpper(entityName),
+                    BusName = entityName,
+                    Projection = projection,  // P9-S4：复用循环外投影
+                });
+                contexts.Add(ctx);
+            }
+            catch (TemplateContextBuildException)
+            {
+                // 单实体失败不阻断整体（跳过该实体）
+                // 实际场景应由 IrCompletenessGate 在编译前拦截并报告缺口
+            }
+        }
+
+        return contexts;
+    }
+
+    #region Column mapping (P9-S4: projection → TableColumnConfigModel)
+
+    /// <summary>
+    /// 将 EntityDesignProjection 中指定实体的字段映射为 <see cref="TableColumnConfigModel"/> 列表。
+    /// 这是 DDL 正则解析的唯一替代路径（宪法一：唯一解析器）。
+    /// </summary>
+    private static List<TableColumnConfigModel> MapProjectionToColumns(
+        IReadOnlyList<EntityFieldDesign> entityFields,
+        Ir2CodegenBuildOptions options)
+    {
+        var columns = new List<TableColumnConfigModel>(entityFields.Count);
+
+        foreach (var field in entityFields)
+        {
+            // 跳过工作流列（模板自行注入）
+            if (options.EnableFlow && IsFlowColumn(field.FieldName, field.DbColumnName))
+                continue;
+
+            // 跳过租户列（模板自行注入）
+            if (options.IsTenantColumn && IsTenantColumnName(field.FieldName, field.DbColumnName))
+                continue;
+
+            columns.Add(new TableColumnConfigModel
+            {
+                ColumnName = field.PropertyName,
+                OriginalColumnName = field.DbColumnName,
+                ColumnComment = field.FieldDescription ?? field.FieldName,
+                NetType = field.CSharpType,
+                PrimaryKey = field.IsPrimaryKey,
+                jnpfKey = field.IsPrimaryKey ? null : "input",
+                IsImportField = false,
+            });
+        }
+
+        return columns;
+    }
+
+    private static bool IsFlowColumn(string fieldName, string dbColumnName)
+    {
+        return string.Equals(fieldName, "FlowId", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(fieldName, "FlowTaskId", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(dbColumnName, "F_Flow_Id", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(dbColumnName, "F_Flow_Task_Id", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsTenantColumnName(string fieldName, string dbColumnName)
+    {
+        return string.Equals(fieldName, "TenantId", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(dbColumnName, "F_TenantId", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(dbColumnName, "F_Tenant_Id", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// 非严格模式兜底：构建仅含主键的最小列集合。
+    /// 不再硬编码"请假"实体（消灭 BuildMinimalLeaveColumns）。
+    /// </summary>
+    private static List<TableColumnConfigModel> BuildMinimalFallbackColumns(Ir2CodegenBuildOptions options)
+    {
+        var columns = new List<TableColumnConfigModel>
+        {
+            new()
+            {
+                ColumnName = "Id",
+                OriginalColumnName = "F_Id",
+                ColumnComment = "主键",
+                NetType = "string",
+                PrimaryKey = true,
+            },
+        };
+
+        if (options.IsTenantColumn)
+        {
+            columns.Add(new TableColumnConfigModel
+            {
+                ColumnName = "TenantId",
+                OriginalColumnName = "F_TenantId",
+                ColumnComment = "租户",
+                NetType = "string",
+            });
+        }
+
+        if (options.EnableFlow)
+        {
+            columns.Add(new TableColumnConfigModel
+            {
+                ColumnName = "FlowId",
+                OriginalColumnName = "F_Flow_Id",
+                ColumnComment = "流程引擎ID",
+                NetType = "string",
+            });
+            columns.Add(new TableColumnConfigModel
+            {
+                ColumnName = "FlowTaskId",
+                OriginalColumnName = "F_Flow_Task_Id",
+                ColumnComment = "流程任务ID",
+                NetType = "string",
+            });
+        }
+
+        return columns;
+    }
+
+    #endregion
+
+    #region Helpers (unchanged from original, kept for JSON/name resolution)
+
+    private static string? GetString(JsonElement el, string name)
+    {
+        if (!el.TryGetProperty(name, out var prop)) return null;
+        return prop.ValueKind == JsonValueKind.String ? prop.GetString() : prop.ToString();
     }
 
     private static void ValidateIr2Fragments(IrSnapshot snapshot, Ir2CodegenBuildOptions options)
@@ -177,7 +400,7 @@ public sealed class TemplateContextBuilder : ITransient
                         return en.GetString()!;
                 }
             }
-            catch
+            catch (JsonException)
             {
                 // ignore parse errors
             }
@@ -210,7 +433,7 @@ public sealed class TemplateContextBuilder : ITransient
                     return names[0].GetString() ?? $"OA_{entityName.ToUpperInvariant()}";
                 }
             }
-            catch
+            catch (JsonException)
             {
                 // ignore
             }
@@ -230,7 +453,7 @@ public sealed class TemplateContextBuilder : ITransient
                         return tn.GetString()!;
                 }
             }
-            catch
+            catch (JsonException)
             {
                 // ignore
             }
@@ -263,7 +486,7 @@ public sealed class TemplateContextBuilder : ITransient
                     }
                 }
             }
-            catch
+            catch (JsonException)
             {
                 // ignore
             }
@@ -311,246 +534,6 @@ public sealed class TemplateContextBuilder : ITransient
                 : char.ToUpperInvariant(p[0]) + p[1..].ToLowerInvariant()));
     }
 
-    private static string ExtractDdlText(IrSnapshotFragment? ddl)
-    {
-        if (ddl == null) return string.Empty;
-
-        try
-        {
-            using var doc = JsonDocument.Parse(ddl.Payload);
-            if (doc.RootElement.TryGetProperty("ddl", out var ddlProp))
-                return NormalizeDdlText(ddlProp.GetString() ?? string.Empty);
-        }
-        catch
-        {
-            // ignore
-        }
-
-        return string.Empty;
-    }
-
-    private static string NormalizeDdlText(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return string.Empty;
-
-        var trimmed = text.Trim();
-        if (!trimmed.StartsWith("```", StringComparison.Ordinal))
-            return trimmed;
-
-        var firstNewline = trimmed.IndexOf('\n');
-        if (firstNewline >= 0)
-            trimmed = trimmed[(firstNewline + 1)..];
-
-        var lastFence = trimmed.LastIndexOf("```", StringComparison.Ordinal);
-        if (lastFence >= 0)
-            trimmed = trimmed[..lastFence];
-
-        return trimmed.Trim();
-    }
-
-    private static Dictionary<string, string> ExtractFormFieldLabels(IrSnapshotFragment? formPage)
-    {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (formPage == null) return map;
-
-        try
-        {
-            using var doc = JsonDocument.Parse(formPage.Payload);
-            if (doc.RootElement.TryGetProperty("fields", out var fields) && fields.ValueKind == JsonValueKind.Array)
-            {
-                CollectFieldLabels(fields, map);
-                return map;
-            }
-
-            if (doc.RootElement.TryGetProperty("pages", out var pages) && pages.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var page in pages.EnumerateArray())
-                {
-                    if (page.TryGetProperty("fields", out var pageFields) && pageFields.ValueKind == JsonValueKind.Array)
-                        CollectFieldLabels(pageFields, map);
-                }
-            }
-        }
-        catch
-        {
-            // ignore
-        }
-
-        return map;
-    }
-
-    private static void CollectFieldLabels(JsonElement fields, Dictionary<string, string> map)
-    {
-        foreach (var field in fields.EnumerateArray())
-        {
-            var fieldId = TryGetJsonString(field, "fieldId", "FieldId", "id", "Id");
-            var label = TryGetJsonString(field, "label", "Label");
-            if (!string.IsNullOrWhiteSpace(fieldId) && !string.IsNullOrWhiteSpace(label) && !map.ContainsKey(fieldId))
-                map[fieldId] = label!;
-        }
-    }
-
-    private static string? TryGetJsonString(JsonElement element, params string[] propertyNames)
-    {
-        foreach (var name in propertyNames)
-        {
-            if (element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String)
-                return value.GetString();
-        }
-
-        return null;
-    }
-
-    private static List<TableColumnConfigModel> ParseColumnsFromDdl(
-        string ddl,
-        IReadOnlyDictionary<string, string> fieldLabels,
-        Ir2CodegenBuildOptions options)
-    {
-        var list = new List<TableColumnConfigModel>();
-        foreach (Match match in ColumnLineRegex.Matches(ddl))
-        {
-            var original = match.Groups["col"].Value;
-            var sqlType = match.Groups["sqlType"].Value;
-            var rest = match.Groups["rest"].Value;
-            var columnName = ToPropertyName(original);
-            var isPk = rest.Contains("PRIMARY KEY", StringComparison.OrdinalIgnoreCase)
-                || original.Equals("F_Id", StringComparison.OrdinalIgnoreCase);
-
-            if (options.EnableFlow && original.Equals("F_Flow_Id", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            if (options.EnableFlow && original.Equals("F_Flow_Task_Id", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            // IsTenantColumn 时 Entity.cs.vm 末尾注入 F_Tenant_Id，DDL 中的 F_TenantId 跳过避免重复属性
-            if (options.IsTenantColumn &&
-                (original.Equals("F_TenantId", StringComparison.OrdinalIgnoreCase) ||
-                 original.Equals("F_Tenant_Id", StringComparison.OrdinalIgnoreCase)))
-                continue;
-
-            fieldLabels.TryGetValue(columnName, out var label);
-            if (string.IsNullOrWhiteSpace(label))
-                label = DefaultLabel(columnName);
-
-            list.Add(new TableColumnConfigModel
-            {
-                ColumnName = columnName,
-                OriginalColumnName = original,
-                ColumnComment = label,
-                NetType = MapSqlTypeToNetType(sqlType),
-                PrimaryKey = isPk,
-                jnpfKey = isPk ? null : "input",
-                IsImportField = false,
-            });
-        }
-
-        return list;
-    }
-
-    private static List<TableColumnConfigModel> BuildColumnsFromFormPage(
-        IReadOnlyDictionary<string, string> fieldLabels,
-        Ir2CodegenBuildOptions options)
-    {
-        var list = new List<TableColumnConfigModel>
-        {
-            new()
-            {
-                ColumnName = "Id",
-                OriginalColumnName = "F_Id",
-                ColumnComment = "主键",
-                NetType = "string",
-                PrimaryKey = true,
-            },
-        };
-
-        foreach (var (fieldId, label) in fieldLabels)
-        {
-            if (fieldId.Equals("id", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            list.Add(new TableColumnConfigModel
-            {
-                ColumnName = char.ToUpperInvariant(fieldId[0]) + fieldId[1..],
-                OriginalColumnName = $"F_{char.ToUpperInvariant(fieldId[0])}{fieldId[1..]}",
-                ColumnComment = label,
-                NetType = "string",
-                jnpfKey = "input",
-            });
-        }
-
-        // IsTenantColumn 时 Entity.cs.vm 末尾注入 F_Tenant_Id，此处不得重复添加 TenantId
-        return list;
-    }
-
-    private static List<TableColumnConfigModel> BuildMinimalLeaveColumns(Ir2CodegenBuildOptions options)
-    {
-        var columns = new List<TableColumnConfigModel>
-        {
-            Col("Id", "F_Id", "主键", "string", primaryKey: true),
-            Col("Reason", "F_Reason", "请假事由", "string"),
-            Col("Days", "F_Days", "请假天数", "int"),
-            Col("Status", "F_Status", "状态", "string"),
-        };
-
-        if (options.IsTenantColumn)
-            columns.Add(Col("TenantId", "F_TenantId", "租户", "string"));
-
-        if (options.EnableFlow)
-        {
-            columns.Add(Col("FlowId", "F_Flow_Id", "流程引擎ID", "string"));
-            columns.Add(Col("FlowTaskId", "F_Flow_Task_Id", "流程任务ID", "string"));
-        }
-
-        return columns;
-    }
-
-    private static TableColumnConfigModel Col(
-        string name,
-        string original,
-        string comment,
-        string netType,
-        bool primaryKey = false) => new()
-    {
-        ColumnName = name,
-        OriginalColumnName = original,
-        ColumnComment = comment,
-        NetType = netType,
-        PrimaryKey = primaryKey,
-        jnpfKey = primaryKey ? null : "input",
-    };
-
-    private static string ToPropertyName(string originalColumn)
-    {
-        var raw = originalColumn.StartsWith("F_", StringComparison.OrdinalIgnoreCase)
-            ? originalColumn[2..]
-            : originalColumn;
-        return char.ToUpperInvariant(raw[0]) + raw[1..];
-    }
-
-    private static string MapSqlTypeToNetType(string sqlType) => sqlType.ToUpperInvariant() switch
-    {
-        "INT" => "int",
-        "BIGINT" => "long",
-        "BIT" => "bool",
-        "DECIMAL" or "NUMERIC" or "MONEY" => "decimal",
-        "FLOAT" => "double",
-        "DATETIME" or "DATETIME2" or "DATE" or "SMALLDATETIME" => "DateTime?",
-        _ => "string",
-    };
-
-    private static string DefaultLabel(string columnName) => columnName switch
-    {
-        "Reason" => "请假事由",
-        "Days" => "请假天数",
-        "Status" => "状态",
-        "StartDate" => "开始日期",
-        "EndDate" => "结束日期",
-        "LeaveType" => "请假类型",
-        "TenantId" => "租户",
-        _ => columnName,
-    };
-
     private static IReadOnlyList<CodeGenFunctionModel> BuildDefaultFunctions(Ir2CodegenBuildOptions options)
     {
         _ = options;
@@ -563,6 +546,8 @@ public sealed class TemplateContextBuilder : ITransient
             new() { FullName = "Delete", orderBy = 5 },
         };
     }
+
+    #endregion
 }
 
 public sealed class Ir2CodegenBuildOptions
@@ -585,6 +570,13 @@ public sealed class Ir2CodegenBuildOptions
 
     /// <summary>默认 true：缺 IR-2 片段时 TemplateContextBuildException（API 层映射 Oops.Bah）。</summary>
     public bool StrictMode { get; init; } = true;
+
+    /// <summary>
+    /// P9-S4：确定性投影（EntityDesignProjector.Project 输出）。
+    /// 列定义不再从 DDL 正则解析，统一从此投影读取。
+    /// null = 未计算投影（向后兼容；StrictMode 下将失败）。
+    /// </summary>
+    public EntityDesignProjection? Projection { get; init; }
 }
 
 internal sealed class Ir2SampleFixture

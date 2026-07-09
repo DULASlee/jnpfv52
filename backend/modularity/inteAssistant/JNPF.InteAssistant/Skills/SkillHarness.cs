@@ -136,7 +136,7 @@ public sealed class SkillHarness : ISkillHarness, ITransient
         {
             _skillLogger.LogPhase("RunStart", "started", 0);
 
-            var snapshot = await BuildSnapshotAsync(tenantId, projectId, ct);
+            var snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
             var inputValidation = await skill.ValidateInputAsync(snapshot, ct);
             if (!inputValidation.IsValid)
                 throw Oops.Bah(inputValidation.ErrorMessage ?? "Skill 输入校验失败");
@@ -233,9 +233,9 @@ public sealed class SkillHarness : ISkillHarness, ITransient
         }
     }
 
-    private async Task<IrSnapshot> BuildSnapshotAsync(string tenantId, string projectId, CancellationToken ct)
+    private async Task<IrSnapshot> BuildSnapshotAsync(string tenantId, string projectId, string pipelineId, CancellationToken ct)
     {
-        var dtos = await _eventStore.ListSnapshotsAsync(projectId, tenantId, ct);
+        var dtos = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId, ct);
         var fragments = dtos.Select(d => new IrSnapshotFragment
         {
             FragmentId = d.FragmentId,

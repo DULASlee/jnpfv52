@@ -13,7 +13,7 @@ public interface IIrProjectionEngine
 {
     Task<AiIrFragmentSnapshotEntity?> ProjectEventAsync(AiIrEventEntity evt, CancellationToken ct = default);
 
-    Task<IrRebuildResultDto> RebuildAsync(string tenantId, string projectId, CancellationToken ct = default);
+    Task<IrRebuildResultDto> RebuildAsync(string tenantId, string projectId, string pipelineId, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -25,16 +25,16 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
 
     public IrProjectionEngine(ISqlSugarClient db) => _db = db;
 
-    public async Task<IrRebuildResultDto> RebuildAsync(string tenantId, string projectId, CancellationToken ct = default)
+    public async Task<IrRebuildResultDto> RebuildAsync(string tenantId, string projectId, string pipelineId, CancellationToken ct = default)
     {
         var sw = Stopwatch.StartNew();
 
         await _db.Deleteable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId)
+            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId && x.PipelineId == pipelineId)
             .ExecuteCommandAsync(ct);
 
         var events = await _db.Queryable<AiIrEventEntity>()
-            .Where(x => x.TenantId == tenantId && x.ProjectId == projectId)
+            .Where(x => x.TenantId == tenantId && x.ProjectId == projectId && x.PipelineId == pipelineId)
             .OrderBy(x => x.Sequence)
             .ToListAsync(ct);
 
@@ -42,7 +42,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
             await ProjectEventAsync(evt, ct);
 
         var fragmentCount = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId && !x.DeleteMark)
+            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId && x.PipelineId == pipelineId && !x.DeleteMark)
             .CountAsync(ct);
 
         sw.Stop();
@@ -96,7 +96,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
     {
         var fragmentId = evt.FragmentId ?? throw new InvalidOperationException($"{evt.EventType} 缺少 fragmentId");
         var existing = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                 && x.FragmentId == fragmentId && !x.DeleteMark)
             .FirstAsync(ct);
 
@@ -136,7 +136,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
     {
         var fragmentId = evt.FragmentId ?? throw new InvalidOperationException($"{evt.EventType} 缺少 fragmentId");
         var existing = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                 && x.FragmentId == fragmentId && !x.DeleteMark)
             .FirstAsync(ct);
 
@@ -176,7 +176,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
     {
         var fragmentId = evt.FragmentId ?? throw new InvalidOperationException($"{evt.EventType} 缺少 fragmentId");
         var existing = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                 && x.FragmentId == fragmentId && !x.DeleteMark)
             .FirstAsync(ct);
 
@@ -215,7 +215,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
     {
         var fragmentId = evt.FragmentId ?? throw new InvalidOperationException($"{evt.EventType} 缺少 fragmentId");
         var snap = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                 && x.FragmentId == fragmentId && !x.DeleteMark)
             .FirstAsync(ct);
 
@@ -236,7 +236,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
     {
         var fragmentId = evt.FragmentId ?? throw new InvalidOperationException($"{evt.EventType} 缺少 fragmentId");
         var snap = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                 && x.FragmentId == fragmentId && !x.DeleteMark)
             .FirstAsync(ct);
 
@@ -264,7 +264,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
     {
         var fragmentId = evt.FragmentId ?? throw new InvalidOperationException($"{evt.EventType} 缺少 fragmentId");
         var snap = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                 && x.FragmentId == fragmentId && !x.DeleteMark)
             .FirstAsync(ct);
 
@@ -292,7 +292,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
     {
         var fragmentId = evt.FragmentId ?? throw new InvalidOperationException($"{evt.EventType} 缺少 fragmentId");
         var existing = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                 && x.FragmentId == fragmentId && !x.DeleteMark)
             .FirstAsync(ct);
 
@@ -331,7 +331,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
     {
         var fragmentId = evt.FragmentId ?? "skeleton:SK-001";
         var existing = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                 && x.FragmentId == fragmentId && !x.DeleteMark)
             .FirstAsync(ct);
 
@@ -369,7 +369,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
     {
         var fragmentId = evt.FragmentId ?? "skeleton:SK-001";
         var snap = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                 && x.FragmentId == fragmentId && !x.DeleteMark)
             .FirstAsync(ct);
 
@@ -411,7 +411,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
     {
         var fragmentId = evt.FragmentId ?? throw new InvalidOperationException("EventSpecRevised 缺少 fragmentId");
         var snap = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                 && x.FragmentId == fragmentId && !x.DeleteMark)
             .FirstAsync(ct);
         if (snap == null) return null;
@@ -440,7 +440,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
         foreach (var fragmentId in invalidated)
         {
             var snap = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-                .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+                .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                     && x.FragmentId == fragmentId && !x.DeleteMark)
                 .FirstAsync(ct);
             if (snap == null)
@@ -463,7 +463,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
     {
         var fragmentId = evt.FragmentId ?? throw new InvalidOperationException("FragmentInvalidated 缺少 fragmentId");
         var snap = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                 && x.FragmentId == fragmentId && !x.DeleteMark)
             .FirstAsync(ct);
         if (snap == null) return null;
@@ -525,7 +525,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
     {
         var fragmentId = evt.FragmentId ?? throw new InvalidOperationException("EventSpecConfirmed 缺少 fragmentId");
         var existing = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                 && x.FragmentId == fragmentId && !x.DeleteMark)
             .FirstAsync(ct);
 
@@ -564,7 +564,7 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
     {
         var fragmentId = evt.FragmentId ?? "skeleton:SK-001";
         var snap = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
                 && x.FragmentId == fragmentId && !x.DeleteMark)
             .FirstAsync(ct);
         if (snap == null) return null;

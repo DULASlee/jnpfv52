@@ -1,4 +1,5 @@
 using JNPF.InteAssistant.Codegen;
+using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Codegen.TemplateContext;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Skills;
@@ -54,7 +55,7 @@ public static class TemplateContextBuilderTests
             },
         };
 
-        AssertBah(() => Build(snapshot), "ddl 文本");
+        AssertBah(() => Build(snapshot), "无字段定义");
     }
 
     private static void TestMissingArchitectureModule_ThrowsBahWithoutOverride()
@@ -122,7 +123,7 @@ public static class TemplateContextBuilderTests
                     FragmentId = "ddl:markdown",
                     FragmentType = IrFragmentTypes.DDL,
                     StabilityState = IrStabilityStates.Stable,
-                    Payload = """{"tableNames":["LeaveRequest"],"ddl":"```sql\nCREATE TABLE LeaveRequest (RequestID INT PRIMARY KEY);\n```"}""",
+                    Payload = """{"tableNames":["LeaveRequest"],"ddl":"```sql\nCREATE TABLE LeaveRequest (RequestID INT PRIMARY KEY, Reason NVARCHAR(200) NULL, Days INT NOT NULL);\n```"}""",
                 },
                 new IrSnapshotFragment
                 {
@@ -135,12 +136,21 @@ public static class TemplateContextBuilderTests
         };
 
         var ctx = Build(snapshot);
+        // P9-S4：列定义来自 DDL（确定性投影），form page 字段不再作为列源
         if (ctx.TableField.Count < 3)
-            throw new InvalidOperationException($"expected >=3 columns from nested form page, got {ctx.TableField.Count}");
+            throw new InvalidOperationException($"expected >=3 columns from DDL projection, got {ctx.TableField.Count}");
     }
 
     private static Ir2CodegenContext Build(IrSnapshot snapshot)
     {
+        // P9-S4：Build 需显式传入 Projection（消费端契约主权）
+        var projection = EntityDesignProjector.Project(snapshot, new EntityDesignProjectionOptions
+        {
+            ProjectId = "neg-test",
+            TenantId = "000000",
+            PipelineId = "0",
+        });
+
         var builder = new TemplateContextBuilder();
         return builder.Build(snapshot, new Ir2CodegenBuildOptions
         {
@@ -148,6 +158,7 @@ public static class TemplateContextBuilderTests
             TenantId = "000000",
             SampleId = "neg-test",
             StrictMode = true,
+            Projection = projection,
         });
     }
 

@@ -6,7 +6,7 @@
  *   SA_DB_BACKEND=sqlserver   — 启用（server.ts createDatabase）
  */
 
-import sql from 'mssql';
+import * as sql from 'mssql';
 import {
   ISADatabase, SAContext, ScopeOutput, DFDOutput, BPMOutput, DictOutput,
   PSpecOutput, DecisionTableOutput, EROutput, StateMachineOutput, UIOutput,
@@ -31,11 +31,10 @@ export class SqlServerSADatabase implements ISADatabase {
 
   /** 三元组落库参数（tenant_id + project_id + pipeline_id） */
   private bindTriple(req: sql.Request, ctx: SAContext): sql.Request {
-    const pipelineId = ctx.pipelineId ?? ctx.projectId;
     return req
       .input('tenant_id', sql.NVarChar(50), ctx.tenantId)
       .input('project_id', sql.BigInt, ctx.projectId)
-      .input('pipeline_id', sql.BigInt, pipelineId);
+      .input('pipeline_id', sql.BigInt, ctx.pipelineId);
   }
 
   async saveScope(scope: ScopeOutput, ctx: SAContext): Promise<{ id: number }> {
@@ -172,11 +171,10 @@ export class SqlServerSADatabase implements ISADatabase {
 
   async logValidation(record: ValidationLogRecord): Promise<void> {
     await this.ensureConnected();
-    const pipelineId = record.pipelineId ?? record.projectId;
     await this.pool.request()
       .input('tenant_id', sql.NVarChar(50), record.tenantId)
       .input('project_id', sql.BigInt, record.projectId)
-      .input('pipeline_id', sql.BigInt, pipelineId)
+      .input('pipeline_id', sql.BigInt, record.pipelineId)
       .input('sa_table_name', sql.NVarChar(100), record.saTableName)
       .input('sa_record_id', sql.BigInt, record.saRecordId ?? null)
       .input('validator_name', sql.NVarChar(100), record.validatorName)

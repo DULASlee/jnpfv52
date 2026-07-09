@@ -95,14 +95,14 @@ public class IrObservabilityApiService : IDynamicApiController, ITransient
     public async Task<List<IrEventDto>> GetEventsAsync(long pipelineId)
     {
         var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
-        return await _eventStore.ListEventsAsync(projectId, tenantId);
+        return await _eventStore.ListEventsAsync(projectId, tenantId, pipelineId.ToString());
     }
 
     [HttpGet("{pipelineId:long}/snapshots")]
     public async Task<List<IrFragmentSnapshotDto>> GetSnapshotsAsync(long pipelineId)
     {
         var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
-        return await _eventStore.ListSnapshotsAsync(projectId, tenantId);
+        return await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString());
     }
 
     [HttpGet("{pipelineId:long}/snapshots/{fragmentId}")]
@@ -110,14 +110,14 @@ public class IrObservabilityApiService : IDynamicApiController, ITransient
         long pipelineId, string fragmentId, [FromQuery] int? version)
     {
         var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
-        return await _eventStore.GetSnapshotAtVersionAsync(projectId, tenantId, fragmentId, version);
+        return await _eventStore.GetSnapshotAtVersionAsync(projectId, tenantId, pipelineId.ToString(), fragmentId, version);
     }
 
     [HttpGet("{pipelineId:long}/stability")]
     public async Task<IrStabilityDto?> GetStabilityAsync(long pipelineId)
     {
         var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
-        return await _eventStore.GetStabilityAsync(projectId, tenantId);
+        return await _eventStore.GetStabilityAsync(projectId, tenantId, pipelineId.ToString());
     }
 
     [HttpGet("{pipelineId:long}/diagnostics")]
@@ -160,7 +160,7 @@ public class IrObservabilityApiService : IDynamicApiController, ITransient
     {
         EnsureDevToolsEnabled();
         var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
-        return await _projection.RebuildAsync(tenantId, projectId);
+        return await _projection.RebuildAsync(tenantId, projectId, pipelineId.ToString());
     }
 
     [HttpPost("{pipelineId:long}/events/{fragmentId}/revise")]
@@ -168,7 +168,7 @@ public class IrObservabilityApiService : IDynamicApiController, ITransient
         long pipelineId, string fragmentId, [FromBody] ReviseEventSpecInput input)
     {
         var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
-        var result = await _revisionService.ReviseAsync(projectId, tenantId, fragmentId, input);
+        var result = await _revisionService.ReviseAsync(projectId, tenantId, pipelineId.ToString(), fragmentId, input);
 
         if (input.AutoRerunAffected == true && result.AffectedSteps.Count > 0)
         {
@@ -201,7 +201,7 @@ public class IrObservabilityApiService : IDynamicApiController, ITransient
         var saStepName = input.SaStepName;
         if (input.EventType == IrEventTypes.SaStepCompleted && string.IsNullOrWhiteSpace(saStepName))
         {
-            saStepName = await InferNextSaStepAsync(projectId, tenantId);
+            saStepName = await InferNextSaStepAsync(projectId, tenantId, pipelineId.ToString());
         }
 
         var request = BuildSimulateRequest(input with { SaStepName = saStepName });
@@ -475,9 +475,9 @@ public class IrObservabilityApiService : IDynamicApiController, ITransient
         };
     }
 
-    private async Task<string> InferNextSaStepAsync(string projectId, string tenantId)
+    private async Task<string> InferNextSaStepAsync(string projectId, string tenantId, string pipelineId)
     {
-        var stability = await _eventStore.GetStabilityAsync(projectId, tenantId);
+        var stability = await _eventStore.GetStabilityAsync(projectId, tenantId, pipelineId);
         var completed = stability?.SaStepsCompleted?.ToHashSet(StringComparer.Ordinal)
             ?? new HashSet<string>(StringComparer.Ordinal);
 

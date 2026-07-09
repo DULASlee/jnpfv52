@@ -1,15 +1,20 @@
 using System.Collections.Concurrent;
+using System.Data;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using JNPF.DependencyInjection;
 using JNPF.FriendlyException;
+using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Ir;
+using JNPF.InteAssistant.Gates;
 using JNPF.InteAssistant.Ir;
+using JNPF.InteAssistant.Runtime;
 using JNPF.InteAssistant.Sa;
 using JNPF.InteAssistant.Skills.Cognitive;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SqlSugar;
 
 namespace JNPF.InteAssistant.Skills;
 
@@ -32,6 +37,13 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
     private readonly IExperienceRecorder _experience;
     private readonly ILogger<AnalystSkillService> _logger;
 
+    // ── Round 3 工程接线依赖 ─────────────────────────────────────────
+    private readonly EntityDesignRepository _entityDesignRepo;
+    private readonly ISystemDesignLockedCompletenessGate _consistencyGate;
+    private readonly ISaMaterializer _materializer;
+    private readonly ILightStructureValidator _lightValidator;
+    private readonly ISqlSugarClient _db;
+
     public AnalystSkillService(
         ICognitiveSkillToolkit toolkit,
         ISaOrchestratorAdapter saAdapter,
@@ -40,7 +52,12 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
         IAnalysisCompletedCompletenessGate completenessGate,
         IIrEventStoreService eventStore,
         IExperienceRecorder experience,
-        ILogger<AnalystSkillService> logger)
+        ILogger<AnalystSkillService> logger,
+        EntityDesignRepository entityDesignRepo,
+        ISystemDesignLockedCompletenessGate consistencyGate,
+        ISaMaterializer materializer,
+        ILightStructureValidator lightValidator,
+        ISqlSugarClient db)
         : base(toolkit)
     {
         _saAdapter = saAdapter;
@@ -50,6 +67,11 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
         _eventStore = eventStore;
         _experience = experience;
         _logger = logger;
+        _entityDesignRepo = entityDesignRepo;
+        _consistencyGate = consistencyGate;
+        _materializer = materializer;
+        _lightValidator = lightValidator;
+        _db = db;
     }
 
     public override string SkillId => "analyst-skill";
@@ -117,10 +139,11 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
             "AnalystSkill: 共 {Total} 个事件，{Pending} 个待分析，{Done} 个已完成（断点续跑）",
             businessEvents.Count, pendingEvents.Count, alreadyConfirmed.Count);
 
+        SaNineViewCompileResult? compileResult = null;
+
         if (pendingEvents.Count > 0)
         {
             SaProjectResult saResult;
-            SaNineViewCompileResult? compileResult = null;
 
             if (_pipelineOptions.IsCompileMode)
             {
@@ -226,14 +249,84 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
             }
         }
 
+        // ── Round 3 工程一次性保障（27 号 §5.2 / §9：前两轮零工程步骤，仅 Round 3 落库）──
+        // 默认（ThinkAsync 经 SkillHarness 触发）= 开启最终工程保障。
+        // 三轮编排器在 Round 1/2 调用 ThinkAsyncWithRoundAsync(enableFinalization: false) 时，
+        // 只编译 SA + 产出 IR 事件 + 内存收集 Assumptions，不投影/不门禁/不 Materializer。
+        yield return await FinalizeAsync(context, compileResult, businessEvents.Count, enableFinalization: true, ct);
+    }
+
+    /// <summary>
+    /// 27 号 §5.2：Round 3 工程一次性保障 —— 投影 ai_entity_field → 轻量校验 →
+    /// R1-R3 一致性门禁 → Materializer 九表 → sa_assumptions → 完整性门禁 → AnalysisCompleted。
+    /// enableFinalization=false（Round 1/2）时跳过投影/门禁/Materializer，仅产出 AnalysisCompleted 标记本轮编译完成。
+    /// </summary>
+    /// <remarks>
+    /// 从 ThinkAsync 内联块（原 :252-315）抽取，行为严格不变：
+    ///   - 工程接线守卫条件保留：_pipelineOptions.EnableEngineeringWiring && IsCompileMode && compileResult != null
+    ///   - completenessGate + AnalysisCompleted 始终执行（不受 enableFinalization 影响）
+    /// </remarks>
+    private async Task<AppendIrEventRequest> FinalizeAsync(
+        SkillContext context,
+        SaNineViewCompileResult? compileResult,
+        int businessEventCount,
+        bool enableFinalization,
+        CancellationToken ct)
+    {
+        var freshSnapshot = await BuildSnapshotAsync(
+            context.TenantId, context.ProjectId, context.PipelineId.ToString(), ct);
+
+        if (enableFinalization
+            && _pipelineOptions.EnableEngineeringWiring
+            && _pipelineOptions.IsCompileMode
+            && compileResult != null)
+        {
+            _logger.LogInformation("AnalystSkill: 开始 Round 3 工程接线（投影+门禁+物化+假设落库）");
+
+            // ① 投影 → PersistAsync（ai_entity_field）
+            //    三元组使用 context 真实值（非 gate placeholder）
+            var projectionOptions = new EntityDesignProjectionOptions
+            {
+                TenantId = context.TenantId,
+                ProjectId = context.ProjectId,
+                PipelineId = context.PipelineId.ToString(),
+            };
+            var projection = EntityDesignProjector.Project(freshSnapshot, projectionOptions);
+            await _entityDesignRepo.PersistAsync(projection, ct);
+            _logger.LogInformation(
+                "AnalystSkill: 投影完成 {FieldCount} fields, {TableCount} tables, hash={Hash}",
+                projection.Fields.Count, projection.TableNames().Count, projection.ProjectionHash);
+
+            // ② 轻量结构校验器（WARNING 日志，不阻断）
+            var warnings = _lightValidator.Validate(compileResult.Source);
+            foreach (var w in warnings)
+                _logger.LogWarning("LightStructureValidator: {Warning}", w);
+
+            // ③ R1-R3 跨层一致性门禁（阻断）
+            var consistencyResult = await _consistencyGate.ValidateAsync(freshSnapshot, ct);
+            if (!consistencyResult.IsValid)
+                throw Oops.Bah(consistencyResult.ErrorMessage ?? "跨层一致性门禁未通过");
+
+            // ④ Materializer（物化到 sa_* 九表，自管事务）
+            var triple = new PipelineTriple(context.TenantId, context.ProjectId, context.PipelineId);
+            var materializeResult = await _materializer.MaterializeAsync(triple, compileResult, ct);
+            _logger.LogInformation(
+                "AnalystSkill: 物化完成 scope={ScopeId} dict={DictId} events={EventCount} ms={DurationMs}",
+                materializeResult.ScopeId, materializeResult.DictId,
+                materializeResult.EventCount, materializeResult.DurationMs);
+
+            // ⑤ sa_assumptions 独立事务写入
+            if (compileResult.Assumptions is { Count: > 0 })
+                await PersistAssumptionsAsync(context, compileResult.Assumptions, ct);
+        }
+
         // 完整性门禁
-        var freshSnapshot = await BuildSnapshotAsync(context.TenantId, context.ProjectId, ct);
         var gate = await _completenessGate.ValidateAsync(
             context.TenantId, context.ProjectId, freshSnapshot, context.RunId, ct);
         if (!gate.IsValid)
             throw Oops.Bah(gate.ErrorMessage ?? "AnalysisCompleted 完整性门禁未通过");
 
-        yield return new AppendIrEventRequest
+        return new AppendIrEventRequest
         {
             EventType = IrEventTypes.AnalysisCompleted,
             Payload = JsonSerializer.Serialize(new
@@ -241,9 +334,10 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
                 tenantId = context.TenantId,
                 projectId = context.ProjectId,
                 pipelineId = context.PipelineId,
-                eventSpecCount = businessEvents.Count,
+                eventSpecCount = businessEventCount,
                 s2Mode = _pipelineOptions.S2Mode,
                 allStable = true,
+                finalized = enableFinalization,  // 标记是否完成最终工程保障（编排器据此区分 Round 1/2 vs Round 3）
             }, JsonOptions),
         };
     }
@@ -293,9 +387,9 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
             throw Oops.Bah("EventSpec IOI 不变量校验失败");
     }
 
-    private async Task<IrSnapshot> BuildSnapshotAsync(string tenantId, string projectId, CancellationToken ct)
+    private async Task<IrSnapshot> BuildSnapshotAsync(string tenantId, string projectId, string pipelineId, CancellationToken ct)
     {
-        var dtos = await _eventStore.ListSnapshotsAsync(projectId, tenantId, ct);
+        var dtos = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId, ct);
         return new IrSnapshot
         {
             Fragments = dtos.Select(d => new IrSnapshotFragment
@@ -307,6 +401,34 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
                 SaStepsCompleted = d.SaStepsCompleted ?? Array.Empty<string>(),
             }).ToList(),
         };
+    }
+
+    /// <summary>
+    /// 将 Round 3 假设项独立事务写入 sa_assumptions 表。
+    /// Materializer 事务已提交，此方法与 SA 九表写入不在同一事务内。
+    /// </summary>
+    private async Task PersistAssumptionsAsync(
+        SkillContext context, IReadOnlyList<Assumption> assumptions, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var rows = assumptions.Select(a => new
+        {
+            F_Id = Guid.NewGuid().ToString("N"),
+            F_TenantId = context.TenantId,
+            F_ProjectId = context.ProjectId,
+            F_PIPELINE_ID = context.PipelineId.ToString(),
+            F_EventId = string.IsNullOrWhiteSpace(a.EventId) ? null : (string?)a.EventId,
+            F_SourceStep = a.SourceStep,
+            F_AssumptionText = a.Text,
+            F_Confidence = a.Confidence,
+            F_IsUserConfirmed = false,
+            F_UserVerdict = (string?)null,
+            F_RoundCreated = 3,
+            F_CreatedAt = now,
+        }).ToList();
+
+        await _db.Insertable(rows).AS("sa_assumptions").ExecuteCommandAsync(ct);
+        _logger.LogInformation("AnalystSkill: 写入 {Count} 条假设项到 sa_assumptions", rows.Count);
     }
 
     private static string BuildEventSpecPayload(

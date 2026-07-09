@@ -1,15 +1,30 @@
 namespace JNPF.InteAssistant.Codegen;
 
 /// <summary>
-/// .vm 模板 ID → sandbox 内相对路径（对齐 JNPF 命名空间约定）。
+/// .vm 模板 ID → workspace 内相对路径（对齐 JNPF 命名空间约定）。
+///
+/// P9-S2 扩展：从 3 个路径扩展为 10 个（Entity/Service/IService/Mapper + 5 个 DTO）。
 /// </summary>
 public static class CodegenArtifactPaths
 {
     public static string ToRelativePath(string templateId, string className) => templateId switch
     {
+        // 后端核心
         VmTemplateIds.Entity => Path.Combine("Entitys", $"{className}Entity.cs"),
         VmTemplateIds.Service => Path.Combine("Services", $"{className}Service.cs"),
         VmTemplateIds.IService => Path.Combine("Interfaces", $"I{className}Service.cs"),
+
+        // P9-S2 后端扩展：Mapper
+        VmTemplateIds.Mapper => Path.Combine("Mappers", $"{className}Mapper.cs"),
+
+        // P9-S2 后端扩展：DTO（放 Entitys/Dto/{ClassName}/ 目录）
+        VmTemplateIds.CrInput => Path.Combine("Entitys", "Dto", className, $"{className}CrInput.cs"),
+        VmTemplateIds.UpInput => Path.Combine("Entitys", "Dto", className, $"{className}UpInput.cs"),
+        VmTemplateIds.ListQueryInput => Path.Combine("Entitys", "Dto", className, $"{className}ListQueryInput.cs"),
+        VmTemplateIds.InfoOutput => Path.Combine("Entitys", "Dto", className, $"{className}InfoOutput.cs"),
+        VmTemplateIds.ListOutput => Path.Combine("Entitys", "Dto", className, $"{className}ListOutput.cs"),
+        VmTemplateIds.DetailOutput => Path.Combine("Entitys", "Dto", className, $"{className}DetailOutput.cs"),
+
         _ => throw new ArgumentOutOfRangeException(nameof(templateId), $"未锁定的模板: {templateId}"),
     };
 

@@ -12,6 +12,7 @@ public interface IEventSpecRevisionService
     Task<ReviseEventSpecResult> ReviseAsync(
         string projectId,
         string tenantId,
+        string pipelineId,
         string fragmentId,
         ReviseEventSpecInput input,
         CancellationToken ct = default);
@@ -36,6 +37,7 @@ public sealed class EventSpecRevisionService : IEventSpecRevisionService, ITrans
     public async Task<ReviseEventSpecResult> ReviseAsync(
         string projectId,
         string tenantId,
+        string pipelineId,
         string fragmentId,
         ReviseEventSpecInput input,
         CancellationToken ct = default)
@@ -43,7 +45,7 @@ public sealed class EventSpecRevisionService : IEventSpecRevisionService, ITrans
         if (!EventSpecRevisionPlanner.IsKnownRevisionType(input.RevisionType))
             throw Oops.Bah($"未知修订类型: {input.RevisionType}");
 
-        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId);
+        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId);
         var snap = snapshots.FirstOrDefault(s =>
             string.Equals(s.FragmentId, fragmentId, StringComparison.Ordinal));
 

@@ -28,7 +28,7 @@ export interface QualityBoardResult {
 
 export function getSkillQualityBoard(sinceDays = 30) {
   return defHttp.get<QualityBoardResult>({
-    url: '/api/studio/skill-quality',
+    url: '/api/studio/skill-quality/board',
     params: { sinceDays },
   });
 }

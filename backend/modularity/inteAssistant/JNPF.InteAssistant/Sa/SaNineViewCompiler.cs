@@ -2,6 +2,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using JNPF.DependencyInjection;
+using JNPF.FriendlyException;
+using Microsoft.Extensions.Logging;
 
 namespace JNPF.InteAssistant.Sa;
 
@@ -24,6 +26,13 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
         PropertyNameCaseInsensitive = true,
     };
 
+    private readonly ILogger<SaNineViewCompiler> _logger;
+
+    public SaNineViewCompiler(ILogger<SaNineViewCompiler> logger)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
     public SaNineViewCompileResult CompileFromSkeletonJson(string skeletonJson, string? requirementSummary = null)
     {
         var model = PreAnalysisModel.ParseFromSkeletonJson(skeletonJson, requirementSummary);
@@ -33,9 +42,14 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
     public SaNineViewCompileResult Compile(PreAnalysisModel model)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
+        _logger.LogInformation("SA九步编译开始 events={EventCount} entities={EntityCount}",
+            model.BusinessEvents.Count, model.EntityDrafts.Count);
 
         if (model.BusinessEvents.Count == 0)
-            throw new InvalidOperationException("PreAnalysisModel 无 businessEvents，无法编译九步视图");
+        {
+            _logger.LogWarning("编译失败: PreAnalysisModel 无 businessEvents");
+            throw Oops.Bah("PreAnalysisModel 无 businessEvents，无法编译九步视图");
+        }
 
         var scope = CompileDomainModel(model);
         var dfd = CompileAggregateDesign(model);
@@ -63,6 +77,8 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
 
             if (IsComplex(evt.ComplexityHint))
             {
+                _logger.LogDebug("事件 {EventId}({EventName}) 标记为 complex，生成 IntegrationPoints + WorkflowSpec",
+                    evt.EventId, evt.EventName);
                 steps[SaStepNames.IntegrationPoints] = CompileIntegrationPoints(model, evt);
                 steps[SaStepNames.WorkflowSpec] = CompileWorkflowSpec(model, evt);
             }
@@ -81,8 +97,14 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
             };
         }).ToList();
 
+        // ── 收集假设项（C# 编译器的确定性推导）─────────────────────────
+        var assumptions = CollectAssumptions(model);
+
         sw.Stop();
         var hash = ComputeBundleHash(projectSteps, eventResults);
+
+        _logger.LogInformation("SA九步编译完成 耗时={Elapsed}ms hash={Hash} assumptions={AssumptionCount}",
+            sw.ElapsedMilliseconds, hash, assumptions.Count);
 
         return new SaNineViewCompileResult
         {
@@ -91,6 +113,7 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
             EventResults = eventResults,
             CompileDurationMs = (int)sw.ElapsedMilliseconds,
             BundleHash = hash,
+            Assumptions = assumptions,
         };
     }
 
@@ -152,13 +175,13 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
         {
             contextDiagram = new
             {
-                processName = model.SystemName ?? "业务系统",
+                processName = model.SystemName ?? SaCompilerDefaults.DefaultSystemName,
                 inboundFlows = processes.Select(p => new { from = "用户", dataName = p.inputFlows[0] }).ToList(),
                 outboundFlows = processes.Select(p => new { to = "用户", dataName = p.outputFlows[0] }).ToList(),
             },
             dfdLevels = new
             {
-                level0 = new[] { new { id = "P0", name = model.SystemName ?? "系统" } },
+                level0 = new[] { new { id = "P0", name = model.SystemName ?? SaCompilerDefaults.DefaultSystemNameShort } },
                 level1 = new Dictionary<string, object>
                 {
                     ["P0"] = processes.Select(p => new { id = p.id, name = p.name }).ToList(),
@@ -215,6 +238,7 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
     {
         var elements = new List<object>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var entityNames = model.EntityDrafts.Select(e => e.EntityName).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var entity in model.EntityDrafts)
         {
@@ -223,16 +247,17 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
                 if (string.IsNullOrWhiteSpace(field.Name) || !seen.Add(field.Name))
                     continue;
 
+                // Fix-6: FK 推导统一走 EntityRelationInferenceService
+                var isFK = EntityRelationInferenceService.IsForeignKey(field);
+                var refEntity = EntityRelationInferenceService.ResolveRefEntity(field, entityNames, model.EntityDrafts);
+
                 elements.Add(new
                 {
                     name = ToSnakeLower(field.Name),
                     type = MapSqlType(field.Type),
                     isRequired = field.Required || field.IsPrimaryKey,
-                    isFK = field.Name.EndsWith("Id", StringComparison.OrdinalIgnoreCase)
-                        && !field.IsPrimaryKey,
-                    refEntity = field.Name.EndsWith("Id", StringComparison.OrdinalIgnoreCase)
-                        ? GuessRefEntity(field.Name, model.EntityDrafts)
-                        : null,
+                    isFK,
+                    refEntity,
                 });
             }
         }
@@ -285,27 +310,74 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
             };
         }
 
+        // P9-S1：构建实体名索引（用于 FK refTable 解析）
+        var entityNames = model.EntityDrafts.Select(e => e.EntityName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var entities = model.EntityDrafts.Select(d => new
         {
             name = d.EntityName,
             tableName = ToSnakeUpper(d.TableName ?? d.EntityName),
-            columns = d.Fields.Select(f => new
-            {
-                name = ToSnakeLower(f.Name),
-                type = MapSqlType(f.Type),
-                dataType = MapSqlType(f.Type),
-                isPK = f.IsPrimaryKey,
-                isFK = f.Name.EndsWith("Id", StringComparison.OrdinalIgnoreCase) && !f.IsPrimaryKey,
-                refTable = f.Name.EndsWith("Id", StringComparison.OrdinalIgnoreCase) && !f.IsPrimaryKey
-                    ? GuessRefEntity(f.Name, model.EntityDrafts)
-                    : null,
-            }).ToList(),
+                columns = d.Fields.Select(f => new
+                {
+                    name = ToSnakeLower(f.Name),
+                    type = MapSqlType(f.Type),
+                    dataType = MapSqlType(f.Type),
+                    isPK = f.IsPrimaryKey,
+                    // Fix-6: FK 推导统一走 EntityRelationInferenceService
+                    isFK = EntityRelationInferenceService.IsForeignKey(f),
+                    refTable = EntityRelationInferenceService.ResolveRefEntity(f, entityNames, model.EntityDrafts),
+                }).ToList(),
         }).ToList();
+
+        // P9-S1 核心修复：从 EntityDraft.Relations 派生真实关系（不再写死 relationships=[]）
+        var relationships = new List<object>();
+        foreach (var entity in model.EntityDrafts)
+        {
+            foreach (var rel in entity.Relations)
+            {
+                relationships.Add(new
+                {
+                    fromEntity = entity.EntityName,
+                    fromField = ToSnakeLower(rel.FromField),
+                    toEntity = rel.ToEntity,
+                    toField = ToSnakeLower(rel.ToField),
+                    type = rel.RelationType,
+                });
+            }
+        }
+
+        // 兜底：若 Relations 为空，从字段 FK 推导派生（统一走 EntityRelationInferenceService）
+        if (relationships.Count == 0)
+        {
+            foreach (var entity in model.EntityDrafts)
+            {
+                foreach (var field in entity.Fields)
+                {
+                    if (EntityRelationInferenceService.IsForeignKey(field))
+                    {
+                        var guessed = EntityRelationInferenceService.GuessRefEntity(field.Name, model.EntityDrafts);
+                        if (!string.IsNullOrEmpty(guessed))
+                        {
+                            var targetEntity = model.EntityDrafts.FirstOrDefault(e =>
+                                string.Equals(e.EntityName, guessed, StringComparison.OrdinalIgnoreCase));
+                            relationships.Add(new
+                            {
+                                fromEntity = entity.EntityName,
+                                fromField = ToSnakeLower(field.Name),
+                                toEntity = guessed,
+                                toField = EntityRelationInferenceService.ResolveToField(field.References, targetEntity),
+                                type = "many-to-one",
+                            });
+                        }
+                    }
+                }
+            }
+        }
 
         return new
         {
             entities,
-            relationships = Array.Empty<object>(),
+            relationships,  // P9-S1：不再 Array.Empty
             source = "SaNineViewCompiler",
         };
     }
@@ -327,7 +399,9 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
                 if (!string.IsNullOrWhiteSpace(t.To)) states.Add(t.To);
             }
 
-            if (entity.Fields.Any(f => f.Name.Contains("status", StringComparison.OrdinalIgnoreCase)))
+            // P9-S1 修复：只有当 StateTransitions 为空（IR 未声明状态转换）且有 status 字段时，
+            // 才用通用审批语义默认（Draft→Submitted→Approved/Rejected），非硬编码请假专用。
+            if (related.Count == 0 && entity.Fields.Any(f => f.Name.Contains("status", StringComparison.OrdinalIgnoreCase)))
             {
                 states.Add("Submitted");
                 states.Add("Approved");
@@ -404,6 +478,24 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
             conditions.Add(new { name = "default", @operator = "always", value = "true" });
         }
 
+        // P9-S1 修复：actionIndex 不再用无意义的 i%2。
+        // 语义：所有条件满足 → actionIndex=0（执行）；有任一不满足 → actionIndex=1（拒绝/转人工）
+        // 默认规则：第一个规则=执行（条件全 true），第二个规则=拒绝（兜底）
+        var ruleList = new List<object>
+        {
+            new
+            {
+                conditionMask = Enumerable.Repeat(true, conditions.Count).ToArray(), // 所有条件满足
+                actionIndex = 0, // → 执行
+            },
+            new
+            {
+                conditionMask = Enumerable.Repeat(false, conditions.Count)
+                    .Select((v, i) => i == 0 ? false : true).ToArray(), // 任一条件不满足
+                actionIndex = 1, // → 拒绝
+            },
+        };
+
         return new
         {
             tables = new[]
@@ -413,11 +505,8 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
                     id = $"DT-{evt.EventId}",
                     conditions,
                     actions = new[] { new { name = "执行" }, new { name = "拒绝" } },
-                    rules = conditions.Select((_, i) => new
-                    {
-                        conditionMask = Enumerable.Repeat(true, conditions.Count).ToArray(),
-                        actionIndex = i % 2,
-                    }).ToList(),
+                    rules = ruleList,
+                    hasDefaultRule = true, // P9-S1：标记有默认规则
                 },
             },
             source = "SaNineViewCompiler",
@@ -520,19 +609,13 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
         return list;
     }
 
-    private static string MapSqlType(string draftType) => draftType.ToLowerInvariant() switch
+    private static string MapSqlType(string draftType)
     {
-        "string" => "NVARCHAR(255)",
-        "text" => "NVARCHAR(MAX)",
-        "datetime" => "DATETIME",
-        "decimal" => "DECIMAL(18,2)",
-        "int" => "INT",
-        "bigint" => "BIGINT",
-        "boolean" or "bool" => "BIT",
-        "file" => "NVARCHAR(500)",
-        "json" => "NVARCHAR(MAX)",
-        _ => draftType.Contains('(') ? draftType : "NVARCHAR(255)",
-    };
+        var lower = draftType.ToLowerInvariant();
+        return SaCompilerDefaults.SqlTypeMap.TryGetValue(lower, out var sqlType)
+            ? sqlType
+            : draftType.Contains('(') ? draftType : SaCompilerDefaults.DefaultSqlType;
+    }
 
     private static string MapControlType(string sqlType, string fieldName)
     {
@@ -556,19 +639,73 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
 
     private static string ToSnakeUpper(string name) => ToSnakeLower(name).ToUpperInvariant();
 
-    private static string? GuessRefEntity(string fieldName, IReadOnlyList<PreAnalysisEntityDraft> entities)
-    {
-        var baseName = fieldName.EndsWith("Id", StringComparison.OrdinalIgnoreCase)
-            ? fieldName[..^2]
-            : fieldName;
-        var match = entities.FirstOrDefault(e =>
-            e.EntityName.Contains(baseName, StringComparison.OrdinalIgnoreCase)
-            || baseName.Contains(e.EntityName, StringComparison.OrdinalIgnoreCase));
-        return match?.EntityName;
-    }
-
     private static bool IsComplex(string complexity) =>
         string.Equals(complexity, "complex", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// 收集编译器确定性推导产生的假设项（安全网 2：标记从 Round 1 开始）。
+    /// 当前收集：FK 命名推导、外部实体推断。后续可扩展更多推导类型。
+    /// </summary>
+    private List<Assumption> CollectAssumptions(PreAnalysisModel model)
+    {
+        var list = new List<Assumption>();
+
+        // 1. FK 命名推导：字段以 Id 结尾、非主键、无显式 References 声明 → 编译器猜测外键
+        foreach (var entity in model.EntityDrafts)
+        {
+            foreach (var field in entity.Fields)
+            {
+                if (!field.IsPrimaryKey
+                    && field.Name.EndsWith("Id", StringComparison.OrdinalIgnoreCase)
+                    && string.IsNullOrEmpty(field.References))
+                {
+                    var guessed = EntityRelationInferenceService.GuessRefEntity(field.Name, model.EntityDrafts);
+                    var refText = !string.IsNullOrEmpty(guessed)
+                        ? $"推断 {entity.EntityName}.{field.Name} → {guessed}.id（命名以 Id 结尾，无显式 References）"
+                        : $"字段 {entity.EntityName}.{field.Name} 推断为外键（命名以 Id 结尾但无法确定引用实体）";
+                    list.Add(new Assumption(
+                        entity.EntityName,
+                        "DataModel",
+                        refText,
+                        SaCompilerDefaults.DefaultForeignKeyConfidence));
+                    _logger.LogDebug("假设项 FK推导: {Text}", refText);
+                }
+            }
+        }
+
+        // 2. 外部实体推断：根据需求关键词推断外部系统
+        if (model.RequirementSummary?.Contains("AD", StringComparison.OrdinalIgnoreCase) == true
+            || model.BusinessEvents.Any(e => e.EventName.Contains("AD", StringComparison.OrdinalIgnoreCase)))
+        {
+            const string adText = "推断外部实体'AD目录'（检测到 AD 关键词）";
+            list.Add(new Assumption("ALL", "DomainModel", adText, SaCompilerDefaults.DefaultExternalEntityConfidence));
+            _logger.LogDebug("假设项 外部实体: {Text}", adText);
+        }
+
+        // 3. 实体间关系推导：Relations 为空时，从 EndsWith("Id") 字段猜测关系
+        foreach (var entity in model.EntityDrafts)
+        {
+            if (entity.Relations.Count == 0)
+            {
+                foreach (var field in entity.Fields)
+                {
+                    if (!field.IsPrimaryKey
+                        && field.Name.EndsWith("Id", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var guessed = EntityRelationInferenceService.GuessRefEntity(field.Name, model.EntityDrafts);
+                        if (!string.IsNullOrEmpty(guessed))
+                        {
+                            var relText = $"推断关系 {entity.EntityName} → {guessed}（从字段命名推导，实体无显式 Relations 声明）";
+                            list.Add(new Assumption(entity.EntityName, "DataModel", relText, 0.5m));
+                            _logger.LogDebug("假设项 关系推导: {Text}", relText);
+                        }
+                    }
+                }
+            }
+        }
+
+        return list;
+    }
 
     private static string ComputeBundleHash(
         IReadOnlyDictionary<string, object> projectSteps,

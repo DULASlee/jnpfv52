@@ -92,7 +92,34 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
         var systemPrompt = """
             你是 JNPF 低代码平台的产品经理 Skill。根据用户需求输出 IR-0 骨架 JSON。
             必须包含：businessEvents（6-15项，每项含 eventId/eventName/complexityHint/dependsOn）、
-            roleMatrix、entityDrafts（3-8项）。
+            roleMatrix（角色×事件→操作）、entityDrafts（3-8项）。
+
+            entityDrafts 每项必须含：
+            - entityName: 实体名（PascalCase）
+            - displayName: 中文显示名
+            - tableName: 表名（留空则编译器自动派生）
+            - fields[]: 每字段含 name/type/required/primaryKey（布尔，true=主键）
+            - relations[]: 实体间关系声明，每项含 fromField/toEntity/toField/relationType(many-to-one|one-to-many|many-to-many)
+              或在字段级用 references: "EntityName.FieldName" 声明外键
+
+            字段示例：
+            "fields": [
+              {"name":"id","type":"BIGINT","required":true,"primaryKey":true},
+              {"name":"employeeId","type":"BIGINT","required":true,"references":"Employee.id"},
+              {"name":"leaveDays","type":"float","required":true}
+            ]
+
+            关系示例：
+            "relations": [
+              {"fromField":"employeeId","toEntity":"Employee","toField":"id","relationType":"many-to-one"}
+            ]
+
+            roleMatrix 示例：
+            "roleMatrix": {
+              "roles": ["员工","部门主管","HR"],
+              "matrix": {"EV-001": {"员工": ["create","read"], "部门主管": ["approve","reject"]}}
+            }
+
             只输出 JSON，不要 markdown。
             """;
 
@@ -110,7 +137,11 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
 
         var tot = await Llm.TreeSearchAsync(new TreeSearchRequest
         {
-            ProviderCode = context.ProviderCode ?? string.Empty,
+            // 27 号 §7.2/§7.3：按任务路由 Provider + 超时分级。
+            // context.ProviderCode 显式指定时优先（编排器/测试可覆盖）；否则走 AI:ProviderRouting["pm-skill"]。
+            ProviderCode = !string.IsNullOrWhiteSpace(context.ProviderCode)
+                ? context.ProviderCode
+                : Llm.ResolveProvider(SkillId),
             SystemPrompt = systemPrompt,
             Messages = new List<ChatMessage> { new("user", userPrompt) },
             BranchCount = TotBranchCount,
@@ -118,7 +149,7 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             TemperatureStep = 0.35,
             ResponseFormat = "json",
             MaxTokens = 4096,
-            TimeoutMs = 120_000,
+            TimeoutMs = Llm.ResolveTimeoutMs(SkillId),
         }, ct);
 
         if (!tot.IsSuccess || !tot.Succeeded.Any())

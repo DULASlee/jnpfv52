@@ -64,7 +64,7 @@ public sealed class DeliverableRebuildService : IDeliverableRebuildService, ITra
         var written = new List<string>();
         var skipped = new List<string>();
 
-        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, ct);
+        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString(), ct);
 
         if (Want("S1"))
         {

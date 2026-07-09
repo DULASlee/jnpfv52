@@ -95,7 +95,32 @@ public sealed class UiDesignSkillService : CognitiveSkill, ITransient
             ProviderCode = context.ProviderCode ?? string.Empty,
             SystemPrompt = """
                 你是 JNPF UI 设计 Skill。输出 FormPageIR JSON（pages 数组，每页含 fields）。
-                字段需含 id、label、componentType。只输出 JSON。
+
+                每页必须含：
+                - id: 页面唯一标识
+                - title: 页面标题
+                - pageType: 页面类型（list=列表页 / form=表单页 / detail=详情页）
+                - entityBinding: 绑定的实体名（对应 entityDrafts[].entityName）
+                - fields[]: 每字段含 id/label/componentType/required
+
+                列表页额外字段：
+                - listColumns[]: 列表显示的列名
+                - searchFields[]: 搜索/筛选字段名
+
+                字段 componentType 可选值：Input/Textarea/Number/InputNumber/Select/Radio/Checkbox/
+                DatePicker/DateTimePicker/TimePicker/Switch/UploadFile/UploadImg/Table/Cascader/Rate/Slider/Editor
+
+                输出示例：
+                {"pages": [
+                  {"id":"leave-list","title":"请假申请列表","pageType":"list","entityBinding":"LeaveRequest",
+                   "listColumns":["employeeName","leaveType","startDate","endDate","status"],
+                   "searchFields":["leaveType","status"],
+                   "fields":[{"id":"leaveType","label":"请假类型","componentType":"Select","required":true}]},
+                  {"id":"leave-form","title":"请假申请表单","pageType":"form","entityBinding":"LeaveRequest",
+                   "fields":[{"id":"leaveType","label":"请假类型","componentType":"Select","required":true},
+                             {"id":"reason","label":"请假事由","componentType":"Textarea","required":true}]}]}
+
+                只输出 JSON，不要 markdown。
                 """,
             Messages = new List<ChatMessage>
             {

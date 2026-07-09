@@ -1,0 +1,30 @@
+{
+  "mcp": {
+    "servers": {
+      "serena": {
+        "type": "stdio",
+        "command": "C:\\Users\\admin\\.local\\bin\\serena.exe",
+        "args": [
+          "start-mcp-server",
+          "--context",
+          "ide",
+          "--project",
+          "D:\\JNPF-v52"
+        ],
+        "timeoutMs": 60000
+      },
+      "knowledge-graph": {
+        "type": "stdio",
+        "command": "C:\\Users\\admin\\AppData\\Roaming\\npm\\npx.cmd",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-memory"
+        ],
+        "env": {
+          "MEMORY_FILE_PATH": "D:\\JNPF-v52\\.ai-memory\\knowledge-graph.json"
+        },
+        "timeoutMs": 60000
+      }
+    }
+  }
+}

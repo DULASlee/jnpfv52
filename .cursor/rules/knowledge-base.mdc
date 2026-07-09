@@ -21,6 +21,43 @@ alwaysApply: true
 - 新决策 → 建议补充 ADR 或 OpenSpec change
 - 阶段完成 → 更新 `docs/progress-registry.yaml` + 回复「本会话结论」块（见 episodic-memory-automation.mdc）
 
+## InteAssistant 模块编码铁律（2026-07-08 自审沉淀）
+
+以下规则来自 Node 3+4 质量自审，每次修改 InteAssistant 代码前必查：
+
+### 日志
+- **所有 `ITransient` 服务 MUST 注入 `ILogger<T>`** — 不注入 = review 不通过
+- Gate/Validator 失败 → `LogWarning`；编译/物化 → `LogInformation("开始/完成 {Entity} 耗时{Elapsed}ms")`
+- 吞异常/降级分支 → `LogWarning(ex, "降级原因")`，不允许静默
+
+### 异常
+- **全模块统一 `Oops.Bah`（业务）/ `Oops.Oh`（系统）** — 禁止裸 `InvalidOperationException`
+- **禁止裸 `catch { }`** — 最小 `catch (JsonException)`；必须吞异常时加 `when (ex is not OutOfMemoryException)`
+- Gate 用 `SkillValidationResult` 聚合结果（不抛异常），Validator 用 `Oops.Bah` 抛异常
+
+### 重复代码
+- 相同推导逻辑出现 ≥2 次 → **必须抽取**单一源（参考 FK 推导三处重复的教训）
+- 魔法值（`"NVARCHAR(255)"` / `0.6m` / `"请假申请"`）→ 抽取常量类或配置
+
+### 异步
+- 纯同步方法不声明 `Task`/`IAsyncEnumerable` — 假异步欺骗调用方
+- `CancellationToken` 参数要么真传播（`ThrowIfCancellationRequested`），要么删除
+- I/O 操作用 `*Async` API + `ConfigureAwait(false)`
+
+### 安全
+- SQL 拼接 MUST 转义标识符（至少 `[{name}]`）或走 `DbMaintenance` API
+- 三元组 `(tenantId, projectId, pipelineId)` 不可用假值（参考 R12 铁律）
+
+### LLM 专项（Node 4 经验）
+- JSON 修复器的截断修复有能力产生"语法合法但语义错误"的 JSON → 标记 `fallbackReason = "json_truncation_suspected"`
+- 熔断器 `IsOpen()` 有隐性状态变更（Open→HalfOpen）→ 不能当纯查询方法调用
+- Tuple 解构变量名避开 C# 关键字（`fixed`、`string`、`class` 等）
+- `ConcurrentDictionary` 只增不减 → 长期运行需清理机制（`MemoryCache` 或定时扫描）
+
+### 参考文件
+- 错题本：`.claude/memory/lessons-learned.md` §2026-07-08
+- Node 4 实现计划：`.zcode/plans/plan-sess_5da1a40f-20e0-42c6-bfde-089dff01df35.md`
+
 ## 禁止
 
 - ❌ 自建向量库 / embedding / ChromaDB 替代上述流程

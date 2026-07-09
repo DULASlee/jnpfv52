@@ -1,12 +1,12 @@
 {
   "config": {
     "argv": [
-      "d:\\Users\\admin\\AppData\\Local\\Programs\\cursor\\resources\\app\\resources\\helpers\\node.exe",
-      "D:\\JNPF-v52\\node_modules\\playwright\\cli.js",
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "D:\\JNPF-v52\\node_modules\\@playwright\\test\\cli.js",
       "test",
       "-c",
       "e2e/playwright.config.ts",
-      "e2e/studio/02-submit-requirement-layout.spec.ts"
+      "e2e/admin/01-system-switch.spec.ts"
     ],
     "configFile": "D:\\JNPF-v52\\e2e\\playwright.config.ts",
     "rootDir": "D:/JNPF-v52/e2e",
@@ -36,7 +36,7 @@
         "testDir": "D:/JNPF-v52/e2e",
         "testIgnore": [],
         "testMatch": [
-          "studio/**/*.spec.ts"
+          "**/*.spec.ts"
         ],
         "timeout": 60000
       }
@@ -68,104 +68,55 @@
   },
   "suites": [
     {
-      "title": "studio\\02-submit-requirement-layout.spec.ts",
-      "file": "studio/02-submit-requirement-layout.spec.ts",
+      "title": "admin\\01-system-switch.spec.ts",
+      "file": "admin/01-system-switch.spec.ts",
       "column": 0,
       "line": 0,
-      "specs": [],
-      "suites": [
+      "specs": [
         {
-          "title": "提交需求页 · 布局",
-          "file": "studio/02-submit-requirement-layout.spec.ts",
-          "line": 6,
-          "column": 6,
-          "specs": [
+          "title": "admin 头像下拉含\"切换系统\"且打开抽屉",
+          "ok": true,
+          "tags": [],
+          "tests": [
             {
-              "title": "三栏 + 输入框 + 发送按钮",
-              "ok": false,
-              "tags": [],
-              "tests": [
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
                 {
-                  "timeout": 60000,
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4852,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-07-07T04:46:52.017Z",
                   "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "failed",
-                      "duration": 3414,
-                      "error": {
-                        "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/#/login\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/#/login\", waiting until \"domcontentloaded\"\u001b[22m\n",
-                        "stack": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/#/login\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/#/login\", waiting until \"domcontentloaded\"\u001b[22m\n\n    at loginAsAdmin (D:\\JNPF-v52\\e2e\\helpers\\login.ts:8:14)\n    at D:\\JNPF-v52\\e2e\\studio\\02-submit-requirement-layout.spec.ts:8:23",
-                        "location": {
-                          "file": "D:\\JNPF-v52\\e2e\\helpers\\login.ts",
-                          "column": 14,
-                          "line": 8
-                        },
-                        "snippet": "   at helpers\\login.ts:8\n\n   6 | /** 与 PC 前端一致：登录后进工作台 */\n   7 | export async function loginAsAdmin(page: Page) {\n>  8 |   await page.goto('/#/login', { waitUntil: 'domcontentloaded' });\n     |              ^\n   9 |   await page.locator('input[placeholder*=\"账号\"], input[placeholder*=\"账户\"]').fill(ACCOUNT);\n  10 |   await page.locator('input[type=\"password\"]').fill(PASSWORD);\n  11 |   await page.locator('button:has-text(\"登录\"), button[type=\"submit\"]').click();"
-                      },
-                      "errors": [
-                        {
-                          "location": {
-                            "file": "D:\\JNPF-v52\\e2e\\helpers\\login.ts",
-                            "column": 14,
-                            "line": 8
-                          },
-                          "message": "Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/#/login\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/#/login\", waiting until \"domcontentloaded\"\u001b[22m\n\n\n   at helpers\\login.ts:8\n\n   6 | /** 与 PC 前端一致：登录后进工作台 */\n   7 | export async function loginAsAdmin(page: Page) {\n>  8 |   await page.goto('/#/login', { waitUntil: 'domcontentloaded' });\n     |              ^\n   9 |   await page.locator('input[placeholder*=\"账号\"], input[placeholder*=\"账户\"]').fill(ACCOUNT);\n  10 |   await page.locator('input[type=\"password\"]').fill(PASSWORD);\n  11 |   await page.locator('button:has-text(\"登录\"), button[type=\"submit\"]').click();\n    at loginAsAdmin (D:\\JNPF-v52\\e2e\\helpers\\login.ts:8:14)\n    at D:\\JNPF-v52\\e2e\\studio\\02-submit-requirement-layout.spec.ts:8:23"
-                        }
-                      ],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-07-05T06:52:54.370Z",
-                      "annotations": [],
-                      "attachments": [
-                        {
-                          "name": "screenshot",
-                          "contentType": "image/png",
-                          "path": "D:\\JNPF-v52\\test-results\\studio-02-submit-requirement-layout-提交需求页-·-布局-三栏-输入框-发送按钮-chromium\\test-failed-1.png"
-                        },
-                        {
-                          "name": "error-context",
-                          "contentType": "text/markdown",
-                          "path": "D:\\JNPF-v52\\test-results\\studio-02-submit-requirement-layout-提交需求页-·-布局-三栏-输入框-发送按钮-chromium\\error-context.md"
-                        },
-                        {
-                          "name": "trace",
-                          "contentType": "application/zip",
-                          "path": "D:\\JNPF-v52\\test-results\\studio-02-submit-requirement-layout-提交需求页-·-布局-三栏-输入框-发送按钮-chromium\\trace.zip"
-                        }
-                      ],
-                      "errorLocation": {
-                        "file": "D:\\JNPF-v52\\e2e\\helpers\\login.ts",
-                        "column": 14,
-                        "line": 8
-                      }
-                    }
-                  ],
-                  "status": "unexpected"
+                  "attachments": []
                 }
               ],
-              "id": "189b7efde2caf0f4c66b-74b42843071395ae5cc3",
-              "file": "studio/02-submit-requirement-layout.spec.ts",
-              "line": 12,
-              "column": 7
+              "status": "expected"
             }
-          ]
+          ],
+          "id": "bf8740cbee7b37c04210-00a5bb73589a4bc7577d",
+          "file": "admin/01-system-switch.spec.ts",
+          "line": 8,
+          "column": 5
         }
       ]
     }
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-05T06:52:53.840Z",
-    "duration": 4487.089,
-    "expected": 0,
+    "startTime": "2026-07-07T04:46:51.517Z",
+    "duration": 5680.263,
+    "expected": 1,
     "skipped": 0,
-    "unexpected": 1,
+    "unexpected": 0,
     "flaky": 0
   }
 }

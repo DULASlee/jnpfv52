@@ -290,6 +290,8 @@ public class FakeLlmGateway : ILlmGatewayService
         throw new NotSupportedException();
     Task<ProviderInfo> ILlmGatewayService.GetProviderInfoAsync(string providerCode) =>
         throw new NotSupportedException();
+    Task<TreeSearchResult> ILlmGatewayService.TreeSearchAsync(TreeSearchRequest request, CancellationToken ct) =>
+        throw new NotSupportedException();
 }
 
 /// <summary>Fake Logger — 记录日志和异常</summary>

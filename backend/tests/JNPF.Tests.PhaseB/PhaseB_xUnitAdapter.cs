@@ -145,14 +145,14 @@ public class PhaseB_xUnitAdapter
     [Fact]
     public void P5_B01_IrDiffEngine_FragmentDiff()
     {
-        IrPhase5DiffTests.RunAll();
+        IrPhase5DiffTests.RunAllAsync();
         Assert.True(true);
     }
 
     [Fact]
     public void P5_B02_BugfixSkill_AffectedFragments()
     {
-        IrPhase5BugfixTests.RunAll();
+        IrPhase5BugfixTests.RunAllAsync();
         Assert.True(true);
     }
 

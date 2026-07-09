@@ -357,7 +357,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         var message = request.Message ?? "";
         await SaveMessageAsync(pipelineId.ToString(), projectId, PipelineStage.Requirement, "user", message);
 
-        var snapshots = await _irEventStore.ListSnapshotsAsync(projectId, tenantId);
+        var snapshots = await _irEventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString());
         var hasStableEventSpec = snapshots.Any(s =>
             s.FragmentType == IrFragmentTypes.EventSpec
             && (s.StabilityState == IrStabilityStates.Stable || s.StabilityState == IrStabilityStates.Locked));

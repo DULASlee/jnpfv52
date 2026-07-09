@@ -173,19 +173,19 @@ public static class IrPhase4ArchGuardQ2Tests
         }
 
         public Task<List<IrEventDto>> ListEventsAsync(
-            string projectId, string tenantId, CancellationToken ct = default) =>
+            string projectId, string tenantId, string pipelineId, CancellationToken ct = default) =>
             Task.FromResult(new List<IrEventDto>());
 
         public Task<List<IrFragmentSnapshotDto>> ListSnapshotsAsync(
-            string projectId, string tenantId, CancellationToken ct = default) =>
+            string projectId, string tenantId, string pipelineId, CancellationToken ct = default) =>
             Task.FromResult(new List<IrFragmentSnapshotDto>());
 
         public Task<IrStabilityDto?> GetStabilityAsync(
-            string projectId, string tenantId, CancellationToken ct = default) =>
+            string projectId, string tenantId, string pipelineId, CancellationToken ct = default) =>
             Task.FromResult<IrStabilityDto?>(null);
 
         public Task<IrFragmentSnapshotDto?> GetSnapshotAtVersionAsync(
-            string projectId, string tenantId, string fragmentId, int? version, CancellationToken ct = default) =>
+            string projectId, string tenantId, string pipelineId, string fragmentId, int? version, CancellationToken ct = default) =>
             Task.FromResult<IrFragmentSnapshotDto?>(null);
 
         public Task EnsureProjectAsync(

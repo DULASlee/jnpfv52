@@ -4,6 +4,7 @@ using JNPF.DependencyInjection;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Ir;
+using JNPF.InteAssistant.Runtime;
 using JNPF.InteAssistant.Skills;
 
 namespace JNPF.InteAssistant.Constraints;
@@ -267,7 +268,9 @@ public sealed class ConstraintEngineService : IConstraintEngineService, ITransie
 
     private async Task<IrSnapshot> BuildSnapshotAsync(string projectId, string tenantId, CancellationToken ct)
     {
-        var dtos = await _eventStore.ListSnapshotsAsync(projectId, tenantId, ct);
+        // TODO: 三元组补洞
+        var pipelineId = SkillExecutionScope.CurrentScope?.PipelineId.ToString() ?? string.Empty;
+        var dtos = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId, ct);
         var fragments = dtos.Select(d => new IrSnapshotFragment
         {
             FragmentId = d.FragmentId,

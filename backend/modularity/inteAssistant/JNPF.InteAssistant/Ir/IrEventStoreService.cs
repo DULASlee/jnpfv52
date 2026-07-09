@@ -19,14 +19,14 @@ public interface IIrEventStoreService
         AppendIrEventRequest request,
         CancellationToken ct = default);
 
-    Task<List<IrEventDto>> ListEventsAsync(string projectId, string tenantId, CancellationToken ct = default);
+    Task<List<IrEventDto>> ListEventsAsync(string projectId, string tenantId, string pipelineId, CancellationToken ct = default);
 
-    Task<List<IrFragmentSnapshotDto>> ListSnapshotsAsync(string projectId, string tenantId, CancellationToken ct = default);
+    Task<List<IrFragmentSnapshotDto>> ListSnapshotsAsync(string projectId, string tenantId, string pipelineId, CancellationToken ct = default);
 
-    Task<IrStabilityDto?> GetStabilityAsync(string projectId, string tenantId, CancellationToken ct = default);
+    Task<IrStabilityDto?> GetStabilityAsync(string projectId, string tenantId, string pipelineId, CancellationToken ct = default);
 
     Task<IrFragmentSnapshotDto?> GetSnapshotAtVersionAsync(
-        string projectId, string tenantId, string fragmentId, int? version, CancellationToken ct = default);
+        string projectId, string tenantId, string pipelineId, string fragmentId, int? version, CancellationToken ct = default);
 
     Task EnsureProjectAsync(string projectId, string tenantId, string projectName, string creatorUserId, CancellationToken ct = default);
 }
@@ -184,30 +184,30 @@ public sealed class IrEventStoreService : IIrEventStoreService, ITransient
         return evt;
     }
 
-    public async Task<List<IrEventDto>> ListEventsAsync(string projectId, string tenantId, CancellationToken ct = default)
+    public async Task<List<IrEventDto>> ListEventsAsync(string projectId, string tenantId, string pipelineId, CancellationToken ct = default)
     {
         var rows = await _db.Queryable<AiIrEventEntity>()
-            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId)
+            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId && x.PipelineId == pipelineId)
             .OrderByDescending(x => x.Sequence)
             .ToListAsync(ct);
 
         return rows.Select(ToEventDto).ToList();
     }
 
-    public async Task<List<IrFragmentSnapshotDto>> ListSnapshotsAsync(string projectId, string tenantId, CancellationToken ct = default)
+    public async Task<List<IrFragmentSnapshotDto>> ListSnapshotsAsync(string projectId, string tenantId, string pipelineId, CancellationToken ct = default)
     {
         var rows = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId && !x.DeleteMark)
+            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId && x.PipelineId == pipelineId && !x.DeleteMark)
             .OrderBy(x => x.FragmentId)
             .ToListAsync(ct);
 
         return rows.Select(ToSnapshotDto).ToList();
     }
 
-    public async Task<IrStabilityDto?> GetStabilityAsync(string projectId, string tenantId, CancellationToken ct = default)
+    public async Task<IrStabilityDto?> GetStabilityAsync(string projectId, string tenantId, string pipelineId, CancellationToken ct = default)
     {
         var snap = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId && !x.DeleteMark)
+            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId && x.PipelineId == pipelineId && !x.DeleteMark)
             .OrderBy(x => x.FragmentId)
             .FirstAsync(ct);
 
@@ -229,6 +229,7 @@ public sealed class IrEventStoreService : IIrEventStoreService, ITransient
     public async Task<IrFragmentSnapshotDto?> GetSnapshotAtVersionAsync(
         string projectId,
         string tenantId,
+        string pipelineId,
         string fragmentId,
         int? version,
         CancellationToken ct = default)
@@ -236,13 +237,13 @@ public sealed class IrEventStoreService : IIrEventStoreService, ITransient
         if (version == null)
         {
             var current = await _db.Queryable<AiIrFragmentSnapshotEntity>()
-                .FirstAsync(x => x.ProjectId == projectId && x.TenantId == tenantId
+                .FirstAsync(x => x.ProjectId == projectId && x.TenantId == tenantId && x.PipelineId == pipelineId
                     && x.FragmentId == fragmentId && !x.DeleteMark, ct);
             return current == null ? null : ToSnapshotDto(current);
         }
 
         var evt = await _db.Queryable<AiIrEventEntity>()
-            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId
+            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId && x.PipelineId == pipelineId
                 && x.FragmentId == fragmentId && x.FragmentVersion == version.Value)
             .OrderByDescending(x => x.Sequence)
             .FirstAsync(ct);

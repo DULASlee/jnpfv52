@@ -49,16 +49,31 @@ public sealed class CodegenWorkspaceWriter : ITransient
             File.WriteAllText(fullPath, header + content, System.Text.Encoding.UTF8);
         }
 
-        WriteDtoStubs(workspaceRoot, context);
+        // Dto 占位仅当 Dto .vm 未渲染时写入（避免与 ListOutput.cs.vm 等重复定义）
+        WriteDtoStubs(workspaceRoot, context, renderedByTemplateId);
 
         var csprojPath = Path.Combine(workspaceRoot, "JNPF.Codegen.Sandbox.csproj");
         File.WriteAllText(csprojPath, BuildCsprojContent(VmTemplateCatalog.ResolveRepoRoot()), System.Text.Encoding.UTF8);
         return workspaceRoot;
     }
 
-    /// <summary>D3 sandbox 最小 Dto 占位，满足 Service.cs.vm 的 using；D4 起由 Dto .vm 替换。</summary>
-    private static void WriteDtoStubs(string workspaceRoot, Ir2CodegenContext context)
+    /// <summary>
+    /// D3 sandbox 最小 Dto 占位，满足 Service.cs.vm 的 using。
+    /// 当 Dto .vm 已渲染（CrInput/UpInput/InfoOutput/ListOutput 在 renderedByTemplateId 中），
+    /// 跳过对应占位避免 CS0101 重复定义。
+    /// </summary>
+    private static void WriteDtoStubs(
+        string workspaceRoot,
+        Ir2CodegenContext context,
+        IReadOnlyDictionary<string, string> renderedByTemplateId)
     {
+        // 若任一 Dto .vm 已渲染，则跳过占位（它们会提供完整类型定义）
+        if (renderedByTemplateId.ContainsKey(VmTemplateIds.CrInput)
+            || renderedByTemplateId.ContainsKey(VmTemplateIds.UpInput)
+            || renderedByTemplateId.ContainsKey(VmTemplateIds.InfoOutput)
+            || renderedByTemplateId.ContainsKey(VmTemplateIds.ListOutput))
+            return;
+
         var dtoDir = Path.Combine(workspaceRoot, "Entitys", "Dto", context.ClassName);
         Directory.CreateDirectory(dtoDir);
         var ns = $"JNPF.{context.NameSpace}.Entitys.Dto.{context.ClassName}";

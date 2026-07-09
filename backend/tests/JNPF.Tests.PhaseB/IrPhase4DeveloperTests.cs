@@ -1,10 +1,12 @@
 using System.Text.Json;
 using JNPF.InteAssistant.Codegen;
+using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Ir;
 using JNPF.InteAssistant.Skills;
 using Microsoft.Extensions.Logging;
+using SqlSugar;
 
 namespace JNPF.Tests.PhaseB;
 
@@ -97,8 +99,11 @@ public static class IrPhase4DeveloperTests
             throw new InvalidOperationException("Service file not written");
 
         using var doc = JsonDocument.Parse(events[0].Payload);
-        if (!doc.RootElement.TryGetProperty("templateVersions", out var tv) || tv.GetArrayLength() != 3)
-            throw new InvalidOperationException("CodeGenerated templateVersions count != 3");
+        // P9-S2：多实体 payload 改为 entityCount/fileCount（非旧 templateVersions）
+        if (!doc.RootElement.TryGetProperty("entityCount", out var ecEl) || ecEl.GetInt32() <= 0)
+            throw new InvalidOperationException("CodeGenerated entityCount 须 > 0");
+        if (!doc.RootElement.TryGetProperty("fileCount", out var fcEl) || fcEl.GetInt32() <= 0)
+            throw new InvalidOperationException("CodeGenerated fileCount 须 > 0");
 
         if (Directory.Exists(backendRoot))
             Directory.Delete(backendRoot, recursive: true);
@@ -116,7 +121,53 @@ public static class IrPhase4DeveloperTests
             new TemplateContextBuilder(),
             new CodegenWorkspaceWriter(),
             new SystemDesignLockedCompletenessGate(),
-            loggerFactory.CreateLogger<DeveloperSkillService>());
+            new CodegenBackendRegistry(),
+            loggerFactory.CreateLogger<DeveloperSkillService>(),
+            new EntityDesignRepository(CreateSqliteClientWithEntityFieldTable()));
+    }
+
+    /// <summary>内存 SQLite + ai_entity_field 表，供 PersistAsync 落表验证。</summary>
+    private static SqlSugarClient CreateSqliteClientWithEntityFieldTable()
+    {
+        var client = new SqlSugarClient(new ConnectionConfig
+        {
+            DbType = DbType.Sqlite,
+            ConnectionString = "DataSource=:memory:",
+            IsAutoCloseConnection = false,
+            InitKeyType = InitKeyType.Attribute,
+        });
+        client.Open();
+        client.Ado.ExecuteCommand("""
+            CREATE TABLE ai_entity_field (
+                F_Id TEXT PRIMARY KEY,
+                F_TenantId TEXT NOT NULL DEFAULT '',
+                F_ProjectId TEXT NOT NULL DEFAULT '',
+                F_PIPELINE_ID TEXT NOT NULL DEFAULT '',
+                F_SchemaVersion TEXT NOT NULL DEFAULT 'entity-field.v1',
+                F_ProjectionHash TEXT NOT NULL DEFAULT '',
+                F_SourceFragmentId TEXT NOT NULL DEFAULT '',
+                F_SourceDdlFragmentId TEXT,
+                F_EntityName TEXT NOT NULL DEFAULT '',
+                F_EntityDisplayName TEXT,
+                F_TableName TEXT NOT NULL DEFAULT '',
+                F_FieldName TEXT NOT NULL DEFAULT '',
+                F_PropertyName TEXT NOT NULL DEFAULT '',
+                F_DbColumnName TEXT NOT NULL DEFAULT '',
+                F_CSharpType TEXT NOT NULL DEFAULT 'string',
+                F_SqlType TEXT NOT NULL DEFAULT 'NVARCHAR(255)',
+                F_IsRequired INTEGER NOT NULL DEFAULT 0,
+                F_IsPrimaryKey INTEGER NOT NULL DEFAULT 0,
+                F_IsNullable INTEGER NOT NULL DEFAULT 1,
+                F_IsIdentity INTEGER NOT NULL DEFAULT 0,
+                F_References TEXT,
+                F_ReferencesTable TEXT,
+                F_ReferencesColumn TEXT,
+                F_CreatorTime TEXT NOT NULL,
+                F_LastModifyTime TEXT,
+                F_DeleteMark INTEGER NOT NULL DEFAULT 0
+            );
+            """);
+        return client;
     }
 
     private static IrSnapshot BuildLeaveSimpleSnapshot(bool includeSystemDesign)

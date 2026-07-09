@@ -1,7 +1,9 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using JNPF.InteAssistant.Sa;
 using JNPF.Tests.Gate.Auth;
+using Microsoft.Extensions.Options;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -357,7 +359,7 @@ public class Phase2SkillsE2ETests
     [Fact]
     public void D15_完整性门禁_缺EventSpec_应拒绝()
     {
-        var gate = new JNPF.InteAssistant.Ir.AnalysisCompletedCompletenessGate(null!);
+        var gate = new JNPF.InteAssistant.Ir.AnalysisCompletedCompletenessGate(null!, Microsoft.Extensions.Options.Options.Create(new SaPipelineOptions()));
         var snapshot = new JNPF.InteAssistant.Skills.IrSnapshot
         {
             Fragments = new List<JNPF.InteAssistant.Skills.IrSnapshotFragment>

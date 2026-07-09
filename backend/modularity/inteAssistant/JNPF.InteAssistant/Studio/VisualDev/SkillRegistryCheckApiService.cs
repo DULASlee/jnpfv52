@@ -41,7 +41,7 @@ public class SkillRegistryCheckApiService : IDynamicApiController, ITransient
     /// GET /api/studio/skills/registry-check — 验证所有预期 Skill 已注册。
     /// 返回每个 skill 的注册状态 + 已注册总数。
     /// </summary>
-    [HttpGet]
+    [HttpGet("check")]
     public object Check()
     {
         var registered = _registry.SkillIds.ToHashSet();

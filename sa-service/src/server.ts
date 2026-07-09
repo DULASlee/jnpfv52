@@ -6,9 +6,20 @@ import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
 import { InMemorySADatabase } from './orchestrator/SADatabase';
 import { SqlServerSADatabase } from './orchestrator/SqlServerSADatabase';
+import { SAOrchestrator } from './orchestrator/SAOrchestrator';
 import { ILLMClient, SARequest, SAOutput, SAConfig, DEFAULT_SA_CONFIG } from './orchestrator/orchestrator-types';
 import { logStep } from './lib/structuredLogger';
 import { tenantSessionStore } from './storage/TenantScopedSessionStore';
+import {
+  DFDValidator, BPMValidator, DictValidator, LogicValidator,
+  CrossEventConsistencyValidator, ERValidator, STDValidator, UIValidator,
+} from './validators';
+
+// C2: 真实 Validator 注入（替代 null 占位）——让 RetryLoop 的"生成→验证→自修复"闭环真正生效
+const REAL_VALIDATORS = {
+  DFDValidator, BPMValidator, DictValidator, LogicValidator,
+  CrossEventConsistencyValidator, ERValidator, STDValidator, UIValidator,
+};
 
 // ═══════════════════════════════════════════════════════
 // 1. LLM 客户端适配器（桥接后端 ILlmGatewayService）
@@ -171,17 +182,37 @@ const LLM_MAX_TOKENS = parseInt(process.env.LLM_MAX_TOKENS || '4096', 10);
 const DB_BACKEND = (process.env.SA_DB_BACKEND || 'inmemory').toLowerCase();
 
 const sseManager = new SSEManager();
-setInterval(() => tenantSessionStore.purgeExpired(), 5 * 60 * 1000);
+// r6-safe: Node.js Express 服务端模块级定时器（非前端组件作用域），随进程退出自动清理，无需 clearInterval
+setInterval(() => {
+  tenantSessionStore.purgeExpired();
+  purgeExpiredTasks();
+}, 5 * 60 * 1000);
 
 // 运行中的任务追踪（含完整 SA 产出，供 C# 轮询 /api/sa/tasks/:taskId 获取）
+const TASK_TTL_MS = 30 * 60 * 1000; // 终态 task 保留 30min 供 C# 轮询，过期清理防 OOM
+
 interface SATask {
   status: 'running' | 'completed' | 'failed';
   result?: SAOutput;
   error?: string;
   startedAt: Date;
   completedAt?: Date;
+  expiresAt?: number; // 终态后 +TASK_TTL_MS；过期由 purgeExpiredTasks 清理（B 组防内存泄漏）
 }
 const runningTasks = new Map<string, SATask>();
+
+/** 清理过期终态 task（completed/failed 超 TASK_TTL_MS），防 runningTasks 无限增长 OOM。
+ *  now 参数供测试注入虚拟时间，生产用 Date.now()。 */
+export function purgeExpiredTasks(now: number = Date.now()): number {
+  let removed = 0;
+  for (const [id, task] of runningTasks) {
+    if (task.expiresAt !== undefined && task.expiresAt <= now) {
+      runningTasks.delete(id);
+      removed++;
+    }
+  }
+  return removed;
+}
 
 // ═══════════════════════════════════════════════════════
 // 健康检查
@@ -203,12 +234,12 @@ app.post('/sa/run-step', async (req, res) => {
   const started = Date.now();
   try {
     const {
-      tenantId, projectId, eventId, agentName, irStepName,
+      tenantId, projectId, pipelineId, eventId, agentName, irStepName,
       requirementText, skeleton, previousSteps,
     } = req.body;
 
-    if (!tenantId || !projectId || !eventId || !agentName) {
-      return res.status(400).json({ error: '缺少 tenantId/projectId/eventId/agentName' });
+    if (!tenantId || !projectId || !pipelineId || !eventId || !agentName) {
+      return res.status(400).json({ error: '缺少 tenantId/projectId/pipelineId/eventId/agentName' });
     }
 
     const runId = req.headers['x-skill-run-id'] as string | undefined;
@@ -239,16 +270,13 @@ app.post('/sa/run-step', async (req, res) => {
       LLM_PROVIDER, LLM_TEMPERATURE, LLM_MAX_TOKENS,
     );
     const db = createDatabase(DB_BACKEND);
-    const validators = {
-      DFDValidator: null, BPMValidator: null, DictValidator: null,
-      LogicValidator: null, CrossEventConsistencyValidator: null,
-      ERValidator: null, STDValidator: null, UIValidator: null,
-    };
+    const validators = REAL_VALIDATORS;
     const orchestrator = new SAOrchestrator(llm, db, validators);
 
     const output = await orchestrator.runSingleStep({
       tenantId,
       projectId: String(projectId),
+      pipelineId: Number(pipelineId),
       eventId: String(eventId),
       agentName,
       irStepName: stepName,
@@ -297,6 +325,7 @@ app.post('/api/sa/run', async (req, res) => {
     const {
       tenantId,
       projectId,
+      pipelineId,
       requirementId,
       requirementText,
       userId,
@@ -304,9 +333,9 @@ app.post('/api/sa/run', async (req, res) => {
       sseSessionId,
     } = req.body;
 
-    if (!requirementText || !tenantId || !projectId) {
+    if (!requirementText || !tenantId || !projectId || !pipelineId) {
       return res.status(400).json({
-        error: '缺少必要参数: tenantId, projectId, requirementText',
+        error: '缺少必要参数: tenantId, projectId, pipelineId, requirementText',
       });
     }
 
@@ -332,16 +361,13 @@ app.post('/api/sa/run', async (req, res) => {
     const db = createDatabase(DB_BACKEND);
 
     // Validator 未注入时跳过校验（SAOrchestrator 有判空保护）
-    const validators = {
-      DFDValidator: null, BPMValidator: null, DictValidator: null,
-      LogicValidator: null, CrossEventConsistencyValidator: null,
-      ERValidator: null, STDValidator: null, UIValidator: null,
-    };
+    const validators = REAL_VALIDATORS;
     const orchestrator = new SAOrchestrator(llm, db, validators);
 
     const saRequest: SARequest = {
       tenantId,
       projectId,
+      pipelineId: Number(pipelineId),
       requirementId: requirementId || 0,
       requirementText,
       userId: userId || 'anonymous',
@@ -361,6 +387,7 @@ app.post('/api/sa/run', async (req, res) => {
     task.status = 'completed';
     task.result = result;
     task.completedAt = new Date();
+    task.expiresAt = Date.now() + TASK_TTL_MS;
 
     if (sseSessionId) {
       sseManager.send(sseSessionId, 'task-completed', {
@@ -403,12 +430,12 @@ app.post('/api/sa/run-async', (req, res) => {
     skeletonBusinessEvents,
   } = req.body;
 
-  if (!requirementText || !tenantId || !projectId) {
-    return res.status(400).json({ error: '缺少必要参数: tenantId, projectId, requirementText' });
+  if (!requirementText || !tenantId || !projectId || !pipelineId) {
+    return res.status(400).json({ error: '缺少必要参数: tenantId, projectId, pipelineId, requirementText' });
   }
 
   const projectIdNum = Number(projectId);
-  const pipelineIdNum = pipelineId != null ? Number(pipelineId) : projectIdNum;
+  const pipelineIdNum = Number(pipelineId);
 
   const taskId = uuidv4();
   runningTasks.set(taskId, { status: 'running', startedAt: new Date() });
@@ -429,11 +456,7 @@ app.post('/api/sa/run-async', (req, res) => {
         providerCode, LLM_TEMPERATURE, LLM_MAX_TOKENS,
       );
       const db = createDatabase(DB_BACKEND);
-      const validators = {
-        DFDValidator: null, BPMValidator: null, DictValidator: null,
-        LogicValidator: null, CrossEventConsistencyValidator: null,
-        ERValidator: null, STDValidator: null, UIValidator: null,
-      };
+      const validators = REAL_VALIDATORS;
       const orchestrator = new SAOrchestrator(llm, db, validators);
 
       const saRequest: SARequest = {
@@ -452,6 +475,7 @@ app.post('/api/sa/run-async', (req, res) => {
       task.status = 'completed';
       task.result = result;
       task.completedAt = new Date();
+      task.expiresAt = Date.now() + TASK_TTL_MS;
 
       logStep({
         level: 'info',
@@ -465,6 +489,7 @@ app.post('/api/sa/run-async', (req, res) => {
       task.status = 'failed';
       task.error = error?.message ?? 'SA async task failed';
       task.completedAt = new Date();
+      task.expiresAt = Date.now() + TASK_TTL_MS;
       logStep({ level: 'error', message: `SA async task failed taskId=${taskId}: ${task.error}` });
     }
   })();
@@ -493,6 +518,11 @@ app.get('/api/sa/events', (req, res) => {
 // ═══════════════════════════════════════════════════════
 app.get('/api/sa/tasks/:taskId', (req, res) => {
   const task = runningTasks.get(req.params.taskId);
+  // 懒清理：过期终态 task 视为不存在（双保险，配合定时 purge）
+  if (task && task.expiresAt !== undefined && task.expiresAt <= Date.now()) {
+    runningTasks.delete(req.params.taskId);
+    return res.status(404).json({ error: '任务不存在' });
+  }
   if (!task) {
     return res.status(404).json({ error: '任务不存在' });
   }

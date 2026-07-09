@@ -13,7 +13,10 @@ public static class VmTemplateCatalog
         if (string.IsNullOrWhiteSpace(templateId))
             throw new ArgumentException("templateId 不能为空", nameof(templateId));
 
-        if (!VmTemplateIds.LockedBackendTemplates.Contains(templateId, StringComparer.Ordinal))
+        // P9-S2：白名单检查（后端 + 前端模板都允许）
+        var isLocked = VmTemplateIds.LockedBackendTemplates.Contains(templateId, StringComparer.Ordinal)
+            || VmTemplateIds.LockedFrontendTemplates.Contains(templateId, StringComparer.Ordinal);
+        if (!isLocked)
             throw new ArgumentOutOfRangeException(nameof(templateId), $"未锁定的模板 ID: {templateId}");
 
         var path = Path.Combine(templateRoot, templateId.Replace('/', Path.DirectorySeparatorChar));

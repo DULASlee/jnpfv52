@@ -10,4 +10,10 @@ public sealed class SaPipelineOptions
 
     public bool IsCompileMode =>
         !string.Equals(S2Mode, "agent", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// 是否执行 Round 3 工程接线（投影 + 门禁 + 物化 + 假设落库）。
+    /// 默认 true（当前单轮 pipeline）；27 号多轮编排器对 Round 1/2 设为 false。
+    /// </summary>
+    public bool EnableEngineeringWiring { get; set; } = true;
 }

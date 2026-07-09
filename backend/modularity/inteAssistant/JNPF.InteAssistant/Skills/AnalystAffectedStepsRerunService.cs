@@ -78,7 +78,7 @@ public sealed class AnalystAffectedStepsRerunService : IAnalystAffectedStepsReru
 
         try
         {
-            var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, ct);
+            var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString(), ct);
             var skeleton = snapshots.FirstOrDefault(s =>
                 s.FragmentType == IrFragmentTypes.Skeleton
                 && s.StabilityState is IrStabilityStates.Stable or IrStabilityStates.Locked);
@@ -90,7 +90,7 @@ public sealed class AnalystAffectedStepsRerunService : IAnalystAffectedStepsReru
             if (eventSpec == null)
                 throw Oops.Bah($"EventSpec 不存在: {fragmentId}");
 
-            var affectedSteps = await ResolveAffectedStepsAsync(input, projectId, tenantId, fragmentId, ct);
+            var affectedSteps = await ResolveAffectedStepsAsync(input, projectId, tenantId, pipelineId.ToString(), fragmentId, ct);
             if (affectedSteps.Count == 0)
                 throw Oops.Bah("无受影响 SA 步骤可重跑");
 
@@ -103,7 +103,7 @@ public sealed class AnalystAffectedStepsRerunService : IAnalystAffectedStepsReru
             var skeletonJson = SerializePayload(skeleton.Payload);
             var requirement = await LoadUserRequirementAsync(pipelineId, ct);
             var previousSteps = await BuildPreviousStepsAsync(
-                projectId, tenantId, fragmentId, orderedAffected, eventSpec, ct);
+                projectId, tenantId, pipelineId.ToString(), fragmentId, orderedAffected, eventSpec, ct);
 
             _logger.LogInformation(
                 "Rerun affected SA steps: pipeline={PipelineId} event={EventId} steps=[{Steps}]",
@@ -118,7 +118,7 @@ public sealed class AnalystAffectedStepsRerunService : IAnalystAffectedStepsReru
                 previousSteps[step] = result.Output;
             }
 
-            var freshSnapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, ct);
+            var freshSnapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString(), ct);
             var freshSpec = freshSnapshots.FirstOrDefault(s =>
                 string.Equals(s.FragmentId, fragmentId, StringComparison.Ordinal));
             var completed = freshSpec?.SaStepsCompleted ?? Array.Empty<string>();
@@ -162,6 +162,7 @@ public sealed class AnalystAffectedStepsRerunService : IAnalystAffectedStepsReru
         RerunAffectedStepsInput? input,
         string projectId,
         string tenantId,
+        string pipelineId,
         string fragmentId,
         CancellationToken ct)
     {
@@ -171,13 +172,13 @@ public sealed class AnalystAffectedStepsRerunService : IAnalystAffectedStepsReru
         if (!string.IsNullOrWhiteSpace(input?.RevisionType))
             return EventSpecRevisionPlanner.GetAffectedSteps(input.RevisionType).ToList();
 
-        return await GetAffectedStepsFromLastRevisionAsync(projectId, tenantId, fragmentId, ct);
+        return await GetAffectedStepsFromLastRevisionAsync(projectId, tenantId, pipelineId, fragmentId, ct);
     }
 
     private async Task<List<string>> GetAffectedStepsFromLastRevisionAsync(
-        string projectId, string tenantId, string fragmentId, CancellationToken ct)
+        string projectId, string tenantId, string pipelineId, string fragmentId, CancellationToken ct)
     {
-        var events = await _eventStore.ListEventsAsync(projectId, tenantId, ct);
+        var events = await _eventStore.ListEventsAsync(projectId, tenantId, pipelineId, ct);
         var revised = events
             .Where(e => e.EventType == IrEventTypes.EventSpecRevised
                 && string.Equals(e.FragmentId, fragmentId, StringComparison.Ordinal))
@@ -213,6 +214,7 @@ public sealed class AnalystAffectedStepsRerunService : IAnalystAffectedStepsReru
     private async Task<Dictionary<string, object>> BuildPreviousStepsAsync(
         string projectId,
         string tenantId,
+        string pipelineId,
         string fragmentId,
         IReadOnlyList<string> affectedSteps,
         IrFragmentSnapshotDto eventSpec,
@@ -221,7 +223,7 @@ public sealed class AnalystAffectedStepsRerunService : IAnalystAffectedStepsReru
         var affectedSet = affectedSteps.ToHashSet(StringComparer.Ordinal);
         var previousSteps = new Dictionary<string, object>(StringComparer.Ordinal);
 
-        var events = await _eventStore.ListEventsAsync(projectId, tenantId, ct);
+        var events = await _eventStore.ListEventsAsync(projectId, tenantId, pipelineId, ct);
         foreach (var evt in events.Where(e =>
             e.EventType == IrEventTypes.SaStepCompleted
             && string.Equals(e.FragmentId, fragmentId, StringComparison.Ordinal)

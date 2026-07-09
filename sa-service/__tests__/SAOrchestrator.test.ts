@@ -130,6 +130,7 @@ describe('SAOrchestrator.runSA() 集成测试', () => {
     const req: SARequest = {
       tenantId: 't1',
       projectId: 1,
+      pipelineId: 1,
       requirementId: 1,
       requirementText: '我们要建 MES 报工系统,机加工车间,工单报工,物料消耗',
       userId: 'user1',
@@ -188,7 +189,7 @@ describe('SAOrchestrator.runSA() 集成测试', () => {
     const orchestrator = new SAOrchestrator(llm, db, mockValidators);
 
     const req: SARequest = {
-      tenantId: 't1', projectId: 1, requirementId: 1,
+      tenantId: 't1', projectId: 1, pipelineId: 1, requirementId: 1,
       requirementText: '简单查询', userId: 'u1',
     };
 
@@ -285,7 +286,7 @@ describe('3-Tier 混合事件分流', () => {
     const orchestrator = new SAOrchestrator(llm, db, mockValidators);
 
     const req: SARequest = {
-      tenantId: 't1', projectId: 1, requirementId: 1,
+      tenantId: 't1', projectId: 1, pipelineId: 1, requirementId: 1,
       requirementText: 'MES 报工系统', userId: 'u1',
     };
 
@@ -316,6 +317,7 @@ describe('3-Tier 混合事件分流', () => {
     const req: SARequest = {
       tenantId: 't1',
       projectId: 99,
+      pipelineId: 99,
       requirementId: 1,
       requirementText: '请假管理系统',
       userId: 'u1',
@@ -332,5 +334,26 @@ describe('3-Tier 混合事件分流', () => {
     expect(result.eventResults[0].eventId).toBe('BE-001');
     expect(result.eventResults[1].eventId).toBe('BE-002');
     expect(typeof result.eventResults[0].eventId).toBe('string');
+  });
+});
+
+// =====================================================
+// D 组：parseEventIdNum 统一解析
+// =====================================================
+describe('SAOrchestrator.parseEventIdNum（D 组统一解析）', () => {
+  it('BE-001 → 1', () => {
+    expect(SAOrchestrator.parseEventIdNum('BE-001')).toBe(1);
+  });
+  it('BE-002 → 2', () => {
+    expect(SAOrchestrator.parseEventIdNum('BE-002')).toBe(2);
+  });
+  it('EV-010 → 10', () => {
+    expect(SAOrchestrator.parseEventIdNum('EV-010')).toBe(10);
+  });
+  it('无数字字符串 → 0', () => {
+    expect(SAOrchestrator.parseEventIdNum('xyz')).toBe(0);
+  });
+  it('空字符串 → 0', () => {
+    expect(SAOrchestrator.parseEventIdNum('')).toBe(0);
   });
 });

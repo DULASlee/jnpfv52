@@ -75,12 +75,19 @@ export class SAOrchestrator {
     this.dkee = new DKEEFacade();
   }
 
+  /** 统一解析 eventId（如 'BE-001'）为数字（1）；无数字则 0。D 组：消除 runSingleStep eventId/currentEventId 解析不一致。 */
+  public static parseEventIdNum(eventId: string): number {
+    const m = eventId.match(/\d+/);
+    return m ? Number(m[0]) : 0;
+  }
+
   // ============================================================
   // 单步执行（C# Analyst Skill 逐步驱动）
   // ============================================================
   async runSingleStep(params: {
     tenantId: string;
     projectId: string;
+    pipelineId: number;
     eventId: string;
     agentName: string;
     irStepName: string;
@@ -90,12 +97,14 @@ export class SAOrchestrator {
     runId?: string;
   }): Promise<any> {
     const start = Date.now();
+    const eventNum = SAOrchestrator.parseEventIdNum(params.eventId);
     const ctx: SAContext = {
       tenantId: params.tenantId,
       projectId: Number(params.projectId) || 0,
+      pipelineId: params.pipelineId,
       requirementId: 0,
       requirementText: params.requirementText,
-      eventId: Number(params.eventId.replace(/\D/g, '')) || 1,
+      eventId: eventNum,
       eventDescription: params.eventId,
       assetLevel: 'EVENT',
       kgPatterns: [],
@@ -103,7 +112,7 @@ export class SAOrchestrator {
       previousSteps: { ...(params.previousSteps || {}), skeleton: params.skeleton },
       userId: 'analyst-skill',
       startTime: start,
-      currentEventId: Number(params.eventId) || 0,
+      currentEventId: eventNum,
     };
 
     const tableMap: Record<string, string> = {
@@ -417,7 +426,9 @@ export class SAOrchestrator {
             console.warn('[Validator] DFDValidator 未注入，跳过 DFD 校验');
             return { passed: true, errors: [] };
           }
-          const v = new this.validators.DFDValidator(output);
+          // C1 adapter: Agent 产出 dfdLevels(camel) → Validator 期望 dfd_levels(snake)
+          const adapted = { ...output, dfd_levels: output.dfdLevels };
+          const v = new this.validators.DFDValidator(adapted);
           return v.validate();
         }
         case 'BPMAgent': {
@@ -426,7 +437,13 @@ export class SAOrchestrator {
             return { passed: true, errors: [] };
           }
           const dfdProcesses = ctx.previousSteps['dfd']?.processes || [];
-          const v = new this.validators.BPMValidator(output, dfdProcesses);
+          // C1 adapter: Agent 产出 activityNodes/swimLanes(camel) → Validator 期望 activity_nodes/swim_lanes(snake)
+          const adapted = {
+            ...output,
+            activity_nodes: output.activityNodes,
+            swim_lanes: output.swimLanes,
+          };
+          const v = new this.validators.BPMValidator(adapted, dfdProcesses);
           return v.validate();
         }
         case 'DictAgent': {
@@ -445,7 +462,9 @@ export class SAOrchestrator {
           }
           const dict = ctx.previousSteps['dict'];
           if (!dict) return { passed: true, errors: [] };
-          const v = new this.validators.LogicValidator(output, dict);
+          // C1 adapter: Agent 产出 processSpecs(camel) → Validator 期望 process_specs(snake)
+          const adapted = { ...output, process_specs: output.processSpecs };
+          const v = new this.validators.LogicValidator(adapted, dict);
           return v.validate();
         }
         case 'DecisionTableAgent': {

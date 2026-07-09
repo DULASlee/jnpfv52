@@ -15,8 +15,8 @@ export interface SkeletonBusinessEvent {
 export interface SARequest {
   tenantId: string;
   projectId: number;
-  /** Studio 流水线实例 ID（三元组）；缺省时与 projectId 相同（历史兼容） */
-  pipelineId?: number;
+  /** Studio 流水线实例 ID（三元组，必填，R12 宪法级） */
+  pipelineId: number;
   requirementId: number;
   requirementText: string;          // 客户原始需求
   /** PM 已确认骨架中的 businessEvents — 有则跳过 ScopeAgent 重切，直接驱动 SA */
@@ -254,7 +254,7 @@ export interface ISADatabase {
 export interface ValidationLogRecord {
   tenantId: string;
   projectId: number;
-  pipelineId?: number;
+  pipelineId: number;
   saTableName: string;
   saRecordId?: number;
   validatorName: string;

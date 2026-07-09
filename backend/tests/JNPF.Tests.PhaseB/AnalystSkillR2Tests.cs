@@ -1,5 +1,6 @@
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Interfaces;
+using JNPF.InteAssistant.Sa;
 using JNPF.InteAssistant.Skills;
 using JNPF.InteAssistant.Skills.Cognitive;
 using JNPF.InteAssistant.Skills.Cognitive.Mcp;
@@ -44,7 +45,7 @@ public static class AnalystSkillR2Tests
 
     private static void T3_ValidateInput_RequiresStableSkeleton()
     {
-        var skill = new AnalystSkillService(new FakeAnalystToolkit(), null!, null!, null!, null!, null!);
+        var skill = new AnalystSkillService(new FakeAnalystToolkit(), null!, null!, Microsoft.Extensions.Options.Options.Create(new SaPipelineOptions()), null!, null!, null!, null!);
         var missing = skill.ValidateInputAsync(IrSnapshot.Empty).GetAwaiter().GetResult();
         if (missing.IsValid)
             throw new Exception("T3 无 stable 骨架应校验失败");
@@ -69,7 +70,7 @@ public static class AnalystSkillR2Tests
 
     private static void T4_ValidateOutput_RequiresAnalysisCompleted()
     {
-        var skill = new AnalystSkillService(new FakeAnalystToolkit(), null!, null!, null!, null!, null!);
+        var skill = new AnalystSkillService(new FakeAnalystToolkit(), null!, null!, Microsoft.Extensions.Options.Options.Create(new SaPipelineOptions()), null!, null!, null!, null!);
         var bad = skill.ValidateOutputAsync(Array.Empty<JNPF.InteAssistant.Entitys.Dto.Ir.AppendIrEventRequest>())
             .GetAwaiter().GetResult();
         if (bad.IsValid)
@@ -78,7 +79,7 @@ public static class AnalystSkillR2Tests
 
     private static void T5_LayerAndMission_Classification()
     {
-        var skill = new AnalystSkillService(new FakeAnalystToolkit(), null!, null!, null!, null!, null!);
+        var skill = new AnalystSkillService(new FakeAnalystToolkit(), null!, null!, Microsoft.Extensions.Options.Options.Create(new SaPipelineOptions()), null!, null!, null!, null!);
         if (skill.Layer != SkillLayer.Refinement || skill.Mission != SkillMission.RefineSpecification)
             throw new Exception("T5 Analyst 应为 Refinement + RefineSpecification");
         if (skill.Version != "2.0.0-cognitive")

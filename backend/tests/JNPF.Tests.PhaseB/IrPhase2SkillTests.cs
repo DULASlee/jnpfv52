@@ -141,7 +141,7 @@ public static class IrPhase2SkillTests
 
     private static void TestCompletenessGate_ExcludesCurrentRun()
     {
-        var gate = new JNPF.InteAssistant.Ir.AnalysisCompletedCompletenessGate(null!);
+        var gate = new JNPF.InteAssistant.Ir.AnalysisCompletedCompletenessGate(null!, Microsoft.Extensions.Options.Options.Create(new SaPipelineOptions()));
         var snapshot = new IrSnapshot
         {
             Fragments = new List<IrSnapshotFragment>
@@ -159,7 +159,7 @@ public static class IrPhase2SkillTests
                     FragmentType = JNPF.InteAssistant.Entitys.Ir.IrFragmentTypes.EventSpec,
                     StabilityState = JNPF.InteAssistant.Entitys.Ir.IrStabilityStates.Stable,
                     SaStepsCompleted = JNPF.InteAssistant.Entitys.Ir.IrSaSteps.All,
-                    Payload = "{}",
+                    Payload = """{"saStepsCompleted":["DomainModel","AggregateDesign","EventCatalog","CommandQuery","IntegrationPoints","WorkflowSpec","UISpec","DataModel","DeliveryChecklist"]}""",
                 },
             },
         };

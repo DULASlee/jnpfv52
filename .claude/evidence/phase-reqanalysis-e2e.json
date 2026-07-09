@@ -1,0 +1,252 @@
+{
+  "phase": "P9-ReqA",
+  "ticket": "28-§7",
+  "description": "需求分析子链 E2E 验收",
+  "total": 40,
+  "passed": 40,
+  "failed": 0,
+  "passRate": "100.0%",
+  "results": [
+    {
+      "id": "D1-exists",
+      "pass": true,
+      "detail": "RequirementDocumentRenderer.cs 存在",
+      "timestamp": "2026-07-09T14:13:45.071Z"
+    },
+    {
+      "id": "D1-interface",
+      "pass": true,
+      "detail": "IRequirementDocumentRenderer + ITransient 注册",
+      "timestamp": "2026-07-09T14:13:45.071Z"
+    },
+    {
+      "id": "D1-cover",
+      "pass": true,
+      "detail": "封面渲染方法存在",
+      "timestamp": "2026-07-09T14:13:45.072Z"
+    },
+    {
+      "id": "D1-sections",
+      "pass": true,
+      "detail": "6 个章节方法齐全",
+      "timestamp": "2026-07-09T14:13:45.073Z"
+    },
+    {
+      "id": "D1-appendices",
+      "pass": true,
+      "detail": "4 个附录方法齐全（状态转换/权限矩阵/业务规则/编译假设）",
+      "timestamp": "2026-07-09T14:13:45.074Z"
+    },
+    {
+      "id": "D1-esc",
+      "pass": true,
+      "detail": "Markdown 转义工具 Esc() 存在",
+      "timestamp": "2026-07-09T14:13:45.074Z"
+    },
+    {
+      "id": "D1-no-llm",
+      "pass": true,
+      "detail": "纯 C# 确定性实现，无 LLM 调用依赖",
+      "timestamp": "2026-07-09T14:13:45.074Z"
+    },
+    {
+      "id": "D2-exists",
+      "pass": true,
+      "detail": "DddProjection.cs 存在",
+      "timestamp": "2026-07-09T14:13:45.075Z"
+    },
+    {
+      "id": "D2-interface",
+      "pass": true,
+      "detail": "IDddProjection 接口存在",
+      "timestamp": "2026-07-09T14:13:45.075Z"
+    },
+    {
+      "id": "D2-views",
+      "pass": true,
+      "detail": "5 个 DDD 视角类齐全（DomainModel/Aggregate/EventCatalog/Cqrs/Integration）",
+      "timestamp": "2026-07-09T14:13:45.076Z"
+    },
+    {
+      "id": "D2-result",
+      "pass": true,
+      "detail": "DddProjectionResult + OverallConfidence 聚合属性",
+      "timestamp": "2026-07-09T14:13:45.076Z"
+    },
+    {
+      "id": "D2-no-llm",
+      "pass": true,
+      "detail": "纯 C# 确定性实现，无 LLM 调用",
+      "timestamp": "2026-07-09T14:13:45.076Z"
+    },
+    {
+      "id": "D3-exists",
+      "pass": true,
+      "detail": "ConsistencyChecker.cs 存在",
+      "timestamp": "2026-07-09T14:13:45.076Z"
+    },
+    {
+      "id": "D3-interface",
+      "pass": true,
+      "detail": "IConsistencyChecker + ITransient",
+      "timestamp": "2026-07-09T14:13:45.076Z"
+    },
+    {
+      "id": "D3-rules",
+      "pass": true,
+      "detail": "4 条一致性检查规则齐全",
+      "timestamp": "2026-07-09T14:13:45.077Z"
+    },
+    {
+      "id": "D3-finding",
+      "pass": true,
+      "detail": "ConsistencyFinding 类型（CheckType/Severity/Message）",
+      "timestamp": "2026-07-09T14:13:45.077Z"
+    },
+    {
+      "id": "D3-r12",
+      "pass": true,
+      "detail": "方法签名含 PipelineTriple（三元组 R12）",
+      "timestamp": "2026-07-09T14:13:45.077Z"
+    },
+    {
+      "id": "D4-exists",
+      "pass": true,
+      "detail": "QualityScoreCalculator.cs 存在",
+      "timestamp": "2026-07-09T14:13:45.077Z"
+    },
+    {
+      "id": "D4-interface",
+      "pass": true,
+      "detail": "IQualityScoreCalculator + ITransient",
+      "timestamp": "2026-07-09T14:13:45.077Z"
+    },
+    {
+      "id": "D4-dimensions",
+      "pass": true,
+      "detail": "5 维度评分齐全",
+      "timestamp": "2026-07-09T14:13:45.078Z"
+    },
+    {
+      "id": "D4-score-type",
+      "pass": true,
+      "detail": "QualityScore 类型（TotalScore/PassesGate）",
+      "timestamp": "2026-07-09T14:13:45.078Z"
+    },
+    {
+      "id": "D4-weights",
+      "pass": true,
+      "detail": "权重配置（25%+25%+20%+15%+15%=100%）",
+      "timestamp": "2026-07-09T14:13:45.078Z"
+    },
+    {
+      "id": "D5-exists",
+      "pass": true,
+      "detail": "RequirementAnalysisOrchestrator.cs 存在",
+      "timestamp": "2026-07-09T14:13:45.078Z"
+    },
+    {
+      "id": "D5-interface",
+      "pass": true,
+      "detail": "IRequirementAnalysisOrchestrator + ITransient",
+      "timestamp": "2026-07-09T14:13:45.079Z"
+    },
+    {
+      "id": "D5-rounds",
+      "pass": true,
+      "detail": "3 轮深化循环（PM/Analyst联合/确认）",
+      "timestamp": "2026-07-09T14:13:45.079Z"
+    },
+    {
+      "id": "D5-pause-resume",
+      "pass": true,
+      "detail": "暂停-恢复机制（Clarification IR 事件）",
+      "timestamp": "2026-07-09T14:13:45.079Z"
+    },
+    {
+      "id": "D5-sa-compile",
+      "pass": true,
+      "detail": "SA 全量 C# 重编译（每轮）",
+      "timestamp": "2026-07-09T14:13:45.080Z"
+    },
+    {
+      "id": "D5-run-async",
+      "pass": true,
+      "detail": "RunAsync 返回 RequirementAnalysisOrchestratorResult",
+      "timestamp": "2026-07-09T14:13:45.080Z"
+    },
+    {
+      "id": "D5-compile-default",
+      "pass": true,
+      "detail": "默认 compile 模式（无需 sa-service）",
+      "timestamp": "2026-07-09T14:13:45.080Z"
+    },
+    {
+      "id": "D6-exists",
+      "pass": true,
+      "detail": "20260708_P9_ReqA.sql 存在",
+      "timestamp": "2026-07-09T14:13:45.080Z"
+    },
+    {
+      "id": "D6-tables",
+      "pass": true,
+      "detail": "4 张 DDL 齐全（sa_assumptions/consistency/entity_fields VIEW/quality_score）",
+      "timestamp": "2026-07-09T14:13:45.080Z"
+    },
+    {
+      "id": "D6-indexes",
+      "pass": true,
+      "detail": "三元组隔离索引齐全",
+      "timestamp": "2026-07-09T14:13:45.081Z"
+    },
+    {
+      "id": "D6-prefix",
+      "pass": true,
+      "detail": "F_ 列名前缀 + UPPER_SNAKE_CASE 表名",
+      "timestamp": "2026-07-09T14:13:45.081Z"
+    },
+    {
+      "id": "D7-triple",
+      "pass": true,
+      "detail": "所有 5 个组件均含三元组 R12 隔离",
+      "timestamp": "2026-07-09T14:13:45.082Z"
+    },
+    {
+      "id": "D7-migration",
+      "pass": true,
+      "detail": "迁移 SQL 表均含三元组列",
+      "timestamp": "2026-07-09T14:13:45.082Z"
+    },
+    {
+      "id": "D8-deterministic",
+      "pass": true,
+      "detail": "4 个渲染/门控组件均为纯 C# 确定性实现，零 LLM 依赖",
+      "timestamp": "2026-07-09T14:13:45.083Z"
+    },
+    {
+      "id": "D9-build",
+      "pass": true,
+      "detail": "dotnet build 成功（0 错误）",
+      "timestamp": "2026-07-09T14:13:48.362Z"
+    },
+    {
+      "id": "D11-structure",
+      "pass": true,
+      "detail": "文档结构完整（封面+6节+4附录）",
+      "timestamp": "2026-07-09T14:13:48.363Z"
+    },
+    {
+      "id": "D11-tables",
+      "pass": true,
+      "detail": "Markdown 表格齐全（封面/规模/事件/数据模型/一致性/质量/附录）",
+      "timestamp": "2026-07-09T14:13:48.363Z"
+    },
+    {
+      "id": "D10-api",
+      "pass": true,
+      "detail": "⚠️ 跳过（--skip-api）",
+      "timestamp": "2026-07-09T14:13:48.364Z"
+    }
+  ],
+  "verifiedAt": "2026-07-09T14:13:48.364Z"
+}

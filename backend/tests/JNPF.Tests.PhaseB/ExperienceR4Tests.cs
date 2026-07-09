@@ -55,7 +55,7 @@ public static class ExperienceR4Tests
         var recorder = new ExperienceRecorder(stream);
         var svc = new EventSpecRevisionService(store, recorder);
 
-        svc.ReviseAsync("p1", "t1", "eventspec:BE-001", new ReviseEventSpecInput
+        svc.ReviseAsync("p1", "t1", "pipe-1", "eventspec:BE-001", new ReviseEventSpecInput
         {
             RevisionType = EventSpecRevisionPlanner.FieldTypeOrConstraint,
             PayloadPatch = """{"note":"human-patched"}""",
@@ -110,16 +110,16 @@ public static class ExperienceR4Tests
         public Task<AiIrEventEntity> AppendAsync(string projectId, string tenantId, AppendIrEventRequest request, CancellationToken ct = default)
             => _stream.AppendAsync(projectId, tenantId, request, ct);
 
-        public Task<List<IrEventDto>> ListEventsAsync(string projectId, string tenantId, CancellationToken ct = default)
+        public Task<List<IrEventDto>> ListEventsAsync(string projectId, string tenantId, string pipelineId, CancellationToken ct = default)
             => Task.FromResult(new List<IrEventDto>());
 
-        public Task<List<IrFragmentSnapshotDto>> ListSnapshotsAsync(string projectId, string tenantId, CancellationToken ct = default)
+        public Task<List<IrFragmentSnapshotDto>> ListSnapshotsAsync(string projectId, string tenantId, string pipelineId, CancellationToken ct = default)
             => Task.FromResult(_snapshots);
 
-        public Task<IrStabilityDto?> GetStabilityAsync(string projectId, string tenantId, CancellationToken ct = default)
+        public Task<IrStabilityDto?> GetStabilityAsync(string projectId, string tenantId, string pipelineId, CancellationToken ct = default)
             => Task.FromResult<IrStabilityDto?>(null);
 
-        public Task<IrFragmentSnapshotDto?> GetSnapshotAtVersionAsync(string projectId, string tenantId, string fragmentId, int? version, CancellationToken ct = default)
+        public Task<IrFragmentSnapshotDto?> GetSnapshotAtVersionAsync(string projectId, string tenantId, string pipelineId, string fragmentId, int? version, CancellationToken ct = default)
             => Task.FromResult(_snapshots.FirstOrDefault(s => s.FragmentId == fragmentId));
 
         public Task EnsureProjectAsync(string projectId, string tenantId, string projectName, string creatorUserId, CancellationToken ct = default)

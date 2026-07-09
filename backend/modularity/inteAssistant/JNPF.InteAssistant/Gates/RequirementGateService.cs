@@ -176,8 +176,10 @@ public class RequirementGateService : ITransient
             var response = await _llmGateway.ChatAsync(request, ct);
             if (!response.IsSuccess)
             {
-                _logger.LogWarning("成熟度评估失败，降级refine: {Error}", response.Error);
-                return new MaturityResult { Score = 60, Mode = "refine" };
+                // fail-safe：LLM 故障时降级 confirm（继续追问），不降级 refine（直接分析）。
+                // refine 会跳过追问直接进入 SA 深度分析，等于放行不完整需求——与主门控 fail-closed 策略一致。
+                _logger.LogWarning("成熟度评估 LLM 调用失败，保守降级 confirm（继续追问，不进分析）: {Error}", response.Error);
+                return new MaturityResult { Score = 40, Mode = "confirm" };
             }
 
             var json = ExtractJson(response.Content);
@@ -185,7 +187,10 @@ public class RequirementGateService : ITransient
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (parsed == null)
-                return new MaturityResult { Score = 60, Mode = "refine" };
+            {
+                _logger.LogWarning("成熟度评估 JSON 解析失败，保守降级 confirm（继续追问，不进分析）");
+                return new MaturityResult { Score = 40, Mode = "confirm" };
+            }
 
             // 一致性兜底：mode 必须与 score 匹配（LLM 偶尔给出矛盾值）
             parsed.Mode = NormalizeMode(parsed.Score, parsed.Mode);
@@ -194,8 +199,9 @@ public class RequirementGateService : ITransient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "成熟度评估异常，降级refine");
-            return new MaturityResult { Score = 60, Mode = "refine" };
+            // fail-safe：异常时同样降级 confirm，不降级 refine
+            _logger.LogError(ex, "成熟度评估异常，保守降级 confirm（继续追问，不进分析）");
+            return new MaturityResult { Score = 40, Mode = "confirm" };
         }
     }
 
