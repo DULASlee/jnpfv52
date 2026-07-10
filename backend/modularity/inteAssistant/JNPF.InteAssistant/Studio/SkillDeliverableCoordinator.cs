@@ -68,6 +68,14 @@ public sealed class SkillDeliverableCoordinator : ISkillDeliverableCoordinator, 
                     await SaveSkeletonAsync(tenantId, pipelineId, events, ct);
                     break;
                 case "analyst-skill":
+                    // P0：Round 3 Finalize 已用 RequirementDocumentRenderer 写入 02；
+                    // AnalysisCompleted.finalized=true 时跳过旧 EventSpec 模板，避免覆盖新渲染器产物。
+                    if (HasFinalizedAnalysis(events))
+                    {
+                        _logger.LogInformation(
+                            "跳过旧 02 覆盖（Round3 Finalize 已落盘新渲染器） pipeline={PipelineId}", pipelineId);
+                        break;
+                    }
                     await SaveRequirementSpecAsync(tenantId, pipelineId, projectId, ct);
                     break;
                 case DesignSkillIds.Architect:
@@ -96,6 +104,26 @@ public sealed class SkillDeliverableCoordinator : ISkillDeliverableCoordinator, 
         catch (Exception ex)
         {
             _logger.LogError(ex, "Skill 交付物落盘失败 skill={SkillId} pipeline={PipelineId}", skillId, pipelineId);
+        }
+    }
+
+    /// <summary>检测本轮事件是否含 AnalysisCompleted 且 finalized=true（Round 3 工程保障已写 02）。</summary>
+    private static bool HasFinalizedAnalysis(IReadOnlyList<AppendIrEventRequest> events)
+    {
+        var completed = events.LastOrDefault(e => e.EventType == IrEventTypes.AnalysisCompleted);
+        if (completed?.Payload is null) return false;
+        try
+        {
+            var json = completed.Payload is string s
+                ? s
+                : JsonSerializer.Serialize(completed.Payload, JsonOptions);
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty("finalized", out var f)
+                   && f.ValueKind == JsonValueKind.True;
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 

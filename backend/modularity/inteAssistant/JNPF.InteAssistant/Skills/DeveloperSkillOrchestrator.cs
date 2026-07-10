@@ -336,7 +336,7 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
 
     private async Task ValidatePreconditionsAsync(IrSnapshot snapshot, CancellationToken ct)
     {
-        var gate = await _completenessGate.ValidateAsync(snapshot, ct);
+        var gate = await _completenessGate.ValidateAsync(snapshot, null, ct);
         if (!gate.IsValid)
             throw Oops.Oh(gate.ErrorMessage ?? "SystemDesign 前置条件未满足")
                 .StatusCode(StatusCodes.Status400BadRequest);

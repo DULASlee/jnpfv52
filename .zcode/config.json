@@ -7,11 +7,11 @@
         "args": [
           "start-mcp-server",
           "--context",
-          "ide",
+          "claude-code",
           "--project",
           "D:\\JNPF-v52"
         ],
-        "timeoutMs": 60000
+        "timeoutMs": 180000
       },
       "knowledge-graph": {
         "type": "stdio",

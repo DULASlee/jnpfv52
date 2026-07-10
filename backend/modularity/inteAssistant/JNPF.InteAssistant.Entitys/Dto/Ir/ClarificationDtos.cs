@@ -152,6 +152,7 @@ public record AnswerClarificationResult
     ///   "re-evaluate"                   — 重新触发 sa-gate（需求阶段，下一轮 maturity 评估）
     ///   "rerun-architect"               — 重新运行 architect-skill（架构阶段，阶段二 ToT）
     ///   "rerun-system-design-clarification"— 重新运行 system-design-clarification-skill（总体设计阶段，阶段二约束引擎+锁定）
+    ///   "continue-requirement-analysis" — 续跑三轮需求分析编排器（requirement-analysis-round1/2/3）
     ///   "none"                          — 无后续
     /// </summary>
     public string NextAction { get; init; } = "re-evaluate";

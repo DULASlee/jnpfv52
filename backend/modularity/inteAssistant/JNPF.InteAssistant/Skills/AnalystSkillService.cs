@@ -12,6 +12,7 @@ using JNPF.InteAssistant.Ir;
 using JNPF.InteAssistant.Runtime;
 using JNPF.InteAssistant.Sa;
 using JNPF.InteAssistant.Skills.Cognitive;
+using JNPF.InteAssistant.Studio;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SqlSugar;
@@ -43,6 +44,12 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
     private readonly ISaMaterializer _materializer;
     private readonly ILightStructureValidator _lightValidator;
     private readonly ISqlSugarClient _db;
+    // 28 号 §3/§5/§6/§7：四组件（2026-07-10 接线 P0-2，原为孤儿代码）
+    private readonly IDddProjection _dddProjection;
+    private readonly IConsistencyChecker _consistencyChecker;
+    private readonly IQualityScoreCalculator _qualityScoreCalculator;
+    private readonly IRequirementDocumentRenderer _documentRenderer;
+    private readonly IPipelineDeliverableService _deliverables;
 
     public AnalystSkillService(
         ICognitiveSkillToolkit toolkit,
@@ -57,7 +64,12 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
         ISystemDesignLockedCompletenessGate consistencyGate,
         ISaMaterializer materializer,
         ILightStructureValidator lightValidator,
-        ISqlSugarClient db)
+        ISqlSugarClient db,
+        IDddProjection dddProjection,
+        IConsistencyChecker consistencyChecker,
+        IQualityScoreCalculator qualityScoreCalculator,
+        IRequirementDocumentRenderer documentRenderer,
+        IPipelineDeliverableService deliverables)
         : base(toolkit)
     {
         _saAdapter = saAdapter;
@@ -72,6 +84,11 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
         _materializer = materializer;
         _lightValidator = lightValidator;
         _db = db;
+        _dddProjection = dddProjection;
+        _consistencyChecker = consistencyChecker;
+        _qualityScoreCalculator = qualityScoreCalculator;
+        _documentRenderer = documentRenderer;
+        _deliverables = deliverables;
     }
 
     public override string SkillId => "analyst-skill";
@@ -250,10 +267,39 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
         }
 
         // ── Round 3 工程一次性保障（27 号 §5.2 / §9：前两轮零工程步骤，仅 Round 3 落库）──
-        // 默认（ThinkAsync 经 SkillHarness 触发）= 开启最终工程保障。
-        // 三轮编排器在 Round 1/2 调用 ThinkAsyncWithRoundAsync(enableFinalization: false) 时，
-        // 只编译 SA + 产出 IR 事件 + 内存收集 Assumptions，不投影/不门禁/不 Materializer。
-        yield return await FinalizeAsync(context, compileResult, businessEvents.Count, enableFinalization: true, ct);
+        // enableFinalization 由三轮编排器经 SkillRunOptions → SkillContext 透传：
+        // Round 1/2=false（只编译 SA + 产出 IR 事件 + 内存收集 Assumptions，不投影/不门禁/不 Materializer），
+        // Round 3=true（一次性工程保障）。默认 true 保持非编排器直接调用兼容。
+        //
+        // P0 修复：编排器 Round 2 已确认全部事件后，Round 3 再跑时 pendingEvents=0，
+        // compileResult 为 null 会导致工程接线整块跳过。enableFinalization 时强制从 skeleton 重编译，
+        // 并合并 IR 中跨轮持久化的 AssumptionsCollected fragment。
+        if (context.EnableFinalization
+            && compileResult == null
+            && _pipelineOptions.IsCompileMode
+            && _pipelineOptions.EnableEngineeringWiring)
+        {
+            _logger.LogInformation(
+                "AnalystSkill: enableFinalization=true 但 compileResult 为空（断点续跑/Round3），从 skeleton 重编译");
+            compileResult = _compiler.CompileFromSkeletonJson(
+                skeleton.Payload,
+                context.UserRequirement ?? skeleton.Payload);
+            compileResult = MergePersistedAssumptions(context.Snapshot, compileResult);
+        }
+        else if (compileResult != null)
+        {
+            compileResult = MergePersistedAssumptions(context.Snapshot, compileResult);
+        }
+
+        if (context.EnableFinalization
+            && _pipelineOptions.EnableEngineeringWiring
+            && _pipelineOptions.IsCompileMode
+            && compileResult == null)
+        {
+            throw Oops.Bah("Round 3 工程保障失败：无法从 skeleton 重编译 compileResult，禁止静默跳过");
+        }
+
+        yield return await FinalizeAsync(context, compileResult, businessEvents.Count, context.EnableFinalization, ct);
     }
 
     /// <summary>
@@ -283,8 +329,9 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
         {
             _logger.LogInformation("AnalystSkill: 开始 Round 3 工程接线（投影+门禁+物化+假设落库）");
 
-            // ① 投影 → PersistAsync（ai_entity_field）
-            //    三元组使用 context 真实值（非 gate placeholder）
+            var triple = new PipelineTriple(context.TenantId, context.ProjectId, context.PipelineId);
+
+            // ① 投影（内存）——三元组使用 context 真实值
             var projectionOptions = new EntityDesignProjectionOptions
             {
                 TenantId = context.TenantId,
@@ -292,7 +339,6 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
                 PipelineId = context.PipelineId.ToString(),
             };
             var projection = EntityDesignProjector.Project(freshSnapshot, projectionOptions);
-            await _entityDesignRepo.PersistAsync(projection, ct);
             _logger.LogInformation(
                 "AnalystSkill: 投影完成 {FieldCount} fields, {TableCount} tables, hash={Hash}",
                 projection.Fields.Count, projection.TableNames().Count, projection.ProjectionHash);
@@ -302,22 +348,67 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
             foreach (var w in warnings)
                 _logger.LogWarning("LightStructureValidator: {Warning}", w);
 
-            // ③ R1-R3 跨层一致性门禁（阻断）
-            var consistencyResult = await _consistencyGate.ValidateAsync(freshSnapshot, ct);
+            // ③ R1-R3 跨层一致性门禁（阻断）——须在落库前，避免门禁失败留下半成品
+            var consistencyResult = await _consistencyGate.ValidateAsync(freshSnapshot, triple, ct);
             if (!consistencyResult.IsValid)
                 throw Oops.Bah(consistencyResult.ErrorMessage ?? "跨层一致性门禁未通过");
 
-            // ④ Materializer（物化到 sa_* 九表，自管事务）
-            var triple = new PipelineTriple(context.TenantId, context.ProjectId, context.PipelineId);
-            var materializeResult = await _materializer.MaterializeAsync(triple, compileResult, ct);
-            _logger.LogInformation(
-                "AnalystSkill: 物化完成 scope={ScopeId} dict={DictId} events={EventCount} ms={DurationMs}",
-                materializeResult.ScopeId, materializeResult.DictId,
-                materializeResult.EventCount, materializeResult.DurationMs);
+            // ④ 投影 + Materializer 同事务（26 号 §7.3）：门禁通过后一次性提交
+            await _db.Ado.BeginTranAsync();
+            try
+            {
+                await _entityDesignRepo.PersistAsync(projection, ct);
+                var materializeResult = await _materializer.MaterializeAsync(triple, compileResult, ct);
+                await _db.Ado.CommitTranAsync();
+                _logger.LogInformation(
+                    "AnalystSkill: 物化完成 scope={ScopeId} dict={DictId} events={EventCount} ms={DurationMs}",
+                    materializeResult.ScopeId, materializeResult.DictId,
+                    materializeResult.EventCount, materializeResult.DurationMs);
+            }
+            catch
+            {
+                try { await _db.Ado.RollbackTranAsync(); } catch { /* best effort */ }
+                throw;
+            }
 
-            // ⑤ sa_assumptions 独立事务写入
+            // ⑤ sa_assumptions 独立事务写入（衍生数据可重建，失败→告警不阻断）
             if (compileResult.Assumptions is { Count: > 0 })
-                await PersistAssumptionsAsync(context, compileResult.Assumptions, ct);
+            {
+                try
+                {
+                    await PersistAssumptionsAsync(context, compileResult.Assumptions, ct);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not OperationCanceledException)
+                {
+                    _logger.LogWarning(ex, "sa_assumptions 写入失败（不阻断工程保障）pipeline={PipelineId}", context.PipelineId);
+                }
+            }
+
+            // ⑥ DDD 实时推导（28 号 §3：纯内存，<50ms，不落库，供质量评分 + 渲染）
+            var dddResult = _dddProjection.Project(compileResult, projection);
+            _logger.LogInformation(
+                "AnalystSkill: DDD 推导完成 confidence={Conf:F2} subDomains={Sub} roots={Roots}",
+                dddResult.OverallConfidence, dddResult.DomainModel.SubDomains.Count,
+                dddResult.AggregateDesign.RootEntities.Count);
+
+            // ⑦ 一致性检查器（28 号 §5：4 条规则，写 sa_consistency）
+            var consistencyFindings = await _consistencyChecker.CheckAsync(
+                triple, compileResult, projection, roundNumber: 3, ct);
+
+            // ⑧ 质量评分器（28 号 §6：5 维度加权，写 sa_quality_score）
+            var qualityScore = await _qualityScoreCalculator.CalculateAsync(
+                triple, compileResult, projection, dddResult, consistencyFindings, roundNumber: 3, ct);
+
+            // ⑨ 需求分析书渲染（28 号 §7：渲染并落盘 deliverable）
+            var documentMarkdown = _documentRenderer.Render(
+                triple, compileResult, dddResult, projection,
+                consistencyFindings, qualityScore, roundNumber: 3, ct);
+            await _deliverables.SaveRequirementSpecAsync(
+                context.TenantId, context.PipelineId, documentMarkdown, ct);
+            _logger.LogInformation(
+                "AnalystSkill: 需求分析书渲染落盘 quality={Total:F1} pass={Pass} docLen={Len}",
+                qualityScore.TotalScore, qualityScore.PassesGate(
+                    consistencyFindings.Count(f => f.Severity == "CRITICAL")), documentMarkdown.Length);
         }
 
         // 完整性门禁
@@ -429,6 +520,59 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
 
         await _db.Insertable(rows).AS("sa_assumptions").ExecuteCommandAsync(ct);
         _logger.LogInformation("AnalystSkill: 写入 {Count} 条假设项到 sa_assumptions", rows.Count);
+    }
+
+    /// <summary>
+    /// 合并 IR fragment <c>assumptions:{projectId}</c> 中跨轮持久化的假设项（P1）。
+    /// 编排器 Round 1/2 暂停恢复后内存 Assumptions 会丢失，须从 IR 回捞。
+    /// </summary>
+    private static SaNineViewCompileResult MergePersistedAssumptions(
+        IrSnapshot snapshot, SaNineViewCompileResult compileResult)
+    {
+        var frag = snapshot.Fragments.FirstOrDefault(f =>
+            f.FragmentType == IrFragmentTypes.Assumptions
+            && f.StabilityState is IrStabilityStates.InProgress or IrStabilityStates.Stable);
+        if (frag?.Payload is null || string.IsNullOrWhiteSpace(frag.Payload))
+            return compileResult;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(frag.Payload);
+            if (!doc.RootElement.TryGetProperty("assumptions", out var arr)
+                || arr.ValueKind != JsonValueKind.Array)
+                return compileResult;
+
+            var merged = compileResult.Assumptions.ToList();
+            var existing = new HashSet<string>(
+                merged.Select(a => $"{a.EventId}|{a.SourceStep}|{a.Text}"),
+                StringComparer.Ordinal);
+
+            foreach (var el in arr.EnumerateArray())
+            {
+                var eventId = el.TryGetProperty("eventId", out var e) ? e.GetString() ?? "" : "";
+                var source = el.TryGetProperty("sourceStep", out var s) ? s.GetString() ?? "" : "";
+                var text = el.TryGetProperty("text", out var t) ? t.GetString() ?? "" : "";
+                var conf = el.TryGetProperty("confidence", out var c) && c.TryGetDecimal(out var d) ? d : 0.5m;
+                if (string.IsNullOrWhiteSpace(text)) continue;
+                var key = $"{eventId}|{source}|{text}";
+                if (!existing.Add(key)) continue;
+                merged.Add(new Assumption(eventId, source, text, conf));
+            }
+
+            return new SaNineViewCompileResult
+            {
+                Source = compileResult.Source,
+                ProjectSteps = compileResult.ProjectSteps,
+                EventResults = compileResult.EventResults,
+                CompileDurationMs = compileResult.CompileDurationMs,
+                BundleHash = compileResult.BundleHash,
+                Assumptions = merged,
+            };
+        }
+        catch (JsonException)
+        {
+            return compileResult;
+        }
     }
 
     private static string BuildEventSpecPayload(

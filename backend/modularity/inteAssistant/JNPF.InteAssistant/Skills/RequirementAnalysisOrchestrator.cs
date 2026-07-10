@@ -9,6 +9,7 @@ using JNPF.InteAssistant.Gates;
 using JNPF.InteAssistant.Infrastructure.Messaging;
 using JNPF.InteAssistant.Interfaces;
 using JNPF.InteAssistant.Ir;
+using JNPF.InteAssistant.Runtime;
 using JNPF.InteAssistant.Sa;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -61,6 +62,16 @@ public sealed class RequirementAnalysisOptions
     public IReadOnlyList<ClarificationAnswer>? CurrentRoundAnswers { get; init; }
 }
 
+/// <summary>三轮需求分析编排器 API 请求体。</summary>
+public sealed class RequirementAnalysisRunRequest
+{
+    /// <summary>显式指定 Provider（可选）。</summary>
+    public string? ProviderCode { get; init; }
+
+    /// <summary>用户对当前轮澄清题的作答（恢复时传入；首次进入为 null）。</summary>
+    public IReadOnlyList<ClarificationAnswer>? Answers { get; init; }
+}
+
 /// <summary>编排器运行结果。</summary>
 public sealed class RequirementAnalysisOrchestratorResult
 {
@@ -98,6 +109,9 @@ public static class RequirementAnalysisStages
     public const string Round1 = "requirement-analysis-round1";
     public const string Round2 = "requirement-analysis-round2";
     public const string Round3 = "requirement-analysis-round3";
+
+    public static bool IsRequirementAnalysisStage(string? stage) =>
+        stage is Round1 or Round2 or Round3;
 }
 
 public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrchestrator, ITransient
@@ -157,6 +171,11 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
 
         try
         {
+            // P0：编排器写 IR 时必须有 SkillExecutionScope，否则 PipelineId 回退为 projectId（违反 R12）
+            using var execScope = SkillExecutionScope.Begin(
+                orchestratorRunId, tenantId, projectId, pipelineId,
+                "requirement-analysis-orchestrator", ct);
+
             var snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
             var currentRound = DetermineCurrentRound(snapshot);
             var skillResults = new List<SkillRunResult>();
@@ -164,6 +183,30 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             _logger.LogInformation(
                 "RequirementAnalysis 编排器启动: pipeline={PipelineId} 从第 {Round} 轮续跑, fragments={Count}",
                 pipelineId, currentRound, snapshot.Fragments.Count);
+
+            // P0：三轮澄清均已 stable 但尚未 Finalize → 强制跑 Round 3 工程保障（禁止静默 completed）
+            if (currentRound > TotalRounds)
+            {
+                if (!await HasFinalizedEngineeringAsync(tenantId, projectId, pipelineId, ct))
+                {
+                    _logger.LogInformation(
+                        "三轮澄清已完成但尚未 Finalize，强制执行 Round 3 工程保障 pipeline={PipelineId}",
+                        pipelineId);
+                    var skillOptions = new SkillRunOptions { ProviderCode = options?.ProviderCode };
+                    var finalizeResult = await RunRoundAnalystAsync(
+                        TotalRounds, pipelineId, tenantId, projectId, skillOptions,
+                        enableFinalization: true, ct);
+                    skillResults.Add(finalizeResult);
+                }
+
+                return new RequirementAnalysisOrchestratorResult
+                {
+                    OrchestratorRunId = orchestratorRunId,
+                    Status = "completed",
+                    CurrentRound = TotalRounds,
+                    SkillResults = skillResults,
+                };
+            }
 
             for (var round = currentRound; round <= TotalRounds; round++)
             {
@@ -269,6 +312,10 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                 "Round 1 PM 完成 skeleton hash={Hash} events={Count} warnings={Warn}",
                 compileResult.BundleHash, compileResult.EventResults.Count, warnings.Count);
 
+            // P1：Assumptions 跨轮落 IR，暂停恢复后可重建
+            await PersistAssumptionsFragmentAsync(
+                pipelineId, tenantId, projectId, compileResult.Assumptions, round, ct);
+
             // Round 1 出题（PM 自主出 3 题或由 LLM 生成）
             var clarSet = await GenerateRoundClarificationAsync(
                 round, stage, tenantId, projectId, pipelineId, compileResult, warnings,
@@ -290,7 +337,23 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         var roundClar = FindRoundClarification(snapshot, stage);
         if (roundClar is { StabilityState: IrStabilityStates.Stable })
         {
-            // 本轮已完成（用户已答），继续下一轮
+            // Round 3 专属：用户已答最终确认题 → 此时才执行工程一次性保障（确认后落库，非确认前）
+            // 架构哲学（KG 记载）："Round3 确认+出3题+工程一次性保障"——确认在先，保障在后。
+            // FinalizeAsync 内含：投影→门禁→Materializer→DDD→一致性→质量→渲染需求分析书。
+            if (round == TotalRounds)
+            {
+                var finalizeResult = await RunRoundAnalystAsync(
+                    round, pipelineId, tenantId, projectId, skillOptions, enableFinalization: true, ct);
+                _logger.LogInformation("Round {Round} 用户已确认，工程一次性保障完成", round);
+                return new RequirementAnalysisOrchestratorResult
+                {
+                    Status = "completed",
+                    CurrentRound = round,
+                    SkillResults = new[] { finalizeResult },
+                };
+            }
+
+            // Round 1/2：本轮已完成（用户已答），继续下一轮
             _logger.LogInformation("Round {Round} 已完成（用户已作答），继续", round);
             return new RequirementAnalysisOrchestratorResult
             {
@@ -323,6 +386,10 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             // LLM 只精化属性（boundaries/exceptions/preconditions/edge_cases），不增删实体字段。
             recompile = await EnhancePspecAndDecisionTableAsync(recompile, prevAnswersText, ct);
 
+            // P1：合并后 Assumptions 落 IR
+            await PersistAssumptionsFragmentAsync(
+                pipelineId, tenantId, projectId, recompile.Assumptions, round, ct);
+
             var analystResult = await RunRoundAnalystAsync(
                 round, pipelineId, tenantId, projectId, skillOptions, enableFinalization: false, ct);
 
@@ -342,8 +409,12 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             };
         }
 
-        // ── Round 3：最终确认 + 工程一次性保障 ──
-        // 出最终确认题（遗漏检查 + 假设项确认）
+        // ── Round 3：最终确认（工程保障在用户确认后执行，见上方 stable 分支）──
+        // 先出最终确认题（遗漏检查 + 假设项确认），用户答完后重跑进入 stable 分支执行工程落库。
+        // 这符合架构哲学："确认+出题" 在先，"工程一次性保障" 在后。
+        await PersistAssumptionsFragmentAsync(
+            pipelineId, tenantId, projectId, recompile.Assumptions, round, ct);
+
         var confirmSet = await GenerateRoundClarificationAsync(
             round, stage, tenantId, projectId, pipelineId, recompile, roundWarnings,
             prevAnswersText, ct);
@@ -368,8 +439,18 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         SkillRunOptions skillOptions, bool enableFinalization, CancellationToken ct)
     {
         _logger.LogInformation("Round {Round} Analyst 启动 enableFinalization={Fin}", round, enableFinalization);
+        // enableFinalization 经 SkillRunOptions → SkillContext 透传到 AnalystSkillService.ThinkAsync。
+        // SkillRunOptions 是 sealed class（非 record），逐字段复制后覆写目标字段。
+        var runOptions = new SkillRunOptions
+        {
+            UserRequirement = skillOptions.UserRequirement,
+            ProviderCode = skillOptions.ProviderCode,
+            ArchGuardWarnings = skillOptions.ArchGuardWarnings,
+            Bugfix = skillOptions.Bugfix,
+            EnableFinalization = enableFinalization,
+        };
         return await _harness.RunAsync(
-            "analyst-skill", pipelineId, tenantId, projectId, skillOptions, ct);
+            "analyst-skill", pipelineId, tenantId, projectId, runOptions, ct);
     }
 
     /// <summary>
@@ -510,26 +591,152 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             return compileResult;
         }
 
-        // 精化结果仅作为 Assumption 留痕（C# 编译主体不可变）
-        // 实际合并到 EventSpec 发生在 Analyst Skill 的 EventSpecAssembler（28 号渲染器读取）
-        var extraAssumptions = ParsePspecEnhancementsAsAssumptions(response.Content);
-        if (extraAssumptions.Count > 0)
+        var (mergedEvents, extraAssumptions, mergeWarnings) =
+            MergePspecEnhancements(compileResult.EventResults, response.Content);
+        foreach (var w in mergeWarnings)
+            _logger.LogWarning("PSpec/DT 合并校验: {Warning}", w);
+
+        var mergedAssumptions = compileResult.Assumptions.ToList();
+        mergedAssumptions.AddRange(extraAssumptions);
+
+        return new SaNineViewCompileResult
         {
-            var merged = compileResult.Assumptions.ToList();
-            merged.AddRange(extraAssumptions);
-            // SaNineViewCompileResult 是 class（非 record），不能用 with；手动重建
-            return new SaNineViewCompileResult
+            Source = compileResult.Source,
+            ProjectSteps = compileResult.ProjectSteps,
+            EventResults = mergedEvents,
+            CompileDurationMs = compileResult.CompileDurationMs,
+            BundleHash = compileResult.BundleHash,
+            Assumptions = mergedAssumptions,
+        };
+    }
+
+    /// <summary>
+    /// 将 LLM 精化合并进 EventResults：只追加允许字段；
+    /// 若 LLM 试图覆盖主体键 → 忽略并 WARNING。
+    /// </summary>
+    private static (IReadOnlyList<SaEventResult> Events, List<Assumption> Assumptions, List<string> Warnings)
+        MergePspecEnhancements(IReadOnlyList<SaEventResult> eventResults, string content)
+    {
+        var assumptions = new List<Assumption>();
+        var warnings = new List<string>();
+        var forbiddenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "processSpecs", "tables", "source", "main_logic", "input_spec", "output_spec",
+            "conditions", "actions", "rules",
+        };
+
+        try
+        {
+            var json = ExtractJsonObject(content);
+            using var doc = JsonDocument.Parse(json);
+            var rebuilt = new List<SaEventResult>();
+
+            foreach (var evt in eventResults)
             {
-                Source = compileResult.Source,
-                ProjectSteps = compileResult.ProjectSteps,
-                EventResults = compileResult.EventResults,
-                CompileDurationMs = compileResult.CompileDurationMs,
-                BundleHash = compileResult.BundleHash,
-                Assumptions = merged,
-            };
+                if (!doc.RootElement.TryGetProperty(evt.EventId, out var enh)
+                    || enh.ValueKind != JsonValueKind.Object)
+                {
+                    rebuilt.Add(evt);
+                    continue;
+                }
+
+                foreach (var prop in enh.EnumerateObject())
+                {
+                    if (forbiddenKeys.Contains(prop.Name))
+                        warnings.Add($"事件 {evt.EventId}: LLM 试图修改主体字段「{prop.Name}」，已忽略");
+                    if (prop.Value.ValueKind == JsonValueKind.Object)
+                    {
+                        foreach (var nested in prop.Value.EnumerateObject())
+                        {
+                            if (forbiddenKeys.Contains(nested.Name))
+                                warnings.Add($"事件 {evt.EventId}: LLM 试图修改主体字段「{nested.Name}」，已忽略");
+                        }
+                    }
+                }
+
+                var steps = evt.Steps.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+
+                if (enh.TryGetProperty("pspec", out var pspec) && pspec.ValueKind == JsonValueKind.Object)
+                {
+                    steps[SaStepNames.IntegrationPoints] = MergeStepJson(
+                        steps.GetValueOrDefault(SaStepNames.IntegrationPoints),
+                        pspec, new[] { "boundaries", "exceptions" }, warnings, evt.EventId, "PSpec");
+
+                    if (pspec.TryGetProperty("boundaries", out var b) && b.ValueKind == JsonValueKind.Array)
+                        foreach (var item in b.EnumerateArray())
+                            if (item.ValueKind == JsonValueKind.String)
+                                assumptions.Add(new Assumption(evt.EventId, "PSpec", $"边界: {item.GetString()}", 0.7m));
+                    if (pspec.TryGetProperty("exceptions", out var ex) && ex.ValueKind == JsonValueKind.Array)
+                        foreach (var item in ex.EnumerateArray())
+                            if (item.ValueKind == JsonValueKind.String)
+                                assumptions.Add(new Assumption(evt.EventId, "PSpec", $"异常: {item.GetString()}", 0.7m));
+                }
+
+                if (enh.TryGetProperty("decisionTable", out var dt) && dt.ValueKind == JsonValueKind.Object)
+                {
+                    steps[SaStepNames.WorkflowSpec] = MergeStepJson(
+                        steps.GetValueOrDefault(SaStepNames.WorkflowSpec),
+                        dt, new[] { "preconditions", "edge_cases" }, warnings, evt.EventId, "DecisionTable");
+
+                    if (dt.TryGetProperty("preconditions", out var pc) && pc.ValueKind == JsonValueKind.Array)
+                        foreach (var item in pc.EnumerateArray())
+                            if (item.ValueKind == JsonValueKind.String)
+                                assumptions.Add(new Assumption(evt.EventId, "DecisionTable", $"前置: {item.GetString()}", 0.7m));
+                    if (dt.TryGetProperty("edge_cases", out var ec) && ec.ValueKind == JsonValueKind.Array)
+                        foreach (var item in ec.EnumerateArray())
+                            if (item.ValueKind == JsonValueKind.String)
+                                assumptions.Add(new Assumption(evt.EventId, "DecisionTable", $"边界场景: {item.GetString()}", 0.7m));
+                }
+
+                rebuilt.Add(new SaEventResult
+                {
+                    EventId = evt.EventId,
+                    EventName = evt.EventName,
+                    Complexity = evt.Complexity,
+                    Steps = steps,
+                    Error = evt.Error,
+                });
+            }
+
+            return (rebuilt, assumptions, warnings);
+        }
+        catch (Exception)
+        {
+            warnings.Add("PSpec/DT LLM JSON 解析失败，跳过合并");
+            return (eventResults, ParsePspecEnhancementsAsAssumptions(content), warnings);
+        }
+    }
+
+    /// <summary>将允许的追加字段合并进步骤 JSON（主体键保留，仅追加 allowedKeys）。</summary>
+    private static object MergeStepJson(
+        object? existing, JsonElement enhancement, string[] allowedKeys,
+        List<string> warnings, string eventId, string stepLabel)
+    {
+        var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            if (existing != null)
+            {
+                var raw = existing is JsonElement je
+                    ? je.GetRawText()
+                    : JsonSerializer.Serialize(existing, JsonOptions);
+                using var doc = JsonDocument.Parse(raw);
+                foreach (var p in doc.RootElement.EnumerateObject())
+                    dict[p.Name] = JsonSerializer.Deserialize<object>(p.Value.GetRawText());
+            }
+        }
+        catch (JsonException)
+        {
+            warnings.Add($"事件 {eventId}: {stepLabel} 主体 JSON 解析失败，仅保留 LLM 追加字段");
         }
 
-        return compileResult;
+        foreach (var key in allowedKeys)
+        {
+            if (enhancement.TryGetProperty(key, out var val))
+                dict[key] = JsonSerializer.Deserialize<object>(val.GetRawText());
+        }
+
+        return dict;
     }
 
     /// <summary>将 PSpec/DT 精化结果转为 Assumption 留痕（confidence=0.7，标记为 LLM 推导）。</summary>
@@ -566,12 +773,46 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                     if (dt.TryGetProperty("edge_cases", out var ec) && ec.ValueKind == JsonValueKind.Array)
                         foreach (var item in ec.EnumerateArray())
                             if (item.ValueKind == JsonValueKind.String)
-                                result.Add(new Assumption(eventId, "DecisionTable", $"边界: {item.GetString()}", 0.7m));
+                                result.Add(new Assumption(eventId, "DecisionTable", $"边界场景: {item.GetString()}", 0.7m));
                 }
             }
         }
         catch (Exception) { /* 解析失败→返回空，不阻断 */ }
         return result;
+    }
+
+    /// <summary>P1：将当前轮 Assumptions 写入 IR fragment，供暂停恢复后合并。</summary>
+    private async Task PersistAssumptionsFragmentAsync(
+        long pipelineId, string tenantId, string projectId,
+        IReadOnlyList<Assumption> assumptions, int round, CancellationToken ct)
+    {
+        if (assumptions.Count == 0) return;
+
+        var fragmentId = $"assumptions:{projectId}";
+        await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
+        {
+            EventType = IrEventTypes.AssumptionsCollected,
+            FragmentId = fragmentId,
+            FragmentType = IrFragmentTypes.Assumptions,
+            FragmentVersion = round,
+            Payload = JsonSerializer.Serialize(new
+            {
+                round,
+                pipelineId,
+                assumptions = assumptions.Select(a => new
+                {
+                    eventId = a.EventId,
+                    sourceStep = a.SourceStep,
+                    text = a.Text,
+                    confidence = a.Confidence,
+                }),
+            }, JsonOptions),
+            SkillId = "requirement-analysis-orchestrator",
+        }, ct);
+
+        _logger.LogInformation(
+            "Round {Round} Assumptions 已落 IR count={Count} pipelineId={Id}",
+            round, assumptions.Count, pipelineId);
     }
 
     /// <summary>从可能含 markdown 包裹的响应中提取 JSON 对象。</summary>
@@ -696,17 +937,56 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                     }
                 }
 
+                var format = "SINGLE";
+                if (el.TryGetProperty("format", out var fmtEl) && fmtEl.ValueKind == JsonValueKind.String)
+                    format = (fmtEl.GetString() ?? "SINGLE").ToUpperInvariant();
+                else if (el.TryGetProperty("questionFormat", out var qfEl) && qfEl.ValueKind == JsonValueKind.String)
+                    format = (qfEl.GetString() ?? "SINGLE").ToUpperInvariant();
+
+                List<MatrixSubItem>? matrixItems = null;
+                if (el.TryGetProperty("matrixSubItems", out var mxEl) && mxEl.ValueKind == JsonValueKind.Array
+                    || el.TryGetProperty("matrix_rows", out mxEl) && mxEl.ValueKind == JsonValueKind.Array)
+                {
+                    matrixItems = new List<MatrixSubItem>();
+                    foreach (var row in mxEl.EnumerateArray())
+                    {
+                        var rowId = row.TryGetProperty("rowId", out var rid) ? rid.GetString()
+                            : row.TryGetProperty("id", out var id2) ? id2.GetString() : null;
+                        var rowLabel = row.TryGetProperty("rowLabel", out var rl) ? rl.GetString()
+                            : row.TryGetProperty("label", out var lb) ? lb.GetString() : rowId;
+                        if (string.IsNullOrWhiteSpace(rowId)) continue;
+                        matrixItems.Add(new MatrixSubItem
+                        {
+                            RowId = rowId!,
+                            RowLabel = rowLabel ?? rowId!,
+                        });
+                    }
+                    if (matrixItems.Count > 0 && format is "SINGLE" or "MULTI")
+                        format = format == "MULTI" ? "MATRIX_MULTI" : "MATRIX_SINGLE";
+                }
+
+                var qType = format switch
+                {
+                    "MULTI" or "MATRIX_MULTI" => "multi",
+                    "TEXT" => "text",
+                    _ => "single",
+                };
+
                 var q = new ClarificationQuestion
                 {
                     Id = $"r{round}-q{idx + 1}",
                     Text = text,
-                    Type = "single",
+                    Type = qType,
                     Required = false,
                     Options = options,
-                    ContextHint = el.TryGetProperty("contextHint", out var ch) ? ch.GetString() : null,
+                    ContextHint = el.TryGetProperty("contextHint", out var ch) ? ch.GetString()
+                        : el.TryGetProperty("context_hint", out var ch2) ? ch2.GetString() : null,
                     DefaultOption = el.TryGetProperty("defaultOption", out var dof)
-                        ? (dof.ValueKind == JsonValueKind.String ? dof.GetString() : null) : null,
-                    QuestionFormat = "SINGLE",
+                        ? (dof.ValueKind == JsonValueKind.String ? dof.GetString() : null)
+                        : el.TryGetProperty("default_option", out var dof2)
+                            ? (dof2.ValueKind == JsonValueKind.String ? dof2.GetString() : null) : null,
+                    QuestionFormat = format,
+                    MatrixSubItems = matrixItems,
                 };
                 questions.Add(q);
                 idx++;
@@ -766,6 +1046,29 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                 return f;
         }
         return null;
+    }
+
+    /// <summary>是否已有 AnalysisCompleted 且 finalized=true（Round 3 工程保障已执行）。</summary>
+    private async Task<bool> HasFinalizedEngineeringAsync(
+        string tenantId, string projectId, long pipelineId, CancellationToken ct)
+    {
+        var events = await _eventStore.ListEventsAsync(projectId, tenantId, pipelineId.ToString(), ct);
+        foreach (var evt in events)
+        {
+            if (!string.Equals(evt.EventType, IrEventTypes.AnalysisCompleted, StringComparison.Ordinal))
+                continue;
+            var payload = evt.PayloadPreview;
+            if (string.IsNullOrWhiteSpace(payload)) continue;
+            try
+            {
+                using var doc = JsonDocument.Parse(payload);
+                if (doc.RootElement.TryGetProperty("finalized", out var f)
+                    && f.ValueKind == JsonValueKind.True)
+                    return true;
+            }
+            catch (JsonException) { /* 忽略坏 payload */ }
+        }
+        return false;
     }
 
     private static string StageForRound(int round) => round switch

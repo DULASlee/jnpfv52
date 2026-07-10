@@ -79,10 +79,52 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
             // ADR-005 交互式澄清问答：Requested→in-progress，Answered→stable（两阶段 Skill 模式的基石）
             IrEventTypes.ClarificationRequested => await UpsertClarificationAsync(evt, IrStabilityStates.InProgress, ct),
             IrEventTypes.ClarificationAnswered => await UpsertClarificationAsync(evt, IrStabilityStates.Stable, ct),
+            // 27 号 P1：跨轮 Assumptions 持久化 → in-progress（Round 3 Finalize 合并后仍可读）
+            IrEventTypes.AssumptionsCollected => await UpsertAssumptionsAsync(evt, ct),
             // ADR-005 P3：总体设计澄清完成事件，仅留痕（不更新 fragment 状态，SystemDesignLocked 才更新）
             IrEventTypes.SystemDesignClarificationCompleted => null,
             _ => null,
         };
+    }
+
+    /// <summary>跨轮 Assumptions fragment 投影。fragmentId = assumptions:{projectId}。</summary>
+    private async Task<AiIrFragmentSnapshotEntity?> UpsertAssumptionsAsync(AiIrEventEntity evt, CancellationToken ct)
+    {
+        var fragmentId = evt.FragmentId ?? $"assumptions:{evt.ProjectId}";
+        var existing = await _db.Queryable<AiIrFragmentSnapshotEntity>()
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
+                && x.FragmentId == fragmentId && !x.DeleteMark)
+            .FirstAsync(ct);
+
+        if (existing != null)
+        {
+            existing.IrContent = evt.Payload;
+            existing.CurrentVersion = evt.FragmentVersion;
+            existing.FragmentType = IrFragmentTypes.Assumptions;
+            existing.StabilityState = IrStabilityStates.InProgress;
+            existing.LastEventId = evt.Id;
+            existing.UpdatedAt = evt.CreatedAt;
+            await _db.Updateable(existing).ExecuteCommandAsync(ct);
+            return existing;
+        }
+
+        var snap = new AiIrFragmentSnapshotEntity
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            ProjectId = evt.ProjectId,
+            PipelineId = evt.PipelineId,
+            TenantId = evt.TenantId,
+            FragmentId = fragmentId,
+            FragmentType = IrFragmentTypes.Assumptions,
+            CurrentVersion = evt.FragmentVersion,
+            IrContent = evt.Payload,
+            StabilityState = IrStabilityStates.InProgress,
+            SaStepsCompleted = "[]",
+            LastEventId = evt.Id,
+            UpdatedAt = evt.CreatedAt,
+        };
+        await _db.Insertable(snap).ExecuteCommandAsync(ct);
+        return snap;
     }
 
     /// <summary>

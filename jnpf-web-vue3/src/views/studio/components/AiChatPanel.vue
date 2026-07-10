@@ -274,6 +274,7 @@
   import { defHttp } from '/@/utils/http/axios';
   import { createPipeline, getGeneratedProjectList, getPageRoutes, quickBugfix, quickEnhancement, triggerSaGate } from '../api/studio/pipeline';
   import { runArchitectSkill, runSystemDesignClarificationSkill } from '../api/studio/designSkills';
+  import { runRequirementAnalysis } from '../api/studio/skills';
   import IrPreviewCard from './chat/IrPreviewCard.vue';
   import ChatWorkflowProgress from './chat/ChatWorkflowProgress.vue';
   import IrSkeletonConfirmCard from './ir/IrSkeletonConfirmCard.vue';
@@ -1176,7 +1177,7 @@
     nextTick(() => handleSend());
   }
 
-  // ADR-005：用户完成澄清作答后，清空卡片并触发下一轮 maturity 评估
+  // ADR-005 / 27 号：用户完成澄清作答后，清空卡片并触发下一轮
   async function onClarificationAnswered(msg: any, payload: { setId: string; triggerNextRound: boolean; nextAction: string; stage: string }) {
     msg.clarification = null;
     if (!payload.triggerNextRound || payload.nextAction === 'none') return;
@@ -1188,6 +1189,8 @@
         ? '🏗️ 已收到架构澄清作答，正在重新运行架构设计（ToT）…\n'
         : payload.nextAction === 'rerun-system-design-clarification'
         ? '📐 已收到总体设计澄清作答，正在运行约束引擎并锁定系统设计…\n'
+        : payload.nextAction === 'continue-requirement-analysis'
+        ? '📋 已收到需求分析澄清作答，正在继续三轮精化…\n'
         : '🔄 已收到澄清补充，正在重新评估需求成熟度…\n';
     messages.value.push({
       id: aiMsgId,
@@ -1212,6 +1215,9 @@
       } else if (payload.nextAction === 'rerun-system-design-clarification') {
         // 总体设计阶段二：重跑 system-design-clarification-skill（读已 stable 的澄清答案，跑约束引擎 + 锁定）
         await runSystemDesignClarificationSkill(pipelineId.value, {});
+      } else if (payload.nextAction === 'continue-requirement-analysis') {
+        // 27 号三轮编排器：续跑 requirement-analysis/run
+        await runRequirementAnalysis(pipelineId.value, {});
       } else {
         // 需求阶段：触发 sa-gate，后端读取最新对话历史（含澄清补充）重新做 maturity 评估
         await triggerSaGate(pipelineId.value, '继续分析', false, []);

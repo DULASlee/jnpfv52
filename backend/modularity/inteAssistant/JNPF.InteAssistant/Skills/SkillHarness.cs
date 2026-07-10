@@ -37,6 +37,11 @@ public sealed class SkillRunOptions
     public IReadOnlyList<SkillArchWarning>? ArchGuardWarnings { get; init; }
     /// <summary>阶段五 bugfix-skill 序列点 diff。</summary>
     public BugfixRunContext? Bugfix { get; init; }
+    /// <summary>
+    /// 需求分析三轮编排器专用（27 号 §5.2）：是否执行最终工程保障（投影/门禁/Materializer）。
+    /// Round 1/2=false（零工程步骤），Round 3=true（一次性保障）。默认 true 保持非编排器调用兼容。
+    /// </summary>
+    public bool EnableFinalization { get; init; } = true;
 }
 
 public sealed class SkillArchWarning
@@ -160,6 +165,7 @@ public sealed class SkillHarness : ISkillHarness, ITransient
                 SeedMatches = seeds,
                 PromptContext = promptContext,
                 ProviderCode = options.ProviderCode,
+                EnableFinalization = options.EnableFinalization,
             };
 
             PushSkillProgress(pipelineId, skillId, runId, "reason", 10, "Skill 推理中…");

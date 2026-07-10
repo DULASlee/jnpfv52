@@ -97,6 +97,11 @@ public sealed class SkillContext
     public string? ProviderCode { get; init; }
     /// <summary>阶段五 bugfix-skill 序列点 diff 参数。</summary>
     public BugfixRunContext? Bugfix { get; init; }
+    /// <summary>
+    /// 需求分析三轮编排器专用：是否执行最终工程保障（投影/门禁/Materializer）。
+    /// 默认 true；Round 1/2 由编排器经 SkillRunOptions → 此处置 false。
+    /// </summary>
+    public bool EnableFinalization { get; init; } = true;
 }
 
 public sealed class PromptContext

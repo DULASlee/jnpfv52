@@ -66,6 +66,9 @@ public static class IrEventTypes
     /// <summary>S2 Compiler 九步视图编译完成（payload 含 bundleHash）。</summary>
     public const string SaNineViewCompiled = "SaNineViewCompiled";
 
+    /// <summary>跨轮 Assumptions 收集（编排器 Round 1/2 写入，Round 3 Finalize 合并）。</summary>
+    public const string AssumptionsCollected = "AssumptionsCollected";
+
     /// <summary>用户确认后 SA 九表物化完成。</summary>
     public const string SaMaterializationCompleted = "SaMaterializationCompleted";
 
@@ -77,6 +80,9 @@ public static class IrFragmentTypes
 {
     public const string Skeleton = "IR0_Skeleton";
     public const string EventSpec = "IR1_EventSpec";
+
+    /// <summary>跨轮 Assumptions 持久化（暂停恢复后可重建）。fragmentId = assumptions:{projectId}</summary>
+    public const string Assumptions = "IR1_Assumptions";
 
     // 澄清问答片段（ADR-005）：stage 区分需求/设计阶段，fragmentId 形如 clarification:{stage}:{projectId}
     public const string Clarification = "IR1_Clarification";

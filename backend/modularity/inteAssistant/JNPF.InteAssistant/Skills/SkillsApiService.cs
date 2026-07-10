@@ -38,6 +38,7 @@ public class SkillsApiService : IDynamicApiController, ITransient
     private readonly IExperienceRecorder _experience;
     private readonly IPipelineTripleResolver _tripleResolver;
     private readonly ISaMaterializationService _materializationService;
+    private readonly IRequirementAnalysisOrchestrator _requirementOrchestrator;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -57,7 +58,8 @@ public class SkillsApiService : IDynamicApiController, ITransient
         ISkillRunGuard runGuard,
         IExperienceRecorder experience,
         IPipelineTripleResolver tripleResolver,
-        ISaMaterializationService materializationService)
+        ISaMaterializationService materializationService,
+        IRequirementAnalysisOrchestrator requirementOrchestrator)
     {
         _db = db;
         _harness = harness;
@@ -72,6 +74,7 @@ public class SkillsApiService : IDynamicApiController, ITransient
         _experience = experience;
         _tripleResolver = tripleResolver;
         _materializationService = materializationService;
+        _requirementOrchestrator = requirementOrchestrator;
     }
 
     [HttpPost("pm/{pipelineId:long}/run")]
@@ -81,6 +84,39 @@ public class SkillsApiService : IDynamicApiController, ITransient
     [HttpPost("analyst/{pipelineId:long}/run")]
     public Task<object> RunAnalystAsync(long pipelineId, [FromBody] SkillRunRequest? request)
         => RunSkillAsync("analyst-skill", pipelineId, request);
+
+    /// <summary>
+    /// 三轮需求分析编排器入口（27 号 §5）。
+    /// 首次调用从 Round 1 开始，每轮出题后返回 awaiting-answer；
+    /// 用户作答后再次调用恢复下一轮（幂等：据 IR 状态定位未完成轮次）。
+    /// </summary>
+    [HttpPost("requirement-analysis/{pipelineId:long}/run")]
+    public async Task<object> RunRequirementAnalysisAsync(
+        long pipelineId, [FromBody] RequirementAnalysisRunRequest? request)
+    {
+        var runId = Guid.NewGuid().ToString("N");
+        var taskName = $"req-analysis:{pipelineId}:{runId}";
+        var tenantSnapshot = RequestContext.Capture(_httpContextAccessor).TenantId;
+
+        _taskRunner.Run(taskName, async (ctx, ct) =>
+        {
+            var (projectId, tenantId) = await ResolveProjectAsync(pipelineId, ctx, tenantSnapshot);
+            var options = new RequirementAnalysisOptions
+            {
+                ProviderCode = request?.ProviderCode,
+                CurrentRoundAnswers = request?.Answers,
+            };
+            await _requirementOrchestrator.RunAsync(pipelineId, tenantId, projectId, options, ct);
+        }, timeout: TimeSpan.FromMinutes(35));
+
+        return new
+        {
+            runId,
+            pipelineId,
+            status = "running",
+            message = "三轮需求分析编排器已启动",
+        };
+    }
 
     /// <summary>
     /// EventSpecRevised 后重跑受影响 SA 步骤（D11）
@@ -261,7 +297,15 @@ public class SkillsApiService : IDynamicApiController, ITransient
                     answersText = "（用户选择全部跳过，沿用默认假设）",
                     confirmedBy = "user-hitl",
                 }, JsonOptions),
-                SkillId = stage == ClarificationStages.Requirement ? "requirement-gate" : DesignSkillIds.Architect,
+                SkillId = stage switch
+                {
+                    ClarificationStages.Requirement => "requirement-gate",
+                    ClarificationStages.Architecture => DesignSkillIds.Architect,
+                    ClarificationStages.SystemDesign => DesignSkillIds.SystemDesignClarification,
+                    _ when RequirementAnalysisStages.IsRequirementAnalysisStage(stage)
+                        => "requirement-analysis-orchestrator",
+                    _ => DesignSkillIds.Architect,
+                },
             });
 
             // 需求阶段：写一条 user message 引导下一轮进入 refine（ForceRefine 关键词）
@@ -277,13 +321,7 @@ public class SkillsApiService : IDynamicApiController, ITransient
                 // skipAll 也要推进流程：需求阶段重新评估，架构/总体设计阶段重跑对应 Skill
                 TriggerNextRound = true,
                 Stage = stage,
-                NextAction = stage switch
-                {
-                    ClarificationStages.Requirement => "re-evaluate",
-                    ClarificationStages.Architecture => "rerun-architect",
-                    ClarificationStages.SystemDesign => "rerun-system-design-clarification",
-                    _ => "none",
-                },
+                NextAction = ResolveClarificationNextAction(stage),
             };
         }
 
@@ -340,6 +378,8 @@ public class SkillsApiService : IDynamicApiController, ITransient
                 ClarificationStages.Requirement => "requirement-gate",
                 ClarificationStages.Architecture => DesignSkillIds.Architect,
                 ClarificationStages.SystemDesign => DesignSkillIds.SystemDesignClarification,
+                _ when RequirementAnalysisStages.IsRequirementAnalysisStage(set.Stage)
+                    => "requirement-analysis-orchestrator",
                 _ => "requirement-gate",
             },
         });
@@ -371,16 +411,22 @@ public class SkillsApiService : IDynamicApiController, ITransient
             // 需求阶段：前端重新发 sa-gate 做下一轮 maturity 评估
             // 架构阶段：前端重新运行 architect-skill（阶段二 ToT）
             // 总体设计阶段：前端重新运行 system-design-clarification-skill（阶段二约束引擎 + 锁定）
+            // 三轮需求分析：前端续跑 requirement-analysis/run
             TriggerNextRound = true,
-            NextAction = set.Stage switch
-            {
-                ClarificationStages.Requirement => "re-evaluate",
-                ClarificationStages.Architecture => "rerun-architect",
-                ClarificationStages.SystemDesign => "rerun-system-design-clarification",
-                _ => "none",
-            },
+            NextAction = ResolveClarificationNextAction(set.Stage),
         };
     }
+
+    /// <summary>按澄清 stage 解析前端 nextAction（含三轮需求分析编排器）。</summary>
+    private static string ResolveClarificationNextAction(string stage) => stage switch
+    {
+        ClarificationStages.Requirement => "re-evaluate",
+        ClarificationStages.Architecture => "rerun-architect",
+        ClarificationStages.SystemDesign => "rerun-system-design-clarification",
+        _ when RequirementAnalysisStages.IsRequirementAnalysisStage(stage)
+            => "continue-requirement-analysis",
+        _ => "none",
+    };
 
     /// <summary>从 IR 事件流按 setId 加载原始 ClarificationSet（ClarificationRequested 事件 payload）。</summary>
     private async Task<ClarificationSet?> LoadClarificationSetAsync(

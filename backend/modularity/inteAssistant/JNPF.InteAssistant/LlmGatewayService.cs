@@ -10,6 +10,7 @@ using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Interfaces;
 using JNPF.InteAssistant.Llm;
 using JNPF.InteAssistant.Skills.Cognitive;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SqlSugar;
@@ -51,12 +52,21 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
     /// <summary>27 号 §7.3：按任务路由 Provider（skillId → providerCode）。空则回退默认链。</summary>
     private readonly Dictionary<string, string> _providerRouting;
 
+    /// <summary>
+    /// 27 号 §6 响应缓存（IMemoryCache 实现，P1-2 修复 2026-07-10）。
+    /// 对确定性请求（相同 provider+model+temperature+prompt）命中缓存直接返回，跳过 Provider 调用。
+    /// TTL 由 AI:ResponseCacheTtlMinutes（默认 30）配置；=0 则禁用缓存。
+    /// </summary>
+    private readonly IMemoryCache? _responseCache;
+    private readonly int _responseCacheTtlMinutes;
+
     public LlmGatewayService(
         IHttpClientFactory httpClientFactory,
         ISqlSugarRepository<AiCallLogEntity> logRepository,
         IConfiguration configuration,
         ILogger<LlmGatewayService> logger,
-        ILlmCircuitBreaker circuitBreaker)
+        ILlmCircuitBreaker circuitBreaker,
+        IMemoryCache? responseCache = null)
     {
         _httpClientFactory = httpClientFactory;
         _logRepository = logRepository;
@@ -71,6 +81,10 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
         _providerRouting = _configuration
             .GetSection("AI:ProviderRouting")
             .Get<Dictionary<string, string>>() ?? new();
+
+        // 27 号 §6：响应缓存（默认 30 分钟，=0 禁用）
+        _responseCache = responseCache;
+        _responseCacheTtlMinutes = _configuration.GetValue("AI:ResponseCacheTtlMinutes", 30);
     }
 
     /// <summary>
@@ -213,10 +227,78 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
 
     // ─── 新接口（对齐前端 LLMGateway）───
 
+    /// <summary>
+    /// 27 号 §6：计算响应缓存键（P1-2 修复 2026-07-10）。
+    /// 键 = SHA256(provider|model|temperature|responseFormat|systemPrompt|messages)。
+    /// 返回 null 表示该请求不应缓存（缓存禁用 / 高 Temperature 创意生成 / 消息为空）。
+    /// </summary>
+    private string? BuildResponseCacheKey(ChatCompletionRequest request)
+    {
+        // 缓存未启用（无 IMemoryCache 实例 或 TTL=0）
+        if (_responseCache == null || _responseCacheTtlMinutes <= 0)
+            return null;
+
+        // 高 Temperature（>1.0）= 创意生成，不缓存以保证多样性
+        if (request.Temperature > 1.0)
+            return null;
+
+        // 空消息不缓存
+        if (request.Messages is not { Count: > 0 })
+            return null;
+
+        var sb = new StringBuilder();
+        sb.Append(request.ProviderCode).Append('|');
+        sb.Append(request.ModelCode ?? "").Append('|');
+        sb.Append(request.Temperature.ToString("F2")).Append('|');
+        sb.Append(request.ResponseFormat ?? "").Append('|');
+        sb.Append(request.SystemPrompt ?? "").Append('|');
+        foreach (var msg in request.Messages)
+            sb.Append(msg.Role).Append(':').Append(msg.Content).Append('\n');
+
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()));
+        return "llm:resp:" + Convert.ToHexString(hashBytes);
+    }
+
+    /// <summary>尝试从缓存获取响应。</summary>
+    private bool TryGetCachedResponse(string cacheKey, out ChatCompletionResponse? response)
+    {
+        response = null;
+        if (_responseCache == null) return false;
+        if (_responseCache.TryGetValue(cacheKey, out var raw) && raw is ChatCompletionResponse r)
+        {
+            response = r;
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>将响应写入缓存（带 TTL）。</summary>
+    private void StoreCachedResponse(string cacheKey, ChatCompletionResponse response)
+    {
+        if (_responseCache == null) return;
+        var options = new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_responseCacheTtlMinutes),
+            Size = null, // 不限制条目大小（IMemoryCache 默认不设 SizeLimit）
+        };
+        _responseCache.Set(cacheKey, response, options);
+    }
+
     /// <inheritdoc/>
     public async Task<ChatCompletionResponse> ChatAsync(
         ChatCompletionRequest request, CancellationToken ct = default)
     {
+        // 27 号 §6 响应缓存（P1-2 修复 2026-07-10）。
+        // 对确定性请求命中缓存直接返回，跳过 Provider 调用。
+        // 高 Temperature（>1.0）请求视为创意生成，不缓存以保证多样性。
+        var cacheKey = BuildResponseCacheKey(request);
+        if (cacheKey != null && TryGetCachedResponse(cacheKey, out var cached))
+        {
+            _logger.LogDebug("LLM 响应缓存命中 key={Key}", cacheKey[0..Math.Min(12, cacheKey.Length)]);
+            return cached! with { LatencyMs = 0 };
+        }
+
         var sw = Stopwatch.StartNew();
         var model = request.ModelCode ?? string.Empty;
 
@@ -329,6 +411,10 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
                             result.TokensIn, result.TokensOut, true, null,
                             chainIdx, originalProvider, providerName,
                             fallbackReason);
+
+                        // 27 号 §6：成功响应写入缓存（仅当缓存启用且 key 非空）
+                        if (cacheKey != null && result.IsSuccess)
+                            StoreCachedResponse(cacheKey, result);
 
                         return result;
                     }
@@ -562,6 +648,29 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
             {
                 _logger.LogWarning("熔断器开启（Stream），跳过 Provider={Provider}", providerName);
                 continue;
+            }
+
+            // P2-2（2026-07-10）：Stream 路径补 Token 预检（与 ChatAsync :249-268 对齐）。
+            // 仅首级首次预估，超长 prompt 截断 messages，避免流式请求超上下文窗口直达 API。
+            if (chainIdx == 0)
+            {
+                var estimated = LlmTokenEstimator.EstimateRequestTokens(request);
+                _logger.LogDebug("Stream Token预估: {Estimated}, MaxTokens={MaxTokens}", estimated, request.MaxTokens);
+                if (estimated > 100_000)
+                    _logger.LogWarning("Stream 请求Token预估值过大({Estimated})，可能超出模型上下文窗口", estimated);
+
+                if (_configuration.GetValue("AI:EnforceTokenLimit", false) && estimated > 200_000)
+                {
+                    var tokenLimit = _configuration.GetValue("AI:TokenLimit", 200_000);
+                    var inputBudget = Math.Max(1, tokenLimit - request.MaxTokens);
+                    var originalMsgCount = request.Messages?.Count ?? 0;
+                    request = LlmTokenEstimator.TruncateForTokenLimit(request, inputBudget);
+                    var newEstimated = LlmTokenEstimator.EstimateRequestTokens(request);
+                    _logger.LogWarning(
+                        "Stream Token 预估超限({Orig})，截断消息历史 {Before}→{After} 条，预估 {Orig}→{New}，MaxTokens={Max}",
+                        estimated, originalMsgCount, request.Messages?.Count ?? 0,
+                        estimated, newEstimated, request.MaxTokens);
+                }
             }
 
             if (isFallback)

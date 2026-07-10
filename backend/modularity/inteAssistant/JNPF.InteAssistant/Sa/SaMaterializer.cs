@@ -70,10 +70,13 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
         var sw = Stopwatch.StartNew();
         var steps = bundle.ProjectSteps;
         var events = bundle.EventResults;
+        // 若调用方已开启事务（如 FinalizeAsync 投影+物化同事务），则复用，不再自管 Begin/Commit
+        var ownsTransaction = _db.Ado.Transaction == null;
 
         try
         {
-            await _db.Ado.BeginTranAsync();
+            if (ownsTransaction)
+                await _db.Ado.BeginTranAsync();
             await SetSaVersionTriggersAsync(enabled: false, ct);
 
         var scopeJson = BuildScopePayload(steps, events);
@@ -111,11 +114,12 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
         }
 
         await SetSaVersionTriggersAsync(enabled: true, ct);
-        await _db.Ado.CommitTranAsync();
+        if (ownsTransaction)
+            await _db.Ado.CommitTranAsync();
         sw.Stop();
         _logger.LogInformation(
-            "SA 物化完成 pipeline={PipelineId} scope={ScopeId} dict={DictId} events={Events} {Ms}ms",
-            triple.PipelineId, scopeId, dictId, events.Count, sw.ElapsedMilliseconds);
+            "SA 物化完成 pipeline={PipelineId} scope={ScopeId} dict={DictId} events={Events} {Ms}ms ownsTx={Owns}",
+            triple.PipelineId, scopeId, dictId, events.Count, sw.ElapsedMilliseconds, ownsTransaction);
 
         return new SaMaterializeResult
         {
@@ -128,7 +132,10 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
         catch
         {
             try { await SetSaVersionTriggersAsync(enabled: true, ct); } catch { /* best effort */ }
-            await _db.Ado.RollbackTranAsync();
+            if (ownsTransaction)
+            {
+                try { await _db.Ado.RollbackTranAsync(); } catch { /* best effort */ }
+            }
             throw;
         }
     }

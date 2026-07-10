@@ -59,7 +59,7 @@ public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, 
         var sb = new StringBuilder();
         var model = compileResult.Source;
 
-        RenderCover(sb, model, triple, roundNumber);
+        RenderCover(sb, model, triple, roundNumber, qualityScore);
         RenderSection1Overview(sb, model, compileResult, entityFields, dddProjection);
         RenderSection2BusinessEvents(sb, model, compileResult);
         RenderSection3DddEnhancement(sb, dddProjection);
@@ -74,7 +74,8 @@ public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, 
 
     // ──────────────────── 封面 ────────────────────
 
-    private static void RenderCover(StringBuilder sb, PreAnalysisModel model, PipelineTriple triple, int roundNumber)
+    private static void RenderCover(
+        StringBuilder sb, PreAnalysisModel model, PipelineTriple triple, int roundNumber, QualityScore qualityScore)
     {
         sb.AppendLine("# 需求分析规格说明书");
         sb.AppendLine();
@@ -86,6 +87,7 @@ public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, 
         sb.AppendLine($"| 项目 ID | {Esc(triple.ProjectId)} |");
         sb.AppendLine($"| Pipeline ID | {triple.PipelineId} |");
         sb.AppendLine($"| 需求分析轮次 | Round {roundNumber} |");
+        sb.AppendLine($"| 质量综合评分 | {qualityScore.TotalScore:F1} |");
         sb.AppendLine($"| 生成时间 | {DateTime.Now:yyyy-MM-dd HH:mm:ss} |");
         sb.AppendLine($"| Schema 版本 | {Esc(model.SchemaVersion)} |");
         sb.AppendLine();
@@ -417,7 +419,46 @@ public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, 
             }
             sb.AppendLine();
         }
+
+        // §4.2 全局 ER 图（从 References / ReferencesTable 推导）
+        sb.AppendLine("### 4.2 全局 ER 关系");
+        sb.AppendLine();
+        var relations = entityFields.Fields
+            .Where(f => !string.IsNullOrWhiteSpace(f.ReferencesTable) || !string.IsNullOrWhiteSpace(f.References))
+            .Select(f => (
+                From: f.EntityName,
+                To: !string.IsNullOrWhiteSpace(f.ReferencesTable) ? f.ReferencesTable! : f.References!,
+                Field: f.FieldName))
+            .Distinct()
+            .ToList();
+
+        if (relations.Count == 0)
+        {
+            sb.AppendLine("（无外键关系）");
+            sb.AppendLine();
+        }
+        else
+        {
+            sb.AppendLine("| 源实体 | 字段 | 目标 |");
+            sb.AppendLine("|--------|------|------|");
+            foreach (var r in relations)
+                sb.AppendLine($"| `{Esc(r.From)}` | `{Esc(r.Field)}` | `{Esc(r.To)}` |");
+            sb.AppendLine();
+            sb.AppendLine("```mermaid");
+            sb.AppendLine("erDiagram");
+            foreach (var r in relations)
+            {
+                var from = SanitizeMermaidId(r.From);
+                var to = SanitizeMermaidId(r.To);
+                sb.AppendLine($"    {from} ||--o{{ {to} : \"{Esc(r.Field)}\"");
+            }
+            sb.AppendLine("```");
+            sb.AppendLine();
+        }
     }
+
+    private static string SanitizeMermaidId(string name)
+        => string.Concat(name.Where(c => char.IsLetterOrDigit(c) || c == '_'));
 
     // ──────────────────── §5 一致性分析 ────────────────────
 
@@ -505,7 +546,8 @@ public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, 
         sb.AppendLine();
         sb.AppendLine("| 判定 | 结果 |");
         sb.AppendLine("|------|------|");
-        sb.AppendLine($"| 总分 ≥ 70 | {(qualityScore.TotalScore >= 70 ? "✅ 通过" : "❌ 不通过")} |");
+        sb.AppendLine($"| 总分 ≥ 60 | {(qualityScore.TotalScore >= 60 ? "✅ 通过" : "❌ 不通过")} |");
+        sb.AppendLine($"| 结构完整度 ≥ 70 | {(qualityScore.StructureScore >= 70 ? "✅ 通过" : "❌ 不通过")} |");
         sb.AppendLine($"| 通过 Gate (0 critical) | {(qualityScore.PassesGate(0) ? "✅ 通过" : "❌ 不通过")} |");
         sb.AppendLine($"| 通过 Gate (≤5 critical) | {(qualityScore.PassesGate(5) ? "✅ 通过" : "❌ 不通过")} |");
         sb.AppendLine();

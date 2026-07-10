@@ -81,7 +81,7 @@ public sealed class DeveloperSkillService : IBaseSkill, ITransient
     public async Task<SkillValidationResult> ValidateInputAsync(IrSnapshot snapshot, CancellationToken ct = default)
     {
         _ = ct;
-        return await _completenessGate.ValidateAsync(snapshot, ct);
+        return await _completenessGate.ValidateAsync(snapshot, null, ct);
     }
 
     public async IAsyncEnumerable<AppendIrEventRequest> ReasonAsync(

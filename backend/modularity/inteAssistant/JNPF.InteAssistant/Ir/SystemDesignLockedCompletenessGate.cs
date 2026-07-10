@@ -3,6 +3,7 @@ using JNPF.DependencyInjection;
 using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Entitys.Ir.Contracts;
+using JNPF.InteAssistant.Runtime;
 using JNPF.InteAssistant.Skills;
 using Microsoft.Extensions.Logging;
 
@@ -15,7 +16,12 @@ public interface ISystemDesignLockedCompletenessGate
     /// Checks fragment presence, Skeleton↔DDL coherence, and cross-layer consistency
     /// between Skeleton entities and the EntityDesignProjection (CQRS Read Model).
     /// </summary>
-    Task<SkillValidationResult> ValidateAsync(IrSnapshot snapshot, CancellationToken ct = default);
+    /// <param name="triple">
+    /// 三元组（P2-1 修复 2026-07-10）：传入真实 (tenantId,projectId,pipelineId) 供 EntityDesignProjector 投影。
+    /// 传 null 时回退占位三元组 ("gate","gate","gate")——仅结构映射，不涉及租户隔离查询。
+    /// 跨层一致性规则只比较实体/字段名称，不涉及三元组值。
+    /// </param>
+    Task<SkillValidationResult> ValidateAsync(IrSnapshot snapshot, PipelineTriple? triple = null, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -36,28 +42,39 @@ public sealed class SystemDesignLockedCompletenessGate : ISystemDesignLockedComp
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public Task<SkillValidationResult> ValidateAsync(IrSnapshot snapshot, CancellationToken ct = default)
+    public Task<SkillValidationResult> ValidateAsync(IrSnapshot snapshot, PipelineTriple? triple = null, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
 
         // ── 结构完整性（P3-R03 基线）─────────────────────────────────────────
-        // P9-RT 临时放宽：编译器核心只需 Skeleton + DDL + FormPageIR
+        // Analyst Round 3 Finalize（传入真实 triple）时尚无 DDL/FormPageIR：
+        // 仅要求 Skeleton stable + R1-R3；Developer 激活前（triple=null）仍要求完整设计片段。
+        var analysisStage = triple != null;
+
         if (snapshot.Find(IrFragmentTypes.Skeleton, IrStabilityStates.Stable) == null)
         {
             _logger.LogWarning("R0 校验失败: Skeleton 片段未 stable");
             return Task.FromResult(SkillValidationResult.Fail("Skeleton 片段未 stable"));
         }
 
-        if (snapshot.Find(IrFragmentTypes.DDL, IrStabilityStates.Stable) == null)
+        if (!analysisStage)
         {
-            _logger.LogWarning("R0 校验失败: DDL 片段未 stable");
-            return Task.FromResult(SkillValidationResult.Fail("DDL 片段未 stable"));
-        }
+            if (snapshot.Find(IrFragmentTypes.DDL, IrStabilityStates.Stable) == null)
+            {
+                _logger.LogWarning("R0 校验失败: DDL 片段未 stable");
+                return Task.FromResult(SkillValidationResult.Fail("DDL 片段未 stable"));
+            }
 
-        if (snapshot.Find(IrFragmentTypes.FormPageIR, IrStabilityStates.Stable) == null)
+            if (snapshot.Find(IrFragmentTypes.FormPageIR, IrStabilityStates.Stable) == null)
+            {
+                _logger.LogWarning("R0 校验失败: FormPageIR 片段未 stable");
+                return Task.FromResult(SkillValidationResult.Fail("FormPageIR 片段未 stable"));
+            }
+        }
+        else
         {
-            _logger.LogWarning("R0 校验失败: FormPageIR 片段未 stable");
-            return Task.FromResult(SkillValidationResult.Fail("FormPageIR 片段未 stable"));
+            _logger.LogInformation(
+                "Analyst Round3 门禁：跳过 DDL/FormPageIR 要求（设计阶段尚未开始），仅校验 Skeleton + R1-R3");
         }
 
         // ── P9-S5 跨层一致性（R1-R3）────────────────────────────────────────
@@ -70,15 +87,28 @@ public sealed class SystemDesignLockedCompletenessGate : ISystemDesignLockedComp
             return Task.FromResult(SkillValidationResult.Ok());
         }
 
-        // Gate is called before we have triple-key context, so use placeholder
-        // options. The consistency rules only compare entity/field names, not triple values.
-        _logger.LogWarning("SystemDesignLockedCompletenessGate 使用占位三元组 (gate/gate/gate)，Project 可能租户感知不准确");
-        var projection = EntityDesignProjector.Project(snapshot, new EntityDesignProjectionOptions
+        // P2-1 修复（2026-07-10）：优先用调用方传入的真实三元组，回退占位三元组保持兼容。
+        var projectionOptions = triple != null
+            ? new EntityDesignProjectionOptions
+            {
+                TenantId = triple.TenantId,
+                ProjectId = triple.ProjectId,
+                PipelineId = triple.PipelineId.ToString(),
+            }
+            : new EntityDesignProjectionOptions
+            {
+                TenantId = "gate",
+                ProjectId = "gate",
+                PipelineId = "gate",
+            };
+
+        if (triple == null)
         {
-            TenantId = "gate",
-            ProjectId = "gate",
-            PipelineId = "gate",
-        });
+            _logger.LogWarning(
+                "SystemDesignLockedCompletenessGate 未接收三元组，回退占位 (gate/gate/gate)——建议调用方传入真实三元组");
+        }
+
+        var projection = EntityDesignProjector.Project(snapshot, projectionOptions);
 
         if (projection.Fields.Count > 0)
         {

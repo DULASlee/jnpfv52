@@ -1,0 +1,10 @@
+{
+  "pipelineId": 339,
+  "scenario": "A-3events",
+  "deliverables": [
+    "01-skeleton.md"
+  ],
+  "hasAnalysisCompleted": false,
+  "eventCount": 20,
+  "failureEvents": []
+}

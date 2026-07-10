@@ -35,7 +35,10 @@ public enum CircuitState
     HalfOpen
 }
 
-public class LlmCircuitBreaker : ILlmCircuitBreaker, ITransient
+// ISingleton（2026-07-10 修 P0-3）：熔断状态 _entries 是跨请求累积的实例字段。
+// 原 ITransient 导致每次注入拿到空字典，CheckAndTransition 永远 Closed，熔断器运行时 100% 失效。
+// 状态访问已用 per-entry lock 保护，Singleton 不会引入竞态。
+public class LlmCircuitBreaker : ILlmCircuitBreaker, ISingleton
 {
     private readonly ILogger<LlmCircuitBreaker> _logger;
     private readonly int _failureThreshold;

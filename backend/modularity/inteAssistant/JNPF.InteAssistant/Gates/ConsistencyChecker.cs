@@ -51,19 +51,19 @@ public sealed class ConsistencyChecker : IConsistencyChecker, ITransient
     {
         var findings = new List<ConsistencyFinding>();
 
-        // 规则 1：数据实体一致性——同实体字段类型冲突
-        findings.AddRange(CheckDataEntityConsistency(entityFields));
+        // 规则 1：数据实体一致性——sa_entity_fields VIEW 自 JOIN（物化后）
+        findings.AddRange(await CheckDataEntityConsistencyAsync(triple, entityFields, ct));
 
-        // 规则 2：角色权限一致性——同一角色 TRIGGER+VIEW 共存
-        findings.AddRange(CheckRoleConsistency(compileResult));
+        // 规则 2：角色权限一致性——优先读 sa_state_machine.roles_json，回退 RoleMatrix
+        findings.AddRange(await CheckRoleConsistencyAsync(triple, compileResult, ct));
 
-        // 规则 3：流程闭环——DFD 流中 output - input = orphan
-        findings.AddRange(CheckFlowClosure(compileResult));
+        // 规则 3：流程闭环——优先读 sa_dfd.flows_json，回退 dependsOn
+        findings.AddRange(await CheckFlowClosureAsync(triple, compileResult, ct));
 
-        // 规则 4：假设项汇总——未确认假设去重统计
-        findings.AddRange(CheckAssumptions(compileResult));
+        // 规则 4：假设项汇总——优先读 sa_assumptions 未确认项
+        findings.AddRange(await CheckAssumptionsAsync(triple, compileResult, ct));
 
-        // 写入 sa_consistency 表（按 CheckType 分组，每组一条记录）
+        // 写入 sa_consistency（零 findings 也写「已执行」哨兵，便于验收）
         await PersistFindingsAsync(triple, findings, roundNumber, ct);
 
         _logger.LogInformation(
@@ -76,13 +76,52 @@ public sealed class ConsistencyChecker : IConsistencyChecker, ITransient
         return findings;
     }
 
-    /// <summary>规则 1：数据实体一致性（内存 LINQ）——同实体同名字段类型不一致 → WARNING。</summary>
-    private static List<ConsistencyFinding> CheckDataEntityConsistency(EntityDesignProjection entityFields)
+    /// <summary>
+    /// 规则 1：sa_entity_fields VIEW 自 JOIN 检测同实体同名字段类型冲突。
+    /// VIEW 不可用时回退内存投影；类型冲突 → CRITICAL。
+    /// </summary>
+    private async Task<List<ConsistencyFinding>> CheckDataEntityConsistencyAsync(
+        PipelineTriple triple, EntityDesignProjection entityFields, CancellationToken ct)
     {
         var findings = new List<ConsistencyFinding>();
+        try
+        {
+            var sql = """
+                SELECT a.EntityName, a.FieldName,
+                       a.SqlType AS SqlTypeA, b.SqlType AS SqlTypeB
+                FROM sa_entity_fields a
+                INNER JOIN sa_entity_fields b
+                  ON a.TenantId = b.TenantId AND a.ProjectId = b.ProjectId AND a.PipelineId = b.PipelineId
+                 AND a.EntityName = b.EntityName AND a.FieldName = b.FieldName
+                 AND a.SqlType <> b.SqlType
+                WHERE a.TenantId = @tenantId AND a.ProjectId = @projectId AND a.PipelineId = @pipelineId
+                """;
+            var rows = await _db.Ado.SqlQueryAsync<dynamic>(sql, new
+            {
+                tenantId = triple.TenantId,
+                projectId = triple.ProjectId,
+                pipelineId = triple.PipelineId.ToString(),
+            });
 
-        // 28 号 §5 规则 1 原设计是 sa_entity_fields VIEW 自 JOIN；
-        // v2.0 极简：投影已在内存 entityFields.Fields，直接 LINQ（无需 SQL 自 JOIN）。
+            foreach (var row in rows)
+            {
+                findings.Add(new ConsistencyFinding
+                {
+                    CheckType = "DATA_ENTITY",
+                    Severity = "CRITICAL",
+                    Message = $"实体 {row.EntityName} 字段 {row.FieldName} 类型冲突：{row.SqlTypeA} vs {row.SqlTypeB}",
+                });
+            }
+
+            if (findings.Count > 0)
+                return findings;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _logger.LogWarning(ex, "sa_entity_fields VIEW 查询失败，回退内存投影检查");
+        }
+
+        // 回退：内存投影 LINQ
         var conflicts = entityFields.Fields
             .GroupBy(f => (Entity: f.EntityName.ToLowerInvariant(), Field: f.FieldName.ToLowerInvariant()))
             .Where(g => g.Select(x => x.SqlType).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1)
@@ -94,7 +133,7 @@ public sealed class ConsistencyChecker : IConsistencyChecker, ITransient
             findings.Add(new ConsistencyFinding
             {
                 CheckType = "DATA_ENTITY",
-                Severity = "WARNING",
+                Severity = "CRITICAL",
                 Message = $"实体 {c.Key.Entity} 字段 {c.Key.Field} 类型不一致：{types}",
             });
         }
@@ -102,10 +141,38 @@ public sealed class ConsistencyChecker : IConsistencyChecker, ITransient
         return findings;
     }
 
-    /// <summary>规则 2：角色权限一致性（内存 LINQ）——roleMatrix 中同一角色 TRIGGER+VIEW 共存 → WARNING。</summary>
-    private static List<ConsistencyFinding> CheckRoleConsistency(SaNineViewCompileResult compileResult)
+    /// <summary>规则 2：角色权限——sa_state_machine.state_machines 或 RoleMatrix，TRIGGER+VIEW → WARNING。</summary>
+    private async Task<List<ConsistencyFinding>> CheckRoleConsistencyAsync(
+        PipelineTriple triple, SaNineViewCompileResult compileResult, CancellationToken ct)
     {
         var findings = new List<ConsistencyFinding>();
+
+        try
+        {
+            var rolesJson = await _db.Ado.GetStringAsync("""
+                SELECT TOP 1 state_machines FROM sa_state_machine
+                WHERE tenant_id = @tenantId AND project_id = @projectId AND pipeline_id = @pipelineId
+                ORDER BY id DESC
+                """, new
+            {
+                tenantId = triple.TenantId,
+                projectId = triple.ProjectIdNumeric,
+                pipelineId = triple.PipelineId,
+            });
+
+            if (!string.IsNullOrWhiteSpace(rolesJson))
+            {
+                using var doc = JsonDocument.Parse(rolesJson);
+                findings.AddRange(ParseRolesJsonFindings(doc.RootElement));
+                if (findings.Count > 0 || doc.RootElement.ValueKind != JsonValueKind.Undefined)
+                    return findings;
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not JsonException)
+        {
+            _logger.LogWarning(ex, "sa_state_machine.state_machines 读取失败，回退 RoleMatrix");
+        }
+
         var roleMatrix = compileResult.Source.RoleMatrix;
         if (roleMatrix == null) return findings;
 
@@ -130,10 +197,97 @@ public sealed class ConsistencyChecker : IConsistencyChecker, ITransient
         return findings;
     }
 
-    /// <summary>规则 3：流程闭环（内存 LINQ）——dependsOn 引用了不存在的事件 → INFO。</summary>
-    private static List<ConsistencyFinding> CheckFlowClosure(SaNineViewCompileResult compileResult)
+    private static List<ConsistencyFinding> ParseRolesJsonFindings(JsonElement root)
     {
         var findings = new List<ConsistencyFinding>();
+        // 兼容 { "roles": [ { "role":"x", "permissions":["trigger","view"] } ] } 或矩阵形态
+        if (root.TryGetProperty("roles", out var roles) && roles.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var r in roles.EnumerateArray())
+            {
+                var role = r.TryGetProperty("role", out var rn) ? rn.GetString() ?? "?" : "?";
+                var perms = new List<string>();
+                if (r.TryGetProperty("permissions", out var p) && p.ValueKind == JsonValueKind.Array)
+                    perms.AddRange(p.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!));
+                var hasTrigger = perms.Any(o => o.Contains("trigger", StringComparison.OrdinalIgnoreCase));
+                var hasView = perms.Any(o => o.Contains("view", StringComparison.OrdinalIgnoreCase));
+                if (hasTrigger && hasView)
+                {
+                    findings.Add(new ConsistencyFinding
+                    {
+                        CheckType = "ROLE",
+                        Severity = "WARNING",
+                        Message = $"角色 {role} 同时拥有 trigger 和 view 权限，确认是否合理",
+                    });
+                }
+            }
+        }
+        return findings;
+    }
+
+    /// <summary>规则 3：流程闭环——sa_dfd.data_flows orphan 或 dependsOn 孤立依赖。</summary>
+    private async Task<List<ConsistencyFinding>> CheckFlowClosureAsync(
+        PipelineTriple triple, SaNineViewCompileResult compileResult, CancellationToken ct)
+    {
+        var findings = new List<ConsistencyFinding>();
+
+        try
+        {
+            var flowsJson = await _db.Ado.GetStringAsync("""
+                SELECT TOP 1 data_flows FROM sa_dfd
+                WHERE tenant_id = @tenantId AND project_id = @projectId AND pipeline_id = @pipelineId
+                ORDER BY id DESC
+                """, new
+            {
+                tenantId = triple.TenantId,
+                projectId = triple.ProjectIdNumeric,
+                pipelineId = triple.PipelineId,
+            });
+
+            if (!string.IsNullOrWhiteSpace(flowsJson))
+            {
+                using var doc = JsonDocument.Parse(flowsJson);
+                var inputs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var outputs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                JsonElement flows = doc.RootElement;
+                if (doc.RootElement.TryGetProperty("flows", out var fArr))
+                    flows = fArr;
+
+                if (flows.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var flow in flows.EnumerateArray())
+                    {
+                        if (flow.TryGetProperty("from", out var from) && from.ValueKind == JsonValueKind.String)
+                            outputs.Add(from.GetString()!);
+                        if (flow.TryGetProperty("to", out var to) && to.ValueKind == JsonValueKind.String)
+                            inputs.Add(to.GetString()!);
+                        if (flow.TryGetProperty("source", out var src) && src.ValueKind == JsonValueKind.String)
+                            outputs.Add(src.GetString()!);
+                        if (flow.TryGetProperty("target", out var tgt) && tgt.ValueKind == JsonValueKind.String)
+                            inputs.Add(tgt.GetString()!);
+                    }
+
+                    foreach (var orphan in outputs.Except(inputs, StringComparer.OrdinalIgnoreCase))
+                    {
+                        findings.Add(new ConsistencyFinding
+                        {
+                            CheckType = "FLOW_CLOSURE",
+                            Severity = "INFO",
+                            Message = $"DFD 节点「{orphan}」有输出无输入消费（orphan output）",
+                        });
+                    }
+                }
+
+                if (findings.Count > 0 || flows.ValueKind == JsonValueKind.Array)
+                    return findings;
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not JsonException)
+        {
+            _logger.LogWarning(ex, "sa_dfd.data_flows 读取失败，回退 dependsOn 检查");
+        }
+
         var knownEvents = compileResult.Source.BusinessEvents
             .Select(e => e.EventId)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -158,10 +312,44 @@ public sealed class ConsistencyChecker : IConsistencyChecker, ITransient
         return findings;
     }
 
-    /// <summary>规则 4：假设项汇总——未确认假设去重统计 → INFO。</summary>
-    private static List<ConsistencyFinding> CheckAssumptions(SaNineViewCompileResult compileResult)
+    /// <summary>规则 4：sa_assumptions 未确认项汇总；表空时回退 compileResult.Assumptions。</summary>
+    private async Task<List<ConsistencyFinding>> CheckAssumptionsAsync(
+        PipelineTriple triple, SaNineViewCompileResult compileResult, CancellationToken ct)
     {
         var findings = new List<ConsistencyFinding>();
+
+        try
+        {
+            var rows = await _db.Ado.SqlQueryAsync<dynamic>("""
+                SELECT F_EventId AS EventId, COUNT(1) AS Cnt
+                FROM sa_assumptions
+                WHERE F_TenantId = @tenantId AND F_ProjectId = @projectId AND F_PIPELINE_ID = @pipelineId
+                  AND (F_IsUserConfirmed = 0 OR F_IsUserConfirmed IS NULL)
+                GROUP BY F_EventId
+                """, new
+            {
+                tenantId = triple.TenantId,
+                projectId = triple.ProjectId,
+                pipelineId = triple.PipelineId.ToString(),
+            });
+
+            foreach (var row in rows)
+            {
+                findings.Add(new ConsistencyFinding
+                {
+                    CheckType = "ASSUMPTION",
+                    Severity = "INFO",
+                    Message = $"事件 {row.EventId ?? "全局"} 有 {row.Cnt} 个未确认假设待用户确认",
+                });
+            }
+
+            if (findings.Count > 0 || rows.Count > 0)
+                return findings;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _logger.LogWarning(ex, "sa_assumptions 查询失败，回退内存 Assumptions");
+        }
 
         var unconfirmed = compileResult.Assumptions
             .Where(a => a.Confidence < 0.6m)
@@ -181,14 +369,15 @@ public sealed class ConsistencyChecker : IConsistencyChecker, ITransient
         return findings;
     }
 
-    /// <summary>将发现按 CheckType 分组写入 sa_consistency 表。</summary>
+    /// <summary>将发现按 CheckType 分组写入 sa_consistency；零 findings 写 PASSED 哨兵。</summary>
     private async Task PersistFindingsAsync(
         PipelineTriple triple, IReadOnlyList<ConsistencyFinding> findings, int roundNumber, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        var rows = findings
-            .GroupBy(f => f.CheckType)
-            .Select(g => new
+        var groups = findings.GroupBy(f => f.CheckType).ToList();
+
+        var rows = groups.Count > 0
+            ? groups.Select(g => new
             {
                 F_Id = Guid.NewGuid().ToString("N"),
                 F_TenantId = triple.TenantId,
@@ -204,10 +393,24 @@ public sealed class ConsistencyChecker : IConsistencyChecker, ITransient
                     g.Where(f => f.Severity == "INFO").Select(f => f.Message).ToList(), JsonOptions),
                 F_Severity = g.Max(f => SeverityRank(f.Severity)),
                 F_CreatedAt = now,
-            })
-            .ToList();
-
-        if (rows.Count == 0) return;
+            }).ToList()
+            : new[]
+            {
+                new
+                {
+                    F_Id = Guid.NewGuid().ToString("N"),
+                    F_TenantId = triple.TenantId,
+                    F_ProjectId = triple.ProjectId,
+                    F_PIPELINE_ID = triple.PipelineId.ToString(),
+                    F_RoundNumber = roundNumber,
+                    F_CheckType = "PASSED",
+                    F_ConflictsJson = "[]",
+                    F_AssumptionsJson = "[]",
+                    F_GapsJson = "[]",
+                    F_Severity = "INFO",
+                    F_CreatedAt = now,
+                },
+            }.ToList();
 
         await _db.Insertable(rows).AS("sa_consistency").ExecuteCommandAsync(ct);
     }

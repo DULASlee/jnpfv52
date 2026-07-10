@@ -32,6 +32,14 @@ export function runAnalystSkill(pipelineId: number, data?: { userRequirement?: s
   });
 }
 
+/** 启动/续跑三轮需求分析编排器（27 号） */
+export function runRequirementAnalysis(pipelineId: number, data?: { providerCode?: string; answers?: unknown }) {
+  return defHttp.post<SkillRunResult>({
+    url: `/api/studio/skills/requirement-analysis/${pipelineId}/run`,
+    data: data ?? {},
+  });
+}
+
 export function confirmSkeleton(pipelineId: number, data?: { autoRunAnalyst?: boolean }) {
   return defHttp.post<{ status: string; fragmentId: string; autoRunAnalyst?: boolean }>({
     url: `/api/studio/skills/pm/${pipelineId}/confirm-skeleton`,
@@ -85,8 +93,8 @@ export interface ClarificationQuestion {
 
 export interface ClarificationSet {
   setId: string;
-  /** requirement | architecture | system-design */
-  stage: 'requirement' | 'architecture' | 'system-design';
+  /** requirement | architecture | system-design | requirement-analysis-round1/2/3 */
+  stage: string;
   round: number;
   title: string;
   intro: string;
@@ -114,10 +122,15 @@ export interface AnswerClarificationResult {
   fragmentId: string;
   stabilityState: string;
   triggerNextRound: boolean;
-  /** 澄清阶段：requirement | architecture | system-design */
-  stage: 'requirement' | 'architecture' | 'system-design';
+  /** 澄清阶段：requirement | architecture | system-design | requirement-analysis-round* */
+  stage: string;
   /** 作答后前端应执行的下一步动作 */
-  nextAction: 're-evaluate' | 'rerun-architect' | 'rerun-system-design-clarification' | 'none';
+  nextAction:
+    | 're-evaluate'
+    | 'rerun-architect'
+    | 'rerun-system-design-clarification'
+    | 'continue-requirement-analysis'
+    | 'none';
 }
 
 /**
