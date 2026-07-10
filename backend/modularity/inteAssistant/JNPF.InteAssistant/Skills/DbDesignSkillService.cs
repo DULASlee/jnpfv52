@@ -55,7 +55,7 @@ public sealed class DbDesignSkillService : CognitiveSkill, ITransient
     public override Task<SkillValidationResult> ValidateInputAsync(IrSnapshot snapshot, CancellationToken ct = default)
     {
         if (snapshot.Find(IrFragmentTypes.EventSpec, IrStabilityStates.Stable) == null)
-            return Task.FromResult(SkillValidationResult.Fail("IR-1 未 stable"));
+            return Task.FromResult(SkillValidationResult.Fail("IR-1 EventSpec 未 stable（设计启动另须 Finalize + ai_entity_field）"));
 
         if (snapshot.Find(IrFragmentTypes.DDL, IrStabilityStates.Stable) != null)
             return Task.FromResult(SkillValidationResult.Fail("DDL 片段已 stable"));

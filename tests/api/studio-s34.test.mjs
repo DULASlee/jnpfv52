@@ -20,6 +20,7 @@ import {
   confirmRequirementSpec,
   confirmStage,
   getDeliverables,
+  getDesignStatus,
   getEvents,
   getSnapshots,
   rebuildDeliverables,
@@ -67,6 +68,23 @@ describe.skipIf(skipPipeline)(`Studio S3→S4 产物 verify pipeline=${pipelineI
 
   beforeAll(async () => {
     session = await login();
+  });
+
+  it('设计 status 暴露 finalized / ai_entity_field 门禁字段（25 §6）', async () => {
+    const status = await getDesignStatus(session, pipelineId);
+    expect(status).toBeTruthy();
+    // 字段必须存在（布尔语义由 pipeline 状态决定；旧 311 可能已 Finalize）
+    expect(typeof pick(status, 'analysisFinalized', 'AnalysisFinalized')).toBe('boolean');
+    expect(typeof pick(status, 'hasEntityFields', 'HasEntityFields')).toBe('boolean');
+    expect(typeof pick(status, 'canRunDesign', 'CanRunDesign')).toBe('boolean');
+    const fieldCount = Number(pick(status, 'entityFieldCount', 'EntityFieldCount') ?? 0);
+    expect(fieldCount).toBeGreaterThanOrEqual(0);
+    // 一致性：canRunDesign ⇒ finalized ∧ hasEntityFields
+    const can = pick(status, 'canRunDesign', 'CanRunDesign');
+    if (can) {
+      expect(pick(status, 'analysisFinalized', 'AnalysisFinalized')).toBe(true);
+      expect(pick(status, 'hasEntityFields', 'HasEntityFields')).toBe(true);
+    }
   });
 
   it('设计交付物 03~06 齐全', async (ctx) => {

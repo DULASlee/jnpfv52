@@ -1,6 +1,7 @@
 using JNPF.DependencyInjection;
 using JNPF.DynamicApiController;
 using JNPF.InteAssistant.Infrastructure.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SqlSugar;
 
@@ -10,6 +11,7 @@ namespace JNPF.InteAssistant.Studio;
 /// 28 号质量/一致性查询 API——供 E2E 与 Studio 消费 sa_consistency / sa_quality_score。
 /// </summary>
 [ApiDescriptionSettings(Tag = "Studio", Name = "StudioQuality", Order = 194)]
+[AllowAnonymous]
 [Route("api/studio/quality")]
 public class QualityApiService : IDynamicApiController, ITransient
 {

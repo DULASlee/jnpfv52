@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using JNPF.DependencyInjection;
-using JNPF.FriendlyException;
+
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Ir;
@@ -294,7 +294,7 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         if (round == 1 && skeleton == null)
         {
             if (!_registry.TryGet("pm-skill", out _))
-                throw Oops.Bah("PM Skill 未注册，无法启动 Round 1");
+                throw new InvalidOperationException("PM Skill 未注册，无法启动 Round 1");
 
             var pmResult = await _harness.RunAsync(
                 "pm-skill", pipelineId, tenantId, projectId, skillOptions, ct);
@@ -368,7 +368,7 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             var prevStage = StageForRound(round - 1);
             var prevClar = FindRoundClarification(snapshot, prevStage);
             if (prevClar is not { StabilityState: IrStabilityStates.Stable })
-                throw Oops.Bah($"第 {round} 轮前置未满足：第 {round - 1} 轮澄清未完成");
+                throw new InvalidOperationException($"第 {round} 轮前置未满足：第 {round - 1} 轮澄清未完成");
         }
 
         // SA 全量重编译（C# 毫秒级，零工程步骤）
@@ -376,8 +376,9 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         var roundWarnings = _lightValidator.Validate(recompile.Source);
 
         // 收集上一轮用户答案文本
-        var prevStageForAnswers = StageForRound(round - 1);
-        var prevClarFragment = round >= 2 ? FindRoundClarification(snapshot, prevStageForAnswers) : null;
+        string? prevStageForAnswers = null;
+        if (round >= 2) prevStageForAnswers = StageForRound(round - 1);
+        var prevClarFragment = round >= 2 ? FindRoundClarification(snapshot, prevStageForAnswers!) : null;
         var prevAnswersText = ExtractAnswersText(prevClarFragment?.Payload);
 
         if (round < TotalRounds)

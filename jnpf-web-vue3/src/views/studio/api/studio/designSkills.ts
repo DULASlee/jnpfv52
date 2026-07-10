@@ -10,7 +10,14 @@ export interface DesignSkillPhaseStatus {
 export interface DesignOrchestratorStatus {
   pipelineId: number;
   projectId: string;
+  /** @deprecated 设计启动以 analysisFinalized + hasEntityFields 为准 */
   ir1Stable: boolean;
+  /** AnalysisCompleted.finalized=true（25 §6） */
+  analysisFinalized?: boolean;
+  hasEntityFields?: boolean;
+  entityFieldCount?: number;
+  /** 后端门禁：finalized ∧ 有实体字段 */
+  canRunDesign?: boolean;
   designComplete: boolean;
   phases: DesignSkillPhaseStatus[];
   tokenConsumed: number;

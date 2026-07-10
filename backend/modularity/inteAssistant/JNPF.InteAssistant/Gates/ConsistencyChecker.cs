@@ -377,7 +377,7 @@ public sealed class ConsistencyChecker : IConsistencyChecker, ITransient
         var groups = findings.GroupBy(f => f.CheckType).ToList();
 
         var rows = groups.Count > 0
-            ? groups.Select(g => new
+            ? groups.Select(g => new SaConsistencyRow
             {
                 F_Id = Guid.NewGuid().ToString("N"),
                 F_TenantId = triple.TenantId,
@@ -396,7 +396,7 @@ public sealed class ConsistencyChecker : IConsistencyChecker, ITransient
             }).ToList()
             : new[]
             {
-                new
+                new SaConsistencyRow
                 {
                     F_Id = Guid.NewGuid().ToString("N"),
                     F_TenantId = triple.TenantId,
@@ -421,6 +421,22 @@ public sealed class ConsistencyChecker : IConsistencyChecker, ITransient
         "WARNING" => "WARNING",
         _ => "INFO",
     };
+
+    /// <summary>sa_consistency 表行映射（SqlSugar Insertable 要求具体类型，不支持匿名）。</summary>
+    private sealed class SaConsistencyRow
+    {
+        public string F_Id { get; set; } = string.Empty;
+        public string F_TenantId { get; set; } = string.Empty;
+        public string F_ProjectId { get; set; } = string.Empty;
+        public string F_PIPELINE_ID { get; set; } = string.Empty;
+        public int F_RoundNumber { get; set; }
+        public string F_CheckType { get; set; } = string.Empty;
+        public string F_ConflictsJson { get; set; } = string.Empty;
+        public string F_AssumptionsJson { get; set; } = string.Empty;
+        public string F_GapsJson { get; set; } = string.Empty;
+        public string F_Severity { get; set; } = string.Empty;
+        public DateTime F_CreatedAt { get; set; }
+    }
 }
 
 internal static class StringExt

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using JNPF.DependencyInjection;
 using JNPF.FriendlyException;
+using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Constraints;
@@ -41,7 +42,15 @@ public sealed class DesignOrchestratorStatus
 {
     public long PipelineId { get; init; }
     public string ProjectId { get; init; } = string.Empty;
+    /// <summary>历史字段：EventSpec stable。设计启动以 <see cref="AnalysisFinalized"/> 为准。</summary>
     public bool Ir1Stable { get; init; }
+    /// <summary>AnalysisCompleted.finalized=true（25 §6 / Round 3 工程保障完成）。</summary>
+    public bool AnalysisFinalized { get; init; }
+    /// <summary>ai_entity_field 三元组下字段行数 &gt; 0。</summary>
+    public bool HasEntityFields { get; init; }
+    public int EntityFieldCount { get; init; }
+    /// <summary>可启动设计：finalized ∧ 有实体字段。</summary>
+    public bool CanRunDesign { get; init; }
     public bool DesignComplete { get; init; }
     public IReadOnlyList<DesignSkillPhaseStatus> Phases { get; init; } = Array.Empty<DesignSkillPhaseStatus>();
     public long TokenConsumed { get; init; }
@@ -76,6 +85,7 @@ public sealed class DesignSkillOrchestrator : IDesignSkillOrchestrator, ITransie
     private readonly ISkillRegistry _registry;
     private readonly ISqlSugarClient _db;
     private readonly IConstraintEngineService _constraintEngine;
+    private readonly EntityDesignRepository _entityDesignRepo;
     private readonly ILogger<DesignSkillOrchestrator> _logger;
 
     public DesignSkillOrchestrator(
@@ -85,6 +95,7 @@ public sealed class DesignSkillOrchestrator : IDesignSkillOrchestrator, ITransie
         ISkillRegistry registry,
         ISqlSugarClient db,
         IConstraintEngineService constraintEngine,
+        EntityDesignRepository entityDesignRepo,
         ILogger<DesignSkillOrchestrator> logger)
     {
         _harness = harness;
@@ -93,6 +104,7 @@ public sealed class DesignSkillOrchestrator : IDesignSkillOrchestrator, ITransie
         _registry = registry;
         _db = db;
         _constraintEngine = constraintEngine;
+        _entityDesignRepo = entityDesignRepo;
         _logger = logger;
     }
 
@@ -209,6 +221,13 @@ public sealed class DesignSkillOrchestrator : IDesignSkillOrchestrator, ITransie
             s.FragmentType == IrFragmentTypes.EventSpec
             && s.StabilityState is IrStabilityStates.Stable or IrStabilityStates.Locked);
 
+        var analysisFinalized = await AnalysisFinalizedGate.HasFinalizedAsync(
+            _eventStore, tenantId, projectId, pipelineId, ct);
+        var entityFieldCount = await _entityDesignRepo.CountFieldsAsync(
+            tenantId, projectId, pipelineId.ToString(), ct);
+        var hasEntityFields = entityFieldCount > 0;
+        var canRunDesign = analysisFinalized && hasEntityFields;
+
         var designComplete = snapshots.Any(s =>
             s.FragmentType == IrFragmentTypes.SystemDesign
             && s.StabilityState == IrStabilityStates.Locked);
@@ -265,6 +284,10 @@ public sealed class DesignSkillOrchestrator : IDesignSkillOrchestrator, ITransie
             PipelineId = pipelineId,
             ProjectId = projectId,
             Ir1Stable = ir1Stable,
+            AnalysisFinalized = analysisFinalized,
+            HasEntityFields = hasEntityFields,
+            EntityFieldCount = entityFieldCount,
+            CanRunDesign = canRunDesign,
             DesignComplete = designComplete,
             Phases = phases,
             TokenConsumed = project?.TokenConsumed ?? 0,
@@ -290,13 +313,17 @@ public sealed class DesignSkillOrchestrator : IDesignSkillOrchestrator, ITransie
 
     private async Task ValidatePreconditionsAsync(long pipelineId, string tenantId, string projectId, CancellationToken ct)
     {
-        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString(), ct);
-        var hasAnalysis = snapshots.Any(s =>
-            s.FragmentType == IrFragmentTypes.EventSpec
-            && s.StabilityState is IrStabilityStates.Stable or IrStabilityStates.Locked);
+        // 25 §6：设计启动以 Finalize 为准，不以「EventSpec stable」替代
+        var finalized = await AnalysisFinalizedGate.HasFinalizedAsync(
+            _eventStore, tenantId, projectId, pipelineId, ct);
+        if (!finalized)
+            throw Oops.Bah(AnalysisFinalizedGate.NotFinalizedMessage)
+                .StatusCode(StatusCodes.Status400BadRequest);
 
-        if (!hasAnalysis)
-            throw Oops.Oh("IR-1 未 stable，请先完成 Analyst Skill")
+        var fieldCount = await _entityDesignRepo.CountFieldsAsync(
+            tenantId, projectId, pipelineId.ToString(), ct);
+        if (fieldCount <= 0)
+            throw Oops.Bah("ai_entity_field 无投影字段，请先完成 Round 3 工程保障（EntityDesignProjector）")
                 .StatusCode(StatusCodes.Status400BadRequest);
     }
 }

@@ -1,4 +1,5 @@
 using JNPF.InteAssistant.Sa;
+using Microsoft.Extensions.Logging.Abstractions;
 using JNPF.InteAssistant.Skills;
 
 namespace JNPF.Tests.PhaseB;
@@ -48,7 +49,7 @@ public static class SaNineViewCompilerTests
 
     private static void T1_Compile_FastAndNineStepsPerEvent()
     {
-        var compiler = new SaNineViewCompiler();
+        var compiler = new SaNineViewCompiler(NullLogger<SaNineViewCompiler>.Instance);
         var result = compiler.CompileFromSkeletonJson(LeaveSkeletonJson, "员工请假系统");
 
         if (result.EventResults.Count != 2)
@@ -69,7 +70,7 @@ public static class SaNineViewCompilerTests
 
     private static void T2_Compile_ExtractsFieldsNotDefaultPkOnly()
     {
-        var compiler = new SaNineViewCompiler();
+        var compiler = new SaNineViewCompiler(NullLogger<SaNineViewCompiler>.Instance);
         var result = compiler.CompileFromSkeletonJson(LeaveSkeletonJson);
         var ev = result.EventResults.First(e => e.EventId == "EV-001");
         var meta = new AnalystSkillService.BusinessEventMeta(ev.EventId, ev.EventName, ev.Complexity);
@@ -88,7 +89,7 @@ public static class SaNineViewCompilerTests
 
     private static void T3_Compile_ComplexEventHasWorkflowAndPspec()
     {
-        var compiler = new SaNineViewCompiler();
+        var compiler = new SaNineViewCompiler(NullLogger<SaNineViewCompiler>.Instance);
         var result = compiler.CompileFromSkeletonJson(LeaveSkeletonJson);
         var ev = result.EventResults.First(e => e.EventId == "EV-005");
 
@@ -104,7 +105,7 @@ public static class SaNineViewCompilerTests
 
     private static void T4_Compile_EventSpecAssemblerConsumesOutput()
     {
-        var compiler = new SaNineViewCompiler();
+        var compiler = new SaNineViewCompiler(NullLogger<SaNineViewCompiler>.Instance);
         var result = compiler.CompileFromSkeletonJson(LeaveSkeletonJson);
         var ev = result.EventResults[0];
         var meta = new AnalystSkillService.BusinessEventMeta(ev.EventId, ev.EventName, ev.Complexity);

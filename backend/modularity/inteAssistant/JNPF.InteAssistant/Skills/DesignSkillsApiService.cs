@@ -100,10 +100,13 @@ public class DesignSkillsApiService : IDynamicApiController, ITransient
                 .WithData(new { code = "TENANT_PIPELINE_QUOTA_EXCEEDED", activePipelineIds });
 
         var status = await _orchestrator.GetStatusAsync(pipelineId, tenantId, projectId, CancellationToken.None);
-        if (!status.Ir1Stable)
+        if (!status.CanRunDesign)
         {
             _quotaGuard.Release(tenantId, pipelineId);
-            throw Oops.Oh("IR-1 未 stable，请先完成 Analyst Skill")
+            var reason = !status.AnalysisFinalized
+                ? AnalysisFinalizedGate.NotFinalizedMessage
+                : "ai_entity_field 无投影字段，请先完成 Round 3 工程保障";
+            throw Oops.Bah(reason)
                 .StatusCode(StatusCodes.Status400BadRequest);
         }
 
@@ -152,6 +155,21 @@ public class DesignSkillsApiService : IDynamicApiController, ITransient
             throw Oops.Oh($"Skill {skillId} 已在运行中")
                 .StatusCode(StatusCodes.Status409Conflict);
 
+        // 单 Skill 入口同样走 25 §6 门禁（澄清重跑除外：架构/总体澄清阶段一可在 Finalize 后）
+        var isClarification = skillId is DesignSkillIds.SystemDesignClarification;
+        if (!isClarification)
+        {
+            var status = await _orchestrator.GetStatusAsync(pipelineId, tenantId, projectId, CancellationToken.None);
+            if (!status.CanRunDesign)
+            {
+                var reason = !status.AnalysisFinalized
+                    ? AnalysisFinalizedGate.NotFinalizedMessage
+                    : "ai_entity_field 无投影字段，请先完成 Round 3 工程保障";
+                throw Oops.Bah(reason)
+                    .StatusCode(StatusCodes.Status400BadRequest);
+            }
+        }
+
         _taskRunner.Run(taskName, async (ctx, ct) =>
         {
             await _harness.RunAsync(skillId, pipelineId, tenantId, projectId, new SkillRunOptions
@@ -183,7 +201,11 @@ public class DesignSkillsApiService : IDynamicApiController, ITransient
         if (!_tenantGuard.VerifyOwnership(pipeline, tenantId) && !TenantResolver.IsSuperTenant())
             throw Oops.Oh("无权访问该流水线");
 
-        return (pipelineId.ToString(), pipeline.TenantId ?? tenantId);
+        // R12：MUST 返回真实 ProjectId（F_PROJECT_ID），禁止用 pipelineId 冒充
+        var projectId = string.IsNullOrWhiteSpace(pipeline.ProjectId)
+            ? pipelineId.ToString()
+            : pipeline.ProjectId;
+        return (projectId, pipeline.TenantId ?? tenantId);
     }
 
     private static string ResolveEffectiveTenantId(string? tenantSnapshot, string? pipelineTenantId)

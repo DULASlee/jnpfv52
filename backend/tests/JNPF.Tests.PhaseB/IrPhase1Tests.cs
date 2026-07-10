@@ -3,6 +3,7 @@ using System.Text.Json;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Ir;
+using Microsoft.Extensions.Logging.Abstractions;
 using SqlSugar;
 
 namespace JNPF.Tests.PhaseB;
@@ -14,7 +15,7 @@ public static class IrPhase1Tests
 {
     public static Task T20_SchemaValidator_RejectsMissingBusinessEvents()
     {
-        var validator = new IrSchemaValidator();
+        var validator = new IrSchemaValidator(NullLogger<IrSchemaValidator>.Instance);
         try
         {
             validator.Validate(IrEventTypes.SkeletonCreated, "{\"skeletonId\":\"SK-001\"}");
@@ -30,7 +31,7 @@ public static class IrPhase1Tests
 
     public static Task T21_SchemaValidator_AcceptsValidSkeleton()
     {
-        var validator = new IrSchemaValidator();
+        var validator = new IrSchemaValidator(NullLogger<IrSchemaValidator>.Instance);
         var payload = JsonSerializer.Serialize(new
         {
             businessEvents = new[] { new { eventId = "BE-1", eventName = "Test" } },

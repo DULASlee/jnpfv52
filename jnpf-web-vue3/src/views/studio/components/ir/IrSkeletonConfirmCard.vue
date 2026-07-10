@@ -4,7 +4,7 @@
       <span class="badge">IR-0 骨架审阅</span>
       <a-tag color="orange">待确认</a-tag>
     </div>
-    <p class="hint">请审阅业务事件与角色矩阵，确认后进入需求分析（Analyst Skill）。</p>
+    <p class="hint">请审阅业务事件与角色矩阵，确认后进入三轮需求分析。</p>
     <div v-if="summary" class="summary">{{ summary }}</div>
     <div v-if="expanded" class="payload-preview">
       <pre>{{ prettyPayload }}</pre>

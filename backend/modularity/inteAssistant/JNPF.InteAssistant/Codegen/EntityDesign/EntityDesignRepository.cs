@@ -23,6 +23,34 @@ public sealed class EntityDesignRepository : ITransient
     }
 
     /// <summary>
+    /// 三元组范围内是否已有投影字段（25 §6 下游消费契约：设计前须可读 ai_entity_field）。
+    /// </summary>
+    public async Task<int> CountFieldsAsync(
+        string tenantId, string projectId, string pipelineId, CancellationToken ct = default)
+    {
+        return await _db.Queryable<AiEntityFieldEntity>()
+            .Where(x => x.TenantId == tenantId
+                        && x.ProjectId == projectId
+                        && x.PipelineId == pipelineId
+                        && !x.DeleteMark)
+            .CountAsync(ct);
+    }
+
+    /// <summary>列出投影字段（UI/Tester 消费，禁止各自 parse IR JSON 当唯一源）。</summary>
+    public async Task<List<AiEntityFieldEntity>> ListFieldsAsync(
+        string tenantId, string projectId, string pipelineId, CancellationToken ct = default)
+    {
+        return await _db.Queryable<AiEntityFieldEntity>()
+            .Where(x => x.TenantId == tenantId
+                        && x.ProjectId == projectId
+                        && x.PipelineId == pipelineId
+                        && !x.DeleteMark)
+            .OrderBy(x => x.EntityName)
+            .OrderBy(x => x.FieldName)
+            .ToListAsync(ct);
+    }
+
+    /// <summary>
     /// Batch upsert projection fields to <c>ai_entity_field</c>.
     /// Insert for new rows; update mutable columns (ProjectionHash, types, nullability, FK refs,
     /// LastModifyTime) for existing rows identified by the unique business key.

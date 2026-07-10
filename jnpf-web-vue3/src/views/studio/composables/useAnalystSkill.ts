@@ -1,6 +1,6 @@
 import { computed, ref, watch, type InjectionKey, type Ref } from 'vue';
 import type { IrEventRecord, IrFragmentSnapshot } from '../types/ir';
-import { confirmRequirementSpec, runAnalystSkill, type SkillRunResult } from '../api/studio/skills';
+import { confirmRequirementSpec, runRequirementAnalysis, type SkillRunResult } from '../api/studio/skills';
 
 export interface EventSaProgress {
   eventId: string;
@@ -81,7 +81,7 @@ export function useAnalystSkill(pipelineId: Ref<number>, snapshots: Ref<IrFragme
     analystLoading.value = true;
     abortController = new AbortController();
     try {
-      const res = await runAnalystSkill(pipelineId.value);
+      const res = await runRequirementAnalysis(pipelineId.value);
       await refreshAll();
       return res;
     } finally {

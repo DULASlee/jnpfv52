@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using JNPF.DatabaseAccessor;
 using JNPF.DependencyInjection;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
@@ -59,6 +60,13 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
     /// </summary>
     private readonly IMemoryCache? _responseCache;
     private readonly int _responseCacheTtlMinutes;
+
+    /// <summary>缓存统计（跨实例共享，供 E2E 验收）。</summary>
+    private static long _cacheHits;
+    private static long _cacheMisses;
+
+    /// <summary>获取当前缓存统计快照。</summary>
+    public static (long Hits, long Misses) GetCacheStats() => (_cacheHits, _cacheMisses);
 
     public LlmGatewayService(
         IHttpClientFactory httpClientFactory,
@@ -295,9 +303,12 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
         var cacheKey = BuildResponseCacheKey(request);
         if (cacheKey != null && TryGetCachedResponse(cacheKey, out var cached))
         {
+            Interlocked.Increment(ref _cacheHits);
             _logger.LogDebug("LLM 响应缓存命中 key={Key}", cacheKey[0..Math.Min(12, cacheKey.Length)]);
             return cached! with { LatencyMs = 0 };
         }
+        if (cacheKey != null)
+            Interlocked.Increment(ref _cacheMisses);
 
         var sw = Stopwatch.StartNew();
         var model = request.ModelCode ?? string.Empty;

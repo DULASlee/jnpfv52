@@ -15,6 +15,38 @@ namespace JNPF.Tests.PhaseB;
 public class PhaseB_xUnitAdapter
 {
     // ═══════════════════════════════════════════════════════════
+    // 28 号: 熔断器 + 一致性 + 编排器 + 缓存（企业级 E2E 缺口修补）
+    // ═══════════════════════════════════════════════════════════
+
+    [Fact]
+    public void CB1_LlmCircuitBreaker_10Cases()
+    {
+        LlmCircuitBreakerTests.RunAll();
+        Assert.True(true);
+    }
+
+    [Fact]
+    public async Task CC1_ConsistencyChecker_9Cases()
+    {
+        await ConsistencyCheckerTests.RunAllAsync();
+        Assert.True(true);
+    }
+
+    [Fact]
+    public async Task RO1_RequirementAnalysisOrchestrator_15Cases()
+    {
+        await RequirementAnalysisOrchestratorTests.RunAllAsync();
+        Assert.True(true);
+    }
+
+    [Fact]
+    public void CA1_LlmGatewayServiceCache_5Cases()
+    {
+        LlmGatewayServiceCacheTests.RunAll();
+        Assert.True(true);
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // 阶段一: IR 基础设施
     // ═══════════════════════════════════════════════════════════
 

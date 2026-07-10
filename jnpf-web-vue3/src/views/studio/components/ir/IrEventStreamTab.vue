@@ -7,7 +7,7 @@
     <template v-else>
       <div class="skill-toolbar">
         <a-button size="small" type="primary" :loading="pmLoading" @click="runPmSkill">运行 PM Skill</a-button>
-        <a-button size="small" :loading="analystLoading" @click="runAnalystSkill">运行 Analyst</a-button>
+        <a-button size="small" :loading="analystLoading" @click="runAnalystSkill">运行需求分析</a-button>
         <a-button size="small" type="primary" ghost :loading="designLoading" :disabled="!canRunDesign" @click="runDesignSkill"> 运行设计 Skill </a-button>
       </div>
       <div v-if="designBlockedHint" class="design-hint">{{ designBlockedHint }}</div>
@@ -67,7 +67,8 @@
 
   const designBlockedHint = computed(() => {
     if (!pipelineId.value) return '';
-    if (!designSkill.ir1Stable.value) return '需 IR-1 stable 后才可运行设计 Skill';
+    if (!designSkill.analysisFinalized.value) return '需三轮需求分析 Finalize（AnalysisCompleted.finalized=true）后才可运行设计 Skill';
+    if (!designSkill.hasEntityFields.value) return '需 ai_entity_field 投影字段就绪（Round 3 工程保障）';
     if (budgetInfoBlocked.value) return 'LLM 预算已达 95% 预检阈值';
     return '';
   });
@@ -90,9 +91,9 @@
     if (!pipelineId.value) return;
     try {
       const res = await analystSkill.runAnalyst();
-      message.success(`Analyst Skill 已启动 (runId: ${res?.runId ?? '—'})`);
+      message.success(`需求分析已启动 (runId: ${res?.runId ?? '—'})`);
     } catch (e: any) {
-      message.error(e?.response?.data?.msg ?? e?.message ?? 'Analyst Skill 启动失败');
+      message.error(e?.response?.data?.msg ?? e?.message ?? '需求分析启动失败');
     }
   }
 

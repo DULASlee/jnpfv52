@@ -1,9 +1,12 @@
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using JNPF.DependencyInjection;
 using JNPF.FriendlyException;
+using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
+using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Llm;
 using JNPF.InteAssistant.Skills.Cognitive;
@@ -11,7 +14,7 @@ using JNPF.InteAssistant.Skills.Cognitive;
 namespace JNPF.InteAssistant.Skills;
 
 /// <summary>
-/// UI 设计 Skill（R3 认知模具版）— FormPageIR 经 BudgetGuard 生成；禁止 fallback。
+/// UI 设计 Skill（R3 认知模具版）— FormPageIR 经 BudgetGuard 生成；字段源 = ai_entity_field（25 §6）。
 /// </summary>
 public sealed class UiDesignSkillService : CognitiveSkill, ITransient
 {
@@ -22,13 +25,16 @@ public sealed class UiDesignSkillService : CognitiveSkill, ITransient
     };
 
     private readonly ISkillLlmBudgetGuard _budgetGuard;
+    private readonly EntityDesignRepository _entityDesignRepo;
 
     public UiDesignSkillService(
         ICognitiveSkillToolkit toolkit,
-        ISkillLlmBudgetGuard budgetGuard)
+        ISkillLlmBudgetGuard budgetGuard,
+        EntityDesignRepository entityDesignRepo)
         : base(toolkit)
     {
         _budgetGuard = budgetGuard;
+        _entityDesignRepo = entityDesignRepo;
     }
 
     public override string SkillId => DesignSkillIds.UiDesign;
@@ -49,8 +55,9 @@ public sealed class UiDesignSkillService : CognitiveSkill, ITransient
 
     public override Task<SkillValidationResult> ValidateInputAsync(IrSnapshot snapshot, CancellationToken ct = default)
     {
+        // Finalize / ai_entity_field 由 DesignSkillsApi / Orchestrator 门禁；此处保留 EventSpec 存在性
         if (snapshot.Find(IrFragmentTypes.EventSpec, IrStabilityStates.Stable) == null)
-            return Task.FromResult(SkillValidationResult.Fail("IR-1 未 stable"));
+            return Task.FromResult(SkillValidationResult.Fail("IR-1 EventSpec 未 stable（且须已 Finalize）"));
 
         if (snapshot.Find(IrFragmentTypes.FormPageIR, IrStabilityStates.Stable) != null)
             return Task.FromResult(SkillValidationResult.Fail("FormPageIR 已 stable"));
@@ -73,7 +80,13 @@ public sealed class UiDesignSkillService : CognitiveSkill, ITransient
     {
         var context = perception.Context;
         var fragmentId = $"formPage:{context.ProjectId}";
-        var payload = await GenerateFormPageIrAsync(context, fragmentId, ct);
+
+        var fields = await _entityDesignRepo.ListFieldsAsync(
+            context.TenantId, context.ProjectId, context.PipelineId.ToString(), ct);
+        if (fields.Count == 0)
+            throw Oops.Bah("UiDesign Skill: ai_entity_field 无字段，拒绝继续（须先 Round 3 投影）");
+
+        var payload = await GenerateFormPageIrAsync(context, fragmentId, fields, ct);
 
         yield return new AppendIrEventRequest
         {
@@ -85,10 +98,16 @@ public sealed class UiDesignSkillService : CognitiveSkill, ITransient
         };
     }
 
-    private async Task<string> GenerateFormPageIrAsync(SkillContext context, string fragmentId, CancellationToken ct)
+    private async Task<string> GenerateFormPageIrAsync(
+        SkillContext context,
+        string fragmentId,
+        IReadOnlyList<AiEntityFieldEntity> fields,
+        CancellationToken ct)
     {
         var slot = await _budgetGuard.AcquireAsync(
             context.ProjectId, SkillId, context.RunId, context.TenantId, context.PipelineId, ct);
+
+        var fieldContext = BuildFieldContext(fields);
 
         var response = await _budgetGuard.ExecuteAsync(slot, new ChatCompletionRequest
         {
@@ -100,8 +119,8 @@ public sealed class UiDesignSkillService : CognitiveSkill, ITransient
                 - id: 页面唯一标识
                 - title: 页面标题
                 - pageType: 页面类型（list=列表页 / form=表单页 / detail=详情页）
-                - entityBinding: 绑定的实体名（对应 entityDrafts[].entityName）
-                - fields[]: 每字段含 id/label/componentType/required
+                - entityBinding: 绑定的实体名（必须来自下方 ai_entity_field 实体列表）
+                - fields[]: 每字段含 id/label/componentType/required（字段 id 必须来自 ai_entity_field.FieldName）
 
                 列表页额外字段：
                 - listColumns[]: 列表显示的列名
@@ -110,21 +129,14 @@ public sealed class UiDesignSkillService : CognitiveSkill, ITransient
                 字段 componentType 可选值：Input/Textarea/Number/InputNumber/Select/Radio/Checkbox/
                 DatePicker/DateTimePicker/TimePicker/Switch/UploadFile/UploadImg/Table/Cascader/Rate/Slider/Editor
 
-                输出示例：
-                {"pages": [
-                  {"id":"leave-list","title":"请假申请列表","pageType":"list","entityBinding":"LeaveRequest",
-                   "listColumns":["employeeName","leaveType","startDate","endDate","status"],
-                   "searchFields":["leaveType","status"],
-                   "fields":[{"id":"leaveType","label":"请假类型","componentType":"Select","required":true}]},
-                  {"id":"leave-form","title":"请假申请表单","pageType":"form","entityBinding":"LeaveRequest",
-                   "fields":[{"id":"leaveType","label":"请假类型","componentType":"Select","required":true},
-                             {"id":"reason","label":"请假事由","componentType":"Textarea","required":true}]}]}
-
-                只输出 JSON，不要 markdown。
+                只输出 JSON，不要 markdown。禁止发明不在 ai_entity_field 中的实体或字段名。
                 """,
             Messages = new List<ChatMessage>
             {
-                new("user", $"需求: {context.UserRequirement}\nIR: {context.PromptContext.CompressedSummary}"),
+                new("user",
+                    $"需求: {context.UserRequirement}\n" +
+                    $"ai_entity_field（唯一字段源）:\n{fieldContext}\n" +
+                    $"IR 摘要: {context.PromptContext.CompressedSummary}"),
             },
             ResponseFormat = "json",
             MaxTokens = slot.MaxTokens,
@@ -149,5 +161,17 @@ public sealed class UiDesignSkillService : CognitiveSkill, ITransient
         dict["@id"] = JsonSerializer.SerializeToElement(fragmentId);
         dict["stabilityState"] = JsonSerializer.SerializeToElement(IrStabilityStates.Stable);
         return JsonSerializer.Serialize(dict, JsonOptions);
+    }
+
+    private static string BuildFieldContext(IReadOnlyList<AiEntityFieldEntity> fields)
+    {
+        var sb = new StringBuilder();
+        foreach (var g in fields.GroupBy(f => f.EntityName))
+        {
+            sb.AppendLine($"实体 {g.Key} (表 {g.First().TableName}):");
+            foreach (var f in g)
+                sb.AppendLine($"  - {f.FieldName} ({f.CSharpType}, required={f.IsRequired})");
+        }
+        return sb.ToString();
     }
 }

@@ -4,6 +4,8 @@ using static JNPF.Tests.PhaseB.SandboxQueueTests;
 using static JNPF.Tests.PhaseB.SandboxConfigTests;
 using static JNPF.Tests.PhaseB.PreviewResourceCleanupTests;
 using static JNPF.Tests.PhaseB.IrPhase1Tests;
+using static JNPF.Tests.PhaseB.LlmCircuitBreakerTests;
+using static JNPF.Tests.PhaseB.LlmGatewayServiceCacheTests;
 
 namespace JNPF.Tests.PhaseB;
 
@@ -25,6 +27,19 @@ public static class TestRunner
 
         try
         {
+            // ── 工作区 0: 28 号熔断器 + 一致性 + 编排器 + 缓存 ──
+            LlmCircuitBreakerTests.RunAll();
+            Pass("CB1 LlmCircuitBreaker 10 用例");
+
+            await ConsistencyCheckerTests.RunAllAsync();
+            Pass("CC1 ConsistencyChecker 9 用例");
+
+            await RequirementAnalysisOrchestratorTests.RunAllAsync();
+            Pass("RO1 RequirementAnalysisOrchestrator 15 用例");
+
+            LlmGatewayServiceCacheTests.RunAll();
+            Pass("CA1 LlmGatewayServiceCache 5 用例");
+
             // ── 工作区 1: StudioWorkspaceHelper (不依赖 App 配置) ──
             await T5_InjectFrontendFiles_CopiesVueFiles();
             await T6_InjectFrontendFiles_EmptyDirReturnsGracefully();

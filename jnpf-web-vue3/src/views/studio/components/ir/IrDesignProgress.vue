@@ -2,11 +2,11 @@
   <div class="ir-design-progress">
     <div v-if="!pipelineId" class="tab-empty">
       <span class="empty-icon">🏗️</span>
-      <p>IR-1 stable 后可运行设计四 Skill</p>
+      <p>需求分析 Finalize 后可运行设计四 Skill</p>
     </div>
     <template v-else>
-      <div v-if="!ir1Stable" class="gate-hint">
-        <a-alert type="info" show-icon message="请先完成 Analyst Skill，使 IR-1 EventSpec 达到 stable" />
+      <div v-if="!canRunDesignGate" class="gate-hint">
+        <a-alert type="info" show-icon message="请先完成三轮需求分析（finalized=true + ai_entity_field），再运行设计 Skill" />
       </div>
       <div v-else class="dag-section">
         <div class="section-title">设计 Skill DAG</div>
@@ -48,7 +48,9 @@
   const designSkill = inject(DESIGN_SKILL_KEY)!;
 
   const pipelineId = computed(() => ir.pipelineId.value);
-  const ir1Stable = designSkill.ir1Stable;
+  const canRunDesignGate = computed(
+    () => designSkill.analysisFinalized.value && designSkill.hasEntityFields.value,
+  );
   const designComplete = designSkill.designComplete;
   const constraintCritical = designSkill.constraintCritical;
   const constraintWarning = designSkill.constraintWarning;

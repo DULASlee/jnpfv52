@@ -27,7 +27,7 @@ public static class DesignSkillR3Tests
         {
             new ArchitectSkillService(toolkit, null!, null!, null!),
             new DbDesignSkillService(toolkit, null!, null!),
-            new UiDesignSkillService(toolkit, null!),
+            new UiDesignSkillService(toolkit, null!, null!),
             new SystemDesignSkillService(toolkit, new JNPF.InteAssistant.Constraints.ConstraintEngineService(null!), null!),
         };
 

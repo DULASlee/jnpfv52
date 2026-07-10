@@ -103,13 +103,21 @@ export function useDesignSkills(pipelineId: Ref<number>, snapshots: Ref<IrFragme
     ),
   );
 
+  /** 25 §6：优先用后端 status；未拉到 status 时回退 ir1Stable（兼容旧 pipeline） */
+  const analysisFinalized = computed(() => orchestratorStatus.value?.analysisFinalized ?? ir1Stable.value);
+  const hasEntityFields = computed(() => orchestratorStatus.value?.hasEntityFields ?? ir1Stable.value);
+
   const ir2Snapshots = computed(() => snapshots.value.filter(s => IR2_FRAGMENT_TYPES.includes(s.fragmentType as (typeof IR2_FRAGMENT_TYPES)[number])));
 
   const designComplete = computed(
     () => orchestratorStatus.value?.designComplete || snapshots.value.some(s => s.fragmentType === 'IR2_SystemDesign' && s.stabilityState === 'locked'),
   );
 
-  const canRunDesign = computed(() => ir1Stable.value && !designLoading.value && (budgetInfo.value?.canRunDesign ?? true));
+  const canRunDesign = computed(() => {
+    const gateOk =
+      orchestratorStatus.value?.canRunDesign ?? (analysisFinalized.value && hasEntityFields.value);
+    return gateOk && !designLoading.value && (budgetInfo.value?.canRunDesign ?? true);
+  });
 
   const hasConstraintIssues = computed(() => constraintCritical.value > 0 || constraintWarning.value > 0);
 
@@ -245,7 +253,7 @@ export function useDesignSkills(pipelineId: Ref<number>, snapshots: Ref<IrFragme
   }
 
   async function runDesign(): Promise<boolean> {
-    if (!pipelineId.value || designLoading.value || !ir1Stable.value) return false;
+    if (!pipelineId.value || designLoading.value || !canRunDesign.value) return false;
     designLoading.value = true;
     lastError.value = null;
     abortController = new AbortController();
@@ -320,6 +328,8 @@ export function useDesignSkills(pipelineId: Ref<number>, snapshots: Ref<IrFragme
     constraintChecking,
     hasConstraintIssues,
     ir1Stable,
+    analysisFinalized,
+    hasEntityFields,
     ir2Snapshots,
     designComplete,
     canRunDesign,

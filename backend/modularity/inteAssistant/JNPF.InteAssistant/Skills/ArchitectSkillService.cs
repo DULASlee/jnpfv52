@@ -70,7 +70,7 @@ public sealed class ArchitectSkillService : CognitiveSkill, ITransient
     public override Task<SkillValidationResult> ValidateInputAsync(IrSnapshot snapshot, CancellationToken ct = default)
     {
         if (snapshot.Find(IrFragmentTypes.EventSpec, IrStabilityStates.Stable) == null)
-            return Task.FromResult(SkillValidationResult.Fail("IR-1 EventSpec 未 stable"));
+            return Task.FromResult(SkillValidationResult.Fail("IR-1 EventSpec 未 stable（设计启动另须 Finalize，见 DesignSkillsApi）"));
 
         if (snapshot.Find(IrFragmentTypes.Architecture, IrStabilityStates.Stable) != null)
             return Task.FromResult(SkillValidationResult.Fail("架构片段已 stable"));

@@ -33,7 +33,7 @@
   const runningSkills = computed(() => {
     const list: Array<{ id: string; label: string; percent: number }> = [];
     if (analyst?.analystLoading.value) {
-      list.push({ id: 'analyst', label: 'Analyst · SA 九步', percent: saTotal.value });
+      list.push({ id: 'analyst', label: '需求分析 · 三轮编排', percent: saTotal.value });
     }
     const progress = designSkill?.skillProgress.value ?? {};
     const labels: Record<string, string> = {

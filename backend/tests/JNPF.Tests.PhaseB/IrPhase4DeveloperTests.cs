@@ -6,6 +6,7 @@ using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Ir;
 using JNPF.InteAssistant.Skills;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using SqlSugar;
 
 namespace JNPF.Tests.PhaseB;
@@ -34,7 +35,7 @@ public static class IrPhase4DeveloperTests
 
     private static async Task TestDeveloperSkill_ValidateInputAsync()
     {
-        var gate = new SystemDesignLockedCompletenessGate();
+        var gate = new SystemDesignLockedCompletenessGate(NullLogger<SystemDesignLockedCompletenessGate>.Instance);
         var incomplete = new IrSnapshot
         {
             Fragments = new[]
@@ -120,7 +121,7 @@ public static class IrPhase4DeveloperTests
         return new DeveloperSkillService(
             new TemplateContextBuilder(),
             new CodegenWorkspaceWriter(),
-            new SystemDesignLockedCompletenessGate(),
+            new SystemDesignLockedCompletenessGate(NullLogger<SystemDesignLockedCompletenessGate>.Instance),
             new CodegenBackendRegistry(),
             loggerFactory.CreateLogger<DeveloperSkillService>(),
             new EntityDesignRepository(CreateSqliteClientWithEntityFieldTable()));
