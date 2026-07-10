@@ -1,5 +1,6 @@
 ﻿using JNPF.Common.Const;
 using JNPF.Common.Core.Manager;
+using JNPF.Common.Manager;
 using JNPF.Extensions;
 using JNPF.Common.Enums;
 using JNPF.Common.Extension;
@@ -67,6 +68,11 @@ public class VisualDevService : IVisualDevService, IDynamicApiController, ITrans
     private readonly TenantOptions _tenant;
 
     /// <summary>
+    /// 缓存管理.
+    /// </summary>
+    private readonly ICacheManager _cacheManager;
+
+    /// <summary>
     /// 初始化一个<see cref="VisualDevService"/>类型的新实例.
     /// </summary>
     public VisualDevService(
@@ -75,7 +81,8 @@ public class VisualDevService : IVisualDevService, IDynamicApiController, ITrans
         IUserManager userManager,
         IOptions<TenantOptions> tenantOptions,
         RunService runService,
-        ISqlSugarClient context)
+        ISqlSugarClient context,
+        ICacheManager cacheManager)
     {
         _visualDevRepository = visualDevRepository;
         _userManager = userManager;
@@ -83,6 +90,7 @@ public class VisualDevService : IVisualDevService, IDynamicApiController, ITrans
         _tenant = tenantOptions.Value;
         _changeDataBase = changeDataBase;
         _db = context.AsTenant();
+        _cacheManager = cacheManager;
     }
 
     #region Get
@@ -121,15 +129,18 @@ public class VisualDevService : IVisualDevService, IDynamicApiController, ITrans
     [HttpGet("")]
     public async Task<dynamic> GetList([FromQuery] VisualDevListQueryInput input)
     {
-        // ── 顺序预加载引用数据（避免 N+1 子查询） ──
+        // ── 引用表缓存加载（5 分钟 TTL，避免每次分页请求都全表扫描） ──
         // 注意：SqlSugar ISqlSugarClient 非线程安全，禁止并发查询（Task.Run / Task.WhenAll）。
-        // 并发会导致 "Collection was modified" / "A task was canceled" / mapping metadata 损坏。
-        // 4 个轻量查询顺序执行仅 ~5ms，安全性优先。
+        var tenantId = _userManager.TenantId ?? "default";
         var refClient = _visualDevRepository.AsSugarClient();
-        var dict = await refClient.Queryable<DictionaryDataEntity>().Where(d => d.DeleteMark == null).ToListAsync();
-        var users = await refClient.Queryable<UserEntity>().Where(u => u.DeleteMark == null).ToListAsync();
-        var systems = await refClient.Queryable<SystemEntity>().Where(s => s.DeleteMark == null).ToListAsync();
-        var modules = await refClient.Queryable<ModuleEntity>().Where(m => m.DeleteMark == null).ToListAsync();
+        var dict = await GetOrSetCacheAsync($"VisualDev_RefDict_{tenantId}",
+            () => refClient.Queryable<DictionaryDataEntity>().Where(d => d.DeleteMark == null).ToListAsync());
+        var users = await GetOrSetCacheAsync($"VisualDev_RefUsers_{tenantId}",
+            () => refClient.Queryable<UserEntity>().Where(u => u.DeleteMark == null).ToListAsync());
+        var systems = await GetOrSetCacheAsync($"VisualDev_RefSystems_{tenantId}",
+            () => refClient.Queryable<SystemEntity>().Where(s => s.DeleteMark == null).ToListAsync());
+        var modules = await GetOrSetCacheAsync($"VisualDev_RefModules_{tenantId}",
+            () => refClient.Queryable<ModuleEntity>().Where(m => m.DeleteMark == null).ToListAsync());
 
         // ── 主查询：分页列表（不含子查询，单次 SQL 完成） ──
         SqlSugarPagedList<VisualDevListOutput>? data = await _visualDevRepository.AsSugarClient().Queryable<VisualDevEntity>()
@@ -2365,6 +2376,19 @@ public class VisualDevService : IVisualDevService, IDynamicApiController, ITrans
             tInfo.DbLink = link;
             await _runService.SyncField(tInfo);
         }
+    }
+
+    /// <summary>
+    /// 缓存优先读取（5 分钟 TTL），避免每次分页请求都全表扫描引用表。
+    /// </summary>
+    private async Task<List<T>> GetOrSetCacheAsync<T>(string key, Func<Task<List<T>>> factory, int ttlMinutes = 5)
+    {
+        var cached = _cacheManager.Get<List<T>>(key);
+        if (cached != null) return cached;
+
+        var result = await factory();
+        _cacheManager.Set(key, result, TimeSpan.FromMinutes(ttlMinutes));
+        return result;
     }
 
     /// <summary>

@@ -103,10 +103,7 @@ public class DesignSkillsApiService : IDynamicApiController, ITransient
         if (!status.CanRunDesign)
         {
             _quotaGuard.Release(tenantId, pipelineId);
-            var reason = !status.AnalysisFinalized
-                ? AnalysisFinalizedGate.NotFinalizedMessage
-                : "ai_entity_field 无投影字段，请先完成 Round 3 工程保障";
-            throw Oops.Bah(reason)
+            throw Oops.Bah(BuildCannotRunDesignReason(status))
                 .StatusCode(StatusCodes.Status400BadRequest);
         }
 
@@ -162,10 +159,7 @@ public class DesignSkillsApiService : IDynamicApiController, ITransient
             var status = await _orchestrator.GetStatusAsync(pipelineId, tenantId, projectId, CancellationToken.None);
             if (!status.CanRunDesign)
             {
-                var reason = !status.AnalysisFinalized
-                    ? AnalysisFinalizedGate.NotFinalizedMessage
-                    : "ai_entity_field 无投影字段，请先完成 Round 3 工程保障";
-                throw Oops.Bah(reason)
+                throw Oops.Bah(BuildCannotRunDesignReason(status))
                     .StatusCode(StatusCodes.Status400BadRequest);
             }
         }
@@ -186,6 +180,22 @@ public class DesignSkillsApiService : IDynamicApiController, ITransient
             pipelineId,
             status = "running",
         };
+    }
+
+    /// <summary>按优先级拼拒绝原因：Finalize → 字段投影 → 质量门控。</summary>
+    private static string BuildCannotRunDesignReason(DesignOrchestratorStatus status)
+    {
+        if (!status.AnalysisFinalized)
+            return AnalysisFinalizedGate.NotFinalizedMessage;
+        if (!status.HasEntityFields)
+            return "ai_entity_field 无投影字段，请先完成 Round 3 工程保障";
+        if (!status.QualityGatePasses)
+        {
+            if (status.QualityCriticalCount > 0)
+                return $"一致性存在 {status.QualityCriticalCount} 条 CRITICAL，禁止启动设计 Skill";
+            return $"质量门控未通过：总分={status.QualityTotalScore:0.#}（须≥60）、结构分须≥70";
+        }
+        return "设计前置条件未满足";
     }
 
     private async Task<(string ProjectId, string TenantId)> ResolveProjectAsync(

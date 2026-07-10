@@ -113,6 +113,9 @@ public record ClarificationAnswer
 
     /// <summary>"其他"项或 text 题的自由文本补充。</summary>
     public string? FreeText { get; init; }
+
+    /// <summary>矩阵行作答（矩阵题专用：每行独立选择与补充说明）。</summary>
+    public List<MatrixSubItem>? MatrixRowAnswers { get; init; }
 }
 
 /// <summary>用户提交作答的请求体（POST /api/studio/skills/clarification/{id}/answer）。</summary>

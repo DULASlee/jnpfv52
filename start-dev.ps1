@@ -23,7 +23,8 @@ function Invoke-BackendBuild {
         dotnet build $ProjectPath `
             -v q /nologo `
             -p:RunAnalyzers=false `
-            -p:CI_BUILD=false
+            -p:CI_BUILD=false `
+            -p:IsPackable=false
     } finally {
         Pop-Location
         [Console]::OutputEncoding = $prev
@@ -456,7 +457,7 @@ if (Test-Path $viteCache) {
 }
 
 Start-DevWindow -Title 'JNPF PC :3100' -WorkDir $frontendDir -Command `
-    "Write-Host 'Vite PC starting...'; pnpm dev -- --force"
+    "Write-Host 'Vite PC starting...'; pnpm dev"
 
 $null = Wait-HttpReady -Url 'http://127.0.0.1:3100' -TimeoutSec 90 -Label 'PC frontend :3100'
 

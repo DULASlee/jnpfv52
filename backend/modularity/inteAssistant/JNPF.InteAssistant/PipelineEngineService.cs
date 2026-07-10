@@ -340,7 +340,7 @@ public class PipelineEngineService : IPipelineEngine, IScoped
     }
 
     public async Task<List<PipelineSummary>> ListAsync(
-        long tenantId, int pageIndex, int pageSize, CancellationToken ct = default)
+        long tenantId, int pageIndex, int pageSize, string? creatorUserId = null, CancellationToken ct = default)
     {
         if (_db == null) return new List<PipelineSummary>();
         if (pageIndex < 0) pageIndex = 0;
@@ -352,6 +352,12 @@ public class PipelineEngineService : IPipelineEngine, IScoped
         if (!string.IsNullOrWhiteSpace(tenant))
         {
             query = query.Where(x => x.TenantId == tenant);
+        }
+
+        // R12：同租户按创建人隔离
+        if (!string.IsNullOrWhiteSpace(creatorUserId))
+        {
+            query = query.Where(x => x.CreatorUserId == creatorUserId);
         }
 
         var entities = await query

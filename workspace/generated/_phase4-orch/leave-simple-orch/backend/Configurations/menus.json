@@ -1,0 +1,28 @@
+{
+  "systemName": "\u4E1A\u52A1\u7CFB\u7EDF",
+  "menus": [
+    {
+      "id": "menu_generatedmodule",
+      "parentId": "0",
+      "fullName": "\u4E1A\u52A1\u7CFB\u7EDF",
+      "enCode": "\u4E1A\u52A1\u7CFB\u7EDF",
+      "icon": "icon-ym-system",
+      "type": "directory",
+      "urlAddress": "",
+      "sortCode": 99,
+      "enabledMark": true
+    },
+    {
+      "id": "menu_leaverequest",
+      "parentId": "menu_generatedmodule",
+      "fullName": "LeaveRequest\u7BA1\u7406",
+      "enCode": "leaverequest",
+      "icon": "icon-ym-tree-organization",
+      "type": "menu",
+      "urlAddress": "/leaverequest/list",
+      "sortCode": 1,
+      "enabledMark": true
+    }
+  ],
+  "permissions": []
+}

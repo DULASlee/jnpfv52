@@ -527,6 +527,9 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
 
         var questions = ParseQuestionsFromLlm(response.Content, round);
 
+        // P9 兜底：LLM 未产出矩阵格式但问题覆盖 ≥2 个事件 → 自动合成矩阵行
+        ApplyMatrixFallback(questions, compileResult);
+
         // 确保末项是"其他+文本框"逃生口（ADR-005 要求）
         EnsureEscapeHatch(questions);
 
@@ -848,7 +851,12 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                       - 只问真正模糊的、需要业务方决策的点
                       - 行业惯例能定的（如请假类型、审批层级、状态流转）不要问用户
                       - 每个问题含：问题文本 + 3-5 个选项（末项为"其他"）+ context_hint（为什么问）+ 默认值
-                    输出 JSON 数组，每元素：{"text","contextHint","defaultOption","options":["...","其他"]}
+                      - 如果问题是「对多个事件做同一维度的决策」（如"每个事件的审批策略是什么？"），必须使用 matrixSubItems 格式：
+                        输出 questionFormat: "MATRIX_SINGLE"（每行单选）或 "MATRIX_MULTI"（每行多选），
+                        并输出 matrixSubItems 数组，每元素 {"rowId":"event_xxx","rowLabel":"事件名"}
+                        单事件/实体的问题使用 questionFormat: "SINGLE" 或 "MULTI"
+                    输出 JSON 数组，每元素：
+                    {"text","questionFormat","contextHint","defaultOption","matrixSubItems":[{"rowId","rowLabel"}],"options":["...","其他"]}
                     只输出 JSON，不要 markdown。
                     """),
             2 => ("深度精化确认",
@@ -858,7 +866,11 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                     基于用户上一轮的回答与 SA 深度分析（PSpec/DecisionTable），判断分析中发现的遗漏/冲突/假设中，
                     最重要的 3 个需要用户裁决的点是什么？
                     规则：每个问题聚焦一个决策点（边界条件/异常路径/业务规则冲突）。
-                    输出 JSON 数组，每元素：{"text","contextHint","defaultOption","options":["...","其他"]}
+                    矩阵规则（同 Round 1）：
+                      如果问题覆盖 2+ 个事件/实体的同一决策维度 → 使用 questionFormat "MATRIX_SINGLE"/"MATRIX_MULTI"
+                      并输出 matrixSubItems 数组；单事件/实体 → "SINGLE"/"MULTI"
+                    输出 JSON 数组，每元素：
+                    {"text","questionFormat","contextHint","defaultOption","matrixSubItems":[{"rowId","rowLabel"}],"options":["...","其他"]}
                     只输出 JSON。
                     """),
             3 => ("最终遗漏检查",
@@ -867,7 +879,11 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                     你是最终审查专家。
                     任务：检查全部三轮分析后，还有遗漏吗？推导的假设项（assumptions）中哪些需要用户确认？
                     规则：最多发现 3 个遗漏/待确认假设；如无遗漏，返回空数组 []。
-                    输出 JSON 数组，每元素：{"text","contextHint","defaultOption","options":["...","其他"]}
+                    矩阵规则（同 Round 1）：
+                      如果问题覆盖 2+ 个事件/实体的同一决策维度 → 使用 questionFormat "MATRIX_SINGLE"/"MATRIX_MULTI"
+                      并输出 matrixSubItems 数组；单事件/实体 → "SINGLE"/"MULTI"
+                    输出 JSON 数组，每元素：
+                    {"text","questionFormat","contextHint","defaultOption","matrixSubItems":[{"rowId","rowLabel"}],"options":["...","其他"]}
                     如确实无遗漏，输出 []。
                     """),
             _ => ($"第 {round} 轮确认", string.Empty, "输出 JSON 数组。"),
@@ -998,6 +1014,51 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             // JSON 解析失败 → 返回空列表（调用方降级处理）
         }
         return questions;
+    }
+
+    /// <summary>
+    /// P9 兜底：LLM 未产出矩阵格式，但问题文本覆盖 ≥2 个事件名 → 自动合成矩阵行并升级 QuestionFormat。
+    /// 这是 LLM 不听话时的保险——即便 prompt 已指令矩阵格式，LLM 仍可能忽略。
+    /// </summary>
+    private static void ApplyMatrixFallback(List<ClarificationQuestion> questions, SaNineViewCompileResult compileResult)
+    {
+        var eventNames = compileResult.EventResults
+            .Select(e => e.EventName)
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (eventNames.Count < 2) return;
+
+        for (var i = 0; i < questions.Count; i++)
+        {
+            var q = questions[i];
+
+            // 已有矩阵格式的跳过
+            if (q.MatrixSubItems is { Count: > 0 }) continue;
+            // 非 SINGLE/MULTI 格式的跳过（text 型不适用矩阵）
+            if (q.QuestionFormat is not ("SINGLE" or "MULTI")) continue;
+
+            // 检查问题文本中包含哪些事件名（OrdinalIgnoreCase 容错 LLM 大小写不一致）
+            var matchedEvents = eventNames
+                .Where(en => q.Text.Contains(en, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (matchedEvents.Count < 2) continue;
+
+            // 为每个匹配的事件创建矩阵行（record 的 init-only 属性需用 with 表达式替换）
+            var matrixItems = matchedEvents.Select((en, j) => new MatrixSubItem
+            {
+                RowId = $"evt-{j + 1}",
+                RowLabel = en,
+            }).ToList();
+
+            questions[i] = q with
+            {
+                MatrixSubItems = matrixItems,
+                QuestionFormat = q.QuestionFormat == "MULTI" ? "MATRIX_MULTI" : "MATRIX_SINGLE",
+            };
+        }
     }
 
     /// <summary>确保题集末项是"其他+文本框"逃生口（ADR-005 要求）。</summary>

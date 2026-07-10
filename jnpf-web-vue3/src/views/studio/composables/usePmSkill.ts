@@ -40,6 +40,7 @@ export function usePmSkill(pipelineId: Ref<number>, snapshots: Ref<IrFragmentSna
     if (!pipelineId.value || confirmLoading.value) return;
     confirmLoading.value = true;
     try {
+      // 后端 AutoRunAnalyst=true 时调度 requirement-analysis（非旧 analyst-skill）
       await confirmSkeleton(pipelineId.value, { autoRunAnalyst });
       await refreshAll();
     } finally {

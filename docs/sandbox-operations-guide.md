@@ -20,9 +20,20 @@
 ## 前置条件
 
 1. **Docker** 已安装并运行 (`docker info` 可用)
-2. **jnpf-sandbox:latest** 镜像已构建或可从 registry 拉取
-3. **SQL Server** 实例可从 Docker 容器访问 (`host.docker.internal`)
-4. `Sandbox:ConnectionStringTemplate` 配置正确
+2. **jnpf-sandbox:latest** 镜像已构建（仓库内 Dockerfile）：
+
+```powershell
+# 仓库根目录
+powershell -ExecutionPolicy Bypass -File docker/jnpf-sandbox/build.ps1
+# 或
+docker build -t jnpf-sandbox:latest -f docker/jnpf-sandbox/Dockerfile .
+```
+
+3. **SQL Server** 实例可从 Docker 容器访问 (`host.docker.internal`)（后端沙箱连接串场景）
+4. `Sandbox:ConnectionStringTemplate` / `Sandbox:Image` 配置正确（默认 `jnpf-sandbox:latest`）
+5. `StudioPreview:ProjectPath` 指向本机 `studio-preview` 壳工程（交付预览注入用）
+
+> **说明（30 号 W2）：** 交付预览路径由 `PipelineDeliveryCoordinator` 将生成的 Vue 注入 `studio-preview`，再 `docker cp` 到容器 `/app`，执行 `npm install` + `vite --port 4173`。镜像基于 Node 20，`CMD sleep infinity` 保活。
 
 ## 关键配置
 

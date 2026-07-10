@@ -49,8 +49,13 @@ public sealed class DesignOrchestratorStatus
     /// <summary>ai_entity_field 三元组下字段行数 &gt; 0。</summary>
     public bool HasEntityFields { get; init; }
     public int EntityFieldCount { get; init; }
-    /// <summary>可启动设计：finalized ∧ 有实体字段。</summary>
+    /// <summary>可启动设计：finalized ∧ 有实体字段 ∧ 质量门控（有评分则 PassesGate；无评分仅拦 CRITICAL）。</summary>
     public bool CanRunDesign { get; init; }
+    /// <summary>是否已有 sa_quality_score 行。</summary>
+    public bool HasQualityScore { get; init; }
+    public decimal? QualityTotalScore { get; init; }
+    public int QualityCriticalCount { get; init; }
+    public bool QualityGatePasses { get; init; }
     public bool DesignComplete { get; init; }
     public IReadOnlyList<DesignSkillPhaseStatus> Phases { get; init; } = Array.Empty<DesignSkillPhaseStatus>();
     public long TokenConsumed { get; init; }
@@ -226,7 +231,9 @@ public sealed class DesignSkillOrchestrator : IDesignSkillOrchestrator, ITransie
         var entityFieldCount = await _entityDesignRepo.CountFieldsAsync(
             tenantId, projectId, pipelineId.ToString(), ct);
         var hasEntityFields = entityFieldCount > 0;
-        var canRunDesign = analysisFinalized && hasEntityFields;
+        var quality = await QualityDesignGate.EvaluateAsync(
+            _db, tenantId, projectId, pipelineId.ToString(), ct);
+        var canRunDesign = analysisFinalized && hasEntityFields && quality.Passes;
 
         var designComplete = snapshots.Any(s =>
             s.FragmentType == IrFragmentTypes.SystemDesign
@@ -288,6 +295,10 @@ public sealed class DesignSkillOrchestrator : IDesignSkillOrchestrator, ITransie
             HasEntityFields = hasEntityFields,
             EntityFieldCount = entityFieldCount,
             CanRunDesign = canRunDesign,
+            HasQualityScore = quality.HasScore,
+            QualityTotalScore = quality.TotalScore,
+            QualityCriticalCount = quality.CriticalCount,
+            QualityGatePasses = quality.Passes,
             DesignComplete = designComplete,
             Phases = phases,
             TokenConsumed = project?.TokenConsumed ?? 0,
@@ -325,5 +336,8 @@ public sealed class DesignSkillOrchestrator : IDesignSkillOrchestrator, ITransie
         if (fieldCount <= 0)
             throw Oops.Bah("ai_entity_field 无投影字段，请先完成 Round 3 工程保障（EntityDesignProjector）")
                 .StatusCode(StatusCodes.Status400BadRequest);
+
+        await QualityDesignGate.EnsureCanRunDesignAsync(
+            _db, tenantId, projectId, pipelineId.ToString(), _logger, ct);
     }
 }

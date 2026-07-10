@@ -89,7 +89,7 @@ public class DeveloperSkillsApiService : IDynamicApiController, ITransient
             {
                 _quotaGuard.Release(tenantId, pipelineId);
             }
-        }, timeout: TimeSpan.FromMinutes(30));
+        }, timeout: TimeSpan.FromMinutes(60));
 
         return new
         {
@@ -97,7 +97,7 @@ public class DeveloperSkillsApiService : IDynamicApiController, ITransient
             skillId = DevelopmentSkillIds.Developer,
             pipelineId,
             status = "running",
-            message = "Developer 编排（codegen + sandbox build + arch-guard）已启动",
+            message = "自动交付链已启动（codegen → sandbox → tester → deploy），请关注 SSE 进度",
         };
     }
 
@@ -114,7 +114,11 @@ public class DeveloperSkillsApiService : IDynamicApiController, ITransient
         if (!_tenantGuard.VerifyOwnership(pipeline, tenantId) && !TenantResolver.IsSuperTenant())
             throw Oops.Oh("无权访问该流水线");
 
-        return (pipelineId.ToString(), pipeline.TenantId ?? tenantId);
+        // R12：MUST 返回真实 ProjectId，禁止用 pipelineId 冒充
+        var projectId = string.IsNullOrWhiteSpace(pipeline.ProjectId)
+            ? pipelineId.ToString()
+            : pipeline.ProjectId;
+        return (projectId, pipeline.TenantId ?? tenantId);
     }
 
     private static string ResolveEffectiveTenantId(string? tenantSnapshot, string? pipelineTenantId)

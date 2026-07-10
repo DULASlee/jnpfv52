@@ -1,14 +1,38 @@
 # JNPF V5.2 Progress Registry
 # Canonical reference for all completed milestones and current state.
 
-version: "8.12"
+version: "8.14"
 last_updated: "2026-07-10"
-current_phase: "S2 重构（25–28）文档消歧完成 · 下游适配待代码 · 部署 step4 待推进"
+current_phase: "全链条冲刺（30 号）代码已推进 · 待 Docker 起预览 + 新 pipeline 全链冒烟"
 current_focus:
-  - "文档：8–16 已对齐 25+26–28（supersede/契约指针）"
-  - "代码下一步：Design/Developer ValidateInput → finalized + ai_entity_field（清单 B1–B6）"
-  - "其后：部署 Skill + 07–09 交付物（原 step4/step5）"
-  next_gate: "B1–B6 下游输入适配 + 新 S2→设计联调绿"
+  - "已落地：W1 主路径切 requirement-analysis；Architect/SystemDesign 读 ai_entity_field；W2 Dockerfile；W4 fork/Creator隔离/freeze UI"
+  - "阻塞运行时：本机 Docker Desktop 未启动 → jnpf-sandbox 镜像未 build；W3 新 pipeline 全链冒烟未跑"
+  - "下一步：启动 Docker → build.ps1 → 热重载后端 → 新 pipeline 确认总体设计验试用链接"
+  next_gate: "docker build jnpf-sandbox + 新 pipeline 全链到 preview_ready"
+
+s2_requirement_analysis_refactor:
+  status: docs_aligned
+  anchor_docs:
+    - "docs/AI原生开发/1、多用户多任务并行/25、需求分析子链重构方案书（修订版）.md"
+    - "docs/AI原生开发/1、多用户多任务并行/26、需求分析重构-第一阶段开发计划（数据基座与SA编译增强）.md"
+    - "docs/AI原生开发/1、多用户多任务并行/27、需求分析重构-第二阶段开发计划（三轮循环与矩阵题）.md"
+    - "docs/AI原生开发/1、多用户多任务并行/28、需求分析重构-第三阶段开发计划（需求分析书与质量验收）.md"
+  supersedes: "9号旧 PM→Analyst→sa-service 九步生产主链"
+  downstream_contract: "25 §6 — finalized=true + ai_entity_field"
+  fullchain_docs_patched: ["8","9","10","11","12","13","14","15","16"]
+  sprint_30_doc: "docs/AI原生开发/1、多用户多任务并行/30、全链条冲刺开发计划（最后一公里）.md"
+  code_adapt_done_2026_07_10:
+    - "AnalysisFinalizedGate + DesignSkillOrchestrator/API CanRunDesign"
+    - "EntityDesignRepository Count/ListFields；UiDesign 读 ai_entity_field"
+    - "DesignSkillsApi ResolveProjectAsync 返回真实 ProjectId（R12）"
+    - "前端 canRunDesign / 文案对齐；studio-s34 门禁字段断言"
+    - "W1: confirm-skeleton → requirement-analysis；Architect/SystemDesign 消费 ai_entity_field"
+    - "W2: docker/jnpf-sandbox/Dockerfile + 镜像缺失可观测错误"
+    - "W4: POST fork + List Creator 隔离 + freeze/resume/fork UI + diagnose-triple-key.mjs"
+  code_adapt_pending:
+    - "W2: Docker Desktop 启动后 build 镜像并真预览 200"
+    - "W3: 新 pipeline 全链冒烟到试用链接 + evidence"
+    - "W1-T4 运行时：未 Finalize 设计 400 的 HTTP 实测（断言已加强）"
 
 s2_requirement_analysis_refactor:
   status: docs_aligned
@@ -58,9 +82,11 @@ skills_five_step_plan:
     e2e_long: "node scripts/phase4-green-path.mjs --pipeline-id 311"
     fixes: "TemplateContextBuilder string-modules + nested FormPageIR + TenantId dedupe; phase4 skip re-run if green"
   step4_deploy:
-    status: pending
+    status: in_progress
+    note: "自动链+SSE+Dockerfile 已落地；待 Docker Desktop 构建 jnpf-sandbox 并真预览"
   step5_deliverables_07_09:
-    status: pending
+    status: in_progress
+    note: "落盘逻辑+Vitest skip 断言已加；待 Deploy 成功后硬绿"
 
 phase4_schedule:
   anchor_doc: "docs/AI原生开发/1、多用户多任务并行/12、全链条第四阶段开发计划.md"

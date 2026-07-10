@@ -81,14 +81,18 @@ interface LazyComponentResult {
   component: Component;
   /** 是否已加载完成，可用于控制按钮 disabled 状态 */
   isLoaded: Ref<boolean>;
-  /** 手动触发预加载（如绑定到按钮的 @mouseenter） */
-  prefetch: () => void;
+  /** 手动触发预加载（如绑定到按钮的 @mouseenter），返回 Promise 以便调用方 await */
+  prefetch: () => Promise<void>;
+  /** 同 prefetch，语义更明确（用于需要等待加载完成的场景，如 useLazyModal） */
+  load: () => Promise<void>;
 }
+
+export type { LazyComponentResult };
 
 export function useLazyComponent(loader: () => Promise<Record<string, any>>, moduleOrOptions: string | LazyOptions): LazyComponentResult {
   const opts: LazyOptions = typeof moduleOrOptions === 'string' ? { moduleName: moduleOrOptions } : moduleOrOptions;
 
-  const { moduleName, loadingComponent, timeout = 30000, delay = 0 } = opts;
+  const { moduleName, loadingComponent, timeout = 10000, delay = 0 } = opts;
 
   // 从 loader 的 toString 中提取文件路径用于错误定位
   const componentPath = extractPath(loader);
@@ -159,16 +163,22 @@ export function useLazyComponent(loader: () => Promise<Record<string, any>>, mod
     },
   });
 
-  function prefetch(): void {
-    triggerLoad().catch(() => {
+  function prefetch(): Promise<void> {
+    return triggerLoad().catch(() => {
       // prefetch 失败不阻塞 UI，仅记录
     });
+  }
+
+  /** 语义化别名：等待加载完成（失败抛出异常，调用方可 try/catch） */
+  function load(): Promise<void> {
+    return triggerLoad().then(() => {});
   }
 
   return {
     component: asyncComp,
     isLoaded,
     prefetch,
+    load,
   };
 }
 

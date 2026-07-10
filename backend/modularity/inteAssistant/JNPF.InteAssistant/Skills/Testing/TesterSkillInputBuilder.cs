@@ -1,4 +1,5 @@
 using System.Text.Json;
+using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Skills;
 
@@ -15,6 +16,15 @@ public static class TesterSkillInputBuilder
     };
 
     public static TesterBuildResult Build(SkillContext context)
+        => Build(context, entityFields: null);
+
+    /// <summary>
+    /// 25 §6：优先用 <paramref name="entityFields"/>（ai_entity_field）；
+    /// IR confirmedFields / FormPage 仅作派生回退，不得当唯一源。
+    /// </summary>
+    public static TesterBuildResult Build(
+        SkillContext context,
+        IReadOnlyList<AiEntityFieldEntity>? entityFields)
     {
         var warnings = (context.ArchGuardWarnings ?? Array.Empty<SkillArchWarning>())
             .Select(w => new TesterArchWarning
@@ -32,12 +42,20 @@ public static class TesterSkillInputBuilder
         var systemDesign = context.Snapshot.Find(IrFragmentTypes.SystemDesign, IrStabilityStates.Locked)
             ?? context.Snapshot.Find(IrFragmentTypes.SystemDesign);
 
-        var fields = eventSpec != null
-            ? ParseConfirmedFieldsFromEventSpec(eventSpec.Payload)
-            : ParseConfirmedFieldsFromFormPage(formPage?.Payload);
+        var fields = MapFromEntityFields(entityFields);
+        var fieldSource = fields.Count > 0 ? "ai_entity_field" : null;
 
         if (fields.Count == 0)
-            throw new InvalidOperationException("无法从 IR1_EventSpec 或 IR2_FormPageIR 解析 confirmedFields");
+        {
+            fields = eventSpec != null
+                ? ParseConfirmedFieldsFromEventSpec(eventSpec.Payload)
+                : ParseConfirmedFieldsFromFormPage(formPage?.Payload);
+            fieldSource = fields.Count > 0 ? "ir_json_fallback" : null;
+        }
+
+        if (fields.Count == 0)
+            throw new InvalidOperationException(
+                "无法从 ai_entity_field / IR1_EventSpec / IR2_FormPageIR 解析字段（声明 3 唯一源优先）");
 
         var stateMachines = ParseStateMachines(systemDesign?.Payload);
         var derivationMode = stateMachines.Count > 0 ? "field-and-state-machine" : "field-only";
@@ -53,12 +71,34 @@ public static class TesterSkillInputBuilder
         return new TesterBuildResult
         {
             DerivationMode = derivationMode,
+            FieldSource = fieldSource ?? "unknown",
             ConfirmedFields = fields,
             Transitions = transitions,
             States = states,
             ArchGuardWarnings = warnings,
             FormPageName = ParseFormPageName(formPage?.Payload),
         };
+    }
+
+    private static List<TesterConfirmedField> MapFromEntityFields(IReadOnlyList<AiEntityFieldEntity>? entityFields)
+    {
+        if (entityFields == null || entityFields.Count == 0)
+            return new List<TesterConfirmedField>();
+
+        return entityFields
+            .Where(f => !string.IsNullOrWhiteSpace(f.FieldName))
+            .GroupBy(f => f.FieldName, StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var f = g.First();
+                return new TesterConfirmedField
+                {
+                    Name = f.FieldName,
+                    Type = string.IsNullOrWhiteSpace(f.CSharpType) ? "string" : f.CSharpType,
+                    Required = f.IsRequired,
+                };
+            })
+            .ToList();
     }
 
     private static List<TesterConfirmedField> ParseConfirmedFieldsFromEventSpec(string payloadJson)
@@ -225,6 +265,8 @@ public static class TesterSkillInputBuilder
 public sealed class TesterBuildResult
 {
     public required string DerivationMode { get; init; }
+    /// <summary>ai_entity_field | ir_json_fallback | unknown</summary>
+    public string FieldSource { get; init; } = "unknown";
     public required IReadOnlyList<TesterConfirmedField> ConfirmedFields { get; init; }
     public required IReadOnlyList<TesterStateTransition> Transitions { get; init; }
     public required IReadOnlyList<TesterStateNode> States { get; init; }

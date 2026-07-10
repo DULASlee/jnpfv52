@@ -1,9 +1,12 @@
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using JNPF.DependencyInjection;
 using JNPF.FriendlyException;
+using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
+using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Infrastructure.Messaging;
 using JNPF.InteAssistant.Llm;
@@ -32,17 +35,20 @@ public sealed class ArchitectSkillService : CognitiveSkill, ITransient
 
     private readonly ISkillLlmBudgetGuard _budgetGuard;
     private readonly IPipelineSseChannelHub _sseHub;
+    private readonly EntityDesignRepository _entityDesignRepo;
     private readonly ILogger<ArchitectSkillService> _logger;
 
     public ArchitectSkillService(
         ICognitiveSkillToolkit toolkit,
         ISkillLlmBudgetGuard budgetGuard,
         IPipelineSseChannelHub sseHub,
+        EntityDesignRepository entityDesignRepo,
         ILogger<ArchitectSkillService> logger)
         : base(toolkit)
     {
         _budgetGuard = budgetGuard;
         _sseHub = sseHub;
+        _entityDesignRepo = entityDesignRepo;
         _logger = logger;
     }
 
@@ -138,6 +144,11 @@ public sealed class ArchitectSkillService : CognitiveSkill, ITransient
 
         // 阶段二：读用户答案，注入 userPrompt，跑 ToT
         var answersText = ExtractAnswersText(archClarification.Payload);
+        var fieldCount = await _entityDesignRepo.CountFieldsAsync(
+            context.TenantId, context.ProjectId, context.PipelineId.ToString(), ct);
+        if (fieldCount == 0)
+            throw Oops.Bah("Architect Skill: ai_entity_field 无字段，拒绝架构生成（须先 Round 3 Finalize 投影）");
+
         var payload = await GenerateArchitectureViaTotAsync(context, fragmentId, answersText, ct);
 
         yield return new AppendIrEventRequest
@@ -184,6 +195,9 @@ public sealed class ArchitectSkillService : CognitiveSkill, ITransient
                   "id": "q1",
                   "text": "问题文本",
                   "type": "single",
+                  "questionFormat": "SINGLE",
+                  "contextHint": "为什么问这个问题",
+                  "defaultOption": "o1",
                   "required": true,
                   "options": [
                     {"id":"o1","label":"选项A"},
@@ -202,6 +216,8 @@ public sealed class ArchitectSkillService : CognitiveSkill, ITransient
             - type=single（单选）/multi（多选）；本阶段不用 text
             - required=true 的关键题不超过 2 个
             - id 用 q1/q2/...，option id 用 o1/o2/.../o_other
+            - 新增字段（P9）：contextHint（为什么问）、defaultOption（默认值 option id）、questionFormat（SINGLE|MULTI|MATRIX_SINGLE|MATRIX_MULTI）
+              如果问题是对「多个组件/模块」做同一维度的决策，使用 MATRIX_SINGLE 并输出 matrixSubItems：[{"rowId","rowLabel"}]
             - 只输出 JSON
             """;
 
@@ -211,6 +227,9 @@ public sealed class ArchitectSkillService : CognitiveSkill, ITransient
 
             IR-1 上下文：
             {context.PromptContext.CompressedSummary}
+
+            ai_entity_field（唯一字段源，25 §6）：
+            {await LoadEntityFieldContextAsync(context, ct)}
 
             projectId={context.ProjectId}
             """;
@@ -426,6 +445,10 @@ public sealed class ArchitectSkillService : CognitiveSkill, ITransient
             IR-1 上下文：
             {context.PromptContext.CompressedSummary}
             {clarificationBlock}
+
+            ai_entity_field（唯一字段源，25 §6）：
+            {await LoadEntityFieldContextAsync(context, ct)}
+
             请给出一种完整架构决策 JSON。
             projectId={context.ProjectId}
             """;
@@ -499,6 +522,24 @@ public sealed class ArchitectSkillService : CognitiveSkill, ITransient
         dict["stabilityState"] = JsonSerializer.SerializeToElement(IrStabilityStates.Stable);
 
         return JsonSerializer.Serialize(dict, JsonOptions);
+    }
+
+    /// <summary>25 §6：从 ai_entity_field 组装字段上下文，禁止仅依赖 IR JSON。</summary>
+    private async Task<string> LoadEntityFieldContextAsync(SkillContext context, CancellationToken ct)
+    {
+        var fields = await _entityDesignRepo.ListFieldsAsync(
+            context.TenantId, context.ProjectId, context.PipelineId.ToString(), ct);
+        if (fields.Count == 0)
+            return "（尚无投影字段 — 须 Finalize 后才有完整实体模型）";
+
+        var sb = new StringBuilder();
+        foreach (var g in fields.GroupBy(f => f.EntityName))
+        {
+            sb.AppendLine($"实体 {g.Key} (表 {g.First().TableName}):");
+            foreach (var f in g)
+                sb.AppendLine($"  - {f.FieldName} ({f.CSharpType}, required={f.IsRequired})");
+        }
+        return sb.ToString();
     }
 
     /// <summary>LLM 产出的澄清草案（内部反序列化用）。</summary>

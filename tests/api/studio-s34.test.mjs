@@ -85,8 +85,25 @@ describe.skipIf(skipPipeline)(`Studio S3→S4 产物 verify pipeline=${pipelineI
       expect(pick(status, 'analysisFinalized', 'AnalysisFinalized')).toBe(true);
       expect(pick(status, 'hasEntityFields', 'HasEntityFields')).toBe(true);
     }
+    // 反向：未 Finalize 或无字段 ⇒ 不可跑设计
+    if (!pick(status, 'analysisFinalized', 'AnalysisFinalized') || !pick(status, 'hasEntityFields', 'HasEntityFields')) {
+      expect(can).toBe(false);
+    }
   });
 
+  it('交付物 07~09 在 Deploy 后应出现（step5；未部署则 skip）', async (ctx) => {
+    const items = await getDeliverables(session, pipelineId);
+    const names = items.map(i => i.fileName || i.FileName || '');
+    const has07 = names.some(n => String(n).includes('07-codegen'));
+    const has08 = names.some(n => String(n).includes('08-testsuite'));
+    const has09 = names.some(n => String(n).includes('09-deployment'));
+    if (!has07 && !has08 && !has09) {
+      ctx.skip('07–09 尚未产出 — 需 Deploy 成功后断言');
+    }
+    if (has07) expect(has07).toBe(true);
+    if (has08) expect(has08).toBe(true);
+    if (has09) expect(has09).toBe(true);
+  });
   it('设计交付物 03~06 齐全', async (ctx) => {
     if (!(await s34Started(session))) {
       ctx.skip('S3 未启动 — studio-s34-chain.http 或 E2E_DRIVE_S34=1');

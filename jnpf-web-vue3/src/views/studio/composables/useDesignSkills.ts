@@ -106,6 +106,9 @@ export function useDesignSkills(pipelineId: Ref<number>, snapshots: Ref<IrFragme
   /** 25 §6：优先用后端 status；未拉到 status 时回退 ir1Stable（兼容旧 pipeline） */
   const analysisFinalized = computed(() => orchestratorStatus.value?.analysisFinalized ?? ir1Stable.value);
   const hasEntityFields = computed(() => orchestratorStatus.value?.hasEntityFields ?? ir1Stable.value);
+  const qualityGatePasses = computed(() => orchestratorStatus.value?.qualityGatePasses ?? true);
+  const qualityCriticalCount = computed(() => orchestratorStatus.value?.qualityCriticalCount ?? 0);
+  const qualityTotalScore = computed(() => orchestratorStatus.value?.qualityTotalScore ?? null);
 
   const ir2Snapshots = computed(() => snapshots.value.filter(s => IR2_FRAGMENT_TYPES.includes(s.fragmentType as (typeof IR2_FRAGMENT_TYPES)[number])));
 
@@ -115,7 +118,8 @@ export function useDesignSkills(pipelineId: Ref<number>, snapshots: Ref<IrFragme
 
   const canRunDesign = computed(() => {
     const gateOk =
-      orchestratorStatus.value?.canRunDesign ?? (analysisFinalized.value && hasEntityFields.value);
+      orchestratorStatus.value?.canRunDesign ??
+      (analysisFinalized.value && hasEntityFields.value && qualityGatePasses.value);
     return gateOk && !designLoading.value && (budgetInfo.value?.canRunDesign ?? true);
   });
 
@@ -330,6 +334,9 @@ export function useDesignSkills(pipelineId: Ref<number>, snapshots: Ref<IrFragme
     ir1Stable,
     analysisFinalized,
     hasEntityFields,
+    qualityGatePasses,
+    qualityCriticalCount,
+    qualityTotalScore,
     ir2Snapshots,
     designComplete,
     canRunDesign,

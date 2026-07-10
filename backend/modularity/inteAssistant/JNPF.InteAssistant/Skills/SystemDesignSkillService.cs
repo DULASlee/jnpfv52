@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using JNPF.DependencyInjection;
 using JNPF.FriendlyException;
+using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Constraints;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Ir;
@@ -22,15 +23,18 @@ public sealed class SystemDesignSkillService : CognitiveSkill, ITransient
     };
 
     private readonly IConstraintEngineService _constraintEngine;
+    private readonly EntityDesignRepository _entityDesignRepo;
     private readonly ILogger<SystemDesignSkillService> _logger;
 
     public SystemDesignSkillService(
         ICognitiveSkillToolkit toolkit,
         IConstraintEngineService constraintEngine,
+        EntityDesignRepository entityDesignRepo,
         ILogger<SystemDesignSkillService> logger)
         : base(toolkit)
     {
         _constraintEngine = constraintEngine;
+        _entityDesignRepo = entityDesignRepo;
         _logger = logger;
     }
 
@@ -94,6 +98,13 @@ public sealed class SystemDesignSkillService : CognitiveSkill, ITransient
     {
         var context = perception.Context;
         var fragmentId = $"systemDesign:{context.ProjectId}";
+
+        // 25 §6：锁定前校验 ai_entity_field 投影存在（字段唯一源）
+        var fieldCount = await _entityDesignRepo.CountFieldsAsync(
+            context.TenantId, context.ProjectId, context.PipelineId.ToString(), ct);
+        if (fieldCount == 0)
+            throw Oops.Bah("SystemDesign Skill: ai_entity_field 无字段，拒绝锁定（须先 Round 3 Finalize 投影）");
+
         var arch = context.Snapshot.Find(IrFragmentTypes.Architecture, IrStabilityStates.Stable)!;
         var ddl = context.Snapshot.Find(IrFragmentTypes.DDL, IrStabilityStates.Stable)!;
         var ui = context.Snapshot.Find(IrFragmentTypes.FormPageIR, IrStabilityStates.Stable)!;

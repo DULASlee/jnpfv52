@@ -27,6 +27,9 @@
         </a-popover>
       </div>
       <div class="top-bar-right">
+        <a-button v-if="pipelineId" size="small" :loading="lifecycleLoading" @click="handleFreezePipeline">冻结</a-button>
+        <a-button v-if="pipelineId" size="small" :loading="lifecycleLoading" @click="handleResumePipeline">恢复</a-button>
+        <a-button v-if="pipelineId" size="small" :loading="lifecycleLoading" @click="handleForkPipeline">Fork</a-button>
         <a-button v-if="showObservatoryToggle" size="small" :type="observatoryPanelCollapsed ? 'default' : 'primary'" ghost @click="onToggleObservatory">
           <template #icon><NodeIndexOutlined /></template>
           观测台
@@ -272,7 +275,7 @@
   import { PlusOutlined, SendOutlined, PauseOutlined, UpOutlined, DownOutlined, NodeIndexOutlined } from '@ant-design/icons-vue';
   import { message as antMessage, Modal } from 'ant-design-vue';
   import { defHttp } from '/@/utils/http/axios';
-  import { createPipeline, getGeneratedProjectList, getPageRoutes, quickBugfix, quickEnhancement, triggerSaGate } from '../api/studio/pipeline';
+  import { createPipeline, getGeneratedProjectList, getPageRoutes, quickBugfix, quickEnhancement, triggerSaGate, freezePipeline, resumePipeline, forkPipeline } from '../api/studio/pipeline';
   import { runArchitectSkill, runSystemDesignClarificationSkill } from '../api/studio/designSkills';
   import { runRequirementAnalysis } from '../api/studio/skills';
   import IrPreviewCard from './chat/IrPreviewCard.vue';
@@ -386,7 +389,7 @@
     if (!pmSkill) return;
     try {
       await pmSkill.confirmAndProceed(autoRunAnalyst);
-      antMessage.success(autoRunAnalyst ? '骨架已确认，Analyst 已启动' : '骨架已确认');
+      antMessage.success(autoRunAnalyst ? '骨架已确认，三轮需求分析已启动' : '骨架已确认');
       await irObservatory?.refreshAll();
       await refreshPipelineMaterials();
     } catch (e: any) {
@@ -430,6 +433,7 @@
   /** 阶段一 SA 门控是否已通过（未通过时每次发送走 sa-gate，不走 LLM execute） */
   const gatePassed = ref(false);
   const gateProcessing = ref(false);
+  const lifecycleLoading = ref(false);
 
   const observatoryPanelCollapsed = computed(() => irObservatory?.panelCollapsed.value ?? true);
 
@@ -879,6 +883,16 @@
         }
         break;
       }
+      case 'preview_ready': {
+        const preview = parseSseJsonPayload(data.data) as { previewUrl?: string; sandboxId?: string } | null;
+        void refreshPipelineMaterials();
+        void irObservatory?.refreshAll();
+        if (preview?.previewUrl) {
+          msg.content += `\n\n---\n\n🚀 **试用环境已就绪**：[打开试用链接](${preview.previewUrl})\n`;
+          scrollOnStream();
+        }
+        break;
+      }
       case 'stage_complete':
         msg.stageConfirmable = true;
         if (msg.content && !msg.document) {
@@ -1304,6 +1318,51 @@
       return;
     }
     resetChat();
+  }
+
+  async function handleFreezePipeline() {
+    if (!pipelineId.value || lifecycleLoading.value) return;
+    lifecycleLoading.value = true;
+    try {
+      await freezePipeline(pipelineId.value, '用户冻结');
+      antMessage.success('流水线已冻结，写操作已锁定；可点「恢复」继续');
+    } catch (e: any) {
+      antMessage.error(e?.message || '冻结失败');
+    } finally {
+      lifecycleLoading.value = false;
+    }
+  }
+
+  async function handleResumePipeline() {
+    if (!pipelineId.value || lifecycleLoading.value) return;
+    lifecycleLoading.value = true;
+    try {
+      await resumePipeline(pipelineId.value);
+      antMessage.success('流水线已恢复');
+    } catch (e: any) {
+      antMessage.error(e?.message || '恢复失败');
+    } finally {
+      lifecycleLoading.value = false;
+    }
+  }
+
+  async function handleForkPipeline() {
+    if (!pipelineId.value || lifecycleLoading.value) return;
+    lifecycleLoading.value = true;
+    try {
+      const res = await forkPipeline(pipelineId.value, { workMode: 'enhancement' });
+      const data = (res as any)?.data ?? res;
+      const newId = data?.pipelineId ?? data?.PipelineId;
+      antMessage.success(newId ? `已 Fork 为流水线 ${newId}` : 'Fork 成功');
+      if (newId) {
+        pipelineId.value = Number(newId);
+        await loadPipelineState();
+      }
+    } catch (e: any) {
+      antMessage.error(e?.message || 'Fork 失败');
+    } finally {
+      lifecycleLoading.value = false;
+    }
   }
 
   function resetChat() {

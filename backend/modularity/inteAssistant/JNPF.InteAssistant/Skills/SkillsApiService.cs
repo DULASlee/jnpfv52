@@ -190,7 +190,10 @@ public class SkillsApiService : IDynamicApiController, ITransient
         });
 
         if (request?.AutoRunAnalyst == true)
-            await RunSkillAsync("analyst-skill", pipelineId, null);
+        {
+            // 30 号 W1：生产主路径切到三轮需求分析编排器，禁止默认旧 analyst-skill
+            await RunRequirementAnalysisAsync(pipelineId, null);
+        }
 
         await _experience.RecordReviewAsync(
             projectId, tenantId, "pm-skill",
@@ -201,9 +204,19 @@ public class SkillsApiService : IDynamicApiController, ITransient
                 fragmentId = skeleton.FragmentId,
                 source = "confirm-skeleton",
                 autoRunAnalyst = request?.AutoRunAnalyst == true,
+                nextSkill = "requirement-analysis",
             }, JsonOptions));
 
-        return new { status = "confirmed", fragmentId = skeleton.FragmentId, autoRunAnalyst = request?.AutoRunAnalyst == true };
+        return new
+        {
+            status = "confirmed",
+            fragmentId = skeleton.FragmentId,
+            autoRunAnalyst = request?.AutoRunAnalyst == true,
+            nextAction = request?.AutoRunAnalyst == true ? "continue-requirement-analysis" : null,
+            message = request?.AutoRunAnalyst == true
+                ? "骨架已确认，三轮需求分析编排器已启动"
+                : "骨架已确认",
+        };
     }
 
     [HttpPost("analyst/{pipelineId:long}/confirm-requirement-spec")]
@@ -350,6 +363,29 @@ public class SkillsApiService : IDynamicApiController, ITransient
             foreach (var oid in ans.OptionIds ?? new())
                 if (!validOpts.Contains(oid))
                     throw Oops.Bah($"答案引用了不存在的选项：{oid}");
+
+            // 矩阵行校验：每一行的 SelectedOption 必须引用合法选项
+            if (ans.MatrixRowAnswers is { Count: > 0 })
+            {
+                var matrixQ = set.Questions.FirstOrDefault(x => x.Id == ans.QuestionId);
+                if (matrixQ?.MatrixSubItems is { Count: > 0 })
+                {
+                    var validRowIds = matrixQ.MatrixSubItems.Select(r => r.RowId).ToHashSet(StringComparer.Ordinal);
+                    foreach (var rowAns in ans.MatrixRowAnswers)
+                    {
+                        if (!validRowIds.Contains(rowAns.RowId))
+                            throw Oops.Bah($"矩阵行答案引用了不存在的行：{rowAns.RowId}");
+                        if (!string.IsNullOrWhiteSpace(rowAns.SelectedOption))
+                        {
+                            // MATRIX_MULTI：逗号分隔多 ID
+                            var rowOptionIds = rowAns.SelectedOption.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                            foreach (var rid in rowOptionIds)
+                                if (!validOpts.Contains(rid.Trim()))
+                                    throw Oops.Bah($"矩阵行「{rowAns.RowLabel}」引用了不存在的选项：{rid}");
+                        }
+                    }
+                }
+            }
         }
 
         // 4. 写 ClarificationAnswered IR 事件（fragment 进入 stable）
@@ -491,17 +527,44 @@ public class SkillsApiService : IDynamicApiController, ITransient
         {
             var q = set.Questions.FirstOrDefault(x => x.Id == ans.QuestionId);
             if (q == null) continue;
-            sb.Append("- ").Append(q.Text).Append("：");
-            var labels = new List<string>();
-            foreach (var oid in ans.OptionIds ?? new())
+
+            if (ans.MatrixRowAnswers is { Count: > 0 })
             {
-                if (optionLabelById.TryGetValue($"{q.Id}:{oid}", out var meta))
-                    labels.Add(meta.label);
+                // 矩阵题格式化：逐行列出作答
+                sb.Append("- ").Append(q.Text).Append("（逐行作答）：\n");
+                foreach (var rowAns in ans.MatrixRowAnswers)
+                {
+                    sb.Append("    - ").Append(rowAns.RowLabel).Append("：");
+                    var rowLabels = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(rowAns.SelectedOption))
+                    {
+                        var ids = rowAns.SelectedOption.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                        foreach (var rid in ids)
+                        {
+                            if (optionLabelById.TryGetValue($"{q.Id}:{rid.Trim()}", out var meta))
+                                rowLabels.Add(meta.label);
+                        }
+                    }
+                    sb.Append(rowLabels.Count > 0 ? string.Join("、", rowLabels) : "（未选）");
+                    if (!string.IsNullOrWhiteSpace(rowAns.FreeText))
+                        sb.Append("（补充：").Append(rowAns.FreeText).Append("）");
+                    sb.Append('\n');
+                }
             }
-            sb.Append(string.Join("、", labels));
-            if (!string.IsNullOrWhiteSpace(ans.FreeText))
-                sb.Append("（补充：").Append(ans.FreeText).Append("）");
-            sb.Append('\n');
+            else
+            {
+                sb.Append("- ").Append(q.Text).Append("：");
+                var labels = new List<string>();
+                foreach (var oid in ans.OptionIds ?? new())
+                {
+                    if (optionLabelById.TryGetValue($"{q.Id}:{oid}", out var meta))
+                        labels.Add(meta.label);
+                }
+                sb.Append(string.Join("、", labels));
+                if (!string.IsNullOrWhiteSpace(ans.FreeText))
+                    sb.Append("（补充：").Append(ans.FreeText).Append("）");
+                sb.Append('\n');
+            }
         }
 
         foreach (var skippedId in request.SkippedQuestionIds ?? new())

@@ -149,6 +149,13 @@ public class RequirementGateService : ITransient
             - 其余 option 的 id 用 o1/o2/o3，label 为简洁中文选项文本
             - text 类型的问题，options 只放一个"其他"项
             - required=true 表示关键题（影响后续设计的核心歧义），每轮关键题不超过 2 个
+            - 新增字段（P9 矩阵题交互，2026-07-10）：
+              · contextHint：为什么问这个问题（string，可选）
+              · defaultOption：合理默认值（option id，可选）
+              · questionFormat：SINGLE | MULTI | MATRIX_SINGLE | MATRIX_MULTI（默认 SINGLE）
+              · matrixSubItems：矩阵题行数组，每元素 {"rowId","rowLabel"}（仅 MATRIX_* 格式需要）
+              如果问题是对「多个已识别的实体/领域术语」做同一维度的决策（如"每个实体是否需要审批？"），
+              应使用 questionFormat="MATRIX_SINGLE" 并输出 matrixSubItems 行；否则用 SINGLE/MULTI。
 
             ## 输出格式（只输出 JSON，不要 markdown 代码块、不要注释、不要多余文本）
 

@@ -161,7 +161,16 @@ public sealed class SandboxManager : ISandboxManager, ISingleton, IDisposable
         var dbConnectionString = BuildConnectionString(dbName);
         instance.DbConnectionString = dbConnectionString;
 
-        // 4. 启动 Docker 容器
+        // 4. 启动 Docker 容器（先校验镜像，避免静默失败）
+        var imageCheck = await RunDockerAsync($"image inspect {config.Image}", ct);
+        if (imageCheck.ExitCode != 0)
+        {
+            instance.Status = "error";
+            var hint = $"沙箱镜像不存在: {config.Image}。请先执行: docker build -t jnpf-sandbox:latest -f docker/jnpf-sandbox/Dockerfile .";
+            _logger.LogError("{Hint} stderr={Stderr}", hint, imageCheck.Stderr);
+            throw new InvalidOperationException(hint);
+        }
+
         var port = config.Port;
         var args = new StringBuilder();
         args.Append("run -d --rm ");

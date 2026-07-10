@@ -69,6 +69,14 @@
     if (!pipelineId.value) return '';
     if (!designSkill.analysisFinalized.value) return '需三轮需求分析 Finalize（AnalysisCompleted.finalized=true）后才可运行设计 Skill';
     if (!designSkill.hasEntityFields.value) return '需 ai_entity_field 投影字段就绪（Round 3 工程保障）';
+    if (!designSkill.qualityGatePasses.value) {
+      if ((designSkill.qualityCriticalCount.value ?? 0) > 0)
+        return `一致性存在 ${designSkill.qualityCriticalCount.value} 条 CRITICAL，禁止启动设计`;
+      const score = designSkill.qualityTotalScore.value;
+      return score != null
+        ? `质量门控未通过：总分=${score}（须≥60，结构分≥70）`
+        : '质量门控未通过（须总分≥60、结构分≥70、无 CRITICAL）';
+    }
     if (budgetInfoBlocked.value) return 'LLM 预算已达 95% 预检阈值';
     return '';
   });

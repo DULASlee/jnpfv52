@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using JNPF.Common.Const;
 using JNPF.DependencyInjection;
 using JNPF.FriendlyException;
+using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using Microsoft.Extensions.Logging;
@@ -15,11 +16,12 @@ using SqlSugar;
 namespace JNPF.InteAssistant.Studio.VisualDev;
 
 /// <summary>
-/// P8-M01 Ir1ToVisualDevMapper — IR2_FormPageIR + IR1_EventSpec → VisualDev formData JSON。
+/// P8-M01 Ir1ToVisualDevMapper — IR2_FormPageIR + ai_entity_field → VisualDev formData JSON。
 ///
 /// 铁律：
 ///   - 映射层**不写**生成物源码；只产出 JSON
-///   - 每个 UI field 必须映射 IR-1 confirmedField 或标记 extension（缺口不 silent drop）
+///   - 字段名集合优先 <c>ai_entity_field</c>（25 §6 / 声明 3）；IR confirmedFields 仅派生对照
+///   - 每个 UI field 必须映射字段源或标记 extension（缺口不 silent drop）
 ///   - 多租户：结果含 tenantId
 ///   - 输出经基础 schema 校验（fields 非空 + jnpfKey/vModel 齐全）
 ///
@@ -28,7 +30,7 @@ namespace JNPF.InteAssistant.Studio.VisualDev;
 public interface IIr1ToVisualDevMapper
 {
     /// <summary>
-    /// 将 pipeline 的 FormPageIR + EventSpec 映射为 VisualDev formData JSON。
+    /// 将 pipeline 的 FormPageIR + 字段源映射为 VisualDev formData JSON。
     /// </summary>
     Task<VisualDevMappingResult> MapAsync(string tenantId, string projectId, string pipelineId, CancellationToken ct = default);
 }
@@ -77,28 +79,50 @@ public sealed class Ir1ToVisualDevMapper : IIr1ToVisualDevMapper, ITransient
     };
 
     private readonly ISqlSugarClient _db;
+    private readonly EntityDesignRepository _entityDesignRepo;
     private readonly ILogger<Ir1ToVisualDevMapper> _logger;
 
-    public Ir1ToVisualDevMapper(ISqlSugarClient db, ILogger<Ir1ToVisualDevMapper> logger)
+    public Ir1ToVisualDevMapper(
+        ISqlSugarClient db,
+        EntityDesignRepository entityDesignRepo,
+        ILogger<Ir1ToVisualDevMapper> logger)
     {
         _db = db;
+        _entityDesignRepo = entityDesignRepo;
         _logger = logger;
     }
 
     public async Task<VisualDevMappingResult> MapAsync(string tenantId, string projectId, string pipelineId, CancellationToken ct = default)
     {
-        // 1. 读 IR1_EventSpec + IR2_FormPageIR stable snapshot（三元组 R12）
+        // 1. 读 IR2_FormPageIR stable snapshot（三元组 R12）
         var eventSpecSnapshot = await LoadSnapshotAsync(tenantId, projectId, pipelineId, IrFragmentTypes.EventSpec, ct);
         var formPageSnapshot = await LoadSnapshotAsync(tenantId, projectId, pipelineId, IrFragmentTypes.FormPageIR, ct);
 
         if (formPageSnapshot == null)
             throw Oops.Bah($"未找到 stable FormPageIR（pipeline={pipelineId}）。请先跑 UI Design Skill");
 
-        // 2. 解析 EventSpec confirmedFields（字段名集合，用于映射验证）
-        var confirmedFields = ParseConfirmedFields(eventSpecSnapshot?.IrContent);
-        var confirmedNames = new HashSet<string>(
-            confirmedFields.Select(f => f.Name),
-            StringComparer.OrdinalIgnoreCase);
+        // 2. 字段名集合：优先 ai_entity_field（声明 3）；IR confirmedFields 仅派生对照
+        var entityFields = await _entityDesignRepo.ListFieldsAsync(tenantId, projectId, pipelineId, ct);
+        HashSet<string> confirmedNames;
+        string fieldSource;
+        if (entityFields.Count > 0)
+        {
+            confirmedNames = new HashSet<string>(
+                entityFields.Select(f => f.FieldName).Where(n => !string.IsNullOrWhiteSpace(n)),
+                StringComparer.OrdinalIgnoreCase);
+            fieldSource = "ai_entity_field";
+        }
+        else
+        {
+            var confirmedFields = ParseConfirmedFields(eventSpecSnapshot?.IrContent);
+            confirmedNames = new HashSet<string>(
+                confirmedFields.Select(f => f.Name).Where(n => !string.IsNullOrWhiteSpace(n))!,
+                StringComparer.OrdinalIgnoreCase);
+            fieldSource = "ir_json_fallback";
+            _logger.LogWarning(
+                "Ir1ToVisualDevMapper 无 ai_entity_field，回退 IR confirmedFields pipeline={PipelineId}",
+                pipelineId);
+        }
 
         // 3. 解析 FormPageIR fields（兼容 pages[].fields 和 root fields）
         var formFields = ParseFormFields(formPageSnapshot.IrContent);
@@ -130,11 +154,11 @@ public sealed class Ir1ToVisualDevMapper : IIr1ToVisualDevMapper, ITransient
                 jnpfKey = JnpfKeyConst.COMINPUT;  // 兜底默认
             }
 
-            // 缺口3：IR1 confirmedField 无匹配（UI 有但 IR1 未确认）→ 标记 extension
+            // 缺口3：字段源无匹配（UI 有但投影/IR 未确认）→ 标记 extension
             var isExtension = !confirmedNames.Contains(fieldId);
             if (isExtension)
             {
-                gaps.Add(new MappingGap { FieldId = fieldId, Label = label, ComponentType = field.ResolvedComponent, Reason = "no_ir1_match" });
+                gaps.Add(new MappingGap { FieldId = fieldId, Label = label, ComponentType = field.ResolvedComponent, Reason = "no_field_source_match" });
             }
 
             // 构造 VisualDev FieldsModel（最小可渲染结构）
@@ -156,6 +180,7 @@ public sealed class Ir1ToVisualDevMapper : IIr1ToVisualDevMapper, ITransient
             concurrencyLock = false,
             formRef = "dataForm",
             formModel = "dataForm",
+            fieldSource,
         };
         var formDataJson = JsonSerializer.Serialize(formData, JsonOptions);
 
@@ -168,8 +193,8 @@ public sealed class Ir1ToVisualDevMapper : IIr1ToVisualDevMapper, ITransient
         var enCode = !string.IsNullOrEmpty(pageName) ? ToEnCode(pageName) : $"ai_form_{projectId[..Math.Min(8, projectId.Length)]}";
 
         _logger.LogInformation(
-            "Ir1ToVisualDevMapper 完成 pipeline={PipelineId} mapped={Mapped} gaps={Gaps} valid={Valid}",
-            pipelineId, mappedCount, gaps.Count, schemaValid);
+            "Ir1ToVisualDevMapper 完成 pipeline={PipelineId} fieldSource={FieldSource} mapped={Mapped} gaps={Gaps} valid={Valid}",
+            pipelineId, fieldSource, mappedCount, gaps.Count, schemaValid);
 
         return new VisualDevMappingResult
         {

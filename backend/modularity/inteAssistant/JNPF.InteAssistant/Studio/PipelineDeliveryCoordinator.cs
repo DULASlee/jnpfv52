@@ -2,6 +2,7 @@ using System.Text.Json;
 using JNPF.DependencyInjection;
 using JNPF.FriendlyException;
 using JNPF.InteAssistant.Entitys.Entity;
+using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Infrastructure.Messaging;
 using JNPF.InteAssistant.Interfaces;
 using Microsoft.Extensions.Configuration;
@@ -51,19 +52,23 @@ public sealed class PipelineDeliveryCoordinator : IPipelineDeliveryCoordinator, 
 
         try
         {
+            PushDeployProgress(pipelineId, "running", 82, "正在启动沙箱预览…");
             await TryStartPreviewAsync(pipelineId, tenantIdStr, projectId, pipelineIdStr, ct);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "沙箱预览失败，继续尝试打包: PipelineId={Id}", pipelineId);
+            PushDeployProgress(pipelineId, "running", 90, $"预览启动失败，继续打包：{ex.Message}");
         }
 
         try
         {
+            PushDeployProgress(pipelineId, "running", 92, "正在打包源码 ZIP…");
             var zipPath = StudioWorkspaceHelper.CreateDeliveryZip(tenantIdStr, projectId, pipelineIdStr);
             StudioWorkspaceHelper.ClearAiDevContext();
             var downloadUrl = $"/api/file/download?path={Uri.EscapeDataString(zipPath)}";
             await _generatedProjectRegistry.UpdateDeliveryArtifactsAsync(pipelineId, null, downloadUrl);
+            PushDeployProgress(pipelineId, "running", 98, "源码包已生成");
             _logger.LogInformation("交付包已生成: PipelineId={Id}, Path={Path}", pipelineId, zipPath);
         }
         catch (Exception ex)
@@ -71,6 +76,18 @@ public sealed class PipelineDeliveryCoordinator : IPipelineDeliveryCoordinator, 
             _logger.LogError(ex, "交付打包失败: PipelineId={Id}", pipelineId);
             throw;
         }
+    }
+
+    private void PushDeployProgress(long pipelineId, string phase, int percent, string message)
+    {
+        var payload = JsonSerializer.Serialize(new
+        {
+            skillId = DeploySkillIds.Deploy,
+            phase,
+            percent,
+            message,
+        });
+        _sseHub.TryPush(pipelineId, SseEventType.SkillProgress, payload);
     }
 
     private async Task TryStartPreviewAsync(
@@ -107,6 +124,7 @@ public sealed class PipelineDeliveryCoordinator : IPipelineDeliveryCoordinator, 
                 TimeoutSeconds = 600,
                 Port = 8080,
                 PreviewPort = 4173,
+                Image = _configuration.GetValue<string>("Sandbox:Image") ?? "jnpf-sandbox:latest",
             });
             sandboxCreated = true;
         }
@@ -118,18 +136,22 @@ public sealed class PipelineDeliveryCoordinator : IPipelineDeliveryCoordinator, 
 
             using var npmCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             npmCts.CancelAfter(TimeSpan.FromSeconds(120));
+            PushDeployProgress(pipelineId, "running", 85, "沙箱内 npm install…");
             var installResult = await _sandbox.ExecuteCommandAsync(
                 sandboxId, "cd /app && npm install --prefer-offline 2>&1 | tail -5", npmCts.Token);
 
             if (installResult.ExitCode != 0)
                 throw Oops.Bah($"npm install 失败: {installResult.Error}");
 
+            PushDeployProgress(pipelineId, "running", 88, "正在启动 Vite 预览服务…");
             await _sandbox.ExecuteCommandAsync(sandboxId, "cd /app && nohup npx vite --port 4173 --host > /tmp/vite.log 2>&1 &");
 
             var ready = false;
             for (var i = 0; i < 15; i++)
             {
                 await Task.Delay(2000, ct);
+                PushDeployProgress(pipelineId, "running", 88 + Math.Min(i, 3),
+                    $"等待预览服务就绪（{i + 1}/15）…");
                 var check = await _sandbox.ExecuteCommandAsync(
                     sandboxId, "curl -s -o /dev/null -w '%{http_code}' http://localhost:4173");
                 if (check.ExitCode == 0 && check.Output.Trim() == "200")
@@ -145,12 +167,13 @@ public sealed class PipelineDeliveryCoordinator : IPipelineDeliveryCoordinator, 
             var sandboxInfo = await _sandbox.GetSandboxInfoAsync(sandboxId);
             var previewUrl = sandboxInfo.PreviewUrl;
 
-            _sseHub.TryPush(pipelineId, "preview_ready", JsonSerializer.Serialize(new
+            _sseHub.TryPush(pipelineId, SseEventType.PreviewReady, JsonSerializer.Serialize(new
             {
                 previewUrl,
                 sandboxId,
                 status = "running",
             }));
+            PushDeployProgress(pipelineId, "running", 91, $"试用环境已就绪：{previewUrl}");
 
             await _generatedProjectRegistry.UpdateDeliveryArtifactsAsync(pipelineId, previewUrl, null);
             _logger.LogInformation("预览就绪: PipelineId={Id}, Url={Url}", pipelineId, previewUrl);

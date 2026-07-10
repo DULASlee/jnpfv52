@@ -81,7 +81,7 @@ export function useDeveloperSkill(pipelineId: Ref<number>, snapshots: Ref<IrFrag
       await runDeveloperOrchestrator(pipelineId.value);
       startPolling();
       await Promise.all([refreshAll(), loadStatus()]);
-      message.success('开发 Skill 已启动（codegen → sandbox → tester）');
+      message.success('自动交付链已启动（代码生成 → 测试 → 部署），请关注进度提示');
       return true;
     } catch (e: any) {
       lastError.value = e?.response?.data?.msg ?? e?.message ?? '开发 Skill 启动失败';
@@ -114,15 +114,25 @@ export function useDeveloperSkill(pipelineId: Ref<number>, snapshots: Ref<IrFrag
   function handleSkillProgress(payload: SseSkillProgressPayload) {
     if (!payload.skillId || !DEV_SKILL_SET.has(payload.skillId)) return;
     skillProgress.value = { ...skillProgress.value, [payload.skillId]: payload };
-    if (payload.phase === 'running' || payload.phase === 'reason') {
-      developerLoading.value = payload.skillId === DEVELOPER_SKILL_ID;
+
+    const inFlight = payload.phase === 'running' || payload.phase === 'reason';
+    if (inFlight) {
+      // 自动交付链：任一环节运行中都保持 loading，避免用户以为卡住
+      developerLoading.value = true;
       deployLoading.value = payload.skillId === DEPLOY_SKILL_ID;
     }
-    if (payload.phase === 'completed' || payload.phase === 'failed') {
+
+    if (payload.phase === 'completed' || payload.phase === 'failed' || payload.phase === 'aborted') {
       void refreshAll();
       void loadStatus();
-      if (payload.skillId === DEVELOPER_SKILL_ID) developerLoading.value = false;
-      if (payload.skillId === DEPLOY_SKILL_ID) deployLoading.value = false;
+      if (payload.skillId === DEPLOY_SKILL_ID || payload.percent >= 100) {
+        developerLoading.value = false;
+        deployLoading.value = false;
+        stopPolling();
+      } else if (payload.phase === 'failed' || payload.phase === 'aborted') {
+        developerLoading.value = false;
+        deployLoading.value = false;
+      }
     }
   }
 

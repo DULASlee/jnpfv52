@@ -1,5 +1,6 @@
 using JNPF.DependencyInjection;
 using JNPF.InteAssistant.Entitys.Common;
+using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Infrastructure.Background;
 using JNPF.InteAssistant.Infrastructure.Security;
@@ -7,6 +8,7 @@ using JNPF.InteAssistant.Runtime;
 using JNPF.InteAssistant.Skills;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using SqlSugar;
 
 namespace JNPF.InteAssistant.Pipeline;
 
@@ -33,6 +35,7 @@ public sealed class StageConfirmTriggerResult
 
 public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITransient
 {
+    private readonly ISqlSugarClient _db;
     private readonly ISkillHarness _harness;
     private readonly IDeveloperSkillOrchestrator _developerOrchestrator;
     private readonly IBackgroundTaskRunner _taskRunner;
@@ -42,6 +45,7 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
     private readonly ILogger<StageConfirmSkillTrigger> _logger;
 
     public StageConfirmSkillTrigger(
+        ISqlSugarClient db,
         ISkillHarness harness,
         IDeveloperSkillOrchestrator developerOrchestrator,
         IBackgroundTaskRunner taskRunner,
@@ -50,6 +54,7 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
         IConfiguration configuration,
         ILogger<StageConfirmSkillTrigger> logger)
     {
+        _db = db;
         _harness = harness;
         _developerOrchestrator = developerOrchestrator;
         _taskRunner = taskRunner;
@@ -59,7 +64,7 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
         _logger = logger;
     }
 
-    public Task<StageConfirmTriggerResult> TriggerAfterConfirmAsync(
+    public async Task<StageConfirmTriggerResult> TriggerAfterConfirmAsync(
         long pipelineId,
         string tenantId,
         string confirmedStage,
@@ -67,9 +72,10 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(nextStage))
-            return Task.FromResult(new StageConfirmTriggerResult());
+            return new StageConfirmTriggerResult();
 
-        var projectId = pipelineId.ToString();
+        // R12：真实 ProjectId，禁止用 pipelineId 冒充
+        var projectId = await ResolveProjectIdAsync(pipelineId, ct);
         var triggered = new List<string>();
         var tasks = new List<string>();
 
@@ -84,11 +90,13 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
                 break;
 
             case PipelineStage.Design:
+                // 产品铁律：确认总体设计后自动 Dev→Test→Deploy，中间无 HITL
                 ScheduleDeveloperOrchestrator(pipelineId, tenantId, projectId, triggered, tasks);
                 break;
 
             case PipelineStage.Development:
-                ScheduleDelivery(pipelineId, tenantId, triggered, tasks);
+                // 兜底重试：若自动链未跑完部署，开发阶段确认可再触发 deploy
+                ScheduleDelivery(pipelineId, tenantId, projectId, triggered, tasks);
                 break;
 
             default:
@@ -98,11 +106,24 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
                 break;
         }
 
-        return Task.FromResult(new StageConfirmTriggerResult
+        return new StageConfirmTriggerResult
         {
             TriggeredSkillIds = triggered,
             BackgroundTaskNames = tasks,
-        });
+        };
+    }
+
+    private async Task<string> ResolveProjectIdAsync(long pipelineId, CancellationToken ct)
+    {
+        var pipeline = await _db.Queryable<AiPipelineEntity>()
+            .Where(x => x.Id == pipelineId.ToString())
+            .Select(x => new { x.ProjectId })
+            .FirstAsync(ct);
+
+        if (pipeline == null || string.IsNullOrWhiteSpace(pipeline.ProjectId))
+            return pipelineId.ToString();
+
+        return pipeline.ProjectId;
     }
 
     private void ScheduleSingleSkill(
@@ -222,6 +243,7 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
         tasks.Add(taskName);
         triggered.Add(DevelopmentSkillIds.Developer);
         triggered.Add(DevelopmentSkillIds.Tester);
+        triggered.Add(DeploySkillIds.Deploy);
 
         _taskRunner.Run(taskName, async (_, ct) =>
         {
@@ -234,16 +256,17 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
             {
                 _quotaGuard.Release(tenantId, pipelineId);
             }
-        }, timeout: TimeSpan.FromMinutes(45));
+        }, timeout: TimeSpan.FromMinutes(60));
 
         _logger.LogInformation(
-            "阶段确认已调度 Developer 编排: PipelineId={PipelineId}, Task={Task}",
+            "阶段确认已调度自动交付链(Dev→Test→Deploy): PipelineId={PipelineId}, Task={Task}",
             pipelineId, taskName);
     }
 
     private void ScheduleDelivery(
         long pipelineId,
         string tenantId,
+        string projectId,
         List<string> triggered,
         List<string> tasks)
     {
@@ -260,7 +283,6 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
             return;
         }
 
-        var projectId = pipelineId.ToString();
         var runId = Guid.NewGuid().ToString("N");
         var taskName = $"stage-confirm:deploy-skill:{pipelineId}:{runId}";
         tasks.Add(taskName);

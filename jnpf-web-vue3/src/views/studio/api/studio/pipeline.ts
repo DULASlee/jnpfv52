@@ -183,3 +183,23 @@ export function quickEnhancement(pipelineId: number, message: string) {
     data: { message },
   });
 }
+
+export function freezePipeline(pipelineId: number, reason?: string) {
+  return defHttp.post({
+    url: `/api/studio/pipeline/execute/${pipelineId}/freeze`,
+    data: { reason: reason ?? '用户冻结' },
+  });
+}
+
+export function resumePipeline(pipelineId: number) {
+  return defHttp.post({
+    url: `/api/studio/pipeline/execute/${pipelineId}/resume`,
+  });
+}
+
+export function forkPipeline(pipelineId: number, data?: { name?: string; workMode?: string }) {
+  return defHttp.post<{ pipelineId: number; projectId: string }>({
+    url: `/api/studio/pipeline/execute/${pipelineId}/fork`,
+    data: data ?? { workMode: 'enhancement' },
+  });
+}

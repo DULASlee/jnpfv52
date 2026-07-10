@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using JNPF.DependencyInjection;
+using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Skills.Testing;
@@ -10,6 +11,7 @@ namespace JNPF.InteAssistant.Skills;
 
 /// <summary>
 /// 阶段四 P4-B03 — tester-skill：Q1 结构化输入 → 确定性 TestSuite（无 LLM MVP）。
+/// 字段源优先 ai_entity_field（25 §6 / 声明 3）。
 /// </summary>
 public sealed class TesterSkillService : IBaseSkill, ITransient
 {
@@ -18,9 +20,16 @@ public sealed class TesterSkillService : IBaseSkill, ITransient
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
+    private readonly EntityDesignRepository _entityDesignRepo;
     private readonly ILogger<TesterSkillService> _logger;
 
-    public TesterSkillService(ILogger<TesterSkillService> logger) => _logger = logger;
+    public TesterSkillService(
+        EntityDesignRepository entityDesignRepo,
+        ILogger<TesterSkillService> logger)
+    {
+        _entityDesignRepo = entityDesignRepo;
+        _logger = logger;
+    }
 
     public string SkillId => DevelopmentSkillIds.Tester;
     public string Version { get; } = "1.0.0-d8";
@@ -65,8 +74,9 @@ public sealed class TesterSkillService : IBaseSkill, ITransient
         SkillContext context,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        _ = ct;
-        var built = TesterSkillInputBuilder.Build(context);
+        var entityFields = await _entityDesignRepo.ListFieldsAsync(
+            context.TenantId, context.ProjectId, context.PipelineId.ToString(), ct);
+        var built = TesterSkillInputBuilder.Build(context, entityFields);
         var cases = TestCaseDeriver.DeriveAll(
             built.DerivationMode,
             built.ConfirmedFields,
@@ -81,9 +91,10 @@ public sealed class TesterSkillService : IBaseSkill, ITransient
             cases);
 
         _logger.LogInformation(
-            "Tester skill derived {Count} scenarios mode={Mode} pipeline={PipelineId}",
+            "Tester skill derived {Count} scenarios mode={Mode} fieldSource={FieldSource} pipeline={PipelineId}",
             cases.Count,
             built.DerivationMode,
+            built.FieldSource,
             context.PipelineId);
 
         yield return new AppendIrEventRequest

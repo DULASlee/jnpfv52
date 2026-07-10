@@ -5,6 +5,7 @@ using JNPF.FriendlyException;
 using JNPF.InteAssistant.Codegen;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Ir;
+using JNPF.InteAssistant.Infrastructure.Messaging;
 using JNPF.InteAssistant.Ir;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -12,7 +13,8 @@ using Microsoft.Extensions.Logging;
 namespace JNPF.InteAssistant.Skills;
 
 /// <summary>
-/// 阶段四 P4-B01b/D7 — developer-skill → sandbox build → arch-guard → promote stable。
+/// 总体设计确认后自动链：developer → sandbox → arch-guard → tester → deploy。
+/// 全程推送 skill_progress SSE，避免用户误以为卡住/掉线。
 /// </summary>
 public interface IDeveloperSkillOrchestrator
 {
@@ -41,6 +43,7 @@ public sealed class DeveloperOrchestratorResult
     public string Status { get; init; } = "completed";
     public SkillRunResult? DeveloperSkillResult { get; init; }
     public SkillRunResult? TesterSkillResult { get; init; }
+    public SkillRunResult? DeploySkillResult { get; init; }
     public CodeSandboxBuildResult? SandboxResult { get; init; }
     public ArchGuardScanResult? ArchGuardResult { get; init; }
     public string? ErrorMessage { get; init; }
@@ -74,6 +77,7 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
     private readonly IArchGuardService _archGuard;
     private readonly IIrEventStoreService _eventStore;
     private readonly ISystemDesignLockedCompletenessGate _completenessGate;
+    private readonly IPipelineSseChannelHub _sseHub;
     private readonly ILogger<DeveloperSkillOrchestrator> _logger;
 
     public DeveloperSkillOrchestrator(
@@ -82,6 +86,7 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
         IArchGuardService archGuard,
         IIrEventStoreService eventStore,
         ISystemDesignLockedCompletenessGate completenessGate,
+        IPipelineSseChannelHub sseHub,
         ILogger<DeveloperSkillOrchestrator> logger)
     {
         _harness = harness;
@@ -89,6 +94,7 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
         _archGuard = archGuard;
         _eventStore = eventStore;
         _completenessGate = completenessGate;
+        _sseHub = sseHub;
         _logger = logger;
     }
 
@@ -108,9 +114,14 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
 
         try
         {
+            PushProgress(pipelineId, DevelopmentSkillIds.Developer, orchestratorRunId,
+                "running", 5, "已启动自动交付链：代码生成 → 编译 → 测试 → 部署");
+
             SkillRunResult devResult;
             try
             {
+                PushProgress(pipelineId, DevelopmentSkillIds.Developer, orchestratorRunId,
+                    "running", 10, "正在生成代码…");
                 devResult = await _harness.RunAsync(
                     DevelopmentSkillIds.Developer,
                     pipelineId,
@@ -122,6 +133,8 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Developer skill failed pipeline={PipelineId}", pipelineId);
+                PushProgress(pipelineId, DevelopmentSkillIds.Developer, orchestratorRunId,
+                    "failed", 100, $"代码生成失败：{ex.Message}");
                 return new DeveloperOrchestratorResult
                 {
                     OrchestratorRunId = orchestratorRunId,
@@ -131,17 +144,22 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
             }
 
             var fragmentId = $"codegen:{projectId}";
+            PushProgress(pipelineId, DevelopmentSkillIds.Developer, orchestratorRunId,
+                "running", 35, "沙箱编译校验中…");
             var sandbox = await _sandboxGate.RunAsync(tenantId, pipelineId, projectId, ct);
             if (!sandbox.Success)
             {
                 await AppendCodegenFailedAsync(projectId, tenantId, fragmentId, sandbox, ct);
+                var err = sandbox.ErrorMessage ?? sandbox.Phase;
+                PushProgress(pipelineId, DevelopmentSkillIds.Developer, orchestratorRunId,
+                    "failed", 100, $"沙箱编译失败：{err}");
                 return new DeveloperOrchestratorResult
                 {
                     OrchestratorRunId = orchestratorRunId,
                     Status = "codegen-failed",
                     DeveloperSkillResult = devResult,
                     SandboxResult = sandbox,
-                    ErrorMessage = sandbox.ErrorMessage ?? sandbox.Phase,
+                    ErrorMessage = err,
                 };
             }
 
@@ -155,6 +173,8 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
                 SkillId = DevelopmentSkillIds.Developer,
             }, ct);
 
+            PushProgress(pipelineId, DevelopmentSkillIds.Developer, orchestratorRunId,
+                "running", 50, "架构守卫扫描中…");
             var archResult = await _archGuard.ScanAndPersistAsync(
                 projectId,
                 tenantId,
@@ -165,9 +185,10 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
             if (archResult.CriticalCount > 0)
             {
                 var first = archResult.CriticalViolations[0];
-                throw new AbortSkillChainException(
-                    $"[{first.RuleId}] {first.Message}",
-                    "ArchAbort");
+                var abortMsg = $"[{first.RuleId}] {first.Message}";
+                PushProgress(pipelineId, DevelopmentSkillIds.Developer, orchestratorRunId,
+                    "failed", 100, $"架构守卫阻断：{abortMsg}");
+                throw new AbortSkillChainException(abortMsg, "ArchAbort");
             }
 
             await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
@@ -184,6 +205,8 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
             SkillRunResult testerResult;
             try
             {
+                PushProgress(pipelineId, DevelopmentSkillIds.Tester, orchestratorRunId,
+                    "running", 65, "正在生成并执行测试用例…");
                 var archWarnings = archResult.WarningViolations
                     .Select(v => new SkillArchWarning
                     {
@@ -208,6 +231,8 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Tester skill failed pipeline={PipelineId}", pipelineId);
+                PushProgress(pipelineId, DevelopmentSkillIds.Tester, orchestratorRunId,
+                    "failed", 100, $"测试失败：{ex.Message}");
                 return new DeveloperOrchestratorResult
                 {
                     OrchestratorRunId = orchestratorRunId,
@@ -218,6 +243,39 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
                     ErrorMessage = ex.Message,
                 };
             }
+
+            SkillRunResult deployResult;
+            try
+            {
+                PushProgress(pipelineId, DeploySkillIds.Deploy, orchestratorRunId,
+                    "running", 80, "正在部署预览环境并打包源码…");
+                deployResult = await _harness.RunAsync(
+                    DeploySkillIds.Deploy,
+                    pipelineId,
+                    tenantId,
+                    projectId,
+                    new SkillRunOptions { ProviderCode = options?.ProviderCode },
+                    ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Deploy skill failed pipeline={PipelineId}", pipelineId);
+                PushProgress(pipelineId, DeploySkillIds.Deploy, orchestratorRunId,
+                    "failed", 100, $"部署失败：{ex.Message}");
+                return new DeveloperOrchestratorResult
+                {
+                    OrchestratorRunId = orchestratorRunId,
+                    Status = "deploy-failed",
+                    DeveloperSkillResult = devResult,
+                    TesterSkillResult = testerResult,
+                    SandboxResult = sandbox,
+                    ArchGuardResult = archResult,
+                    ErrorMessage = ex.Message,
+                };
+            }
+
+            PushProgress(pipelineId, DeploySkillIds.Deploy, orchestratorRunId,
+                "completed", 100, "交付完成：试用链接与源码包已就绪");
 
             _logger.LogInformation(
                 "Developer orchestrator completed pipeline={PipelineId} scenarios={Scenarios} archWarnings={Warnings} elapsed={Ms}ms",
@@ -232,6 +290,7 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
                 Status = archResult.WarningCount > 0 ? "completed-with-warnings" : "completed",
                 DeveloperSkillResult = devResult,
                 TesterSkillResult = testerResult,
+                DeploySkillResult = deployResult,
                 SandboxResult = sandbox,
                 ArchGuardResult = archResult,
             };
@@ -240,6 +299,20 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
         {
             projectLock.Release();
         }
+    }
+
+    private void PushProgress(
+        long pipelineId, string skillId, string runId, string phase, int percent, string message)
+    {
+        var payload = JsonSerializer.Serialize(new
+        {
+            skillId,
+            runId,
+            phase,
+            percent,
+            message,
+        }, JsonOptions);
+        _sseHub.TryPush(pipelineId, SseEventType.SkillProgress, payload);
     }
 
     public async Task<DeveloperOrchestratorStatus> GetStatusAsync(

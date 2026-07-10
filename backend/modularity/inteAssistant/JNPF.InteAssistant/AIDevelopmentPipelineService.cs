@@ -255,6 +255,125 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         };
     }
 
+    /// <summary>
+    /// R12 fork：同 Project 下新建 pipeline，复制 IR fragment snapshots + ai_entity_field。
+    /// </summary>
+    [HttpPost("{sourcePipelineId:long}/fork")]
+    public async Task<object> ForkAsync(long sourcePipelineId, [FromBody] ForkPipelineRequest? request)
+    {
+        await EnsurePipelineTenantAsync(sourcePipelineId, CancellationToken.None);
+        var tenantId = TenantResolver.Resolve();
+        var userId = GetUserId();
+
+        var source = await _db.Queryable<AiPipelineEntity>()
+            .FirstAsync(x => x.Id == sourcePipelineId.ToString()
+                && (x.DeleteMark == null || x.DeleteMark == 0));
+        if (source == null)
+            throw Oops.Bah($"源流水线 {sourcePipelineId} 不存在");
+
+        var workMode = PipelineWorkMode.Normalize(
+            string.IsNullOrWhiteSpace(request?.WorkMode) ? PipelineWorkMode.Enhancement : request.WorkMode);
+        if (workMode == PipelineWorkMode.Greenfield)
+            workMode = PipelineWorkMode.Enhancement;
+
+        var name = string.IsNullOrWhiteSpace(request?.Name)
+            ? $"{source.Name} (fork)"
+            : request!.Name!.Trim();
+
+        var createResult = await _pipelineEngine.CreateAsync(
+            new PipelineCreateRequest { Name = name, UserRequirement = $"fork from {sourcePipelineId}", PipelineType = workMode },
+            tenantId, userId);
+
+        var projectId = string.IsNullOrWhiteSpace(source.ProjectId)
+            ? sourcePipelineId.ToString()
+            : source.ProjectId;
+        var newId = createResult.PipelineId.ToString();
+
+        var entity = new AiPipelineEntity
+        {
+            Id = newId,
+            Name = name,
+            CurrentStage = source.CurrentStage ?? PipelineStage.Requirement,
+            Status = "active",
+            StartedTime = DateTime.Now,
+            TenantId = tenantId.ToString(),
+            ProjectId = projectId,
+            WorkMode = workMode,
+            SourcePipelineId = source.Id,
+        };
+        entity.Create();
+        await _db.Insertable(entity).ExecuteCommandAsync();
+
+        StudioWorkspaceHelper.EnsureDirectories(tenantId.ToString(), projectId, newId);
+
+        // 复制 IR fragment snapshots
+        var snaps = await _db.Queryable<AiIrFragmentSnapshotEntity>()
+            .Where(x => x.TenantId == source.TenantId
+                        && x.ProjectId == projectId
+                        && x.PipelineId == sourcePipelineId.ToString()
+                        && !x.DeleteMark)
+            .ToListAsync();
+        if (snaps.Count > 0)
+        {
+            var copies = snaps.Select(s => new AiIrFragmentSnapshotEntity
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                ProjectId = projectId,
+                PipelineId = newId,
+                TenantId = s.TenantId,
+                FragmentId = s.FragmentId,
+                FragmentType = s.FragmentType,
+                CurrentVersion = s.CurrentVersion,
+                StabilityState = s.StabilityState,
+                IrContent = s.IrContent,
+                SaStepsCompleted = s.SaStepsCompleted,
+                LastEventId = s.LastEventId,
+                UpdatedAt = DateTime.UtcNow,
+                DeleteMark = false,
+            }).ToList();
+            await _db.Insertable(copies).ExecuteCommandAsync();
+        }
+
+        // 复制 ai_entity_field
+        var fields = await _db.Queryable<AiEntityFieldEntity>()
+            .Where(x => x.TenantId == source.TenantId
+                        && x.ProjectId == projectId
+                        && x.PipelineId == sourcePipelineId.ToString()
+                        && !x.DeleteMark)
+            .ToListAsync();
+        if (fields.Count > 0)
+        {
+            var fieldCopies = fields.Select(f =>
+            {
+                var json = JsonSerializer.Serialize(f);
+                var c = JsonSerializer.Deserialize<AiEntityFieldEntity>(json)!;
+                c.Id = Guid.NewGuid().ToString("N");
+                c.PipelineId = newId;
+                c.ProjectId = projectId;
+                c.CreatorTime = DateTime.UtcNow;
+                c.LastModifyTime = DateTime.UtcNow;
+                c.DeleteMark = false;
+                return c;
+            }).ToList();
+            await _db.Insertable(fieldCopies).ExecuteCommandAsync();
+        }
+
+        _logger.LogInformation(
+            "Pipeline fork: Source={Source} New={New} Project={Project} Mode={Mode} Snaps={Snaps} Fields={Fields}",
+            sourcePipelineId, createResult.PipelineId, projectId, workMode, snaps.Count, fields.Count);
+
+        return new
+        {
+            pipelineId = createResult.PipelineId,
+            projectId,
+            sourcePipelineId,
+            workMode,
+            fragmentCount = snaps.Count,
+            entityFieldCount = fields.Count,
+            status = "active",
+        };
+    }
+
     /// <summary>源系统可修改页面/路由列表（Debug 快路径选页）</summary>
     [HttpGet("{pipelineId:long}/page-routes")]
     public async Task<object> GetPageRoutesAsync(long pipelineId)
@@ -1487,7 +1606,10 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     public async Task<List<PipelineSummary>> ListAsync(
         [FromQuery] int pageIndex = 0, [FromQuery] int pageSize = 20)
     {
-        return await _pipelineEngine.ListAsync(TenantResolver.Resolve(), pageIndex, pageSize);
+        var tenantId = TenantResolver.Resolve();
+        var userId = GetUserId().ToString();
+        var isSuper = TenantResolver.IsSuperTenant();
+        return await _pipelineEngine.ListAsync(tenantId, pageIndex, pageSize, isSuper ? null : userId);
     }
 
     // ─── Provider 列表（前端模型选择器）───
@@ -2026,7 +2148,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
         var pipeline = await _db.Queryable<AiPipelineEntity>()
             .Where(p => p.Id == pipelineId.ToString() && (p.DeleteMark == null || p.DeleteMark == 0))
-            .Select(p => new { p.TenantId })
+            .Select(p => new { p.TenantId, p.CreatorUserId })
             .FirstAsync(ct);
 
         if (pipeline == null)
@@ -2036,6 +2158,17 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             && !string.Equals(pipeline.TenantId, currentTenantId.ToString(), StringComparison.Ordinal))
         {
             throw Oops.Bah("无权访问该流水线");
+        }
+
+        // R12：同租户按创建人隔离（超管例外）
+        if (!TenantResolver.IsSuperTenant())
+        {
+            var userId = GetUserId().ToString();
+            if (!string.IsNullOrWhiteSpace(pipeline.CreatorUserId)
+                && !string.Equals(pipeline.CreatorUserId, userId, StringComparison.Ordinal))
+            {
+                throw Oops.Bah("无权访问该流水线（非创建人）");
+            }
         }
     }
 
@@ -2271,6 +2404,14 @@ public record FreezeRequest
 {
     /// <summary>冻结原因(可选,如"用户离开""等待人工介入""BUG修复中途暂停")</summary>
     public string? Reason { get; init; }
+}
+
+/// <summary>R12 fork 请求</summary>
+public record ForkPipelineRequest
+{
+    public string? Name { get; init; }
+    /// <summary>bugfix | enhancement（默认 enhancement）</summary>
+    public string? WorkMode { get; init; }
 }
 
 /// <summary>

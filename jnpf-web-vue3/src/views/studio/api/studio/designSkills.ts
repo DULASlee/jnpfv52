@@ -16,8 +16,12 @@ export interface DesignOrchestratorStatus {
   analysisFinalized?: boolean;
   hasEntityFields?: boolean;
   entityFieldCount?: number;
-  /** 后端门禁：finalized ∧ 有实体字段 */
+  /** 后端门禁：finalized ∧ 有实体字段 ∧ 质量门控 */
   canRunDesign?: boolean;
+  hasQualityScore?: boolean;
+  qualityTotalScore?: number | null;
+  qualityCriticalCount?: number;
+  qualityGatePasses?: boolean;
   designComplete: boolean;
   phases: DesignSkillPhaseStatus[];
   tokenConsumed: number;

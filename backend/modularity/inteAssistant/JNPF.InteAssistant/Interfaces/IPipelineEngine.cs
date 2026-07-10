@@ -55,10 +55,11 @@ public interface IPipelineEngine
     Task<PipelineDetail> GetDetailAsync(long pipelineId, CancellationToken ct = default);
 
     /// <summary>
-    /// 分页查询流水线列表
+    /// 分页查询流水线列表。
+    /// <paramref name="creatorUserId"/> 非空时按创建人过滤（R12 同租户隔离；超管传 null）。
     /// </summary>
     Task<List<PipelineSummary>> ListAsync(
-        long tenantId, int pageIndex, int pageSize, CancellationToken ct = default);
+        long tenantId, int pageIndex, int pageSize, string? creatorUserId = null, CancellationToken ct = default);
 }
 
 // ─── DTO ───

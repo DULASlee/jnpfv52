@@ -241,6 +241,9 @@ public sealed class SystemDesignClarificationSkill : CognitiveSkill, ITransient
                   "id": "q1",
                   "text": "问题文本",
                   "type": "single",
+                  "questionFormat": "SINGLE",
+                  "contextHint": "为什么问这个问题",
+                  "defaultOption": "o1",
                   "required": true,
                   "options": [
                     {"id":"o1","label":"选项A"},
@@ -259,6 +262,8 @@ public sealed class SystemDesignClarificationSkill : CognitiveSkill, ITransient
             - type=single（单选）/multi（多选）；不用 text
             - required=true 的关键题不超过 2 个
             - id 用 q1/q2/...，option id 用 o1/o2/.../o_other
+            - 新增字段（P9）：contextHint（为什么问）、defaultOption（默认值 option id）、questionFormat（SINGLE|MULTI|MATRIX_SINGLE|MATRIX_MULTI）
+              如果问题是对「多个集成点/模块」做同一维度的决策，使用 MATRIX_SINGLE 并输出 matrixSubItems：[{"rowId","rowLabel"}]
             - 只输出 JSON
             """;
 
