@@ -315,17 +315,19 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             .ToListAsync();
         if (snaps.Count > 0)
         {
+            var sourceIdText = sourcePipelineId.ToString();
             var copies = snaps.Select(s => new AiIrFragmentSnapshotEntity
             {
                 Id = Guid.NewGuid().ToString("N"),
                 ProjectId = projectId,
                 PipelineId = newId,
                 TenantId = s.TenantId,
-                FragmentId = s.FragmentId,
+                // R12：同 project 多 pipeline 时 FragmentId 若含源 pipelineId 必须重映射，避免语义串线
+                FragmentId = RemapForkFragmentId(s.FragmentId, sourceIdText, newId),
                 FragmentType = s.FragmentType,
                 CurrentVersion = s.CurrentVersion,
                 StabilityState = s.StabilityState,
-                IrContent = s.IrContent,
+                IrContent = RemapForkFragmentId(s.IrContent ?? string.Empty, sourceIdText, newId),
                 SaStepsCompleted = s.SaStepsCompleted,
                 LastEventId = s.LastEventId,
                 UpdatedAt = DateTime.UtcNow,
@@ -521,6 +523,18 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         return string.IsNullOrWhiteSpace(page)
             ? (message ?? "Debug 修复")
             : $"[{page}] {message}".Trim();
+    }
+
+    /// <summary>
+    /// fork 时把 FragmentId / IR JSON 中嵌入的源 pipelineId 替换为新 pipelineId。
+    /// </summary>
+    private static string RemapForkFragmentId(string value, string sourcePipelineId, string newPipelineId)
+    {
+        if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(sourcePipelineId))
+            return value;
+        if (string.Equals(sourcePipelineId, newPipelineId, StringComparison.Ordinal))
+            return value;
+        return value.Replace($":{sourcePipelineId}", $":{newPipelineId}", StringComparison.Ordinal);
     }
 
     private async Task<(int From, int To)> ResolveBugfixSequenceRangeAsync(string projectId, string tenantId)

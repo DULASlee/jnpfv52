@@ -6,6 +6,7 @@ using JNPF.InteAssistant.Interfaces;
 using JNPF.InteAssistant.Skills.Cognitive;
 using JNPF.InteAssistant.Skills.Cognitive.Mcp;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Text.Json;
 
 namespace JNPF.Tests.PhaseB;
@@ -125,7 +126,11 @@ public static class IrPhase3Tests
             },
         };
 
-        var skill = new SystemDesignSkillService(new FakeDesignToolkit(), new ConstraintEngineService(null!), null!);
+        var skill = new SystemDesignSkillService(
+            new FakeDesignToolkit(),
+            new ConstraintEngineService(null!),
+            null!,
+            NullLogger<SystemDesignSkillService>.Instance);
         var validation = skill.ValidateInputAsync(snapshot).GetAwaiter().GetResult();
         if (validation.IsValid || !validation.ErrorMessage!.Contains("FormPageIR", StringComparison.Ordinal))
             throw new InvalidOperationException("SystemDesign should reject when FormPageIR fragment is missing");

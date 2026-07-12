@@ -38,10 +38,15 @@ public sealed class SkillRunOptions
     /// <summary>阶段五 bugfix-skill 序列点 diff。</summary>
     public BugfixRunContext? Bugfix { get; init; }
     /// <summary>
-    /// 需求分析三轮编排器专用（27 号 §5.2）：是否执行最终工程保障（投影/门禁/Materializer）。
+    /// 需求分析三轮编排器专用：是否执行最终工程保障（投影/门禁/Materializer）。
     /// Round 1/2=false（零工程步骤），Round 3=true（一次性保障）。默认 true 保持非编排器调用兼容。
     /// </summary>
     public bool EnableFinalization { get; init; } = true;
+
+    /// <summary>
+    /// Round 2 专用：Analyst 在 compile 之上做受控语义分析并写回 Skeleton（非仅 Compile）。
+    /// </summary>
+    public bool EnableSemanticAnalysis { get; init; }
 }
 
 public sealed class SkillArchWarning
@@ -133,6 +138,8 @@ public sealed class SkillHarness : ISkillHarness, ITransient
         using var logScope = _skillLogger.BeginScope(runId, tenantId, projectId, pipelineId, skillId);
         var skill = _registry.GetRequired(skillId);
         var collected = new List<AppendIrEventRequest>();
+        // H3: 当前架构 Skill 为确定性执行（零 LLM），token 跟踪尚未实现。
+        // tokenConsumed 始终为 0，待未来引入 LLM 调用后由调用方通过 SkillRunOptions 传入。
         long tokenConsumed = 0;
 
         await InsertRunAsync(runId, tenantId, projectId, pipelineId, skillId, ct);
@@ -166,6 +173,7 @@ public sealed class SkillHarness : ISkillHarness, ITransient
                 PromptContext = promptContext,
                 ProviderCode = options.ProviderCode,
                 EnableFinalization = options.EnableFinalization,
+                EnableSemanticAnalysis = options.EnableSemanticAnalysis,
             };
 
             PushSkillProgress(pipelineId, skillId, runId, "reason", 10, "Skill 推理中…");

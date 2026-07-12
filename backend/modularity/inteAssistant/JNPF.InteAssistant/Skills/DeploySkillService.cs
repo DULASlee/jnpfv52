@@ -127,7 +127,7 @@ public sealed class DeploySkillService : IBaseSkill, ITransient
                 pipelineId = context.PipelineId,
                 previewUrl,
                 downloadUrl,
-                defaultCredentials = new { username = "admin", password = "admin123" },
+                // H4: 凭据不应写入 IR 事件存储 — 移除 defaultCredentials
                 verifiedAt = DateTime.UtcNow.ToString("O"),
             }, JsonOptions),
         };

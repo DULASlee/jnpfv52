@@ -12,7 +12,7 @@
 |------|------|------|------|
 | 01 | [`01-core-framework.md`](01-core-framework.md) | ✅ v2.0-final | Serve.Run、DynamicApi、SqlSugar、JWT、中间件、部署拓扑 |
 | — | [`00-outline-core-framework.md`](00-outline-core-framework.md) | ✅ 总纲 | 专项01 章节与产出清单 |
-| ENV | 内嵌 01 第一章 / 独立 `00-environment-topology.md`（可选） | 规划 | :30000 / :3100 / :8100 / :3800；与操作手册对齐 |
+| ENV | 内嵌 01 第一章 / 独立 `00-environment-topology.md`（可选） | 规划 | :30000 / :3100 / :3102 / :3800；与操作手册对齐 |
 
 **第一批完成标准**：新人仅读 01 + 操作手册环境章，可正确启动 v5.2 全链路。
 
@@ -32,7 +32,7 @@
 
 | 编号 | 文件 | 状态 | 说明 |
 |------|------|------|------|
-| 05 | [`05-visual-data-deep-dive.md`](05-visual-data-deep-dive.md) | ✅ v2.0-final | `jnpf-web-datascreen-vue3`；`:8100`；`/api/blade-visual/`；BLADE_*；lazy-list 已知缺陷 |
+| 05 | [`05-visual-data-deep-dive.md`](05-visual-data-deep-dive.md) | ✅ v2.0-final | `jnpf-web-datascreen`；`:3102`；`/api/blade-visual/`；BLADE_*；lazy-list 已知缺陷 |
 | 06 | [`06-mobile-uniapp-deep-dive.md`](06-mobile-uniapp-deep-dive.md) | ✅ v2.0-final | `jnpf-app-vue3`；HBuilderX / `:3800`；`jnpf-origin: app` |
 | 07 | [`07-cache-middleware-deep-dive.md`](07-cache-middleware-deep-dive.md) | ✅ v2.0-final | `ICacheManager`、Cache.json、28 项键清单、Cache-Aside |
 | 08 | [`08-mq-and-events-deep-dive.md`](08-mq-and-events-deep-dive.md) | ✅ v2.0-final | EventBus Memory 默认；8 事件；TaskQueue 对比 |

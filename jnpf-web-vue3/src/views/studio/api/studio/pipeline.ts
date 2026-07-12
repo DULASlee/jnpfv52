@@ -8,7 +8,10 @@ export interface PipelineSummaryItem {
   name: string;
   currentStage: string;
   status: string;
-  updatedAt?: string;
+  updatedAt?: string | number;
+  createdAt?: string | number;
+  creatorUserId?: string;
+  creatorUserName?: string;
 }
 
 export function getPipelineList(pageIndex = 0, pageSize = 20) {

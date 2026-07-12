@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using JNPF.Common.Core.Manager.Files;
 using JNPF.Common.Core.MultiTenancy;
@@ -231,14 +232,14 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
                         new List<AttachmentFile> { new() { FileName = att.FileName, Content = bytes } });
                     var fileHash = ComputeSha256(bytes);
 
-                    await _db.Updateable<InteAssistantAttachment>()
-                        .SetColumns(a => a.ProcessStatus == 2)
-                        .SetColumns(a => a.ExtractedText == extracted)
-                        .SetColumns(a => a.FileHash == fileHash)
-                        .SetColumns(a => a.FileSize == bytes.Length)
-                        .SetColumns(a => a.LastModifyTime == DateTime.Now)
-                        .Where(a => a.F_Id == att.F_Id)
-                        .ExecuteCommandAsync(ct);
+                    // #region agent log
+                    AgentDebugLog("A", "PipelineAttachmentService.PrepareForGateAsync", "extract ready",
+                        $"{{\"fileName\":{JsonStr(att.FileName)},\"bytes\":{bytes.Length},\"extractedLen\":{extracted?.Length ?? 0},\"hashLen\":{fileHash.Length}}}");
+                    // #endregion
+
+                    // SqlSugar SetColumns 对长字符串常按 NVARCHAR(4000) 传参 → SQL「将截断字符串或二进制数据」
+                    // 显式 Size=-1（nvarchar(max)）写入 F_ExtractedText
+                    await PersistExtractSuccessAsync(att.F_Id, extracted, fileHash, bytes.Length, ct);
 
                     att.ProcessStatus = 2;
                     att.ExtractedText = extracted;
@@ -253,8 +254,13 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
                 catch (Exception ex)
                 {
                     failed++;
+                    // #region agent log
+                    AgentDebugLog("A", "PipelineAttachmentService.PrepareForGateAsync", "extract/persist failed",
+                        $"{{\"fileName\":{JsonStr(att.FileName)},\"err\":{JsonStr(ex.Message)},\"exType\":{JsonStr(ex.GetType().Name)}}}");
+                    // #endregion
                     await MarkFailedAsync(att.F_Id, ex.Message, ct);
-                    warnings.Add($"附件 {att.FileName} 解析失败");
+                    _logger.LogWarning(ex, "附件解析失败: PipelineId={Id}, FileName={FileName}", pipelineId, att.FileName);
+                    warnings.Add($"附件 {att.FileName} 解析失败：{ex.Message}");
                     items.Add(new AttachmentItemSummary
                     {
                         Id = att.F_Id,
@@ -446,11 +452,59 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
             .ExecuteCommandAsync(ct);
     }
 
+    /// <summary>
+    /// 将解析结果写入附件表。F_ExtractedText 必须走 nvarchar(max) 参数，
+    /// 避免 SqlSugar SetColumns 默认 NVARCHAR(4000) 导致「将截断字符串或二进制数据」。
+    /// </summary>
+    private async Task PersistExtractSuccessAsync(
+        string id, string? extracted, string fileHash, long fileSize, CancellationToken ct)
+    {
+        var extractedParam = new SugarParameter("@extracted", (object?)extracted ?? DBNull.Value)
+        {
+            DbType = System.Data.DbType.String,
+            Size = -1, // nvarchar(max)
+        };
+        await _db.Ado.ExecuteCommandAsync(
+            @"UPDATE [inte_assistant_attachment]
+              SET [F_ProcessStatus] = 2,
+                  [F_ExtractedText] = @extracted,
+                  [F_FileHash] = @hash,
+                  [F_FileSize] = @size,
+                  [F_ProcessError] = NULL,
+                  [F_LastModifyTime] = GETDATE()
+              WHERE [F_Id] = @id",
+            extractedParam,
+            new SugarParameter("@hash", fileHash),
+            new SugarParameter("@size", fileSize),
+            new SugarParameter("@id", id));
+        ct.ThrowIfCancellationRequested();
+    }
+
     private static string ComputeSha256(byte[] data)
     {
         var hash = SHA256.HashData(data);
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
+
+    // #region agent log
+    private static void AgentDebugLog(string hypothesisId, string location, string message, string dataJson)
+    {
+        try
+        {
+            var line =
+                $"{{\"sessionId\":\"ead5d0\",\"runId\":\"post-fix\",\"hypothesisId\":{JsonStr(hypothesisId)},\"location\":{JsonStr(location)},\"message\":{JsonStr(message)},\"data\":{dataJson},\"timestamp\":{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}}}\n";
+            const string path = @"D:\JNPF-v52\debug-ead5d0.log";
+            File.AppendAllText(path, line, Encoding.UTF8);
+        }
+        catch
+        {
+            /* debug ingest must never break gate */
+        }
+    }
+
+    private static string JsonStr(string? s) =>
+        System.Text.Json.JsonSerializer.Serialize(s ?? "");
+    // #endregion
 }
 
 public sealed record AttachmentRegisterItem

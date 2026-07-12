@@ -164,7 +164,7 @@ public sealed class SystemDesignSkillService : CognitiveSkill, ITransient
     /// P9-S1：从 skeleton stateTransitions + FormPageIR pages 确定性派生状态机/工作流/菜单。
     /// 零 LLM，纯编译派生（编译器架构原则）。
     /// </summary>
-    private static (List<object> stateMachines, List<object> workflowNodes, List<object> menus)
+    internal static (List<object> stateMachines, List<object> workflowNodes, List<object> menus)
         DeriveStructuredDesign(IrSnapshotFragment? skeleton, IrSnapshotFragment formPage)
     {
         var stateMachines = new List<object>();
@@ -271,14 +271,14 @@ public sealed class SystemDesignSkillService : CognitiveSkill, ITransient
         return (stateMachines, workflowNodes, menus);
     }
 
-    private static string? GetString(JsonElement el, string name)
+    internal static string? GetString(JsonElement el, string name)
     {
         if (!el.TryGetProperty(name, out var prop)) return null;
         return prop.ValueKind == JsonValueKind.String ? prop.GetString() : prop.ToString();
     }
 
     /// <summary>页面类型推断（与 FormPagePayload.InferPageType 一致的确定性逻辑）</summary>
-    private static string FormPageInferPageType(string? title)
+    internal static string FormPageInferPageType(string? title)
     {
         if (string.IsNullOrWhiteSpace(title)) return "form";
         var t = title.ToLowerInvariant();

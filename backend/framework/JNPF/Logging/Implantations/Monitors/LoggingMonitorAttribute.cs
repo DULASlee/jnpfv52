@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Logging;
@@ -115,6 +116,14 @@ public sealed class LoggingMonitorAttribute : Attribute, IAsyncActionFilter, IAs
     /// 配置信息
     /// </summary>
     private LoggingMonitorSettings Settings { get; set; }
+
+    /// <summary>
+    /// 特性缓存（避免每次请求反射）
+    /// </summary>
+    private static readonly ConcurrentDictionary<MethodInfo, bool> _suppressMethodCache = new();
+    private static readonly ConcurrentDictionary<Type, bool> _suppressTypeCache = new();
+    private static readonly ConcurrentDictionary<MethodInfo, bool> _monitorAttrCache = new();
+    private static readonly ConcurrentDictionary<MethodInfo, DisplayNameAttribute?> _displayAttrCache = new();
 
     /// <summary>
     /// 监视 Action 执行
@@ -738,8 +747,8 @@ public sealed class LoggingMonitorAttribute : Attribute, IAsyncActionFilter, IAs
         var isPageDescriptor = context.ActionDescriptor is CompiledPageActionDescriptor;
 
         // 如果贴了 [SuppressMonitor] 特性则跳过
-        if (actionMethod.IsDefined(typeof(SuppressMonitorAttribute), true)
-            || actionMethod.DeclaringType.IsDefined(typeof(SuppressMonitorAttribute), true))
+        if (_suppressMethodCache.GetOrAdd(actionMethod, m => m.IsDefined(typeof(SuppressMonitorAttribute), true))
+            || _suppressTypeCache.GetOrAdd(actionMethod.DeclaringType, t => t.IsDefined(typeof(SuppressMonitorAttribute), true)))
         {
             _ = await next();
             return;
@@ -756,7 +765,7 @@ public sealed class LoggingMonitorAttribute : Attribute, IAsyncActionFilter, IAs
         var methodFullName = actionMethod.DeclaringType.FullName + "." + actionMethod.Name;
 
         // 只有方法没有贴有 [LoggingMonitor] 特性才判断全局，贴了特性优先级最大
-        var isDefinedScopedAttribute = actionMethod.IsDefined(typeof(LoggingMonitorAttribute), true);
+        var isDefinedScopedAttribute = _monitorAttrCache.GetOrAdd(actionMethod, m => m.IsDefined(typeof(LoggingMonitorAttribute), true));
 
         // 解决局部和全局触发器同时配置触发两次问题
         if (isDefinedScopedAttribute && Settings.FromGlobalFilter == true)
@@ -823,9 +832,8 @@ public sealed class LoggingMonitorAttribute : Attribute, IAsyncActionFilter, IAs
         writer.WriteString(nameof(displayName), displayName);
 
         // [DisplayName] 特性
-        var displayNameAttribute = actionMethod.IsDefined(typeof(DisplayNameAttribute), true)
-            ? actionMethod.GetCustomAttribute<DisplayNameAttribute>(true)
-            : default;
+        var displayNameAttribute = _displayAttrCache.GetOrAdd(actionMethod, m =>
+            m.IsDefined(typeof(DisplayNameAttribute), true) ? m.GetCustomAttribute<DisplayNameAttribute>(true) : null);
         writer.WriteString("displayTitle", displayNameAttribute?.DisplayName);
 
         // 获取 HttpContext 和 HttpRequest 对象
@@ -960,6 +968,18 @@ public sealed class LoggingMonitorAttribute : Attribute, IAsyncActionFilter, IAs
         // 判断是否是验证异常
         var isValidationException = exception is AppFriendlyException friendlyException && friendlyException.ValidationException;
 
+        // 提前获取日志记录器，避免在无需记录时构建昂贵消息
+        var logger = httpContext.RequestServices.GetRequiredService<ILogger<LoggingMonitor>>();
+        var effectiveLogLevel = exception == null ? Settings.LogLevel :
+            (!isValidationException ? LogLevel.Error : Settings.BahLogLevel);
+
+        if (!logger.IsEnabled(effectiveLogLevel))
+        {
+            writer.WriteEndObject();
+            writer.Flush();
+            return;
+        }
+
         var monitorItems = new List<string>()
         {
             $"##控制器名称## {actionMethod.DeclaringType.Name}"
@@ -1017,9 +1037,6 @@ public sealed class LoggingMonitorAttribute : Attribute, IAsyncActionFilter, IAs
 
         // 生成最终模板
         var monitorMessage = TP.Wrapper(Title, displayName, monitorItems.ToArray());
-
-        // 创建日志记录器
-        var logger = httpContext.RequestServices.GetRequiredService<ILogger<LoggingMonitor>>();
 
         // 调用外部配置
         LoggingMonitorSettings.Configure?.Invoke(logger, logContext, resultContext as FilterContext);

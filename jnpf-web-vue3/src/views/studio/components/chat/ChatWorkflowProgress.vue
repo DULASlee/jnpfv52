@@ -1,7 +1,7 @@
 <template>
   <div v-if="showProgress" class="chat-workflow-progress">
     <div v-if="saEvents.length" class="wf-section">
-      <div class="wf-label">EventSpec 九步</div>
+      <div class="wf-label">EventSpec 编译进度</div>
       <div v-for="evt in saEvents.slice(0, 3)" :key="evt.fragmentId" class="wf-row">
         <code>{{ evt.eventId }}</code>
         <a-progress :percent="evt.percent" size="small" :status="evt.isStable ? 'success' : 'active'" />

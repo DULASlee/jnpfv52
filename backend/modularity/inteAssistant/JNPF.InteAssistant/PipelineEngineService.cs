@@ -4,6 +4,7 @@ using JNPF.InteAssistant.Entitys.Common;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Enum;
 using JNPF.InteAssistant.Interfaces;
+using JNPF.Systems.Entitys.Permission;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
@@ -365,14 +366,46 @@ public class PipelineEngineService : IPipelineEngine, IScoped
             .OrderBy(x => x.CreatorTime, SqlSugar.OrderByType.Desc)
             .ToPageListAsync(pageIndex + 1, pageSize);
 
-        return entities.Select(x => new PipelineSummary
+        var userIds = entities
+            .Select(x => x.CreatorUserId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct()
+            .ToList();
+
+        var nameByUserId = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (userIds.Count > 0)
+        {
+            var users = await _db.Queryable<UserEntity>()
+                .Where(u => userIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.RealName, u.Account })
+                .ToListAsync();
+            foreach (var u in users)
             {
-                Id = long.TryParse(x.Id, out var parsedId) ? parsedId : 0,
-                Name = x.Name ?? "",
-                PipelineType = "full_app",
-                CurrentStage = x.CurrentStage ?? PipelineStage.Requirement,
-                Status = x.Frozen ? "frozen" : (x.Status ?? "draft"),
-                UpdatedAt = x.LastModifyTime ?? x.CreatorTime ?? DateTime.Now
+                var display = !string.IsNullOrWhiteSpace(u.RealName) ? u.RealName : (u.Account ?? "");
+                if (!string.IsNullOrWhiteSpace(u.Id) && !string.IsNullOrWhiteSpace(display))
+                    nameByUserId[u.Id] = display;
+            }
+        }
+
+        return entities.Select(x =>
+            {
+                string? creatorName = null;
+                if (!string.IsNullOrWhiteSpace(x.CreatorUserId)
+                    && nameByUserId.TryGetValue(x.CreatorUserId, out var n))
+                    creatorName = n;
+
+                return new PipelineSummary
+                {
+                    Id = long.TryParse(x.Id, out var parsedId) ? parsedId : 0,
+                    Name = x.Name ?? "",
+                    PipelineType = "full_app",
+                    CurrentStage = x.CurrentStage ?? PipelineStage.Requirement,
+                    Status = x.Frozen ? "frozen" : (x.Status ?? "draft"),
+                    UpdatedAt = x.LastModifyTime ?? x.CreatorTime ?? DateTime.Now,
+                    CreatedAt = x.CreatorTime ?? x.LastModifyTime,
+                    CreatorUserId = x.CreatorUserId,
+                    CreatorUserName = creatorName,
+                };
             })
             .ToList();
     }

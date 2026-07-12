@@ -178,9 +178,9 @@ public sealed class QualityScoreCalculator : IQualityScoreCalculator, ITransient
     private async Task PersistScoreAsync(PipelineTriple triple, QualityScore score, int roundNumber, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        var rows = new[]
+        var rows = new List<SaQualityScoreRow>
         {
-            new
+            new()
             {
                 F_Id = Guid.NewGuid().ToString("N"),
                 F_TenantId = triple.TenantId,
@@ -195,9 +195,26 @@ public sealed class QualityScoreCalculator : IQualityScoreCalculator, ITransient
                 F_TotalScore = score.TotalScore,
                 F_CreatedAt = now,
             },
-        }.ToList();
+        };
 
         await _db.Insertable(rows).AS("sa_quality_score").ExecuteCommandAsync(ct);
+    }
+
+    /// <summary>sa_quality_score 表行映射（SqlSugar Insertable 要求具体类型，不支持匿名）。</summary>
+    private sealed class SaQualityScoreRow
+    {
+        public string F_Id { get; set; } = string.Empty;
+        public string F_TenantId { get; set; } = string.Empty;
+        public string F_ProjectId { get; set; } = string.Empty;
+        public string F_PIPELINE_ID { get; set; } = string.Empty;
+        public int F_RoundNumber { get; set; }
+        public decimal F_StructureScore { get; set; }
+        public decimal F_CoverageScore { get; set; }
+        public decimal F_ConsistencyScore { get; set; }
+        public decimal F_DepthScore { get; set; }
+        public decimal F_DddScore { get; set; }
+        public decimal F_TotalScore { get; set; }
+        public DateTime F_CreatedAt { get; set; }
     }
 }
 

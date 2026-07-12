@@ -120,7 +120,7 @@ public class StartupFilter : IStartupFilter
         }
 
         // 释放内存
-        App.AppStartups.Clear();
+        while (App.AppStartups.TryDequeue(out _)) { }
     }
 
     /// <summary>

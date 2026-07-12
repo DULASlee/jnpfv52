@@ -313,8 +313,9 @@ public class SuperQueryHelper
             }
         });
 
-        var sql = string.Format("SELECT F_OBJECTID OBJECTID,F_OBJECTTYPE OBJECTTYPE FROM BASE_USERRELATION WHERE F_USERID='{0}'", fieldValue.ToString().Replace("--user", string.Empty));
-        var res = db.SqlQueryable<object>(sql).ToDataTable();
+        var userId = fieldValue.ToString().Replace("--user", string.Empty);
+        var sql = "SELECT F_OBJECTID OBJECTID,F_OBJECTTYPE OBJECTTYPE FROM BASE_USERRELATION WHERE F_USERID=@userId";
+        var res = db.Ado.GetDataTable(sql, new SugarParameter("@userId", userId));
         return res.ToObject<List<Dictionary<string, string>>>();
     }
 }

@@ -3136,6 +3136,7 @@ public class RunService : IRunService, ITransient, IDisposable
                             if (itemWhere.Contains("WHERE"))
                             {
                                 var fieldName = model.FieldName.Split(".").FirstOrDefault();
+                                SqlGuard.ValidateIdentifier(fieldName, "表名");
                                 var idField = templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField;
                                 var itemSql = string.Format(sqlStr, idField.IsNullOrEmpty() ? primaryKey : idField, fieldName);
                                 itemSql = string.Format("{0} where {1}", itemSql, itemWhere.Split("WHERE").Last());
@@ -3157,6 +3158,7 @@ public class RunService : IRunService, ITransient, IDisposable
                     else
                     {
                         var fieldName = item.Key.Split(".").FirstOrDefault();
+                        SqlGuard.ValidateIdentifier(fieldName, "表名");
                         var table = templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First();
                         // 去除多余的f_inte_assistant条件
                         if (table.typeId.Equals("1") && !isInteAssistant && where.Count > 1 && where.Last().ToJsonString().Contains("f_inte_assistant"))
@@ -3207,6 +3209,7 @@ public class RunService : IRunService, ITransient, IDisposable
                         if (subItem.Value.IsNotEmptyOrNull())
                         {
                             var fieldName = subItem.Value.FieldName.Split(".").FirstOrDefault();
+                            SqlGuard.ValidateIdentifier(fieldName, "表名");
                             var idField = templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField;
                             var itemSql = string.Format(sqlStr, idField.IsNullOrEmpty() ? primaryKey : idField, fieldName);
 
@@ -3287,6 +3290,7 @@ public class RunService : IRunService, ITransient, IDisposable
                         {
                             var field = ((ConditionalTree)subItem.Value).ConditionalList.FirstOrDefault();
                             var fieldName = ((ConditionalModel)field.Value).FieldName.Split(".").FirstOrDefault();
+                            SqlGuard.ValidateIdentifier(fieldName, "表名");
                             var idField = templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField;
                             var itemSql = string.Format(sqlStr, idField.IsNullOrEmpty() ? primaryKey : idField, fieldName);
 
@@ -3370,6 +3374,7 @@ public class RunService : IRunService, ITransient, IDisposable
                                 foreach (var condition in ((ConditionalTree)groupCondition.Value).ConditionalList)
                                 {
                                     var fieldName = ((ConditionalModel)condition.Value).FieldName.Split(".").FirstOrDefault();
+                                    SqlGuard.ValidateIdentifier(fieldName, "表名");
                                     var idField = templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField;
                                     var itemSql = string.Format(sqlStr, idField.IsNullOrEmpty() ? primaryKey : idField, fieldName);
                                     var where = new List<IConditionalModel> { new ConditionalTree() { ConditionalList = new List<KeyValuePair<WhereType, IConditionalModel>> { condition } } };

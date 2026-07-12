@@ -46,7 +46,7 @@
 |------|------|
 | 后端 API | `http://localhost:30000` |
 | 主 WEB | `http://localhost:3100`（proxy `/dev` → `:30000`） |
-| 数字大屏 | `http://localhost:8100/DataV/` |
+| 数字大屏 | `http://localhost:3102/DataV/` |
 | UniApp H5 | `http://localhost:3800` |
 | Univer 报表 API | `/reportDev` → `:32000`（见 [11 §4](11-plugins-integration-deep-dive.md)） |
 | Univer 报表静态 | `:8200`；旧 ReportServer `:30007` |

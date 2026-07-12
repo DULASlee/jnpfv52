@@ -7,7 +7,7 @@
     <template v-else>
       <div class="skill-toolbar">
         <a-button size="small" type="primary" :loading="pmLoading" @click="runPmSkill">运行 PM Skill</a-button>
-        <a-button size="small" :loading="analystLoading" @click="runAnalystSkill">运行需求分析</a-button>
+        <a-button size="small" :loading="analystLoading" @click="runAnalystSkill">运行三轮需求分析</a-button>
         <a-button size="small" type="primary" ghost :loading="designLoading" :disabled="!canRunDesign" @click="runDesignSkill"> 运行设计 Skill </a-button>
       </div>
       <div v-if="designBlockedHint" class="design-hint">{{ designBlockedHint }}</div>
@@ -15,7 +15,7 @@
         <span class="dev-label">Dev 联调</span>
         <a-button size="small" :loading="loading" @click="simulate('SkeletonCreated')">模拟 SkeletonCreated</a-button>
         <a-button size="small" :loading="loading" @click="simulate('SA_Step_Completed')">模拟 SA 步骤 +1</a-button>
-        <a-button size="small" :loading="loading" type="primary" @click="simulateAllSaSteps">模拟 9 步 SA</a-button>
+        <a-button size="small" :loading="loading" type="primary" @click="simulateAllSaSteps">模拟 SA 编译步骤</a-button>
         <a-button size="small" :loading="loading" @click="simulate('EventSpecRevised')">模拟规格修订</a-button>
         <a-button size="small" danger :loading="loading" @click="simulateInvalid">非法 Skeleton (D7)</a-button>
       </div>

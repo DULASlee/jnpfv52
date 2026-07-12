@@ -2,6 +2,7 @@ using System.Text.Json;
 using JNPF.InteAssistant.Codegen;
 using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
+using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Ir;
 using JNPF.InteAssistant.Skills;
@@ -21,6 +22,8 @@ public static class IrPhase4DeveloperTests
         TestDevelopmentSkillIds_Defined();
         await TestDeveloperSkill_ValidateInputAsync();
         await TestDeveloperSkill_ReasonAsync_LeaveSimpleFixtureAsync();
+        await TestEntityDesignRepository_TransactionAtomicityAsync();
+        TestSyntaxValidator_PropagatesErrors();
         Console.WriteLine("[Phase4] Developer skill tests passed.");
     }
 
@@ -202,5 +205,114 @@ public static class IrPhase4DeveloperTests
         }
 
         return new IrSnapshot { Fragments = fragments };
+    }
+
+    /// <summary>
+    /// T11: 验证 PersistAsync 的事务原子性 — 两轮 Persist 后旧数据软删+新数据插入，无孤儿行。
+    /// </summary>
+    private static async Task TestEntityDesignRepository_TransactionAtomicityAsync()
+    {
+        using var db = CreateSqliteClientWithEntityFieldTable();
+        var repo = new EntityDesignRepository(db);
+        const string tenantId = "_t11-tenant";
+        const string projectId = "t11-proj";
+        const string pipelineId = "t11-pipe";
+
+        // Round 1: Insert 1 field
+        var proj1 = new EntityDesignProjection
+        {
+            TenantId = tenantId,
+            ProjectId = projectId,
+            PipelineId = pipelineId,
+            Fields = new[]
+            {
+                new EntityFieldDesign
+                {
+                    TenantId = tenantId, ProjectId = projectId, PipelineId = pipelineId,
+                    EntityName = "LeaveRequest", TableName = "LEAVE_REQUEST",
+                    FieldName = "Reason", PropertyName = "Reason", DbColumnName = "F_Reason",
+                    CSharpType = "string", SqlType = "NVARCHAR(500)",
+                    IsRequired = true, IsNullable = false, IsPrimaryKey = false, IsIdentity = false,
+                },
+            },
+        };
+        await repo.PersistAsync(proj1);
+
+        // Verify Round 1: 1 active field
+        if (await repo.CountFieldsAsync(tenantId, projectId, pipelineId) != 1)
+            throw new InvalidOperationException("Round 1: expected 1 active field");
+
+        // Round 2: Replace with 2 new fields (triggering soft-delete of old + insert of new)
+        var proj2 = new EntityDesignProjection
+        {
+            TenantId = tenantId,
+            ProjectId = projectId,
+            PipelineId = pipelineId,
+            Fields = new[]
+            {
+                new EntityFieldDesign
+                {
+                    TenantId = tenantId, ProjectId = projectId, PipelineId = pipelineId,
+                    EntityName = "LeaveRequest", TableName = "LEAVE_REQUEST",
+                    FieldName = "Days", PropertyName = "Days", DbColumnName = "F_Days",
+                    CSharpType = "int", SqlType = "INT",
+                    IsRequired = true, IsNullable = false, IsPrimaryKey = false, IsIdentity = false,
+                },
+                new EntityFieldDesign
+                {
+                    TenantId = tenantId, ProjectId = projectId, PipelineId = pipelineId,
+                    EntityName = "LeaveRequest", TableName = "LEAVE_REQUEST",
+                    FieldName = "Status", PropertyName = "Status", DbColumnName = "F_Status",
+                    CSharpType = "string", SqlType = "NVARCHAR(50)",
+                    IsRequired = true, IsNullable = false, IsPrimaryKey = false, IsIdentity = false,
+                },
+            },
+        };
+        await repo.PersistAsync(proj2);
+
+        // Verify Round 2: 2 active fields (old 1 is soft-deleted)
+        if (await repo.CountFieldsAsync(tenantId, projectId, pipelineId) != 2)
+            throw new InvalidOperationException("Round 2: expected 2 active fields");
+
+        // Verify row-level integrity: total 3 rows, exactly 1 soft-deleted
+        var allRows = await db.Queryable<AiEntityFieldEntity>()
+            .Where(x => x.TenantId == tenantId && x.ProjectId == projectId && x.PipelineId == pipelineId)
+            .ToListAsync();
+        if (allRows.Count != 3)
+            throw new InvalidOperationException($"Expected 3 total rows (2 active + 1 deleted), got {allRows.Count}");
+        var deleted = allRows.Count(r => r.DeleteMark);
+        var active = allRows.Count(r => !r.DeleteMark);
+        if (deleted != 1 || active != 2)
+            throw new InvalidOperationException($"Row counts: active={active} deleted={deleted} — expected 2/1");
+    }
+
+    /// <summary>
+    /// T13: 验证 CodegenSyntaxValidator 对语法非法代码正确抛出异常（非静默忽略）。
+    /// </summary>
+    private static void TestSyntaxValidator_PropagatesErrors()
+    {
+        // Valid C# passes
+        CodegenSyntaxValidator.EnsureValidSyntax("public class Foo { }", "Foo.cs");
+
+        // Incomplete class body → should throw
+        try
+        {
+            CodegenSyntaxValidator.EnsureValidSyntax("public class Foo {", "Bad.cs");
+            throw new InvalidOperationException("EnsureValidSyntax should have thrown for syntax error");
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Bad.cs"))
+        {
+            // Expected: error message includes file name
+        }
+
+        // Trash input → GetSyntaxErrors returns errors
+        var errors = CodegenSyntaxValidator.GetSyntaxErrors("!!!not csharp!!!");
+        if (errors.Count == 0)
+            throw new InvalidOperationException("GetSyntaxErrors should detect syntax errors for invalid code");
+
+        // Empty source → returns error
+        var emptyErrors = CodegenSyntaxValidator.GetSyntaxErrors("");
+        if (emptyErrors.Count == 0)
+            throw new InvalidOperationException("GetSyntaxErrors should flag empty source");
     }
 }

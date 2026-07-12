@@ -1,3 +1,4 @@
+using System.Text.Json;
 using JNPF.InteAssistant.Codegen;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Skills;
@@ -14,6 +15,7 @@ public static class IrPhase4OrchestratorTests
     {
         TestCodegenFailedPayload_Format();
         TestAbortSkillChainException_Phase();
+        TestDeploySkill_CredentialFreePayload();
         await TestSandboxGate_AfterDeveloperWriteAsync();
         Console.WriteLine("[Phase4] Developer orchestrator tests passed.");
     }
@@ -81,5 +83,43 @@ public static class IrPhase4OrchestratorTests
 
         if (Directory.Exists(backendRoot))
             Directory.Delete(backendRoot, recursive: true);
+    }
+
+    /// <summary>
+    /// T12: 验证 DeploymentVerified payload 不含凭据字段（H4 修复验证）。
+    /// </summary>
+    private static void TestDeploySkill_CredentialFreePayload()
+    {
+        // 模拟 DeploySkillService 中 DeploymentVerified 的 payload 结构
+        var payloadObj = new
+        {
+            projectId = "test-proj",
+            pipelineId = 9999,
+            previewUrl = "http://localhost:3800/preview/test",
+            downloadUrl = "http://localhost:3800/download/package.zip",
+            verifiedAt = DateTime.UtcNow.ToString("O"),
+        };
+        var payload = JsonSerializer.Serialize(payloadObj,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+        using var doc = JsonDocument.Parse(payload);
+        var root = doc.RootElement;
+
+        // H4: 凭据不应出现在 IR 事件 payload 中
+        if (root.TryGetProperty("defaultCredentials", out _))
+            throw new InvalidOperationException(
+                "DeploymentVerified payload MUST NOT contain defaultCredentials (H4)");
+
+        // 验证必要字段存在
+        if (!root.TryGetProperty("projectId", out _))
+            throw new InvalidOperationException("DeploymentVerified payload missing projectId");
+        if (!root.TryGetProperty("verifiedAt", out _))
+            throw new InvalidOperationException("DeploymentVerified payload missing verifiedAt");
+        if (!root.TryGetProperty("downloadUrl", out _))
+            throw new InvalidOperationException("DeploymentVerified payload missing downloadUrl");
+
+        // 验证不包含 username/password 等凭据字段
+        if (root.TryGetProperty("username", out _) || root.TryGetProperty("password", out _))
+            throw new InvalidOperationException("DeploymentVerified payload MUST NOT contain credentials");
     }
 }

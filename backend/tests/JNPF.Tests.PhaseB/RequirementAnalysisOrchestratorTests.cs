@@ -15,6 +15,8 @@ using JNPF.InteAssistant.Llm;
 using JNPF.InteAssistant.Runtime;
 using JNPF.InteAssistant.Sa;
 using JNPF.InteAssistant.Skills;
+using JNPF.InteAssistant.Skills.Cognitive;
+using JNPF.InteAssistant.Skills.Cognitive.Mcp;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -358,6 +360,7 @@ public static class RequirementAnalysisOrchestratorTests
             registry ?? new FakeSkillRegistry(hasPm: false),
             compiler ?? new FakeCompiler(),
             validator ?? new FakeLightValidator(),
+            new PmSkillService(new FakePmToolkit(llm ?? new FakeLlmGateway()), NullLogger<PmSkillService>.Instance),
             llm ?? new FakeLlmGateway(),
             sseHub ?? new FakeSseHub(),
             Microsoft.Extensions.Options.Options.Create(new SaPipelineOptions()),
@@ -486,7 +489,10 @@ public static class RequirementAnalysisOrchestratorTests
 
         public SaNineViewCompileResult Compile(PreAnalysisModel model) => CompileFromSkeletonJson(null);
 
-        public SaNineViewCompileResult CompileFromSkeletonJson(string? skeletonJson, string? requirementSummary = null)
+        public SaNineViewCompileResult CompileFromSkeletonJson(
+            string? skeletonJson,
+            string? requirementSummary = null,
+            string? pipelineTitle = null)
         {
             var eventResults = Enumerable.Range(1, _events).Select(i => new SaEventResult
             {
@@ -550,6 +556,15 @@ public static class RequirementAnalysisOrchestratorTests
         public Task<ProviderHealth> HealthCheckAsync() => throw new NotSupportedException();
         public Task<ProviderInfo> GetProviderInfoAsync(string providerCode) => throw new NotSupportedException();
         public Task<TreeSearchResult> TreeSearchAsync(TreeSearchRequest request, CancellationToken ct = default) => throw new NotSupportedException();
+    }
+
+    private sealed class FakePmToolkit : ICognitiveSkillToolkit
+    {
+        public FakePmToolkit(ILlmGatewayService llm) => Llm = llm;
+        public ILlmGatewayService Llm { get; }
+        public IMcpClient Mcp => null!;
+        public IEventStream Events => null!;
+        public IExperienceRecorder Experience => null!;
     }
 
     private sealed class FakeSseHub : IPipelineSseChannelHub

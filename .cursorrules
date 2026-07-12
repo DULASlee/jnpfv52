@@ -9,7 +9,7 @@ JNPF v5.2 低代码平台全栈 monorepo：**.NET 8 + SqlSugar + Dapper + IDynam
 |------|------|------|
 | 后端 API | `backend/application/JNPF.API.Entry` | :5000 |
 | PC 前端 | `jnpf-web-vue3/` | :3100 |
-| 数据大屏 | `jnpf-web-datascreen/` | :8100 |
+| 数据大屏 | `jnpf-web-datascreen/` | :3102 |
 | 移动端 | `jnpf-app-vue3/` | :3800 |
 | SA 编排 | `sa-service/` | :3001 |
 
@@ -23,12 +23,13 @@ powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1
 ## 架构红线（违反即系统损坏）
 
 0. **三元组铁律（R12 · 宪法级，凌驾 R1-R11）** — AI 原生开发一切数据/IR/路径/SkillContext MUST 携带 `(tenantId, projectId, pipelineId)`，三者完整、独立、可分离。详见 `.cursor/rules/triple-key-iron-law.mdc`
+0b. **全链条冲刺铁律（宪法级）** — 分阶段推进 + 核心 xUnit；数据一致性；排除旧实现；全链冒烟置后。详见 `.cursor/rules/fullchain-sprint-iron-law.mdc` · 30 号计划
 1. **禁止手写 Controller** — Service 实现 `IDynamicApiController` 自动映射 API
 2. **统一响应** — `RESTfulResult<T>` 自动包装；业务异常 `Oops.Bah()`，系统 `Oops.Oh()`；HTTP 600 = JWT 过期
 3. **JNPF 业务码** — 常为 HTTP 200 + `json.code`（409/429 在 body，非 status）
 4. **生成代码边界** — 模板输出 bug → 改 `.vm` 源码，不改生成物
 5. **多租户** — SqlSugar 查询必须激活 `ITenantFilter`；原生 SQL 必须参数化
-6. **模块边界** — OA 禁用勿改；IoT/MES 不存在勿 scaffold
+6. **模块边界** — OA 独立入口（JNPF.OA.API.Entry）勿从主入口修改；IoT/MES 不存在勿 scaffold
 7. **SSE/定时器** — `setTimeout`/`EventSource`/`WebSocket` 必须 clear + 重连上限；SSE URL 用 `buildEventSourceUrl()` + `?token=`
 
 ## 分层与调用链
@@ -74,6 +75,7 @@ application/JNPF.API.Entry → modularity/*/*Service (IDynamicApiController)
 | **Superpowers** `.cursor/skills/` | 开发主流程（plan → execute → verify） |
 | **Serena MCP** | C# 符号级 rename/find-refs；不写前端 |
 | **episodic-memory** | 跨会话 WHY；编码前先 search |
+| **针式搜索** | `.cursor/rules/needle-search.mdc` — 先窄后宽 · 并行≤3 · 禁拖网 · >15s 收窄 |
 
 编码前查阅：`openspec/specs/README.md` → 相关 spec · `docs/progress-registry.yaml` 当前阶段
 

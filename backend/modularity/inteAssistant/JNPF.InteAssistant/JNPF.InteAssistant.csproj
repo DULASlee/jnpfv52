@@ -31,4 +31,8 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="JNPF.Tests.PhaseB" />
+  </ItemGroup>
+
 </Project>

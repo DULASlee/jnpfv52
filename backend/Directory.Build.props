@@ -17,13 +17,21 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
-    <!-- 本地开发关闭第三方分析器，CI 通过 CI_BUILD=true 开启 -->
+    <!-- 本地：IDE 可分析，但 CLI/MSBuild 构建不跑分析器（实测约省 28s / 65%） -->
     <PropertyGroup Condition="'$(CI_BUILD)' != 'true'">
-        <EnableNETAnalyzers>true</EnableNETAnalyzers>
-        <AnalysisLevel>latest-recommended</AnalysisLevel>
+        <EnableNETAnalyzers>false</EnableNETAnalyzers>
+        <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+        <AnalysisLevel>none</AnalysisLevel>
         <RunRoslynator>false</RunRoslynator>
         <StyleCopEnabled>false</StyleCopEnabled>
-        <NoWarn>$(NoWarn);CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625</NoWarn>
+        <NoWarn>$(NoWarn);CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;NETSDK1187</NoWarn>
+    </PropertyGroup>
+
+    <!-- CI：开启 .NET 分析器（Roslynator/StyleCop/JNPF.Analyzers 见下方 ItemGroup） -->
+    <PropertyGroup Condition="'$(CI_BUILD)' == 'true'">
+        <EnableNETAnalyzers>true</EnableNETAnalyzers>
+        <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+        <AnalysisLevel>latest-recommended</AnalysisLevel>
     </PropertyGroup>
 
     <ItemGroup>

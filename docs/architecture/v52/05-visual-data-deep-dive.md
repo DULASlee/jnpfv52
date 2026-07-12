@@ -17,7 +17,7 @@
 > 主仓库 `web/` 目录仅含已构建静态 dist 与 SQL 脚本；**可维护的大屏前端源码**位于外部路径 `d:\JNPF-v52\jnpf-web-datascreen\`。本文档所有大屏前端文件路径、行号、配置值均来自该外部工程 v5.2.0 实测。
 
 > **⚠️ 端口职责（编写强制）**  
-> **`:8100` 仅为大屏前端 Vite 开发服务**，不提供 REST API。所有大屏 REST 接口由后端 **`JNPF.API.Entry`（`:30000`）** 暴露，统一前缀 **`/api/blade-visual/`**。禁止在正文将 `:8100` 描述为 API 宿主。
+> **`:3102` 仅为大屏前端 Vite 开发服务**，不提供 REST API。所有大屏 REST 接口由后端 **`JNPF.API.Entry`（`:30000`）** 暴露，统一前缀 **`/api/blade-visual/`**。禁止在正文将 `:3102` 描述为 API 宿主。
 
 > **⚠️ JNPF.VisualData 默认未启用**  
 > `application/JNPF.API.Entry/JNPF.API.Entry.csproj` **默认不引用** `JNPF.VisualData`；备份工程 `JNPF - Backup.API.Entry.csproj` 已包含引用。未添加引用时，大屏前端请求 `/api/blade-visual/*` 将 404。
@@ -44,10 +44,10 @@
 |------|------|----------|
 | 后端 API | `http://localhost:30000` | `JNPF.API.Entry` Kestrel / IIS 部署 |
 | 主 WEB 开发服务 | `http://localhost:3100` | `jnpf-web-vue3/.env` → `VITE_PORT=3100` |
-| **大屏前端开发服务** | `http://localhost:8100/DataV/` | `jnpf-web-datascreen-vue3/vite.config.js` → `server.port: 8100` |
+| **大屏前端开发服务** | `http://localhost:3102/DataV/` | `jnpf-web-datascreen-vue3/vite.config.js` → `server.port: 8100` |
 | 大屏前端 API 前缀（dev） | `/dev` + `/api/blade-visual` | `.env.development` → `VITE_APP_API=/dev`；`public/config.js` → `url: '/api/blade-visual'` |
 | dev 代理目标 | `http://localhost:30000` | `.env.development` → `VITE_PROXY=http://localhost:30000` |
-| 主 WEB → 大屏跳转 | `http://localhost:8100/DataV/view/{id}?token=…` | `jnpf-web-vue3/src/hooks/setting/index.ts` → `dataVUrl` |
+| 主 WEB → 大屏跳转 | `http://localhost:3102/DataV/view/{id}?token=…` | `jnpf-web-vue3/src/hooks/setting/index.ts` → `dataVUrl` |
 
 > **脚注**：`launchSettings.json` 中 `:5000` 为 Visual Studio 本地调试端口，**非 v5.2 生产/文档拓扑**（与 [02-application-services.md](02-application-services.md) 一致）。
 
@@ -63,7 +63,7 @@
 flowchart TB
   subgraph browser["浏览器"]
     MAIN["主 WEB :3100<br/>jnpf-web-vue3"]
-    DATAV["大屏 :8100/DataV/<br/>jnpf-web-datascreen-vue3"]
+    DATAV["大屏 :3102/DataV/<br/>jnpf-web-datascreen"]
     VIEW["独立预览 view.html<br/>/DataV/view.html?id="]
   end
 
@@ -167,7 +167,7 @@ public class ScreenService : IDynamicApiController, ITransient
 | **DataV 组件** | **`@kjgl77/datav-vue3`** | **^1.5.0** | 边框/装饰/水位等大屏特效组件 |
 | 图表 | `echarts`（CDN） | 5.4.0 | `public/view.html` 引入 |
 | HTTP | `axios` | 0.19.0 | 请求客户端 |
-| 构建 | `vite` | **^4.4.6** | dev `:8100` + 生产打包 |
+| 构建 | `vite` | **^4.4.6** | dev `:3102` + 生产打包 |
 | 工程版本 | `jnpf-web-datascreen-vue3` | **5.2.0** | `package.json` `version` |
 
 ### 2.2 构建与环境配置
@@ -193,7 +193,7 @@ VITE_APP_BASE= /DataV/
     server: {
       https: false,
       host: true,
-      port: 8100,
+      port: 3102,
       proxy: {
         "/dev": {
           target: VITE_PROXY,//代理接口
@@ -206,7 +206,7 @@ VITE_APP_BASE= /DataV/
 ```
 
 - **`base: '/DataV/'`**（来自 `VITE_APP_BASE`）：History 路由与静态资源均以 `/DataV/` 为前缀。
-- **代理链路**：浏览器请求 `http://localhost:8100/dev/api/blade-visual/visual/list` → Vite 剥离 `/dev` → `http://localhost:30000/api/blade-visual/visual/list`。
+- **代理链路**：浏览器请求 `http://localhost:3102/dev/api/blade-visual/visual/list` → Vite 剥离 `/dev` → `http://localhost:30000/api/blade-visual/visual/list`。
 
 #### 2.2.3 `public/config.js` — 运行时 API 根路径
 
@@ -738,11 +738,11 @@ public class VisualDevEntity : CLDSEntityBase
 
 ### 5.4 与专项 04 的交叉引用 — 主 WEB 与门户
 
-主 WEB（[04-application-frontend-deep-dive.md](04-application-frontend-deep-dive.md)）通过 **`globSetting.dataVUrl`** 打开大屏，**不在主 WEB SPA 内嵌 DataV 设计器**（设计器为独立 `:8100` 工程）：
+主 WEB（[04-application-frontend-deep-dive.md](04-application-frontend-deep-dive.md)）通过 **`globSetting.dataVUrl`** 打开大屏，**不在主 WEB SPA 内嵌 DataV 设计器**（设计器为独立 `:3102` 工程）：
 
 ```31:32:jnpf-web-vue3/src/hooks/setting/index.ts
     // 大屏应用前端路径
-    dataVUrl: isDevMode() ? 'http://localhost:8100/DataV/' : prodUrlPrefix + '/DataV/',
+    dataVUrl: isDevMode() ? 'http://localhost:3102/DataV/' : prodUrlPrefix + '/DataV/',
 ```
 
 #### 5.4.1 门户（VisualPortal）与大屏的关系
@@ -764,7 +764,7 @@ public class VisualDevEntity : CLDSEntityBase
       path = `${globSetting.dataVUrl}view/${moduleId}?token=${getToken()}`;
 ```
 
-- **默认推荐**：门户「大屏链接」类型（`type=6`）→ 全屏跳转至 `:8100/DataV/view/{id}`。
+- **默认推荐**：门户「大屏链接」类型（`type=6`）→ 全屏跳转至 `:3102/DataV/view/{id}`。
 - **嵌入需求**：在门户设计器拖入 **iframe 组件**，URL 填 `${dataV}/view/{id}?token=${jnpfToken}`（或生产绝对路径）；主 WEB 通过 `HIframe` 渲染 `<iframe :src="value">`。
 - **权限**：大屏菜单仍走 **BASE_MODULE** 授权（见 [03-application-modules-deep-dive.md](03-application-modules-deep-dive.md) §4.1）；门户内 iframe/链接携带 Token，预览页 `view.html` 以 query `token` 或 Header 鉴权。
 
@@ -874,7 +874,7 @@ sequenceDiagram
   participant Browser as 浏览器 view.html
   participant LS as localStorage
   participant Axios as axios 拦截器
-  participant Vite as Vite :8100 /dev 代理
+  participant Vite as Vite :3102 /dev 代理
   participant API as ScreenService :30000
   participant DB as BLADE_VISUAL + CONFIG
   participant Container as avue-data / container
@@ -1029,7 +1029,7 @@ sequenceDiagram
 
 ## 附录 A：深度自检清单
 
-- [x] 端到端链路：主 WEB `dataVUrl` → `:8100` 设计器 → `/dev` 代理 → `:30000` `/api/blade-visual/Visual/detail` → **BLADE_VISUAL** + **CONFIG**
+- [x] 端到端链路：主 WEB `dataVUrl` → `:3102` 设计器 → `/dev` 代理 → `:30000` `/api/blade-visual/Visual/detail` → **BLADE_VISUAL** + **CONFIG**
 - [x] 8 张 **BLADE_** 表及关键字段
 - [x] 图1-1 部署拓扑、图3-1 ER、图7-1 view.html 时序
 - [x] 7 Service 全路由表 + 文件路径可检索
@@ -1038,7 +1038,7 @@ sequenceDiagram
 - [x] **`/map/lazy-list` 已知缺陷** 已记录（§4.6、§8.3）
 - [x] **CATEGORY ↔ CATEGORY_VALUE** 关联机制已源码验证（§3.2）
 - [x] **多租户** §3.3；**门户/iframe** §5.4.1；**proxy 安全** §7.6
-- [x] `:5000` 仅脚注，正文用 `:30000` / `:8100`
+- [x] `:5000` 仅脚注，正文用 `:30000` / `:3102`
 
 ---
 

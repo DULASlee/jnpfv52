@@ -65,6 +65,16 @@ public sealed class DeveloperOrchestratorStatus
 
 public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, ITransient
 {
+    /// <summary>
+    /// Codegen 片段版本序列：
+    /// 1 = CodeGenerated（初稿，DeveloperSkill 产出）
+    /// 2 = CodegenBuildValidated / CodegenFailed（沙箱编译后）
+    /// 3 = CodeGeneratedStablePromoted（架构守卫通过，晋升 stable）
+    /// </summary>
+    private const int CodegenFragmentVersionInitial = 1;
+    private const int CodegenFragmentVersionBuildValidated = 2;
+    private const int CodegenFragmentVersionStablePromoted = 3;
+
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> ProjectLocks = new(StringComparer.Ordinal);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -168,7 +178,7 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
                 EventType = IrEventTypes.CodegenBuildValidated,
                 FragmentId = fragmentId,
                 FragmentType = IrFragmentTypes.GeneratedCode,
-                FragmentVersion = 2,
+                FragmentVersion = CodegenFragmentVersionBuildValidated,
                 Payload = CodegenManifestBuilder.BuildCodegenBuildValidatedPayload(projectId, sandbox, fragmentId),
                 SkillId = DevelopmentSkillIds.Developer,
             }, ct);
@@ -196,7 +206,7 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
                 EventType = IrEventTypes.CodeGeneratedStablePromoted,
                 FragmentId = fragmentId,
                 FragmentType = IrFragmentTypes.GeneratedCode,
-                FragmentVersion = 3,
+                FragmentVersion = CodegenFragmentVersionStablePromoted,
                 Payload = CodegenManifestBuilder.BuildCodeGeneratedStablePromotedPayload(
                     projectId, sandbox, archResult, fragmentId),
                 SkillId = DevelopmentSkillIds.Developer,
@@ -396,7 +406,7 @@ public sealed class DeveloperSkillOrchestrator : IDeveloperSkillOrchestrator, IT
             EventType = IrEventTypes.CodegenFailed,
             FragmentId = fragmentId,
             FragmentType = IrFragmentTypes.GeneratedCode,
-            FragmentVersion = 2,
+            FragmentVersion = CodegenFragmentVersionBuildValidated,
             Payload = CodegenManifestBuilder.BuildCodegenFailedPayload(projectId, sandbox, fragmentId),
             SkillId = DevelopmentSkillIds.Developer,
         }, ct);

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using JNPF.DependencyInjection;
+using JNPF.FriendlyException;
 
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
@@ -60,6 +61,9 @@ public sealed class RequirementAnalysisOptions
 
     /// <summary>用户对当前轮次澄清题的作答（阶段二恢复时传入）。null 表示首次进入该轮。</summary>
     public IReadOnlyList<ClarificationAnswer>? CurrentRoundAnswers { get; init; }
+
+    /// <summary>Apply 补充需求后，即使已 Finalize 也强制重生成 02 并复审。</summary>
+    public bool ForceRefinalize { get; init; }
 }
 
 /// <summary>三轮需求分析编排器 API 请求体。</summary>
@@ -70,6 +74,12 @@ public sealed class RequirementAnalysisRunRequest
 
     /// <summary>用户对当前轮澄清题的作答（恢复时传入；首次进入为 null）。</summary>
     public IReadOnlyList<ClarificationAnswer>? Answers { get; init; }
+
+    /// <summary>
+    /// 强制重跑 Round3 Finalize + PM 终评（用于历史 pipeline 回填 CTA/PmReviewed，或运维重生 02）。
+    /// 不绕过「已 StageConfirmed 禁止 Amend」门闩。
+    /// </summary>
+    public bool ForceRefinalize { get; init; }
 }
 
 /// <summary>编排器运行结果。</summary>
@@ -133,6 +143,7 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
     private readonly ISkillRegistry _registry;
     private readonly ISaNineViewCompiler _compiler;
     private readonly ILightStructureValidator _lightValidator;
+    private readonly PmSkillService _pm;
     private readonly ILlmGatewayService _llm;
     private readonly IPipelineSseChannelHub _sseHub;
     private readonly IOptions<SaPipelineOptions> _pipelineOptions;
@@ -144,6 +155,7 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         ISkillRegistry registry,
         ISaNineViewCompiler compiler,
         ILightStructureValidator lightValidator,
+        PmSkillService pm,
         ILlmGatewayService llm,
         IPipelineSseChannelHub sseHub,
         IOptions<SaPipelineOptions> pipelineOptions,
@@ -154,6 +166,7 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         _registry = registry;
         _compiler = compiler;
         _lightValidator = lightValidator;
+        _pm = pm;
         _llm = llm;
         _sseHub = sseHub;
         _pipelineOptions = pipelineOptions;
@@ -184,6 +197,28 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                 "RequirementAnalysis 编排器启动: pipeline={PipelineId} 从第 {Round} 轮续跑, fragments={Count}",
                 pipelineId, currentRound, snapshot.Fragments.Count);
 
+            // Apply / 运维回填：强制 Finalize+PM 终评，不依赖三轮澄清是否齐全
+            if (options?.ForceRefinalize == true)
+            {
+                _logger.LogInformation(
+                    "ForceRefinalize 执行 Round3 工程保障 pipeline={PipelineId} priorRound={Round}",
+                    pipelineId, currentRound);
+                var skillOptions = new SkillRunOptions { ProviderCode = options?.ProviderCode };
+                var finalizeResult = await RunRoundAnalystAsync(
+                    TotalRounds, pipelineId, tenantId, projectId, skillOptions,
+                    enableFinalization: true, ct);
+                await ReviewRequirementSpecAsync(
+                    pipelineId, tenantId, projectId, orchestratorRunId, skillOptions, ct);
+                skillResults.Add(finalizeResult);
+                return new RequirementAnalysisOrchestratorResult
+                {
+                    OrchestratorRunId = orchestratorRunId,
+                    Status = "completed",
+                    CurrentRound = TotalRounds,
+                    SkillResults = skillResults,
+                };
+            }
+
             // P0：三轮澄清均已 stable 但尚未 Finalize → 强制跑 Round 3 工程保障（禁止静默 completed）
             if (currentRound > TotalRounds)
             {
@@ -196,6 +231,8 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                     var finalizeResult = await RunRoundAnalystAsync(
                         TotalRounds, pipelineId, tenantId, projectId, skillOptions,
                         enableFinalization: true, ct);
+                    await ReviewRequirementSpecAsync(
+                        pipelineId, tenantId, projectId, orchestratorRunId, skillOptions, ct);
                     skillResults.Add(finalizeResult);
                 }
 
@@ -263,8 +300,8 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
     /// </summary>
     private int DetermineCurrentRound(IrSnapshot snapshot)
     {
-        // 没有 Skeleton → 从 Round 1 开始（Round 1 内部先跑 PM Skill 产骨架）
-        var skeleton = snapshot.Find(IrFragmentTypes.Skeleton, IrStabilityStates.Stable);
+        // SkeletonCreated 投影为 Draft；三轮编排消费 Draft/Stable 均可（随后会 Stabilize）
+        var skeleton = FindSkeletonAny(snapshot);
         if (skeleton == null) return 1;
 
         // 逐轮检查：该轮澄清题是否已 stable（用户已答）
@@ -289,22 +326,38 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         var stage = StageForRound(round);
         var skillOptions = new SkillRunOptions { ProviderCode = options?.ProviderCode };
 
-        // ── Round 1 前置：若无 Skeleton，先跑 PM Skill 产骨架 ──
+        // ── Round 1 前置：若无 Stable 骨架，先跑 PM（或复用 Draft）并 Stabilize ──
+        // 注意：SkeletonCreated 投影稳定性为 Draft（IrProjectionEngine.UpsertSkeletonAsync），
+        // 三轮编排视澄清轮为确认，不再要求单独 confirm-skeleton HITL。
         var skeleton = snapshot.Find(IrFragmentTypes.Skeleton, IrStabilityStates.Stable);
         if (round == 1 && skeleton == null)
         {
-            if (!_registry.TryGet("pm-skill", out _))
-                throw new InvalidOperationException("PM Skill 未注册，无法启动 Round 1");
+            SkillRunResult? pmResult = null;
+            skeleton = FindSkeletonAny(snapshot);
+            if (skeleton == null)
+            {
+                if (!_registry.TryGet("pm-skill", out _))
+                    throw new InvalidOperationException("PM Skill 未注册，无法启动 Round 1");
 
-            var pmResult = await _harness.RunAsync(
-                "pm-skill", pipelineId, tenantId, projectId, skillOptions, ct);
+                pmResult = await _harness.RunAsync(
+                    "pm-skill", pipelineId, tenantId, projectId, skillOptions, ct);
 
+                snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
+                skeleton = FindSkeletonAny(snapshot);
+            }
+
+            if (skeleton == null)
+                throw Oops.Bah("PM Skill 已运行但未找到骨架 fragment（请检查 SkeletonCreated 投影）");
+
+            await StabilizeSkeletonAsync(pipelineId, tenantId, projectId, skeleton, ct);
             snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
-            skeleton = snapshot.Find(IrFragmentTypes.Skeleton, IrStabilityStates.Stable);
+            skeleton = snapshot.Find(IrFragmentTypes.Skeleton, IrStabilityStates.Stable)
+                ?? FindSkeletonAny(snapshot)
+                ?? throw Oops.Bah("骨架 Stabilize 后仍无法读取");
 
             // SA 全量 C# 编译（内存，零工程步骤）
             var compileResult = _compiler.CompileFromSkeletonJson(
-                skeleton!.Payload, /* requirementSummary */ null);
+                skeleton.Payload, /* requirementSummary */ null);
 
             var warnings = _lightValidator.Validate(compileResult.Source);
 
@@ -329,7 +382,7 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                 Status = "awaiting-answer",
                 CurrentRound = round,
                 PendingClarification = clarSet,
-                SkillResults = new[] { pmResult },
+                SkillResults = pmResult != null ? new[] { pmResult } : Array.Empty<SkillRunResult>(),
             };
         }
 
@@ -337,6 +390,11 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         var roundClar = FindRoundClarification(snapshot, stage);
         if (roundClar is { StabilityState: IrStabilityStates.Stable })
         {
+            // P0：作答写回骨架唯一源（Typed patches），再进入下一轮 / Finalize
+            await ApplyClarificationAnswersToSkeletonAsync(
+                pipelineId, tenantId, projectId, snapshot, roundClar, round, ct);
+            snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
+
             // Round 3 专属：用户已答最终确认题 → 此时才执行工程一次性保障（确认后落库，非确认前）
             // 架构哲学（KG 记载）："Round3 确认+出3题+工程一次性保障"——确认在先，保障在后。
             // FinalizeAsync 内含：投影→门禁→Materializer→DDD→一致性→质量→渲染需求分析书。
@@ -344,6 +402,8 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             {
                 var finalizeResult = await RunRoundAnalystAsync(
                     round, pipelineId, tenantId, projectId, skillOptions, enableFinalization: true, ct);
+                await ReviewRequirementSpecAsync(
+                    pipelineId, tenantId, projectId, Guid.NewGuid().ToString("N"), skillOptions, ct);
                 _logger.LogInformation("Round {Round} 用户已确认，工程一次性保障完成", round);
                 return new RequirementAnalysisOrchestratorResult
                 {
@@ -354,11 +414,37 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             }
 
             // Round 1/2：本轮已完成（用户已答），继续下一轮
-            _logger.LogInformation("Round {Round} 已完成（用户已作答），继续", round);
+            _logger.LogInformation("Round {Round} 已完成（用户已作答并写回骨架），继续", round);
             return new RequirementAnalysisOrchestratorResult
             {
                 Status = "completed",
                 CurrentRound = round,
+            };
+        }
+
+        // 本轮题已发出、用户尚未作答：禁止重跑 Analyst / 刷新 setId（否则作答永远对不上最新题）
+        if (roundClar is { StabilityState: IrStabilityStates.InProgress })
+        {
+            ClarificationSet? pending = null;
+            if (!string.IsNullOrWhiteSpace(roundClar.Payload))
+            {
+                try
+                {
+                    pending = JsonSerializer.Deserialize<ClarificationSet>(roundClar.Payload, JsonOptions);
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Round {Round} InProgress 澄清 payload 反序列化失败，仍返回 awaiting-answer", round);
+                }
+            }
+
+            _logger.LogInformation(
+                "Round {Round} 澄清仍为 in-progress，短路返回 awaiting-answer（不重发出题）", round);
+            return new RequirementAnalysisOrchestratorResult
+            {
+                Status = "awaiting-answer",
+                CurrentRound = round,
+                PendingClarification = pending,
             };
         }
 
@@ -372,27 +458,44 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         }
 
         // SA 全量重编译（C# 毫秒级，零工程步骤）
-        var recompile = _compiler.CompileFromSkeletonJson(skeleton!.Payload);
+        skeleton ??= FindSkeletonAny(snapshot);
+        if (skeleton == null)
+            throw Oops.Bah($"第 {round} 轮缺少需求骨架，无法继续");
+        if (skeleton.StabilityState is not (IrStabilityStates.Stable or IrStabilityStates.Locked))
+        {
+            await StabilizeSkeletonAsync(pipelineId, tenantId, projectId, skeleton, ct);
+            snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
+            skeleton = FindSkeletonAny(snapshot) ?? skeleton;
+        }
+
+        var recompile = _compiler.CompileFromSkeletonJson(skeleton.Payload);
         var roundWarnings = _lightValidator.Validate(recompile.Source);
 
-        // 收集上一轮用户答案文本
+        // 收集上一轮用户答案文本 + 已填槽位（供选问去重）
         string? prevStageForAnswers = null;
         if (round >= 2) prevStageForAnswers = StageForRound(round - 1);
         var prevClarFragment = round >= 2 ? FindRoundClarification(snapshot, prevStageForAnswers!) : null;
         var prevAnswersText = ExtractAnswersText(prevClarFragment?.Payload);
+        var prevFilled = ExtractFilledSlotIds(prevClarFragment?.Payload);
+        if (prevFilled.Count > 0)
+            prevAnswersText = (prevAnswersText ?? string.Empty) + "\n" + string.Join("\n", prevFilled);
 
         if (round < TotalRounds)
         {
-            // Round 2：联合精化——PSpec/DecisionTable LLM 增强（27 号 §4.2）
-            // LLM 只精化属性（boundaries/exceptions/preconditions/edge_cases），不增删实体字段。
-            recompile = await EnhancePspecAndDecisionTableAsync(recompile, prevAnswersText, ct);
+            // Round 2：Analyst 受控语义分析写回骨架（非仅 Compile）；编排器不再旁路 EnhancePspec
+            var analystResult = await RunRoundAnalystAsync(
+                round, pipelineId, tenantId, projectId, skillOptions,
+                enableFinalization: false, ct,
+                enableSemanticAnalysis: true,
+                userRequirementOverride: prevAnswersText);
 
-            // P1：合并后 Assumptions 落 IR
+            snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
+            skeleton = FindSkeletonAny(snapshot) ?? skeleton;
+            recompile = _compiler.CompileFromSkeletonJson(skeleton.Payload);
+            roundWarnings = _lightValidator.Validate(recompile.Source);
+
             await PersistAssumptionsFragmentAsync(
                 pipelineId, tenantId, projectId, recompile.Assumptions, round, ct);
-
-            var analystResult = await RunRoundAnalystAsync(
-                round, pipelineId, tenantId, projectId, skillOptions, enableFinalization: false, ct);
 
             var clarSet = await GenerateRoundClarificationAsync(
                 round, stage, tenantId, projectId, pipelineId, recompile, roundWarnings,
@@ -435,23 +538,130 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
     /// 跑一轮 Analyst Skill（Round 2 联合精化 / Round 3 工程保障）。
     /// enableFinalization=false → AnalystSkillService ThinkAsync 内部跳过投影/门禁/Materializer。
     /// </summary>
+    /// <summary>
+    /// 跑一轮 Analyst Skill（Round 2 语义分析 / Round 3 工程保障）。
+    /// enableFinalization=false → 跳过投影/门禁/Materializer。
+    /// enableSemanticAnalysis=true → Round2 在 Compile 之上做受控 LLM 分析并写回 Skeleton。
+    /// </summary>
     private async Task<SkillRunResult> RunRoundAnalystAsync(
         int round, long pipelineId, string tenantId, string projectId,
-        SkillRunOptions skillOptions, bool enableFinalization, CancellationToken ct)
+        SkillRunOptions skillOptions, bool enableFinalization, CancellationToken ct,
+        bool enableSemanticAnalysis = false,
+        string? userRequirementOverride = null)
     {
-        _logger.LogInformation("Round {Round} Analyst 启动 enableFinalization={Fin}", round, enableFinalization);
-        // enableFinalization 经 SkillRunOptions → SkillContext 透传到 AnalystSkillService.ThinkAsync。
-        // SkillRunOptions 是 sealed class（非 record），逐字段复制后覆写目标字段。
+        _logger.LogInformation(
+            "Round {Round} Analyst 启动 enableFinalization={Fin} enableSemanticAnalysis={Sem}",
+            round, enableFinalization, enableSemanticAnalysis);
         var runOptions = new SkillRunOptions
         {
-            UserRequirement = skillOptions.UserRequirement,
+            UserRequirement = userRequirementOverride ?? skillOptions.UserRequirement,
             ProviderCode = skillOptions.ProviderCode,
             ArchGuardWarnings = skillOptions.ArchGuardWarnings,
             Bugfix = skillOptions.Bugfix,
             EnableFinalization = enableFinalization,
+            EnableSemanticAnalysis = enableSemanticAnalysis,
         };
         return await _harness.RunAsync(
             "analyst-skill", pipelineId, tenantId, projectId, runOptions, ct);
+    }
+
+    private async Task ReviewRequirementSpecAsync(
+        long pipelineId,
+        string tenantId,
+        string projectId,
+        string orchestratorRunId,
+        SkillRunOptions skillOptions,
+        CancellationToken ct)
+    {
+        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString(), ct);
+        var requirementSpecMarkdown = BuildRequirementSpecReviewInput(snapshots);
+        var context = new SkillContext
+        {
+            RunId = orchestratorRunId,
+            TenantId = tenantId,
+            ProjectId = projectId,
+            PipelineId = pipelineId,
+            UserRequirement = skillOptions.UserRequirement ?? string.Empty,
+            ProviderCode = skillOptions.ProviderCode,
+        };
+
+        SaNineViewCompileResult? compileResult = null;
+        var skeleton = snapshots.FirstOrDefault(s =>
+            s.FragmentType == IrFragmentTypes.Skeleton && s.StabilityState == IrStabilityStates.Stable);
+        if (skeleton != null)
+        {
+            try
+            {
+                var skeletonJson = skeleton.Payload switch
+                {
+                    JsonElement je when je.ValueKind == JsonValueKind.Object => je.GetRawText(),
+                    JsonElement je when je.ValueKind == JsonValueKind.String => je.GetString() ?? "{}",
+                    string s => s,
+                    null => "{}",
+                    _ => JsonSerializer.Serialize(skeleton.Payload, JsonOptions),
+                };
+                // 双重引号包裹的 JSON 字符串
+                if (skeletonJson.Length >= 2 && skeletonJson[0] == '"' && skeletonJson[^1] == '"')
+                {
+                    skeletonJson = JsonSerializer.Deserialize<string>(skeletonJson) ?? "{}";
+                }
+                if (!skeletonJson.TrimStart().StartsWith('{'))
+                {
+                    _logger.LogWarning(
+                        "PM 终评跳过 compile：骨架 payload 非 JSON pipeline={PipelineId} preview={Preview}",
+                        pipelineId, skeletonJson.Length > 80 ? skeletonJson[..80] : skeletonJson);
+                }
+                else
+                {
+                    compileResult = _compiler.CompileFromSkeletonJson(skeletonJson);
+                }
+            }
+            catch (Exception ex) when (ex is JsonException or InvalidOperationException or ArgumentException)
+            {
+                _logger.LogWarning(ex,
+                    "PM 终评骨架编译失败，降级为无图 gaps pipeline={PipelineId}", pipelineId);
+            }
+        }
+
+        var review = await _pm.ReviewSpecAsync(context, requirementSpecMarkdown, ct, compileResult);
+        await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
+        {
+            EventType = IrEventTypes.RequirementSpecPmReviewed,
+            FragmentId = $"requirement-spec-review:{projectId}",
+            FragmentType = IrFragmentTypes.EventSpec,
+            FragmentVersion = 1,
+            Payload = JsonSerializer.Serialize(new
+            {
+                score = review.Score,
+                verdict = review.Verdict,
+                gaps = review.Gaps,
+                gapDetails = review.GapDetails,
+                threshold = 85,
+                pipelineId,
+                reviewedBy = "pm-skill",
+            }, JsonOptions),
+            SkillId = "pm-skill",
+        }, ct);
+
+        _logger.LogInformation(
+            "PM 终评完成 pipeline={PipelineId} score={Score} verdict={Verdict} gaps={GapCount}",
+            pipelineId, review.Score, review.Verdict, review.Gaps.Count);
+    }
+
+    private static string BuildRequirementSpecReviewInput(IReadOnlyList<IrFragmentSnapshotDto> snapshots)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("# 需求分析说明书快照");
+        foreach (var snap in snapshots
+            .Where(s => s.FragmentType == IrFragmentTypes.EventSpec)
+            .OrderBy(s => s.FragmentId, StringComparer.Ordinal))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## {snap.FragmentId}");
+            sb.AppendLine(snap.Payload is string s ? s : JsonSerializer.Serialize(snap.Payload, JsonOptions));
+        }
+
+        return sb.ToString();
     }
 
     /// <summary>
@@ -476,7 +686,7 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             FragmentType = IrFragmentTypes.Clarification,
             FragmentVersion = round,
             Payload = JsonSerializer.Serialize(clarSet, JsonOptions),
-            SkillId = "requirement-analysis-orchestrator",
+            SkillId = "pm-skill",
         }, ct);
 
         _logger.LogInformation(
@@ -495,57 +705,8 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         SaNineViewCompileResult compileResult, IReadOnlyList<string> warnings,
         string? previousAnswersText, CancellationToken ct)
     {
-        // 27 号 §3.1/§4.1/§5.1：三轮各用不同 system prompt 出 3 道结构化选择题。
-        // Round 1：PM 行业专家视角——只问真正模糊、需业务方决策的点，行业惯例能定的不问。
-        // Round 2：联合精化视角——分析中发现的遗漏/冲突/假设，最需用户裁决的 3 点。
-        // Round 3：最终确认视角——遗漏检查 + 推导假设项确认。
-        var (title, intro, systemPrompt) = BuildRoundPrompt(round, compileResult, warnings, previousAnswersText);
-
-        // 构造 LLM 调用：按任务路由 Provider（27 号 §7.3）+ 超时分级（27 号 §7.2）
-        var skillKey = round switch { 1 => "pm-skill", 2 => "pspec-enhance", 3 => "confirm", _ => "confirm" };
-        var request = new ChatCompletionRequest
-        {
-            ProviderCode = _llm.ResolveProvider(skillKey),
-            SystemPrompt = systemPrompt,
-            Messages = new List<ChatMessage>
-            {
-                new("user", BuildRoundUserPrompt(round, compileResult, warnings, previousAnswersText)),
-            },
-            Temperature = 0.3,
-            MaxTokens = 2048,
-            TimeoutMs = _llm.ResolveTimeoutMs(skillKey),
-            ResponseFormat = "json",
-        };
-
-        var response = await _llm.ChatAsync(request, ct);
-        if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
-        {
-            _logger.LogWarning("第 {Round} 轮出题 LLM 失败，降级为空题集（AllowSkip=true）: {Error}",
-                round, response.Error);
-            return BuildEmptyClarificationSet(stage, round, title, intro);
-        }
-
-        var questions = ParseQuestionsFromLlm(response.Content, round);
-
-        // P9 兜底：LLM 未产出矩阵格式但问题覆盖 ≥2 个事件 → 自动合成矩阵行
-        ApplyMatrixFallback(questions, compileResult);
-
-        // 确保末项是"其他+文本框"逃生口（ADR-005 要求）
-        EnsureEscapeHatch(questions);
-
-        var set = new ClarificationSet
-        {
-            SetId = Guid.NewGuid().ToString("N"),
-            Stage = stage,
-            Round = round,
-            Title = title,
-            Intro = intro,
-            AllowSkipNonCritical = true,
-            Questions = questions,
-        };
-
-        _logger.LogInformation("第 {Round} 轮出题完成 stage={Stage} questions={Count}", round, stage, questions.Count);
-        return set;
+        return await _pm.GenerateClarificationAsync(
+            round, stage, tenantId, projectId, pipelineId, compileResult, warnings, previousAnswersText, ct);
     }
 
     /// <summary>
@@ -1154,6 +1315,169 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         }
         catch (JsonException) { /* 损坏 payload，降级空串 */ }
         return string.Empty;
+    }
+
+    private static IReadOnlyList<string> ExtractFilledSlotIds(string? payloadJson)
+    {
+        if (string.IsNullOrWhiteSpace(payloadJson))
+            return Array.Empty<string>();
+        try
+        {
+            using var doc = JsonDocument.Parse(payloadJson);
+            if (doc.RootElement.TryGetProperty("filledSlotIds", out var arr)
+                && arr.ValueKind == JsonValueKind.Array)
+            {
+                return arr.EnumerateArray()
+                    .Where(x => x.ValueKind == JsonValueKind.String)
+                    .Select(x => x.GetString()!)
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .ToList();
+            }
+        }
+        catch (JsonException) { /* ignore */ }
+        return Array.Empty<string>();
+    }
+
+    /// <summary>
+    /// PM 作为完善主体：澄清作答 → RefineSkeleton Typed patches → 写回 Skeleton。
+    /// LLM 失败时仍应用确定性槽位补丁（基线），不阻断三轮。
+    /// </summary>
+    private async Task ApplyClarificationAnswersToSkeletonAsync(
+        long pipelineId, string tenantId, string projectId,
+        IrSnapshot snapshot, IrSnapshotFragment roundClar, int round, CancellationToken ct)
+    {
+        var answersText = ExtractAnswersText(roundClar.Payload);
+        var filledSlots = ExtractFilledSlotIds(roundClar.Payload).ToList();
+        if (filledSlots.Count == 0)
+            filledSlots = ClarificationAnswerPatchMapper.DetectFilledSlots(answersText).ToList();
+
+        if (string.IsNullOrWhiteSpace(answersText) && filledSlots.Count == 0)
+        {
+            _logger.LogInformation(
+                "Round {Round} 无可用澄清答案，跳过 PM 完善 pipeline={PipelineId}", round, pipelineId);
+            return;
+        }
+
+        var skeleton = FindSkeletonAny(snapshot);
+        if (skeleton == null)
+        {
+            _logger.LogWarning(
+                "Round {Round} 无骨架，无法 PM 完善 pipeline={PipelineId}", round, pipelineId);
+            return;
+        }
+
+        if (skeleton.StabilityState != IrStabilityStates.Stable
+            && skeleton.StabilityState != IrStabilityStates.Locked)
+        {
+            await StabilizeSkeletonAsync(pipelineId, tenantId, projectId, skeleton, ct);
+            snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
+            skeleton = FindSkeletonAny(snapshot) ?? skeleton;
+        }
+
+        var skeletonJson = ResolveSkeletonPayloadJson(skeleton.Payload);
+        if (!skeletonJson.TrimStart().StartsWith('{'))
+        {
+            _logger.LogWarning(
+                "Round {Round} 骨架非 JSON，跳过 PM 完善 pipeline={PipelineId}", round, pipelineId);
+            return;
+        }
+
+        var context = new SkillContext
+        {
+            RunId = Guid.NewGuid().ToString("N"),
+            TenantId = tenantId,
+            ProjectId = projectId,
+            PipelineId = pipelineId,
+            UserRequirement = answersText,
+        };
+        var patches = await _pm.RefineSkeletonFromClarificationAsync(
+            context, skeletonJson, answersText, filledSlots, ct);
+        if (patches.Count == 0)
+            return;
+
+        var patched = AmendmentPatchApplier.ApplyToSkeletonJson(skeletonJson, patches);
+        if (string.Equals(patched, skeletonJson, StringComparison.Ordinal))
+        {
+            _logger.LogInformation(
+                "Round {Round} PM 完善未改变骨架（已幂等） pipeline={PipelineId}", round, pipelineId);
+            return;
+        }
+
+        var compile = _compiler.CompileFromSkeletonJson(patched);
+        await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
+        {
+            EventType = IrEventTypes.SkeletonCreated,
+            FragmentId = skeleton.FragmentId,
+            FragmentType = IrFragmentTypes.Skeleton,
+            Payload = patched,
+            SkillId = "pm-skill",
+        }, ct);
+        // SkeletonCreated 会把投影打回 Draft，必须立刻 Stabilize 供下游 Find(Stable)
+        await StabilizeSkeletonAsync(pipelineId, tenantId, projectId, skeleton, ct);
+
+        _logger.LogInformation(
+            "Round {Round} PM 完善已写回骨架 pipeline={PipelineId} patchCount={PatchCount} filledSlots={Slots} bundleHash={Hash}",
+            round, pipelineId, patches.Count, string.Join(",", filledSlots), compile.BundleHash);
+    }
+
+    /// <summary>查找任意稳定性骨架（Stable → InProgress → Draft）。</summary>
+    private static IrSnapshotFragment? FindSkeletonAny(IrSnapshot snapshot)
+        => snapshot.Find(IrFragmentTypes.Skeleton, IrStabilityStates.Stable)
+           ?? snapshot.Find(IrFragmentTypes.Skeleton, IrStabilityStates.InProgress)
+           ?? snapshot.Find(IrFragmentTypes.Skeleton);
+
+    /// <summary>三轮编排内自动 Stabilize 骨架（等价于 confirm-skeleton，避免 Draft 空引用）。</summary>
+    private async Task StabilizeSkeletonAsync(
+        long pipelineId, string tenantId, string projectId,
+        IrSnapshotFragment skeleton, CancellationToken ct)
+    {
+        if (skeleton.StabilityState is IrStabilityStates.Stable or IrStabilityStates.Locked)
+            return;
+
+        await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
+        {
+            EventType = IrEventTypes.FragmentStabilized,
+            FragmentId = skeleton.FragmentId,
+            FragmentType = IrFragmentTypes.Skeleton,
+            Payload = JsonSerializer.Serialize(new
+            {
+                fragmentId = skeleton.FragmentId,
+                stabilityState = IrStabilityStates.Stable,
+                confirmedBy = "requirement-analysis-orchestrator",
+                pipelineId,
+            }, JsonOptions),
+            SkillId = "requirement-analysis-orchestrator",
+        }, ct);
+
+        _logger.LogInformation(
+            "骨架已 Stabilize fragment={FragmentId} pipeline={PipelineId}",
+            skeleton.FragmentId, pipelineId);
+    }
+
+    private static string ResolveSkeletonPayloadJson(object? payload)
+    {
+        return payload switch
+        {
+            string s => UnwrapJsonString(s),
+            JsonElement je when je.ValueKind == JsonValueKind.Object => je.GetRawText(),
+            JsonElement je when je.ValueKind == JsonValueKind.String => UnwrapJsonString(je.GetString() ?? "{}"),
+            null => "{}",
+            _ => UnwrapJsonString(JsonSerializer.Serialize(payload, JsonOptions)),
+        };
+    }
+
+    private static string UnwrapJsonString(string raw)
+    {
+        var skeletonJson = raw?.Trim() ?? "{}";
+        if (skeletonJson.Length >= 2 && skeletonJson[0] == '"' && skeletonJson[^1] == '"')
+        {
+            try
+            {
+                skeletonJson = JsonSerializer.Deserialize<string>(skeletonJson) ?? "{}";
+            }
+            catch (JsonException) { /* keep raw */ }
+        }
+        return skeletonJson;
     }
 
     private async Task<IrSnapshot> BuildSnapshotAsync(string tenantId, string projectId, string pipelineId, CancellationToken ct)

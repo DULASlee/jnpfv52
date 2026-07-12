@@ -15,19 +15,28 @@ public static class RequirementTitleHelper
         @"[《「]([^》」]{2,40})[》」]",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-    /// <summary>提取系统简称（不含「系统」后缀）。</summary>
+    /// <summary>提取系统简称（不含「系统」后缀）。优先需求原文中的中文系统名，拒绝 E2E slug 抢占表头。</summary>
     public static string ExtractSystemName(string? requirementText, string? pipelineTitle = null)
     {
-        if (!string.IsNullOrWhiteSpace(pipelineTitle))
+        var fromText = ExtractFromRequirementText(requirementText);
+        if (!string.IsNullOrWhiteSpace(fromText) && !string.Equals(fromText, "业务", StringComparison.Ordinal))
+            return fromText;
+
+        if (IsUsablePipelineTitle(pipelineTitle))
         {
-            var fromPipeline = NormalizeName(pipelineTitle.Trim());
+            var fromPipeline = NormalizeName(pipelineTitle!.Trim());
             if (!string.IsNullOrWhiteSpace(fromPipeline))
                 return fromPipeline;
         }
 
+        return string.IsNullOrWhiteSpace(fromText) ? "业务" : fromText;
+    }
+
+    private static string ExtractFromRequirementText(string? requirementText)
+    {
         var text = requirementText?.Trim() ?? string.Empty;
         if (string.IsNullOrEmpty(text))
-            return "业务";
+            return string.Empty;
 
         var book = BookTitleRegex.Match(text);
         if (book.Success)
@@ -50,7 +59,19 @@ public static class RequirementTitleHelper
                 return cleaned;
         }
 
-        return "业务";
+        return string.Empty;
+    }
+
+    /// <summary>E2E 自动生成的 longchain-*-timestamp 不得作为企业说明书项目名。</summary>
+    private static bool IsUsablePipelineTitle(string? pipelineTitle)
+    {
+        if (string.IsNullOrWhiteSpace(pipelineTitle))
+            return false;
+        if (pipelineTitle.Contains("longchain", StringComparison.OrdinalIgnoreCase))
+            return false;
+        if (Regex.IsMatch(pipelineTitle, @"\d{10,}"))
+            return false;
+        return true;
     }
 
     public static string BuildDocumentTitle(string systemName)

@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using JNPF.DependencyInjection;
 using JNPF.FriendlyException;
+using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Constraints;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
@@ -38,6 +39,7 @@ public sealed class SystemDesignClarificationSkill : CognitiveSkill, ITransient
     private readonly ISkillLlmBudgetGuard _budgetGuard;
     private readonly IConstraintEngineService _constraintEngine;
     private readonly IPipelineSseChannelHub _sseHub;
+    private readonly EntityDesignRepository _entityDesignRepo;
     private readonly ILogger<SystemDesignClarificationSkill> _logger;
 
     public SystemDesignClarificationSkill(
@@ -45,12 +47,14 @@ public sealed class SystemDesignClarificationSkill : CognitiveSkill, ITransient
         ISkillLlmBudgetGuard budgetGuard,
         IConstraintEngineService constraintEngine,
         IPipelineSseChannelHub sseHub,
+        EntityDesignRepository entityDesignRepo,
         ILogger<SystemDesignClarificationSkill> logger)
         : base(toolkit)
     {
         _budgetGuard = budgetGuard;
         _constraintEngine = constraintEngine;
         _sseHub = sseHub;
+        _entityDesignRepo = entityDesignRepo;
         _logger = logger;
     }
 
@@ -144,6 +148,12 @@ public sealed class SystemDesignClarificationSkill : CognitiveSkill, ITransient
         // 阶段二：读用户答案，调约束引擎，产出 SystemDesignLocked（含 assumptions 留痕）
         var answersText = ExtractAnswersText(sysClarification.Payload);
 
+        // 25 §6：锁定前校验 ai_entity_field 投影存在（字段唯一源）— 与 SystemDesignSkillService 一致
+        var fieldCount = await _entityDesignRepo.CountFieldsAsync(
+            context.TenantId, context.ProjectId, context.PipelineId.ToString(), ct);
+        if (fieldCount == 0)
+            throw Oops.Bah("SystemDesignClarification Skill: ai_entity_field 无字段，拒绝锁定（须先 Round 3 Finalize 投影）");
+
         // 先投 SystemDesignClarificationCompleted（携带 answersText，留痕 + 作为阶段二信号）
         yield return new AppendIrEventRequest
         {
@@ -175,6 +185,12 @@ public sealed class SystemDesignClarificationSkill : CognitiveSkill, ITransient
         var ddl = context.Snapshot.Find(IrFragmentTypes.DDL, IrStabilityStates.Stable)!;
         var ui = context.Snapshot.Find(IrFragmentTypes.FormPageIR, IrStabilityStates.Stable)!;
 
+        // P9-S1：从上游 IR 确定性派生状态机/工作流/菜单（零 LLM，纯编译派生）
+        // 与 SystemDesignSkillService 一致，确保澄清路径产出完整结构化设计
+        var skeleton = context.Snapshot.Find(IrFragmentTypes.Skeleton, IrStabilityStates.Stable)
+            ?? context.Snapshot.Find(IrFragmentTypes.Skeleton);
+        var (stateMachines, workflowNodes, menus) = SystemDesignSkillService.DeriveStructuredDesign(skeleton, ui);
+
         var payload = JsonSerializer.Serialize(new
         {
             @context = "https://schema.jnpf.ai/ir/v1",
@@ -192,6 +208,10 @@ public sealed class SystemDesignClarificationSkill : CognitiveSkill, ITransient
                 new { check = "constraint-engine", passed = true, warningCount = check.WarningCount },
                 new { check = "clarification-answered", passed = true },
             },
+            // P9-S1 新增：结构化设计内容（编译器据此生成工作流 JSON + 菜单注册）
+            stateMachines,
+            workflowNodes,
+            menus,
             // ADR-005 P3：用户对总体设计的澄清作答留痕（约束引擎不读 prompt，但答案写入 payload 供审计回放）
             assumptions = string.IsNullOrWhiteSpace(answersText) ? null : answersText,
             stabilityState = IrStabilityStates.Locked,
@@ -392,7 +412,7 @@ public sealed class SystemDesignClarificationSkill : CognitiveSkill, ITransient
                     Id = "q2",
                     Text = "与外部系统的集成方式？",
                     Type = "multi",
-                    Required = false,
+                    Required = true,
                     Options = new List<ClarificationOption>
                     {
                         new() { Id = "o1", Label = "REST API" },

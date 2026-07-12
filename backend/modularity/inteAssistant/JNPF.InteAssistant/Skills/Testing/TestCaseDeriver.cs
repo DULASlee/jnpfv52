@@ -74,21 +74,79 @@ public static class TestCaseDeriver
             });
         }
 
-        foreach (var field in fields.Where(f => f.Type == "int"))
+        // 数值类型：int / long / decimal / double / float → 边界值 + 类型错误
+        foreach (var field in fields.Where(f => IsNumericType(f.Type)))
         {
             cases.Add(new DerivedTestCase
             {
-                CaseId = $"valid-boundary-int-{field.Name.ToLowerInvariant()}",
+                CaseId = $"valid-boundary-{field.Type}-{field.Name.ToLowerInvariant()}",
                 Rule = "F-TYPE",
                 Kind = "valid",
-                Description = $"{field.Name} 边界值 1",
+                Description = $"{field.Name} ({field.Type}) 边界值 1",
             });
             cases.Add(new DerivedTestCase
             {
-                CaseId = $"invalid-wrong-type-{field.Name.ToLowerInvariant()}",
+                CaseId = $"invalid-wrong-type-{field.Type}-{field.Name.ToLowerInvariant()}",
                 Rule = "F-TYPE",
                 Kind = "invalid",
-                Description = $"{field.Name} 类型错误（非 int）",
+                Description = $"{field.Name} ({field.Type}) 类型错误（非数值）",
+            });
+        }
+
+        // DateTime 类型：有效日期 + 无效格式
+        foreach (var field in fields.Where(f => IsDateTimeType(f.Type)))
+        {
+            cases.Add(new DerivedTestCase
+            {
+                CaseId = $"valid-date-{field.Name.ToLowerInvariant()}",
+                Rule = "F-TYPE",
+                Kind = "valid",
+                Description = $"{field.Name} ({field.Type}) 有效日期 2024-01-01",
+            });
+            cases.Add(new DerivedTestCase
+            {
+                CaseId = $"invalid-date-format-{field.Name.ToLowerInvariant()}",
+                Rule = "F-TYPE",
+                Kind = "invalid",
+                Description = $"{field.Name} ({field.Type}) 日期格式错误",
+            });
+        }
+
+        // bool 类型：有效值 + 非布尔值
+        foreach (var field in fields.Where(f => IsBooleanType(f.Type)))
+        {
+            cases.Add(new DerivedTestCase
+            {
+                CaseId = $"valid-bool-true-{field.Name.ToLowerInvariant()}",
+                Rule = "F-TYPE",
+                Kind = "valid",
+                Description = $"{field.Name} ({field.Type}) 值为 true",
+            });
+            cases.Add(new DerivedTestCase
+            {
+                CaseId = $"invalid-bool-{field.Name.ToLowerInvariant()}",
+                Rule = "F-TYPE",
+                Kind = "invalid",
+                Description = $"{field.Name} ({field.Type}) 非布尔值",
+            });
+        }
+
+        // Guid 类型：有效 GUID + 格式错误
+        foreach (var field in fields.Where(f => IsGuidType(f.Type)))
+        {
+            cases.Add(new DerivedTestCase
+            {
+                CaseId = $"valid-guid-{field.Name.ToLowerInvariant()}",
+                Rule = "F-TYPE",
+                Kind = "valid",
+                Description = $"{field.Name} ({field.Type}) 有效 GUID",
+            });
+            cases.Add(new DerivedTestCase
+            {
+                CaseId = $"invalid-guid-format-{field.Name.ToLowerInvariant()}",
+                Rule = "F-TYPE",
+                Kind = "invalid",
+                Description = $"{field.Name} ({field.Type}) GUID 格式错误",
             });
         }
 
@@ -167,4 +225,33 @@ public static class TestCaseDeriver
 
         return list;
     }
+
+    private static readonly HashSet<string> NumericTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "int", "int32", "long", "int64", "decimal", "double", "float", "single",
+        "short", "int16", "byte", "uint", "uint32", "ulong", "uint64", "sbyte",
+    };
+
+    private static readonly HashSet<string> DateTimeTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "datetime", "date", "datetimeoffset", "timespan",
+    };
+
+    private static readonly HashSet<string> BooleanTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "bool", "boolean",
+    };
+
+    private static readonly HashSet<string> GuidTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "guid", "uuid",
+    };
+
+    private static bool IsNumericType(string type) => NumericTypes.Contains(type);
+
+    private static bool IsDateTimeType(string type) => DateTimeTypes.Contains(type);
+
+    private static bool IsBooleanType(string type) => BooleanTypes.Contains(type);
+
+    private static bool IsGuidType(string type) => GuidTypes.Contains(type);
 }

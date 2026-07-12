@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text;
 using JNPF.DependencyInjection;
 using JNPF.InteAssistant.Codegen.EntityDesign;
@@ -23,6 +24,7 @@ public interface IRequirementDocumentRenderer
     /// <param name="consistencyFindings">一致性检查发现列表</param>
     /// <param name="qualityScore">质量评分</param>
     /// <param name="roundNumber">需求分析轮次（1/2/3）</param>
+    /// <param name="clarificationAnswers">三轮澄清作答附录（有则写，无则空节）</param>
     /// <param name="ct">取消令牌</param>
     string Render(
         PipelineTriple triple,
@@ -32,8 +34,12 @@ public interface IRequirementDocumentRenderer
         IReadOnlyList<ConsistencyFinding> consistencyFindings,
         QualityScore qualityScore,
         int roundNumber,
+        IReadOnlyList<ClarificationAnswerAppendix>? clarificationAnswers = null,
         CancellationToken ct = default);
 }
+
+/// <summary>02 附录：用户澄清作答摘要。</summary>
+public sealed record ClarificationAnswerAppendix(string Stage, int Round, string AnswersText);
 
 public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, ITransient
 {
@@ -52,21 +58,30 @@ public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, 
         IReadOnlyList<ConsistencyFinding> consistencyFindings,
         QualityScore qualityScore,
         int roundNumber,
+        IReadOnlyList<ClarificationAnswerAppendix>? clarificationAnswers = null,
         CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
 
         var sb = new StringBuilder();
-        var model = compileResult.Source;
+        // 企业可用：表头禁止「—」；身份在渲染前强制补全
+        var model = compileResult.Source.ResolveIdentity(
+            pipelineTitle: null,
+            requirementText: compileResult.Source.RequirementSummary);
 
         RenderCover(sb, model, triple, roundNumber, qualityScore);
+        RenderPendingConfirmations(sb, dddProjection);
         RenderSection1Overview(sb, model, compileResult, entityFields, dddProjection);
         RenderSection2BusinessEvents(sb, model, compileResult);
         RenderSection3DddEnhancement(sb, dddProjection);
         RenderSection4DataModel(sb, entityFields);
         RenderSection5Consistency(sb, consistencyFindings);
         RenderSection6Quality(sb, qualityScore);
-        RenderAppendices(sb, model, compileResult);
+        RenderSection7OutOfScope(sb, compileResult);
+        RenderSection8FailureCompensation(sb, model, compileResult);
+        RenderSection9AcceptancePoints(sb, model);
+        RenderAppendices(sb, model, compileResult, clarificationAnswers);
+        RenderConfirmCta(sb);
 
         _logger.LogInformation("需求分析规格说明书渲染完成，{totalChars:N0} 字符", sb.Length);
         return sb.ToString();
@@ -81,8 +96,9 @@ public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, 
         sb.AppendLine();
         sb.AppendLine("| 属性 | 值 |");
         sb.AppendLine("|------|-----|");
-        sb.AppendLine($"| 项目名称 | {Esc(model.SystemName ?? "—")} |");
-        sb.AppendLine($"| 需求概要 | {Esc(model.RequirementSummary ?? "—")} |");
+        // ResolveIdentity 已保证非空；禁止回退到「—」
+        sb.AppendLine($"| 项目名称 | {Esc(model.SystemName!)} |");
+        sb.AppendLine($"| 需求概要 | {Esc(model.RequirementSummary!)} |");
         sb.AppendLine($"| 租户 ID | {Esc(triple.TenantId)} |");
         sb.AppendLine($"| 项目 ID | {Esc(triple.ProjectId)} |");
         sb.AppendLine($"| Pipeline ID | {triple.PipelineId} |");
@@ -90,6 +106,27 @@ public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, 
         sb.AppendLine($"| 质量综合评分 | {qualityScore.TotalScore:F1} |");
         sb.AppendLine($"| 生成时间 | {DateTime.Now:yyyy-MM-dd HH:mm:ss} |");
         sb.AppendLine($"| Schema 版本 | {Esc(model.SchemaVersion)} |");
+        sb.AppendLine();
+        sb.AppendLine("---");
+        sb.AppendLine();
+    }
+
+    /// <summary>DDD 低置信度待确认（SG2-T11 / SG2-E2）：必须显式列出，禁止静默 30%。</summary>
+    private static void RenderPendingConfirmations(StringBuilder sb, DddProjectionResult dddProjection)
+    {
+        if (dddProjection.PendingConfirmations.Count == 0)
+            return;
+
+        sb.AppendLine("## ⚠ 待确认事项（DDD 低置信度）");
+        sb.AppendLine();
+        sb.AppendLine("> 以下项置信度 &lt; 50%，须业务确认后方可作为设计/生成依据。");
+        sb.AppendLine();
+        var i = 1;
+        foreach (var item in dddProjection.PendingConfirmations)
+        {
+            sb.AppendLine($"{i}. {Esc(item)}");
+            i++;
+        }
         sb.AppendLine();
         sb.AppendLine("---");
         sb.AppendLine();
@@ -170,6 +207,7 @@ public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, 
             sb.AppendLine("| 属性 | 值 |");
             sb.AppendLine("|------|-----|");
             sb.AppendLine($"| EventId | `{Esc(evt.EventId)}` |");
+            sb.AppendLine("| 阶段 | MVP |");
             sb.AppendLine($"| 复杂度 | {Esc(evt.ComplexityHint)} |");
             sb.AppendLine($"| 编译步骤数 | {evtResult?.Steps?.Count ?? 0} |");
             if (evtResult?.Error != null)
@@ -553,9 +591,110 @@ public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, 
         sb.AppendLine();
     }
 
+    // ──────────────────── 轻量增强章节 ────────────────────
+
+    private static void RenderSection7OutOfScope(StringBuilder sb, SaNineViewCompileResult compileResult)
+    {
+        sb.AppendLine("## 非目标 / Out of Scope");
+        sb.AppendLine();
+
+        var boundaryHints = compileResult.Assumptions
+            .Where(a => a.Text.Contains("边界", StringComparison.OrdinalIgnoreCase)
+                || a.Text.Contains("不包含", StringComparison.OrdinalIgnoreCase)
+                || a.Text.Contains("暂不", StringComparison.OrdinalIgnoreCase)
+                || a.Text.Contains("外部", StringComparison.OrdinalIgnoreCase))
+            .Select(a => a.Text)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(5)
+            .ToList();
+
+        if (boundaryHints.Count > 0)
+        {
+            foreach (var hint in boundaryHints)
+                sb.AppendLine($"- {Esc(hint)}");
+        }
+        else
+        {
+            sb.AppendLine("- 暂不覆盖三方系统深度改造，仅保留必要对接边界。");
+            sb.AppendLine("- 暂不覆盖生产环境数据迁移与历史数据清洗，后续由实施阶段单独评估。");
+            sb.AppendLine("- 暂不覆盖移动端、数据大屏等额外端形态，除非后续需求明确纳入。");
+        }
+
+        sb.AppendLine();
+    }
+
+    private static void RenderSection8FailureCompensation(
+        StringBuilder sb,
+        PreAnalysisModel model,
+        SaNineViewCompileResult compileResult)
+    {
+        sb.AppendLine("## 失败与补偿");
+        sb.AppendLine();
+
+        var exceptionHints = new List<string>();
+        exceptionHints.AddRange(compileResult.Assumptions
+            .Where(a => a.Text.Contains("异常", StringComparison.OrdinalIgnoreCase)
+                || a.Text.Contains("失败", StringComparison.OrdinalIgnoreCase)
+                || a.Text.Contains("补偿", StringComparison.OrdinalIgnoreCase)
+                || a.Text.Contains("重试", StringComparison.OrdinalIgnoreCase))
+            .Select(a => a.Text));
+        exceptionHints.AddRange(model.BusinessRules
+            .Where(r => r.Description.Contains("异常", StringComparison.OrdinalIgnoreCase)
+                || r.Description.Contains("失败", StringComparison.OrdinalIgnoreCase)
+                || r.Description.Contains("补偿", StringComparison.OrdinalIgnoreCase)
+                || r.Description.Contains("重试", StringComparison.OrdinalIgnoreCase))
+            .Select(r => r.Description));
+
+        var items = exceptionHints
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToList();
+
+        if (items.Count == 0)
+        {
+            sb.AppendLine("- 暂未识别明确失败与补偿规则；实施前需补充外部接口失败、审批驳回、并发提交等异常路径。");
+        }
+        else
+        {
+            foreach (var item in items)
+                sb.AppendLine($"- {Esc(item)}");
+        }
+
+        sb.AppendLine();
+    }
+
+    private static void RenderSection9AcceptancePoints(StringBuilder sb, PreAnalysisModel model)
+    {
+        sb.AppendLine("## 验收要点");
+        sb.AppendLine();
+
+        if (model.BusinessEvents.Count == 0)
+        {
+            sb.AppendLine("- 暂无核心业务事件，无法生成 Given/When/Then 验收要点。");
+            sb.AppendLine();
+            return;
+        }
+
+        foreach (var evt in model.BusinessEvents.Take(12))
+        {
+            var eventName = Esc(evt.EventName);
+            sb.AppendLine($"### {eventName}");
+            sb.AppendLine();
+            sb.AppendLine($"- Given 用户具备执行「{eventName}」的业务权限和必要前置数据。");
+            sb.AppendLine($"- When 用户在系统中完成「{eventName}」操作。");
+            sb.AppendLine($"- Then 系统记录对应业务数据、状态变化和可审计操作结果。");
+            sb.AppendLine();
+        }
+    }
+
     // ──────────────────── 附录 ────────────────────
 
-    private static void RenderAppendices(StringBuilder sb, PreAnalysisModel model, SaNineViewCompileResult compileResult)
+    private static void RenderAppendices(
+        StringBuilder sb,
+        PreAnalysisModel model,
+        SaNineViewCompileResult compileResult,
+        IReadOnlyList<ClarificationAnswerAppendix>? clarificationAnswers)
     {
         sb.AppendLine("## 附录");
         sb.AppendLine();
@@ -571,6 +710,30 @@ public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, 
 
         // 附录 D：编译假设清单
         RenderAppendixD(sb, compileResult);
+
+        // 附录 E：澄清问答作答（31 P0.4 — 有则写，无则空节）
+        RenderAppendixE(sb, clarificationAnswers);
+    }
+
+    private static void RenderAppendixE(StringBuilder sb, IReadOnlyList<ClarificationAnswerAppendix>? clarificationAnswers)
+    {
+        sb.AppendLine("### 附录 E — 澄清问答作答");
+        sb.AppendLine();
+
+        if (clarificationAnswers == null || clarificationAnswers.Count == 0)
+        {
+            sb.AppendLine("（本轮无结构化澄清作答记录）");
+            sb.AppendLine();
+            return;
+        }
+
+        foreach (var item in clarificationAnswers.OrderBy(x => x.Round).ThenBy(x => x.Stage, StringComparer.Ordinal))
+        {
+            sb.AppendLine($"#### 第 {item.Round} 轮（`{Esc(item.Stage)}`）");
+            sb.AppendLine();
+            sb.AppendLine(string.IsNullOrWhiteSpace(item.AnswersText) ? "（空）" : item.AnswersText.Trim());
+            sb.AppendLine();
+        }
     }
 
     private static void RenderAppendixA(StringBuilder sb, PreAnalysisModel model)
@@ -664,6 +827,14 @@ public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, 
         {
             sb.AppendLine($"| `{Esc(a.EventId)}` | {Esc(a.SourceStep)} | {Esc(a.Text)} | {a.Confidence:P0} |");
         }
+        sb.AppendLine();
+    }
+
+    private static void RenderConfirmCta(StringBuilder sb)
+    {
+        sb.AppendLine("---");
+        sb.AppendLine();
+        sb.AppendLine("请你确认需求分析说明书，如果同意，推进到下一工作阶段，如果不满意，请在输入框继续提出你的问题和要求。");
         sb.AppendLine();
     }
 

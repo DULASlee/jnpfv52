@@ -46,6 +46,16 @@ internal sealed class EventBusHostedService : BackgroundService
     private readonly ConcurrentDictionary<EventHandlerWrapper, EventHandlerWrapper> _eventHandlers = new();
 
     /// <summary>
+    /// 事件处理程序精确匹配索引（EventId → 预排序处理程序列表），O(1) 查找
+    /// </summary>
+    private ConcurrentDictionary<string, List<EventHandlerWrapper>> _handlerIndex = new();
+
+    /// <summary>
+    /// 正则模式匹配的事件处理程序（需线性扫描）
+    /// </summary>
+    private List<EventHandlerWrapper> _regexHandlers = new();
+
+    /// <summary>
     /// 构造函数
     /// </summary>
     /// <param name="logger">日志对象</param>
@@ -112,6 +122,8 @@ internal sealed class EventBusHostedService : BackgroundService
                 }
             }
         }
+
+        RebuildHandlerIndex();
     }
 
     /// <summary>
@@ -198,8 +210,21 @@ internal sealed class EventBusHostedService : BackgroundService
             return;
         }
 
-        // 查找事件 Id 匹配的事件处理程序
-        var eventHandlersThatShouldRun = _eventHandlers.Where(t => t.Key.ShouldRun(eventSource.EventId)).OrderByDescending(u => u.Value.Order).Select(u => u.Key);
+        // O(1) 精确匹配索引查找 + 正则模式扫描
+        var handlersToRun = new List<EventHandlerWrapper>();
+        if (_handlerIndex.TryGetValue(eventSource.EventId, out var exactMatches))
+        {
+            handlersToRun.AddRange(exactMatches);
+        }
+        foreach (var h in _regexHandlers)
+        {
+            if (h.EventId != eventSource.EventId && h.ShouldRun(eventSource.EventId))
+            {
+                handlersToRun.Add(h);
+            }
+        }
+        handlersToRun.Sort((a, b) => b.Order.CompareTo(a.Order));
+        var eventHandlersThatShouldRun = handlersToRun as IEnumerable<EventHandlerWrapper>;
 
         // 空订阅
         if (!eventHandlersThatShouldRun.Any())
@@ -376,6 +401,41 @@ internal sealed class EventBusHostedService : BackgroundService
                 Log(LogLevel.Warning, "Subscriber<{Name}> with event ID <{EventId}> was remove.", new[] { wrapper.HandlerMethod?.Name, eventId });
             }
         }
+
+        RebuildHandlerIndex();
+    }
+
+    /// <summary>
+    /// 从 _eventHandlers 重建精确匹配索引和正则处理器列表
+    /// </summary>
+    private void RebuildHandlerIndex()
+    {
+        var exactDict = new Dictionary<string, List<EventHandlerWrapper>>();
+        var regexList = new List<EventHandlerWrapper>();
+
+        foreach (var kvp in _eventHandlers)
+        {
+            var wrapper = kvp.Key;
+            if (wrapper.Pattern != null)
+            {
+                regexList.Add(wrapper);
+            }
+            if (!exactDict.TryGetValue(wrapper.EventId, out var list))
+            {
+                list = new List<EventHandlerWrapper>();
+                exactDict[wrapper.EventId] = list;
+            }
+            list.Add(wrapper);
+        }
+
+        // 按 Order 降序预排序
+        foreach (var list in exactDict.Values)
+        {
+            list.Sort((a, b) => b.Order.CompareTo(a.Order));
+        }
+
+        _handlerIndex = new ConcurrentDictionary<string, List<EventHandlerWrapper>>(exactDict);
+        _regexHandlers = regexList;
     }
 
     /// <summary>

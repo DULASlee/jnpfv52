@@ -13,8 +13,8 @@ alwaysApply: true
    - **S0→S2 / Analyst / 九表物化：** `openspec/specs/studio-s2-compile/spec.md` + ADR-004
    - **E2E / 验收工具选型：** `openspec/specs/studio-e2e-toolchain/spec.md` + `.cursor/rules/testing-toolchain.mdc`
 3. **ADR**：若涉及「为什么这样设计」，读 `openspec/adr/ADR-*.md`（S2 必读 **ADR-004**）
-4. **规则**：确认未违反 `.cursor/rules/*.mdc`（S2 改 Analyst/Sa* 必读 **`studio-s2-compile`**；另见 `testing-toolchain`、`auto-test-fix-loop`、`frontend-typecheck`、`tenant`、`git-workflow`、`toolchain-division`）
-5. **代码定位**：用 Grep / SemanticSearch；C# 符号级改动用 Serena MCP（**无** `serena index` CLI）
+4. **规则**：确认未违反 `.cursor/rules/*.mdc`（S2 改 Analyst/Sa* 必读 **`studio-s2-compile`**；另见 `testing-toolchain`、`auto-test-fix-loop`、`frontend-typecheck`、`tenant`、`git-workflow`、`toolchain-division`、**`needle-search`**）
+5. **代码定位**：遵守 **`needle-search.mdc`**（先窄后宽 · 并行≤3）；C# 符号用 Serena；禁止全仓拖网 / 为找文件派 explore
 
 ## 编码后
 

@@ -39,7 +39,7 @@
 | 1 | 主 API | `:30000` | 同域 `/dev` 反代 | ASP.NET Core 6 + Furion | [01](01-core-framework.md)、[02](02-application-services.md) |
 | 2 | 主 WEB | `:3100` | 静态 + Nginx | Vue 3 + Vite | [04](04-application-frontend-deep-dive.md) |
 | 3 | UniApp H5 | `:3800` | `/app` 等 | uni-app | [06](06-mobile-uniapp-deep-dive.md) |
-| 4 | 数字大屏 DataV | `:8100/DataV/` | `/DataV/` | Vue（独立工程） | [05](05-visual-data-deep-dive.md) |
+| 4 | 数字大屏 DataV | `:3102/DataV/` | `/DataV/` | Vue（独立工程） | [05](05-visual-data-deep-dive.md) |
 | 5 | **Univer 报表 API** | 代理 `/reportDev` → **`:32000`** | `/Report` 或独立域名 | **独立服务**【待源码验证 Java 栈】 | **本篇 §4** |
 | 6 | **Univer 报表前端静态** | **`:8200`** | `apiUrl + '/Report'` | 静态资源 + JnpfUniver 组件 | **本篇 §4** |
 | 7 | **旧数据报表 ReportServer** | **`:30007`** | `/ReportServer` | **独立服务** | **本篇 §4.4** |
@@ -58,7 +58,7 @@ VITE_GLOB_REPORT_API_URL=/reportDev
 
 ```29:36:d:\JNPF-v52\jnpf-web-vue3\src\hooks\setting\index.ts
     filePreviewServer: isDevMode() ? 'http://localhost:30090/FileServer' : VITE_GLOB_API_URL + '/FileServer',
-    dataVUrl: isDevMode() ? 'http://localhost:8100/DataV/' : prodUrlPrefix + '/DataV/',
+    dataVUrl: isDevMode() ? 'http://localhost:3102/DataV/' : prodUrlPrefix + '/DataV/',
     reportServer: isDevMode() ? 'http://localhost:30007' : VITE_GLOB_API_URL + '/ReportServer',
     report: isDevMode() ? 'http://localhost:8200' : VITE_GLOB_API_URL + '/Report',
 ```
@@ -72,7 +72,7 @@ flowchart TB
   subgraph Clients["客户端"]
     PC["主 WEB :3100"]
     APP["UniApp H5 :3800"]
-    DV["DataV :8100"]
+    DV["DataV :3102"]
   end
 
   subgraph Gateway["开发代理 / 生产 Nginx"]
@@ -158,7 +158,7 @@ flowchart TB
 | 02 | [02-application-services.md](02-application-services.md) | DI、Filter、数据权限、UnitOfWork、Oops |
 | 03 | [03-application-modules-deep-dive.md](03-application-modules-deep-dive.md) | Systems 六大模块 **BASE_*** 表 |
 | 04 | [04-application-frontend-deep-dive.md](04-application-frontend-deep-dive.md) | 主 WEB 工程化、路由、Axios、Layout |
-| 05 | [05-visual-data-deep-dive.md](05-visual-data-deep-dive.md) | DataV 大屏 **BLADE_***、`:8100` |
+| 05 | [05-visual-data-deep-dive.md](05-visual-data-deep-dive.md) | DataV 大屏 **BLADE_***、`:3102` |
 | 06 | [06-mobile-uniapp-deep-dive.md](06-mobile-uniapp-deep-dive.md) | UniApp 工程、App 菜单、`:3800` |
 | 07 | [07-cache-middleware-deep-dive.md](07-cache-middleware-deep-dive.md) | Redis/Memory 缓存、键全量清单 |
 | 08 | [08-mq-and-events-deep-dive.md](08-mq-and-events-deep-dive.md) | EventBus、RabbitMQ、8 EventId |
@@ -849,7 +849,7 @@ sequenceDiagram
 
 ## 附录 A：深度自检清单
 
-- [x] 部署拓扑含 :30000 / :3100 / :3800 / :8100 / :8200 / :32000 / :30007 / :30090
+- [x] 部署拓扑含 :30000 / :3100 / :3800 / :3102 / :8200 / :32000 / :30007 / :30090
 - [x] 01–10 文档索引矩阵
 - [x] mt{ID} 生命周期图 + NoTblToTable 源码
 - [x] 报表三路径区分（Univer / ReportServer / PrintDev）

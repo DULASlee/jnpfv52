@@ -29,7 +29,7 @@ JNPF v5.2 low-code platform — .NET 8 backend + Vue 3 frontends. Full architect
 powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1
 ```
 
-Kills stale dotnet/node processes, frees ports 3100+5000, then launches frontend (`:3100`) and backend (`:5000` with hot-reload).
+Kills stale dotnet/node processes, frees ports 3100+3102+3800+5000+3001, then launches frontend (`:3100`), datascreen (`:3102`), mobile (`:3800`), and backend (`:5000` with hot-reload).
 
 ## Key Commands
 
@@ -55,16 +55,19 @@ Kills stale dotnet/node processes, frees ports 3100+5000, then launches frontend
 
 ## Code Search Rules（强制性 — 所有 Agent 必遵）
 
-**使用 MCP 工具做代码搜索，禁止逐文件 grep/find 遍历：**
+> **针式搜索铁律（防卡死）：** `.cursor/rules/needle-search.mdc` · `.claude/rules/needle-search.md`  
+> 先窄后宽 · 并行≤3 · 禁全仓拖网 · 禁为找文件派 explore · 大文件局部 Read · >15s 收窄不盲重试。
 
 | 搜索目标 | 工具 | 说明 |
 |---------|------|------|
-| C# 符号（类/方法/接口/引用） | **Serena MCP** `mcp__serena__find_symbol` / `find_referencing_symbols` | 语义级精确搜索 |
-| C# 文件结构概览 | **Serena MCP** `mcp__serena__get_symbols_overview` | 一眼看清文件内容 |
-| 项目架构/领域知识查询 | **Knowledge Graph MCP** `mcp__knowledge-graph__search_nodes` | 知识图谱语义查询 |
-| 文本内容搜索 | Grep / `git grep` | 仅限上述工具不适用时 |
+| 已知路径 | 直接 Read（大文件带 offset/limit） | 禁止先全仓扫 |
+| C# 符号（类/方法/接口/引用） | **Serena MCP** `find_symbol` / `find_referencing_symbols` | 语义级精确搜索 |
+| C# 文件结构概览 | **Serena MCP** `get_symbols_overview` | 一眼看清文件内容 |
+| 项目架构/领域知识查询 | **Knowledge Graph MCP** `search_nodes` | 知识图谱语义查询 |
+| 文本关键词 | Grep（**必须**带 path 和/或 glob） | 禁止无范围全仓扫 |
+| 文件名模式 | 窄 Glob（如 `**/PmSkill*.cs`） | 禁止 `**/*` 拖网 |
 
-> Serena 和 Knowledge Graph 已配置于 `.zcode/config.json`。详见 [CLAUDE.md](./CLAUDE.md) §Agent Toolchain。
+> ❌ Shell `find`/`dir /s` 全仓搜索 · ❌ 为「找一个文件」派 explore 子 Agent。详见 [CLAUDE.md](./CLAUDE.md) §Agent Toolchain。
 
 ## Auto Test-Fix Loop（无浏览器 — 所有 Agent 必遵）
 
@@ -96,22 +99,25 @@ python scripts/jnpf_auth.py GET /api/studio/ir/42/events          # Python 等�
 backend/              .NET 8 solution (zx_lowcode_netcore.sln)
   framework/          Core: DynamicApiController, DI, SqlSugar, JWT, Serilog
   infrastructure/     Cross-cutting: event bus, OAuth, WebSockets
-  modularity/         15 business modules (system, workflow, visualdev, etc.)
-  application/        Hosts: JNPF.API.Entry (main), JNPF.OA.API.Entry (OA — disabled)
+  modularity/         16 business modules (app, codegen, inteAssistant, system, visualdata, visualdev, workflow, etc.)
+  application/        Hosts: JNPF.API.Entry (main), JNPF.OA.API.Entry (OA — separate entry point)
   tests/              Integration test projects (Gate, Phase6, Stage5, ADR012)
   tools/              JNPF.Analyzers (custom Roslyn analyzer)
 jnpf-web-vue3/        PC admin frontend → :3100 (pnpm, Vite, Ant Design Vue, WindiCSS)
-jnpf-web-datascreen/  Data screen frontend → :8100/DataV/ (pnpm, Element Plus)
+jnpf-web-datascreen/  Data screen frontend → :3102/DataV/ (pnpm, Element Plus)
 jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
 ```
 
 ## Architecture Rules (violation = broken system)
 
+- **Assertion discipline:** Tag claims with `[KNOWN]`/`[COMPUTED]`/`[INFERRED]`/`[GUESS]` + confidence (HIGH≥80%/MED/LOW<50%). Don't guess past 3 failures — capture runtime data. See `.claude/rules/assertion-discipline.md`.
 - **Never write Controllers.** All APIs auto-map from Service classes implementing `IDynamicApiController`.
 - **Unified response:** `RESTfulResult<T>` wraps automatically. Throw `Oops.Oh()` (system) / `Oops.Bah()` (business) — never raw `Exception`. HTTP code 600 = JWT expired.
 - **Codegen boundary:** Bugs in generated code → fix `.vm` template source. Never edit template output files directly.
 - **Multi-tenant:** Every SqlSugar query MUST verify `ITenantFilter` is active. Missing filter = cross-tenant data leak.
-- **OA module is disabled** — never modify. IoT/MES modules don't exist — never scaffold.
+- **SQL injection:** Dynamic SQL MUST be parameterized. Never `$"SELECT * FROM {table}"` — use `SqlSugarFilterable<T>` or `SqlParameter[]`. Hook-enforced (L0).
+- **API permission:** Every `IDynamicApiController` method MUST declare `[AllowAnonymous]` or `[SecurityDefine]`. Missing = hook-blocked (L0).
+- **OA module** has separate entry point (`JNPF.OA.API.Entry`) — do not modify from main entry. IoT/MES modules don't exist — never scaffold.
 - **Database:** SqlSugar (SQL Server) + Dapper. Table names: `UPPER_SNAKE_CASE` with module prefix (`BASE_USER`, `FLOW_TASK`). C# code: PascalCase.
 
 ## 实现完整性铁律（宪法级, 永远生效, 2026-07-08 立）
@@ -128,6 +134,19 @@ jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
 5. **禁止跳过验收标准核心项** — 声称"完成"前逐条列验收+证据，弱项不替代强项
 
 **节点审批门禁：** 从第一个小功能起，每个功能节点完成后 MUST 暂停，提交"业务实现+质量自检+功能证据+验收对照"，**未经用户审批不得进入下一节点。** 沉默 ≠ 审批。
+
+## 全链条冲刺铁律（宪法级, 永远生效, 2026-07-11 立）
+
+**按阶段推进；核心功能/产出物做 xUnit；保证数据一致性；排除旧实现干扰；全链条冒烟置后。**
+
+| # | 铁律 |
+|---|------|
+| F1 | 分阶段推进 + 核心产出物可单测（验证业务准确性） |
+| F2 | 数据一致性（IR / ai_entity_field / 投影契约） |
+| F3 | 排除并修订旧实现干扰 |
+| F4 | 全链条冒烟测试置后（SG 全绿 → W3） |
+
+**主文件：** `.cursor/rules/fullchain-sprint-iron-law.mdc` · `.claude/rules/fullchain-sprint-iron-law.md` · 30 号计划 §0.6/§5/§16
 
 ## Triple-Key Iron Law (R12 — 宪法级, 永远生效)
 
@@ -186,6 +205,29 @@ Skill 质量评估管线：L1 组件/L2 轨迹/L3 任务**确定性**（无 LLM�
 ## E2E 分层工具链（2026-07-06）
 
 **禁止**日常仅依赖慢速 `.mjs`。见 `openspec/specs/studio-e2e-toolchain/spec.md` · `.cursor/rules/testing-toolchain.mdc`。
+
+## Hooks (自动拦截 · AI 无法绕过)
+
+Three L0 hooks registered in `.claude/settings.json` block dangerous writes, commands, and unverified completions:
+
+| Hook | Guards |
+|------|--------|
+| `guard-write.mjs` | Secrets, empty files, R4 (tenant), R5 (OA boundary), R7 (SQL injection), R8 (auth) |
+| `guard-bash.mjs` | Dangerous shell commands |
+| `guard-finish.mjs` | E2E evidence — blocks if no screenshot/api-smoke output |
+
+Verify hooks: `node scripts/test-hooks.mjs` (28 用例). If a write/command is blocked, check the hook output — don't retry blindly.
+
+## Evidence Over Assumption（禁止猜源码, 必须抓运行时数据）
+
+**猜 3 次不行就停手抓数据，不要再猜第 4 次。**
+
+| 场景 | 错误 | 正确 |
+|------|------|------|
+| 前端无响应 | 读 .vue 源码猜 | Playwright `page.on('response')` 抓 SSE |
+| API 异常 | 读 Controller 猜路由 | `scripts/jnpf-api.mjs GET/POST <path>` |
+| 数据错误 | 读 SQL 拼装逻辑 | SqlSugar `ToSql()` 输出实际 SQL |
+| Token 失败 | 读 `getToken()` 源码 | `scripts/lib/jnpf-auth.mjs --json` |
 
 ## Frontend SSE/Timer Rules (memory leak prevention)
 

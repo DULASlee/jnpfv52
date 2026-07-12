@@ -317,6 +317,31 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
         var chain = BuildProviderChain(request.ProviderCode.Length > 0 ? request.ProviderCode : null);
         var originalProvider = chain.FirstOrDefault().Name ?? _defaultProvider;
 
+        // #region agent log
+        try
+        {
+            var circuitStates = chain.Select(c => $"{c.Name}:{_circuitBreaker.GetState(c.Name)}");
+            var dbg = JsonSerializer.Serialize(new
+            {
+                sessionId = "ead5d0",
+                runId = "gate-llm",
+                hypothesisId = "H1-H2",
+                location = "LlmGatewayService.ChatAsync:chain",
+                message = "provider chain built",
+                data = new
+                {
+                    requested = request.ProviderCode,
+                    chain = chain.Select(c => c.Name).ToArray(),
+                    circuit = circuitStates.ToArray(),
+                    originalProvider
+                },
+                timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            });
+            System.IO.File.AppendAllText(@"D:\JNPF-v52\debug-ead5d0.log", dbg + "\n");
+        }
+        catch { /* debug ingest must never break LLM */ }
+        // #endregion
+
         for (int chainIdx = 0; chainIdx < chain.Count; chainIdx++)
         {
             var (providerName, providerModel) = chain[chainIdx];
@@ -332,8 +357,56 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
             // Node-4 C2: 熔断器检查
             if (_circuitBreaker.CheckAndTransition(providerName))
             {
-                _logger.LogWarning("熔断器开启，跳过 Provider={Provider}", providerName);
-                continue;
+                // 显式指定的 primary（如门控 SemanticProvider=deepseek）允许强制探测一次，
+                // 避免「熔断跳过 + 降级链 Key 失效」直接 GATE_LLM_ERR。
+                var isExplicitPrimary = chainIdx == 0
+                    && !string.IsNullOrWhiteSpace(request.ProviderCode)
+                    && string.Equals(providerName, request.ProviderCode, StringComparison.OrdinalIgnoreCase);
+                if (!isExplicitPrimary)
+                {
+                    _logger.LogWarning("熔断器开启，跳过 Provider={Provider}", providerName);
+                    // #region agent log
+                    try
+                    {
+                        var dbgSkip = JsonSerializer.Serialize(new
+                        {
+                            sessionId = "ead5d0",
+                            runId = "gate-llm",
+                            hypothesisId = "H1",
+                            location = "LlmGatewayService.ChatAsync:circuit-skip",
+                            message = "circuit open skip",
+                            data = new { providerName, chainIdx, state = _circuitBreaker.GetState(providerName).ToString() },
+                            timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                        });
+                        System.IO.File.AppendAllText(@"D:\JNPF-v52\debug-ead5d0.log", dbgSkip + "\n");
+                    }
+                    catch { }
+                    // #endregion
+                    await WriteCallLogAsync(providerName, resolvedModel,
+                        string.Empty, string.Empty, 0, 0, 0, 0, false,
+                        "circuit_open_skip", chainIdx, originalProvider, providerName,
+                        $"熔断跳过: {providerName}");
+                    continue;
+                }
+
+                _logger.LogWarning("熔断器开启但强制探测显式 Provider={Provider}", providerName);
+                // #region agent log
+                try
+                {
+                    var dbgForce = JsonSerializer.Serialize(new
+                    {
+                        sessionId = "ead5d0",
+                        runId = "gate-llm",
+                        hypothesisId = "H1",
+                        location = "LlmGatewayService.ChatAsync:circuit-force-probe",
+                        message = "force probe explicit primary despite circuit open",
+                        data = new { providerName, state = _circuitBreaker.GetState(providerName).ToString() },
+                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    });
+                    System.IO.File.AppendAllText(@"D:\JNPF-v52\debug-ead5d0.log", dbgForce + "\n");
+                }
+                catch { }
+                // #endregion
             }
 
             // Node-4 C4: Token 预估算预检（仅首级首次）
@@ -397,6 +470,27 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
                         _logger.LogWarning(
                             "LLM error: Provider={Provider}, Attempt={Attempt}, Error={Error}",
                             providerName, retry + 1, error);
+                        // #region agent log
+                        try
+                        {
+                            var dbgNull = JsonSerializer.Serialize(new
+                            {
+                                sessionId = "ead5d0",
+                                runId = "gate-llm",
+                                hypothesisId = "H2",
+                                location = "LlmGatewayService.ChatAsync:null-response",
+                                message = "provider returned null",
+                                data = new { providerName, attempt = retry + 1, error, chainIdx },
+                                timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                            });
+                            System.IO.File.AppendAllText(@"D:\JNPF-v52\debug-ead5d0.log", dbgNull + "\n");
+                        }
+                        catch { }
+                        // #endregion
+                        await WriteCallLogAsync(providerName, resolvedModel,
+                            JsonSerializer.Serialize(request.Messages), string.Empty,
+                            sw.ElapsedMilliseconds, 0, 0, 0, false,
+                            error ?? "null_response", chainIdx, originalProvider, providerName, null);
                     }
                     else if (response.IsSuccessStatusCode)
                     {
@@ -853,18 +947,26 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
     {
         var chain = new List<(string Name, string? Model)>();
 
-        // 1. 显式请求的 provider 作为 primary（若有）
-        if (!string.IsNullOrWhiteSpace(requestedProvider) && Providers.ContainsKey(requestedProvider))
+        bool IsUsable(string name)
+        {
+            if (!Providers.TryGetValue(name, out var p)) return false;
+            // 本地/ollama 允许空 Key；云厂商空 Key 只会空转 401，污染降级链
+            if (string.Equals(p.ApiFormat, "ollama", StringComparison.OrdinalIgnoreCase)) return true;
+            return !string.IsNullOrWhiteSpace(p.ApiKey);
+        }
+
+        // 1. 显式请求的 provider 作为 primary（若有且可用）
+        if (!string.IsNullOrWhiteSpace(requestedProvider) && IsUsable(requestedProvider))
         {
             chain.Add((requestedProvider, null)); // model 解析留给调用方
         }
 
-        // 2. 从配置链补充（去重）
+        // 2. 从配置链补充（去重 + 跳过空 Key）
         var levelConfigs = LoadLevelChain();
         foreach (var cfg in levelConfigs)
         {
             if (!chain.Any(c => string.Equals(c.Name, cfg.Name, StringComparison.OrdinalIgnoreCase))
-                && Providers.ContainsKey(cfg.Name))
+                && IsUsable(cfg.Name))
             {
                 chain.Add((cfg.Name, cfg.Model));
             }
@@ -872,15 +974,15 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
             if (chain.Count >= 3) break; // 最多 3 级
         }
 
-        // 3. 向后兼容：chain 为空时回退到旧 2 级逻辑
+        // 3. 向后兼容：chain 为空时回退到旧 2 级逻辑（仍跳过空 Key）
         if (chain.Count == 0)
         {
             EnsureProvidersLoaded();
-            if (!string.IsNullOrEmpty(_defaultProvider) && Providers.ContainsKey(_defaultProvider))
+            if (!string.IsNullOrEmpty(_defaultProvider) && IsUsable(_defaultProvider))
                 chain.Add((_defaultProvider, null));
             if (!string.IsNullOrEmpty(_fallbackProvider)
                 && !string.Equals(_fallbackProvider, _defaultProvider, StringComparison.OrdinalIgnoreCase)
-                && Providers.ContainsKey(_fallbackProvider))
+                && IsUsable(_fallbackProvider))
                 chain.Add((_fallbackProvider, null));
         }
 

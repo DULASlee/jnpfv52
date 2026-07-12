@@ -2,7 +2,7 @@
   <div class="ir-stability-tab">
     <div v-if="!pipelineId" class="tab-empty">
       <span class="empty-icon">🛡️</span>
-      <p>SA 九步稳定性门控进度将在此展示</p>
+      <p>SA 编译稳定性门控进度将在此展示</p>
     </div>
     <template v-else>
       <div v-if="skeletonSnapshots.length" class="section">
@@ -31,7 +31,7 @@
         <IrDesignProgress />
       </div>
       <div class="section">
-        <div class="section-title">EventSpec 九步进度</div>
+        <div class="section-title">EventSpec 编译进度</div>
         <IrSaEventProgress :events="saEvents" :steps="analyst.SA_STEPS" :total-percent="saTotal" />
       </div>
     </template>

@@ -20,6 +20,7 @@ public static class IrPhase4TesterTests
         TestDevelopmentSkillIds_TesterDefined();
         TestCaseDeriver_FieldOnly_MinThree();
         TestCaseDeriver_FieldAndStateMachine_MinFive();
+        TestCaseDeriver_MultiTypeCoverage();
         await TestTesterSkill_LeaveSimpleAsync();
         await TestTesterSkill_LeaveWithFlowAsync();
         await TestProjection_TestSuiteGeneratedAsync();
@@ -245,7 +246,8 @@ public static class IrPhase4TesterTests
     private static TesterSkillService CreateTesterSkill()
     {
         using var loggerFactory = LoggerFactory.Create(static _ => { });
-        return new TesterSkillService(loggerFactory.CreateLogger<TesterSkillService>());
+        var inputBuilder = new TesterSkillInputBuilder(loggerFactory.CreateLogger<TesterSkillInputBuilder>());
+        return new TesterSkillService(null!, loggerFactory.CreateLogger<TesterSkillService>(), inputBuilder);
     }
 
     private static async Task ProjectAsync(
@@ -338,5 +340,47 @@ public static class IrPhase4TesterTests
             );
             """);
         return client;
+    }
+
+    /// <summary>
+    /// T14: 验证 TestCaseDeriver 对 decimal/DateTime/bool/Guid 多类型均生成测试用例（L9 修复验证）。
+    /// </summary>
+    private static void TestCaseDeriver_MultiTypeCoverage()
+    {
+        var fields = new[]
+        {
+            new TesterConfirmedField { Name = "Amount", Type = "decimal", Required = true },
+            new TesterConfirmedField { Name = "CreatedAt", Type = "DateTime", Required = true },
+            new TesterConfirmedField { Name = "IsActive", Type = "bool", Required = true },
+            new TesterConfirmedField { Name = "ReferenceKey", Type = "Guid", Required = true },
+        };
+
+        var cases = TestCaseDeriver.DeriveFieldCases(fields);
+
+        // decimal: 边界值 + 类型错误
+        if (!cases.Any(c => c.CaseId.Contains("decimal", StringComparison.OrdinalIgnoreCase) && c.Kind == "valid"))
+            throw new InvalidOperationException("Missing valid boundary case for decimal");
+        if (!cases.Any(c => c.CaseId.Contains("decimal", StringComparison.OrdinalIgnoreCase) && c.Kind == "invalid"))
+            throw new InvalidOperationException("Missing invalid type-error case for decimal");
+
+        // DateTime: 有效日期 + 无效格式
+        if (!cases.Any(c => c.CaseId.Contains("datetime", StringComparison.OrdinalIgnoreCase) && c.Kind == "valid"))
+            throw new InvalidOperationException("Missing valid date case for DateTime");
+        if (!cases.Any(c => c.CaseId.Contains("datetime", StringComparison.OrdinalIgnoreCase) && c.Kind == "invalid"))
+            throw new InvalidOperationException("Missing invalid date-format case for DateTime");
+
+        // bool: 有效值 + 非布尔值
+        if (!cases.Any(c => c.CaseId.Contains("bool", StringComparison.OrdinalIgnoreCase) && c.Kind == "valid"))
+            throw new InvalidOperationException("Missing valid bool case");
+        if (!cases.Any(c => c.CaseId.Contains("bool", StringComparison.OrdinalIgnoreCase) && c.Kind == "invalid"))
+            throw new InvalidOperationException("Missing invalid non-bool case");
+
+        // Guid: 有效 GUID + 格式错误
+        if (!cases.Any(c => c.CaseId.Contains("guid", StringComparison.OrdinalIgnoreCase) && c.Kind == "valid"))
+            throw new InvalidOperationException("Missing valid Guid case");
+        if (!cases.Any(c => c.CaseId.Contains("guid", StringComparison.OrdinalIgnoreCase) && c.Kind == "invalid"))
+            throw new InvalidOperationException("Missing invalid Guid-format case");
+
+        Console.WriteLine($"[T14] Multi-type coverage: {cases.Count} cases across decimal/DateTime/bool/Guid");
     }
 }

@@ -1,28 +1,37 @@
 using System.Text.Json;
+using JNPF.DependencyInjection;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Skills;
+using Microsoft.Extensions.Logging;
 
 namespace JNPF.InteAssistant.Skills.Testing;
 
 /// <summary>
 /// 从 IR 快照组装 tester-skill 输入（Q1 schema 对齐）。
 /// </summary>
-public static class TesterSkillInputBuilder
+public sealed class TesterSkillInputBuilder : ITransient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
     };
 
-    public static TesterBuildResult Build(SkillContext context)
+    private readonly ILogger<TesterSkillInputBuilder> _logger;
+
+    public TesterSkillInputBuilder(ILogger<TesterSkillInputBuilder> logger)
+    {
+        _logger = logger;
+    }
+
+    public TesterBuildResult Build(SkillContext context)
         => Build(context, entityFields: null);
 
     /// <summary>
     /// 25 §6：优先用 <paramref name="entityFields"/>（ai_entity_field）；
     /// IR confirmedFields / FormPage 仅作派生回退，不得当唯一源。
     /// </summary>
-    public static TesterBuildResult Build(
+    public TesterBuildResult Build(
         SkillContext context,
         IReadOnlyList<AiEntityFieldEntity>? entityFields)
     {
@@ -101,7 +110,7 @@ public static class TesterSkillInputBuilder
             .ToList();
     }
 
-    private static List<TesterConfirmedField> ParseConfirmedFieldsFromEventSpec(string payloadJson)
+    private List<TesterConfirmedField> ParseConfirmedFieldsFromEventSpec(string payloadJson)
     {
         var list = new List<TesterConfirmedField>();
         try
@@ -124,15 +133,15 @@ public static class TesterSkillInputBuilder
                 });
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // ignore
+            _logger.LogWarning(ex, "解析 EventSpec confirmedFields 失败");
         }
 
         return list;
     }
 
-    private static List<TesterConfirmedField> ParseConfirmedFieldsFromFormPage(string? payloadJson)
+    private List<TesterConfirmedField> ParseConfirmedFieldsFromFormPage(string? payloadJson)
     {
         var list = new List<TesterConfirmedField>();
         if (string.IsNullOrWhiteSpace(payloadJson))
@@ -156,19 +165,20 @@ public static class TesterSkillInputBuilder
                 {
                     Name = name,
                     Type = InferType(component),
-                    Required = fieldId is "reason" or "days" or "status",
+                    // M5: 从 FormPageIR 元数据派生 Required，不再硬编码领域字段
+                    Required = f.TryGetProperty("required", out var r) && r.ValueKind == JsonValueKind.True,
                 });
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // ignore
+            _logger.LogWarning(ex, "解析 FormPageIR fields 失败");
         }
 
         return list;
     }
 
-    private static List<TesterStateMachineSlice> ParseStateMachines(string? payloadJson)
+    private List<TesterStateMachineSlice> ParseStateMachines(string? payloadJson)
     {
         var list = new List<TesterStateMachineSlice>();
         if (string.IsNullOrWhiteSpace(payloadJson))
@@ -221,15 +231,15 @@ public static class TesterSkillInputBuilder
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // ignore
+            _logger.LogWarning(ex, "解析 SystemDesign stateMachines 失败");
         }
 
         return list;
     }
 
-    private static string? ParseFormPageName(string? payloadJson)
+    private string? ParseFormPageName(string? payloadJson)
     {
         if (string.IsNullOrWhiteSpace(payloadJson))
             return null;
@@ -239,8 +249,9 @@ public static class TesterSkillInputBuilder
             using var doc = JsonDocument.Parse(payloadJson);
             return doc.RootElement.TryGetProperty("pageName", out var p) ? p.GetString() : null;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogWarning(ex, "解析 FormPageIR pageName 失败");
             return null;
         }
     }

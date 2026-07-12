@@ -15,6 +15,8 @@ alwaysApply: true
 | **Cursor 内置** | 读写文件、Grep、Shell、`dotnet build/run` |
 | **episodic-memory** | 跨会话 WHY（hooks 自动 sync + Agent 自动 search，详见 `episodic-memory-automation.mdc`） |
 
+> **搜索怎么用才不卡死：** 见 **`needle-search.mdc`**（先窄后宽 · 并行≤3 · 禁拖网 · >15s 收窄）。
+
 ## OpenSpec — 仅知识库
 
 - 维护 `openspec/specs/<capability>/spec.md`；用 `openspec/changes/` 起草，`/opsx:archive` 归档

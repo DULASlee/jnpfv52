@@ -154,6 +154,13 @@
               @answered="onClarificationAnswered(msg, $event)"
               @skip-all="onClarificationSkipAll(msg)" />
 
+            <AmendmentEchoCard
+              v-if="msg.amendmentProposal"
+              :understanding="msg.amendmentProposal.understanding"
+              :applying="msg.amendmentApplying"
+              :applied="msg.amendmentApplied"
+              @apply="handleApplyRequirementAmendment(msg)" />
+
             <!-- 流内操作按钮（门控反馈 / 流水线错误） -->
             <div v-if="msg.actions && msg.actions.length > 0" class="stream-action-bar">
               <a-button v-for="(act, idx) in msg.actions" :key="idx" size="small" :type="act.type || 'default'" @click="handleChatAction(act)">
@@ -161,8 +168,20 @@
               </a-button>
             </div>
 
-            <!-- 文档卡片（预览 + 下载） -->
-            <div v-if="msg.document" class="doc-card">
+            <!-- 文档卡片（预览 + 下载）—— 支持会话恢复的多交付物 -->
+            <div v-if="msg.deliverableLinks?.length" class="doc-card-list">
+              <div v-for="d in msg.deliverableLinks" :key="d.relativePath" class="doc-card">
+                <span class="doc-emoji">📄</span>
+                <div class="doc-info">
+                  <div class="doc-name">{{ d.name }}</div>
+                </div>
+                <div class="doc-actions">
+                  <a-button size="small" type="link" @click="previewDoc({ name: d.name, relativePath: d.relativePath })">预览</a-button>
+                  <a-button size="small" type="link" @click="downloadDoc({ name: d.name, relativePath: d.relativePath }, 'word')">下载</a-button>
+                </div>
+              </div>
+            </div>
+            <div v-else-if="msg.document" class="doc-card">
               <span class="doc-emoji">📄</span>
               <div class="doc-info">
                 <div class="doc-name">{{ msg.document.name }}</div>
@@ -213,7 +232,11 @@
         :document-title="requirementSpecTitle"
         :relative-path="requirementSpecDeliverable?.relativePath ?? requirementSpecDeliverable?.RelativePath"
         :confirm-loading="requirementSpecConfirmLoading"
+        :pm-score="analystSkill?.pmReview.value.score"
+        :pm-gaps="analystSkill?.pmReview.value.gaps"
+        :pm-verdict="analystSkill?.pmReview.value.verdict"
         @confirm="handleConfirmRequirementSpec"
+        @force-confirm="handleForceConfirmRequirementSpec"
         @download="handleDownloadRequirementSpec" />
     </div>
 
@@ -275,13 +298,15 @@
   import { PlusOutlined, SendOutlined, PauseOutlined, UpOutlined, DownOutlined, NodeIndexOutlined } from '@ant-design/icons-vue';
   import { message as antMessage, Modal } from 'ant-design-vue';
   import { defHttp } from '/@/utils/http/axios';
+  import { ContentTypeEnum } from '/@/enums/httpEnum';
   import { createPipeline, getGeneratedProjectList, getPageRoutes, quickBugfix, quickEnhancement, triggerSaGate, freezePipeline, resumePipeline, forkPipeline } from '../api/studio/pipeline';
   import { runArchitectSkill, runSystemDesignClarificationSkill } from '../api/studio/designSkills';
-  import { runRequirementAnalysis } from '../api/studio/skills';
+  import { applyRequirementAmendment, proposeRequirementAmendment, runRequirementAnalysis, type PmAmendProposeResult } from '../api/studio/skills';
   import IrPreviewCard from './chat/IrPreviewCard.vue';
   import ChatWorkflowProgress from './chat/ChatWorkflowProgress.vue';
   import IrSkeletonConfirmCard from './ir/IrSkeletonConfirmCard.vue';
   import IrRequirementSpecConfirmCard from './ir/IrRequirementSpecConfirmCard.vue';
+  import AmendmentEchoCard from './ir/AmendmentEchoCard.vue';
   import ClarificationCard from './clarification/ClarificationCard.vue';
   import type { ChatStreamAction } from '../types/gate';
   import {
@@ -295,9 +320,11 @@
     parseGatePayload,
     streamTextToMessage,
   } from '../composables/gateStreamFormatter';
+  import { hydrateChatSession } from '../composables/hydrateChatSession';
   import type { AttachmentsReadyPayload, GateErrorPayload, GateFailedPayload, GatePassedPayload } from '../types/gate';
   import { buildFetchSseUrl } from '/@/utils/http/sseUrl';
   import { getAuthHeader, getTenantId } from '/@/utils/auth';
+  import { getPipelineDeliverableText } from '../api/studio/pipeline';
   import { marked } from 'marked';
   import hljs from 'highlight.js';
   import 'highlight.js/styles/github.css';
@@ -397,15 +424,43 @@
     }
   }
 
-  async function handleConfirmRequirementSpec(autoRunDesign: boolean) {
+  async function handleConfirmRequirementSpec(autoRunDesign: boolean, forceConfirm = false) {
     if (!analystSkill) return;
     try {
-      await analystSkill.confirmAndProceed(autoRunDesign);
+      await analystSkill.confirmAndProceed(autoRunDesign, forceConfirm);
       antMessage.success(autoRunDesign ? '需求说明书已确认，架构设计已启动' : '需求说明书已确认');
       await irObservatory?.refreshAll();
       await refreshPipelineMaterials();
     } catch (e: any) {
       antMessage.error(e?.response?.data?.msg ?? e?.message ?? '确认失败');
+    }
+  }
+
+  function handleForceConfirmRequirementSpec(autoRunDesign: boolean) {
+    void handleConfirmRequirementSpec(autoRunDesign, true);
+  }
+
+  async function handleApplyRequirementAmendment(msg: any) {
+    const proposal = msg.amendmentProposal as PmAmendProposeResult | undefined;
+    if (!proposal || !pipelineId.value || msg.amendmentApplying || msg.amendmentApplied) return;
+    msg.amendmentApplying = true;
+    try {
+      await applyRequirementAmendment(pipelineId.value, {
+        proposalId: proposal.proposalId,
+        understanding: proposal.understanding,
+        userMessage: msg.amendmentUserMessage,
+        providerCode: selectedProvider.value,
+      });
+      msg.amendmentApplied = true;
+      msg.content = '## 已更新需求分析说明书\n\n已应用你的补充要求，并重新生成 02 需求分析说明书与 PM 复审结果。你可以预览最新文档，或继续在输入框提出修改。';
+      await irObservatory?.refreshAll();
+      await refreshPipelineMaterials();
+      antMessage.success('已更新 02 需求分析说明书');
+      scrollToBottom();
+    } catch (e: any) {
+      antMessage.error(e?.response?.data?.msg ?? e?.message ?? '应用失败');
+    } finally {
+      msg.amendmentApplying = false;
     }
   }
 
@@ -521,6 +576,10 @@
   const showScrollDown = ref(false);
   const showScrollButtons = ref(false);
   const autoScroll = ref(true);
+  /** 流式贴底 rAF 句柄（onUnmounted 必须 cancel） */
+  let streamScrollRaf = 0;
+  let streamScrollCalls = 0;
+  let streamScrollLastLogAt = 0;
 
   const stages = ref([
     { stage: 1, name: '需求分析', code: 'requirement', status: 'active' },
@@ -592,6 +651,10 @@
 
   onUnmounted(() => {
     abortController.value?.abort();
+    if (streamScrollRaf) {
+      cancelAnimationFrame(streamScrollRaf);
+      streamScrollRaf = 0;
+    }
     // 释放所有 Blob URL，防止内存泄漏
     for (const url of blobUrls) {
       URL.revokeObjectURL(url);
@@ -666,6 +729,7 @@
       thinkingCollapsed: true,
       strategies: m.strategies ?? m.Strategies ?? [],
       document: m.document ?? m.Document ?? null,
+      deliverableLinks: [] as Array<{ name: string; relativePath: string }>,
       ir: m.ir ?? m.Ir ?? null,
       actions: m.actions ?? m.Actions ?? [],
       stageConfirmable: m.stageConfirmable ?? m.StageConfirmable ?? false,
@@ -708,13 +772,39 @@
       targetPageRoute.value = data?.targetPageRoute ?? data?.TargetPageRoute ?? undefined;
       targetPageLabel.value = data?.targetPageLabel ?? data?.TargetPageLabel ?? undefined;
       gatePassed.value = workMode.value !== 'greenfield' ? true : detectGatePassedFromLoadedMessages(rawMessages);
-      messages.value = rawMessages.map(mapLoadedMessage);
+
+      // 先拉附件/交付物，再水合主聊天（避免重进后只剩残缺 JSON）
+      await refreshPipelineMaterials();
+      const hydrated = hydrateChatSession({
+        rawMessages,
+        attachments: pipelineMaterials?.attachments.value ?? [],
+        deliverables: pipelineMaterials?.deliverables.value ?? [],
+      });
+      messages.value = hydrated.messages.length ? hydrated.messages : rawMessages.map(mapLoadedMessage);
+
+      // #region agent log
+      fetch('http://127.0.0.1:7354/ingest/a6dd8c09-a41a-4bdf-b8f4-ed467f774eaa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'ead5d0' },
+        body: JSON.stringify({
+          sessionId: 'ead5d0',
+          runId: 'session-hydrate',
+          hypothesisId: 'H-restore',
+          location: 'AiChatPanel.vue:loadPipelineState',
+          message: 'chat-session-hydrated',
+          timestamp: Date.now(),
+          data: { pipelineId: pipelineId.value, ...hydrated.stats },
+        }),
+      }).catch(() => {});
+      // #endregion
+
       updateStageStatus();
       scrollToBottom();
       if (currentStage.value >= 5) {
         void pipelineMaterials?.triggerDeliveryArtifacts(false);
       }
-      await refreshPipelineMaterials();
+      // 确认框依赖 IR 快照
+      void irObservatory?.refreshAll();
     } catch (e) {
       console.error('加载状态失败', e);
     } finally {
@@ -731,8 +821,42 @@
   }
 
   // ====== SSE 流式消息 ======
+  // 流式输出时用 rAF 合并滚动，避免与 CSS smooth 叠加造成页面抖动
   const scrollOnStream = () => {
-    if (autoScroll.value) scrollToBottom();
+    if (!autoScroll.value) return;
+    streamScrollCalls++;
+    if (streamScrollRaf) return;
+    streamScrollRaf = requestAnimationFrame(() => {
+      streamScrollRaf = 0;
+      scrollToBottomImmediate();
+      // #region agent log
+      const now = Date.now();
+      if (now - streamScrollLastLogAt > 500) {
+        streamScrollLastLogAt = now;
+        const el = chatStreamRef.value;
+        fetch('http://127.0.0.1:7354/ingest/a6dd8c09-a41a-4bdf-b8f4-ed467f774eaa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'ead5d0' },
+          body: JSON.stringify({
+            sessionId: 'ead5d0',
+            runId: 'jitter-post-fix',
+            hypothesisId: 'A',
+            location: 'AiChatPanel.vue:scrollOnStream',
+            message: 'stream-scroll-raf',
+            timestamp: now,
+            data: {
+              pendingCalls: streamScrollCalls,
+              scrollHeight: el?.scrollHeight ?? 0,
+              scrollTop: el?.scrollTop ?? 0,
+              clientHeight: el?.clientHeight ?? 0,
+              scrollBehavior: el ? getComputedStyle(el).scrollBehavior : null,
+            },
+          }),
+        }).catch(() => {});
+        streamScrollCalls = 0;
+      }
+      // #endregion
+    });
   };
 
   async function processSseEvent(data: Record<string, any>, msg: any): Promise<void> {
@@ -776,6 +900,9 @@
         const failSf = normalizeSemanticFitness(failPayload) ?? ({ passed: false, score: 0, level: 'insufficient', identified: [], missing: [] } as const);
         msg.actions = gateFailedActions();
         const failMd = buildGateFailedMarkdown(failPayload, failSf);
+        // #region agent log
+        fetch('http://127.0.0.1:7354/ingest/a6dd8c09-a41a-4bdf-b8f4-ed467f774eaa',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ead5d0'},body:JSON.stringify({sessionId:'ead5d0',runId:'post-fix',hypothesisId:'G1',location:'AiChatPanel.vue:gate_failed',message:'gate_failed markdown built',data:{reason:failPayload?.reason??null,hintType:typeof failPayload?.hint,missingCount:failSf.missing?.length??0,missingSample:failSf.missing?.slice?.(0,3)??null,guidanceType:typeof failSf.nextStepGuidance,guidancePreview:String(failSf.nextStepGuidance??'').slice(0,120),mdHasObjectObject:failMd.includes('[object Object]'),mdPreview:failMd.slice(0,500),exampleActionLabel:msg.actions?.[0]?.label??null,examplePayloadPreview:String(msg.actions?.[0]?.payload??'').slice(0,80)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         await streamTextToMessage(msg, failMd, { onChunk: scrollOnStream });
         break;
       }
@@ -835,7 +962,7 @@
             const step =
               (irPayload as { saStepName?: string }).saStepName ??
               (typeof preview === 'object' && preview ? String(preview.stepName ?? preview.saStepName ?? '') : '');
-            if (step) appendWorkflowThinking(msg, `✅ SA 九步 · ${step}`);
+            if (step) appendWorkflowThinking(msg, `✅ SA 编译 · ${step}`);
             scrollOnStream();
           }
           if (irPayload.fragmentType?.startsWith('IR0')) {
@@ -1024,6 +1151,52 @@
       }
     }
 
+    if (showRequirementSpecConfirm.value) {
+      if (!submittedText) {
+        loading.value = false;
+        antMessage.warning('请先输入你对需求分析说明书的修改意见');
+        return;
+      }
+      try {
+        const proposal = await proposeRequirementAmendment(pipelineId.value, {
+          userMessage: submittedText,
+          providerCode: selectedProvider.value,
+        });
+        const data = (proposal as any)?.data ?? proposal;
+        messages.value.push({
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: '我先复述一下对补充需求的理解，请确认是否应用到 02 需求分析说明书。',
+          thinking: '',
+          thinkingCollapsed: true,
+          strategies: [],
+          document: null,
+          ir: null,
+          actions: [] as ChatStreamAction[],
+          stageConfirmable: false,
+          stageConfirmed: false,
+          clarification: null,
+          amendmentProposal: data,
+          amendmentUserMessage: submittedText,
+          amendmentApplying: false,
+          amendmentApplied: false,
+        });
+        scrollToBottom();
+      } catch (e: any) {
+        messages.value.push({
+          id: Date.now() + 1,
+          role: 'assistant',
+          content: `## 补充需求理解失败\n\n${e?.response?.data?.msg ?? e?.message ?? '请稍后重试'}`,
+          actions: gateErrorActions(),
+        });
+        scrollToBottom();
+      } finally {
+        loading.value = false;
+        gateProcessing.value = false;
+      }
+      return;
+    }
+
     const aiMsgId = Date.now() + 1;
     const needsSaGate = workMode.value === 'greenfield' && currentStage.value === 1 && !gatePassed.value;
     const isQuickBugfix = workMode.value === 'bugfix';
@@ -1135,16 +1308,32 @@
           batch.map(async file => {
             const formData = new FormData();
             formData.append('file', file);
-            // 勿手动设置 Content-Type — axios 需自动附带 multipart boundary
-            const res = await defHttp.post({
-              url: '/api/file/Uploader/annex',
-              data: formData,
-              headers: tenantId ? { 'X-Tenant-Id': tenantId } : undefined,
-            });
-            const fileModel = res?.data;
-            const url = typeof fileModel?.url === 'string' ? fileModel.url : '';
-            if (!url) throw new Error('上传响应缺少 url');
-            return { name: file.name, url };
+            // 必须显式 FORM_DATA：defHttp 默认 Content-Type=application/json，否则后端 ChunkModel.file 为 null → NRE
+            // #region agent log
+            fetch('http://127.0.0.1:7354/ingest/a6dd8c09-a41a-4bdf-b8f4-ed467f774eaa',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ead5d0'},body:JSON.stringify({sessionId:'ead5d0',runId:'post-fix',hypothesisId:'A',location:'AiChatPanel.vue:uploadAttachmentsAndSend',message:'annex upload start',data:{fileName:file.name,fileSize:file.size,tenantId:tenantId||null,contentType:ContentTypeEnum.FORM_DATA},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            try {
+              const res = await defHttp.post({
+                url: '/api/file/Uploader/annex',
+                data: formData,
+                headers: {
+                  'Content-Type': ContentTypeEnum.FORM_DATA,
+                  ...(tenantId ? { 'X-Tenant-Id': tenantId } : {}),
+                },
+              });
+              const fileModel = res?.data;
+              const url = typeof fileModel?.url === 'string' ? fileModel.url : '';
+              // #region agent log
+              fetch('http://127.0.0.1:7354/ingest/a6dd8c09-a41a-4bdf-b8f4-ed467f774eaa',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ead5d0'},body:JSON.stringify({sessionId:'ead5d0',runId:'post-fix',hypothesisId:'B',location:'AiChatPanel.vue:uploadAttachmentsAndSend',message:'annex upload response',data:{fileName:file.name,resKeys:res&&typeof res==='object'?Object.keys(res):[],hasData:!!fileModel,url:url||null,fileModelKeys:fileModel&&typeof fileModel==='object'?Object.keys(fileModel):[]},timestamp:Date.now()})}).catch(()=>{});
+              // #endregion
+              if (!url) throw new Error('上传响应缺少 url');
+              return { name: file.name, url };
+            } catch (err: any) {
+              // #region agent log
+              fetch('http://127.0.0.1:7354/ingest/a6dd8c09-a41a-4bdf-b8f4-ed467f774eaa',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ead5d0'},body:JSON.stringify({sessionId:'ead5d0',runId:'post-fix',hypothesisId:'A',location:'AiChatPanel.vue:uploadAttachmentsAndSend',message:'annex upload error',data:{fileName:file.name,errMsg:String(err?.message||err),errName:err?.name||null,status:err?.response?.status??null,bizCode:err?.response?.data?.code??null,bizMsg:typeof err?.response?.data?.msg==='string'?err.response.data.msg:String(err?.response?.data?.msg??err?.message??'')},timestamp:Date.now()})}).catch(()=>{});
+              // #endregion
+              throw err;
+            }
           }),
         );
         results.forEach((r, idx) => {
@@ -1397,10 +1586,32 @@
     selectedProvider.value = code;
   }
 
-  function previewDoc(doc: any) {
-    window.open(doc.previewUrl, '_blank');
+  async function previewDoc(doc: any) {
+    if (doc?.relativePath && pipelineId.value) {
+      try {
+        const text = await getPipelineDeliverableText(pipelineId.value, doc.relativePath);
+        const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        blobUrls.push(url);
+        window.open(url, '_blank');
+        return;
+      } catch (e: any) {
+        antMessage.error(e?.message || '预览失败');
+        return;
+      }
+    }
+    if (doc?.previewUrl) window.open(doc.previewUrl, '_blank');
   }
   function downloadDoc(doc: any, fmt: string) {
+    if (doc?.relativePath && pipelineMaterials) {
+      void pipelineMaterials.downloadDeliverable({
+        fileName: doc.name,
+        FileName: doc.name,
+        relativePath: doc.relativePath,
+        RelativePath: doc.relativePath,
+      });
+      return;
+    }
     const a = document.createElement('a');
     a.href = fmt === 'pdf' ? doc.downloadPdfUrl : doc.downloadWordUrl;
     a.download = doc.name + (fmt === 'pdf' ? '.pdf' : '.docx');
@@ -1408,10 +1619,14 @@
   }
 
   // ====== 滚动控制 ======
+  /** 瞬时贴底（流式/程序滚动）；勿配合 CSS scroll-behavior:smooth，否则高频赋值会抖动 */
+  function scrollToBottomImmediate() {
+    const el = chatStreamRef.value;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }
   function scrollToBottom() {
-    nextTick(() => {
-      if (chatStreamRef.value) chatStreamRef.value.scrollTop = chatStreamRef.value.scrollHeight;
-    });
+    nextTick(() => scrollToBottomImmediate());
   }
   function scrollToTop() {
     chatStreamRef.value?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1451,7 +1666,7 @@
 
     .work-mode-meta {
       font-size: 12px;
-      color: #8c8c8c;
+      color: rgba(0, 0, 0, 0.45);
     }
   }
   .ai-chat-panel {
@@ -1460,8 +1675,11 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
-    background: #f5f5f5;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', sans-serif;
+    /* 继承 JNPF/Ant Design 全局字体与字号（默认 14px），禁止自建系统字体栈 */
+    font-family: inherit;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.85);
+    background: #f4f7f9;
     position: relative;
   }
 
@@ -1486,8 +1704,8 @@
       width: 180px;
     }
     .stage-text {
-      font-size: 13px;
-      color: #666;
+      font-size: 14px;
+      color: rgba(0, 0, 0, 0.65);
       font-weight: 500;
     }
   }
@@ -1513,7 +1731,7 @@
       }
       .stage-name {
         flex: 1;
-        font-size: 13px;
+        font-size: 14px;
       }
     }
   }
@@ -1524,7 +1742,8 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 24px 0;
-    scroll-behavior: smooth;
+    /* 禁止 smooth：流式 token/打字机高频改 scrollTop 时，smooth 会互相打断导致整页抖动 */
+    scroll-behavior: auto;
   }
 
   /* ====== 欢迎卡片 ====== */
@@ -1532,54 +1751,56 @@
     max-width: 680px;
     margin: 0 auto 24px;
     background: #fff;
-    border: 1px solid #e8e8e8;
-    border-radius: 12px;
+    border: 1px solid #f0f0f0;
+    border-radius: 4px;
     padding: 32px;
     text-align: center;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 
     &.loading-card {
       padding: 48px 32px;
     }
     .welcome-icon {
-      font-size: 48px;
+      font-size: 40px;
       margin-bottom: 12px;
     }
     h2 {
-      font-size: 20px;
+      font-size: 16px;
       margin-bottom: 12px;
       font-weight: 600;
-      color: #1a1a1a;
+      color: rgba(0, 0, 0, 0.85);
     }
     p {
       font-size: 14px;
-      color: #333;
-      line-height: 1.8;
+      color: rgba(0, 0, 0, 0.65);
+      line-height: 1.6;
       margin-bottom: 4px;
     }
     .hint {
       color: #1890ff;
-      font-size: 13px;
+      font-size: 14px;
       margin-bottom: 20px;
     }
     .gate-hint {
       color: #d48806;
       background: #fffbe6;
       padding: 8px 12px;
-      border-radius: 6px;
+      border-radius: 4px;
       border: 1px solid #ffe58f;
       text-align: left;
       margin-bottom: 16px;
+      font-size: 14px;
     }
     .gate-format {
       text-align: left;
-      border: 1px solid #e8e8e8;
-      border-radius: 8px;
+      border: 1px solid #f0f0f0;
+      border-radius: 4px;
       padding: 10px 12px;
       background: #fafafa;
       .gate-format-title {
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 600;
-        color: #333;
+        color: rgba(0, 0, 0, 0.85);
         margin-bottom: 6px;
       }
       ul {
@@ -1587,8 +1808,8 @@
         padding-left: 18px;
       }
       li {
-        font-size: 12px;
-        color: #666;
+        font-size: 14px;
+        color: rgba(0, 0, 0, 0.65);
         margin-bottom: 4px;
       }
       .gate-format-example {
@@ -1599,7 +1820,7 @@
     }
   }
 
-  /* ====== 消息卡片（全宽，设计稿原版） ====== */
+  /* ====== 消息卡片（对齐 Ant Card：小圆角、浅边框） ====== */
   .msg-card {
     display: flex;
     gap: 12px;
@@ -1607,8 +1828,9 @@
     margin: 0 auto 16px;
     padding: 16px 20px;
     background: #fff;
-    border: 1px solid #e8e8e8;
-    border-radius: 12px;
+    border: 1px solid #f0f0f0;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   }
 
   .card-avatar {
@@ -1626,8 +1848,8 @@
     flex: 1;
     min-width: 0;
     font-size: 14px;
-    line-height: 1.7;
-    color: #333;
+    line-height: 1.5715;
+    color: rgba(0, 0, 0, 0.85);
     word-break: break-word;
   }
 
@@ -1637,15 +1859,16 @@
     :deep(h3) {
       margin: 16px 0 8px;
       font-weight: 600;
+      color: rgba(0, 0, 0, 0.85);
     }
     :deep(h1) {
-      font-size: 18px;
+      font-size: 16px;
     }
     :deep(h2) {
       font-size: 16px;
     }
     :deep(h3) {
-      font-size: 15px;
+      font-size: 14px;
     }
     :deep(strong) {
       font-weight: 600;
@@ -1666,18 +1889,18 @@
   :deep(table) {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 14px;
     th,
     td {
-      padding: 10px 14px;
+      padding: 8px 12px;
       border-bottom: 1px solid #f0f0f0;
       text-align: left;
     }
     th {
       background: #fafafa;
       font-weight: 600;
-      color: #1a1a1a;
-      border-bottom: 2px solid #e8e8e8;
+      color: rgba(0, 0, 0, 0.85);
+      border-bottom: 1px solid #f0f0f0;
     }
     tr:hover td {
       background: #f9f9f9;
@@ -1709,9 +1932,9 @@
     border: 1px solid #d9d9d9;
     border-radius: 4px;
     padding: 2px 8px;
-    font-size: 11px;
+    font-size: 12px;
     cursor: pointer;
-    color: #666;
+    color: rgba(0, 0, 0, 0.65);
     &:hover {
       border-color: #1890ff;
       color: #1890ff;
@@ -1781,8 +2004,8 @@
   /* ====== 思考过程（折叠） ====== */
   .thinking-block {
     margin-bottom: 12px;
-    border: 1px solid #e8e8e8;
-    border-radius: 8px;
+    border: 1px solid #f0f0f0;
+    border-radius: 4px;
     background: #fafafa;
     overflow: hidden;
     .thinking-header {
@@ -1791,17 +2014,17 @@
       justify-content: space-between;
       padding: 8px 12px;
       cursor: pointer;
-      font-size: 12px;
-      color: #888;
+      font-size: 14px;
+      color: rgba(0, 0, 0, 0.65);
       &:hover {
-        background: #f0f0f0;
+        background: #f5f5f5;
       }
     }
     .thinking-content {
       padding: 0 12px 8px;
       font-size: 12px;
-      color: #999;
-      line-height: 1.6;
+      color: rgba(0, 0, 0, 0.45);
+      line-height: 1.5715;
       white-space: pre-wrap;
     }
   }
@@ -1813,7 +2036,7 @@
     gap: 8px;
     .thinking-label {
       color: #1890ff;
-      font-size: 13px;
+      font-size: 14px;
     }
     .dots {
       display: flex;
@@ -1866,14 +2089,14 @@
     align-items: center;
     gap: 12px;
     padding: 12px;
-    border: 1px solid #e8e8e8;
-    border-radius: 8px;
+    border: 1px solid #f0f0f0;
+    border-radius: 4px;
     background: #fff;
     cursor: pointer;
     transition: all 0.2s;
     &:hover {
       border-color: #1890ff;
-      background: #f0f7ff;
+      background: #e6f7ff;
     }
     .strategy-icon {
       font-size: 18px;
@@ -1886,22 +2109,29 @@
       font-weight: 600;
       font-size: 14px;
       margin-bottom: 2px;
+      color: rgba(0, 0, 0, 0.85);
     }
     .strategy-desc {
-      font-size: 13px;
-      color: #666;
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.45);
     }
   }
 
   /* ====== 文档卡片 ====== */
+  .doc-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+  }
   .doc-card {
     display: flex;
     align-items: center;
     gap: 12px;
     margin-top: 12px;
     padding: 12px;
-    border: 1px solid #e8e8e8;
-    border-radius: 8px;
+    border: 1px solid #f0f0f0;
+    border-radius: 4px;
     background: #fff;
     .doc-emoji {
       font-size: 24px;
@@ -1942,9 +2172,9 @@
   .confirmed-badge {
     margin-top: 12px;
     padding: 8px 12px;
-    background: #f0f0f0;
-    border-radius: 6px;
-    font-size: 13px;
+    background: #f5f5f5;
+    border-radius: 4px;
+    font-size: 14px;
     color: #52c41a;
     text-align: center;
   }

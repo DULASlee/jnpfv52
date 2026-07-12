@@ -1,4 +1,4 @@
-# start-dev.ps1 v3.1 — JNPF v5.2 全栈开发环境一键启动
+﻿# start-dev.ps1 v4.1 — JNPF v5.2 全栈开发环境一键启动
 # Encoding: UTF-8 with BOM (PowerShell 5.1 requirement)
 # 启动：PC 前端 :3100 | 数字大屏 :3102 | UniApp H5 :3800 | 后端 :5000 | SA :3001
 param(
@@ -12,13 +12,41 @@ $script:IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.Wind
 # 端口规范见 docs/conventions/ports.md
 $script:DevPorts = @(3100, 3102, 3800, 5000, 3001)
 
+# --- Console encoding helpers (ASCII-only comments: PS 5.1 needs UTF-8 BOM) ---
+# Do NOT call chcp mid-script: it redraws/clears the console and wipes prior step output.
+# Set DOTNET_CLI_UI_LANGUAGE=en for clean English MSBuild; set encodings without chcp.
+$script:CliOutputPrepared = $false
+
+function Set-SafeConsoleEncoding {
+    param($Encoding)
+    if ($null -eq $Encoding) { return }
+    try { [Console]::OutputEncoding = $Encoding } catch { }
+}
+
+function Set-SafeConsoleInputEncoding {
+    param($Encoding)
+    if ($null -eq $Encoding) { return }
+    try { [Console]::InputEncoding = $Encoding } catch { }
+}
+
+function Enable-CleanDotnetCliOutput {
+    if ($script:CliOutputPrepared) { return }
+    # Prefer UTF-8 OutputEncoding only (no chcp) to keep scrollback of steps 1-2.
+    Set-SafeConsoleEncoding ([System.Text.Encoding]::UTF8)
+    Set-SafeConsoleInputEncoding ([System.Text.Encoding]::UTF8)
+    $env:DOTNET_CLI_UI_LANGUAGE = 'en'
+    $script:CliOutputPrepared = $true
+}
+
+# Prepare CLI output once at start (before any Write-Step), so build does not clear history.
+Enable-CleanDotnetCliOutput
+
 function Invoke-BackendBuild {
     param([string]$ProjectPath)
     # Run from backend/ so global.json resolves SDK version correctly
     $backendDir = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $ProjectPath))
-    $prev = [Console]::OutputEncoding
-    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
     try {
+        Enable-CleanDotnetCliOutput
         Push-Location $backendDir
         dotnet build $ProjectPath `
             -v q /nologo `
@@ -26,8 +54,7 @@ function Invoke-BackendBuild {
             -p:CI_BUILD=false `
             -p:IsPackable=false
     } finally {
-        Pop-Location
-        [Console]::OutputEncoding = $prev
+        Pop-Location -ErrorAction SilentlyContinue
     }
     return $LASTEXITCODE
 }
@@ -60,117 +87,206 @@ function Get-PortProcessMap {
     return $map
 }
 
+function Stop-ProcessTree {
+    param(
+        [int]$ProcessId,
+        [string]$Reason = ''
+    )
+    if ($ProcessId -le 4) { return $false }
+    if ($ProcessId -eq $PID) { return $false }  # never kill ourselves
+
+    $proc = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+    if ($null -eq $proc) { return $false }
+
+    $name = $proc.ProcessName
+    $mb = [math]::Round($proc.WorkingSet64 / 1MB, 0)
+
+    # /T = kill child tree (node→esbuild, dotnet→host, powershell→child)
+    $null = & taskkill.exe /F /T /PID $ProcessId 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+    }
+
+    $label = if ($Reason) { $Reason } else { 'kill' }
+    Write-Host "  $label`: $name (PID $ProcessId, ~${mb}MB)" -ForegroundColor DarkGray
+    return $true
+}
+
+function Test-IsJnpfDevCommandLine {
+    param([string]$CommandLine, [string]$ProcessName)
+
+    if ([string]::IsNullOrWhiteSpace($CommandLine)) { return $false }
+
+    $rootEsc = [regex]::Escape($root)
+    $rootAlt = [regex]::Escape(($root -replace '\\', '/'))
+
+    # Strongest: command line references this repo path
+    if ($CommandLine -match $rootEsc -or $CommandLine -match $rootAlt) { return $true }
+
+    # Backend host / project (cwd may be relative — Path alone is useless)
+    if ($ProcessName -match '^(dotnet|JNPF\.API\.Entry)$') {
+        if ($CommandLine -match 'JNPF\.API\.Entry|zx_lowcode_netcore|InteAssistant|SaPipeline') {
+            return $true
+        }
+    }
+
+    # Frontend / SA / datascreen / H5 tooling
+    if ($ProcessName -match '^(node|nodejs)$') {
+        if ($CommandLine -match 'jnpf-web-vue3|jnpf-web-datascreen|jnpf-app-vue3|sa-service|\\vite\\|/vite/|tsx\s+src[/\\]server\.ts') {
+            return $true
+        }
+    }
+
+    # UniApp H5 proxy
+    if ($ProcessName -match '^python') {
+        if ($CommandLine -match 'proxy_server\.py') { return $true }
+    }
+
+    # MSBuild locking JNPF outputs
+    if ($ProcessName -match '^(MSBuild|msbuild)$') {
+        if ($CommandLine -match 'JNPF|zx_lowcode') { return $true }
+    }
+
+    return $false
+}
+
 function Clear-DevEnvironment {
     $freedPorts = 0
     $zombies = 0
     $freedMB = 0
+    $killedPids = @{}  # dedupe across layers
 
-    $modeLabel = if ($script:IsAdmin) { 'Admin' } else { 'User (netstat fallback)' }
-    Write-Host "  Mode: $modeLabel" -ForegroundColor DarkGray
+    $modeLabel = if ($script:IsAdmin) { 'Admin' } else { 'User' }
+    Write-Host "  Mode: $modeLabel | Repo: $root" -ForegroundColor DarkGray
 
-    # --- Layer 1: Kill by port (single netstat pass for all ports) ---
+    # --- Layer 1: Kill by listening port (single netstat pass) ---
     $portMap = Get-PortProcessMap
     foreach ($port in $script:DevPorts) {
-        foreach ($procId in $portMap[$port]) {
+        foreach ($procId in ($portMap[$port] | Select-Object -Unique)) {
             $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
-            if ($null -eq $proc) { continue }
-            $freedMB += [math]::Round($proc.WorkingSet64 / 1MB, 0)
-            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-            Write-Host "  Port $($port): killed $($proc.ProcessName) (PID $procId)" -ForegroundColor DarkGray
-            $freedPorts++
+            $mb = if ($proc) { [math]::Round($proc.WorkingSet64 / 1MB, 0) } else { 0 }
+            if (Stop-ProcessTree -ProcessId $procId -Reason "Port $port") {
+                $killedPids[$procId] = $true
+                $freedPorts++
+                $freedMB += $mb
+            }
         }
     }
 
-    # --- Layer 2: Kill by process name (catches DLL-lock zombies without port) ---
-    # Uses Get-Process only (fast kernel API, no WMI). Path matching guards against killing
-    # unrelated dotnet/node processes on the dev machine.
+    # --- Layer 2: CIM CommandLine scan (real zombie detection) ---
+    # Process.Path is always ...\dotnet.exe / ...\node.exe — useless for repo matching.
+    # Win32_Process.CommandLine carries the project args / absolute module paths.
+    $targetNames = @(
+        'dotnet.exe', 'node.exe', 'nodejs.exe',
+        'JNPF.API.Entry.exe',
+        'python.exe', 'python3.exe', 'py.exe',
+        'MSBuild.exe',
+        'VBCSCompiler.exe'
+    )
 
-    # 2a: JNPF.API.Entry — the backend itself
-    Get-Process -Name 'JNPF.API.Entry' -ErrorAction SilentlyContinue | ForEach-Object {
-        $freedMB += [math]::Round($_.WorkingSet64 / 1MB, 0)
-        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
-        Write-Host "  Name kill: JNPF.API.Entry PID $($_.Id)" -ForegroundColor DarkGray
-        $zombies++
+    try {
+        $cimProcs = Get-CimInstance Win32_Process -ErrorAction Stop |
+            Where-Object { $targetNames -contains $_.Name }
+    } catch {
+        Write-Host "  WARN: CIM scan failed ($($_.Exception.Message)) - name-only fallback" -ForegroundColor DarkYellow
+        $cimProcs = @()
+        # Minimal fallback without CommandLine: kill API host by name only
+        foreach ($n in @('JNPF.API.Entry', 'VBCSCompiler')) {
+            foreach ($p in @(Get-Process -Name $n -ErrorAction SilentlyContinue)) {
+                if ($killedPids.ContainsKey($p.Id)) { continue }
+                $mb = [math]::Round($p.WorkingSet64 / 1MB, 0)
+                if (Stop-ProcessTree -ProcessId $p.Id -Reason "Fallback $n") {
+                    $killedPids[$p.Id] = $true
+                    $zombies++
+                    $freedMB += $mb
+                }
+            }
+        }
     }
 
-    # 2b: dotnet.exe processes under the JNPF backend directory
-    Get-Process -Name 'dotnet' -ErrorAction SilentlyContinue | ForEach-Object {
-        $kill = $false
-        try { $procPath = $_.Path } catch { $procPath = '' }
-        # dotnet.exe from JNPF solution or SDK build tools
-        if ($procPath -and ($procPath -match 'JNPF|dotnet\\sdk')) { $kill = $true }
-        # Also kill if working directory is under JNPF (dotnet run)
-        if (-not $kill) {
-            try { $kill = $_.MainWindowTitle -match 'JNPF' } catch {}
-        }
-        if ($kill) {
-            $freedMB += [math]::Round($_.WorkingSet64 / 1MB, 0)
-            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
-            Write-Host "  Killed dotnet PID $($_.Id)" -ForegroundColor DarkGray
+    foreach ($cim in $cimProcs) {
+        $procId = [int]$cim.ProcessId
+        if ($killedPids.ContainsKey($procId)) { continue }
+        if ($procId -eq $PID) { continue }
+
+        $procName = [System.IO.Path]::GetFileNameWithoutExtension($cim.Name)
+        $cmd = $cim.CommandLine
+
+        # VBCSCompiler: shared Roslyn server; restarting it unlocks stale DLL handles (MSB3027)
+        $isVbcs = ($procName -eq 'VBCSCompiler')
+        $isApiEntry = ($procName -eq 'JNPF.API.Entry')
+        $isJnpf = $isApiEntry -or $isVbcs -or (Test-IsJnpfDevCommandLine -CommandLine $cmd -ProcessName $procName)
+
+        if (-not $isJnpf) { continue }
+
+        $proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
+        $mb = if ($proc) { [math]::Round($proc.WorkingSet64 / 1MB, 0) } else { 0 }
+        $reason = if ($isVbcs) { 'VBCSCompiler' } elseif ($isApiEntry) { 'API.Entry' } else { "Zombie $procName" }
+        if (Stop-ProcessTree -ProcessId $procId -Reason $reason) {
+            $killedPids[$procId] = $true
             $zombies++
+            $freedMB += $mb
         }
     }
 
-    # 2c: node.exe processes — check if path is within jnpf-web-vue3 or sa-service
-    Get-Process -Name 'node' -ErrorAction SilentlyContinue | ForEach-Object {
-        $kill = $false
-        try { $procPath = $_.Path } catch { $procPath = '' }
-        if ($procPath -and ($procPath -match 'jnpf-web-vue3|sa-service|jnpf-app-vue3|jnpf-web-datascreen')) { $kill = $true }
-        # Fallback: window title match
-        if (-not $kill) {
-            try { $kill = $_.MainWindowTitle -match 'JNPF|Vite|3100|3102|3800|3001' } catch {}
-        }
-        if ($kill) {
-            $freedMB += [math]::Round($_.WorkingSet64 / 1MB, 0)
-            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
-            Write-Host "  Killed node PID $($_.Id)" -ForegroundColor DarkGray
-            $zombies++
-        }
-    }
-
-    # --- Layer 3: Python proxy (match by path, no WMI) ---
-    Get-Process -Name 'python', 'python3' -ErrorAction SilentlyContinue | ForEach-Object {
-        $isProxy = $false
-        try { $isProxy = $_.Path -match 'proxy_server\.py' -or $_.MainWindowTitle -match 'proxy' } catch {}
-        if ($isProxy) {
-            $freedMB += [math]::Round($_.WorkingSet64 / 1MB, 0)
-            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
-            Write-Host "  Killed python proxy PID $($_.Id)" -ForegroundColor DarkGray
-            $zombies++
+    # --- Layer 3: Orphan PowerShell windows left by previous start-dev ---
+    $shellProcs = @(Get-Process -Name 'powershell', 'pwsh' -ErrorAction SilentlyContinue)
+    foreach ($shell in $shellProcs) {
+        if ($shell.Id -eq $PID) { continue }
+        if ($killedPids.ContainsKey($shell.Id)) { continue }
+        $title = ''
+        try { $title = $shell.MainWindowTitle } catch { }
+        if ($title -match '^JNPF (Backend|PC|SA|DataV|H5)\b') {
+            $mb = [math]::Round($shell.WorkingSet64 / 1MB, 0)
+            if (Stop-ProcessTree -ProcessId $shell.Id -Reason "Shell '$title'") {
+                $killedPids[$shell.Id] = $true
+                $zombies++
+                $freedMB += $mb
+            }
         }
     }
 
-    # --- Layer 4: Headless browser orphans ---
-    Get-Process -Name 'chrome', 'msedge', 'chromium' -ErrorAction SilentlyContinue |
-        Where-Object { $_.MainWindowTitle -eq '' -or $_.Path -match 'playwright|chrome-win' } |
-        ForEach-Object {
-            $freedMB += [math]::Round($_.WorkingSet64 / 1MB, 0)
-            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+    # --- Layer 4: Playwright / bundled Chromium orphans only (never touch user Chrome) ---
+    $browserProcs = @(Get-Process -Name 'chrome', 'msedge', 'chromium' -ErrorAction SilentlyContinue |
+        Where-Object {
+            -not $killedPids.ContainsKey($_.Id) -and
+            $_.Path -and
+            $_.Path -match 'playwright|chrome-win|chromium-browser'
+        })
+    foreach ($browser in $browserProcs) {
+        $mb = [math]::Round($browser.WorkingSet64 / 1MB, 0)
+        if (Stop-ProcessTree -ProcessId $browser.Id -Reason 'Playwright orphan') {
+            $killedPids[$browser.Id] = $true
             $zombies++
+            $freedMB += $mb
         }
+    }
 
     [System.GC]::Collect()
     [System.GC]::WaitForPendingFinalizers()
     Start-Sleep -Seconds 2
 
-    # --- Verify ports are free ---
+    # --- Layer 5: Verify ports are free; force-kill leftovers ---
     $portMap2 = Get-PortProcessMap
     $stillBusy = @($script:DevPorts | Where-Object { $portMap2[$_].Count -gt 0 })
     if ($stillBusy.Count -gt 0) {
         $busyList = $stillBusy -join ', '
         Write-Host "  WARN: ports still in use: $busyList - force killing..." -ForegroundColor DarkYellow
         foreach ($port in $stillBusy) {
-            foreach ($procId in $portMap2[$port]) {
-                if ($procId -and $procId -gt 4) {
-                    Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-                    taskkill /F /PID $procId 2>$null
+            foreach ($procId in ($portMap2[$port] | Select-Object -Unique)) {
+                if ($procId -and $procId -gt 4 -and -not $killedPids.ContainsKey($procId)) {
+                    if (Stop-ProcessTree -ProcessId $procId -Reason "Force port $port") {
+                        $killedPids[$procId] = $true
+                        $freedPorts++
+                    }
                 }
             }
         }
         Start-Sleep -Seconds 1
     }
 
-    Write-Host "  Cleanup done: ports=$freedPorts zombies=$zombies approx ${freedMB}MB" -ForegroundColor Green
+    $totalKilled = $killedPids.Count
+    Write-Host "  Cleanup done: ports=$freedPorts zombies=$zombies totalPids=$totalKilled approx ${freedMB}MB" -ForegroundColor Green
 }
 
 function Wait-HttpReady {
@@ -302,12 +418,12 @@ function Invoke-PreflightChecks {
     }
 }
 
-Write-Host "=== JNPF v5.2 Dev Startup (v4.0) ===" -ForegroundColor Cyan
+Write-Host "=== JNPF v5.2 Dev Startup (v4.1) ===" -ForegroundColor Cyan
 
 # ================================================================
-# Step 1/8: 清理端口与僵尸进程（内联，确保编译前无 DLL 锁）
+# Step 1/8: 清理端口 + node/.NET 僵尸进程（CIM CommandLine，确保编译前无 DLL 锁）
 # ================================================================
-Write-Step '1' '8' 'Cleaning ports and zombie processes...'
+Write-Step '1' '8' 'Cleaning ports and zombie processes (node / .NET host)...'
 Clear-DevEnvironment
 
 if ($CleanupOnly) {
@@ -341,9 +457,8 @@ if (-not (Test-Path $objDir)) {
 }
 
 Write-Host '  dotnet build...'
-# Set UTF-8 so MSBuild Chinese errors display correctly; run from backend/ for global.json
-$prevEncoding = [Console]::OutputEncoding
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+# UTF-8 + English CLI：避免中文 MSBuild 在 CP936 控制台乱码（不恢复编码，避免 PS5.1 null 异常）
+Enable-CleanDotnetCliOutput
 Push-Location $backendDir
 try {
     $buildOutput = & {
@@ -353,8 +468,7 @@ try {
             -p:CI_BUILD=false 2>&1
     }
 } finally {
-    Pop-Location
-    [Console]::OutputEncoding = $prevEncoding
+    Pop-Location -ErrorAction SilentlyContinue
 }
 $buildExit = $LASTEXITCODE
 
@@ -368,7 +482,7 @@ if ($buildExit -ne 0) {
         Clear-DevEnvironment
         Start-Sleep -Seconds 3
         Write-Host "  Retrying with single-thread (-m:1) to avoid parallel DLL race..."
-        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        Enable-CleanDotnetCliOutput
         Push-Location $backendDir
         try {
             dotnet build $backendProjectPath `
@@ -378,8 +492,7 @@ if ($buildExit -ne 0) {
                 -p:RunAnalyzers=false `
                 -p:CI_BUILD=false 2>&1 | Out-Null
         } finally {
-            Pop-Location
-            [Console]::OutputEncoding = $prevEncoding
+            Pop-Location -ErrorAction SilentlyContinue
         }
         $buildExit = $LASTEXITCODE
     } else {

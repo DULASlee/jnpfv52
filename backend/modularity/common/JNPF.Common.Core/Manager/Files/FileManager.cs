@@ -116,7 +116,15 @@ namespace JNPF.Common.Core.Manager.Files
                         }
                 }
             }
-            catch (AppFriendlyException ex)
+            catch (FileNotFoundException)
+            {
+                throw Oops.Bah(ErrorCode.D8003);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                throw Oops.Bah(ErrorCode.D8003);
+            }
+            catch (AppFriendlyException)
             {
                 throw Oops.Oh(ErrorCode.D8003);
             }

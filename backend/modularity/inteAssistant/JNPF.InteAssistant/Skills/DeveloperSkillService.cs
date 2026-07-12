@@ -135,6 +135,7 @@ public sealed class DeveloperSkillService : IBaseSkill, ITransient
         var backendRoot = CodegenWorkspacePaths.ResolveBackendRoot(context.TenantId, context.ProjectId);
         var allTemplateVersions = new List<CodegenManifestBuilder.TemplateVersionEntry>();
         var totalFilesWritten = 0;
+        var syntaxErrors = new List<string>();
 
         foreach (var codegenContext in codegenContexts)
         {
@@ -156,7 +157,10 @@ public sealed class DeveloperSkillService : IBaseSkill, ITransient
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning("语法校验失败 entity={Entity} template={Template}: {Error}", codegenContext.ClassName, templateId, ex.Message);
+                    var errMsg = $"entity={codegenContext.ClassName} template={templateId}: {ex.Message}";
+                    _logger.LogWarning("语法校验失败: {Error}", errMsg);
+                    syntaxErrors.Add(errMsg);
+                    continue; // 跳过此模板，不写入 workspace
                 }
                 rendered[templateId] = content;
             }
@@ -169,6 +173,12 @@ public sealed class DeveloperSkillService : IBaseSkill, ITransient
                 var entityVersions = CodegenManifestBuilder.BuildTemplateVersions(codegenContext, rendered);
                 allTemplateVersions.AddRange(entityVersions);
             }
+        }
+
+        if (syntaxErrors.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"代码生成语法校验失败 ({syntaxErrors.Count} errors): {string.Join("; ", syntaxErrors)}");
         }
 
         _logger.LogInformation(
@@ -215,7 +225,7 @@ public sealed class DeveloperSkillService : IBaseSkill, ITransient
             entityCount = codegenContexts.Count,
             fileCount = totalFilesWritten,
             backend = backend.BackendKey,
-            channel = "A/B",
+            channel = "stable",
         }, JsonOptions);
 
         yield return new AppendIrEventRequest
@@ -228,7 +238,6 @@ public sealed class DeveloperSkillService : IBaseSkill, ITransient
             SkillId = SkillId,
         };
 
-        await Task.CompletedTask;
     }
 
     public Task<SkillValidationResult> ValidateOutputAsync(

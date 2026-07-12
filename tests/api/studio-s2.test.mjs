@@ -68,6 +68,27 @@ describe.skipIf(skipPipeline)(`Studio S2 产物 pipeline=${pipelineId}`, () => {
     expect(types).toContain('AnalysisCompleted');
   });
 
+  it('02 含固定 CTA（31 产品闭环）', async () => {
+    const { apiRequest, jnpfData, isJnpfOk } = await import('../../scripts/lib/jnpf-auth.mjs');
+    const res = await apiRequest(
+      'GET',
+      `/api/studio/pipeline/execute/${pipelineId}/deliverables/content?relativePath=${encodeURIComponent('02-requirement-spec.md')}`,
+      { session },
+    );
+    expect(isJnpfOk(res), JSON.stringify(res.json).slice(0, 300)).toBe(true);
+    const data = typeof res.json === 'string' ? res.json : (jnpfData(res) ?? res.json?.data);
+    const md = typeof data === 'string' ? data : data?.content || data?.Content || '';
+    expect(md).toContain(
+      '请你确认需求分析说明书，如果同意，推进到下一工作阶段，如果不满意，请在输入框继续提出你的问题和要求。',
+    );
+  });
+
+  it('RequirementSpecPmReviewed 存在（PM 终评）', async () => {
+    const events = await getEvents(session, pipelineId);
+    const types = events.map(e => e.eventType || e.EventType);
+    expect(types).toContain('RequirementSpecPmReviewed');
+  });
+
   it('物化成功或尚未 confirm（二选一可接受）', async () => {
     const events = await getEvents(session, pipelineId);
     const types = events.map(e => e.eventType || e.EventType);

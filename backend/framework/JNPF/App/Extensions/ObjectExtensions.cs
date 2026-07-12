@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -14,6 +15,11 @@ namespace JNPF.Extensions;
 [SuppressSniffer]
 public static class ObjectExtensions
 {
+    /// <summary>
+    /// 类型转换委托缓存，避免每次转换反射
+    /// </summary>
+    private static readonly ConcurrentDictionary<(Type Source, Type Target), Func<object, object>> _conversionCache = new();
+
     /// <summary>
     /// 将 DateTimeOffset 转换成本地 DateTime
     /// </summary>
@@ -369,25 +375,44 @@ public static class ObjectExtensions
         }
         else
         {
-            var converter = TypeDescriptor.GetConverter(type);
-            if (converter.CanConvertFrom(obj.GetType())) return converter.ConvertFrom(obj);
+            var typeConverter = TypeDescriptor.GetConverter(type);
+            if (typeConverter.CanConvertFrom(obj.GetType())) return typeConverter.ConvertFrom(obj);
 
-            var constructor = type.GetConstructor(Type.EmptyTypes);
-            if (constructor != null)
+            var converter = _conversionCache.GetOrAdd((obj.GetType(), type), key =>
             {
-                var o = constructor.Invoke(null);
-                var propertys = type.GetProperties();
-                var oldType = obj.GetType();
+                var (srcType, tgtType) = key;
+                var ctor = tgtType.GetConstructor(Type.EmptyTypes);
+                if (ctor == null) return null;
 
-                foreach (var property in propertys)
+                var srcParam = Expression.Parameter(typeof(object), "src");
+                var srcVar = Expression.Variable(srcType, "srcTyped");
+                var resultVar = Expression.Variable(tgtType, "result");
+
+                var body = new List<Expression>
                 {
-                    var p = oldType.GetProperty(property.Name);
-                    if (property.CanWrite && p != null && p.CanRead)
+                    Expression.Assign(srcVar, Expression.Convert(srcParam, srcType)),
+                    Expression.Assign(resultVar, Expression.New(ctor))
+                };
+
+                foreach (var tgtProp in tgtType.GetProperties())
+                {
+                    var srcProp = srcType.GetProperty(tgtProp.Name);
+                    if (tgtProp.CanWrite && srcProp != null && srcProp.CanRead)
                     {
-                        property.SetValue(o, ChangeType(p.GetValue(obj, null), property.PropertyType), null);
+                        body.Add(Expression.Call(resultVar, tgtProp.GetSetMethod()!,
+                            Expression.Convert(Expression.Property(srcVar, srcProp), tgtProp.PropertyType)));
                     }
                 }
-                return o;
+
+                body.Add(Expression.Convert(resultVar, typeof(object)));
+
+                return Expression.Lambda<Func<object, object>>(
+                    Expression.Block(new[] { srcVar, resultVar }, body), srcParam).Compile();
+            });
+
+            if (converter != null)
+            {
+                return converter(obj);
             }
         }
         return obj;

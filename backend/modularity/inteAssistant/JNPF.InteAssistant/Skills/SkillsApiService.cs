@@ -39,6 +39,8 @@ public class SkillsApiService : IDynamicApiController, ITransient
     private readonly IPipelineTripleResolver _tripleResolver;
     private readonly ISaMaterializationService _materializationService;
     private readonly IRequirementAnalysisOrchestrator _requirementOrchestrator;
+    private readonly PmSkillService _pm;
+    private readonly ISaNineViewCompiler _compiler;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -59,7 +61,9 @@ public class SkillsApiService : IDynamicApiController, ITransient
         IExperienceRecorder experience,
         IPipelineTripleResolver tripleResolver,
         ISaMaterializationService materializationService,
-        IRequirementAnalysisOrchestrator requirementOrchestrator)
+        IRequirementAnalysisOrchestrator requirementOrchestrator,
+        ISaNineViewCompiler compiler,
+        PmSkillService pm)
     {
         _db = db;
         _harness = harness;
@@ -75,6 +79,8 @@ public class SkillsApiService : IDynamicApiController, ITransient
         _tripleResolver = tripleResolver;
         _materializationService = materializationService;
         _requirementOrchestrator = requirementOrchestrator;
+        _compiler = compiler;
+        _pm = pm;
     }
 
     [HttpPost("pm/{pipelineId:long}/run")]
@@ -105,6 +111,7 @@ public class SkillsApiService : IDynamicApiController, ITransient
             {
                 ProviderCode = request?.ProviderCode,
                 CurrentRoundAnswers = request?.Answers,
+                ForceRefinalize = request?.ForceRefinalize == true,
             };
             await _requirementOrchestrator.RunAsync(pipelineId, tenantId, projectId, options, ct);
         }, timeout: TimeSpan.FromMinutes(35));
@@ -231,6 +238,16 @@ public class SkillsApiService : IDynamicApiController, ITransient
         if (eventSpecs.Count == 0)
             throw Oops.Bah("无稳定 EventSpec，请先完成 Analyst Skill 生成需求分析说明书");
 
+        var pmReview = await LoadLatestPmReviewAsync(projectId, tenantId, pipelineId);
+        var forceConfirm = request?.ForceConfirm == true;
+        if (!forceConfirm && (pmReview == null || pmReview.Score < 85))
+        {
+            var gapsText = pmReview?.Gaps is { Count: > 0 }
+                ? "；缺口：" + string.Join("；", pmReview.Gaps)
+                : "；请等待 PM 终评完成或选择强制确认";
+            throw Oops.Bah($"PM 终评分数不足 85，当前分数：{pmReview?.Score.ToString() ?? "未评审"}{gapsText}");
+        }
+
         await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
         {
             EventType = IrEventTypes.StageConfirmed,
@@ -239,6 +256,8 @@ public class SkillsApiService : IDynamicApiController, ITransient
                 stage = "S2",
                 confirmedBy = "user-hitl",
                 eventSpecCount = eventSpecs.Count,
+                forceConfirm,
+                pmScore = pmReview?.Score,
             }, JsonOptions),
             SkillId = "analyst-skill",
         });
@@ -255,6 +274,8 @@ public class SkillsApiService : IDynamicApiController, ITransient
                 source = "confirm-requirement-spec",
                 autoRunDesign = request?.AutoRunDesign == true,
                 eventSpecCount = eventSpecs.Count,
+                forceConfirm,
+                pmScore = pmReview?.Score,
             }, JsonOptions));
 
         var taskName = $"sa-materialize:{pipelineId}";
@@ -266,6 +287,172 @@ public class SkillsApiService : IDynamicApiController, ITransient
         }, timeout: TimeSpan.FromMinutes(10));
 
         return new { status = "confirmed", stage = "S2", autoRunDesign = request?.AutoRunDesign == true, materialization = "enqueued" };
+    }
+
+    [HttpPost("requirement-analysis/{pipelineId:long}/amend/propose")]
+    public async Task<object> ProposeRequirementAmendmentAsync(
+        long pipelineId, [FromBody] PmAmendProposeRequest? request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.UserMessage))
+            throw Oops.Bah("补充需求不能为空");
+
+        var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
+        if (await HasS2ConfirmedAsync(projectId, tenantId, pipelineId))
+            throw Oops.Bah("需求分析说明书已确认，补充需求请通过二次开发/fork 流程处理");
+
+        var context = new SkillContext
+        {
+            RunId = Guid.NewGuid().ToString("N"),
+            TenantId = tenantId,
+            ProjectId = projectId,
+            PipelineId = pipelineId,
+            UserRequirement = request.UserMessage,
+            ProviderCode = request.ProviderCode,
+        };
+        var result = await _pm.AmendProposeAsync(context, request.UserMessage, CancellationToken.None);
+        using var execScope = SkillExecutionScope.Begin(
+            context.RunId, tenantId, projectId, pipelineId, "pm-skill", CancellationToken.None);
+        await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
+        {
+            EventType = IrEventTypes.RequirementAmendmentProposed,
+            FragmentId = $"req-amend:{result.ProposalId}",
+            FragmentType = IrFragmentTypes.Clarification,
+            Payload = JsonSerializer.Serialize(new
+            {
+                result.ProposalId,
+                userMessage = request.UserMessage,
+                result.Understanding,
+                pipelineId,
+            }, JsonOptions),
+            SkillId = "pm-skill",
+        });
+
+        return result;
+    }
+
+    [HttpPost("requirement-analysis/{pipelineId:long}/amend/apply")]
+    public async Task<object> ApplyRequirementAmendmentAsync(
+        long pipelineId, [FromBody] PmAmendApplyRequest? request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.ProposalId))
+            throw Oops.Bah("ProposalId 不能为空");
+
+        var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
+        if (await HasS2ConfirmedAsync(projectId, tenantId, pipelineId))
+            throw Oops.Bah("需求分析说明书已确认，补充需求请通过二次开发/fork 流程处理");
+
+        var appliedCount = (await _eventStore.ListEventsAsync(projectId, tenantId, pipelineId.ToString()))
+            .Count(e => string.Equals(e.EventType, IrEventTypes.RequirementAmendmentApplied, StringComparison.Ordinal));
+        if (appliedCount >= 3)
+            throw Oops.Bah("本次需求分析最多允许应用 3 次补充修改，请确认当前说明书或进入二次开发流程");
+
+        var understanding = request.Understanding ?? new AmendmentUnderstanding
+        {
+            SummaryMarkdown = request.UserMessage ?? string.Empty,
+            Features = string.IsNullOrWhiteSpace(request.UserMessage)
+                ? new List<string>()
+                : new List<string> { request.UserMessage! },
+        };
+        var context = new SkillContext
+        {
+            RunId = Guid.NewGuid().ToString("N"),
+            TenantId = tenantId,
+            ProjectId = projectId,
+            PipelineId = pipelineId,
+            UserRequirement = request.UserMessage ?? understanding.SummaryMarkdown,
+            ProviderCode = request.ProviderCode,
+        };
+        var deltaText = await _pm.ApplyAmendmentAsync(context, understanding, CancellationToken.None);
+        string? patchedSkeletonJson = null;
+        string? patchedBundleHash = null;
+        string? patchedSkeletonFragmentId = null;
+        if (understanding.Patches.Count > 0)
+        {
+            var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString());
+            var skeleton = snapshots.FirstOrDefault(s =>
+                s.FragmentType == IrFragmentTypes.Skeleton && s.StabilityState == IrStabilityStates.Stable);
+            if (skeleton == null)
+                throw Oops.Bah("未找到稳定需求骨架，无法应用类型化补丁");
+
+            patchedSkeletonFragmentId = skeleton.FragmentId;
+            var skeletonJson = ResolveSkeletonPayloadJson(skeleton.Payload);
+            if (!skeletonJson.TrimStart().StartsWith('{'))
+                throw Oops.Bah("需求骨架 payload 不是合法 JSON，无法应用类型化补丁");
+            patchedSkeletonJson = AmendmentPatchApplier.ApplyToSkeletonJson(skeletonJson, understanding.Patches);
+            var patchedCompile = _compiler.CompileFromSkeletonJson(patchedSkeletonJson);
+            patchedBundleHash = patchedCompile.BundleHash;
+        }
+
+        using var execScope = SkillExecutionScope.Begin(
+            context.RunId, tenantId, projectId, pipelineId, "pm-skill", CancellationToken.None);
+
+        await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
+        {
+            EventType = IrEventTypes.RequirementAmendmentApplied,
+            FragmentId = $"req-amend:{request.ProposalId}",
+            FragmentType = IrFragmentTypes.Clarification,
+            Payload = JsonSerializer.Serialize(new
+            {
+                request.ProposalId,
+                understanding,
+                deltaText,
+                patchedSkeletonJson,
+                patchedBundleHash,
+                patchCount = understanding.Patches.Count,
+                pipelineId,
+                appliedBy = "user-hitl",
+            }, JsonOptions),
+            SkillId = "pm-skill",
+        });
+
+        if (!string.IsNullOrWhiteSpace(patchedSkeletonJson) && !string.IsNullOrWhiteSpace(patchedSkeletonFragmentId))
+        {
+            await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
+            {
+                EventType = IrEventTypes.SkeletonCreated,
+                FragmentId = patchedSkeletonFragmentId,
+                FragmentType = IrFragmentTypes.Skeleton,
+                Payload = patchedSkeletonJson,
+                SkillId = "pm-skill",
+            });
+            await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
+            {
+                EventType = IrEventTypes.FragmentStabilized,
+                FragmentId = patchedSkeletonFragmentId,
+                FragmentType = IrFragmentTypes.Skeleton,
+                Payload = JsonSerializer.Serialize(new
+                {
+                    reason = "typed-amendment-patch",
+                    patchCount = understanding.Patches.Count,
+                    request.ProposalId,
+                }, JsonOptions),
+                SkillId = "pm-skill",
+            });
+        }
+
+        await SaveClarificationAsUserMessageAsync(pipelineId, projectId, deltaText);
+        var rerunResult = await _requirementOrchestrator.RunAsync(
+            pipelineId,
+            tenantId,
+            projectId,
+            new RequirementAnalysisOptions
+            {
+                ProviderCode = request.ProviderCode,
+                ForceRefinalize = true,
+            },
+            CancellationToken.None);
+
+        if (string.Equals(rerunResult.Status, "failed", StringComparison.OrdinalIgnoreCase))
+            throw Oops.Oh(rerunResult.ErrorMessage ?? "补充需求已应用，但重新生成需求分析说明书失败");
+
+        return new
+        {
+            status = "applied",
+            request.ProposalId,
+            deltaText,
+            nextAction = "refresh-requirement-spec",
+            reviewRefreshed = true,
+        };
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -297,6 +484,17 @@ public class SkillsApiService : IDynamicApiController, ITransient
         // 逃生口：用户选择"全部跳过直接分析" → 写一条 SkipAll 答案事件，前端据 stage 决定后续
         if (request.SkipAll)
         {
+            // 架构阶段 skipAll：注入 JNPF 平台默认架构假设（30 号 §SG3 打回修复：禁止空 answersText）
+            // 总体设计阶段 skipAll：注入 JNPF 平台默认总体设计假设（30 号 §SG4 打回修复：同 SG3 模式）
+            var skipAllAnswersText = stage switch
+            {
+                ClarificationStages.Architecture
+                    => "（用户选择全部跳过，沿用 JNPF 平台默认架构假设：模块化单体部署 + SQL Server + Redis 缓存 + 分层架构 pattern=layered）",
+                ClarificationStages.SystemDesign
+                    => "（用户选择全部跳过，沿用 JNPF 平台默认总体设计假设：部署拓扑=单机部署（低并发<100），集成方式=REST API，非功能需求=JNPF 平台内置安全/日志/缓存默认策略）",
+                _ => "（用户选择全部跳过，沿用默认假设）",
+            };
+
             await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
             {
                 EventType = IrEventTypes.ClarificationAnswered,
@@ -307,7 +505,7 @@ public class SkillsApiService : IDynamicApiController, ITransient
                     setId = request.SetId,
                     stage,
                     skippedAll = true,
-                    answersText = "（用户选择全部跳过，沿用默认假设）",
+                    answersText = skipAllAnswersText,
                     confirmedBy = "user-hitl",
                 }, JsonOptions),
                 SkillId = stage switch
@@ -392,6 +590,16 @@ public class SkillsApiService : IDynamicApiController, ITransient
         var fragmentId = $"clarification:{set.Stage}:{projectId}";
         var allRequiredAnswered = set.Questions.Where(x => x.Required).All(x => answeredIds.Contains(x.Id));
         var messageText = FormatAnswersAsUserMessage(set, request);
+        var filledSlotIds = ClarificationAnswerPatchMapper.DetectFilledSlots(
+            messageText, set.TargetSlotIds);
+        // 用户实际作答（非 skip）时，本轮 TargetSlotIds 视为已覆盖，避免下一轮重复问同一槽
+        if (!request.SkipAll && set.TargetSlotIds is { Count: > 0 })
+        {
+            filledSlotIds = ClarificationAnswerPatchMapper.DetectFilledSlots(
+                messageText + "\n" + string.Join("\n", set.TargetSlotIds),
+                set.TargetSlotIds);
+        }
+
         await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
         {
             EventType = IrEventTypes.ClarificationAnswered,
@@ -407,6 +615,8 @@ public class SkillsApiService : IDynamicApiController, ITransient
                 skippedQuestionIds = request.SkippedQuestionIds,
                 allRequiredAnswered,
                 answersText = messageText,
+                filledSlotIds,
+                targetSlotIds = set.TargetSlotIds,
                 confirmedBy = "user-hitl",
             }, JsonOptions),
             SkillId = set.Stage switch
@@ -527,6 +737,15 @@ public class SkillsApiService : IDynamicApiController, ITransient
         {
             var q = set.Questions.FirstOrDefault(x => x.Id == ans.QuestionId);
             if (q == null) continue;
+
+            // 回传槽位 id，供 DetectFilledSlots / 下一轮选问
+            if (!string.IsNullOrWhiteSpace(q.ContextHint) && q.ContextHint.Contains("[slot:", StringComparison.Ordinal))
+            {
+                var start = q.ContextHint.IndexOf("[slot:", StringComparison.Ordinal);
+                var end = q.ContextHint.IndexOf(']', start);
+                if (end > start)
+                    sb.Append(q.ContextHint.AsSpan(start, end - start + 1)).Append(' ');
+            }
 
             if (ans.MatrixRowAnswers is { Count: > 0 })
             {
@@ -697,6 +916,76 @@ public class SkillsApiService : IDynamicApiController, ITransient
         }
 
         return new { total = items.Count, items };
+    }
+
+    private async Task<PmSpecReviewResult?> LoadLatestPmReviewAsync(
+        string projectId, string tenantId, long pipelineId)
+    {
+        var evt = await _db.Queryable<AiIrEventEntity>()
+            .Where(x => x.ProjectId == projectId
+                        && x.TenantId == tenantId
+                        && x.PipelineId == pipelineId.ToString()
+                        && x.EventType == IrEventTypes.RequirementSpecPmReviewed)
+            .OrderByDescending(x => x.Sequence)
+            .FirstAsync();
+        if (evt == null)
+            return null;
+
+        try
+        {
+            return PmSkillService.ParseSpecReviewResult(evt.Payload);
+        }
+        catch (JsonException)
+        {
+            return new PmSpecReviewResult
+            {
+                Score = 0,
+                Verdict = "fail",
+                Gaps = new List<string> { "PM 终评事件 payload 解析失败" },
+                GapDetails = new List<PmSpecReviewGap>
+                {
+                    new() { Source = "llm", Message = "PM 终评事件 payload 解析失败" },
+                },
+            };
+        }
+    }
+
+    private static string ResolveSkeletonPayloadJson(object? payload)
+    {
+        var raw = payload switch
+        {
+            JsonElement je when je.ValueKind == JsonValueKind.Object => je.GetRawText(),
+            JsonElement je when je.ValueKind == JsonValueKind.String => je.GetString() ?? "{}",
+            string s => s,
+            null => "{}",
+            _ => JsonSerializer.Serialize(payload, JsonOptions),
+        };
+        if (raw.Length >= 2 && raw[0] == '"' && raw[^1] == '"')
+            raw = JsonSerializer.Deserialize<string>(raw) ?? "{}";
+        return raw;
+    }
+
+    private async Task<bool> HasS2ConfirmedAsync(string projectId, string tenantId, long pipelineId)
+    {
+        var events = await _eventStore.ListEventsAsync(projectId, tenantId, pipelineId.ToString());
+        foreach (var evt in events)
+        {
+            if (!string.Equals(evt.EventType, IrEventTypes.StageConfirmed, StringComparison.Ordinal))
+                continue;
+            try
+            {
+                using var doc = JsonDocument.Parse(evt.PayloadPreview);
+                if (doc.RootElement.TryGetProperty("stage", out var stage)
+                    && string.Equals(stage.GetString(), "S2", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            catch (JsonException)
+            {
+                continue;
+            }
+        }
+
+        return false;
     }
 
     private async Task<object> RunSkillAsync(string skillId, long pipelineId, SkillRunRequest? request)

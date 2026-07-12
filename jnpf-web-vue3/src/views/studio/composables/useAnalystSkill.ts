@@ -10,6 +10,12 @@ export interface EventSaProgress {
   isStable: boolean;
 }
 
+export interface RequirementSpecPmReview {
+  score: number | null;
+  gaps: string[];
+  verdict: string;
+}
+
 export const ANALYST_SKILL_KEY: InjectionKey<ReturnType<typeof useAnalystSkill>> = Symbol('analystSkill');
 
 const SA_STEPS = [
@@ -37,6 +43,15 @@ function isS2StageConfirmed(events: IrEventRecord[]) {
   });
 }
 
+function parsePayload(raw?: string): Record<string, any> | null {
+  if (!raw || !raw.trim().startsWith('{')) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 export function useAnalystSkill(pipelineId: Ref<number>, snapshots: Ref<IrFragmentSnapshot[]>, refreshAll: () => Promise<void>, events?: Ref<IrEventRecord[]>) {
   const analystLoading = ref(false);
   const analysisCompleted = ref(false);
@@ -53,7 +68,25 @@ export function useAnalystSkill(pipelineId: Ref<number>, snapshots: Ref<IrFragme
 
   const s2Confirmed = computed(() => (events?.value ? isS2StageConfirmed(events.value) : false));
 
-  const needsRequirementSpecConfirmation = computed(() => analysisCompleted.value && !s2Confirmed.value);
+  const hasAnalysisCompletedEvent = computed(() => (events?.value ?? []).some(e => e.eventType === 'AnalysisCompleted'));
+
+  const pmReview = computed<RequirementSpecPmReview>(() => {
+    const list = (events?.value ?? []).filter(e => e.eventType === 'RequirementSpecPmReviewed');
+    const latest = list[list.length - 1];
+    const payload = parsePayload(latest?.payloadPreview);
+    if (!payload) return { score: null, gaps: [], verdict: '' };
+    const rawScore = payload.score ?? payload.Score;
+    const gaps = payload.gaps ?? payload.Gaps ?? [];
+    return {
+      score: typeof rawScore === 'number' ? rawScore : rawScore != null ? Number(rawScore) : null,
+      gaps: Array.isArray(gaps) ? gaps.map(String) : [],
+      verdict: String(payload.verdict ?? payload.Verdict ?? ''),
+    };
+  });
+
+  const needsRequirementSpecConfirmation = computed(
+    () => (analysisCompleted.value || hasAnalysisCompletedEvent.value || pmReview.value.score != null) && !s2Confirmed.value,
+  );
 
   const eventProgressList = computed<EventSaProgress[]>(() => {
     const specs = snapshots.value.filter(s => s.fragmentType === 'IR1_EventSpec' || s.fragmentId?.startsWith('eventspec:'));
@@ -90,11 +123,11 @@ export function useAnalystSkill(pipelineId: Ref<number>, snapshots: Ref<IrFragme
     }
   }
 
-  async function confirmAndProceed(autoRunDesign = true): Promise<void> {
+  async function confirmAndProceed(autoRunDesign = true, forceConfirm = false): Promise<void> {
     if (!pipelineId.value || confirmLoading.value) return;
     confirmLoading.value = true;
     try {
-      await confirmRequirementSpec(pipelineId.value, { autoRunDesign });
+      await confirmRequirementSpec(pipelineId.value, { autoRunDesign, forceConfirm });
       await refreshAll();
     } finally {
       confirmLoading.value = false;
@@ -107,7 +140,8 @@ export function useAnalystSkill(pipelineId: Ref<number>, snapshots: Ref<IrFragme
   }
 
   function handleSkillProgress(payload: { skillId?: string; phase?: string; percent?: number; message?: string }) {
-    if (payload.skillId === 'analyst-skill') {
+    const id = payload.skillId ?? '';
+    if (id === 'analyst-skill' || id === 'requirement-analysis-orchestrator' || id.startsWith('requirement-analysis')) {
       analystLoading.value = payload.phase !== 'completed' && payload.phase !== 'failed';
     }
   }
@@ -118,6 +152,7 @@ export function useAnalystSkill(pipelineId: Ref<number>, snapshots: Ref<IrFragme
     analysisCompleted,
     confirmLoading,
     s2Confirmed,
+    pmReview,
     needsRequirementSpecConfirmation,
     eventProgressList,
     totalProgress,

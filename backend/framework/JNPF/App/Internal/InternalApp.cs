@@ -180,11 +180,13 @@ internal static class InternalApp
             ?? Array.Empty<string>()).Concat(InjectOptions.InternalIgnoreConfigurationFiles);
 
         // 处理控制台应用程序
-        var _excludeJsonPrefixs = hostEnvironment == default ? excludeJsonPrefixs.Where(u => !u.Equals("appsettings")) : excludeJsonPrefixs;
+        var _excludeJsonPrefixs = hostEnvironment == default
+            ? new HashSet<string>(excludeJsonPrefixs.Where(u => !u.Equals("appsettings")), StringComparer.OrdinalIgnoreCase)
+            : excludeJsonPrefixs;
 
         // 将所有文件进行分组
         var jsonFilesGroups = SplitConfigFileNameToGroups(jsonFiles)
-                                                                .Where(u => !_excludeJsonPrefixs.Contains(u.Key, StringComparer.OrdinalIgnoreCase) && !u.Any(c => runtimeJsonSuffixs.Any(z => c.EndsWith(z, StringComparison.OrdinalIgnoreCase)) || ignoreConfigurationFiles.Contains(Path.GetFileName(c), StringComparer.OrdinalIgnoreCase) || ignoreConfigurationFiles.Any(i => new Matcher().AddInclude(i).Match(Path.GetFileName(c)).HasMatches)));
+                                                                .Where(u => !_excludeJsonPrefixs.Contains(u.Key) && !u.Any(c => runtimeJsonSuffixs.Any(z => c.EndsWith(z, StringComparison.OrdinalIgnoreCase)) || ignoreConfigurationFiles.Contains(Path.GetFileName(c), StringComparer.OrdinalIgnoreCase) || ignoreConfigurationFiles.Any(i => new Matcher().AddInclude(i).Match(Path.GetFileName(c)).HasMatches)));
 
         // 遍历所有配置分组
         foreach (var group in jsonFilesGroups)
@@ -212,7 +214,7 @@ internal static class InternalApp
     /// <summary>
     /// 排除的配置文件前缀
     /// </summary>
-    private static readonly string[] excludeJsonPrefixs = new[] { "appsettings", "bundleconfig", "compilerconfig" };
+    private static readonly HashSet<string> excludeJsonPrefixs = new(StringComparer.OrdinalIgnoreCase) { "appsettings", "bundleconfig", "compilerconfig" };
 
     /// <summary>
     /// 排除运行时 Json 后缀

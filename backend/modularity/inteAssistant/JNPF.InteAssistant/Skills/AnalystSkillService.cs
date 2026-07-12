@@ -5,7 +5,10 @@ using System.Text.Json;
 using JNPF.DependencyInjection;
 using JNPF.FriendlyException;
 using JNPF.InteAssistant.Codegen.EntityDesign;
+using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
+using JNPF.InteAssistant.Entitys.Dto.Skills;
+using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Gates;
 using JNPF.InteAssistant.Ir;
@@ -136,7 +139,25 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
     {
         var context = perception.Context;
         var skeleton = context.Snapshot.Find(IrFragmentTypes.Skeleton, IrStabilityStates.Stable)!;
-        var businessEvents = ParseBusinessEvents(skeleton.Payload);
+        var skeletonPayload = skeleton.Payload;
+
+        // Round 2：在 Compile 之前做受控语义分析并写回骨架（Analyst 重新成为「分析」主体）
+        if (context.EnableSemanticAnalysis
+            && !context.EnableFinalization
+            && _pipelineOptions.IsCompileMode)
+        {
+            await foreach (var evt in EnrichSkeletonViaSemanticAnalysisAsync(context, skeleton, ct))
+                yield return evt;
+
+            // 刷新：若已写回 SkeletonCreated，后续 Compile 必须用新骨架
+            var refreshed = await BuildSnapshotAsync(
+                context.TenantId, context.ProjectId, context.PipelineId.ToString(), ct);
+            var updated = refreshed.Find(IrFragmentTypes.Skeleton, IrStabilityStates.Stable);
+            if (updated != null)
+                skeletonPayload = updated.Payload;
+        }
+
+        var businessEvents = ParseBusinessEvents(skeletonPayload);
         if (businessEvents.Count == 0)
             throw Oops.Bah("IR-0 无 businessEvents，无法启动分析师 Skill");
 
@@ -153,8 +174,8 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
             .ToList();
 
         _logger.LogInformation(
-            "AnalystSkill: 共 {Total} 个事件，{Pending} 个待分析，{Done} 个已完成（断点续跑）",
-            businessEvents.Count, pendingEvents.Count, alreadyConfirmed.Count);
+            "AnalystSkill: 共 {Total} 个事件，{Pending} 个待分析，{Done} 个已完成（断点续跑） semantic={Sem}",
+            businessEvents.Count, pendingEvents.Count, alreadyConfirmed.Count, context.EnableSemanticAnalysis);
 
         SaNineViewCompileResult? compileResult = null;
 
@@ -164,9 +185,12 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
 
             if (_pipelineOptions.IsCompileMode)
             {
+                var pipelineTitle = await LoadPipelineTitleAsync(context.PipelineId, ct);
+                var requirementText = await ResolveRequirementTextAsync(context, ct);
                 compileResult = _compiler.CompileFromSkeletonJson(
-                    skeleton.Payload,
-                    context.UserRequirement ?? skeleton.Payload);
+                    skeletonPayload,
+                    requirementText,
+                    pipelineTitle);
 
                 _logger.LogInformation(
                     "SaNineViewCompiler 完成：{EventCount} 事件，{Duration}ms hash={Hash}",
@@ -266,6 +290,38 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
             }
         }
 
+        // Round 2 语义分析后：即使事件已全部 confirmed（pending=0），仍须 Compile 以消费新骨架
+        if (compileResult == null
+            && context.EnableSemanticAnalysis
+            && !context.EnableFinalization
+            && _pipelineOptions.IsCompileMode)
+        {
+            var pipelineTitle = await LoadPipelineTitleAsync(context.PipelineId, ct);
+            compileResult = _compiler.CompileFromSkeletonJson(
+                skeletonPayload,
+                await ResolveRequirementTextAsync(context, ct),
+                pipelineTitle);
+            _logger.LogInformation(
+                "AnalystSkill: Round2 语义分析后强制 Compile（pending=0）events={Count} hash={Hash}",
+                compileResult.EventResults.Count, compileResult.BundleHash);
+
+            yield return new AppendIrEventRequest
+            {
+                EventType = IrEventTypes.SaNineViewCompiled,
+                Payload = JsonSerializer.Serialize(new
+                {
+                    tenantId = context.TenantId,
+                    projectId = context.ProjectId,
+                    pipelineId = context.PipelineId,
+                    bundleHash = compileResult.BundleHash,
+                    compileMs = compileResult.CompileDurationMs,
+                    eventCount = compileResult.EventResults.Count,
+                    source = "semantic-analysis-recompile",
+                }, JsonOptions),
+                SkillId = SkillId,
+            };
+        }
+
         // ── Round 3 工程一次性保障（27 号 §5.2 / §9：前两轮零工程步骤，仅 Round 3 落库）──
         // enableFinalization 由三轮编排器经 SkillRunOptions → SkillContext 透传：
         // Round 1/2=false（只编译 SA + 产出 IR 事件 + 内存收集 Assumptions，不投影/不门禁/不 Materializer），
@@ -281,9 +337,11 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
         {
             _logger.LogInformation(
                 "AnalystSkill: enableFinalization=true 但 compileResult 为空（断点续跑/Round3），从 skeleton 重编译");
+            var pipelineTitle = await LoadPipelineTitleAsync(context.PipelineId, ct);
             compileResult = _compiler.CompileFromSkeletonJson(
-                skeleton.Payload,
-                context.UserRequirement ?? skeleton.Payload);
+                skeletonPayload,
+                await ResolveRequirementTextAsync(context, ct),
+                pipelineTitle);
             compileResult = MergePersistedAssumptions(context.Snapshot, compileResult);
         }
         else if (compileResult != null)
@@ -300,6 +358,119 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
         }
 
         yield return await FinalizeAsync(context, compileResult, businessEvents.Count, context.EnableFinalization, ct);
+    }
+
+    /// <summary>
+    /// Round 2 受控语义分析：基于用户澄清与当前骨架，产出 Typed patches 并写回 Skeleton。
+    /// 失败降级为空（不阻断 Compile）；禁止散文改骨架。
+    /// </summary>
+    private async IAsyncEnumerable<AppendIrEventRequest> EnrichSkeletonViaSemanticAnalysisAsync(
+        SkillContext context,
+        IrSnapshotFragment skeleton,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        var skeletonJson = skeleton.Payload?.Trim() ?? "{}";
+        if (skeletonJson.Length >= 2 && skeletonJson[0] == '"' && skeletonJson[^1] == '"')
+        {
+            try { skeletonJson = JsonSerializer.Deserialize<string>(skeletonJson) ?? "{}"; }
+            catch (JsonException) { /* keep */ }
+        }
+
+        if (!skeletonJson.TrimStart().StartsWith('{'))
+            yield break;
+
+        var answersHint = context.UserRequirement ?? string.Empty;
+        var brief = skeletonJson.Length > 3500 ? skeletonJson[..3500] : skeletonJson;
+        var request = new ChatCompletionRequest
+        {
+            ProviderCode = Llm.ResolveProvider(SkillId),
+            SystemPrompt = """
+                你是系统需求分析师。在 C# 编译器 Compile 之前，请对需求骨架做受控语义完善。
+                只输出 JSON：{"patches":[],"summaryMarkdown":""}。
+                patches 操作：AddEntity|AddEvent|PatchRule|AddField|PatchSummary|AddStateTransition。
+                字段格式：{"operation":"","target":"","name":"","displayName":"","type":"","description":"","required":false,"references":"","scopeEventId":"","from":"","to":""}
+                约束：
+                - 根据用户澄清补充业务规则、状态流转、缺失字段、事件说明。
+                - 不要删除已有实体；不确定的不要编造。
+                - 必须把关键分析结论写入 PatchRule 或 PatchSummary。
+                """,
+            Messages = new List<ChatMessage>
+            {
+                new("user", $"""
+                    三元组：tenant={context.TenantId}, project={context.ProjectId}, pipeline={context.PipelineId}
+
+                    用户澄清 / 上下文：
+                    {answersHint}
+
+                    当前骨架 JSON（节选）：
+                    {brief}
+                    """),
+            },
+            Temperature = 0.2,
+            MaxTokens = 2048,
+            TimeoutMs = Llm.ResolveTimeoutMs(SkillId),
+            ResponseFormat = "json",
+        };
+
+        IReadOnlyList<AmendmentPatch> patches = Array.Empty<AmendmentPatch>();
+        try
+        {
+            var response = await Llm.ChatAsync(request, ct);
+            if (response.IsSuccess && !string.IsNullOrWhiteSpace(response.Content))
+            {
+                var json = response.Content.Trim();
+                if (json.StartsWith("```"))
+                {
+                    var s = json.IndexOf('{');
+                    var e = json.LastIndexOf('}');
+                    if (s >= 0 && e > s) json = json[s..(e + 1)];
+                }
+                using var doc = JsonDocument.Parse(json);
+                patches = AmendmentPatchApplier.ParsePatches(doc.RootElement);
+            }
+            else
+            {
+                _logger.LogWarning("AnalystSkill 语义分析 LLM 失败，跳过写回: {Error}", response.Error);
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "AnalystSkill 语义分析解析失败，跳过写回");
+        }
+
+        if (patches.Count == 0)
+            yield break;
+
+        var patched = AmendmentPatchApplier.ApplyToSkeletonJson(skeletonJson, patches);
+        if (string.Equals(patched, skeletonJson, StringComparison.Ordinal))
+            yield break;
+
+        _logger.LogInformation(
+            "AnalystSkill 语义分析写回骨架 tenant={TenantId} project={ProjectId} pipeline={PipelineId} patches={Count}",
+            context.TenantId, context.ProjectId, context.PipelineId, patches.Count);
+
+        yield return new AppendIrEventRequest
+        {
+            EventType = IrEventTypes.SkeletonCreated,
+            FragmentId = skeleton.FragmentId,
+            FragmentType = IrFragmentTypes.Skeleton,
+            Payload = patched,
+            SkillId = SkillId,
+        };
+
+        yield return new AppendIrEventRequest
+        {
+            EventType = IrEventTypes.FragmentStabilized,
+            FragmentId = skeleton.FragmentId,
+            FragmentType = IrFragmentTypes.Skeleton,
+            Payload = JsonSerializer.Serialize(new
+            {
+                fragmentId = skeleton.FragmentId,
+                stabilityState = IrStabilityStates.Stable,
+                confirmedBy = "analyst-skill-semantic",
+            }, JsonOptions),
+            SkillId = SkillId,
+        };
     }
 
     /// <summary>
@@ -387,9 +558,30 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
             // ⑥ DDD 实时推导（28 号 §3：纯内存，<50ms，不落库，供质量评分 + 渲染）
             var dddResult = _dddProjection.Project(compileResult, projection);
             _logger.LogInformation(
-                "AnalystSkill: DDD 推导完成 confidence={Conf:F2} subDomains={Sub} roots={Roots}",
-                dddResult.OverallConfidence, dddResult.DomainModel.SubDomains.Count,
+                "AnalystSkill: DDD 推导完成 confidence={Conf:F2} pending={Pending} subDomains={Sub} roots={Roots}",
+                dddResult.OverallConfidence, dddResult.PendingConfirmations.Count,
+                dddResult.DomainModel.SubDomains.Count,
                 dddResult.AggregateDesign.RootEntities.Count);
+
+            // ⑥b SG2-E1/E2 企业可用门禁：身份非空；低置信度必须有待确认清单（禁止静默假绿）
+            var pipelineTitle = await LoadPipelineTitleAsync(context.PipelineId, ct);
+            var requirementText = await ResolveRequirementTextAsync(context, ct);
+            var identity = compileResult.Source.ResolveIdentity(pipelineTitle, requirementText);
+            if (string.IsNullOrWhiteSpace(identity.SystemName)
+                || string.IsNullOrWhiteSpace(identity.RequirementSummary)
+                || identity.SystemName is "—" or "-"
+                || identity.RequirementSummary is "—" or "-")
+            {
+                throw Oops.Bah(
+                    "Round 3 Finalize 阻断：项目名称/需求概要为空或「—」，禁止产出空壳 02（SG2-E1）");
+            }
+
+            if (dddResult.HasUnguardedLowConfidence)
+            {
+                var views = string.Join("、", dddResult.CollectLowConfidenceViews());
+                throw Oops.Bah(
+                    $"Round 3 Finalize 阻断：DDD 视角 [{views}] 置信度偏低且未生成待确认项（SG2-E2）");
+            }
 
             // ⑦ 一致性检查器（28 号 §5：4 条规则，写 sa_consistency）
             var consistencyFindings = await _consistencyChecker.CheckAsync(
@@ -400,9 +592,21 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
                 triple, compileResult, projection, dddResult, consistencyFindings, roundNumber: 3, ct);
 
             // ⑨ 需求分析书渲染（28 号 §7：渲染并落盘 deliverable）
+            // 用身份补全后的 Source 渲染，避免表头「—」
+            var renderCompile = new SaNineViewCompileResult
+            {
+                Source = identity,
+                ProjectSteps = compileResult.ProjectSteps,
+                EventResults = compileResult.EventResults,
+                Assumptions = compileResult.Assumptions,
+                BundleHash = compileResult.BundleHash,
+                CompileDurationMs = compileResult.CompileDurationMs,
+            };
+            var clarificationAnswers = await LoadRequirementClarificationAppendicesAsync(
+                context.TenantId, context.ProjectId, context.PipelineId, ct);
             var documentMarkdown = _documentRenderer.Render(
-                triple, compileResult, dddResult, projection,
-                consistencyFindings, qualityScore, roundNumber: 3, ct);
+                triple, renderCompile, dddResult, projection,
+                consistencyFindings, qualityScore, roundNumber: 3, clarificationAnswers, ct);
             await _deliverables.SaveRequirementSpecAsync(
                 context.TenantId, context.PipelineId, documentMarkdown, ct);
             _logger.LogInformation(
@@ -502,24 +706,41 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
         SkillContext context, IReadOnlyList<Assumption> assumptions, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        var rows = assumptions.Select(a => new
+        var rows = assumptions.Select(a => new SaAssumptionRow
         {
             F_Id = Guid.NewGuid().ToString("N"),
             F_TenantId = context.TenantId,
             F_ProjectId = context.ProjectId,
             F_PIPELINE_ID = context.PipelineId.ToString(),
-            F_EventId = string.IsNullOrWhiteSpace(a.EventId) ? null : (string?)a.EventId,
+            F_EventId = string.IsNullOrWhiteSpace(a.EventId) ? null : a.EventId,
             F_SourceStep = a.SourceStep,
             F_AssumptionText = a.Text,
             F_Confidence = a.Confidence,
             F_IsUserConfirmed = false,
-            F_UserVerdict = (string?)null,
+            F_UserVerdict = null,
             F_RoundCreated = 3,
             F_CreatedAt = now,
         }).ToList();
 
         await _db.Insertable(rows).AS("sa_assumptions").ExecuteCommandAsync(ct);
         _logger.LogInformation("AnalystSkill: 写入 {Count} 条假设项到 sa_assumptions", rows.Count);
+    }
+
+    /// <summary>sa_assumptions 表行映射（SqlSugar Insertable 要求具体类型，不支持匿名）。</summary>
+    private sealed class SaAssumptionRow
+    {
+        public string F_Id { get; set; } = string.Empty;
+        public string F_TenantId { get; set; } = string.Empty;
+        public string F_ProjectId { get; set; } = string.Empty;
+        public string F_PIPELINE_ID { get; set; } = string.Empty;
+        public string? F_EventId { get; set; }
+        public string F_SourceStep { get; set; } = string.Empty;
+        public string F_AssumptionText { get; set; } = string.Empty;
+        public decimal F_Confidence { get; set; }
+        public bool F_IsUserConfirmed { get; set; }
+        public string? F_UserVerdict { get; set; }
+        public int F_RoundCreated { get; set; }
+        public DateTime F_CreatedAt { get; set; }
     }
 
     /// <summary>
@@ -573,6 +794,98 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
         {
             return compileResult;
         }
+    }
+
+    private async Task<string?> LoadPipelineTitleAsync(long pipelineId, CancellationToken ct)
+    {
+        try
+        {
+            var name = await _db.Queryable<AiPipelineEntity>()
+                .Where(x => x.Id == pipelineId.ToString())
+                .Select(x => x.Name)
+                .FirstAsync(ct);
+            return string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "读取 pipeline 标题失败 pipeline={PipelineId}", pipelineId);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 需求原文：优先 SkillContext；空/JSON 时回退到 pipeline 用户消息（不因 Tenant 过滤丢原文）。
+    /// </summary>
+    private async Task<string?> ResolveRequirementTextAsync(SkillContext context, CancellationToken ct)
+    {
+        var fromContext = NormalizeRequirementText(context.UserRequirement);
+        if (fromContext != null)
+            return fromContext;
+
+        try
+        {
+            var msg = await _db.Queryable<AiPipelineMessageEntity>()
+                .Where(x => x.PipelineId == context.PipelineId.ToString() && x.Role == "user")
+                .OrderByDescending(x => x.CreatorTime)
+                .Select(x => x.Content)
+                .FirstAsync(ct);
+            return NormalizeRequirementText(msg);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "回退读取用户需求失败 pipeline={PipelineId}", context.PipelineId);
+            return null;
+        }
+    }
+
+    /// <summary>空串 / Skeleton JSON 不得当作需求原文（否则表头退化成「业务」）。</summary>
+    private static string? NormalizeRequirementText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+        var t = text.TrimStart();
+        if (t.StartsWith('{') || t.StartsWith('['))
+            return null;
+        return text.Trim();
+    }
+
+    private async Task<IReadOnlyList<ClarificationAnswerAppendix>> LoadRequirementClarificationAppendicesAsync(
+        string tenantId, string projectId, long pipelineId, CancellationToken ct)
+    {
+        var events = await _eventStore.ListEventsAsync(projectId, tenantId, pipelineId.ToString(), ct);
+        var result = new List<ClarificationAnswerAppendix>();
+        foreach (var evt in events)
+        {
+            if (!string.Equals(evt.EventType, IrEventTypes.ClarificationAnswered, StringComparison.Ordinal))
+                continue;
+            var raw = evt.PayloadPreview;
+            if (string.IsNullOrWhiteSpace(raw)) continue;
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                var root = doc.RootElement;
+                var stage = root.TryGetProperty("stage", out var stageEl) && stageEl.ValueKind == JsonValueKind.String
+                    ? stageEl.GetString() ?? ""
+                    : "";
+                if (!RequirementAnalysisStages.IsRequirementAnalysisStage(stage))
+                    continue;
+                var round = root.TryGetProperty("round", out var roundEl) && roundEl.TryGetInt32(out var r) ? r : 0;
+                var answersText = root.TryGetProperty("answersText", out var textEl) && textEl.ValueKind == JsonValueKind.String
+                    ? textEl.GetString() ?? ""
+                    : "";
+                result.Add(new ClarificationAnswerAppendix(stage, round, answersText));
+            }
+            catch (JsonException)
+            {
+                _logger.LogWarning("澄清作答 payload 解析失败，跳过 eventId={EventId}", evt.EventId);
+            }
+        }
+
+        return result
+            .GroupBy(x => $"{x.Stage}:{x.Round}", StringComparer.Ordinal)
+            .Select(g => g.Last())
+            .OrderBy(x => x.Round)
+            .ToList();
     }
 
     private static string BuildEventSpecPayload(

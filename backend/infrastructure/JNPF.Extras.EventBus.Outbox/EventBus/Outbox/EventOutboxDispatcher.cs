@@ -68,7 +68,11 @@ public class EventOutboxDispatcher : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "EventOutboxDispatcher error.");
+                // 传输级断连（SQL 重启/池回收）属瞬时故障，降级 Warning 避免刷屏；已有 5s 退避重试
+                if (ex is Microsoft.Data.SqlClient.SqlException sqlEx && sqlEx.Class >= 20)
+                    _logger.LogWarning(ex, "EventOutboxDispatcher SQL connection lost; will retry.");
+                else
+                    _logger.LogError(ex, "EventOutboxDispatcher error.");
                 await Task.Delay(5000, stoppingToken);
             }
         }
@@ -82,30 +86,35 @@ public class EventOutboxDispatcher : BackgroundService
     {
         using var scope = _serviceScopeFactory.CreateScope();
         var store = scope.ServiceProvider.GetRequiredService<SqlSugarEventOutboxStore>();
-        var publisher = scope.ServiceProvider.GetRequiredService<IEventPublisher>();
 
         var messages = await store.GetPendingAsync(BatchSize);
-        foreach (var msg in messages)
+        if (messages.Count == 0) return;
+
+        // 并行处理消息，每条消息使用独立 Scope 保证线程安全
+        var tasks = messages.Select(async msg =>
         {
-            if (stoppingToken.IsCancellationRequested) break;
+            if (stoppingToken.IsCancellationRequested) return;
+
+            using var msgScope = _serviceScopeFactory.CreateScope();
+            var msgStore = msgScope.ServiceProvider.GetRequiredService<SqlSugarEventOutboxStore>();
+            var msgPublisher = msgScope.ServiceProvider.GetRequiredService<IEventPublisher>();
 
             try
             {
-                await store.MarkProcessingAsync(msg.Id);
-
-                // 通过 EventBus 发布事件
-                await publisher.PublishAsync(msg.EventName, msg.EventPayload);
-
-                await store.MarkCompletedAsync(msg.Id);
+                await msgStore.MarkProcessingAsync(msg.Id);
+                await msgPublisher.PublishAsync(msg.EventName, msg.EventPayload);
+                await msgStore.MarkCompletedAsync(msg.Id);
                 _logger.LogDebug("Outbox message {Id} delivered: {EventName}", msg.Id, msg.EventName);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Outbox message {Id} delivery failed: {EventName}", msg.Id, msg.EventName);
-                await store.IncrementRetryAsync(msg.Id);
-                await store.MarkFailedAsync(msg.Id, ex.Message);
+                await msgStore.IncrementRetryAsync(msg.Id);
+                await msgStore.MarkFailedAsync(msg.Id, ex.Message);
             }
-        }
+        });
+
+        await Task.WhenAll(tasks);
     }
 
     private async Task DrainChannelAsync()

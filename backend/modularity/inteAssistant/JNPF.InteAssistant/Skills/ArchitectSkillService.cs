@@ -353,7 +353,7 @@ public sealed class ArchitectSkillService : CognitiveSkill, ITransient
                     Id = "q2",
                     Text = "数据库选型？",
                     Type = "single",
-                    Required = false,
+                    Required = true,
                     Options = new List<ClarificationOption>
                     {
                         new() { Id = "o1", Label = "SQL Server（沿用现有）" },
@@ -426,6 +426,12 @@ public sealed class ArchitectSkillService : CognitiveSkill, ITransient
         var systemPrompt = """
             你是 JNPF 架构师 Skill。根据 IR-1 业务事件输出架构决策 JSON。
             必须包含：pattern（layered|cqrs）、modules（非空数组）、candidates（2 个架构候选，含 score）、selectedIndex（Top-1）。
+
+            每个 module 必须包含：
+            - name: 模块名（非空字符串）
+            - responsibilities: 核心职责描述（非空字符串，至少 20 字，说明该模块负责哪些业务能力）
+            - aggregates: 该模块管理的聚合根列表（字符串数组，至少 1 个）
+
             只输出 JSON。
             """;
 
@@ -475,6 +481,14 @@ public sealed class ArchitectSkillService : CognitiveSkill, ITransient
                     || modules.GetArrayLength() == 0)
                 {
                     _logger.LogWarning("Architect ToT 分支 {Branch} 缺少 modules，跳过", branch.BranchIndex);
+                    continue;
+                }
+
+                // 验证每个 module 的 responsibilities 非空（30 号 §SG3 打回：03 职责空）
+                var (respValid, respError) = ValidateModuleResponsibilities(json);
+                if (!respValid)
+                {
+                    _logger.LogWarning("Architect ToT 分支 {Branch} {Error}，跳过", branch.BranchIndex, respError);
                     continue;
                 }
             }
@@ -548,5 +562,38 @@ public sealed class ArchitectSkillService : CognitiveSkill, ITransient
         public string Title { get; set; } = "";
         public string Intro { get; set; } = "";
         public List<ClarificationQuestion> Questions { get; set; } = new();
+    }
+
+    /// <summary>
+    /// 验证架构 JSON 中每个 module 的 responsibilities 非空（可测试内部方法）。
+    /// 返回 (isValid, errorMessage)。
+    /// </summary>
+    internal static (bool IsValid, string Error) ValidateModuleResponsibilities(string architectureJson)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(architectureJson);
+            if (!doc.RootElement.TryGetProperty("modules", out var modules)
+                || modules.ValueKind != JsonValueKind.Array
+                || modules.GetArrayLength() == 0)
+                return (false, "modules 缺失或为空数组");
+
+            foreach (var m in modules.EnumerateArray())
+            {
+                var name = m.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String
+                    ? n.GetString() : "(unknown)";
+
+                if (!m.TryGetProperty("responsibilities", out var resp)
+                    || resp.ValueKind != JsonValueKind.String
+                    || string.IsNullOrWhiteSpace(resp.GetString()))
+                    return (false, $"module '{name}' 缺少 responsibilities 或为空");
+            }
+
+            return (true, string.Empty);
+        }
+        catch (JsonException ex)
+        {
+            return (false, $"JSON 解析失败: {ex.Message}");
+        }
     }
 }

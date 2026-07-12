@@ -39,16 +39,23 @@ public class SkillQualityBoardService : IDynamicApiController, ITransient
     /// 单条 SQL 聚合 + tier 分级 + 三元组过滤。
     /// </summary>
     [HttpGet("board")]
-    public async Task<object> GetBoard([FromQuery] int sinceDays = 30, CancellationToken ct = default)
+    public async Task<object> GetBoard(
+        [FromQuery] int sinceDays = 30,
+        [FromQuery] string? skillId = null,
+        CancellationToken ct = default)
     {
         var since = DateTime.UtcNow.AddDays(-sinceDays);
         var tenantId = TenantId();
 
         // 单条 SQL 聚合（三元组过滤 — 六条生命线#5 隔离）
-        var rows = await _db.Queryable<Entitys.Entity.AiSkillRunEntity>()
+        var query = _db.Queryable<Entitys.Entity.AiSkillRunEntity>()
             .Where(x => x.TenantId == tenantId && x.StartedAt >= since)
             // 仅统计已结束的 run（running 状态不计入成功率分母，避免误判）
-            .Where(x => x.Status == "completed" || x.Status == "failed" || x.Status == "aborted" || x.Status == "cancelled")
+            .Where(x => x.Status == "completed" || x.Status == "failed" || x.Status == "aborted" || x.Status == "cancelled");
+        if (!string.IsNullOrWhiteSpace(skillId))
+            query = query.Where(x => x.SkillId == skillId);
+
+        var rows = await query
             .GroupBy(x => x.SkillId)
             .Select(x => new
             {
@@ -87,6 +94,7 @@ public class SkillQualityBoardService : IDynamicApiController, ITransient
             Items = board,
             SinceDays = sinceDays,
             TotalSkills = board.Count,
+            SkillId = skillId,
             // 整体健康度（所有 Skill 的加权平均成功率）
             OverallSuccessRate = board.Count > 0
                 ? System.Math.Round((double)board.Sum(b => b.SuccessCount) / System.Math.Max(1, board.Sum(b => b.TotalRuns)), 3)
@@ -127,5 +135,6 @@ public class QualityBoardResult
     public List<QualityBoardItem> Items { get; set; } = new();
     public int SinceDays { get; set; }
     public int TotalSkills { get; set; }
+    public string? SkillId { get; set; }
     public double OverallSuccessRate { get; set; }
 }

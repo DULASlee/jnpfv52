@@ -122,7 +122,11 @@ public class BugfixSkillsApiService : IDynamicApiController, ITransient
         if (!_tenantGuard.VerifyOwnership(pipeline, tenantId) && !TenantResolver.IsSuperTenant())
             throw Oops.Oh("无权访问该流水线");
 
-        return (pipelineId.ToString(), pipeline.TenantId ?? tenantId);
+        // R12：MUST 返回真实 ProjectId（F_PROJECT_ID），禁止用 pipelineId 冒充
+        var projectId = string.IsNullOrWhiteSpace(pipeline.ProjectId)
+            ? pipelineId.ToString()
+            : pipeline.ProjectId;
+        return (projectId, pipeline.TenantId ?? tenantId);
     }
 
     private static string ResolveEffectiveTenantId(string? tenantSnapshot, string? pipelineTenantId)

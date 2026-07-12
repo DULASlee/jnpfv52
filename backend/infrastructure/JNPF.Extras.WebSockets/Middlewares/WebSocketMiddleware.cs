@@ -4,6 +4,7 @@ using JNPF.DataEncryption;
 using JNPF.Extras.WebSockets.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.JsonWebTokens;
+using System.Buffers;
 using System.Net.WebSockets;
 using System.Text;
 using System.Web;
@@ -112,11 +113,12 @@ public class WebSocketMiddleware
     {
         while (client.WebSocket.State == WebSocketState.Open)
         {
-            ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024 * 4]);
+            var rentedBuffer = ArrayPool<byte>.Shared.Rent(1024 * 4);
             string message = string.Empty;
             WebSocketReceiveResult result = null;
             try
             {
+                ArraySegment<byte> buffer = new ArraySegment<byte>(rentedBuffer);
                 using (var ms = new MemoryStream())
                 {
                     do
@@ -142,6 +144,10 @@ public class WebSocketMiddleware
                 {
                     client.WebSocket.Abort();
                 }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(rentedBuffer);
             }
         }
 

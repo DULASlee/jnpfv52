@@ -118,8 +118,23 @@ public class SqlSugarDbContextProvider : ISqlSugarDbContextProvider
         try
         {
             var cache = App.GetService<ICacheManager>();
-            var tenantCacheList = cache?.Get<List<GlobalTenantCacheModel>>("jnpf:global:tenant");
-            return tenantCacheList?.FirstOrDefault(t => t.TenantId == tenantId);
+            if (cache == null) return null;
+
+            // 首选：按租户 Key 直接获取（O(1)），避免全量反序列化 + O(n) 线性搜索
+            var perTenantKey = $"jnpf:global:tenant:{tenantId}";
+            var tenantCache = cache.Get<GlobalTenantCacheModel>(perTenantKey);
+            if (tenantCache != null) return tenantCache;
+
+            // 回退：从全量列表中查找（兼容未填充按租户 Key 的旧缓存数据）
+            var tenantCacheList = cache.Get<List<GlobalTenantCacheModel>>("jnpf:global:tenant");
+            tenantCache = tenantCacheList?.FirstOrDefault(t => t.TenantId == tenantId);
+            if (tenantCache != null)
+            {
+                // 回填按租户 Key，后续请求直接命中 O(1)
+                cache.Set(perTenantKey, tenantCache);
+            }
+
+            return tenantCache;
         }
         catch
         {

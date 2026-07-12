@@ -37,6 +37,19 @@ Dev Loop：`dotnet build` → `node scripts/jnpf-api.mjs GET /api/oauth/CurrentU
 
 **违反任一 = 立即停工。** 完整条款：`.claude/rules/implementation-integrity-iron-law.md`
 
+### ⬛ 全链条冲刺铁律（2026-07-11 立）
+
+**按阶段推进验收；不得用全链冒烟顶替阶段正确性。**
+
+| # | 铁律 | 要点 |
+|---|------|------|
+| **F1** | 分阶段 + 核心 xUnit | 每 SG 验收核心功能/产出物；确定性核心必须有单测验证业务准确性 |
+| **F2** | 数据一致性 | IR Write Model；`ai_entity_field` 字段唯一源；投影契约无漂移 |
+| **F3** | 排除旧实现干扰 | 切断旧 Analyst/九步/parse-IR 字段源/311 假绿 |
+| **F4** | 全链冒烟置后 | SG0–SG7 + CONTRACT 全绿后才 W3 |
+
+**顺序：** `W0 → SG-CONTRACT → SG0…SG7 → W3`。细则：`.claude/rules/fullchain-sprint-iron-law.md` · `.cursor/rules/fullchain-sprint-iron-law.mdc` · 30 号计划。
+
 ---
 
 ## 架构约束层
@@ -73,7 +86,7 @@ JNPF v5.2 低代码平台全栈工程师。技术栈：.NET 8 + SqlSugar + Dappe
 | R2 | Unified Response — Oops.Bah/Oops.Oh, NEVER raw Exception | L2 |
 | R3 | Codegen Boundary — 修 `.vm` 模板, NEVER 改输出文件 | L2 |
 | R4 | Multi-tenant — 漏过滤 = 跨租户泄漏 | **L0** |
-| R5 | Module Boundary — OA 禁用, IoT/MES 不存在 | **L0** |
+| R5 | Module Boundary — OA 独立入口（JNPF.OA.API.Entry）, IoT/MES 不存在 | **L0** |
 | R6 | SSE/Timer 泄漏 — 6 条铁律 | **L0** |
 | R7 | SQL Injection — 动态 SQL 必须参数化 | **L0** |
 | R8 | API Permission — MUST 声明 `[AllowAnonymous]`/`[SecurityDefine]` | **L0** |
@@ -159,7 +172,7 @@ cd backend && dotnet build
 - **ORM：** SqlSugar（SQL Server）+ Dapper | DB 初始化：`backend/web/jnpf_sundial_init.sql`
 - **表命名：** `{MODULE_PREFIX}_{ENTITY}` UPPER_SNAKE | 分层：`framework/` → `infrastructure/` → `modularity/` → `application/`
 - **调用链：** API.Entry → Service（IDynamicApiController）→ Repository / Infrastructure
-- **前端：** jnpf-web-vue3（PC, :3100）、jnpf-web-datascreen（DataV, :8100）、jnpf-app-vue3（Mobile, :3800）
+- **前端：** jnpf-web-vue3（PC, :3100）、jnpf-web-datascreen（DataV, :3102）、jnpf-app-vue3（Mobile, :3800）
 - **连接串：** `backend/application/JNPF.API.Entry/Configurations/ConnectionStrings.json`（gitignored）
 - **Studio S2（ADR-004）：** compile 默认 → `SaNineViewCompiler`；confirm 后 C# `SaMaterializer` 写 `sa_*` 九表。见 `openspec/specs/studio-s2-compile/spec.md`
 - **交互式澄清（ADR-005）：** 三阶段结构化选择题，IR 事件化。见 `openspec/specs/studio-clarification/spec.md`
@@ -178,11 +191,12 @@ cd backend && dotnet build
 | Knowledge Graph MCP | 知识图谱搜索/实体查询/关系追溯 |
 
 **代码/文件搜索规则（强制性）：**
+- **针式搜索铁律** → `.cursor/rules/needle-search.mdc` · `.claude/rules/needle-search.md`（先窄后宽 · 并行≤3 · 禁拖网 · >15s 收窄）
 - C# 符号搜索（找类/方法/接口/引用）→ **Serena MCP**（`mcp__serena__find_symbol` / `mcp__serena__find_referencing_symbols`）
 - C# 文件结构概览 → **Serena MCP**（`mcp__serena__get_symbols_overview`）
 - 项目知识/架构/领域模型查询 → **Knowledge Graph MCP**（`mcp__knowledge-graph__search_nodes`）
-- 文本内容搜索（不在上述范围）→ Grep/Bash `grep`
-- **禁止**用 Bash `find`/`grep` 逐文件遍历替代 Serena 符号搜索——效率相差 10-100 倍
+- 文本内容搜索 → Grep（必须带 path/glob）；已知路径直接 Read；文件名用窄 Glob
+- **禁止** Shell 全仓搜索；**禁止**为找一个文件派 explore 子 Agent；**禁止**同轮 8+ 广域并行
 
 ### Hooks（自动拦截 · AI 无法绕过）
 

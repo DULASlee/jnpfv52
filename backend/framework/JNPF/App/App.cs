@@ -85,7 +85,7 @@ public static class App
     /// <summary>
     /// 未托管的对象集合
     /// </summary>
-    public static readonly ConcurrentBag<IDisposable> UnmanagedObjects;
+    public static readonly ConcurrentQueue<IDisposable> UnmanagedObjects;
 
     /// <summary>
     /// 解析服务提供器
@@ -108,14 +108,14 @@ public static class App
         else if (RootServices != null)
         {
             var scoped = RootServices.CreateScope();
-            UnmanagedObjects.Add(scoped);
+            UnmanagedObjects.Enqueue(scoped);
             return scoped.ServiceProvider;
         }
         // 第四选择，构建新的服务对象（性能最差）
         else
         {
             var serviceProvider = InternalApp.InternalServices.BuildServiceProvider();
-            UnmanagedObjects.Add(serviceProvider);
+            UnmanagedObjects.Enqueue(serviceProvider);
             return serviceProvider;
         }
     }
@@ -449,7 +449,7 @@ public static class App
     static App()
     {
         // 未托管的对象
-        UnmanagedObjects = new ConcurrentBag<IDisposable>();
+        UnmanagedObjects = new ConcurrentQueue<IDisposable>();
 
         // 加载程序集
         var assObject = GetAssemblies();
@@ -459,13 +459,13 @@ public static class App
         // 获取有效的类型集合
         EffectiveTypes = Assemblies.SelectMany(GetTypes);
 
-        AppStartups = new ConcurrentBag<AppStartup>();
+        AppStartups = new ConcurrentQueue<AppStartup>();
     }
 
     /// <summary>
     /// 应用所有启动配置对象
     /// </summary>
-    internal static ConcurrentBag<AppStartup> AppStartups;
+    internal static ConcurrentQueue<AppStartup> AppStartups;
 
     /// <summary>
     /// 外部程序集
@@ -648,7 +648,7 @@ public static class App
         }
 
         // 强制手动回收 GC 内存
-        if (UnmanagedObjects.Any())
+        if (!UnmanagedObjects.IsEmpty)
         {
             var nowTime = DateTime.UtcNow;
             if ((LastGCCollectTime == null || (nowTime - LastGCCollectTime.Value).TotalSeconds > GC_COLLECT_INTERVAL_SECONDS))
@@ -659,7 +659,7 @@ public static class App
             }
         }
 
-        UnmanagedObjects.Clear();
+        while (UnmanagedObjects.TryDequeue(out _)) { }
     }
 
     /// <summary>

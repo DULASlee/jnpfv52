@@ -9,7 +9,7 @@ public static class WebSocketServiceCollectionExtensions
 {
     public static IServiceCollection AddWebSocketManager(this IServiceCollection services)
     {
-        services.AddTransient<WebSocketConnectionManager>();
+        services.AddSingleton<WebSocketConnectionManager>();
 
         var types = AppDomain.CurrentDomain.GetAssemblies()
               .SelectMany(a => a.GetTypes().Where(t => t.BaseType == typeof(WebSocketHandler)))

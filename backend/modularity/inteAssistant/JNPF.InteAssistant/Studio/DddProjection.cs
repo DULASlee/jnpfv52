@@ -30,10 +30,28 @@ public sealed class DddProjectionResult
     public DddCqrs Cqrs { get; init; } = new();
     public DddIntegration Integration { get; init; } = new();
 
+    /// <summary>低置信度视角必须列出的待确认项（企业可用：禁止静默 30%）。</summary>
+    public IReadOnlyList<string> PendingConfirmations { get; init; } = Array.Empty<string>();
+
     /// <summary>5 视角综合 confidence（0-1），供质量评分器 DDD 维度计算。</summary>
     public double OverallConfidence =>
         (DomainModel.Confidence + AggregateDesign.Confidence + EventCatalog.Confidence
          + Cqrs.Confidence + Integration.Confidence) / 5.0;
+
+    /// <summary>是否存在置信度 &lt; 0.5 且未给出待确认说明的视角（应阻断 Finalize）。</summary>
+    public bool HasUnguardedLowConfidence =>
+        CollectLowConfidenceViews().Count > 0 && PendingConfirmations.Count == 0;
+
+    public IReadOnlyList<string> CollectLowConfidenceViews()
+    {
+        var list = new List<string>();
+        if (DomainModel.Confidence < 0.5) list.Add("领域模型");
+        if (AggregateDesign.Confidence < 0.5) list.Add("聚合设计");
+        if (EventCatalog.Confidence < 0.5) list.Add("事件目录");
+        if (Cqrs.Confidence < 0.5) list.Add("CQRS");
+        if (Integration.Confidence < 0.5) list.Add("集成点");
+        return list;
+    }
 }
 
 public abstract class DddViewBase
@@ -74,6 +92,8 @@ public sealed class DddIntegration : DddViewBase
 {
     /// <summary>集成点（SYSTEM 类型外部交互 → SYNC_API）。</summary>
     public List<string> IntegrationPoints { get; init; } = new();
+    /// <summary>低置信度时的待确认提示（写入 PendingConfirmations）。</summary>
+    public string? PendingHint { get; init; }
 }
 
 public sealed class DddProjection : IDddProjection, ITransient
@@ -86,19 +106,39 @@ public sealed class DddProjection : IDddProjection, ITransient
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
+        var domain = DeriveDomainModel(compileResult, entityFields);
+        var aggregates = DeriveAggregateDesign(compileResult, entityFields);
+        var events = DeriveEventCatalog(compileResult);
+        var cqrs = DeriveCqrs(compileResult);
+        var integration = DeriveIntegration(compileResult);
+
+        var pending = new List<string>();
+        if (domain.Confidence < 0.5)
+            pending.Add("领域模型置信度偏低：请确认限界上下文/子域划分是否符合业务语言。");
+        if (aggregates.Confidence < 0.5)
+            pending.Add("聚合设计置信度偏低：请确认聚合根与一致性边界。");
+        if (events.Confidence < 0.5)
+            pending.Add("事件目录置信度偏低：请确认核心业务事件是否齐全。");
+        if (cqrs.Confidence < 0.5)
+            pending.Add("CQRS 划分置信度偏低：请确认命令/查询边界。");
+        if (integration.Confidence < 0.5)
+            pending.Add(integration.PendingHint
+                ?? "集成点置信度偏低：请确认是否存在外部系统/第三方 API；若无则明确「本期无外部集成」。");
+
         var result = new DddProjectionResult
         {
-            DomainModel = DeriveDomainModel(compileResult, entityFields),
-            AggregateDesign = DeriveAggregateDesign(compileResult, entityFields),
-            EventCatalog = DeriveEventCatalog(compileResult),
-            Cqrs = DeriveCqrs(compileResult),
-            Integration = DeriveIntegration(compileResult),
+            DomainModel = domain,
+            AggregateDesign = aggregates,
+            EventCatalog = events,
+            Cqrs = cqrs,
+            Integration = integration,
+            PendingConfirmations = pending,
         };
 
         sw.Stop();
         _logger.LogInformation(
-            "DDD 推导完成：5 视角，confidence={Conf:F2}，耗时 {Ms}ms",
-            result.OverallConfidence, sw.ElapsedMilliseconds);
+            "DDD 推导完成：5 视角，confidence={Conf:F2}，pending={Pending}，耗时 {Ms}ms",
+            result.OverallConfidence, pending.Count, sw.ElapsedMilliseconds);
 
         return result;
     }
@@ -241,10 +281,9 @@ public sealed class DddProjection : IDddProjection, ITransient
         };
     }
 
-    /// <summary>视角 5 集成点：SYSTEM→SYNC_API，其他→UNKNOWN。</summary>
+    /// <summary>视角 5 集成点：从 Scope.externalEntities / externalActors 推导；空则低置信度并强制待确认。</summary>
     private static DddIntegration DeriveIntegration(SaNineViewCompileResult compileResult)
     {
-        // 从 scope 步骤产出推导外部系统边界
         var points = new List<string>();
         if (compileResult.ProjectSteps.TryGetValue("Scope", out var scopeObj))
         {
@@ -252,25 +291,47 @@ public sealed class DddProjection : IDddProjection, ITransient
             {
                 var scopeJson = scopeObj?.ToString() ?? "{}";
                 using var doc = JsonDocument.Parse(scopeJson);
-                if (doc.RootElement.TryGetProperty("externalActors", out var actors)
-                    && actors.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var a in actors.EnumerateArray())
-                    {
-                        var name = a.ValueKind == JsonValueKind.String
-                            ? a.GetString() : a.TryGetProperty("name", out var n) ? n.GetString() : null;
-                        if (!string.IsNullOrWhiteSpace(name))
-                            points.Add($"{name} → SYNC_API");
-                    }
-                }
+                CollectExternalNames(doc.RootElement, "externalActors", points);
+                CollectExternalNames(doc.RootElement, "externalEntities", points);
             }
-            catch { /* scope 解析失败，降级空列表 */ }
+            catch (JsonException)
+            {
+                // scope 解析失败，降级空列表
+            }
+        }
+
+        if (points.Count > 0)
+        {
+            return new DddIntegration
+            {
+                IntegrationPoints = points,
+                Confidence = 0.7,
+            };
         }
 
         return new DddIntegration
         {
-            IntegrationPoints = points,
-            Confidence = points.Count > 0 ? 0.7 : 0.3,
+            IntegrationPoints = new List<string> { "（未声明外部系统）— 默认按「本期无跨系统集成」处理，须业务确认" },
+            Confidence = 0.3,
+            PendingHint = "未发现外部系统声明：请确认是否存在外部系统/第三方 API；若无则明确「本期无外部集成」。",
         };
+    }
+
+    private static void CollectExternalNames(JsonElement root, string propertyName, List<string> points)
+    {
+        if (!root.TryGetProperty(propertyName, out var actors) || actors.ValueKind != JsonValueKind.Array)
+            return;
+
+        foreach (var a in actors.EnumerateArray())
+        {
+            string? name = a.ValueKind == JsonValueKind.String
+                ? a.GetString()
+                : a.TryGetProperty("name", out var n) ? n.GetString() : null;
+            if (string.IsNullOrWhiteSpace(name))
+                continue;
+            var line = $"{name} → SYNC_API";
+            if (!points.Contains(line, StringComparer.OrdinalIgnoreCase))
+                points.Add(line);
+        }
     }
 }

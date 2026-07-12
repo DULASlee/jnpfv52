@@ -25,6 +25,7 @@ export function runPmSkill(pipelineId: number, data?: { userRequirement?: string
   });
 }
 
+/** @deprecated 生产主路径请用 runRequirementAnalysis；保留仅供回归/兼容 */
 export function runAnalystSkill(pipelineId: number, data?: { userRequirement?: string; providerCode?: string }) {
   return defHttp.post<SkillRunResult>({
     url: `/api/studio/skills/analyst/${pipelineId}/run`,
@@ -47,10 +48,59 @@ export function confirmSkeleton(pipelineId: number, data?: { autoRunAnalyst?: bo
   });
 }
 
-export function confirmRequirementSpec(pipelineId: number, data?: { autoRunDesign?: boolean }) {
+export function confirmRequirementSpec(pipelineId: number, data?: { autoRunDesign?: boolean; forceConfirm?: boolean }) {
   return defHttp.post<{ status: string; stage: string; autoRunDesign?: boolean }>({
     url: `/api/studio/skills/analyst/${pipelineId}/confirm-requirement-spec`,
-    data: { autoRunDesign: data?.autoRunDesign ?? false },
+    data: { autoRunDesign: data?.autoRunDesign ?? false, forceConfirm: data?.forceConfirm ?? false },
+  });
+}
+
+export interface AmendmentPatch {
+  operation: string;
+  target: string;
+  name: string;
+  displayName?: string;
+  type?: string;
+  description?: string;
+  required?: boolean;
+  references?: string;
+  scopeEventId?: string;
+  from?: string;
+  to?: string;
+}
+
+export interface AmendmentUnderstanding {
+  features: string[];
+  flows: string[];
+  entitiesOrTables: string[];
+  summaryMarkdown: string;
+  severity: string;
+  patches?: AmendmentPatch[];
+}
+
+export interface PmAmendProposeResult {
+  proposalId: string;
+  understanding: AmendmentUnderstanding;
+}
+
+export interface PmAmendApplyRequest {
+  proposalId: string;
+  understanding?: AmendmentUnderstanding;
+  userMessage?: string;
+  providerCode?: string;
+}
+
+export function proposeRequirementAmendment(pipelineId: number, data: { userMessage: string; providerCode?: string }) {
+  return defHttp.post<PmAmendProposeResult>({
+    url: `/api/studio/skills/requirement-analysis/${pipelineId}/amend/propose`,
+    data,
+  });
+}
+
+export function applyRequirementAmendment(pipelineId: number, data: PmAmendApplyRequest) {
+  return defHttp.post<{ status: string; proposalId: string; deltaText?: string; nextAction?: string; reviewRefreshed?: boolean }>({
+    url: `/api/studio/skills/requirement-analysis/${pipelineId}/amend/apply`,
+    data,
   });
 }
 

@@ -43,7 +43,7 @@
         "ProviderRouting": {
             "pm-skill": "deepseek",
             "analyst-skill": "deepseek",
-            "requirement-gate": "mimo",
+            "requirement-gate": "deepseek",
             "pspec-enhance": "deepseek",
             "confirm": "mimo"
         },
@@ -83,18 +83,18 @@
     "LlmGateway": {
         "Providers": [
             {
-                "Name": "mimo",
-                "Model": "mimo-v2.5-pro",
-                "Level": 0,
-                "MaxRetries": 3,
-                "TimeoutSeconds": 60
-            },
-            {
                 "Name": "deepseek",
                 "Model": "deepseek-v4-pro",
-                "Level": 1,
+                "Level": 0,
                 "MaxRetries": 3,
                 "TimeoutSeconds": 80
+            },
+            {
+                "Name": "mimo",
+                "Model": "mimo-v2.5-pro",
+                "Level": 1,
+                "MaxRetries": 3,
+                "TimeoutSeconds": 60
             },
             {
                 "Name": "openai",

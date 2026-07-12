@@ -15,7 +15,10 @@ public interface ISaNineViewCompiler
 {
     SaNineViewCompileResult Compile(PreAnalysisModel model);
 
-    SaNineViewCompileResult CompileFromSkeletonJson(string skeletonJson, string? requirementSummary = null);
+    SaNineViewCompileResult CompileFromSkeletonJson(
+        string skeletonJson,
+        string? requirementSummary = null,
+        string? pipelineTitle = null);
 }
 
 public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
@@ -33,9 +36,13 @@ public sealed class SaNineViewCompiler : ISaNineViewCompiler, ITransient
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public SaNineViewCompileResult CompileFromSkeletonJson(string skeletonJson, string? requirementSummary = null)
+    public SaNineViewCompileResult CompileFromSkeletonJson(
+        string skeletonJson,
+        string? requirementSummary = null,
+        string? pipelineTitle = null)
     {
-        var model = PreAnalysisModel.ParseFromSkeletonJson(skeletonJson, requirementSummary);
+        var model = PreAnalysisModel.ParseFromSkeletonJson(skeletonJson, requirementSummary)
+            .ResolveIdentity(pipelineTitle, requirementSummary);
         return Compile(model);
     }
 

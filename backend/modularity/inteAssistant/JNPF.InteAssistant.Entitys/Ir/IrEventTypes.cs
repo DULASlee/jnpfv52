@@ -16,6 +16,11 @@ public static class IrEventTypes
     public const string FragmentInvalidated = "FragmentInvalidated";
     public const string InferredRulesAcknowledged = "InferredRulesAcknowledged";
 
+    // 31 号 P0：PM 专家闭环（终评 / Amend 回显确认）
+    public const string RequirementSpecPmReviewed = "RequirementSpecPmReviewed";
+    public const string RequirementAmendmentProposed = "RequirementAmendmentProposed";
+    public const string RequirementAmendmentApplied = "RequirementAmendmentApplied";
+
     // ── 交互式澄清问答事件（跨阶段：需求分析 / 架构设计 / 总体设计，ADR-005）──
     // ClarificationRequested：LLM 产出结构化选择题后投递，fragment 进入 in-progress，暂停流程等待用户作答
     public const string ClarificationRequested = "ClarificationRequested";

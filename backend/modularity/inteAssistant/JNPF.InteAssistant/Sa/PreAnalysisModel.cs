@@ -30,6 +30,73 @@ public sealed class PreAnalysisModel
     public PreAnalysisRoleMatrix? RoleMatrix { get; init; }
 
     /// <summary>
+    /// 企业可用：补全空的 SystemName / RequirementSummary，禁止说明书表头输出「—」。
+    /// 拒绝把 Skeleton JSON 误当作需求概要。
+    /// </summary>
+    public PreAnalysisModel ResolveIdentity(string? pipelineTitle, string? requirementText)
+    {
+        var text = SanitizeRequirementText(
+            !string.IsNullOrWhiteSpace(requirementText) ? requirementText : RequirementSummary);
+
+        var systemName = !string.IsNullOrWhiteSpace(SystemName) && SystemName is not ("—" or "-")
+            ? SystemName!.Trim()
+            : Studio.RequirementTitleHelper.ExtractSystemName(text, pipelineTitle);
+
+        var summary = !string.IsNullOrWhiteSpace(RequirementSummary)
+                      && RequirementSummary is not ("—" or "-")
+                      && !LooksLikeJson(RequirementSummary)
+            ? RequirementSummary!.Trim()
+            : TruncateSummary(text);
+
+        if (string.IsNullOrWhiteSpace(systemName) || systemName is "—" or "-")
+            systemName = !string.IsNullOrWhiteSpace(pipelineTitle)
+                ? Studio.RequirementTitleHelper.ExtractSystemName(null, pipelineTitle)
+                : "业务";
+        if (string.IsNullOrWhiteSpace(summary) || summary is "—" or "-")
+            summary = $"（待补充）{systemName}相关业务需求";
+
+        if (systemName == SystemName && summary == RequirementSummary)
+            return this;
+
+        return new PreAnalysisModel
+        {
+            SchemaVersion = SchemaVersion,
+            SystemName = systemName,
+            RequirementSummary = summary,
+            BusinessEvents = BusinessEvents,
+            EntityDrafts = EntityDrafts,
+            BusinessRules = BusinessRules,
+            StateTransitions = StateTransitions,
+            RoleMatrix = RoleMatrix,
+        };
+    }
+
+    private static string? SanitizeRequirementText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text) || LooksLikeJson(text))
+            return null;
+        return text.Trim();
+    }
+
+    private static bool LooksLikeJson(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+        var t = text.TrimStart();
+        return t.StartsWith('{') || t.StartsWith('[');
+    }
+
+    private static string TruncateSummary(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return string.Empty;
+        var oneLine = text.Replace("\r\n", "\n").Replace('\r', '\n').Trim();
+        var first = oneLine.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault() ?? oneLine;
+        return first.Length > 120 ? first[..120] + "…" : first;
+    }
+
+    /// <summary>
     /// 从 SkeletonCreated JSON payload 解析。
     /// 契约主权（S1）：委托 <see cref="SkeletonPayload.Parse"/> 做唯一解析，本方法仅映射到 PreAnalysis* 类型。
     /// </summary>

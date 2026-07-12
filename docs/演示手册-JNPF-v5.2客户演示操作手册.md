@@ -128,7 +128,7 @@ Test-Path "d:\JNPF-v52\jnpf-web-vue3\node_modules"
 | **后端 API** | **:5000** | launchSettings.json `applicationUrl` | ✅ 实测确认 |
 | **PC 前端** | **:3100** | jnpf-web-vue3/.env `VITE_PORT` | ✅ |
 | **PC→API 代理** | → :5000 | jnpf-web-vue3/.env.development `VITE_PROXY` | ✅ 已匹配 |
-| **大屏前端** | **:8100** | jnpf-web-datascreen-vue3/vite.config.js | ✅ |
+| **大屏前端** | **:3102** | jnpf-web-datascreen/vite.config.js | ✅ |
 | **大屏→API 代理** | → :30000 ❌ | jnpf-web-datascreen-vue3/.env.development | ⚠️ **需改为 5000** |
 | **UniApp H5** | :3800（HBuilderX） | HBuilderX 内置 | 按需启动 |
 | **UniApp→API** | → :30000 ❌ | jnpf-app-vue3/utils/define.js | ⚠️ **需改为 5000** |
@@ -226,10 +226,10 @@ pnpm run dev
 **等待输出**：
 
 ```
-Local:   http://localhost:8100/DataV/
+Local:   http://localhost:3102/DataV/
 ```
 
-**验证**：浏览器打开 `http://localhost:8100/DataV/`，应看到大屏登录页面。
+**验证**：浏览器打开 `http://localhost:3102/DataV/`，应看到大屏登录页面。
 
 ---
 
@@ -258,7 +258,7 @@ Local:   http://localhost:8100/DataV/
 |---|------|----------|----------|-----------|
 | 1 | 后端 API | `http://localhost:5000/api/oauth/Login` | 405/415（路由存在） | 重启终端 1 |
 | 2 | PC 前端 | `http://localhost:3100/` | 登录页（标题"智轩云"） | 重启终端 2 |
-| 3 | 大屏前端 | `http://localhost:8100/DataV/` | 大屏登录页 | 重启终端 3 |
+| 3 | 大屏前端 | `http://localhost:3102/DataV/` | 大屏登录页 | 重启终端 3 |
 | 4 | 移动端 | HBuilderX 内置浏览器 | UniApp 登录页 | 重新运行 |
 
 ---
@@ -301,7 +301,7 @@ Local:   http://localhost:8100/DataV/
 | 系统 | URL | 账号 | 登录结果 |
 |------|-----|------|----------|
 | PC 前端 | `http://localhost:3100/` | admin | ________ |
-| 大屏前端 | `http://localhost:8100/DataV/` | admin | ________ |
+| 大屏前端 | `http://localhost:3102/DataV/` | admin | ________ |
 | 移动端 | HBuilderX 浏览器 | admin | ________ |
 
 ---
@@ -373,7 +373,7 @@ ORDER BY f_sort_code
 | 4 | PC 前端 | 浏览器 `http://localhost:3100/` | 登录页 | 重启终端 2 |
 | 5 | admin 可登录 | 输入账号密码登录 | 进入首页 | 检查账号状态 |
 | 6 | 在线开发菜单 | 左侧菜单 → 在线开发 | 看到功能设计 | 检查 base_module 表 |
-| 7 | 大屏前端 | 浏览器 `http://localhost:8100/DataV/` | 大屏登录页 | 重启终端 3 |
+| 7 | 大屏前端 | 浏览器 `http://localhost:3102/DataV/` | 大屏登录页 | 重启终端 3 |
 | 8 | 大屏代理端口 | 检查 .env.development 的 VITE_PROXY | 指向 :5000 | 修改后重启 |
 | 9 | 移动端（可选） | HBuilderX 运行 | UniApp 页面 | 检查 define.js baseURL |
 
@@ -494,13 +494,13 @@ ORDER BY f_sort_code
 
 **前提条件**：
 - 后端 API 运行中（:5000）
-- 大屏前端已启动（:8100/DataV/）
+- 大屏前端已启动（:3102/DataV/）
 - 大屏 API 代理已改为 :5000
 - admin 已登录大屏系统
 
 #### 步骤 1：进入大屏管理
 
-1. 浏览器打开 `http://localhost:8100/DataV/`
+1. 浏览器打开 `http://localhost:3102/DataV/`
 2. 使用 admin 账号登录
 3. 进入大屏管理列表页
 
@@ -571,7 +571,7 @@ ORDER BY f_sort_code
 1. 点击右上角 **「保存」** 按钮
 2. 点击 **「预览」** 按钮在新窗口查看效果
 
-> **预览 URL 格式**：`http://localhost:8100/DataV/view.html?id={大屏ID}&token={token}&isDev=1`
+> **预览 URL 格式**：`http://localhost:3102/DataV/view.html?id={大屏ID}&token={token}&isDev=1`
 >
 > ⚠️ 开发环境预览必须带 `isDev=1` 参数。
 
@@ -709,8 +709,8 @@ ORDER BY f_sort_code
 | PC 前端 | `http://localhost:3100/` |
 | 后端 API | `http://localhost:5000` |
 | 后端 Swagger（Knife4j） | `http://localhost:5000/newapi` |
-| 大屏前端 | `http://localhost:8100/DataV/` |
-| 大屏预览 | `http://localhost:8100/DataV/view.html?id={ID}&token={token}&isDev=1` |
+| 大屏前端 | `http://localhost:3102/DataV/` |
+| 大屏预览 | `http://localhost:3102/DataV/view.html?id={ID}&token={token}&isDev=1` |
 
 ### C. 数据库速查命令
 

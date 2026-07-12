@@ -37,7 +37,7 @@ public class ObservabilityModule : JnpfModule
                 })
                 .AddSqlClientInstrumentation(options =>
                 {
-                    options.SetDbStatementForText = true;
+                    // SetDbStatementForText 已在 1.12+ 移除：语句捕获默认开启并自动脱敏
                     options.RecordException = true;
                 })
                 .AddHttpClientInstrumentation(options =>

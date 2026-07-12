@@ -38,6 +38,11 @@ public record ClarificationSet
 
     /// <summary>是否允许跳过非关键题（required=false 的题）。</summary>
     public bool AllowSkipNonCritical { get; init; } = true;
+
+    /// <summary>
+    /// 本轮优先覆盖的信息增益槽位 id（如 leave.types）。作答后写入 filledSlotIds，供下一轮选问与骨架补丁。
+    /// </summary>
+    public List<string> TargetSlotIds { get; init; } = new();
 }
 
 /// <summary>单个澄清问题。</summary>
@@ -66,11 +71,20 @@ public record ClarificationQuestion
     /// <summary>合理默认值（option id）。PM 能定的行业惯例自动设为默认值。</summary>
     public string? DefaultOption { get; init; }
 
-    /// <summary>问题格式枚举：SINGLE / MULTI / MATRIX_SINGLE / MATRIX_MULTI。</summary>
-    public string QuestionFormat { get; init; } = "SINGLE";
+    /// <summary>问题格式枚举：MULTI / MATRIX_SINGLE / MATRIX_MULTI。普通 SINGLE 会升为 MULTI。</summary>
+    public string QuestionFormat { get; init; } = "MULTI";
 
     /// <summary>矩阵子项（矩阵题专用：每行一个事件/实体，独立选择）。</summary>
     public List<MatrixSubItem>? MatrixSubItems { get; init; }
+
+    public static string NormalizeQuestionFormat(string? format)
+    {
+        var normalized = string.IsNullOrWhiteSpace(format)
+            ? "MULTI"
+            : format.Trim().ToUpperInvariant();
+
+        return normalized == "SINGLE" ? "MULTI" : normalized;
+    }
 }
 
 /// <summary>矩阵题子项——每行对应一个事件或实体，用户独立选择。</summary>

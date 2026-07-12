@@ -78,6 +78,29 @@ public class SemanticFitnessValidator : ITransient
             if (!response.IsSuccess)
             {
                 _logger.LogWarning("语义评估 LLM 调用失败: {Error}", response.Error);
+                // #region agent log
+                try
+                {
+                    var dbg = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        sessionId = "ead5d0",
+                        runId = "gate-llm",
+                        hypothesisId = "H3",
+                        location = "SemanticFitnessValidator.EvaluateAsync:fail",
+                        message = "GATE_LLM_ERR",
+                        data = new
+                        {
+                            provider = options.SemanticProvider,
+                            error = response.Error,
+                            modelUsed = response.ModelUsed,
+                            latencyMs = response.LatencyMs
+                        },
+                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    });
+                    System.IO.File.AppendAllText(@"D:\JNPF-v52\debug-ead5d0.log", dbg + "\n");
+                }
+                catch { }
+                // #endregion
                 return FailClosed("需求评估服务暂时不可用，请稍后重试。", "GATE_LLM_ERR");
             }
 

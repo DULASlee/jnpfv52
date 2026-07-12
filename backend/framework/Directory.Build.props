@@ -9,21 +9,31 @@
 		<Copyright>© 2019-present 福建引迈信息技术有限公司</Copyright>
 		<RepositoryUrl>https://www.jnpfsoft.com</RepositoryUrl>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
-		<EmbedUntrackedSource>true</EmbedUntrackedSource>
-		<EmbedAllSources>true</EmbedAllSources>
 		<RepositoryType>Gitee</RepositoryType>
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<IncludeSymbols>true</IncludeSymbols>
-		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 		<PackageOutputPath>../nupkgs</PackageOutputPath>
 		<DelaySign>False</DelaySign>
+		<!-- 本地 Debug 默认不 Pack：避免每次 build 打 nupkg/snupkg + EmbedAllSources 拖慢，并消除 NU5026 -->
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<EmbedUntrackedSource>false</EmbedUntrackedSource>
+		<EmbedAllSources>false</EmbedAllSources>
+		<IncludeSymbols>false</IncludeSymbols>
 	</PropertyGroup>
 
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+	<!-- 仅 CI / 显式发包时启用 Pack + 源码嵌入 + 符号包 -->
+	<PropertyGroup Condition="'$(CI_BUILD)' == 'true' Or '$(JNPF_PACK)' == 'true'">
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<EmbedUntrackedSource>true</EmbedUntrackedSource>
+		<EmbedAllSources>true</EmbedAllSources>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	</PropertyGroup>
+
+	<!-- 文档 XML 仅在显式开启 GenerateDocumentationFile 时写出（与根 Directory.Build.props 对齐） -->
+	<PropertyGroup Condition="'$(GenerateDocumentationFile)' == 'true' And '$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
 		<DocumentationFile>bin\Debug\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
 	</PropertyGroup>
 
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+	<PropertyGroup Condition="'$(GenerateDocumentationFile)' == 'true' And '$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
 		<DocumentationFile>bin\Release\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
 	</PropertyGroup>
 

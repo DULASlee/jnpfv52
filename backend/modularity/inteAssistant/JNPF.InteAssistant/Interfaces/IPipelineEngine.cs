@@ -102,6 +102,12 @@ public record PipelineSummary
     public string CurrentStage { get; init; } = "";
     public string Status { get; init; } = "";
     public DateTime UpdatedAt { get; init; }
+    /// <summary>创建/提交时间</summary>
+    public DateTime? CreatedAt { get; init; }
+    /// <summary>提交人用户 ID</summary>
+    public string? CreatorUserId { get; init; }
+    /// <summary>提交人显示名（RealName，缺省回退 Account）</summary>
+    public string? CreatorUserName { get; init; }
 }
 
 public record StageInfo

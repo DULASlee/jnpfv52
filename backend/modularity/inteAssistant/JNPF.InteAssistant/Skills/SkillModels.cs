@@ -102,6 +102,9 @@ public sealed class SkillContext
     /// 默认 true；Round 1/2 由编排器经 SkillRunOptions → 此处置 false。
     /// </summary>
     public bool EnableFinalization { get; init; } = true;
+
+    /// <summary>Round 2：允许 Analyst 受控语义分析写回骨架。</summary>
+    public bool EnableSemanticAnalysis { get; init; }
 }
 
 public sealed class PromptContext

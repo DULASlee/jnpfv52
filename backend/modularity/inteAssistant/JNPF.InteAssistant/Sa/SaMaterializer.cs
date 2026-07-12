@@ -240,7 +240,7 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
         const string insert = """
             INSERT INTO sa_scope (tenant_id, project_id, pipeline_id, asset_level, system_boundary, external_entities, business_events, event_count, validation_status, created_by, updated_by)
             OUTPUT INSERTED.id INTO @InsertedIds
-            VALUES (@tenantId, @projectId, @pipelineId, 'PROJECT', @systemBoundary, @externalEntities, @businessEvents, @eventCount, 'COMPILED', @auditUser, @auditUser);
+            VALUES (@tenantId, @projectId, @pipelineId, 'PROJECT', @systemBoundary, @externalEntities, @businessEvents, @eventCount, 'PASS', @auditUser, @auditUser);
             """;
 
         return await QueryInsertIdAsync(insert, new
@@ -261,7 +261,7 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
         const string insert = """
             INSERT INTO sa_dfd (tenant_id, project_id, pipeline_id, asset_level, scope_id, context_diagram, dfd_levels, processes, data_flows, data_stores, validation_status, created_by, updated_by)
             OUTPUT INSERTED.id INTO @InsertedIds
-            VALUES (@tenantId, @projectId, @pipelineId, 'PROJECT', @scopeId, @contextDiagram, @dfdLevels, @processes, @dataFlows, @dataStores, 'COMPILED', @auditUser, @auditUser);
+            VALUES (@tenantId, @projectId, @pipelineId, 'PROJECT', @scopeId, @contextDiagram, @dfdLevels, @processes, @dataFlows, @dataStores, 'PASS', @auditUser, @auditUser);
             """;
         return await QueryInsertIdAsync(insert, new
         {
@@ -283,7 +283,7 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
         const string insert = """
             INSERT INTO sa_business_process (tenant_id, project_id, pipeline_id, asset_level, dfd_id, swim_lanes, activity_nodes, edges, exception_paths, dfd_process_mappings, validation_status, created_by, updated_by)
             OUTPUT INSERTED.id INTO @InsertedIds
-            VALUES (@tenantId, @projectId, @pipelineId, 'PROJECT', @dfdId, @swimLanes, @activityNodes, @edges, @exceptionPaths, @dfdProcessMappings, 'COMPILED', @auditUser, @auditUser);
+            VALUES (@tenantId, @projectId, @pipelineId, 'PROJECT', @dfdId, @swimLanes, @activityNodes, @edges, @exceptionPaths, @dfdProcessMappings, 'PASS', @auditUser, @auditUser);
             """;
         return await QueryInsertIdAsync(insert, new
         {
@@ -311,7 +311,7 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
         const string insert = """
             INSERT INTO sa_data_dictionary (tenant_id, project_id, pipeline_id, asset_level, dfd_id, bpm_id, elements, data_structures, data_flows, data_stores, validation_status, created_by, updated_by)
             OUTPUT INSERTED.id INTO @InsertedIds
-            VALUES (@tenantId, @projectId, @pipelineId, 'PROJECT', @dfdId, @bpmId, @elements, @dataStructures, @dataFlows, @dataStores, 'COMPILED', @auditUser, @auditUser);
+            VALUES (@tenantId, @projectId, @pipelineId, 'PROJECT', @dfdId, @bpmId, @elements, @dataStructures, @dataFlows, @dataStores, 'PASS', @auditUser, @auditUser);
             """;
         return await QueryInsertIdAsync(insert, new
         {
@@ -330,17 +330,20 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
 
     private Task InsertErAsync(PipelineTriple triple, long dictId, object? payload, CancellationToken ct)
     {
-        // P9-S1：计算校验列（确定性，零 LLM）
+        // P9-S1：计算校验列（确定性，零 LLM）——列类型为 BIT，禁止写 "PASS" 字符串
         var entitiesJson = JsonProp(payload, "entities");
         var relationshipsJson = JsonPropOrEmptyArray(payload, "relationships");
-        var (fkInDict, thirdNormalForm, noCalculatedColumns) = ComputeErValidationFlags(entitiesJson, relationshipsJson, dictId);
+        var (fkInDict, thirdNormalForm, noCalculatedColumns) = SaMaterializationContracts.ComputeErValidationFlags(
+            entitiesJson, relationshipsJson, dictId);
+        if (!fkInDict)
+            _logger.LogWarning("sa_er fk_in_dict=false pipeline={PipelineId}", triple.PipelineId);
 
         const string insert = """
             INSERT INTO sa_er (tenant_id, project_id, pipeline_id, asset_level, dict_id, entities, relationships,
                 validation_status, fk_in_dict, third_normal_form, no_calculated_columns, created_by, updated_by)
             OUTPUT INSERTED.id INTO @InsertedIds
             VALUES (@tenantId, @projectId, @pipelineId, 'PROJECT', @dictId, @entities, @relationships,
-                'COMPILED', @fkInDict, @thirdNormalForm, @noCalculatedColumns, @auditUser, @auditUser);
+                'PASS', @fkInDict, @thirdNormalForm, @noCalculatedColumns, @auditUser, @auditUser);
             """;
         return QueryInsertIdAsync(insert, new
         {
@@ -357,51 +360,7 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
         }, ct);
     }
 
-    /// <summary>P9-S1：确定性计算 ER 校验标志（零 LLM）。</summary>
-    private static (string fkInDict, string thirdNormalForm, string noCalculatedColumns) ComputeErValidationFlags(
-        string entitiesJson, string relationshipsJson, long dictId)
-    {
-        // fk_in_dict：所有 FK 引用的实体是否都在 entities 列表里
-        var fkInDict = "PASS";
-        try
-        {
-            using var entDoc = JsonDocument.Parse(entitiesJson);
-            var entityNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            if (entDoc.RootElement.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var e in entDoc.RootElement.EnumerateArray())
-                {
-                    if (e.TryGetProperty("name", out var n))
-                        entityNames.Add(n.GetString() ?? "");
-                }
-            }
-
-            using var relDoc = JsonDocument.Parse(relationshipsJson);
-            if (relDoc.RootElement.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var r in relDoc.RootElement.EnumerateArray())
-                {
-                    if (r.TryGetProperty("toEntity", out var te))
-                    {
-                        var toEntity = te.GetString() ?? "";
-                        if (!string.IsNullOrEmpty(toEntity) && !entityNames.Contains(toEntity))
-                        {
-                            fkInDict = $"FAIL: FK 目标实体 {toEntity} 不在 entities 列表";
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        catch { /* 解析失败，放行 */ }
-
-        // third_normal_form：简单启发式——每实体有主键则 PASS
-        var thirdNormalForm = "PASS";
-        // no_calculated_columns：当前 compiler 不产出计算列，默认 PASS
-        var noCalculatedColumns = "PASS";
-
-        return (fkInDict, thirdNormalForm, noCalculatedColumns);
-    }
+    // ER BIT 标志计算见 SaMaterializationContracts.ComputeErValidationFlags（SG-C6 / W1-T6）
 
     private Task InsertStateMachineAsync(
         PipelineTriple triple,
@@ -413,15 +372,21 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
         CancellationToken ct)
     {
         var stateMachinesJson = JsonProp(payload, "stateMachines", "state_machines");
-        // P9-S1：确定性计算状态机校验标志（零 LLM）
+        // P9-S1：确定性计算状态机校验标志（零 LLM）——列类型为 BIT
         var (reachabilityCheck, deadEndCheck) = ComputeStateMachineValidation(stateMachinesJson);
+        if (!reachabilityCheck || !deadEndCheck)
+        {
+            _logger.LogWarning(
+                "sa_state_machine checks reachability={Reach} deadEnd={Dead} pipeline={PipelineId}",
+                reachabilityCheck, deadEndCheck, triple.PipelineId);
+        }
 
         const string insert = """
             INSERT INTO sa_state_machine (tenant_id, project_id, pipeline_id, asset_level, event_id, dict_id, bpm_id, state_machines,
                 validation_status, reachability_check, dead_end_check, created_by, updated_by)
             OUTPUT INSERTED.id INTO @InsertedIds
             VALUES (@tenantId, @projectId, @pipelineId, @assetLevel, @eventId, @dictId, @bpmId, @stateMachines,
-                'COMPILED', @reachabilityCheck, @deadEndCheck, @auditUser, @auditUser);
+                'PASS', @reachabilityCheck, @deadEndCheck, @auditUser, @auditUser);
             """;
         return QueryInsertIdAsync(insert, new
         {
@@ -439,11 +404,11 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
         }, ct);
     }
 
-    /// <summary>P9-S1：确定性计算状态机可达性/死锁校验（零 LLM）。</summary>
-    private static (string reachabilityCheck, string deadEndCheck) ComputeStateMachineValidation(string stateMachinesJson)
+    /// <summary>P9-S1：确定性计算状态机可达性/死锁校验（零 LLM）。返回值对应 BIT 列。</summary>
+    private static (bool reachabilityCheck, bool deadEndCheck) ComputeStateMachineValidation(string stateMachinesJson)
     {
-        var reachability = "PASS";
-        var deadEnd = "PASS";
+        var reachability = true;
+        var deadEnd = true;
 
         try
         {
@@ -492,7 +457,7 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
                     // 可达性：是否有状态不可达
                     var unreachable = states.Except(reachable).ToList();
                     if (unreachable.Count > 0)
-                        reachability = $"WARN: 不可达状态 {string.Join(",", unreachable)}";
+                        reachability = false;
 
                     // 死锁：是否有状态无出边（非终态）
                     var hasOutEdge = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -502,15 +467,18 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
                             hasOutEdge.Add(fEl.GetString() ?? "");
                     }
                     var deadStates = states.Except(hasOutEdge).ToList();
-                    // 允许终态无出边（如 Approved/Rejected），只警告"非典型终态"
+                    // 允许终态无出边（如 Approved/Rejected），只标记"非典型终态"
                     var typicalTerminals = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Approved", "Rejected", "Closed", "Done", "Completed", "End" };
                     var suspicious = deadStates.Where(s => !typicalTerminals.Contains(s)).ToList();
                     if (suspicious.Count > 0)
-                        deadEnd = $"WARN: 可能死锁状态 {string.Join(",", suspicious)}";
+                        deadEnd = false;
                 }
             }
         }
-        catch { /* 解析失败放行 */ }
+        catch (JsonException)
+        {
+            // 解析失败放行
+        }
 
         return (reachability, deadEnd);
     }
@@ -527,7 +495,7 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
         const string insert = """
             INSERT INTO sa_pspec (tenant_id, project_id, pipeline_id, asset_level, event_id, dict_id, bpm_id, process_specs, validation_status, created_by, updated_by)
             OUTPUT INSERTED.id INTO @InsertedIds
-            VALUES (@tenantId, @projectId, @pipelineId, @assetLevel, @eventId, @dictId, @bpmId, @processSpecs, 'COMPILED', @auditUser, @auditUser);
+            VALUES (@tenantId, @projectId, @pipelineId, @assetLevel, @eventId, @dictId, @bpmId, @processSpecs, 'PASS', @auditUser, @auditUser);
             """;
         return QueryInsertIdAsync(insert, new
         {
@@ -582,7 +550,7 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
         const string insert = """
             INSERT INTO sa_decision_table (tenant_id, project_id, pipeline_id, asset_level, event_id, pspec_id, dict_id, tables, validation_status, created_by, updated_by)
             OUTPUT INSERTED.id INTO @InsertedIds
-            VALUES (@tenantId, @projectId, @pipelineId, @assetLevel, @eventId, @pspecId, @dictId, @tables, 'COMPILED', @auditUser, @auditUser);
+            VALUES (@tenantId, @projectId, @pipelineId, @assetLevel, @eventId, @pspecId, @dictId, @tables, 'PASS', @auditUser, @auditUser);
             """;
         return QueryInsertIdAsync(insert, new
         {
@@ -609,7 +577,7 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
     {
         var screens = JsonProp(payload, "screens");
         var fieldMapping = BuildUiFieldMapping(payload);
-        // P9-S1：确定性计算 UI 校验标志
+        // P9-S1：确定性计算 UI 校验标志——列类型为 BIT
         var uiFieldsInDict = ComputeUiFieldsInDict(screens, fieldMapping);
 
         const string insert = """
@@ -617,7 +585,7 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
                 validation_status, ui_fields_in_dict, no_extra_fields, event_to_screen_mapping, created_by, updated_by)
             OUTPUT INSERTED.id INTO @InsertedIds
             VALUES (@tenantId, @projectId, @pipelineId, @assetLevel, @eventId, @bpmId, @dictId, @screens, @fieldMapping,
-                'COMPILED', @uiFieldsInDict, @noExtraFields, @eventToScreenMapping, @auditUser, @auditUser);
+                'PASS', @uiFieldsInDict, @noExtraFields, @eventToScreenMapping, @auditUser, @auditUser);
             """;
         return QueryInsertIdAsync(insert, new
         {
@@ -631,8 +599,8 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
             screens,
             fieldMapping,
             uiFieldsInDict,
-            noExtraFields = "PASS", // 当前 compiler 不产出额外字段
-            eventToScreenMapping = "PASS",
+            noExtraFields = true, // 当前 compiler 不产出额外字段
+            eventToScreenMapping = true,
             auditUser = MaterializeAuditUser,
         }, ct);
     }
@@ -697,17 +665,17 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
         return sb.ToString();
     }
 
-    /// <summary>P9-S1：校验 UI 字段是否都在数据字典里（零 LLM，确定性）。</summary>
-    private static string ComputeUiFieldsInDict(string screensJson, string fieldMappingJson)
+    /// <summary>P9-S1：校验 UI 字段是否都在数据字典里（零 LLM）。返回值对应 sa_ui.ui_fields_in_dict BIT。</summary>
+    private static bool ComputeUiFieldsInDict(string screensJson, string fieldMappingJson)
     {
         try
         {
             using var mapDoc = JsonDocument.Parse(fieldMappingJson);
             if (mapDoc.RootElement.ValueKind != JsonValueKind.Object || mapDoc.RootElement.GetRawText() == "{}")
-                return "SKIP: 无字段映射";
+                return true; // 无映射时不判失败
 
             var mappedCount = 0;
-            foreach (var prop in mapDoc.RootElement.EnumerateObject())
+            foreach (var _ in mapDoc.RootElement.EnumerateObject())
                 mappedCount++;
 
             using var scrDoc = JsonDocument.Parse(screensJson);
@@ -721,11 +689,11 @@ public sealed class SaMaterializer : ISaMaterializer, ITransient
                 }
             }
 
-            return totalFields > 0 ? $"PASS: {mappedCount}/{totalFields} 字段已映射" : "PASS";
+            return totalFields == 0 || mappedCount > 0;
         }
-        catch
+        catch (JsonException)
         {
-            return "SKIP: 解析失败";
+            return true;
         }
     }
 

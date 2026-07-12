@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-07-11 | M035：未钉死业务功能就开发/验收（四大支柱①）
+
+**错误**：SG2 纠偏时把「02 表头非空 / DDD 待确认节」当成业务核心，并勾选支柱①。
+
+**铁律（工作方向与核心）**：
+1. 任何阶段开工前先钉死：**本节点业务功能是什么**（对照设计文档，如 SG2→25 §1.2/§1.3），再说清用户操作与完整产物。
+2. 四大支柱 **① = 业务功能正确完整**；纠偏项、单测绿、快测绿 **不得顶替①**。
+3. 说不清业务能力本体 → 禁止编码、禁止勾选①、禁止进下一阶段。
+
+**已写入**：`.claude/memory/mistake-log.md` M035 · Before You Code #0 · 业务优先铁律 · 30号 §0.6①
+
+---
+
 ## 2026-07-08 | Node 3+4 代码质量自审 — 9 维度系统性改进清单
 
 **审查范围**：Node 3（SaNineViewCompiler / PreAnalysisModel / SystemDesignLockedCompletenessGate / IrSchemaValidator / TemplateContextBuilder / DeveloperSkillService）+ Node 4（LlmCircuitBreaker / LlmJsonFixer / LlmTokenEstimator / LlmGatewayService 重构）。

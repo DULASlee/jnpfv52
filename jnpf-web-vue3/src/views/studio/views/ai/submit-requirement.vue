@@ -15,8 +15,8 @@
 </template>
 
 <script setup lang="ts">
-  import { computed, nextTick, onMounted, provide, ref } from 'vue';
-  import { useRoute, useRouter } from 'vue-router';
+  import { computed, nextTick, onMounted, onUnmounted, provide, ref } from 'vue';
+  import { useRoute } from 'vue-router';
   import AiChatPanel from '../../components/AiChatPanel.vue';
   import IrObservatoryPanel from '../../components/IrObservatoryPanel.vue';
   import PipelineTaskList from '../../components/PipelineTaskList.vue';
@@ -29,7 +29,6 @@
   const ENABLE_OBSERVATORY = false;
 
   const route = useRoute();
-  const router = useRouter();
   const irObservatory = useIrObservatory();
   provide(IR_OBSERVATORY_KEY, irObservatory);
   provide(PM_SKILL_KEY, usePmSkill(irObservatory.pipelineId, irObservatory.snapshots, irObservatory.refreshAll));
@@ -47,29 +46,97 @@
   const pipelineMaterials = usePipelineMaterials(irObservatory.pipelineId, currentStageNum);
   provide(PIPELINE_MATERIALS_KEY, pipelineMaterials);
 
+  /**
+   * 同步地址栏 pipelineId，但禁止 router.replace。
+   * layouts/page/index.vue 使用 :key="route.fullPath"：query 一变整页销毁，
+   * 发送中创建流水线会清空对话/附件并掐断 SSE → 「点发送后一片空白」。
+   */
+  function syncPipelineQuery(id: number | null) {
+    const pathOnly = route.path.startsWith('/') ? route.path : `/${route.path}`;
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(route.query)) {
+      if (k === 'pipelineId' || v == null) continue;
+      params.set(k, Array.isArray(v) ? String(v[0] ?? '') : String(v));
+    }
+    if (id && id > 0) params.set('pipelineId', String(id));
+    const qs = params.toString();
+    const newHash = qs ? `#${pathOnly}?${qs}` : `#${pathOnly}`;
+    if (window.location.hash !== newHash) {
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${newHash}`);
+    }
+    // #region agent log
+    fetch('http://127.0.0.1:7354/ingest/a6dd8c09-a41a-4bdf-b8f4-ed467f774eaa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'ead5d0' },
+      body: JSON.stringify({
+        sessionId: 'ead5d0',
+        runId: 'no-remount',
+        hypothesisId: 'H-remount',
+        location: 'submit-requirement.vue:syncPipelineQuery',
+        message: 'url-synced-without-router-replace',
+        timestamp: Date.now(),
+        data: { id, newHash, vueFullPath: route.fullPath },
+      }),
+    }).catch(() => {});
+    // #endregion
+  }
+
   function onPipelineIdChange(id: number) {
     irObservatory.setPipelineId(id);
     if (id > 0) {
-      router.replace({ query: { ...route.query, pipelineId: String(id) } });
+      syncPipelineQuery(id);
       taskListRef.value?.reload?.();
     }
   }
 
   function onNewChat() {
-    router.replace({ query: {} });
+    syncPipelineQuery(null);
   }
 
   async function onSelectPipeline(id: number) {
     await chatPanelRef.value?.switchPipeline(id);
-    router.replace({ query: { pipelineId: String(id) } });
+    syncPipelineQuery(id);
   }
 
   onMounted(async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7354/ingest/a6dd8c09-a41a-4bdf-b8f4-ed467f774eaa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'ead5d0' },
+      body: JSON.stringify({
+        sessionId: 'ead5d0',
+        runId: 'no-remount',
+        hypothesisId: 'H-remount',
+        location: 'submit-requirement.vue:onMounted',
+        message: 'page-mounted',
+        timestamp: Date.now(),
+        data: { fullPath: route.fullPath, pipelineId: route.query.pipelineId ?? null },
+      }),
+    }).catch(() => {});
+    // #endregion
     await nextTick();
     const pid = Number(route.query.pipelineId);
     if (pid > 0) {
       await chatPanelRef.value?.switchPipeline(pid);
     }
+  });
+
+  onUnmounted(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7354/ingest/a6dd8c09-a41a-4bdf-b8f4-ed467f774eaa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'ead5d0' },
+      body: JSON.stringify({
+        sessionId: 'ead5d0',
+        runId: 'no-remount',
+        hypothesisId: 'H-remount',
+        location: 'submit-requirement.vue:onUnmounted',
+        message: 'page-unmounted',
+        timestamp: Date.now(),
+        data: { fullPath: route.fullPath },
+      }),
+    }).catch(() => {});
+    // #endregion
   });
 </script>
 
@@ -83,7 +150,10 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    background: #f5f5f5;
+    font-family: inherit;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.85);
+    background: #f4f7f9;
   }
 
   .page-body {
@@ -101,7 +171,7 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    background: #fafafa;
+    background: #fff;
     border-right: 1px solid #f0f0f0;
 
     :deep(.pipeline-task-list) {

@@ -21,14 +21,17 @@ public sealed class TesterSkillService : IBaseSkill, ITransient
     };
 
     private readonly EntityDesignRepository _entityDesignRepo;
+    private readonly TesterSkillInputBuilder _inputBuilder;
     private readonly ILogger<TesterSkillService> _logger;
 
     public TesterSkillService(
         EntityDesignRepository entityDesignRepo,
-        ILogger<TesterSkillService> logger)
+        ILogger<TesterSkillService> logger,
+        TesterSkillInputBuilder inputBuilder)
     {
         _entityDesignRepo = entityDesignRepo;
         _logger = logger;
+        _inputBuilder = inputBuilder;
     }
 
     public string SkillId => DevelopmentSkillIds.Tester;
@@ -76,7 +79,7 @@ public sealed class TesterSkillService : IBaseSkill, ITransient
     {
         var entityFields = await _entityDesignRepo.ListFieldsAsync(
             context.TenantId, context.ProjectId, context.PipelineId.ToString(), ct);
-        var built = TesterSkillInputBuilder.Build(context, entityFields);
+        var built = _inputBuilder.Build(context, entityFields);
         var cases = TestCaseDeriver.DeriveAll(
             built.DerivationMode,
             built.ConfirmedFields,
@@ -117,7 +120,6 @@ public sealed class TesterSkillService : IBaseSkill, ITransient
             SkillId = SkillId,
         };
 
-        await Task.CompletedTask;
     }
 
     public Task<SkillValidationResult> ValidateOutputAsync(

@@ -44,6 +44,9 @@ public record ConfirmRequirementSpecRequest
     /// <summary>确认后自动启动设计 Skill（architect-skill）</summary>
     public bool AutoRunDesign { get; init; }
 
+    /// <summary>PM 终评低于 85 时，用户显式强制确认放行。</summary>
+    public bool ForceConfirm { get; init; }
+
     public string? RunId { get; init; }
 }
 

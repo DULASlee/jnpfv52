@@ -62,28 +62,34 @@ public sealed class EntityDesignRepository : ITransient
 
         var now = DateTime.UtcNow;
         var entities = projection.Fields.Select(f => MapToEntity(f, now)).ToList();
+        var tenantId = projection.TenantId;
+        var projectId = projection.ProjectId;
+        var pipelineId = projection.PipelineId;
 
-        // SqlSugar Storageable: splits entities into InsertList / UpdateList based on
-        // whether a row with matching business key already exists in the DB.
-        var storage = _db.Storageable(entities)
-            .WhereColumns(it => new { it.TenantId, it.ProjectId, it.PipelineId, it.EntityName, it.FieldName })
-            .ToStorage();
+        // 避免 Storageable + 匿名 WhereColumns：部分 SqlSugar 版本会生成错误列名 SQL。
+        // 同三元组先软删再插入，保持 UX_ai_entity_field_triple_field 唯一约束可满足。
+        // H2: 软删+插入包裹事务，中途崩溃回滚软删除，保证原子性。
+        _db.Ado.BeginTran();
+        try
+        {
+            await _db.Updateable<AiEntityFieldEntity>()
+                .SetColumns(x => x.DeleteMark == true)
+                .SetColumns(x => x.LastModifyTime == now)
+                .Where(x => x.TenantId == tenantId
+                            && x.ProjectId == projectId
+                            && x.PipelineId == pipelineId
+                            && !x.DeleteMark)
+                .ExecuteCommandAsync(ct);
 
-        await storage.AsInsertable.ExecuteCommandAsync(ct);
+            await _db.Insertable(entities).ExecuteCommandAsync(ct);
 
-        // Update only mutable columns; preserve Id, identity columns, and CreatorTime.
-        await storage.AsUpdateable
-            .IgnoreColumns(it => new
-            {
-                it.Id,
-                it.TenantId,
-                it.ProjectId,
-                it.PipelineId,
-                it.EntityName,
-                it.FieldName,
-                it.CreatorTime,
-            })
-            .ExecuteCommandAsync(ct);
+            _db.Ado.CommitTran();
+        }
+        catch
+        {
+            _db.Ado.RollbackTran();
+            throw;
+        }
     }
 
     private static AiEntityFieldEntity MapToEntity(EntityFieldDesign f, DateTime now) => new()

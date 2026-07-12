@@ -1,14 +1,14 @@
 # JNPF V5.2 Progress Registry
 # Canonical reference for all completed milestones and current state.
 
-version: "8.14"
-last_updated: "2026-07-10"
-current_phase: "全链条冲刺（30 号）代码已推进 · 待 Docker 起预览 + 新 pipeline 全链冒烟"
+version: "8.25"
+last_updated: "2026-07-11"
+current_phase: "30号 v2.3：§0.11 各阶段业务功能目标已钉死；SG2 ① 待按 §0.11.2 深检"
 current_focus:
-  - "已落地：W1 主路径切 requirement-analysis；Architect/SystemDesign 读 ai_entity_field；W2 Dockerfile；W4 fork/Creator隔离/freeze UI"
-  - "阻塞运行时：本机 Docker Desktop 未启动 → jnpf-sandbox 镜像未 build；W3 新 pipeline 全链冒烟未跑"
-  - "下一步：启动 Docker → build.ps1 → 热重载后端 → 新 pipeline 确认总体设计验试用链接"
-  next_gate: "docker build jnpf-sandbox + 新 pipeline 全链到 preview_ready"
+  - "§0.11 为支柱①唯一业务能力清单；开工前必读（M035）"
+  - "SG2-T9 ① 仍打回：按 §0.11.2 五条判据深检，E1/E2 不顶替"
+  - "禁抢跑 SG3/SG4"
+  next_gate: "SG2 ① 按 §0.11.2 深检通过 → 四大支柱审批 → 重做 SG3"
 
 s2_requirement_analysis_refactor:
   status: docs_aligned
@@ -21,6 +21,8 @@ s2_requirement_analysis_refactor:
   downstream_contract: "25 §6 — finalized=true + ai_entity_field"
   fullchain_docs_patched: ["8","9","10","11","12","13","14","15","16"]
   sprint_30_doc: "docs/AI原生开发/1、多用户多任务并行/30、全链条冲刺开发计划（最后一公里）.md"
+  sprint_30_version: "v2.2"
+  sprint_30_note_2026_07_11: "v2.2：一期 B′+DDD 真标准+员工/湖/垂直包二期边界；SG 优先；黄金样本 343；四大支柱"
   code_adapt_done_2026_07_10:
     - "AnalysisFinalizedGate + DesignSkillOrchestrator/API CanRunDesign"
     - "EntityDesignRepository Count/ListFields；UiDesign 读 ai_entity_field"
@@ -30,9 +32,10 @@ s2_requirement_analysis_refactor:
     - "W2: docker/jnpf-sandbox/Dockerfile + 镜像缺失可观测错误"
     - "W4: POST fork + List Creator 隔离 + freeze/resume/fork UI + diagnose-triple-key.mjs"
   code_adapt_pending:
-    - "W2: Docker Desktop 启动后 build 镜像并真预览 200"
-    - "W3: 新 pipeline 全链冒烟到试用链接 + evidence"
-    - "W1-T4 运行时：未 Finalize 设计 400 的 HTTP 实测（断言已加强）"
+    - "SG2 深检 343：02 正文 / ai_entity_field 抽样 / sa_* 类型与一致性（30 v2.0 §5.3）"
+    - "SG-CONTRACT 回归防回潮（COMPILED/BIT/匿名 Insertable）"
+    - "W1 双轨收口 + W1-T3 字段源；其后 SG3–SG7；全部 SG 绿后才 W3"
+    - "W2: Docker Desktop 启动后 build 镜像；真预览验收挂 SG7（非 W2 单独宣称完成）"
 
 s2_requirement_analysis_refactor:
   status: docs_aligned
@@ -50,9 +53,8 @@ s2_requirement_analysis_refactor:
     - "DesignSkillsApi ResolveProjectAsync 返回真实 ProjectId（R12）"
     - "前端 canRunDesign / 文案对齐；studio-s34 门禁字段断言"
   code_adapt_pending:
-    - "Tester/VisualDev mapper 字段源对齐（B3 余量）"
-    - "质量分可选门控接入设计启动（B4）"
-    - "运行时 E2E：后端启动后 pnpm test:api 验证门禁"
+    - "以 30 v2.0 SG 矩阵为准：SG2 深检 343 → W1/SG3… → 全 SG 后 W3（本块旧 pending 已并入 30）"
+    - "Tester/VisualDev mapper 字段源对齐（挂 SG6）"
 
 skills_five_step_plan:
   anchor_doc: "docs/AI原生开发/1、多用户多任务并行/22、Skills全链路装配审计与五步推进计划.md"
@@ -65,6 +67,7 @@ skills_five_step_plan:
     e2e_toolchain: "openspec/specs/studio-e2e-toolchain/spec.md"
     pending: "materialize-wait 纳入 phase-sup-s2-e2e.mjs"
     note_2026_07_10: "生产 S2 主链已迁至 requirement-analysis 编排器（25–28）；311 为旧 compile 基线证据"
+    note_2026_07_11: "新标准黄金样本 pipeline 343（S0–S2 + finalized）；验收以 30 v2.0 SG2 为准，禁止仅用 311"
   step2_s3_s4:
     status: completed
     pipeline_id: 311
@@ -83,10 +86,10 @@ skills_five_step_plan:
     fixes: "TemplateContextBuilder string-modules + nested FormPageIR + TenantId dedupe; phase4 skip re-run if green"
   step4_deploy:
     status: in_progress
-    note: "自动链+SSE+Dockerfile 已落地；待 Docker Desktop 构建 jnpf-sandbox 并真预览"
+    note: "30 v2.0：镜像基建属 W2；真预览验收属 SG7；全链冒烟属 W3（须全部 SG 绿后）"
   step5_deliverables_07_09:
     status: in_progress
-    note: "落盘逻辑+Vitest skip 断言已加；待 Deploy 成功后硬绿"
+    note: "落盘逻辑+Vitest skip 断言已加；硬绿挂 SG7/W3，禁止跳 SG 宣称完成"
 
 phase4_schedule:
   anchor_doc: "docs/AI原生开发/1、多用户多任务并行/12、全链条第四阶段开发计划.md"

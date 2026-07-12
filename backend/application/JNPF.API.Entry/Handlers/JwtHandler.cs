@@ -6,6 +6,8 @@ using JNPF.Common.Manager;
 using JNPF.DataEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace JNPF.API.Entry.Handlers;
 
@@ -17,6 +19,8 @@ public class JwtHandler : AppAuthorizeHandler
     private readonly IUserManager _userManager;
     private readonly ICacheManager _cacheManager;
     private readonly ILogger<JwtHandler> _logger;
+    private readonly JWTSettingsOptions _jwtSettings;
+    private readonly IConfiguration _configuration;
 
     /// <summary>
     /// 路由授权策略（从 Auth:RoutePolicy 配置读取）.
@@ -32,11 +36,14 @@ public class JwtHandler : AppAuthorizeHandler
     /// <summary>
     /// 初始化一个<see cref="JwtHandler"/>类型的新实例
     /// </summary>
-    public JwtHandler(IUserManager userManager, ICacheManager cacheManager, ILogger<JwtHandler> logger)
+    public JwtHandler(IUserManager userManager, ICacheManager cacheManager, ILogger<JwtHandler> logger,
+        IOptions<JWTSettingsOptions> jwtOptions, IConfiguration configuration)
     {
         _userManager = userManager;
         _cacheManager = cacheManager;
         _logger = logger;
+        _jwtSettings = jwtOptions.Value;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -48,7 +55,7 @@ public class JwtHandler : AppAuthorizeHandler
     {
         // 自动刷新Token
         if (JWTEncryption.AutoRefreshToken(context, context.GetCurrentHttpContext(),
-            App.GetOptions<JWTSettingsOptions>().ExpiredTime))
+            _jwtSettings.ExpiredTime))
         {
             await AuthorizeHandleAsync(context);
         }
@@ -136,9 +143,9 @@ public class JwtHandler : AppAuthorizeHandler
     /// <summary>
     /// 获取当前路由授权策略.
     /// </summary>
-    private static RouteAuthPolicy GetRouteAuthPolicy()
+    private RouteAuthPolicy GetRouteAuthPolicy()
     {
-        var configValue = App.GetConfig<string>("Auth:RoutePolicy");
+        var configValue = _configuration["Auth:RoutePolicy"];
         return string.Equals(configValue, "StrictEnforcement", StringComparison.OrdinalIgnoreCase)
             ? RouteAuthPolicy.StrictEnforcement
             : RouteAuthPolicy.GradualEnforcement;
@@ -162,7 +169,7 @@ public class JwtHandler : AppAuthorizeHandler
 
         if (_cacheManager != null)
         {
-            var cacheMinutes = App.GetConfig<int?>("Auth:PermissionCacheMinutes") ?? 5;
+            var cacheMinutes = _configuration.GetValue<int?>("Auth:PermissionCacheMinutes") ?? 5;
             await _cacheManager.SetAsync(cacheKey, resources, TimeSpan.FromMinutes(cacheMinutes));
         }
 
@@ -191,7 +198,7 @@ public class JwtHandler : AppAuthorizeHandler
 
         if (_cacheManager != null)
         {
-            var cacheMinutes = App.GetConfig<int?>("Auth:PermissionCacheMinutes") ?? 5;
+            var cacheMinutes = _configuration.GetValue<int?>("Auth:PermissionCacheMinutes") ?? 5;
             await _cacheManager.SetAsync(cacheKey, isAdmin, TimeSpan.FromMinutes(cacheMinutes));
         }
 
@@ -201,9 +208,9 @@ public class JwtHandler : AppAuthorizeHandler
     /// <summary>
     /// 检查路径是否在白名单中.
     /// </summary>
-    private static bool IsWhitelistedPath(string path)
+    private bool IsWhitelistedPath(string path)
     {
-        var whitelist = App.GetConfig<List<string>>("Auth:AllowAnonymousPaths");
+        var whitelist = _configuration.GetSection("Auth:AllowAnonymousPaths").Get<List<string>>();
         if (whitelist == null || whitelist.Count == 0)
         {
             // 默认白名单
@@ -241,7 +248,7 @@ public class JwtHandler : AppAuthorizeHandler
 
         if (_cacheManager != null)
         {
-            var cacheMinutes = App.GetConfig<int?>("Auth:PermissionCacheMinutes") ?? 5;
+            var cacheMinutes = _configuration.GetValue<int?>("Auth:PermissionCacheMinutes") ?? 5;
             await _cacheManager.SetAsync(cacheKey, permissionGroups, TimeSpan.FromMinutes(cacheMinutes));
         }
 

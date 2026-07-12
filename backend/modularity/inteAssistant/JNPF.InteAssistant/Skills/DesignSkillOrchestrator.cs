@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Json;
 using JNPF.DependencyInjection;
 using JNPF.FriendlyException;
 using JNPF.InteAssistant.Codegen.EntityDesign;
@@ -233,7 +234,8 @@ public sealed class DesignSkillOrchestrator : IDesignSkillOrchestrator, ITransie
         var hasEntityFields = entityFieldCount > 0;
         var quality = await QualityDesignGate.EvaluateAsync(
             _db, tenantId, projectId, pipelineId.ToString(), ct);
-        var canRunDesign = analysisFinalized && hasEntityFields && quality.Passes;
+        var pmGatePasses = await HasPmReviewGatePassedAsync(tenantId, projectId, pipelineId, ct);
+        var canRunDesign = analysisFinalized && hasEntityFields && quality.Passes && pmGatePasses;
 
         var designComplete = snapshots.Any(s =>
             s.FragmentType == IrFragmentTypes.SystemDesign
@@ -307,6 +309,52 @@ public sealed class DesignSkillOrchestrator : IDesignSkillOrchestrator, ITransie
             ConstraintCriticalCount = constraintResult.CriticalCount,
             ConstraintWarningCount = constraintResult.WarningCount,
         };
+    }
+
+    private async Task<bool> HasPmReviewGatePassedAsync(
+        string tenantId, string projectId, long pipelineId, CancellationToken ct)
+    {
+        var events = await _eventStore.ListEventsAsync(projectId, tenantId, pipelineId.ToString(), ct);
+        foreach (var evt in events)
+        {
+            if (string.Equals(evt.EventType, IrEventTypes.RequirementSpecPmReviewed, StringComparison.Ordinal))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(evt.PayloadPreview);
+                    if (doc.RootElement.TryGetProperty("score", out var score)
+                        && score.TryGetInt32(out var value)
+                        && value >= 85)
+                        return true;
+                    if (doc.RootElement.TryGetProperty("forceConfirm", out var reviewForce)
+                        && reviewForce.ValueKind == JsonValueKind.True)
+                        return true;
+                }
+                catch (JsonException)
+                {
+                    return false;
+                }
+            }
+
+            if (string.Equals(evt.EventType, IrEventTypes.StageConfirmed, StringComparison.Ordinal))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(evt.PayloadPreview);
+                    if (doc.RootElement.TryGetProperty("stage", out var stage)
+                        && string.Equals(stage.GetString(), "S2", StringComparison.OrdinalIgnoreCase)
+                        && doc.RootElement.TryGetProperty("forceConfirm", out var force)
+                        && force.ValueKind == JsonValueKind.True)
+                        return true;
+                }
+                catch (JsonException)
+                {
+                    continue;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static IrSnapshot BuildIrSnapshot(IReadOnlyList<Entitys.Dto.Ir.IrFragmentSnapshotDto> dtos)

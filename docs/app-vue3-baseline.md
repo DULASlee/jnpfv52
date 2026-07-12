@@ -8,15 +8,16 @@
 | 项目 | 版本 | 说明 |
 |------|------|------|
 | Vue | 3.3.4 | Composition API + script setup |
-| Vite | 4.5.1 | Build tool |
+| Vite | 4.3.8 | Build tool |
 | TypeScript | 5.0.4 | Strict mode |
 | Ant Design Vue | 3.2.20 | UI library |
 | Pinia | 2.1.3 | State management |
-| Vue Router | 4.2.5 | Routing |
-| Axios | 1.7.0 | HTTP client |
-| Dayjs | 1.11.10 | Date utility |
-| WindiCSS | 3.5.6 | Utility CSS |
-| Less | 4.2.0 | CSS preprocessor |
+| Vue Router | 4.2.1 | Routing |
+| Axios | 1.4.0 | HTTP client |
+| Dayjs | 1.11.7 | Date utility |
+| WindiCSS | 1.8.10 | Utility CSS（vite-plugin-windicss） |
+| Less | 4.1.3 | CSS preprocessor |
+| Vitest | 4.1.9 | Unit test runner |
 
 ## 2. 构建配置
 

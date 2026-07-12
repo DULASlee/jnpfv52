@@ -24,7 +24,7 @@ namespace JNPF.SpecificationDocument;
 /// 规范化文档构建器
 /// </summary>
 [SuppressSniffer]
-public static class SpecificationDocumentBuilder
+public static partial class SpecificationDocumentBuilder
 {
     /// <summary>
     /// 所有分组默认的组名 Key
@@ -47,9 +47,22 @@ public static class SpecificationDocumentBuilder
     private static readonly IEnumerable<GroupExtraInfo> DocumentGroupExtras;
 
     /// <summary>
-    /// 带排序的分组名
+    /// 带排序的分组名正则（编译期生成，零启动分配）
     /// </summary>
-    private static readonly Regex _groupOrderRegex;
+    [GeneratedRegex(@"@(?<order>[0-9]+$)")]
+    private static partial Regex GroupOrderRegex();
+
+    /// <summary>
+    /// 显式继承注释正则（编译期生成，零启动分配）
+    /// </summary>
+    [GeneratedRegex(@"[A-Z]:[a-zA-Z_@\.]+")]
+    private static partial Regex InheritdocExplicitRegex();
+
+    /// <summary>
+    /// 隐式继承注释正则（编译期生成，零启动分配）
+    /// </summary>
+    [GeneratedRegex(@"[A-Z]:[a-zA-Z_@\.]+\.")]
+    private static partial Regex InheritdocImplicitRegex();
 
     /// <summary>
     /// 文档分组列表
@@ -66,7 +79,6 @@ public static class SpecificationDocumentBuilder
         _appSettings = App.Settings;
 
         // 初始化常量
-        _groupOrderRegex = new Regex(@"@(?<order>[0-9]+$)");
         GetActionGroupsCached = new ConcurrentDictionary<MethodInfo, IEnumerable<GroupExtraInfo>>();
         GetControllerGroupsCached = new ConcurrentDictionary<Type, IEnumerable<GroupExtraInfo>>();
         GetGroupOpenApiInfoCached = new ConcurrentDictionary<string, SpecificationOpenApiInfo>();
@@ -429,11 +441,6 @@ public static class SpecificationDocumentBuilder
         var xmlComments = _specificationDocumentSettings.XmlComments;
         var members = new Dictionary<string, XElement>();
 
-        // 显式继承的注释
-        var regex = new Regex(@"[A-Z]:[a-zA-Z_@\.]+");
-        // 隐式继承的注释
-        var regex2 = new Regex(@"[A-Z]:[a-zA-Z_@\.]+\.");
-
         // 支持注释完整特性，包括 inheritdoc 注释语法
         foreach (var xmlComment in xmlComments)
         {
@@ -471,7 +478,7 @@ public static class SpecificationDocumentBuilder
                         // 处理逻辑：直接替换匹配为空，然后讲 # 替换为 . 查找即可
                         if (memberName.Contains('#'))
                         {
-                            value = $"{memberName[..2]}{regex2.Replace(memberName, "").Replace('#', '.')}";
+                            value = $"{memberName[..2]}{InheritdocImplicitRegex().Replace(memberName, "").Replace('#', '.')}";
                         }
                         // 处理带参数的注释
                         // 注释格式：M:JNPF.Application.TestInheritdoc.WithParams(System.String)
@@ -479,7 +486,7 @@ public static class SpecificationDocumentBuilder
                         // 处理逻辑：匹配出不带参数的部分，然后获取类型命名空间，最后调用 GenerateInheritdocCref 进行生成
                         else if (memberName.Contains('('))
                         {
-                            var noParamsClassName = regex.Match(memberName).Value;
+                            var noParamsClassName = InheritdocExplicitRegex().Match(memberName).Value;
                             var className = noParamsClassName[noParamsClassName.IndexOf(":")..noParamsClassName.LastIndexOf(".")];
                             value = GenerateInheritdocCref(xmlDoc, memberName, className);
                         }
@@ -848,11 +855,11 @@ public static class SpecificationDocumentBuilder
         string realGroup;
         var order = 0;
 
-        if (!_groupOrderRegex.IsMatch(group)) realGroup = group;
+        if (!GroupOrderRegex().IsMatch(group)) realGroup = group;
         else
         {
-            realGroup = _groupOrderRegex.Replace(group, "");
-            order = int.Parse(_groupOrderRegex.Match(group).Groups["order"].Value);
+            realGroup = GroupOrderRegex().Replace(group, "");
+            order = int.Parse(GroupOrderRegex().Match(group).Groups["order"].Value);
         }
 
         var groupOpenApiInfo = GetGroupOpenApiInfo(realGroup);

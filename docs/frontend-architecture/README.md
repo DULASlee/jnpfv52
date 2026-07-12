@@ -37,7 +37,7 @@ docs/frontend-architecture/
 | 项目 | 技术栈 | 端口 | 说明 |
 |---|---|---|---|
 | `jnpf-web-vue3` | Vue3 + Vite + Ant Design Vue + WindiCSS | :3100 | PC 管理后台 |
-| `jnpf-web-datascreen` | Vue3 + Vite + DataV | :8100 | 数字大屏 |
+| `jnpf-web-datascreen` | Vue3 + Vite + DataV | :3102 | 数字大屏 |
 | `jnpf-app-vue3` | UniApp (Vue3) | H5 代理 | 移动端 H5/App |
 
 ---

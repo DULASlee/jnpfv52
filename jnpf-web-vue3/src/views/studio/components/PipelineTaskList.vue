@@ -12,6 +12,10 @@
           <span>#{{ t.id }}</span>
           <span>{{ stageLabel(t.currentStage) }}</span>
         </div>
+        <div class="task-submeta">
+          <span class="task-creator" :title="t.creatorUserName || '未知'">{{ t.creatorUserName || '未知' }}</span>
+          <span class="task-time" :title="formatTimeFull(t.createdAt || t.updatedAt)">{{ formatTime(t.createdAt || t.updatedAt) }}</span>
+        </div>
       </li>
     </ul>
   </div>
@@ -19,7 +23,7 @@
 
 <script setup lang="ts">
   import { onMounted, ref } from 'vue';
-  import { getPipelineList, type PipelineSummaryItem } from '../api/studio/pipeline';
+  import { getPipelineList } from '../api/studio/pipeline';
 
   defineProps<{ activePipelineId?: number }>();
   defineEmits<{ select: [pipelineId: number] }>();
@@ -29,7 +33,9 @@
     name: string;
     currentStage: string;
     status: string;
-    updatedAt?: string;
+    updatedAt?: string | number;
+    createdAt?: string | number;
+    creatorUserName?: string;
   };
 
   const tasks = ref<TaskItem[]>([]);
@@ -45,6 +51,45 @@
 
   function stageLabel(code: string) {
     return STAGE_LABELS[code] || code || '进行中';
+  }
+
+  function toDate(value?: string | number): Date | null {
+    if (value === undefined || value === null || value === '') return null;
+    if (typeof value === 'number') {
+      // 后端 DateTime 可能序列化为 Unix ms
+      const d = new Date(value > 1e12 ? value : value * 1000);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    const n = Number(value);
+    if (!Number.isNaN(n) && String(value).trim() !== '' && /^\d+$/.test(String(value).trim())) {
+      const d = new Date(n > 1e12 ? n : n * 1000);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  function pad(n: number) {
+    return n < 10 ? `0${n}` : String(n);
+  }
+
+  /** 列表紧凑显示：同年省略年，同日显示时分 */
+  function formatTime(value?: string | number): string {
+    const d = toDate(value);
+    if (!d) return '—';
+    const now = new Date();
+    const mm = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mi = pad(d.getMinutes());
+    if (d.getFullYear() === now.getFullYear()) return `${mm}-${dd} ${hh}:${mi}`;
+    return `${d.getFullYear()}-${mm}-${dd}`;
+  }
+
+  function formatTimeFull(value?: string | number): string {
+    const d = toDate(value);
+    if (!d) return '';
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   }
 
   function normalizeTasks(payload: any): TaskItem[] {
@@ -65,6 +110,8 @@
         currentStage: String(x.currentStage ?? x.CurrentStage ?? ''),
         status: String(x.status ?? x.Status ?? ''),
         updatedAt: x.updatedAt ?? x.UpdatedAt,
+        createdAt: x.createdAt ?? x.CreatedAt,
+        creatorUserName: String(x.creatorUserName ?? x.CreatorUserName ?? '').trim() || undefined,
       }))
       .filter(x => x.id > 0);
   }
@@ -94,21 +141,24 @@
     flex-direction: column;
     padding: 12px 8px;
     overflow: hidden;
+    font-family: inherit;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.85);
 
     .list-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 600;
-      color: #999;
+      color: rgba(0, 0, 0, 0.65);
       margin-bottom: 8px;
       padding: 0 4px;
     }
 
     .list-empty {
-      font-size: 12px;
-      color: #bbb;
+      font-size: 14px;
+      color: rgba(0, 0, 0, 0.45);
       text-align: center;
       padding: 12px 4px;
     }
@@ -122,8 +172,8 @@
       padding: 0;
 
       .task-item {
-        padding: 8px;
-        border-radius: 6px;
+        padding: 8px 10px;
+        border-radius: 4px;
         cursor: pointer;
         margin-bottom: 4px;
         border: 1px solid transparent;
@@ -138,19 +188,34 @@
         }
 
         .task-name {
-          font-size: 13px;
-          color: #333;
+          font-size: 14px;
+          color: rgba(0, 0, 0, 0.85);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
 
-        .task-meta {
+        .task-meta,
+        .task-submeta {
           display: flex;
           justify-content: space-between;
-          font-size: 11px;
-          color: #999;
-          margin-top: 2px;
+          gap: 8px;
+          font-size: 12px;
+          color: rgba(0, 0, 0, 0.45);
+          margin-top: 4px;
+        }
+
+        .task-creator {
+          flex: 1;
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .task-time {
+          flex-shrink: 0;
+          font-variant-numeric: tabular-nums;
         }
       }
     }

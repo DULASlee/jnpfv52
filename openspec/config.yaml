@@ -2,7 +2,7 @@ schema: spec-driven
 
 context: |
   JNPF v5.2 clean workspace at d:\JNPF-v52.
-  Stack: .NET 6 backend (DynamicApiController, SqlSugar), jnpf-web-vue3 :3100,
-  jnpf-web-datascreen :8100 (OAuth token via PC menu), jnpf-app-vue3 UniApp.
+  Stack: .NET 8 backend (DynamicApiController, SqlSugar), jnpf-web-vue3 :3100,
+  jnpf-web-datascreen :3102 (OAuth token via PC menu), jnpf-app-vue3 UniApp.
   Toolchain: Superpowers (dev), OpenSpec (specs only), episodic D--JNPF-v52.
   Demo script: docs/v52-demo-manual.md. Do NOT use /opsx:apply for implementation.
