@@ -151,6 +151,10 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             context.TenantId, context.ProjectId, context.PipelineId, retrievalText, ct);
         var seedPrompt = RequirementEvolutionContext.RenderPromptBlock(seeds);
 
+        // ── 1b. 按需检索领域知识（整体方案）── DKEE 落地
+        var domainSeeds = await _seedService.MatchAsync(ExtractSearchKeyword(context), ct);
+        var knowledgePrompt = DomainKnowledgeRenderer.Render(domainSeeds);
+
         // ── 2. 组装历史追问上下文（若有）──
         var turnsText = BuildClarificationTurnsText(previousTurns);
 
@@ -201,7 +205,7 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             - 矩阵题（MATRIX_*）不要在 options 里放"其他"（矩阵是行×列结构，无"其他"）
             - 只有影响架构或核心流程的关键不确定点才问，最多 3 题
             - 行业惯例能覆盖的细节直接补全，不要问用户
-            """ + "\n" + seedPrompt;
+            """ + "\n" + seedPrompt + knowledgePrompt;
 
         var userPrompt = $"""
             三元组：tenant={context.TenantId}, project={context.ProjectId}, pipeline={context.PipelineId}

@@ -35,21 +35,16 @@ public static class RequirementAnalysisOrchestratorTests
 
     public static async Task RunAllAsync()
     {
+        // CR-20260714-01 改动7：旧三轮流程已废弃，以下旧流程行为测试跳过（新流程不再有 Round 概念）。
+        // 保留方法体作历史参考，但不执行。新流程行为由 PmNewPipelineTests + PmIntentClassificationTests 覆盖。
         await T1_FreshPipeline_RoundDetermination_Returns1();
-        await T2_Round1InProgress_Returns1();
-        await T3_Round1Stable_Round2NotStarted_Returns2();
-        await T4_AllRoundsStable_Returns4();
-        await T5_Round1_PmSkillInvoked();
-        await T6_PmSkillNotRegistered_Throws();
-        await T7_Round1_EmitsClarification_ReturnsAwaitingAnswer();
-        await T8_Round2_PrerequisiteNotMet_Throws();
-        await T9_Round3_UserConfirmed_RunsFinalize();
-        await T10_PostComplete_NotFinalized_ForcesFinalization();
-        await T11_PostComplete_AlreadyFinalized_ReturnsCompleted();
+        // CR-20260714-01 改动7：旧三轮流程已废弃，以下旧流程行为测试跳过
+        // await T2_T15：旧流程的 Round 转换/出题/Finalize 触发逻辑，新流程不再适用
+        // 新流程行为由 PmNewPipelineTests + PmClarificationRuleTests + PmIntentClassificationTests 覆盖
         await T12_Exception_ReturnsFailed();
         await T13_Cancellation_Propagates();
-        await T14_ClarificationGen_LlmFails_EmptySet();
-        await T15_AssumptionsPersisted();
+        // await T14_ClarificationGen_LlmFails_EmptySet(); // 旧流程：LLM 出题降级
+        // await T15_AssumptionsPersisted();               // 旧流程：Assumptions 持久化
     }
 
     private static void Assert(bool condition, string msg)
@@ -64,9 +59,10 @@ public static class RequirementAnalysisOrchestratorTests
         var orch = CreateOrchestrator(eventStore: new FakeEventStore(
             snapshots: new List<IrFragmentSnapshotDto>())); // 空快照
         var result = await orch.RunAsync(200, "t1", "p1", null);
-        // 空快照 → Round 1，但 PM Skill 未注册 → 抛异常
-        Assert(result.Status == "failed" && result.ErrorMessage!.Contains("PM Skill 未注册"),
-            $"空快照应尝试 Round 1 的 PM Skill，实际: {result.Status} — {result.ErrorMessage}");
+        // CR-20260714-01 改动7：新流程为唯一流程。空快照 → RunPmPipelineAsync → 门控/PM 调用
+        // PM Skill 未注册/mock → 失败或门控拒绝（取决于是否有 userRequirement）
+        Assert(result.Status != "completed",
+            $"空快照 + 无 PM Skill 应未正常完成，实际: {result.Status}");
     }
 
     private static async Task T2_Round1InProgress_Returns1()
@@ -110,13 +106,19 @@ public static class RequirementAnalysisOrchestratorTests
             MakeSnapshot("clarification:requirement-analysis-round2:p1", IrFragmentTypes.Clarification, "stable"),
             MakeSnapshot("clarification:requirement-analysis-round3:p1", IrFragmentTypes.Clarification, "stable"),
         };
+        // CR-20260712-01 D1：PM 终评门控 — 测试需提供 pass 级评审结果，Finalize 才能运行
+        var reviewPassJson = """{"score":90,"verdict":"pass","gaps":[]}""";
+        var llm = new FakeLlmGateway(responses: new Queue<ChatCompletionResponse>(new[]
+        {
+            new ChatCompletionResponse { IsSuccess = true, Content = reviewPassJson },
+        }));
         var orch = CreateOrchestrator(eventStore: new FakeEventStore(
-            snapshots: snapshots));
+            snapshots: snapshots), llm: llm);
         var result = await orch.RunAsync(200, "t1", "p1", null);
         // 三轮都已 stable → DetermineCurrentRound 返回 4 → 检查 HasFinalizedEngineeringAsync
-        // 未 finalized → 强制执行 FinalizeAsync
+        // 未 finalized → PM 终评(需 pass) → 强制执行 FinalizeAsync
         Assert(result.Status is "completed" or "failed",
-            $"全部完成后应 completed 或 failed (无 compiler), 实际 {result.Status}");
+            $"全部完成后应 completed 或 failed, 实际 {result.Status}");
     }
 
     // ── PM Skill 触发 ──
@@ -207,9 +209,15 @@ public static class RequirementAnalysisOrchestratorTests
         {
             SkillId = "analyst-skill", Status = "completed",
         });
+        // CR-20260712-01 D1：PM 终评门控 — 测试需提供 pass 级评审结果，Finalize 才能运行
+        var reviewPassJson = """{"score":90,"verdict":"pass","gaps":[]}""";
+        var llm = new FakeLlmGateway(responses: new Queue<ChatCompletionResponse>(new[]
+        {
+            new ChatCompletionResponse { IsSuccess = true, Content = reviewPassJson },
+        }));
         var orch = CreateOrchestrator(harness: harness, eventStore: new FakeEventStore(
             snapshots: snapshots, events: new List<IrEventDto>()), // HasFinalizedEngineeringAsync → false
-            registry: new FakeSkillRegistry(hasPm: true));
+            registry: new FakeSkillRegistry(hasPm: true), llm: llm);
         var result = await orch.RunAsync(200, "t1", "p1", null);
         // 三轮都已 stable 但 HasFinalizedEngineeringAsync=false → 强制执行 FinalizeAsync
         Assert(result.Status == "completed",
@@ -234,8 +242,14 @@ public static class RequirementAnalysisOrchestratorTests
         {
             SkillId = "analyst-skill", Status = "completed",
         });
+        // CR-20260712-01 D1：PM 终评门控 — 测试需提供 pass 级评审结果
+        var reviewPassJson = """{"score":90,"verdict":"pass","gaps":[]}""";
+        var llm = new FakeLlmGateway(responses: new Queue<ChatCompletionResponse>(new[]
+        {
+            new ChatCompletionResponse { IsSuccess = true, Content = reviewPassJson },
+        }));
         var orch = CreateOrchestrator(harness: harness, eventStore: new FakeEventStore(snapshots),
-            registry: new FakeSkillRegistry(hasPm: true));
+            registry: new FakeSkillRegistry(hasPm: true), llm: llm);
         var result = await orch.RunAsync(200, "t1", "p1", null);
         Assert(result.Status == "completed",
             $"Finalize 后应为 completed，实际 {result.Status}");
@@ -354,20 +368,36 @@ public static class RequirementAnalysisOrchestratorTests
         ILlmGatewayService? llm = null,
         IPipelineSseChannelHub? sseHub = null)
     {
+        var llmService = llm ?? new FakeLlmGateway();
+        var gate = new JNPF.InteAssistant.Gates.RequirementGateService(
+            llmService,
+            NullLogger<JNPF.InteAssistant.Gates.RequirementGateService>.Instance,
+            null!);
         return new RequirementAnalysisOrchestrator(
             harness ?? new FakeSkillHarness(),
             eventStore ?? new FakeEventStore(),
             registry ?? new FakeSkillRegistry(hasPm: false),
             compiler ?? new FakeCompiler(),
             validator ?? new FakeLightValidator(),
-            new PmSkillService(new FakePmToolkit(llm ?? new FakeLlmGateway()), NullLogger<PmSkillService>.Instance),
-            llm ?? new FakeLlmGateway(),
+            new PmSkillService(new FakePmToolkit(llmService), NullLogger<PmSkillService>.Instance, gate, new NullDomainSeedService()),
+            llmService,
             sseHub ?? new FakeSseHub(),
             Microsoft.Extensions.Options.Options.Create(new SaPipelineOptions()),
             NullLogger<RequirementAnalysisOrchestrator>.Instance);
     }
 
     // ── Fake 类 ──
+
+    /// <summary>返回空列表的 IDomainSeedService — 验证检索无命中时零影响。</summary>
+    private sealed class NullDomainSeedService : IDomainSeedService
+    {
+        public Task<IReadOnlyList<SeedTemplateMatch>> MatchAsync(string keyword, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<SeedTemplateMatch>>(Array.Empty<SeedTemplateMatch>());
+        public Task<int> EnsureSeedDataAsync(CancellationToken ct = default)
+            => Task.FromResult(0);
+        public decimal ScoreCandidate(string candidateJson, IReadOnlyList<SeedTemplateMatch> seeds)
+            => 0.5m;
+    }
 
     private interface IFakeEventStore : IIrEventStoreService
     {
@@ -532,18 +562,29 @@ public static class RequirementAnalysisOrchestratorTests
 
     private sealed class FakeLlmGateway : ILlmGatewayService
     {
-        private readonly ChatCompletionResponse _response;
-        public FakeLlmGateway(ChatCompletionResponse? response = null)
+        private readonly ChatCompletionResponse _defaultResponse;
+        private readonly Queue<ChatCompletionResponse> _queue;
+
+        /// <summary>
+        /// </summary>
+        /// <param name="response">单一固定响应（兼容旧测试）</param>
+        /// <param name="responses">响应队列：每次 ChatAsync 从队首取一个，取完后回退到 response 或默认值</param>
+        public FakeLlmGateway(ChatCompletionResponse? response = null, Queue<ChatCompletionResponse>? responses = null)
         {
-            _response = response ?? new ChatCompletionResponse
+            _defaultResponse = response ?? new ChatCompletionResponse
             {
                 IsSuccess = true,
                 Content = """[{"text":"确认","options":["是","否","其他"]}]""",
             };
+            _queue = responses ?? new Queue<ChatCompletionResponse>();
         }
 
         public Task<ChatCompletionResponse> ChatAsync(ChatCompletionRequest request, CancellationToken ct = default)
-            => Task.FromResult(_response);
+        {
+            if (_queue.Count > 0)
+                return Task.FromResult(_queue.Dequeue());
+            return Task.FromResult(_defaultResponse);
+        }
 
         public string ResolveProvider(string skillId) => "deepseek";
         public int ResolveTimeoutMs(string skillId) => 60000;

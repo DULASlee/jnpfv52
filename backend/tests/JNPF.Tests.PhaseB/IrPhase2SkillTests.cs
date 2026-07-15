@@ -117,7 +117,7 @@ public static class IrPhase2SkillTests
 
     private static void TestPmSkill_ValidateOutput()
     {
-        var pm = new PmSkillService(new FakePmToolkit(), null!);
+        var pm = new PmSkillService(new FakePmToolkit(), null!, null!, new NullDomainSeedService());
         var result = pm.ValidateOutputAsync(new[]
         {
             new JNPF.InteAssistant.Entitys.Dto.Ir.AppendIrEventRequest
@@ -129,6 +129,14 @@ public static class IrPhase2SkillTests
 
         if (!result.IsValid)
             throw new InvalidOperationException("PmSkill ValidateOutput failed");
+    }
+
+    private sealed class NullDomainSeedService : IDomainSeedService
+    {
+        public Task<IReadOnlyList<SeedTemplateMatch>> MatchAsync(string keyword, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<SeedTemplateMatch>>(Array.Empty<SeedTemplateMatch>());
+        public Task<int> EnsureSeedDataAsync(CancellationToken ct = default) => Task.FromResult(0);
+        public decimal ScoreCandidate(string candidateJson, IReadOnlyList<SeedTemplateMatch> seeds) => 0.5m;
     }
 
     private sealed class FakePmToolkit : ICognitiveSkillToolkit

@@ -57,7 +57,7 @@ public static class PmSkillR1Tests
 
     private static void T4_ValidateOutput_RequiresSingleSkeletonCreated()
     {
-        var pm = new PmSkillService(new FakePmToolkit(), null!);
+        var pm = new PmSkillService(new FakePmToolkit(), null!, null!, new NullDomainSeedService());
         var ok = pm.ValidateOutputAsync(new[]
         {
             new JNPF.InteAssistant.Entitys.Dto.Ir.AppendIrEventRequest
@@ -74,6 +74,14 @@ public static class PmSkillR1Tests
             .GetAwaiter().GetResult();
         if (bad.IsValid)
             throw new Exception("T4 空产出应校验失败");
+    }
+
+    private sealed class NullDomainSeedService : IDomainSeedService
+    {
+        public Task<IReadOnlyList<SeedTemplateMatch>> MatchAsync(string keyword, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<SeedTemplateMatch>>(Array.Empty<SeedTemplateMatch>());
+        public Task<int> EnsureSeedDataAsync(CancellationToken ct = default) => Task.FromResult(0);
+        public decimal ScoreCandidate(string candidateJson, IReadOnlyList<SeedTemplateMatch> seeds) => 0.5m;
     }
 
     private sealed class FakePmToolkit : ICognitiveSkillToolkit
