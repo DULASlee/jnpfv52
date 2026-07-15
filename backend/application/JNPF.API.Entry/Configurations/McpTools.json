@@ -13,11 +13,6 @@
       "ioi.validate": {
         "Transport": "inproc",
         "Description": "EventSpec IOI 不变量校验"
-      },
-      "sa.run-step": {
-        "Transport": "http",
-        "Endpoint": "http://localhost:3001/sa/run-step",
-        "Description": "SA 单步编排（sa-service，跨进程）"
       }
     }
   }
