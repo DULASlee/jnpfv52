@@ -529,32 +529,71 @@ if (-not $backendReady) {
 }
 
 # ================================================================
-# Step 5/8: 启动 SA Service
+# Step 5/8: 启动 SA Service（仅 agent 模式；compile 模式下跳过 — ADR-004）
 # ================================================================
 Write-Host ''
-Write-Step '5' '8' 'Starting SA Service...'
+Write-Step '5' '8' 'Resolving Studio S2 mode (SaPipeline.json)...'
 
 $saDir = Join-Path $root 'sa-service'
-$saDbBackend = 'inmemory'
-$saDbConnArg = ''
-$connPath = Join-Path $root 'backend\application\JNPF.API.Entry\Configurations\ConnectionStrings.json'
-if (Test-Path $connPath) {
+$saPipelinePath = Join-Path $root 'backend\application\JNPF.API.Entry\Configurations\SaPipeline.json'
+$saS2Mode = 'compile'  # 默认 compile（ADR-004：C# SaNineViewCompiler + SaMaterializer）
+if (Test-Path $saPipelinePath) {
     try {
-        $connJson = Get-Content $connPath -Raw -Encoding UTF8 | ConvertFrom-Json
-        $defaultConn = $connJson.ConnectionStrings.DefaultConnection
-        if ($defaultConn) {
-            $saDbBackend = 'sqlserver'
-            $escapedConn = $defaultConn -replace "'", "''"
-            $saDbConnArg = "; `$env:SA_DB_CONNECTION_STRING='$escapedConn'"
-            Write-Host '  SA DB: sqlserver (from ConnectionStrings.json)' -ForegroundColor DarkGray
+        $saPipelineJson = Get-Content $saPipelinePath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($saPipelineJson.SaPipeline.S2Mode) {
+            $saS2Mode = [string]$saPipelineJson.SaPipeline.S2Mode
         }
     } catch {
-        Write-Host '  SA DB: inmemory (ConnectionStrings.json parse failed)' -ForegroundColor DarkYellow
+        Write-Host '  WARN: SaPipeline.json 解析失败，按默认 compile 模式处理' -ForegroundColor DarkYellow
     }
 }
-Start-DevWindow -Title 'JNPF SA :3001' -WorkDir $saDir -Command `
-    "`$env:SA_SERVICE_PORT='3001'; `$env:SA_DB_BACKEND='$saDbBackend'$saDbConnArg; `$env:LLM_GATEWAY_URL='http://127.0.0.1:5000/api/LlmGateway/ChatAsync'; Write-Host 'SA Service starting...'; npx tsx src/server.ts"
-Write-Host '  SA Service launched' -ForegroundColor Green
+$saIsAgentMode = [string]::Equals($saS2Mode, 'agent', [System.StringComparison]::OrdinalIgnoreCase)
+
+if (-not $saIsAgentMode) {
+    Write-Host "  S2Mode=$saS2Mode → sa-service 已跳过（compile 模式由 C# SaNineViewCompiler + SaMaterializer 物化，不依赖 sa-service）" -ForegroundColor DarkGray
+    Write-Host "  如需 agent 模式回归对比：编辑 Configurations\SaPipeline.json → ""S2Mode"": ""agent"" 后重启" -ForegroundColor DarkGray
+} else {
+    Write-Host "  S2Mode=$saS2Mode → 启动 sa-service（agent 模式回归路径）..." -ForegroundColor Yellow
+    $saDbBackend = 'inmemory'
+    $saDbConnArg = ''
+    $connPath = Join-Path $root 'backend\application\JNPF.API.Entry\Configurations\ConnectionStrings.json'
+    if (Test-Path $connPath) {
+        try {
+            $connJson = Get-Content $connPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            # JNPF 连接串有两种结构：新版数组 ConnectionConfigs[]（主），旧版 DefaultConnection（兼容）
+            $defaultConn = $null
+            $dbLabel = ''
+            $configs = $connJson.ConnectionStrings.ConnectionConfigs
+            if ($configs -and $configs.Count -gt 0) {
+                $c0 = $configs[0]
+                # 拼接 ADO 连接串（mssql npm 包兼容格式），开发环境关掉 Encrypt 避免自签证书问题
+                $adoParts = @(
+                    "Server=$($c0.Host)",
+                    "Database=$($c0.DBName)",
+                    "User Id=$($c0.UserName)",
+                    "Password=$($c0.Password)"
+                )
+                $defaultConn = ($adoParts -join ';') + ';Encrypt=False;TrustServerCertificate=True'
+                $dbLabel = "$($c0.DBName) on $($c0.Host)"
+            } else {
+                # 兼容旧版：直接用 DefaultConnection 字段
+                $defaultConn = $connJson.ConnectionStrings.DefaultConnection
+                $dbLabel = 'DefaultConnection'
+            }
+            if ($defaultConn) {
+                $saDbBackend = 'sqlserver'
+                $escapedConn = $defaultConn -replace "'", "''"
+                $saDbConnArg = "; `$env:SA_DB_CONNECTION_STRING='$escapedConn'"
+                Write-Host "  SA DB: sqlserver ($dbLabel)" -ForegroundColor DarkGray
+            }
+        } catch {
+            Write-Host '  SA DB: inmemory (ConnectionStrings.json parse failed)' -ForegroundColor DarkYellow
+        }
+    }
+    Start-DevWindow -Title 'JNPF SA :3001' -WorkDir $saDir -Command `
+        "`$env:SA_SERVICE_PORT='3001'; `$env:SA_DB_BACKEND='$saDbBackend'$saDbConnArg; `$env:LLM_GATEWAY_URL='http://127.0.0.1:5000/api/LlmGateway/ChatAsync'; Write-Host 'SA Service starting...'; npx tsx src/server.ts"
+    Write-Host '  SA Service launched' -ForegroundColor Green
+}
 
 # ================================================================
 # Step 6/8: 启动 PC 前端
