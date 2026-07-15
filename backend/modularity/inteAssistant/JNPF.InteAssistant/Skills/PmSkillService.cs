@@ -933,10 +933,17 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
         var slotsPrompt = selectedSlots.Count > 0
             ? "\n优先覆盖的信息增益槽位：\n" + string.Join("\n", selectedSlots.Select(s => $"- {s.SlotId}: {s.Title} — {s.Description}"))
             : string.Empty;
+
+        // ── 按需检索易错点知识 ── DKEE 落地
+        var clarificationKeyword = string.Join(" ", compileResult.EventResults.Select(e => e.EventName).Take(5));
+        var pitfallSeeds = await _seedService.MatchAsync(
+            $"{clarificationKeyword} 注意事项 易错", ct);
+        var pitfallPrompt = DomainKnowledgeRenderer.RenderPitfalls(pitfallSeeds);
+
         var request = new ChatCompletionRequest
         {
             ProviderCode = Llm.ResolveProvider(SkillId),
-            SystemPrompt = systemPrompt + "\n" + seedPrompt + slotsPrompt,
+            SystemPrompt = systemPrompt + "\n" + seedPrompt + slotsPrompt + pitfallPrompt,
             Messages = new List<ChatMessage>
             {
                 new("user", BuildRoundUserPrompt(round, compileResult, warnings, previousAnswersText)),
