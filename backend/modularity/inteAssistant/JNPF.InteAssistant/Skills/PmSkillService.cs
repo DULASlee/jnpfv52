@@ -401,6 +401,11 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
 
         var enhancedText = context.UserRequirement ?? string.Empty;
 
+        // ── 按需检索规则知识 ── DKEE 落地
+        var ruleSeeds = await _seedService.MatchAsync(
+            $"{ExtractSearchKeyword(context)} 规则 审批", ct);
+        var rulePrompt = DomainKnowledgeRenderer.RenderRules(ruleSeeds);
+
         var systemPrompt = """
             你是 JNPF 低代码平台的系统分析师。基于完善后的需求文本，为每个业务事件产出：
             1. PSpec（过程规格）的真语义：input（输入）/ output（输出）/ validation（校验规则）/ algorithm（处理算法）/ boundaries（边界条件）/ exceptions（异常路径）
@@ -424,8 +429,7 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
               }
             }
             只输出 JSON。
-            """;
-
+            """ + "\n" + rulePrompt;
         var eventsBrief = string.Join("\n", compileResult.EventResults
             .Select(e => $"- {e.EventId}: {e.EventName}（{e.Complexity}）"));
 
