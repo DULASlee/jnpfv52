@@ -1,12 +1,18 @@
 <template>
   <div class="pipeline-task-list">
     <div class="list-header">
-      <span>我的任务{{ tasks.length > 0 ? ` (${tasks.length})` : '' }}</span>
-      <a-button type="link" size="small" :loading="loading" @click="loadTasks">刷新</a-button>
+      <span class="list-title">我的任务{{ tasks.length > 0 ? ` (${tasks.length})` : '' }}</span>
+      <a-button type="link" size="small" class="refresh-btn" :loading="loading" @click="() => loadTasks(true)">刷新</a-button>
     </div>
-    <div v-if="tasks.length === 0" class="list-empty">暂无任务</div>
+    <div v-if="tasks.length === 0 && !loading" class="list-empty">暂无任务</div>
     <ul v-else class="task-items">
-      <li v-for="t in tasks" :key="t.id" class="task-item" :class="{ active: t.id === activePipelineId }" @click="$emit('select', t.id)">
+      <li
+        v-for="t in tasks"
+        :key="t.id"
+        class="task-item"
+        :class="{ active: t.id === activePipelineId }"
+        @click="$emit('select', t.id)"
+      >
         <div class="task-name">{{ t.name || '未命名' }}</div>
         <div class="task-meta">
           <span>#{{ t.id }}</span>
@@ -14,7 +20,9 @@
         </div>
         <div class="task-submeta">
           <span class="task-creator" :title="t.creatorUserName || '未知'">{{ t.creatorUserName || '未知' }}</span>
-          <span class="task-time" :title="formatTimeFull(t.createdAt || t.updatedAt)">{{ formatTime(t.createdAt || t.updatedAt) }}</span>
+          <span class="task-time" :title="formatTimeFull(t.createdAt || t.updatedAt)">{{
+            formatTime(t.createdAt || t.updatedAt)
+          }}</span>
         </div>
       </li>
     </ul>
@@ -22,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted, ref } from 'vue';
+  import { onMounted, onUnmounted, ref } from 'vue';
   import { getPipelineList } from '../api/studio/pipeline';
 
   defineProps<{ activePipelineId?: number }>();
@@ -38,8 +46,13 @@
     creatorUserName?: string;
   };
 
+  /** 静默轮询间隔（阶段/名称变更无需手点刷新） */
+  const AUTO_REFRESH_MS = 15_000;
+
   const tasks = ref<TaskItem[]>([]);
   const loading = ref(false);
+  let pollTimer: ReturnType<typeof setInterval> | null = null;
+  let inFlight = false;
 
   const STAGE_LABELS: Record<string, string> = {
     requirement: '需求分析',
@@ -56,7 +69,6 @@
   function toDate(value?: string | number): Date | null {
     if (value === undefined || value === null || value === '') return null;
     if (typeof value === 'number') {
-      // 后端 DateTime 可能序列化为 Unix ms
       const d = new Date(value > 1e12 ? value : value * 1000);
       return Number.isNaN(d.getTime()) ? null : d;
     }
@@ -73,7 +85,6 @@
     return n < 10 ? `0${n}` : String(n);
   }
 
-  /** 列表紧凑显示：同年省略年，同日显示时分 */
   function formatTime(value?: string | number): string {
     const d = toDate(value);
     if (!d) return '—';
@@ -89,7 +100,9 @@
   function formatTimeFull(value?: string | number): string {
     const d = toDate(value);
     if (!d) return '';
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(
+      d.getSeconds(),
+    )}`;
   }
 
   function normalizeTasks(payload: any): TaskItem[] {
@@ -116,24 +129,75 @@
       .filter(x => x.id > 0);
   }
 
-  async function loadTasks() {
-    loading.value = true;
+  async function loadTasks(showSpinner = false) {
+    if (inFlight) return;
+    inFlight = true;
+    if (showSpinner) loading.value = true;
     try {
       const res = await getPipelineList(0, 200);
       tasks.value = normalizeTasks(res);
+      // #region agent log
+      fetch('http://127.0.0.1:7354/ingest/a6dd8c09-a41a-4bdf-b8f4-ed467f774eaa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'ead5d0' },
+        body: JSON.stringify({
+          sessionId: 'ead5d0',
+          runId: 'task-list',
+          hypothesisId: 'T1',
+          location: 'PipelineTaskList.vue:loadTasks',
+          message: 'task list refreshed',
+          data: { count: tasks.value.length, showSpinner, topId: tasks.value[0]?.id ?? null },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
     } catch {
-      tasks.value = [];
+      if (showSpinner) tasks.value = [];
     } finally {
       loading.value = false;
+      inFlight = false;
     }
   }
 
-  onMounted(loadTasks);
+  function startPolling() {
+    stopPolling();
+    pollTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') loadTasks(false);
+    }, AUTO_REFRESH_MS);
+  }
 
-  defineExpose({ reload: loadTasks });
+  function stopPolling() {
+    if (pollTimer != null) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  function onVisibilityChange() {
+    if (document.visibilityState === 'visible') {
+      loadTasks(false);
+      startPolling();
+    } else {
+      stopPolling();
+    }
+  }
+
+  onMounted(() => {
+    loadTasks(true);
+    startPolling();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+  });
+
+  onUnmounted(() => {
+    stopPolling();
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+  });
+
+  defineExpose({ reload: () => loadTasks(false) });
 </script>
 
 <style scoped lang="less">
+  /* 对齐 JNPF：继承全局字体；字号 14 / 辅助 12；色用框架变量 */
   .pipeline-task-list {
     flex: 1;
     min-height: 0;
@@ -143,24 +207,36 @@
     overflow: hidden;
     font-family: inherit;
     font-size: 14px;
-    color: rgba(0, 0, 0, 0.85);
+    line-height: 1.5715;
+    color: @text-color-base;
+    background: @white;
 
     .list-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 14px;
-      font-weight: 600;
-      color: rgba(0, 0, 0, 0.65);
       margin-bottom: 8px;
-      padding: 0 4px;
+      padding: 0 4px 8px;
+      border-bottom: 1px solid @border-color-base;
+
+      .list-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: @text-color-label;
+      }
+
+      .refresh-btn {
+        padding: 0;
+        height: auto;
+        font-size: 14px;
+      }
     }
 
     .list-empty {
       font-size: 14px;
-      color: rgba(0, 0, 0, 0.45);
+      color: @text-color-help-dark;
       text-align: center;
-      padding: 12px 4px;
+      padding: 24px 8px;
     }
 
     .task-items {
@@ -173,23 +249,25 @@
 
       .task-item {
         padding: 8px 10px;
-        border-radius: 4px;
+        border-radius: 2px;
         cursor: pointer;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
         border: 1px solid transparent;
+        transition: background-color 0.2s;
 
         &:hover {
-          background: #f5f5f5;
+          background: @content-bg;
         }
 
         &.active {
-          background: #e6f7ff;
-          border-color: #91d5ff;
+          background: fade(@primary-color, 8%);
+          border-color: fade(@primary-color, 35%);
         }
 
         .task-name {
           font-size: 14px;
-          color: rgba(0, 0, 0, 0.85);
+          font-weight: 400;
+          color: @text-color-base;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -201,8 +279,9 @@
           justify-content: space-between;
           gap: 8px;
           font-size: 12px;
-          color: rgba(0, 0, 0, 0.45);
+          color: @text-color-help-dark;
           margin-top: 4px;
+          line-height: 1.5;
         }
 
         .task-creator {
@@ -211,11 +290,13 @@
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+          color: @text-color-label;
         }
 
         .task-time {
           flex-shrink: 0;
           font-variant-numeric: tabular-nums;
+          color: @text-color-help-dark;
         }
       }
     }

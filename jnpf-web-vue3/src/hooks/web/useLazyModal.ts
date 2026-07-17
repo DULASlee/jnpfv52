@@ -9,7 +9,8 @@
  * 1. **加载感知队列** — 组件未就绪时 openModal 入队，register 后自动回放
  * 2. **按钮层守卫** — 暴露 isLoaded，按钮绑定 :loading="!isLoaded" + @mouseenter="prefetch"
  * 3. **错误边界** — 页面级 onErrorCaptured 防止级联崩溃
- * 4. **超时收窄** — useLazyComponent 默认超时 10s（原 30s），快速失败 + 明确提示
+ * 4. **超时收窄** — 生产 10s 快速失败；开发态 120s 适配 Vite 首次编译
+ * 5. **延迟挂载** — 进页不渲染弹窗 DOM，仅 prefetch / openModal 时才挂载并拉 chunk
  *
  * ## 用法
  * ```typescript

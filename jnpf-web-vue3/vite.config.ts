@@ -68,6 +68,26 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
         usePolling: false,
         interval: 1000,
       },
+      /**
+       * Dev 冷启动预热：仅入口链 + Layout/Login/BasicTable 等公共壳。
+       * - 不预热 views/** 业务页，避免「改代码不生效」的误会
+       * - 仅提前做 transform，文件变更仍走 HMR 即时失效（与浏览器强缓存无关）
+       */
+      ...(!isBuild
+        ? {
+            warmup: {
+              clientFiles: [
+                './index.html',
+                './src/main.ts',
+                './src/App.vue',
+                './src/layouts/default/index.vue',
+                './src/layouts/page/index.vue',
+                './src/views/basic/login/Login.vue',
+                './src/components/Table/src/BasicTable.vue',
+              ],
+            },
+          }
+        : {}),
     },
     esbuild: {
       drop: VITE_DROP_CONSOLE ? ['console', 'debugger'] : [],
@@ -149,20 +169,44 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
     // visualizer 已由 configVisualizerConfig() 在 REPORT 模式下按需激活，不在此处常驻
     plugins: [...createVitePlugins(viteEnv, isBuild)],
 
+    /**
+     * Dev 依赖预构建（node_modules/.vite）——只缓存第三方包，不缓存 src 业务代码；HMR 正常。
+     * 若升级依赖后报 504 Outdated Optimize Dep：`pnpm clean:cache && pnpm dev`
+     */
     optimizeDeps: {
       esbuildOptions: {
         target: 'es2020',
       },
       include: [
+        // Vue 生态
         'vue',
         'vue-router',
         'pinia',
+        'vue-i18n',
+        // Ant Design
         'ant-design-vue',
-        // 预构建 locale，避免 zh_CN.ts 动态 import 触发 504 Outdated Optimize Dep
         'ant-design-vue/es/locale/zh_CN',
         'ant-design-vue/es/locale/en_US',
         'ant-design-vue/es/locale/zh_TW',
+        '@ant-design/icons-vue',
+        // 全站高频工具
+        'axios',
+        'dayjs',
+        'lodash-es',
+        'qs',
+        'nprogress',
+        'crypto-js',
+        'path-to-regexp',
+        'vue-types',
+        'dompurify',
+        // 列表 / 设计器常用
+        '@vueuse/core',
+        '@vueuse/shared',
+        'vuedraggable',
+        'sortablejs',
       ],
+      // 巨型编辑器/图表库按需加载，避免拖慢 dev server 启动
+      exclude: ['monaco-editor', 'tinymce', 'vditor'],
     },
   };
 };

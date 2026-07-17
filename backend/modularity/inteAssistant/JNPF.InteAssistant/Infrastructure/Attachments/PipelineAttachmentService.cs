@@ -93,6 +93,7 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IFileManager _fileManager;
     private readonly AttachmentProcessor _attachmentProcessor;
+    private readonly IAttachmentChunkArchive _chunkArchive;
     private readonly IPipelineDeliverableService _deliverableService;
     private readonly ILogger<PipelineAttachmentService> _logger;
 
@@ -101,6 +102,7 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
         IHttpClientFactory httpClientFactory,
         IFileManager fileManager,
         AttachmentProcessor attachmentProcessor,
+        IAttachmentChunkArchive chunkArchive,
         IPipelineDeliverableService deliverableService,
         ILogger<PipelineAttachmentService> logger)
     {
@@ -108,6 +110,7 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
         _httpClientFactory = httpClientFactory;
         _fileManager = fileManager;
         _attachmentProcessor = attachmentProcessor;
+        _chunkArchive = chunkArchive;
         _deliverableService = deliverableService;
         _logger = logger;
     }
@@ -228,27 +231,57 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
                         .Where(a => a.F_Id == att.F_Id)
                         .ExecuteCommandAsync(ct);
 
-                    var extracted = await _attachmentProcessor.ProcessAttachmentsAsync(
-                        new List<AttachmentFile> { new() { FileName = att.FileName, Content = bytes } });
+                    var tenantId = string.IsNullOrWhiteSpace(att.TenantId) ? ctx.TenantId : att.TenantId;
+                    var projectId = string.IsNullOrWhiteSpace(att.ProjectId) ? pipelineKey : att.ProjectId;
                     var fileHash = ComputeSha256(bytes);
 
+                    // 分批解析 → 每批增量写入 StudioWorkspace 分块存档 → 再合并取出
+                    string extracted;
+                    int chunkCount;
+                    try
+                    {
+                        (extracted, chunkCount) = await ExtractToChunkArchiveAsync(
+                            tenantId, projectId, pipelineKey, att, bytes, ct);
+                    }
+                    catch (Exception ex) when (ex is not OutOfMemoryException and not OperationCanceledException)
+                    {
+                        _logger.LogWarning(ex, "附件分批解析首次失败，重试一次: {FileName}", att.FileName);
+                        await Task.Delay(200, ct);
+                        (extracted, chunkCount) = await ExtractToChunkArchiveAsync(
+                            tenantId, projectId, pipelineKey, att, bytes, ct);
+                    }
+
                     // #region agent log
-                    AgentDebugLog("A", "PipelineAttachmentService.PrepareForGateAsync", "extract ready",
-                        $"{{\"fileName\":{JsonStr(att.FileName)},\"bytes\":{bytes.Length},\"extractedLen\":{extracted?.Length ?? 0},\"hashLen\":{fileHash.Length}}}");
+                    AgentDebugLog("A", "PipelineAttachmentService.PrepareForGateAsync", "chunk extract ready",
+                        $"{{\"fileName\":{JsonStr(att.FileName)},\"bytes\":{bytes.Length},\"extractedLen\":{extracted.Length},\"chunkCount\":{chunkCount},\"hashLen\":{fileHash.Length}}}");
                     // #endregion
 
-                    // SqlSugar SetColumns 对长字符串常按 NVARCHAR(4000) 传参 → SQL「将截断字符串或二进制数据」
-                    // 显式 Size=-1（nvarchar(max)）写入 F_ExtractedText
-                    await PersistExtractSuccessAsync(att.F_Id, extracted, fileHash, bytes.Length, ct);
+                    // DB 只缓存短预览；全文权威源 = StudioWorkspace 分块存档（禁止再因 NVARCHAR 截断判失败）
+                    var dbPreview = BuildDbPreview(extracted);
+                    try
+                    {
+                        await PersistExtractSuccessAsync(att.F_Id, dbPreview, fileHash, bytes.Length, ct);
+                    }
+                    catch (Exception persistEx) when (persistEx is not OutOfMemoryException and not OperationCanceledException)
+                    {
+                        _logger.LogWarning(persistEx,
+                            "附件预览写入 DB 失败，分块存档已就绪，继续门控: {FileName}", att.FileName);
+                        await MarkProcessStatusOnlyAsync(att.F_Id, processStatus: 2, ct);
+                        // #region agent log
+                        AgentDebugLog("D", "PipelineAttachmentService.PrepareForGateAsync", "db preview persist failed; chunks ok",
+                            $"{{\"fileName\":{JsonStr(att.FileName)},\"err\":{JsonStr(persistEx.Message)},\"chunkCount\":{chunkCount},\"extractedLen\":{extracted.Length}}}");
+                        // #endregion
+                    }
 
                     att.ProcessStatus = 2;
                     att.ExtractedText = extracted;
                     att.FileSize = bytes.Length;
 
-                    if (!string.IsNullOrWhiteSpace(extracted) && !string.IsNullOrWhiteSpace(ctx.TenantId))
+                    if (!string.IsNullOrWhiteSpace(extracted) && !string.IsNullOrWhiteSpace(tenantId))
                     {
+                        // 交付物也按分块权威：写入合并全文到文件，不依赖 DB 列宽
                         await _deliverableService.SaveAttachmentExtractAsync(
-                            ctx.TenantId, pipelineId, att.F_Id, att.FileName, extracted, ct);
+                            tenantId, pipelineId, att.F_Id, att.FileName, extracted, ct);
                     }
                 }
                 catch (Exception ex)
@@ -280,11 +313,14 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
                     .ExecuteCommandAsync(ct);
             }
 
+            // 优先从分块存档合并全文（权威源）；无存档再回退 DB 缓存
+            var preText = await ResolveExtractedTextAsync(att, pipelineKey, ct) ?? att.ExtractedText;
+
             files.Add(new AttachmentFile
             {
                 FileName = att.FileName,
                 Content = bytes,
-                PreExtractedText = att.ExtractedText,
+                PreExtractedText = preText,
                 AttachmentId = att.F_Id,
             });
             items.Add(new AttachmentItemSummary
@@ -292,7 +328,7 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
                 Id = att.F_Id,
                 FileName = att.FileName,
                 ProcessStatus = 2,
-                ExtractedLength = att.ExtractedText?.Length ?? 0,
+                ExtractedLength = preText?.Length ?? 0,
             });
         }
 
@@ -303,6 +339,59 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
             Warnings = warnings,
             FailedCount = failed,
         };
+    }
+
+    /// <summary>
+    /// 分批解析附件，每批立即写入 StudioWorkspace 分块存档，最后按序合并。
+    /// </summary>
+    private async Task<(string Merged, int ChunkCount)> ExtractToChunkArchiveAsync(
+        string tenantId, string projectId, string pipelineId,
+        InteAssistantAttachment att, byte[] bytes, CancellationToken ct)
+    {
+        await _chunkArchive.ResetAsync(tenantId, projectId, pipelineId, att.F_Id, att.FileName, ct);
+
+        var file = new AttachmentFile { FileName = att.FileName, Content = bytes, AttachmentId = att.F_Id };
+        var header = $"===== 附件：{att.FileName} =====\n";
+        var wrote = 0;
+
+        foreach (var chunk in _attachmentProcessor.ExtractChunks(file, AttachmentProcessor.DefaultTargetChunkChars))
+        {
+            ct.ThrowIfCancellationRequested();
+            var body = wrote == 0 ? header + chunk.Text : chunk.Text;
+            await _chunkArchive.AppendChunkAsync(
+                tenantId, projectId, pipelineId, att.F_Id,
+                chunk.Index, body, chunk.SourceHint, ct);
+            wrote++;
+        }
+
+        if (wrote == 0)
+        {
+            await _chunkArchive.AppendChunkAsync(
+                tenantId, projectId, pipelineId, att.F_Id,
+                0, header + "[附件无可提取文本]", "empty", ct);
+            wrote = 1;
+        }
+
+        var merged = await _chunkArchive.TryMergeAsync(tenantId, projectId, pipelineId, att.F_Id, ct);
+        if (merged == null)
+            throw new InvalidOperationException($"分块存档合并失败: {att.FileName}");
+
+        _logger.LogInformation(
+            "附件分批解析完成: File={File} Chunks={Chunks} Chars={Chars} Pipeline={Pipeline}",
+            att.FileName, merged.Value.Manifest.ChunkCount, merged.Value.Manifest.TotalChars, pipelineId);
+
+        return (merged.Value.Text, merged.Value.Manifest.ChunkCount);
+    }
+
+    private async Task<string?> ResolveExtractedTextAsync(
+        InteAssistantAttachment att, string pipelineKey, CancellationToken ct)
+    {
+        var tenantId = att.TenantId;
+        var projectId = string.IsNullOrWhiteSpace(att.ProjectId) ? pipelineKey : att.ProjectId;
+        if (string.IsNullOrWhiteSpace(tenantId)) return att.ExtractedText;
+
+        var merged = await _chunkArchive.TryMergeAsync(tenantId, projectId, pipelineKey, att.F_Id, ct);
+        return merged?.Text ?? att.ExtractedText;
     }
 
     public async Task<IReadOnlyList<PipelineAttachmentListItem>> ListByPipelineAsync(
@@ -316,21 +405,27 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
             .OrderBy(a => a.CreateTime)
             .ToListAsync(ct);
 
-        return rows.Select(a => new PipelineAttachmentListItem
+        return rows.Select(a =>
         {
-            Id = a.F_Id,
-            FileName = a.FileName,
-            FileUrl = a.FileUrl,
-            FileType = a.FileType,
-            FileSize = a.FileSize,
-            ProcessStatus = a.ProcessStatus,
-            ExtractedLength = a.ExtractedText?.Length ?? 0,
-            ProcessError = a.ProcessError,
-            CreateTime = a.CreateTime,
-            DownloadOriginalUrl = $"/api/studio/pipeline/execute/{pipelineId}/attachments/{a.F_Id}/download",
-            DownloadExtractedUrl = a.ProcessStatus == 2 && !string.IsNullOrWhiteSpace(a.ExtractedText)
-                ? $"/api/studio/pipeline/execute/{pipelineId}/attachments/{a.F_Id}/extracted"
-                : "",
+            var projectId = string.IsNullOrWhiteSpace(a.ProjectId) ? pipelineKey : a.ProjectId;
+            var manifest = _chunkArchive.TryReadManifest(a.TenantId, projectId, pipelineKey, a.F_Id);
+            var extractedLen = manifest?.TotalChars ?? a.ExtractedText?.Length ?? 0;
+            return new PipelineAttachmentListItem
+            {
+                Id = a.F_Id,
+                FileName = a.FileName,
+                FileUrl = a.FileUrl,
+                FileType = a.FileType,
+                FileSize = a.FileSize,
+                ProcessStatus = a.ProcessStatus,
+                ExtractedLength = extractedLen,
+                ProcessError = a.ProcessError,
+                CreateTime = a.CreateTime,
+                DownloadOriginalUrl = $"/api/studio/pipeline/execute/{pipelineId}/attachments/{a.F_Id}/download",
+                DownloadExtractedUrl = a.ProcessStatus == 2 && extractedLen > 0
+                    ? $"/api/studio/pipeline/execute/{pipelineId}/attachments/{a.F_Id}/extracted"
+                    : "",
+            };
         }).ToList();
     }
 
@@ -353,9 +448,11 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
         CancellationToken ct = default)
     {
         var att = await GetAttachmentOrThrowAsync(pipelineId, attachmentId, ct);
-        if (att.ProcessStatus != 2 || string.IsNullOrWhiteSpace(att.ExtractedText))
+        if (att.ProcessStatus != 2)
             return null;
-        return att.ExtractedText;
+
+        var merged = await ResolveExtractedTextAsync(att, pipelineId.ToString(), ct);
+        return string.IsNullOrWhiteSpace(merged) ? null : merged;
     }
 
     private async Task<InteAssistantAttachment> GetAttachmentOrThrowAsync(
@@ -452,17 +549,26 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
             .ExecuteCommandAsync(ct);
     }
 
+    /// <summary>DB 预览上限（分块存档才是全文；列宽兼容 NVARCHAR(4000)）。</summary>
+    private const int DbExtractPreviewMaxChars = 3500;
+
+    private static string BuildDbPreview(string extracted)
+    {
+        if (string.IsNullOrEmpty(extracted)) return "";
+        if (extracted.Length <= DbExtractPreviewMaxChars) return extracted;
+        return extracted[..DbExtractPreviewMaxChars] + "\n…(全文见附件分块存档，共 " + extracted.Length + " 字)";
+    }
+
     /// <summary>
-    /// 将解析结果写入附件表。F_ExtractedText 必须走 nvarchar(max) 参数，
-    /// 避免 SqlSugar SetColumns 默认 NVARCHAR(4000) 导致「将截断字符串或二进制数据」。
+    /// 写入附件表成功态 + 短预览。全文 MUST 读分块存档，禁止依赖本列存完整大文件。
     /// </summary>
     private async Task PersistExtractSuccessAsync(
-        string id, string? extracted, string fileHash, long fileSize, CancellationToken ct)
+        string id, string? extractedPreview, string fileHash, long fileSize, CancellationToken ct)
     {
-        var extractedParam = new SugarParameter("@extracted", (object?)extracted ?? DBNull.Value)
+        var extractedParam = new SugarParameter("@extracted", (object?)extractedPreview ?? DBNull.Value)
         {
             DbType = System.Data.DbType.String,
-            Size = -1, // nvarchar(max)
+            Size = -1,
         };
         await _db.Ado.ExecuteCommandAsync(
             @"UPDATE [inte_assistant_attachment]
@@ -478,6 +584,16 @@ public sealed class PipelineAttachmentService : IPipelineAttachmentService, ITra
             new SugarParameter("@size", fileSize),
             new SugarParameter("@id", id));
         ct.ThrowIfCancellationRequested();
+    }
+
+    private async Task MarkProcessStatusOnlyAsync(string id, int processStatus, CancellationToken ct)
+    {
+        await _db.Updateable<InteAssistantAttachment>()
+            .SetColumns(a => a.ProcessStatus == processStatus)
+            .SetColumns(a => a.ProcessError == null)
+            .SetColumns(a => a.LastModifyTime == DateTime.Now)
+            .Where(a => a.F_Id == id)
+            .ExecuteCommandAsync(ct);
     }
 
     private static string ComputeSha256(byte[] data)

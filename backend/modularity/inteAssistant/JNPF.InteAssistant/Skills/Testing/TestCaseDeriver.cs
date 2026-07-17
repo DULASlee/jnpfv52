@@ -98,14 +98,14 @@ public static class TestCaseDeriver
         {
             cases.Add(new DerivedTestCase
             {
-                CaseId = $"valid-date-{field.Name.ToLowerInvariant()}",
+                CaseId = $"valid-date-{field.Type.ToLowerInvariant()}-{field.Name.ToLowerInvariant()}",
                 Rule = "F-TYPE",
                 Kind = "valid",
                 Description = $"{field.Name} ({field.Type}) 有效日期 2024-01-01",
             });
             cases.Add(new DerivedTestCase
             {
-                CaseId = $"invalid-date-format-{field.Name.ToLowerInvariant()}",
+                CaseId = $"invalid-date-format-{field.Type.ToLowerInvariant()}-{field.Name.ToLowerInvariant()}",
                 Rule = "F-TYPE",
                 Kind = "invalid",
                 Description = $"{field.Name} ({field.Type}) 日期格式错误",
@@ -117,14 +117,14 @@ public static class TestCaseDeriver
         {
             cases.Add(new DerivedTestCase
             {
-                CaseId = $"valid-bool-true-{field.Name.ToLowerInvariant()}",
+                CaseId = $"valid-bool-true-{field.Type.ToLowerInvariant()}-{field.Name.ToLowerInvariant()}",
                 Rule = "F-TYPE",
                 Kind = "valid",
                 Description = $"{field.Name} ({field.Type}) 值为 true",
             });
             cases.Add(new DerivedTestCase
             {
-                CaseId = $"invalid-bool-{field.Name.ToLowerInvariant()}",
+                CaseId = $"invalid-bool-{field.Type.ToLowerInvariant()}-{field.Name.ToLowerInvariant()}",
                 Rule = "F-TYPE",
                 Kind = "invalid",
                 Description = $"{field.Name} ({field.Type}) 非布尔值",
@@ -136,14 +136,14 @@ public static class TestCaseDeriver
         {
             cases.Add(new DerivedTestCase
             {
-                CaseId = $"valid-guid-{field.Name.ToLowerInvariant()}",
+                CaseId = $"valid-guid-{field.Type.ToLowerInvariant()}-{field.Name.ToLowerInvariant()}",
                 Rule = "F-TYPE",
                 Kind = "valid",
                 Description = $"{field.Name} ({field.Type}) 有效 GUID",
             });
             cases.Add(new DerivedTestCase
             {
-                CaseId = $"invalid-guid-format-{field.Name.ToLowerInvariant()}",
+                CaseId = $"invalid-guid-format-{field.Type.ToLowerInvariant()}-{field.Name.ToLowerInvariant()}",
                 Rule = "F-TYPE",
                 Kind = "invalid",
                 Description = $"{field.Name} ({field.Type}) GUID 格式错误",

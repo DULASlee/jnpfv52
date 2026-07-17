@@ -1,4 +1,5 @@
 using JNPF.DependencyInjection;
+using JNPF.FriendlyException;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Ir;
@@ -143,23 +144,23 @@ public class RequirementGateService : ITransient
             - clarifications 数组只含 1 个元素（一轮提问）
             - 该元素的 questions 数量必须 3-5 个，聚焦当前最需要澄清的歧义点（基于 missing 列表）
             - 每个 question 必须含：id（q1/q2/...）、text（问题文本）、type、required、options
-            - type 取值：single（单选）、multi（多选）、text（纯文本补充）
+            - type 取值：single（单选）、multi（多选）；**禁止**用 text 作为主澄清题（用户应点选，不是打长文）
             - 每个 question.options 数量必须 3-5 个
             - 每个 question.options 的【最后一个】必须固定为：{"id":"o_other","label":"其他","freeText":true}
             - 其余 option 的 id 用 o1/o2/o3，label 为简洁中文选项文本
-            - text 类型的问题，options 只放一个"其他"项
             - required=true 表示关键题（影响后续设计的核心歧义），每轮关键题不超过 2 个
+            - 本轮至少 1 道 multi；若识别到 ≥2 个实体/术语，至少 1 道 MATRIX_SINGLE
             - 新增字段（P9 矩阵题交互，2026-07-10）：
               · contextHint：为什么问这个问题（string，可选）
               · defaultOption：合理默认值（option id，可选）
-              · questionFormat：SINGLE | MULTI | MATRIX_SINGLE | MATRIX_MULTI（默认 SINGLE）
+              · questionFormat：SINGLE | MULTI | MATRIX_SINGLE | MATRIX_MULTI（默认 MULTI）
               · matrixSubItems：矩阵题行数组，每元素 {"rowId","rowLabel"}（仅 MATRIX_* 格式需要）
               如果问题是对「多个已识别的实体/领域术语」做同一维度的决策（如"每个实体是否需要审批？"），
-              应使用 questionFormat="MATRIX_SINGLE" 并输出 matrixSubItems 行；否则用 SINGLE/MULTI。
+              应使用 questionFormat="MATRIX_SINGLE" 并输出 matrixSubItems 行；否则用 MULTI。
 
             ## 输出格式（只输出 JSON，不要 markdown 代码块、不要注释、不要多余文本）
 
-            {"score":50,"mode":"confirm","domain":"OA/考勤","entities":["请假单","审批记录"],"missing":["请假类型枚举","审批规则"],"strengths":["有角色"],"nextQuestion":"下一个该问的问题","clarifications":[{"title":"需求澄清","intro":"以下问题影响设计","questions":[{"id":"q1","text":"请假类型有哪些？","type":"multi","required":true,"options":[{"id":"o1","label":"事假"},{"id":"o2","label":"病假"},{"id":"o3","label":"年假"},{"id":"o_other","label":"其他","freeText":true}]}]}]}
+            {"score":50,"mode":"confirm","domain":"OA/考勤","entities":["请假单","审批记录"],"missing":["请假类型枚举","审批规则"],"strengths":["有角色"],"nextQuestion":"下一个该问的问题","clarifications":[{"title":"需求澄清","intro":"以下问题影响设计","questions":[{"id":"q1","text":"请假类型有哪些？","type":"multi","required":true,"questionFormat":"MULTI","options":[{"id":"o1","label":"事假"},{"id":"o2","label":"病假"},{"id":"o3","label":"年假"},{"id":"o_other","label":"其他","freeText":true}]},{"id":"q2","text":"下列实体本期是否必须支持审批？","type":"single","required":true,"questionFormat":"MATRIX_SINGLE","matrixSubItems":[{"rowId":"r1","rowLabel":"请假单"},{"rowId":"r2","rowLabel":"审批记录"}],"options":[{"id":"o1","label":"必须有"},{"id":"o2","label":"可后期"},{"id":"o3","label":"不需要"},{"id":"o_other","label":"其他","freeText":true}]}]}]}
 
             注意：上面是一个完整示例。实际输出时根据对话历史填充真实内容。refine 模式下 clarifications 为 []。
             """;
@@ -174,29 +175,36 @@ public class RequirementGateService : ITransient
             MaxTokens = 2500,
             Temperature = 0.2,
             ResponseFormat = "json",
-            MaxRetries = 1,
-            TimeoutMs = 45000
+            MaxRetries = 3,
+            TimeoutMs = 90_000
         };
 
+        Exception? caught = null;
         try
         {
             var response = await _llmGateway.ChatAsync(request, ct);
             if (!response.IsSuccess)
             {
-                // fail-safe：LLM 故障时降级 confirm（继续追问），不降级 refine（直接分析）。
-                // refine 会跳过追问直接进入 SA 深度分析，等于放行不完整需求——与主门控 fail-closed 策略一致。
-                _logger.LogWarning("成熟度评估 LLM 调用失败，保守降级 confirm（继续追问，不进分析）: {Error}", response.Error);
-                return new MaturityResult { Score = 40, Mode = "confirm" };
+                // 硬错误：LLM 调用失败即抛，禁止返回伪成功兜底对象
+                throw Oops.Bah($"需求门控成熟度评估 LLM 失败: {response.Error ?? "(无错误详情)"} provider={provider}");
             }
 
             var json = ExtractJson(response.Content);
-            var parsed = JsonSerializer.Deserialize<MaturityResult>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            MaturityResult? parsed = null;
+            try
+            {
+                parsed = JsonSerializer.Deserialize<MaturityResult>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (Exception jex)
+            {
+                caught = jex;
+            }
 
             if (parsed == null)
             {
-                _logger.LogWarning("成熟度评估 JSON 解析失败，保守降级 confirm（继续追问，不进分析）");
-                return new MaturityResult { Score = 40, Mode = "confirm" };
+                // 硬错误：JSON 解析失败即抛
+                throw Oops.Bah($"需求门控成熟度评估 JSON 解析失败: {caught?.Message ?? "(无错误详情)"} provider={provider}");
             }
 
             // 一致性兜底：mode 必须与 score 匹配（LLM 偶尔给出矛盾值）
@@ -206,9 +214,10 @@ public class RequirementGateService : ITransient
         }
         catch (Exception ex)
         {
-            // fail-safe：异常时同样降级 confirm，不降级 refine
-            _logger.LogError(ex, "成熟度评估异常，保守降级 confirm（继续追问，不进分析）");
-            return new MaturityResult { Score = 40, Mode = "confirm" };
+            // 硬错误：异常即抛（保留 Oops.Bah 透传，其余异常包装为业务错误）
+            if (ex is JNPF.FriendlyException.AppFriendlyException) throw;
+            _logger.LogError(ex, "成熟度评估异常 provider={Provider}", provider);
+            throw Oops.Bah($"需求门控成熟度评估 LLM 失败: {ex.Message} provider={provider}");
         }
     }
 
@@ -303,16 +312,22 @@ public class RequirementGateService : ITransient
     /// 不变量保证（即使 LLM 输出不规范也强制修正）：
     ///   - 每题 Options 数量裁剪到 [3,5]
     ///   - 每题末项恒为 {"id":"o_other","label":"其他","freeText":true}
-    ///   - text 题 Options 强制只保留"其他"项
+    ///   - 主澄清题禁止纯 text；LLM 未产出 → fallback 为 multi + MATRIX_SINGLE
     ///   - 裁剪到 ≤5 题、关键题(required) ≤2 个
-    ///   - LLM 未产出 clarifications → fallback 用 Missing 字符串构造 text 题
+    ///   - 透传 questionFormat / matrixSubItems / contextHint / defaultOption
     /// </summary>
     public ClarificationSet BuildClarificationSet(MaturityResult maturity, int round)
     {
-        // fallback：LLM 没产出结构化问题，用 Missing 字符串拼成 text 题
+        // CR-20260717-01 §3.1: LLM 没产出结构化问题 = 硬错误（不再 BuildFallbackSet 兜底）
         if (maturity?.Clarifications is null || maturity.Clarifications.Count == 0)
         {
-            return BuildFallbackSet(maturity, round);
+            // #region agent log
+            AgentDebugLog("F1", "RequirementGateService.BuildClarificationSet", "error: no clarifications from LLM",
+                $"{{\"round\":{round},\"score\":{maturity?.Score ?? 0},\"mode\":{JsonEsc(maturity?.Mode)},\"missingCount\":{maturity?.Missing?.Count ?? 0},\"entityCount\":{maturity?.Entities?.Count ?? 0}}}");
+            // #endregion
+            throw Oops.Bah(
+                $"需求门控 BuildClarificationSet: LLM 未产出结构化澄清问题（Clarifications 为空）" +
+                $" round={round} score={maturity?.Score ?? 0} mode={maturity?.Mode ?? "(null)"}");
         }
 
         var draft = maturity.Clarifications[0];
@@ -323,12 +338,43 @@ public class RequirementGateService : ITransient
         foreach (var dq in (draft.Questions ?? new()).Take(5))
         {
             var qId = EnsureQuestionId(dq.Id, questions.Count);
-            var type = NormalizeType(dq.Type);
-            var required = dq.Required && requiredCount < 2; // 关键题 ≤2
+            var format = ClarificationQuestion.NormalizeQuestionFormat(dq.QuestionFormat);
+            var isMatrix = format.StartsWith("MATRIX_", StringComparison.Ordinal);
+            var type = isMatrix
+                ? (format == "MATRIX_MULTI" ? "multi" : "single")
+                : NormalizeType(dq.Type);
+
+            // 计划约定：主澄清题不做纯文本；text 草案升为 multi
+            if (type == "text")
+                type = "multi";
+
+            var required = dq.Required && requiredCount < 2;
             if (required) requiredCount++;
 
             var options = BuildOptions(type, dq.Options);
-            if (options.Count < 2) continue; // 选项不足，跳过该题
+            if (options.Count < 2) continue;
+
+            List<MatrixSubItem>? matrixRows = null;
+            if (isMatrix)
+            {
+                matrixRows = (dq.MatrixSubItems ?? new())
+                    .Where(r => !string.IsNullOrWhiteSpace(r.RowLabel))
+                    .Select((r, i) => new MatrixSubItem
+                    {
+                        RowId = string.IsNullOrWhiteSpace(r.RowId) ? $"r{i + 1}" : r.RowId.Trim(),
+                        RowLabel = r.RowLabel.Trim(),
+                    })
+                    .Take(8)
+                    .ToList();
+                if (matrixRows.Count < 2)
+                {
+                    // 矩阵行不足 → 退回普通多选，避免前端空白矩阵
+                    format = "MULTI";
+                    isMatrix = false;
+                    type = "multi";
+                    matrixRows = null;
+                }
+            }
 
             questions.Add(new ClarificationQuestion
             {
@@ -337,14 +383,30 @@ public class RequirementGateService : ITransient
                 Type = type,
                 Required = required,
                 Options = options,
+                ContextHint = string.IsNullOrWhiteSpace(dq.ContextHint) ? null : dq.ContextHint.Trim(),
+                DefaultOption = string.IsNullOrWhiteSpace(dq.DefaultOption) ? null : dq.DefaultOption.Trim(),
+                QuestionFormat = format,
+                MatrixSubItems = matrixRows,
             });
 
             if (questions.Count >= 5) break;
         }
 
-        // 一题都没构造成功 → fallback
         if (questions.Count == 0)
-            return BuildFallbackSet(maturity, round);
+        {
+            // #region agent log
+            AgentDebugLog("F1", "RequirementGateService.BuildClarificationSet", "error: draft questions invalid",
+                $"{{\"round\":{round},\"draftQuestionCount\":{(draft.Questions?.Count ?? 0)}}}");
+            // #endregion
+            throw Oops.Bah(
+                $"需求门控 BuildClarificationSet: LLM 产出的澄清问题全部无效（questions.Count == 0 after parse）" +
+                $" round={round} draftQuestionCount={draft.Questions?.Count ?? 0}");
+        }
+
+        // #region agent log
+        AgentDebugLog("F2", "RequirementGateService.BuildClarificationSet", "structured set built",
+            $"{{\"round\":{round},\"qCount\":{questions.Count},\"formats\":[{string.Join(",", questions.Select(q => JsonEsc(q.QuestionFormat)))}],\"types\":[{string.Join(",", questions.Select(q => JsonEsc(q.Type)))}]}}");
+        // #endregion
 
         return new ClarificationSet
         {
@@ -353,7 +415,7 @@ public class RequirementGateService : ITransient
             Round = Math.Clamp(round, 1, 7),
             Title = string.IsNullOrWhiteSpace(draft.Title) ? "需求澄清（第 " + Math.Clamp(round, 1, 7) + " 轮）" : draft.Title,
             Intro = string.IsNullOrWhiteSpace(draft.Intro)
-                ? "以下问题影响后续设计与开发，请逐题确认。每题最后一项为「其他」，可自由补充。"
+                ? "以下问题请通过选项确认（支持多选与矩阵）。每题最后一项为「其他」，可自由补充。"
                 : draft.Intro,
             Questions = questions,
             AllowSkipNonCritical = true,
@@ -364,39 +426,26 @@ public class RequirementGateService : ITransient
     public static bool HasStructuredClarifications(MaturityResult maturity)
         => maturity?.Clarifications is { Count: > 0 };
 
-    private static ClarificationSet BuildFallbackSet(MaturityResult maturity, int round)
+    private static List<string> DefaultMatrixRowLabels() => new()
     {
-        // 用 Missing 字符串构造 text 题（保持与既有 ❓ 追问等价的体验）
-        var missing = (maturity?.Missing is { Count: > 0 })
-            ? maturity.Missing
-            : new List<string> { "请补充任何影响系统设计的业务约束或规则" };
+        "核心业务单据",
+        "审批流程",
+        "权限与角色",
+        "消息/告警",
+        "报表统计",
+    };
 
-        var questions = new List<ClarificationQuestion>();
-        for (var i = 0; i < missing.Count && i < 3; i++)
-        {
-            questions.Add(new ClarificationQuestion
-            {
-                Id = $"q{i + 1}",
-                Text = missing[i],
-                Type = "text",
-                Required = i == 0, // 第一题作为关键题
-                Options = new List<ClarificationOption>
-                {
-                    new() { Id = "o_other", Label = "其他", FreeText = true },
-                },
-            });
-        }
+    private static string TruncateLabel(string text, int max)
+        => text.Length <= max ? text : text[..(max - 1)] + "…";
 
-        return new ClarificationSet
-        {
-            SetId = Guid.NewGuid().ToString("N"),
-            Stage = ClarificationStages.Requirement,
-            Round = Math.Clamp(round, 1, 7),
-            Title = "需求澄清（第 " + Math.Clamp(round, 1, 7) + " 轮）",
-            Intro = "请补充以下信息以便进行准确的需求分析。每项可选择「其他」自由输入。",
-            Questions = questions,
-            AllowSkipNonCritical = true,
-        };
+    private static List<ClarificationOption> OptionsWithOther(params (string Id, string Label)[] items)
+    {
+        var opts = items
+            .Where(x => !string.IsNullOrWhiteSpace(x.Label))
+            .Select(x => new ClarificationOption { Id = x.Id, Label = x.Label, FreeText = false })
+            .ToList();
+        opts.Add(new ClarificationOption { Id = "o_other", Label = "其他", FreeText = true });
+        return opts;
     }
 
     private static string EnsureQuestionId(string raw, int index)
@@ -415,34 +464,27 @@ public class RequirementGateService : ITransient
 
     /// <summary>
     /// 构造选项：single/multi 题取 LLM 产出（裁剪到 3-5 + 补"其他"）；
-    /// text 题强制只保留"其他"一项。
+    /// 若选项不足则返回空列表，由调用方跳过该题。
     /// </summary>
     private static List<ClarificationOption> BuildOptions(string type, List<ProposedOption> draft)
     {
+        // text 已在上游升为 multi；此处仍兼容，避免空选项
         if (type == "text")
-        {
-            return new List<ClarificationOption>
-            {
-                new() { Id = "o_other", Label = "其他", FreeText = true },
-            };
-        }
+            type = "multi";
 
         var opts = new List<ClarificationOption>();
         for (var i = 0; i < (draft?.Count ?? 0) && opts.Count < 4; i++)
         {
             var d = draft![i];
             if (string.IsNullOrWhiteSpace(d.Label)) continue;
-            // 跳过 LLM 自己加的"其他"项（下面统一补）
             if (d.FreeText) continue;
             var oid = EnsureOptionId(d.Id, opts.Count);
             opts.Add(new ClarificationOption { Id = oid, Label = d.Label!.Trim(), FreeText = false });
         }
 
-        // 至少要凑够 2 个真实选项（加上"其他"=3，满足下限）
         if (opts.Count < 2)
             return new List<ClarificationOption>();
 
-        // 末项恒为"其他"
         opts.Add(new ClarificationOption { Id = "o_other", Label = "其他", FreeText = true });
         return opts;
     }
@@ -452,6 +494,22 @@ public class RequirementGateService : ITransient
         var id = string.IsNullOrWhiteSpace(raw) ? "" : Regex.Replace(raw.Trim(), @"[^a-zA-Z0-9_]", "");
         return string.IsNullOrEmpty(id) ? $"o{index + 1}" : id;
     }
+
+    // #region agent log
+    private static void AgentDebugLog(string hypothesisId, string location, string message, string dataJson)
+    {
+        try
+        {
+            var line =
+                $"{{\"sessionId\":\"ead5d0\",\"runId\":\"clarify-fix\",\"hypothesisId\":{JsonEsc(hypothesisId)},\"location\":{JsonEsc(location)},\"message\":{JsonEsc(message)},\"data\":{dataJson},\"timestamp\":{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}}}\n";
+            System.IO.File.AppendAllText(@"D:\JNPF-v52\debug-ead5d0.log", line);
+        }
+        catch { /* never break gate */ }
+    }
+
+    private static string JsonEsc(string? s) =>
+        System.Text.Json.JsonSerializer.Serialize(s ?? "");
+    // #endregion
 
     // ═══════════════════════════════════════════════════
     // 多模态图片提取
@@ -483,6 +541,7 @@ public class RequirementGateService : ITransient
             }
             catch (Exception ex)
             {
+                // degradation-ok: 图片附件处理异常 — 非 LLM 调用，单张图片失败不阻断需求门控（错误信息回传给用户）
                 _logger.LogWarning(ex, "图片处理异常: {FileName}", image.FileName);
                 results.Add($"[图片 {image.FileName} 处理异常：{ex.Message}]");
             }
@@ -627,6 +686,11 @@ public class ProposedQuestion
     public string Type { get; set; } = "single"; // single | multi | text
     public bool Required { get; set; } = false;
     public List<ProposedOption> Options { get; set; } = new();
+    public string? ContextHint { get; set; }
+    public string? DefaultOption { get; set; }
+    /// <summary>SINGLE | MULTI | MATRIX_SINGLE | MATRIX_MULTI</summary>
+    public string? QuestionFormat { get; set; }
+    public List<MatrixSubItem>? MatrixSubItems { get; set; }
 }
 
 public class ProposedOption

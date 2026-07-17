@@ -1,0 +1,31 @@
+---
+description: 测试工具选型短指针（Vitest/REST/Playwright/promptfoo）。选测试命令、写断言、E2E 决策时拉取；全文见 openspec / .claude。
+globs:
+  - tests/**
+  - api-tests/**
+  - e2e/**
+  - scripts/**/*e2e*
+  - scripts/**/*test*
+alwaysApply: false
+---
+
+# 测试工具链（短指针）
+
+> **全文：** [`openspec/specs/studio-e2e-toolchain/spec.md`](../../../openspec/specs/studio-e2e-toolchain/spec.md)  
+> **执行手册：** [`.claude/rules/testing-toolchain.md`](../../../.claude/rules/testing-toolchain.md)  
+> **闭环：** `toolchain/auto-test-fix-loop.mdc`
+
+## 核心
+
+1. **快测优先** — `E2E_PIPELINE_ID=<id> pnpm test:api`
+2. **一场景一工具** — 禁新建重复 `.mjs`
+3. **鉴权** — `scripts/lib/jnpf-auth.mjs`；禁手点浏览器登录
+4. **S2 compile** — 日常不需 sa-service
+
+| 要做什么 | 命令 |
+|---|---|
+| API 存活 | `node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser` |
+| 快断言 | `E2E_PIPELINE_ID=311 pnpm test:api` |
+| Token | `node scripts/lib/jnpf-auth.mjs --json` |
+
+详表 → openspec，勿在本文件再堆长表。

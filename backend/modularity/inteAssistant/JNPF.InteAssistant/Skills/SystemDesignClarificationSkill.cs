@@ -238,7 +238,7 @@ public sealed class SystemDesignClarificationSkill : CognitiveSkill, ITransient
                 && el.ValueKind == JsonValueKind.String)
                 return el.GetString() ?? string.Empty;
         }
-        catch (JsonException) { /* 损坏 payload，降级空串 */ }
+        catch (JsonException) { /* 损坏 payload，返回空串（仅文本展示用） */ }
         return string.Empty;
     }
 
@@ -316,19 +316,35 @@ public sealed class SystemDesignClarificationSkill : CognitiveSkill, ITransient
             var response = await _budgetGuard.ExecuteAsync(slot, request, ct);
             if (!response.IsSuccess)
             {
-                _logger.LogWarning("总体设计澄清提问 LLM 失败，降级默认题：{Error}", response.Error);
-                return BuildFallbackSystemDesignClarification();
+                // 硬错误：LLM 失败即抛，禁止兜底默认题
+                throw Oops.Bah($"总体设计澄清问答 LLM 失败/零题: {response.Error ?? "(无错误详情)"} pipeline={context.PipelineId} tenantId={context.TenantId}");
             }
 
             var json = PmSkillService.ExtractJson(response.Content);
-            var draft = JsonSerializer.Deserialize<ClarificationDraft>(json, JsonOptions)
-                ?? new ClarificationDraft();
-            return BuildSystemDesignClarificationSet(draft);
+            ClarificationDraft? draft = null;
+            try
+            {
+                draft = JsonSerializer.Deserialize<ClarificationDraft>(json, JsonOptions);
+            }
+            catch (Exception jex)
+            {
+                throw Oops.Bah($"总体设计澄清问答 LLM 失败/零题: JSON 解析失败 {jex.Message} pipeline={context.PipelineId} tenantId={context.TenantId}");
+            }
+
+            var set = BuildSystemDesignClarificationSet(draft ?? new ClarificationDraft());
+            if (set.Questions.Count == 0)
+            {
+                // 硬错误：LLM 成功但零题也视为失败
+                throw Oops.Bah($"总体设计澄清问答 LLM 失败/零题: LLM 未产出任何有效问题 pipeline={context.PipelineId} tenantId={context.TenantId}");
+            }
+            return set;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException and not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "总体设计澄清提问异常，降级默认题");
-            return BuildFallbackSystemDesignClarification();
+            // 硬错误：异常即抛（FriendlyException 透传，其余包装为业务错误）
+            if (ex is JNPF.FriendlyException.AppFriendlyException) throw;
+            _logger.LogError(ex, "总体设计澄清提问异常 pipeline={PipelineId}", context.PipelineId);
+            throw Oops.Bah($"总体设计澄清问答 LLM 失败/零题: {ex.Message} pipeline={context.PipelineId} tenantId={context.TenantId}");
         }
         finally
         {
@@ -364,7 +380,7 @@ public sealed class SystemDesignClarificationSkill : CognitiveSkill, ITransient
         }
 
         if (questions.Count == 0)
-            return BuildFallbackSystemDesignClarification();
+            throw Oops.Bah("总体设计澄清问答 LLM 失败/零题: LLM 草案未产出任何有效问题");
 
         return new ClarificationSet
         {
@@ -376,66 +392,6 @@ public sealed class SystemDesignClarificationSkill : CognitiveSkill, ITransient
                 ? "以下问题影响总体设计锁定，请逐题确认。每题最后一项为「其他」，可自由补充。"
                 : draft.Intro,
             Questions = questions,
-            AllowSkipNonCritical = true,
-        };
-    }
-
-    /// <summary>LLM 降级时的默认总体设计澄清题。</summary>
-    private static ClarificationSet BuildFallbackSystemDesignClarification()
-    {
-        var other = new ClarificationOption { Id = "o_other", Label = "其他", FreeText = true };
-        return new ClarificationSet
-        {
-            SetId = Guid.NewGuid().ToString("N"),
-            Stage = ClarificationStages.SystemDesign,
-            Round = 1,
-            Title = "总体设计澄清",
-            Intro = "请确认以下总体设计要点，以便锁定系统设计。每题最后一项为「其他」，可自由补充。",
-            Questions = new List<ClarificationQuestion>
-            {
-                new()
-                {
-                    Id = "q1",
-                    Text = "系统预期并发量级？",
-                    Type = "single",
-                    Required = true,
-                    Options = new List<ClarificationOption>
-                    {
-                        new() { Id = "o1", Label = "低（<100 并发）" },
-                        new() { Id = "o2", Label = "中（100-1000 并发）" },
-                        new() { Id = "o3", Label = "高（>1000 并发）" },
-                        other,
-                    },
-                },
-                new()
-                {
-                    Id = "q2",
-                    Text = "与外部系统的集成方式？",
-                    Type = "multi",
-                    Required = true,
-                    Options = new List<ClarificationOption>
-                    {
-                        new() { Id = "o1", Label = "REST API" },
-                        new() { Id = "o2", Label = "消息队列" },
-                        new() { Id = "o3", Label = "数据库直连/ETL" },
-                        other,
-                    },
-                },
-                new()
-                {
-                    Id = "q3",
-                    Text = "部署拓扑？",
-                    Type = "single",
-                    Required = false,
-                    Options = new List<ClarificationOption>
-                    {
-                        new() { Id = "o1", Label = "单机部署" },
-                        new() { Id = "o2", Label = "集群（无状态 + 负载均衡）" },
-                        new() { Id = "o3", Label = "容灾（主备/多活）" },
-                        other,
-                    },
-                },
-            },
             AllowSkipNonCritical = true,
         };
     }

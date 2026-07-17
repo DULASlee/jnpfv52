@@ -33,7 +33,7 @@ function resolvePipelineId() {
     if (fs.existsSync(STATE_FILE))
       return Number(JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')).pipelineId || 0);
   } catch { /* ignore */ }
-  return 311; // 默认回归基准
+  return 0; // 必须通过 E2E_PIPELINE_ID 环境变量显式指定
 }
 
 function log(tag, id, detail) {

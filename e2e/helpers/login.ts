@@ -10,7 +10,7 @@ const PASSWORD = process.env.JNPF_PASSWORD || '123456';
  * 保留 getByRole fallback 以兼容未部署新前端的旧环境。
  */
 export async function loginAsAdmin(page: Page) {
-  await page.goto('/#/login', { waitUntil: 'domcontentloaded' });
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
 
   // ① data-testid 优先
   const accountInput = page.getByTestId('login-account-input');
@@ -30,7 +30,7 @@ export async function loginAsAdmin(page: Page) {
   await acct.fill(ACCOUNT);
   await pwd.fill(PASSWORD);
   await submit.click();
-  await page.waitForURL(/\/(home|workStation|dashboard|studio)/, { timeout: 30_000 }).catch(() => {});
+  await page.waitForURL(/\/(home|workStation|dashboard|studio)/, { timeout: 30_000 });
 }
 
 /**
@@ -38,7 +38,7 @@ export async function loginAsAdmin(page: Page) {
  */
 export async function openSubmitRequirement(page: Page, pipelineId?: number) {
   const q = pipelineId ? `?pipelineId=${pipelineId}` : '';
-  await page.goto(`/#/studio/ai/submit-requirement${q}`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`/studio/ai/submit-requirement${q}`, { waitUntil: 'domcontentloaded' });
 
   // ① data-testid 优先
   const textarea = page.getByTestId('submit-requirement-textarea');

@@ -27,4 +27,5 @@ description: 进入 Architect 角色（收到新需求、设计架构、产出 a
 - **需求提取清单**为空不得推进 Planner
 - **[FRAME] 方案不得当 [KNOWN] 承诺**；虚构 JNPF 能力 = 违规
 - **方案最低要求**：≥2 方案 + "不做/零代码"备选 + 每方案 `failure_boundary`
+- **ADF P1：** 架构产出对齐 `.cursor/templates/adf-architecture.md`；推荐方案未经用户「继续」不得进入 P2/编码
 - **B0 业务优先**：无业务锚定的架构 = 瞎折腾（Infrastructure-only 须标注「基建债」）

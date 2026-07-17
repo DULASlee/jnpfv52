@@ -1,0 +1,27 @@
+---
+description: 自动测试修复闭环 L1–L5 — 禁手点浏览器、失败重跑。跑 Dev Loop / API 验证时拉取。
+alwaysApply: false
+---
+
+# 自动测试 · 自动修复闭环（短）
+
+> 选型详表：`testing-toolchain.mdc` → openspec `studio-e2e-toolchain`。
+
+## 铁律
+
+| # | 规则 |
+|---|---|
+| L1 | 禁手点浏览器登录 — `scripts/lib/jnpf-auth.mjs` |
+| L2 | 登录端点 `POST /api/oauth/Login`（不是 `/api/auth/login`） |
+| L3 | 改代码后必须跑验证，禁止「应该可以」 |
+| L3a | 快测优先：`pnpm test:api` |
+| L4 | 失败 → 修 → **重跑同一命令**（≤3 轮） |
+| L5 | ≥3 次无效 / >10min → 数据驱动调试，停盲改 |
+
+## 默认闭环
+
+```
+dotnet build
+→ node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser
+→ E2E_PIPELINE_ID=<id> pnpm test:api
+```

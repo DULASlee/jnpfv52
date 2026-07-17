@@ -25,8 +25,11 @@
  * ```
  */
 
-import { defineAsyncComponent, Component, h, ref, Ref } from 'vue';
+import { defineAsyncComponent, defineComponent, Component, h, ref, Ref } from 'vue';
 import { Spin } from 'ant-design-vue';
+
+/** 开发态 Vite 首次编译重型 chunk 较慢；生产保持快速失败 */
+const DEFAULT_LAZY_TIMEOUT = import.meta.env.DEV ? 120_000 : 10_000;
 
 // ── 轻量级加载占位 ──
 const DefaultLoadingComponent = {
@@ -70,7 +73,7 @@ interface LazyOptions {
   moduleName: string;
   /** 自定义加载中组件 */
   loadingComponent?: Component;
-  /** 加载超时时间（ms），超时后触发 errorComponent，默认 30000 */
+  /** 加载超时时间（ms），超时后触发 errorComponent；开发态默认 120s，生产 10s */
   timeout?: number;
   /** 是否延迟加载（ms），默认 0 表示立即开始加载 */
   delay?: number;
@@ -92,7 +95,7 @@ export type { LazyComponentResult };
 export function useLazyComponent(loader: () => Promise<Record<string, any>>, moduleOrOptions: string | LazyOptions): LazyComponentResult {
   const opts: LazyOptions = typeof moduleOrOptions === 'string' ? { moduleName: moduleOrOptions } : moduleOrOptions;
 
-  const { moduleName, loadingComponent, timeout = 10000, delay = 0 } = opts;
+  const { moduleName, loadingComponent, timeout = DEFAULT_LAZY_TIMEOUT, delay = 0 } = opts;
 
   // 从 loader 的 toString 中提取文件路径用于错误定位
   const componentPath = extractPath(loader);
@@ -101,11 +104,18 @@ export function useLazyComponent(loader: () => Promise<Record<string, any>>, mod
   const isLoaded = ref(false);
   const isLoading = ref(false);
   const loadPromise = ref<Promise<Record<string, any>> | null>(null);
+  /** 仅 prefetch / openModal / load 时才挂载异步组件，避免进页并行拉取多个重型 chunk */
+  const shouldMount = ref(false);
 
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
+  function ensureMount() {
+    shouldMount.value = true;
+  }
+
   /** 开始加载（幂等 — 多次调用只触发一次加载） */
   function triggerLoad(): Promise<Record<string, any>> {
+    ensureMount();
     if (isLoaded.value) return Promise.resolve({} as Record<string, any>);
     if (loadPromise.value) return loadPromise.value;
 
@@ -157,9 +167,17 @@ export function useLazyComponent(loader: () => Promise<Record<string, any>>, mod
     errorComponent: createErrorComponent(moduleName, componentPath),
     delay: 0, // 由 triggerLoad 内部处理延迟
     timeout,
-    onError(error, retry, fail) {
+    onError(error, _retry, fail) {
       console.error(`[LazyComponent] 重试失败，放弃加载 | Module: ${moduleName} | Path: ${componentPath}`, '\n  最终错误:', error);
       fail();
+    },
+  });
+
+  const component = defineComponent({
+    name: `LazyDeferred_${moduleName.replace(/\W+/g, '_')}`,
+    inheritAttrs: true,
+    setup(_props, { attrs, slots }) {
+      return () => (shouldMount.value ? h(asyncComp, attrs, slots) : null);
     },
   });
 
@@ -175,7 +193,7 @@ export function useLazyComponent(loader: () => Promise<Record<string, any>>, mod
   }
 
   return {
-    component: asyncComp,
+    component,
     isLoaded,
     prefetch,
     load,

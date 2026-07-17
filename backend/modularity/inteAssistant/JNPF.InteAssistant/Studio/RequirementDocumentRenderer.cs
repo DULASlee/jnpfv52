@@ -39,7 +39,14 @@ public interface IRequirementDocumentRenderer
 }
 
 /// <summary>02 附录：用户澄清作答摘要。</summary>
-public sealed record ClarificationAnswerAppendix(string Stage, int Round, string AnswersText);
+public sealed record ClarificationAnswerAppendix(string Stage, int Round, string AnswersText)
+{
+    /// <summary>
+    /// Gap 3：跨轮次去重标记。<see langword="null"/> = 未被后续轮次涵盖；
+    /// 非 null = 该轮答案已被第 N 轮覆盖（N 为 1-based 轮次号）。
+    /// </summary>
+    public int? ResolvedByLaterRound { get; init; }
+}
 
 public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, ITransient
 {
@@ -729,10 +736,26 @@ public sealed class RequirementDocumentRenderer : IRequirementDocumentRenderer, 
 
         foreach (var item in clarificationAnswers.OrderBy(x => x.Round).ThenBy(x => x.Stage, StringComparer.Ordinal))
         {
-            sb.AppendLine($"#### 第 {item.Round} 轮（`{Esc(item.Stage)}`）");
-            sb.AppendLine();
-            sb.AppendLine(string.IsNullOrWhiteSpace(item.AnswersText) ? "（空）" : item.AnswersText.Trim());
-            sb.AppendLine();
+            if (item.ResolvedByLaterRound.HasValue)
+            {
+                // Gap 3：被后续轮次涵盖 → 折叠标注
+                sb.AppendLine($"#### 第 {item.Round} 轮（`{Esc(item.Stage)}`）— 已涵盖于第 {item.ResolvedByLaterRound.Value} 轮");
+                sb.AppendLine();
+                sb.AppendLine("<details>");
+                sb.AppendLine("<summary>展开查看原文</summary>");
+                sb.AppendLine();
+                sb.AppendLine(string.IsNullOrWhiteSpace(item.AnswersText) ? "（空）" : item.AnswersText.Trim());
+                sb.AppendLine();
+                sb.AppendLine("</details>");
+                sb.AppendLine();
+            }
+            else
+            {
+                sb.AppendLine($"#### 第 {item.Round} 轮（`{Esc(item.Stage)}`）");
+                sb.AppendLine();
+                sb.AppendLine(string.IsNullOrWhiteSpace(item.AnswersText) ? "（空）" : item.AnswersText.Trim());
+                sb.AppendLine();
+            }
         }
     }
 

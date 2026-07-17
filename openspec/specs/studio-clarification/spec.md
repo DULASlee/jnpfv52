@@ -1,9 +1,15 @@
 # studio-clarification
 
 > **状态**：draft（P1+P2+P3 已实现，待运行时验证）
-> **日期**：2026-07-06
+> **日期**：2026-07-06（**2026-07-17** 新 PM 4 步续跑 delta 见 `openspec/changes/20260717-pm-pipeline-clarification-resume/`）
 > **适用版本**：JNPF v5.2
 > **一句话描述**：需求分析 / 架构设计 / 总体设计三阶段的交互式澄清问答系统，LLM 产出结构化选择题让用户逐条细化需求，关键题硬门控推进流程，完整 IR 事件化可审计回放。
+
+## Changelog（待 archive 合并）
+
+| 日期 | 变更 |
+|------|------|
+| 2026-07-17 | 新 PM 4 步主链：`ClarificationAnswered` 后续跑步骤③；deepen 改 `forceQuestions` 出题；SSE heartbeat。Change 包：`openspec/changes/20260717-pm-pipeline-clarification-resume/` |
 
 ## 1. 架构概览
 

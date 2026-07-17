@@ -313,7 +313,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
         var sw = Stopwatch.StartNew();
         var model = request.ModelCode ?? string.Empty;
 
-        // Node-4: 构建 N 级 Provider 降级链
+        // Node-4: 构建 N 级 Provider 故障转移链
         var chain = BuildProviderChain(request.ProviderCode.Length > 0 ? request.ProviderCode : null);
         var originalProvider = chain.FirstOrDefault().Name ?? _defaultProvider;
 
@@ -358,7 +358,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
             if (_circuitBreaker.CheckAndTransition(providerName))
             {
                 // 显式指定的 primary（如门控 SemanticProvider=deepseek）允许强制探测一次，
-                // 避免「熔断跳过 + 降级链 Key 失效」直接 GATE_LLM_ERR。
+                // 避免「熔断跳过 + 故障转移链 Key 失效」直接 GATE_LLM_ERR。
                 var isExplicitPrimary = chainIdx == 0
                     && !string.IsNullOrWhiteSpace(request.ProviderCode)
                     && string.Equals(providerName, request.ProviderCode, StringComparison.OrdinalIgnoreCase);
@@ -434,16 +434,16 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
                 }
             }
 
-            // 降级审计
+            // 故障转移审计
             if (isFallback)
             {
-                _logger.LogWarning("LLM降级: {From}→{To}（L{Level}）",
+                _logger.LogWarning("LLM故障转移: {From}→{To}（L{Level}）",
                     originalProvider, providerName, chainIdx);
                 await WriteCallLogAsync(providerName, resolvedModel,
                     JsonSerializer.Serialize(request.Messages), string.Empty,
                     0, 0, 0, 0, false,
-                    $"L{chainIdx}降级触发", chainIdx, originalProvider, providerName,
-                    $"L{chainIdx}降级: {originalProvider}→{providerName}");
+                    $"L{chainIdx}故障转移触发", chainIdx, originalProvider, providerName,
+                    $"L{chainIdx}故障转移: {originalProvider}→{providerName}");
             }
 
             for (int retry = 0; retry < maxRetries; retry++)
@@ -503,7 +503,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
                         // Fix-7: JSON 自动修复标记写入审计日志
                         var fallbackReason = jsonWasFixed
                             ? "json_auto_fixed"
-                            : (isFallback ? $"L{chainIdx}降级成功" : null);
+                            : (isFallback ? $"L{chainIdx}故障转移成功" : null);
                         if (jsonWasFixed)
                         {
                             _logger.LogWarning("LLM JSON 自动修复已生效 Provider={Provider} Model={Model}",
@@ -591,6 +591,10 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
         var branchTasks = schedule.Select((temperature, index) => RunBranchAsync(request, index, temperature, ct));
         var candidates = (await Task.WhenAll(branchTasks)).ToList();
 
+        // 注意：ToT 高温分支失败是预期行为（高温采样偶发劣化）。
+        // 只要任意分支成功即整体 IsSuccess=true；只有全部分支失败才视为硬错误并报错。
+        // 此处不属于"兜底"，是多分支采样的合法部分成功语义——上层 BudgetGuardTreeSearch
+        // 已实现 !Any(IsSuccess) → throw Oops.Bah 的硬错误路径。
         var anySuccess = candidates.Any(c => c.IsSuccess);
         return new TreeSearchResult
         {
@@ -606,7 +610,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
     private async Task<TreeSearchCandidate> RunBranchAsync(
         TreeSearchRequest request, int branchIndex, double temperature, CancellationToken ct)
     {
-        // 每路走标准 ChatAsync：独立审计入 BASE_AI_CALL_LOG、独立重试/降级
+        // 每路走标准 ChatAsync：独立审计入 BASE_AI_CALL_LOG、独立重试/故障转移
         var response = await ChatAsync(new ChatCompletionRequest
         {
             ProviderCode = request.ProviderCode,
@@ -634,11 +638,11 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
         };
     }
 
-    // ─── I-07: 5 级降级链（配置化）───
+    // ─── I-07: 5 级故障转移链（配置化）───
 
     /// <summary>
-    /// 按 LLM 降级链顺序依次尝试调用（I-07 裁决 · v2.1）。
-    /// 读取配置 "LlmGateway:Providers" 数组，按 Level 排序后逐级降级。
+    /// 按 LLM 故障转移链顺序依次尝试调用（I-07 裁决 · v2.1）。
+    /// 读取配置 "LlmGateway:Providers" 数组，按 Level 排序后逐级故障转移。
     /// Node-4 重构：委托给 ChatAsync 统一路径，自身退化为薄包装。
     /// </summary>
     public async Task<ChatCompletionResponse> ChatWithLevelFallbackAsync(
@@ -659,7 +663,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
     }
 
     /// <summary>
-    /// 从配置 "LlmGateway:Providers" 加载降级链，按 Level 排序。
+    /// 从配置 "LlmGateway:Providers" 加载故障转移链，按 Level 排序。
     /// 配置示例（appsettings.json）：
     /// "LlmGateway": { "Providers": [
     ///   {"Name":"mimo","Model":"mimo-v2.5-pro","Level":0,"MaxRetries":3,"TimeoutSeconds":60},
@@ -678,7 +682,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
             .ToList();
     }
 
-    /// <summary>默认降级链（从配置读取模型名，无配置时使用通用回退）</summary>
+    /// <summary>默认故障转移链（从配置读取模型名，无配置时使用通用回退）</summary>
     private List<LlmProviderLevelConfig> DefaultLevelChain()
     {
         EnsureProvidersLoaded();
@@ -729,12 +733,12 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
     }
 
     /// <summary>
-    /// GAP-4: 带降级重试的流式连接建立
+    /// GAP-4: 带故障转移重试的流式连接建立
     /// </summary>
     private async Task<(Stream? Stream, string? Error)> TryCreateStreamAsync(
         ChatCompletionRequest request, CancellationToken ct)
     {
-        // Node-4: 构建 N 级 Provider 降级链
+        // Node-4: 构建 N 级 Provider 故障转移链
         var chain = BuildProviderChain(request.ProviderCode.Length > 0 ? request.ProviderCode : null);
         var originalProvider = chain.FirstOrDefault().Name ?? _defaultProvider;
         var maxRetries = request.MaxRetries > 0 ? request.MaxRetries : 3;
@@ -780,7 +784,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
 
             if (isFallback)
             {
-                _logger.LogWarning("LLM Stream降级: {From}→{To}",
+                _logger.LogWarning("LLM Stream故障转移: {From}→{To}",
                     originalProvider, providerName);
             }
 
@@ -833,7 +837,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
                         JsonSerializer.Serialize(requestBody), "",
                         0, 200, 0, 0, true, null,
                         chainIdx, originalProvider, providerName,
-                        isFallback ? $"Stream L{chainIdx}降级成功" : null);
+                        isFallback ? $"Stream L{chainIdx}故障转移成功" : null);
 
                     return (await response.Content.ReadAsStreamAsync(ct), null);
                 }
@@ -914,6 +918,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
         }
         catch (Exception ex)
         {
+            // degradation-ok: Health check — 返回 false 表示 provider 不健康（健康状态报告，非 LLM 降级）
             _logger.LogWarning(ex, "Health check failed for provider {Provider}", providerCode);
             return false;
         }
@@ -940,7 +945,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
     // ─── Private Helpers ───
 
     /// <summary>
-    /// 构建有序 Provider 降级链（最多 N 级）。
+    /// 构建有序 Provider 故障转移链（最多 N 级）。
     /// request.ProviderCode 指定时作为 primary，其余从配置链补充。
     /// </summary>
     private List<(string Name, string? Model)> BuildProviderChain(string? requestedProvider)
@@ -950,7 +955,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
         bool IsUsable(string name)
         {
             if (!Providers.TryGetValue(name, out var p)) return false;
-            // 本地/ollama 允许空 Key；云厂商空 Key 只会空转 401，污染降级链
+            // 本地/ollama 允许空 Key；云厂商空 Key 只会空转 401，污染故障转移链
             if (string.Equals(p.ApiFormat, "ollama", StringComparison.OrdinalIgnoreCase)) return true;
             return !string.IsNullOrWhiteSpace(p.ApiKey);
         }
@@ -1029,7 +1034,19 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
         }
         catch (Exception ex)
         {
-            return (null, null, ex.Message);
+            var detail = ex.Message;
+            if (ex.InnerException != null)
+                detail = $"{ex.Message} | inner={ex.InnerException.GetType().Name}:{ex.InnerException.Message}";
+            // #region agent log
+            try
+            {
+                var line =
+                    $"{{\"sessionId\":\"ead5d0\",\"runId\":\"llm-send\",\"hypothesisId\":\"E\",\"location\":\"LlmGatewayService.SendSingleProviderRequestAsync\",\"message\":\"provider send failed\",\"data\":{{\"baseUrl\":{System.Text.Json.JsonSerializer.Serialize(provider.BaseUrl)},\"model\":{System.Text.Json.JsonSerializer.Serialize(model)},\"error\":{System.Text.Json.JsonSerializer.Serialize(detail)},\"exType\":{System.Text.Json.JsonSerializer.Serialize(ex.GetType().Name)}}},\"timestamp\":{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}}}\n";
+                System.IO.File.AppendAllText(@"D:\JNPF-v52\debug-ead5d0.log", line);
+            }
+            catch { /* never break LLM */ }
+            // #endregion
+            return (null, null, detail);
         }
     }
 
@@ -1055,6 +1072,12 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
                 ["temperature"] = request.Temperature,
                 ["messages"] = messages
             };
+            // DeepSeek V4 默认 thinking=enabled，会把 max_tokens 预算耗在 thinking 上，
+            // JSON 结构化输出（门控/PM ToT）必须显式关闭，否则 CompletionTokens 打满仍无 text 块。
+            if (string.Equals(request.ResponseFormat, "json", StringComparison.OrdinalIgnoreCase))
+            {
+                body["thinking"] = new Dictionary<string, object> { ["type"] = "disabled" };
+            }
             return (body, $"{provider.BaseUrl}/v1/messages");
         }
         else
@@ -1081,6 +1104,8 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
             if (request.ResponseFormat == "json")
             {
                 body["response_format"] = new { type = "json_object" };
+                // DeepSeek OpenAI 兼容面同样默认 thinking=on
+                body["thinking"] = new Dictionary<string, object> { ["type"] = "disabled" };
             }
 
             return (body, $"{provider.BaseUrl}/chat/completions");
@@ -1202,23 +1227,27 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
             }
 
             _logger.LogError(ex, "Failed to parse LLM response: {Body}", body.Length > 500 ? body[..500] : body);
+            // 网关层硬错误：JSON 解析失败标记 IsSuccess=false，让上层 !IsSuccess 检查生效（禁止伪成功兜底）
             return (new ChatCompletionResponse
             {
                 Content = body,
                 ModelUsed = model,
                 LatencyMs = (int)latencyMs,
-                IsSuccess = true  // 即使解析失败也返回原始内容
+                IsSuccess = false,
+                Error = "LLM 响应 JSON 解析失败: " + ex.Message + " body[0..500]=" + body[..Math.Min(500, body.Length)]
             }, wasFixed);  // Fix-7: wasFixed 可能为 true（修复后递归解析仍失败）
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to parse LLM response: {Body}", body.Length > 500 ? body[..500] : body);
+            // 网关层硬错误：异常标记 IsSuccess=false，让上层 !IsSuccess 检查生效（禁止伪成功兜底）
             return (new ChatCompletionResponse
             {
                 Content = body,
                 ModelUsed = model,
                 LatencyMs = (int)latencyMs,
-                IsSuccess = true  // 即使解析失败也返回原始内容
+                IsSuccess = false,
+                Error = "LLM 响应解析异常: " + ex.Message + " body[0..500]=" + body[..Math.Min(500, body.Length)]
             }, false);
         }
     }
@@ -1251,7 +1280,7 @@ public class LlmGatewayService : ILlmGatewayService, ITransient
                 ProjectId = audit?.ProjectId,
                 // 三元组血缘:PipelineId 从 audit 透传
                 PipelineId = audit?.PipelineId ?? "",
-                // GAP-3: 降级审计字段
+                // GAP-3: 故障转移审计字段
                 Fallback = fallback,
                 OriginalModel = originalModel,
                 ActualModel = actualModel,
@@ -1318,7 +1347,7 @@ internal class ProviderConfig
 }
 
 /// <summary>
-/// LLM 降级链 Provider 配置（I-07 裁决 · 从 LlmGateway:Providers 读取）。
+/// LLM 故障转移链 Provider 配置（I-07 裁决 · 从 LlmGateway:Providers 读取）。
 /// </summary>
 internal class LlmProviderLevelConfig
 {

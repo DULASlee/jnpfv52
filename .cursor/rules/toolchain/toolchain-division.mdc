@@ -1,0 +1,18 @@
+---
+description: OpenSpec=知识库；Superpowers=开发推进；Serena=C# 符号。工具职责混淆时拉取。
+alwaysApply: false
+---
+
+# 工具链职责（短）
+
+| 工具 | 唯一职责 |
+|---|---|
+| testing-toolchain / openspec e2e | 测什么、用什么命令 |
+| OpenSpec `openspec/specs/` | 知识库归档（禁 `/opsx:apply` 驱动编码） |
+| Superpowers `.cursor/skills/` | plan → execute → verify |
+| Serena | C# 符号级改动（不写前端） |
+| jnpf-api-cli | 无浏览器 API |
+| episodic-memory | 跨会话 WHY |
+| 针式搜索 | `needle-search.mdc` — 先窄后宽 · 并行≤3 |
+
+搜索卡死 → `@needle-search`。详规勿在此文件膨胀。

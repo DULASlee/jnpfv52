@@ -68,11 +68,9 @@ public class SemanticFitnessValidator : ITransient
                 MaxTokens = 3000,
                 Temperature = 0.1,
                 ResponseFormat = "json",
-                // ★ 收紧重试预算：语义评估是门控前置步骤，不应吞掉整个 5min 后台预算
-                //   单次 30s × 1 次（无 fallback 自循环）= 最坏 30s 内 fail-closed 返回
-                //   原值 MaxRetries=2 + TimeoutMs=45000 在 LLM 故障时最坏耗 ~3min，逼近后台超时
-                MaxRetries = 1,
-                TimeoutMs = 30000
+                // 大附件评估：给 primary（deepseek）足够瞬时重试；勿 1 次失败就掉进失效 fallback
+                MaxRetries = 3,
+                TimeoutMs = 90_000
             }, ct);
 
             if (!response.IsSuccess)

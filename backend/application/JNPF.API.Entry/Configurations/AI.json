@@ -26,8 +26,8 @@
                 "ApiFormat": "ollama"
             }
         },
-        "DefaultProvider": "mimo",
-        "FallbackProvider": "deepseek",
+        "DefaultProvider": "deepseek",
+        "FallbackProvider": "mimo",
 
         "CircuitBreaker": {
             "FailureThreshold": 5,
@@ -45,15 +45,15 @@
             "analyst-skill": "deepseek",
             "requirement-gate": "deepseek",
             "pspec-enhance": "deepseek",
-            "confirm": "mimo"
+            "confirm": "deepseek"
         },
 
         "TimeoutMs": {
-            "Default": 60000,
-            "requirement-gate": 30000,
-            "pm-skill": 90000,
-            "pspec-enhance": 60000,
-            "confirm": 45000
+            "Default": 90000,
+            "requirement-gate": 90000,
+            "pm-skill": 120000,
+            "pspec-enhance": 90000,
+            "confirm": 60000
         },
 
         "Pipeline": {

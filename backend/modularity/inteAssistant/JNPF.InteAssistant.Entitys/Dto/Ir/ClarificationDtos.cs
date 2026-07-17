@@ -174,3 +174,85 @@ public record AnswerClarificationResult
     /// </summary>
     public string NextAction { get; init; } = "re-evaluate";
 }
+
+// ════════════════════════════════════════════════════════════════
+// CR-20260713-03：PM 核心流程重构 — 4 步线性（回归"完善需求"初衷）
+//
+// 对话式追问 + 需求完善结果 DTO。取代旧 ClarificationSet 的"固定 3 题结构化选择题"，
+// 改为 PM 像顾问一样自然语言追问关键不确定点（0~N 次）。
+// ════════════════════════════════════════════════════════════════
+
+/// <summary>
+/// 对话式追问来源（步骤①完善 / 步骤③二次完善 / 步骤④用户反馈）。
+/// </summary>
+public enum ClarificationSource
+{
+    /// <summary>步骤① EnhanceRequirement 期间的追问。</summary>
+    Step1Enhance,
+
+    /// <summary>步骤③ RefineFromAnalysis 期间的追问。</summary>
+    Step3Refine,
+
+    /// <summary>步骤④ 用户对需求说明书反馈触发的追问（罕见，通常是用户直接给反馈）。</summary>
+    Step4Feedback,
+}
+
+/// <summary>
+/// 一轮对话式追问（PM 自然语言提问 + 用户回答）。
+/// 取代旧 ClarificationSet 的结构化选择题 —— 现在是顾问式自然对话。
+/// </summary>
+public record PmClarificationTurn
+{
+    /// <summary>追问轮次唯一标识（UUID）。</summary>
+    public string TurnId { get; init; } = Guid.NewGuid().ToString("N");
+
+    /// <summary>PM 用自然语言提出的关键问题（一次只问一个最关键的不确定点）。</summary>
+    public string Question { get; init; } = string.Empty;
+
+    /// <summary>用户回答（首轮发出时为空，用户作答后回灌）。</summary>
+    public string? UserAnswer { get; init; }
+
+    /// <summary>追问来源（步骤①/③/④）。</summary>
+    public ClarificationSource Source { get; init; } = ClarificationSource.Step1Enhance;
+
+    /// <summary>PM 为什么认为这个问题关键（简述，供审计）。</summary>
+    public string? QuestionReason { get; init; }
+}
+
+/// <summary>
+/// 步骤① EnhanceRequirement 的返回结果。
+/// 两种状态：completed（需求已完善，可进入步骤②）或 pending_question（需追问用户）。
+/// </summary>
+public record RequirementEnhanceResult
+{
+    /// <summary>状态：completed | pending_question。</summary>
+    public string Status { get; init; } = "completed";
+
+    /// <summary>完善后的需求文本（status=completed 时有效，markdown 格式）。</summary>
+    public string EnhancedText { get; init; } = string.Empty;
+
+    /// <summary>本次补全了哪些方面（status=completed 时有效，供审计）。</summary>
+    public IReadOnlyList<string> CompletenessNotes { get; init; } = Array.Empty<string>();
+
+    /// <summary>召回的种子 ID（行业惯例来源，供审计）。</summary>
+    public IReadOnlyList<long> SeedIds { get; init; } = Array.Empty<long>();
+
+    /// <summary>已发生的追问轮次（含本轮）。</summary>
+    public int ClarificationTurns { get; init; }
+
+    /// <summary>待追问的问题（status=pending_question 时有效）。</summary>
+    public string PendingQuestion { get; init; } = string.Empty;
+
+    /// <summary>为什么这个问题关键（status=pending_question 时有效）。</summary>
+    public string QuestionReason { get; init; } = string.Empty;
+
+    /// <summary>目前已完善的部分（status=pending_question 时有效，供下一轮继续）。</summary>
+    public string PartialEnhancement { get; init; } = string.Empty;
+
+    /// <summary>
+    /// CR-20260714-01 改动2（铁律2）：PM 一次出题 — pending_question 时直接携带选择题集，
+    /// 编排器无需二次调 GenerateClarificationAsync。PM 在同一次 LLM 调用内产题。
+    /// </summary>
+    public ClarificationSet? PendingClarificationSet { get; init; }
+}
+

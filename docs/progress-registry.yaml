@@ -1,14 +1,26 @@
 # JNPF V5.2 Progress Registry
 # Canonical reference for all completed milestones and current state.
 
-version: "8.25"
-last_updated: "2026-07-11"
-current_phase: "30号 v2.3：§0.11 各阶段业务功能目标已钉死；SG2 ① 待按 §0.11.2 深检"
+version: "8.26"
+last_updated: "2026-07-17"
+current_phase: "阶段 C — PM 新流程澄清续跑已修；待用户全路径复验"
 current_focus:
-  - "§0.11 为支柱①唯一业务能力清单；开工前必读（M035）"
-  - "SG2-T9 ① 仍打回：按 §0.11.2 五条判据深检，E1/E2 不顶替"
-  - "禁抢跑 SG3/SG4"
-  next_gate: "SG2 ① 按 §0.11.2 深检通过 → 四大支柱审批 → 重做 SG3"
+  - "PM 4 步：门控→骨架→九步→步骤③→结构化澄清≥2轮→说明书确认"
+  - "2026-07-17 修复：deepen 专用出题 + ClarificationAnswered 续跑步骤③"
+  - "OpenSpec change: openspec/changes/20260717-pm-pipeline-clarification-resume/"
+  next_gate: "用户答题后见第2轮题或说明书确认 → claim → 阶段 C 下一缺口"
+
+session_log:
+  - date: "2026-07-17"
+    topic: "PM 需求分析流水线卡死与澄清续跑"
+    outcomes:
+      - "诊断：SA 九步 C# 编译正常；卡点在步骤③ LLM 与 deepen 循环"
+      - "修复：forceQuestions 专用出题；结构化澄清作答后续跑步骤③"
+      - "修复：SSE 15s heartbeat；E2E History 登录路由"
+      - "证据：.claude/evidence/e2e-pm-clarification-after-fix.png"
+    verify: "dotnet build InteAssistant && dotnet test … --filter FullyQualifiedName~Pm"
+    openspec: "openspec/changes/20260717-pm-pipeline-clarification-resume/"
+    episodic_project_id: "D--JNPF-v52"
 
 s2_requirement_analysis_refactor:
   status: docs_aligned

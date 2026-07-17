@@ -20,6 +20,7 @@ namespace JNPF.InteAssistant.Skills;
 /// </summary>
 public sealed class PmSkillService : CognitiveSkill, ITransient
 {
+    /// <summary>ToT 分支数默认上限（实际值由 GenerateSkeletonViaTotAsync 按需求文本长度动态计算，最少2分支）。</summary>
     private const int TotBranchCount = 3;
     /// <summary>与 LlmCallPolicy["pm-skill"].MaxTokensPerCall 对齐；需覆盖大型 IR-0 JSON。</summary>
     private const int TotMaxTokens = 16384;
@@ -233,18 +234,9 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
 
         if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
         {
-            _logger.LogWarning(
-                "pm-skill EnhanceRequirement LLM 失败 tenant={TenantId} project={ProjectId} pipeline={PipelineId}: {Error}",
-                context.TenantId, context.ProjectId, context.PipelineId, response.Error);
-            // LLM 失败 → 降级：直接用原始需求作为 EnhancedText（不阻断流程，但记录警告）
-            return new RequirementEnhanceResult
-            {
-                Status = "completed",
-                EnhancedText = retrievalText,
-                CompletenessNotes = new[] { "LLM 完善失败，降级使用原始需求" },
-                SeedIds = seeds.Select(s => s.CaseId).ToList(),
-                ClarificationTurns = previousTurns?.Count ?? 0,
-            };
+            throw Oops.Bah(
+                $"PM Skill EnhanceRequirement LLM 调用失败: {response.Error ?? "(无错误详情)"}" +
+                $" pipeline={context.PipelineId} tenantId={context.TenantId}");
         }
 
         var parsed = ParseEnhanceResponse(response.Content, retrievalText, seeds, previousTurns?.Count ?? 0);
@@ -338,17 +330,12 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
                 ClarificationTurns = turnCount,
             };
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            // JSON 解析失败 → 降级使用原始需求（不阻断流程）
-            return new RequirementEnhanceResult
-            {
-                Status = "completed",
-                EnhancedText = fallbackText,
-                CompletenessNotes = new[] { "LLM 响应 JSON 解析失败，降级使用原始需求" },
-                SeedIds = seeds.Select(s => s.CaseId).ToList(),
-                ClarificationTurns = turnCount,
-            };
+            throw Oops.Bah(
+                $"PM Skill EnhanceRequirement LLM 响应 JSON 解析失败: {ex.Message}" +
+                $" content[0..200]={(content.Length > 200 ? content[..200] : content)}",
+                ex);
         }
     }
 
@@ -634,16 +621,9 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
 
         if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
         {
-            _logger.LogWarning(
-                "pm-skill RefineFromAnalysis LLM 失败，保留步骤①文本 tenant={TenantId} pipeline={PipelineId}: {Error}",
-                context.TenantId, context.PipelineId, response.Error);
-            return new RequirementEnhanceResult
-            {
-                Status = "completed",
-                EnhancedText = enhancedText,
-                CompletenessNotes = new[] { "步骤③ LLM 失败，降级使用步骤①文本" },
-                ClarificationTurns = previousTurns?.Count ?? 0,
-            };
+            throw Oops.Bah(
+                $"PM Skill RefineFromAnalysis 步骤③ LLM 调用失败: {response.Error ?? "(无错误详情)"}" +
+                $" pipeline={context.PipelineId} tenantId={context.TenantId}");
         }
 
         var parsed = ParseRefineResponse(response.Content, enhancedText, previousTurns?.Count ?? 0);
@@ -654,6 +634,108 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             parsed.CompletenessNotes.Count);
 
         return parsed;
+    }
+
+    /// <summary>
+    /// CR-20260714-01 改动4（真流式）+ 改动2（一次出题）的步骤③流式版。
+    /// 协议与 EnhanceRequirementStreamAsync 一致：markdown 正文流式 + 可选 ===META=== JSON 尾部追问。
+    /// </summary>
+    public async Task<RequirementEnhanceResult> RefineFromAnalysisStreamAsync(
+        SkillContext context,
+        string enhancedText,
+        SaNineViewCompileResult compileResult,
+        IReadOnlyList<string> warnings,
+        IReadOnlyList<PmClarificationTurn>? previousTurns,
+        Func<string, CancellationToken, Task> onToken,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var turnsText = BuildClarificationTurnsText(previousTurns);
+        var analysis = BuildNineViewAnalysisBrief(compileResult, warnings);
+
+        var systemPrompt = """
+            你是 JNPF 低代码平台的产品经理 Skill。基于系统分析（SA 九步）的结果数据，
+            反向完善需求文本：发现遗漏的业务规则、字段、状态流转、异常路径、边界条件，
+            补进需求文本，使其达到"开发平台能据此生成专业系统"的完善度。
+
+            分析重点（基于九步数据）：
+            - 事件粒度异常（过粗/过细）→ 建议拆分或合并
+            - 字段缺失（实体字段不足以支撑业务事件）→ 补字段
+            - 规则不全（PSpec.validation 过于空泛）→ 补具体校验规则
+            - 状态流转缺失 → 补状态机
+            - 异常路径未覆盖（PSpec.exceptions 为空）→ 补异常处理
+            - 关键词缺失（轻量校验警告）→ 补对应业务概念
+            - 假设置信度低（Assumptions.confidence < 0.5）→ 重点确认这些假设
+
+            ── 输出格式（两段式，严格遵循）──
+
+            第一段（直接输出 markdown 正文，不要前置说明或 JSON 包裹）：
+            - 若已发现遗漏并补全：输出"二次完善后的完整需求文本（markdown）"。
+            - 若存在关键不确定点：先输出"向用户解释为什么要追问的背景说明（markdown）"。
+
+            第二段（可选，仅当需要追问用户时输出）：
+            正文末尾换行后输出精确标记 "===META==="，然后换行输出 JSON：
+            ===META===
+            {"status":"pending_question","questions":[{"text":"问题","questionFormat":"MULTI","contextHint":"为什么","defaultOption":"opt-1","options":["选项1","选项2","选项3","其他"]}]}
+
+            出题规则：普通题用 MULTI（末项必为"其他"）；多维度判断用 MATRIX_MULTI（带 matrixSubItems，无"其他"）。最多 3 题。
+            判断标准：只有当某个遗漏无法用行业惯例补全、且会显著影响系统架构时，才问用户。
+            若无需追问，不要输出 ===META=== 标记。
+            """;
+
+        var userPrompt = $"""
+            三元组：tenant={context.TenantId}, project={context.ProjectId}, pipeline={context.PipelineId}
+
+            步骤①完善后的需求文本：
+            {(enhancedText.Length > 8000 ? enhancedText[..8000] + "…【截断】" : enhancedText)}
+
+            SA 九步分析数据：
+            {analysis}
+
+            {(string.IsNullOrEmpty(turnsText) ? "" : $"历史追问：\n{turnsText}\n")}
+
+            请基于九步数据反向完善需求并直接输出 markdown 正文。若有关键不确定点，正文末尾用 ===META=== 标记附加选择题。
+            """;
+
+        var request = new ChatCompletionRequest
+        {
+            ProviderCode = Llm.ResolveProvider(SkillId),
+            SystemPrompt = systemPrompt,
+            Messages = new List<ChatMessage> { new("user", userPrompt) },
+            Temperature = 0.3,
+            MaxTokens = 4096,
+            TimeoutMs = Llm.ResolveTimeoutMs(SkillId),
+        };
+
+        var (bodyText, metaJson, hasMeta) = await ConsumeStreamWithMetaAsync(request, onToken, ct);
+
+        _logger.LogInformation(
+            "pm-skill RefineFromAnalysisStream 完成 bodyLen={BodyLen} hasMeta={HasMeta} tenant={TenantId} pipeline={PipelineId}",
+            bodyText.Length, hasMeta, context.TenantId, context.PipelineId);
+
+        if (hasMeta)
+        {
+            // ParseStreamMeta 解析失败会直接 throw Oops.Bah，不会返回 null
+            return ParseStreamMeta(
+                ExtractJson(metaJson), bodyText, Array.Empty<RequirementEvolutionSeed>(),
+                previousTurns?.Count ?? 0, roundOffset: 2, title: "需求深度确认");
+        }
+
+        if (bodyText.Length == 0)
+        {
+            throw Oops.Bah(
+                $"PM Skill RefineFromAnalysisStream 步骤③ 流式 LLM 返回空响应" +
+                $" pipeline={context.PipelineId} tenantId={context.TenantId}");
+        }
+
+        return new RequirementEnhanceResult
+        {
+            Status = "completed",
+            EnhancedText = bodyText,
+            CompletenessNotes = Array.Empty<string>(),
+            ClarificationTurns = previousTurns?.Count ?? 0,
+        };
     }
 
     /// <summary>
@@ -670,24 +752,54 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
     {
         ct.ThrowIfCancellationRequested();
 
+        // ── 1. 召回行业种子 + 领域知识（与非流式版一致）──
         var retrievalText = RequirementTextHelper.ForPmPrompt(context);
         var seeds = await RetrieveEvolutionSeedsAsync(
             context.TenantId, context.ProjectId, context.PipelineId, retrievalText, ct);
         var seedPrompt = RequirementEvolutionContext.RenderPromptBlock(seeds);
+        var domainSeeds = await _seedService.MatchAsync(ExtractSearchKeyword(context), ct);
+        var knowledgePrompt = DomainKnowledgeRenderer.Render(domainSeeds);
         var turnsText = BuildClarificationTurnsText(previousTurns);
 
-        // 流式专用 systemPrompt：直接输出 markdown 正文（非 JSON），让 token 逐个推送
+        // ── 2. 两段式 systemPrompt（改动4：真流式 + 改动2：一次出题）──
+        //   LLM 先流式输出 markdown 正文（需求文本 OR 背景说明），用户实时看到打字；
+        //   若需追问，结尾输出 "\n===META===\n" 后跟 JSON {status, questions}。
+        //   编排器在流式过程逐 token 推 SSE，结束后解析 META 决定 completed / pending_question。
         var systemPrompt = """
             你是 JNPF 低代码平台的产品经理 Skill，同时是企业通用管理系统专家。
-            你的任务：运用行业知识，把用户需求推进到"开发平台能据此生成专业系统"的完善度。
+            你的任务：运用你对各业务领域（人事 / 财务 / 进销存 / 生产 / 审批 / CRM 等）的
+            浩瀚行业知识，把用户"比较完善但尚未特别完善"的需求，推进到
+            "开发平台能据此生成专业系统"的完善度。
 
             完善原则：
             - 补全用户遗漏的业务规则、角色权限、状态流转、异常路径、边界条件
             - 基于行业惯例补全用户未提及但同类系统必备的功能点
             - 保持用户原有意图，不得擅自改变业务方向
+            - 不得编造用户未提及且行业无共识的具体数据（如具体金额、具体流程节点数）
 
-            直接输出完善后的需求文本（markdown 格式），不要输出 JSON，不要输出任何包裹标记。
-            """ + "\n" + seedPrompt;
+            ── 输出格式（两段式，严格遵循）──
+
+            第一段（直接输出 markdown 正文，不要任何前置说明或 JSON 包裹）：
+            - 若需求已完善到可拆解程度：输出"完善后的完整需求文本（markdown）"。
+            - 若存在关键不确定点：先输出"向用户解释为什么要追问的背景说明（markdown）"，
+              让用户理解问题的来龙去脉，再在第二段给出选择题。
+
+            第二段（可选，仅当需要追问用户时输出）：
+            在正文末尾换行后，输出一行精确的标记 "===META==="，然后换行输出一个 JSON 对象：
+            ===META===
+            {"status":"pending_question","questions":[{"text":"问题文本","questionFormat":"MULTI","contextHint":"为什么问","defaultOption":"opt-1","options":["选项1","选项2","选项3","其他"]}]}
+
+            出题规则（严格遵守）：
+            - 普通题用 questionFormat: "MULTI"（多选），每题 options 末项必须为"其他"
+            - 如果是对多个事件/模块做同一维度的判断，用 questionFormat: "MATRIX_MULTI"，
+              并提供 matrixSubItems: [{"rowId":"evt-1","rowLabel":"事件名"}]
+            - 矩阵题（MATRIX_*）不要在 options 里放"其他"
+            - 只有影响架构或核心流程的关键不确定点才问，最多 3 题
+            - 行业惯例能覆盖的细节直接补进正文，不要问用户
+            - 若无需追问，**不要**输出 ===META=== 标记，只输出第一段正文即可
+
+            记住：第一段永远是用户可读的 markdown，===META=== 是机器读取的尾部元数据。
+            """ + "\n" + seedPrompt + knowledgePrompt;
 
         var userPrompt = $"""
             三元组：tenant={context.TenantId}, project={context.ProjectId}, pipeline={context.PipelineId}
@@ -697,7 +809,7 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
 
             {(string.IsNullOrEmpty(turnsText) ? "" : $"历史追问：\n{turnsText}\n")}
 
-            请直接输出完善后的需求文本（markdown）。
+            请完善需求并直接输出 markdown 正文。若有关键不确定点，正文末尾用 ===META=== 标记附加选择题。
             """;
 
         var request = new ChatCompletionRequest
@@ -708,50 +820,36 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             Temperature = 0.3,
             MaxTokens = 4096,
             TimeoutMs = Llm.ResolveTimeoutMs(SkillId),
-            // 不设 ResponseFormat=json — 流式输出纯 markdown
+            // 不设 ResponseFormat=json — 第一段是 markdown，不能强制 JSON
         };
 
-        var fullResponse = new StringBuilder();
-        var chunkCount = 0;
-
-        await foreach (var json in Llm.ChatStreamAsync(request, ct))
-        {
-            if (json.StartsWith("[ERROR]") || json.StartsWith("[error]"))
-            {
-                _logger.LogWarning("pm-skill EnhanceStream LLM 流式错误: {Error}", json);
-                break;
-            }
-
-            var token = ExtractToken(json);
-            if (string.IsNullOrEmpty(token)) continue;
-
-            chunkCount++;
-            fullResponse.Append(token);
-            await onToken(token, ct);  // 逐 token 推 SSE
-        }
+        // ── 3. 流式消费（共享内核：正文实时推 SSE，===META=== 缓冲待解析）──
+        var (bodyText, metaJson, hasMeta) = await ConsumeStreamWithMetaAsync(request, onToken, ct);
 
         _logger.LogInformation(
-            "pm-skill EnhanceRequirementStream 完成 chunks={Chunks} len={Len} tenant={TenantId} pipeline={PipelineId}",
-            chunkCount, fullResponse.Length, context.TenantId, context.PipelineId);
+            "pm-skill EnhanceRequirementStream 完成 bodyLen={BodyLen} hasMeta={HasMeta} tenant={TenantId} pipeline={PipelineId}",
+            bodyText.Length, hasMeta, context.TenantId, context.PipelineId);
 
-        if (fullResponse.Length == 0)
+        // ── 4. 解析 META：若有合法 questions → pending_question；否则 completed ──
+        if (hasMeta)
         {
-            // 流式失败 → 降级使用原始需求
-            await onToken(retrievalText, ct);
-            return new RequirementEnhanceResult
-            {
-                Status = "completed",
-                EnhancedText = retrievalText,
-                CompletenessNotes = new[] { "LLM 流式完善失败，降级使用原始需求" },
-                SeedIds = seeds.Select(s => s.CaseId).ToList(),
-                ClarificationTurns = previousTurns?.Count ?? 0,
-            };
+            // ParseStreamMeta 解析失败会直接 throw Oops.Bah，不会返回 null
+            return ParseStreamMeta(
+                ExtractJson(metaJson), bodyText, seeds, previousTurns?.Count ?? 0,
+                roundOffset: 1, title: "需求确认");
+        }
+
+        if (bodyText.Length == 0)
+        {
+            throw Oops.Bah(
+                $"PM Skill EnhanceRequirementStream 流式 LLM 返回空响应" +
+                $" pipeline={context.PipelineId} tenantId={context.TenantId}");
         }
 
         return new RequirementEnhanceResult
         {
             Status = "completed",
-            EnhancedText = fullResponse.ToString(),
+            EnhancedText = bodyText,
             CompletenessNotes = Array.Empty<string>(),
             SeedIds = seeds.Select(s => s.CaseId).ToList(),
             ClarificationTurns = previousTurns?.Count ?? 0,
@@ -783,6 +881,151 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             return null;
         }
         catch { return null; }
+    }
+
+    /// <summary>
+    /// 解析流式响应尾部的 ===META=== JSON（改动4 配套）。
+    /// 复用 ParseEnhanceResponse 的 questions 解析逻辑，但输入是流式累积的 body + meta JSON。
+    /// 返回 null 表示 META 非法（调用方降级处理）。
+    /// </summary>
+    private RequirementEnhanceResult? ParseStreamMeta(
+        string metaJson, string bodyText,
+        IReadOnlyList<RequirementEvolutionSeed> seeds, int turnCount,
+        int roundOffset, string title)
+    {
+        if (string.IsNullOrWhiteSpace(metaJson)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(metaJson);
+            var root = doc.RootElement;
+            var status = root.TryGetProperty("status", out var s) && s.ValueKind == JsonValueKind.String
+                ? s.GetString() ?? "completed"
+                : "completed";
+
+            if (status != "pending_question")
+            {
+                // META 声明 completed → 把 body 当作正文返回
+                return new RequirementEnhanceResult
+                {
+                    Status = "completed",
+                    EnhancedText = bodyText,
+                    CompletenessNotes = Array.Empty<string>(),
+                    SeedIds = seeds.Select(x => x.CaseId).ToList(),
+                    ClarificationTurns = turnCount,
+                };
+            }
+
+            ClarificationSet? clarSet = null;
+            if (root.TryGetProperty("questions", out var qArr) && qArr.ValueKind == JsonValueKind.Array)
+            {
+                var questions = ParseQuestionsFromLlm(qArr.GetRawText(), round: turnCount + roundOffset);
+                ApplyMatrixFallback(questions, BuildEmptyCompileResult());
+                EnsureEscapeHatch(questions);
+
+                clarSet = new ClarificationSet
+                {
+                    SetId = Guid.NewGuid().ToString("N"),
+                    Stage = "requirement",
+                    Round = turnCount + roundOffset,
+                    Title = title,
+                    Intro = bodyText,
+                    AllowSkipNonCritical = questions.Count == 0,
+                    Questions = questions,
+                };
+
+                _logger.LogInformation(
+                    "pm-skill 流式一次出题 questions={Count} turns={Turns} title={Title}",
+                    questions.Count, turnCount, title);
+            }
+
+            return new RequirementEnhanceResult
+            {
+                Status = "pending_question",
+                PendingQuestion = bodyText,
+                PartialEnhancement = bodyText,
+                PendingClarificationSet = clarSet,
+                SeedIds = seeds.Select(x => x.CaseId).ToList(),
+                ClarificationTurns = turnCount,
+            };
+        }
+        catch (JsonException ex)
+        {
+            throw Oops.Bah(
+                $"PM Skill ParseStreamMeta META JSON 解析失败: {ex.Message}" +
+                $" metaJson[0..200]={(metaJson.Length > 200 ? metaJson[..200] : metaJson)}",
+                ex);
+        }
+    }
+
+    /// <summary>
+    /// 流式消费 LLM 响应：正文 token 经 onToken 实时推 SSE，===META=== 后的内容缓冲返回。
+    /// 改动4：两个流式方法（Enhance/Refine）共享的两段式协议解析内核。
+    /// </summary>
+    /// <returns>(bodyText, metaJson, hasMeta)</returns>
+    private async Task<(string Body, string MetaJson, bool HasMeta)> ConsumeStreamWithMetaAsync(
+        ChatCompletionRequest request,
+        Func<string, CancellationToken, Task> onToken,
+        CancellationToken ct)
+    {
+        var bodyBuffer = new StringBuilder();
+        var metaBuffer = new StringBuilder();
+        var tail = new StringBuilder();
+        const string metaStart = "===META===";
+        var inMeta = false;
+
+        await foreach (var json in Llm.ChatStreamAsync(request, ct))
+        {
+            if (json.StartsWith("[ERROR]") || json.StartsWith("[error]"))
+            {
+                _logger.LogWarning("pm-skill 流式 LLM 错误: {Error}", json);
+                break;
+            }
+
+            var token = ExtractToken(json);
+            if (string.IsNullOrEmpty(token)) continue;
+
+            if (inMeta)
+            {
+                metaBuffer.Append(token);
+                continue;
+            }
+
+            tail.Append(token);
+            var combined = tail.ToString();
+            var metaIdx = combined.IndexOf(metaStart, StringComparison.Ordinal);
+            if (metaIdx >= 0)
+            {
+                var bodyPart = combined[..metaIdx];
+                if (bodyPart.Length > 0)
+                {
+                    bodyBuffer.Append(bodyPart);
+                    await onToken(bodyPart, ct);
+                }
+                metaBuffer.Append(combined[(metaIdx + metaStart.Length)..]);
+                tail.Clear();
+                inMeta = true;
+            }
+            else
+            {
+                // 保留尾部 = metaStart.Length - 1 个字符（防止标记被 chunk 切开）
+                var safeLen = combined.Length - (metaStart.Length - 1);
+                if (safeLen > 0)
+                {
+                    var safePart = combined[..safeLen];
+                    bodyBuffer.Append(safePart);
+                    await onToken(safePart, ct);
+                    tail.Remove(0, safeLen);
+                }
+            }
+        }
+
+        if (!inMeta && tail.Length > 0)
+        {
+            bodyBuffer.Append(tail);
+            await onToken(tail.ToString(), ct);
+        }
+
+        return (bodyBuffer.ToString(), metaBuffer.ToString(), inMeta);
     }
 
     /// <summary>
@@ -852,15 +1095,12 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
                 ClarificationTurns = turnCount,
             };
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            return new RequirementEnhanceResult
-            {
-                Status = "completed",
-                EnhancedText = fallbackText,
-                CompletenessNotes = new[] { "步骤③响应 JSON 解析失败，降级使用步骤①文本" },
-                ClarificationTurns = turnCount,
-            };
+            throw Oops.Bah(
+                $"PM Skill RefineFromAnalysis 步骤③ LLM 响应 JSON 解析失败: {ex.Message}" +
+                $" content[0..200]={(content.Length > 200 ? content[..200] : content)}",
+                ex);
         }
     }
 
@@ -904,7 +1144,8 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
         SaNineViewCompileResult compileResult,
         IReadOnlyList<string> warnings,
         string? previousAnswersText,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool forceQuestions = false)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -915,11 +1156,11 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
         var maturity = await _gate.EvaluateMaturity(chatHistory, maturityProvider, ct);
 
         _logger.LogInformation(
-            "pm-skill 第 {Round} 轮成熟度评估 score={Score} mode={Mode} | pipeline={PipelineId}",
-            round, maturity.Score, maturity.Mode, pipelineId);
+            "pm-skill 第 {Round} 轮成熟度评估 score={Score} mode={Mode} force={Force} | pipeline={PipelineId}",
+            round, maturity.Score, maturity.Mode, forceQuestions, pipelineId);
 
-        // 需求已充分完整 → 跳过提问，返回空题集
-        if (maturity.Mode == "refine")
+        // 需求已充分完整 → 跳过提问，返回空题集（编排器强制澄清轮次时 bypass）
+        if (!forceQuestions && maturity.Mode == "refine")
         {
             return BuildRefineEmptySet(stage, round, maturity);
         }
@@ -957,9 +1198,9 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
         var response = await ChatWithSchemaRetryAsync(request, "clarification", ct);
         if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
         {
-            _logger.LogWarning("pm-skill 第 {Round} 轮出题 LLM 失败，降级为空题集: {Error}",
-                round, response.Error);
-            return BuildEmptyClarificationSet(stage, round, title, intro);
+            throw Oops.Bah(
+                $"PM Skill 第 {round} 轮 GenerateClarification LLM 调用失败: {response.Error ?? "(无错误详情)"}" +
+                $" pipeline={pipelineId} tenantId={tenantId} stage={stage}");
         }
 
         var questions = ParseQuestionsFromLlm(response.Content, round);
@@ -1140,17 +1381,15 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             ResponseFormat = "json",
         };
 
-        AmendmentUnderstanding understanding;
         var response = await ChatWithSchemaRetryAsync(request, "amend", ct);
         if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
         {
-            _logger.LogWarning("pm-skill AmendPropose LLM 失败，使用原文回显: {Error}", response.Error);
-            understanding = BuildFallbackUnderstanding(userMessage);
+            throw Oops.Bah(
+                $"PM Skill AmendPropose LLM 调用失败: {response.Error ?? "(无错误详情)"}" +
+                $" pipeline={context.PipelineId} tenantId={context.TenantId}");
         }
-        else
-        {
-            understanding = ParseAmendmentUnderstanding(response.Content, userMessage);
-        }
+
+        var understanding = ParseAmendmentUnderstanding(response.Content, userMessage);
 
         _logger.LogInformation(
             "pm-skill AmendPropose 完成 tenant={TenantId} project={ProjectId} pipeline={PipelineId} patches={PatchCount} seeds={SeedIds}",
@@ -1254,23 +1493,25 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             ResponseFormat = "json",
         };
 
-        IReadOnlyList<AmendmentPatch> llmPatches = Array.Empty<AmendmentPatch>();
+        IReadOnlyList<AmendmentPatch> llmPatches;
+        var response = await ChatWithSchemaRetryAsync(request, "amend", ct);
+        if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
+        {
+            throw Oops.Bah(
+                $"PM Skill RefineSkeleton LLM 调用失败: {response.Error ?? "(无错误详情)"}" +
+                $" pipeline={context.PipelineId} tenantId={context.TenantId}");
+        }
+
         try
         {
-            var response = await ChatWithSchemaRetryAsync(request, "amend", ct);
-            if (response.IsSuccess && !string.IsNullOrWhiteSpace(response.Content))
-            {
-                using var doc = JsonDocument.Parse(ExtractJson(response.Content));
-                llmPatches = AmendmentPatchApplier.ParsePatches(doc.RootElement);
-            }
-            else
-            {
-                _logger.LogWarning("pm-skill RefineSkeleton LLM 失败，仅用确定性补丁: {Error}", response.Error);
-            }
+            using var doc = JsonDocument.Parse(ExtractJson(response.Content));
+            llmPatches = AmendmentPatchApplier.ParsePatches(doc.RootElement);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            _logger.LogWarning(ex, "pm-skill RefineSkeleton 解析失败，仅用确定性补丁");
+            throw Oops.Bah(
+                $"PM Skill RefineSkeleton LLM 响应解析失败: {ex.Message}" +
+                $" pipeline={context.PipelineId} tenantId={context.TenantId}", ex);
         }
 
         // LLM 为完善主体：优先保留其补丁，确定性基线补缺口
@@ -1596,18 +1837,6 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
         };
     }
 
-    private static ClarificationSet BuildEmptyClarificationSet(string stage, int round, string title, string intro)
-        => new()
-        {
-            SetId = Guid.NewGuid().ToString("N"),
-            Stage = stage,
-            Round = round,
-            Title = title,
-            Intro = intro + "（自动生成题目暂不可用，可直接跳过）",
-            AllowSkipNonCritical = true,
-            Questions = new List<ClarificationQuestion>(),
-        };
-
     /// <summary>
     /// 成熟度达 refine（≥80 分）时返回空题集。
     /// Title/Intro 告知编排器和前端：需求已完整，无需额外提问。
@@ -1691,19 +1920,14 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
                 Patches = ReadPatches(root),
             };
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            return BuildFallbackUnderstanding(fallbackText);
+            throw Oops.Bah(
+                $"PM Skill AmendPropose LLM 响应 JSON 解析失败: {ex.Message}" +
+                $" content[0..200]={(content.Length > 200 ? content[..200] : content)}",
+                ex);
         }
     }
-
-    private static AmendmentUnderstanding BuildFallbackUnderstanding(string userMessage)
-        => new()
-        {
-            Features = new List<string> { userMessage.Trim() },
-            SummaryMarkdown = userMessage.Trim(),
-            Severity = "patch",
-        };
 
     private static List<string> ReadStringArray(JsonElement root, params string[] names)
     {
@@ -1896,6 +2120,11 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
     private async Task<string> GenerateSkeletonViaTotAsync(
         SkillContext context, string skeletonId, string fragmentId, CancellationToken ct)
     {
+        // 修复1c：入口硬守卫 —— 无用户需求文本则拒绝，禁止 LLM 凭空编造与用户需求无关的骨架
+        var requirementText = RequirementTextHelper.ForPmPrompt(context);
+        if (string.IsNullOrWhiteSpace(requirementText))
+            throw Oops.Bah("PM Skill 骨架生成缺少用户需求文本，请先通过 sa-gate 提交需求文档或附件");
+
         var systemPrompt = """
             你是 JNPF 低代码平台的产品经理 Skill。根据用户需求输出 IR-0 骨架 JSON。
             必须包含：businessEvents（6-15项，每项含 eventId/eventName/complexityHint/dependsOn）、
@@ -1909,31 +2138,48 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             - relations[]: 实体间关系声明，每项含 fromField/toEntity/toField/relationType(many-to-one|one-to-many|many-to-many)
               或在字段级用 references: "EntityName.FieldName" 声明外键
 
-            字段示例：
+            字段示例（通用，不含特定领域偏见）：
             "fields": [
               {"name":"id","type":"BIGINT","required":true,"primaryKey":true},
-              {"name":"employeeId","type":"BIGINT","required":true,"references":"Employee.id"},
-              {"name":"leaveDays","type":"float","required":true}
+              {"name":"name","type":"NVARCHAR(100)","required":true},
+              {"name":"status","type":"NVARCHAR(50)","required":true}
             ]
 
             关系示例：
             "relations": [
-              {"fromField":"employeeId","toEntity":"Employee","toField":"id","relationType":"many-to-one"}
+              {"fromField":"categoryId","toEntity":"Category","toField":"id","relationType":"many-to-one"}
             ]
 
-            roleMatrix 示例：
+            roleMatrix 示例（根据用户需求实际涉及的角色动态构建）：
             "roleMatrix": {
-              "roles": ["员工","部门主管","HR"],
-              "matrix": {"EV-001": {"员工": ["create","read"], "部门主管": ["approve","reject"]}}
+              "roles": ["操作员","审核员","管理员"],
+              "matrix": {"EV-001": {"操作员": ["create","read"], "审核员": ["approve","reject"]}}
             }
 
             只输出 JSON，不要 markdown。
             """;
 
-        var seedHints = string.Join(", ", context.SeedMatches.Take(5).Select(s => s.EventNamePattern));
+        // CR-20260717-01 §5.4: 种子关联二次验证 — 只注入事件名确实出现在需求文本中的种子
+        // （DomainSeedService.MatchAsync 已做一轮筛选，此处兜底防止宽松匹配的漏网之鱼）
+        // 可观测性（审查建议 2.6）：记录过滤前后数量，防止过度筛选导致信息丢失
+        var inputSeedCount = context.SeedMatches.Count;
+        var relevantSeedHints = context.SeedMatches
+            .Where(s => !string.IsNullOrWhiteSpace(s.EventNamePattern)
+                        && requirementText.Contains(s.EventNamePattern, StringComparison.OrdinalIgnoreCase))
+            .Take(5)
+            .Select(s => s.EventNamePattern)
+            .ToList();
+        if (inputSeedCount > relevantSeedHints.Count)
+        {
+            _logger.LogWarning(
+                "pm-skill 种子关联筛选: 输入 {Input} 个 → 保留 {Kept} 个（过滤 {Dropped} 个不相关）pipeline={PipelineId}" +
+                " 若持续过滤到 0 需复查 DomainSeedService.MatchAsync 关键词匹配策略",
+                inputSeedCount, relevantSeedHints.Count, inputSeedCount - relevantSeedHints.Count, context.PipelineId);
+        }
+        var seedHints = string.Join(", ", relevantSeedHints);
         var userPrompt = $"""
             用户需求：
-            {RequirementTextHelper.ForPmPrompt(context)}
+            {requirementText}
 
             参考种子（可复用模式）：
             {(string.IsNullOrWhiteSpace(seedHints) ? "（无）" : seedHints)}
@@ -1941,6 +2187,10 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             请给出一种 businessEvents 切分方案的完整 IR-0 骨架。
             skeletonId 使用 {skeletonId}。
             """;
+
+        // 修复4b：BranchCount 根据需求文本复杂度动态调整（而非硬编码3）
+        // 大约每2000字一个分支视角，最少2分支，最多不超过 TotBranchCount
+        var dynamicBranchCount = Math.Min(TotBranchCount, Math.Max(2, requirementText.Length / 2000));
 
         var tot = await Llm.TreeSearchAsync(new TreeSearchRequest
         {
@@ -1951,7 +2201,7 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
                 : Llm.ResolveProvider(SkillId),
             SystemPrompt = systemPrompt,
             Messages = new List<ChatMessage> { new("user", userPrompt) },
-            BranchCount = TotBranchCount,
+            BranchCount = dynamicBranchCount,
             BaseTemperature = 0.3,
             TemperatureStep = 0.35,
             ResponseFormat = "json",
@@ -2124,13 +2374,16 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
 
     public static string ExtractSearchKeyword(SkillContext context)
     {
-        if (!string.IsNullOrWhiteSpace(context.UserRequirement))
+        // CR-20260717-01 §5.3: 移除 "enterprise" 兜底 — UserRequirement 为空即硬错误
+        // （SkillHarness 已在入口处硬门控 UserRequirement 非空，此处防御性检查防绕过）
+        if (string.IsNullOrWhiteSpace(context.UserRequirement))
         {
-            var trimmed = context.UserRequirement.Trim();
-            return trimmed.Length <= 80 ? trimmed : trimmed[..80];
+            throw Oops.Bah(
+                $"PM Skill ExtractSearchKeyword: UserRequirement 为空，无法提取领域搜索关键词" +
+                $" pipeline={context.PipelineId} tenantId={context.TenantId}");
         }
-
-        return context.SeedMatches.FirstOrDefault()?.EventNamePattern ?? "enterprise";
+        var trimmed = context.UserRequirement.Trim();
+        return trimmed.Length <= 80 ? trimmed : trimmed[..80];
     }
 
     private static string NormalizeSkeletonJson(JsonElement root, string skeletonId, string fragmentId)

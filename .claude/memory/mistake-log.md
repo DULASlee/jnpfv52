@@ -12,11 +12,14 @@
 | # | 铁律 | 来源 |
 |---|------|------|
 | **0** | **先钉死本节点业务功能（①）再动手**：编码/验收前必须说清「本阶段业务能力是什么、用户操作、完整产物」；禁止用表头/文案/待确认节/单测绿顶替业务功能正确完整 | **M035** · 业务优先铁律 · 30号§0.6① |
+| **0b** | **S/A 先走 ADF**：架构先行 → 设计模式先行 → 接口契约先行 → 再实现；每阶段等「继续」；B 级须声明豁免 | ADF 三先行 · `architecture-design-interface-first` |
+| **0c** | **四支柱硬门**：声称可审批前写 `pillar-claim-current.json` 并 `pillar-claim-check.mjs --force`；①禁止纠偏顶替 | 00-constitution · L0-PILLAR |
 | 1 | **验证三路径**：改了防御代码 → 正向/异常/缺失全测，不能只测修的那条 | M030 |
 | 2 | **改 prompt = 改代码**：改完逐条对照原始 spec 审计，不能凭"感觉对了" | M031 |
 | 3 | **先抓包再分析源码**：前端无响应 → Playwright `page.on('response')` → 看实际返回体 | M011 |
 | 4 | **不跳过 brainstorming**：无论任务多小，MUST 走 S1。输入详尽≠豁免流程 | M009, M024 |
 | 5 | **声称完成 = Gate Function 5 步**：IDENTIFY→RUN→READ→VERIFY→CLAIM，缺一不可 | M010 |
+| 6 | **零占位符**：禁止 TODO implement / NotImplementedException 糊弄编译；hooks+pre-commit 硬拦 | engineering-laws Law4 · L11 |
 
 ---
 

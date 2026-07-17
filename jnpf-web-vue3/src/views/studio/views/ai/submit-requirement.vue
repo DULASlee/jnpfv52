@@ -91,6 +91,8 @@
 
   function onNewChat() {
     syncPipelineQuery(null);
+    // 新对话后立即拉一次列表（轮询兜底，避免新建任务迟迟不出现）
+    taskListRef.value?.reload?.();
   }
 
   async function onSelectPipeline(id: number) {

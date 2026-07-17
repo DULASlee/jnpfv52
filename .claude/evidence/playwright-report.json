@@ -1,12 +1,11 @@
 {
   "config": {
     "argv": [
-      "C:\\nvm4w\\nodejs\\node.exe",
+      "d:\\Users\\admin\\AppData\\Local\\Programs\\cursor\\resources\\app\\resources\\helpers\\node.exe",
       "D:\\JNPF-v52\\node_modules\\@playwright\\test\\cli.js",
       "test",
-      "-c",
-      "e2e/playwright.config.ts",
-      "e2e/admin/01-system-switch.spec.ts"
+      "studio/04-submit-requirement-gate.spec.ts",
+      "--timeout=300000"
     ],
     "configFile": "D:\\JNPF-v52\\e2e\\playwright.config.ts",
     "rootDir": "D:/JNPF-v52/e2e",
@@ -38,7 +37,7 @@
         "testMatch": [
           "**/*.spec.ts"
         ],
-        "timeout": 60000
+        "timeout": 300000
       }
     ],
     "quiet": false,
@@ -68,55 +67,104 @@
   },
   "suites": [
     {
-      "title": "admin\\01-system-switch.spec.ts",
-      "file": "admin/01-system-switch.spec.ts",
+      "title": "studio\\04-submit-requirement-gate.spec.ts",
+      "file": "studio/04-submit-requirement-gate.spec.ts",
       "column": 0,
       "line": 0,
-      "specs": [
+      "specs": [],
+      "suites": [
         {
-          "title": "admin 头像下拉含\"切换系统\"且打开抽屉",
-          "ok": true,
-          "tags": [],
-          "tests": [
+          "title": "提交需求页 · SA 门控",
+          "file": "studio/04-submit-requirement-gate.spec.ts",
+          "line": 15,
+          "column": 6,
+          "specs": [
             {
-              "timeout": 60000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "chromium",
-              "projectName": "chromium",
-              "results": [
+              "title": "发送需求后出现门控通过提示",
+              "ok": false,
+              "tags": [],
+              "tests": [
                 {
-                  "workerIndex": 0,
-                  "parallelIndex": 0,
-                  "status": "passed",
-                  "duration": 4852,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-07-07T04:46:52.017Z",
+                  "timeout": 300000,
                   "annotations": [],
-                  "attachments": []
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 21975,
+                      "error": {
+                        "message": "TimeoutError: locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('submit-requirement-textarea').or(locator('.input-bar textarea')).first() to be visible\u001b[22m\n",
+                        "stack": "TimeoutError: locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('submit-requirement-textarea').or(locator('.input-bar textarea')).first() to be visible\u001b[22m\n\n    at openSubmitRequirement (D:\\JNPF-v52\\e2e\\helpers\\login.ts:49:47)\n    at D:\\JNPF-v52\\e2e\\studio\\04-submit-requirement-gate.spec.ts:18:5",
+                        "location": {
+                          "file": "D:\\JNPF-v52\\e2e\\helpers\\login.ts",
+                          "column": 47,
+                          "line": 49
+                        },
+                        "snippet": "   at helpers\\login.ts:49\n\n  47 |   const textareaFallback = page.locator('.input-bar textarea');\n  48 |\n> 49 |   await textarea.or(textareaFallback).first().waitFor({ state: 'visible', timeout: 20_000 });\n     |                                               ^\n  50 | }\n  51 |"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "D:\\JNPF-v52\\e2e\\helpers\\login.ts",
+                            "column": 47,
+                            "line": 49
+                          },
+                          "message": "TimeoutError: locator.waitFor: Timeout 20000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('submit-requirement-textarea').or(locator('.input-bar textarea')).first() to be visible\u001b[22m\n\n\n   at helpers\\login.ts:49\n\n  47 |   const textareaFallback = page.locator('.input-bar textarea');\n  48 |\n> 49 |   await textarea.or(textareaFallback).first().waitFor({ state: 'visible', timeout: 20_000 });\n     |                                               ^\n  50 | }\n  51 |\n    at openSubmitRequirement (D:\\JNPF-v52\\e2e\\helpers\\login.ts:49:47)\n    at D:\\JNPF-v52\\e2e\\studio\\04-submit-requirement-gate.spec.ts:18:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-07-17T13:48:57.914Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "D:\\JNPF-v52\\test-results\\studio-04-submit-requireme-53cf4-提交需求页-·-SA-门控-发送需求后出现门控通过提示-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "D:\\JNPF-v52\\test-results\\studio-04-submit-requireme-53cf4-提交需求页-·-SA-门控-发送需求后出现门控通过提示-chromium\\error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "D:\\JNPF-v52\\test-results\\studio-04-submit-requireme-53cf4-提交需求页-·-SA-门控-发送需求后出现门控通过提示-chromium\\trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "D:\\JNPF-v52\\e2e\\helpers\\login.ts",
+                        "column": 47,
+                        "line": 49
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
                 }
               ],
-              "status": "expected"
+              "id": "ce318801171dc7433400-bd12fae0b30e67c8cd02",
+              "file": "studio/04-submit-requirement-gate.spec.ts",
+              "line": 21,
+              "column": 7
             }
-          ],
-          "id": "bf8740cbee7b37c04210-00a5bb73589a4bc7577d",
-          "file": "admin/01-system-switch.spec.ts",
-          "line": 8,
-          "column": 5
+          ]
         }
       ]
     }
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-07-07T04:46:51.517Z",
-    "duration": 5680.263,
-    "expected": 1,
+    "startTime": "2026-07-17T13:48:57.457Z",
+    "duration": 22910.661,
+    "expected": 0,
     "skipped": 0,
-    "unexpected": 0,
+    "unexpected": 1,
     "flaky": 0
   }
 }

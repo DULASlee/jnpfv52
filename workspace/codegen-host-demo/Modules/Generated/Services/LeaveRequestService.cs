@@ -30,6 +30,7 @@ namespace JNPF.OaLeave;
 
 /// <summary>
 /// 业务实现：请假申请.
+/// R4 多租户：LeaveRequestEntity 实现 ITenantFilter，Repository 查询自动绑定 TenantId。
 /// </summary>
 [ApiDescriptionSettings(Tag = "OaLeave", Name = "LeaveRequest", Order = 200)]
 [Route("api/OaLeave/[controller]")]

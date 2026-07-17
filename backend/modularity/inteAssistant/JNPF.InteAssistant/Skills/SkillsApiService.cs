@@ -83,13 +83,29 @@ public class SkillsApiService : IDynamicApiController, ITransient
         _pm = pm;
     }
 
+    /// <summary>
+    /// <para><b>[已废止]</b> 旧 pm-skill 直调端点。</para>
+    /// <para>生产主路径已切到三轮需求分析编排器：<c>POST /api/studio/skills/requirement-analysis/{pipelineId}/run</c>。</para>
+    /// <para>参见：全链条冲刺铁律 F3「排除并修订旧实现干扰」· 需求分析子链铁律禁令三「逐阶段推进」。</para>
+    /// </summary>
+    [Obsolete("使用 RequirementAnalysisOrchestrator 三轮编排器：POST /api/studio/skills/requirement-analysis/{pipelineId}/run")]
     [HttpPost("pm/{pipelineId:long}/run")]
     public Task<object> RunPmAsync(long pipelineId, [FromBody] SkillRunRequest? request)
-        => RunSkillAsync("pm-skill", pipelineId, request);
+    {
+        throw Oops.Bah("旧 pm-skill 端点已废止，请使用三轮需求分析编排器：POST /api/studio/skills/requirement-analysis/{pipelineId}/run");
+    }
 
+    /// <summary>
+    /// <para><b>[已废止]</b> 旧 analyst-skill 直调端点（单体运行，无 PM 评审、无澄清追问）。</para>
+    /// <para>生产主路径已切到三轮需求分析编排器：<c>POST /api/studio/skills/requirement-analysis/{pipelineId}/run</c>。</para>
+    /// <para>参见：全链条冲刺铁律 F3「排除并修订旧实现干扰」· 30 号 W1「禁止默认旧 analyst-skill」。</para>
+    /// </summary>
+    [Obsolete("使用 RequirementAnalysisOrchestrator 三轮编排器：POST /api/studio/skills/requirement-analysis/{pipelineId}/run")]
     [HttpPost("analyst/{pipelineId:long}/run")]
     public Task<object> RunAnalystAsync(long pipelineId, [FromBody] SkillRunRequest? request)
-        => RunSkillAsync("analyst-skill", pipelineId, request);
+    {
+        throw Oops.Bah("旧 analyst-skill 端点已废止，请使用三轮需求分析编排器：POST /api/studio/skills/requirement-analysis/{pipelineId}/run");
+    }
 
     /// <summary>
     /// 三轮需求分析编排器入口（27 号 §5）。
@@ -112,6 +128,12 @@ public class SkillsApiService : IDynamicApiController, ITransient
                 ProviderCode = request?.ProviderCode,
                 CurrentRoundAnswers = request?.Answers,
                 ForceRefinalize = request?.ForceRefinalize == true,
+                ForceConfirm = request?.ForceConfirm == true,
+                ForceReason = request?.ForceReason,
+                UseNewPipeline = request?.UseNewPipeline == true,
+                PmClarificationAnswer = request?.PmClarificationAnswer,
+                SpecFeedback = request?.SpecFeedback,
+                UserMessage = request?.UserMessage,
             };
             await _requirementOrchestrator.RunAsync(pipelineId, tenantId, projectId, options, ct);
         }, timeout: TimeSpan.FromMinutes(35));
@@ -666,7 +688,8 @@ public class SkillsApiService : IDynamicApiController, ITransient
     /// <summary>按澄清 stage 解析前端 nextAction（含三轮需求分析编排器）。</summary>
     private static string ResolveClarificationNextAction(string stage) => stage switch
     {
-        ClarificationStages.Requirement => "re-evaluate",
+        // F3 铁律：旧 sa-gate 端点已隔离，requirement stage 的 NextAction 指向三轮编排器而非旧 "re-evaluate"
+        ClarificationStages.Requirement => "continue-requirement-analysis",
         ClarificationStages.Architecture => "rerun-architect",
         ClarificationStages.SystemDesign => "rerun-system-design-clarification",
         _ when RequirementAnalysisStages.IsRequirementAnalysisStage(stage)

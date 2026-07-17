@@ -1,0 +1,25 @@
+---
+description: Git 工作铁律 — 切分支/合并前必须 clean+push。执行 git 分支操作前拉取。
+globs:
+  - .githooks/**
+alwaysApply: false
+---
+
+# JNPF Git 工作铁律（精简版）
+
+**一句核心：任何操作前，保证工作区干净、已提交、已推送。**
+
+## 铁律三条
+
+1. **绝不带未提交改动切分支、合并或变基。**  
+   凡有改动，先 `add` → `commit` → `push`，哪怕提交信息写 `WIP`。
+2. **新建或修改文件后，立即 `add` 并提交。**  
+   文档与代码同等重要，没有例外。未跟踪文件最易丢失，stash 也救不了。
+3. **合并/切分支前，执行三步检查：**  
+   - `git status` 必须 clean  
+   - `git stash list` 必须为空  
+   - `git log origin/当前分支..当前分支` 必须空（本地已全推送）
+
+**记住：远程仓库是你唯一的不可丢失备份。每 30 分钟至少 commit + push 一次。**
+
+完整分支策略与 Conventional Commits 见 `docs/conventions/git-workflow.md`。

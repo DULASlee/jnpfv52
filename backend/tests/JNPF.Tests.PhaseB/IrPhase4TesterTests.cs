@@ -1,4 +1,5 @@
 using System.Text.Json;
+using JNPF.InteAssistant.Codegen.EntityDesign;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
@@ -131,7 +132,7 @@ public static class IrPhase4TesterTests
 
     private static async Task TestTesterSkill_LeaveWithFlowAsync()
     {
-        var skill = CreateTesterSkill();
+        var skill = CreateTesterSkill("_phase4-tester-flow", "leave-with-flow-t9", "9012");
         var snapshot = BuildSnapshotFromSample("leave-with-flow.json", includeSystemDesign: true);
         snapshot = AddStableCodegen(snapshot, "leave-with-flow-t9");
 
@@ -243,11 +244,129 @@ public static class IrPhase4TesterTests
         return new IrSnapshot { Fragments = fragments };
     }
 
-    private static TesterSkillService CreateTesterSkill()
+    private static TesterSkillService CreateTesterSkill(
+        string tenantId = "_phase4-tester",
+        string projectId = "leave-simple-t8",
+        string pipelineId = "9010")
     {
-        using var loggerFactory = LoggerFactory.Create(static _ => { });
+        var loggerFactory = LoggerFactory.Create(static _ => { });
         var inputBuilder = new TesterSkillInputBuilder(loggerFactory.CreateLogger<TesterSkillInputBuilder>());
-        return new TesterSkillService(null!, loggerFactory.CreateLogger<TesterSkillService>(), inputBuilder);
+        var db = CreateSqliteClientWithEntityFieldTable();
+        SeedEntityFields(db, tenantId, projectId, pipelineId);
+        var entityDesignRepo = new EntityDesignRepository(db);
+        return new TesterSkillService(entityDesignRepo, loggerFactory.CreateLogger<TesterSkillService>(), inputBuilder);
+    }
+
+    /// <summary>Seed common leave-request fields (Reason/Days/Status, all required) into ai_entity_field.</summary>
+    private static void SeedEntityFields(
+        SqlSugarClient db, string tenantId, string projectId, string pipelineId)
+    {
+        var now = DateTime.UtcNow;
+        var fields = new[]
+        {
+            new AiEntityFieldEntity
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                TenantId = tenantId,
+                ProjectId = projectId,
+                PipelineId = pipelineId,
+                SchemaVersion = "entity-field.v1",
+                SourceFragmentId = $"ddl:{projectId}",
+                EntityName = "LeaveRequest",
+                TableName = "OA_LEAVE_REQUEST",
+                FieldName = "Reason",
+                PropertyName = "Reason",
+                DbColumnName = "F_Reason",
+                CSharpType = "string",
+                SqlType = "NVARCHAR(500)",
+                IsRequired = true,
+                IsNullable = true,
+                CreatorTime = now,
+            },
+            new AiEntityFieldEntity
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                TenantId = tenantId,
+                ProjectId = projectId,
+                PipelineId = pipelineId,
+                SchemaVersion = "entity-field.v1",
+                SourceFragmentId = $"ddl:{projectId}",
+                EntityName = "LeaveRequest",
+                TableName = "OA_LEAVE_REQUEST",
+                FieldName = "Days",
+                PropertyName = "Days",
+                DbColumnName = "F_Days",
+                CSharpType = "int",
+                SqlType = "INT",
+                IsRequired = true,
+                IsNullable = false,
+                CreatorTime = now,
+            },
+            new AiEntityFieldEntity
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                TenantId = tenantId,
+                ProjectId = projectId,
+                PipelineId = pipelineId,
+                SchemaVersion = "entity-field.v1",
+                SourceFragmentId = $"ddl:{projectId}",
+                EntityName = "LeaveRequest",
+                TableName = "OA_LEAVE_REQUEST",
+                FieldName = "Status",
+                PropertyName = "Status",
+                DbColumnName = "F_Status",
+                CSharpType = "string",
+                SqlType = "NVARCHAR(20)",
+                IsRequired = true,
+                IsNullable = false,
+                CreatorTime = now,
+            },
+        };
+        db.Insertable(fields).ExecuteCommand();
+    }
+
+    /// <summary>内存 SQLite + ai_entity_field 表，供 TesterSkill.ListFieldsAsync 查询。</summary>
+    private static SqlSugarClient CreateSqliteClientWithEntityFieldTable()
+    {
+        var client = new SqlSugarClient(new ConnectionConfig
+        {
+            DbType = DbType.Sqlite,
+            ConnectionString = "DataSource=:memory:",
+            IsAutoCloseConnection = false,
+            InitKeyType = InitKeyType.Attribute,
+        });
+        client.Open();
+        client.Ado.ExecuteCommand("""
+            CREATE TABLE ai_entity_field (
+                F_Id TEXT PRIMARY KEY,
+                F_TenantId TEXT NOT NULL DEFAULT '',
+                F_ProjectId TEXT NOT NULL DEFAULT '',
+                F_PIPELINE_ID TEXT NOT NULL DEFAULT '',
+                F_SchemaVersion TEXT NOT NULL DEFAULT 'entity-field.v1',
+                F_ProjectionHash TEXT NOT NULL DEFAULT '',
+                F_SourceFragmentId TEXT NOT NULL DEFAULT '',
+                F_SourceDdlFragmentId TEXT,
+                F_EntityName TEXT NOT NULL DEFAULT '',
+                F_EntityDisplayName TEXT,
+                F_TableName TEXT NOT NULL DEFAULT '',
+                F_FieldName TEXT NOT NULL DEFAULT '',
+                F_PropertyName TEXT NOT NULL DEFAULT '',
+                F_DbColumnName TEXT NOT NULL DEFAULT '',
+                F_CSharpType TEXT NOT NULL DEFAULT 'string',
+                F_SqlType TEXT NOT NULL DEFAULT 'NVARCHAR(255)',
+                F_IsRequired INTEGER NOT NULL DEFAULT 0,
+                F_IsPrimaryKey INTEGER NOT NULL DEFAULT 0,
+                F_IsNullable INTEGER NOT NULL DEFAULT 1,
+                F_IsIdentity INTEGER NOT NULL DEFAULT 0,
+                F_References TEXT,
+                F_ReferencesTable TEXT,
+                F_ReferencesColumn TEXT,
+                F_CreatorTime TEXT NOT NULL,
+                F_LastModifyTime TEXT,
+                F_DeleteMark INTEGER NOT NULL DEFAULT 0
+            );
+            """);
+        return client;
     }
 
     private static async Task ProjectAsync(

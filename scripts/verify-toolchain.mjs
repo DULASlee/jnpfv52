@@ -115,11 +115,14 @@ for (const c of opsxCmds) {
   else fail(`command:${c}`);
 }
 
-if (fs.existsSync(path.join(repoRoot, '.cursor', 'rules', 'toolchain-division.mdc'))) ok('rule:toolchain-division');
-else fail('rule:toolchain-division');
+const rulePath = (...parts) => path.join(repoRoot, '.cursor', 'rules', ...parts);
+const toolchainDivision = rulePath('toolchain', 'toolchain-division.mdc');
+const knowledgeBase = rulePath('toolchain', 'knowledge-base.mdc');
+if (fs.existsSync(toolchainDivision)) ok('rule:toolchain-division');
+else fail('rule:toolchain-division', 'expected .cursor/rules/toolchain/toolchain-division.mdc');
 
-if (fs.existsSync(path.join(repoRoot, '.cursor', 'rules', 'knowledge-base.mdc'))) ok('rule:knowledge-base');
-else fail('rule:knowledge-base');
+if (fs.existsSync(knowledgeBase)) ok('rule:knowledge-base');
+else fail('rule:knowledge-base', 'expected .cursor/rules/toolchain/knowledge-base.mdc');
 
 if (fs.existsSync(path.join(repoRoot, 'scripts', 'check-knowledge-freshness.mjs'))) ok('check-knowledge-freshness.mjs');
 else fail('check-knowledge-freshness.mjs');

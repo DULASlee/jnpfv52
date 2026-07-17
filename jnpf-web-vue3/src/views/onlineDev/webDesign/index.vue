@@ -47,7 +47,7 @@
   // Layer 1: safeOpen 加载感知队列（组件未就绪时排队，register 后自动回放）
   // Layer 2: isLoaded + prefetch 供按钮绑定 :loading + @mouseenter
   // Layer 3: onErrorCaptured 错误边界（见下方）
-  // Layer 4: useLazyComponent 超时 10s（原 30s），快速失败
+  // Layer 4: 开发态 120s / 生产 10s；进页不挂载弹窗，仅交互时加载 chunk
   const MODULE = 'onlineDev/webDesign';
 
   // ── Modal 类组件：useLazyModal 一体化 ──

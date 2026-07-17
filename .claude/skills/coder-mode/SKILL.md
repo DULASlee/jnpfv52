@@ -26,7 +26,9 @@ description: 进入 Coder 角色（写/改后端 .cs 或前端 .vue/.ts 代码�
 
 ## 硬约束（来自 soul）
 
+- **ADF 三先行（S/A）：** 无 P1–P3 用户批准不得写业务实现；见 `.cursor/rules/architecture-design-interface-first.mdc`
 - **Review Gate 计数器**（soul §8）：Write/Edit 后 +1，≥2 触发 code-reviewer 子代理；Step 7 重置
 - **todo 强制含** `🔍 代码审查(子代理)` + `📝 错题本追加`，code-reviewer PASS 前保持 pending
 - **禁止**吞异常 / TODO/FIXME / 无根因改动 / `.ToListAsync()` 用于 >100 条查询 / IDynamicApiController 方法带 Async 后缀
 - **Trap 自查**（soul §3）：Mapster 审计字段 / N+1 / Updateable 租户 / public=API / 分页
+- **零占位符：** hooks L11 + pre-commit 硬拦；例外 `// placeholder-ok: <理由>`

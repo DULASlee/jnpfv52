@@ -8,21 +8,18 @@ using UglyToad.PdfPig;
 namespace JNPF.InteAssistant.Gates;
 
 /// <summary>
-/// 附件预处理服务
-/// 支持：Excel / Word(docx) / PDF / 图片 / 纯文本
-///
-/// 修复项（相对清言版本）：
-///   ✅ EPPlus LicenseContext 改为静态构造函数（只执行一次） — #7
-///   ✅ XWPFDocument 加 using（修复内存泄漏） — #2
-///   ✅ ProcessAttachmentsAsync 去掉 async 状态机（修复性能浪费） — #5
-///   ✅ 添加 MemoryStream using 确保所有流资源释放
+/// 附件预处理服务 — 分批解析，不截断全文。
+/// 大文件由调用方（PipelineAttachmentService）增量写入分块存档后再合并取出。
 /// </summary>
 public class AttachmentProcessor : ITransient
 {
     private readonly ILogger<AttachmentProcessor> _logger;
-    private const int MaxExtractedLength = 30000;
 
-    // 修复 #7：静态构造函数，确保只执行一次
+    /// <summary>单批目标字符数（按段落/页/行自然边界切分，可略超）。</summary>
+    public const int DefaultTargetChunkChars = 8_000;
+
+    private const int MaxExcelColumns = 20;
+
     static AttachmentProcessor()
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
@@ -34,8 +31,8 @@ public class AttachmentProcessor : ITransient
     }
 
     /// <summary>
-    /// 处理所有附件，返回合并后的纯文本
-    /// 修复 #5：去掉 async，直接返回 Task（无真正异步操作时避免状态机开销）
+    /// 兼容旧调用：同步解析并内存合并（不做长度截断）。
+    /// 大文件场景请改用 <see cref="ExtractChunks"/> + 分块存档。
     /// </summary>
     public Task<string> ProcessAttachmentsAsync(List<AttachmentFile> attachments)
     {
@@ -43,28 +40,21 @@ public class AttachmentProcessor : ITransient
             return Task.FromResult("");
 
         var parts = new List<string>();
-
         foreach (var file in attachments)
         {
             try
             {
-                var ext = Path.GetExtension(file.FileName)?.ToLower();
-                var extracted = ext switch
+                var sb = new StringBuilder();
+                sb.AppendLine().AppendLine($"===== 附件：{file.FileName} =====");
+                foreach (var chunk in ExtractChunks(file, DefaultTargetChunkChars))
                 {
-                    ".xlsx" or ".xls" => ExtractExcel(file.Content),
-                    ".docx" => ExtractWord(file.Content),
-                    ".pdf" => ExtractPdf(file.Content),
-                    // 图片走多模态LLM，这里只标记占位
-                    _ when GateConstants.IsImageFile(file.FileName)
-                        => $"[附件：图片 {file.FileName}，需通过多模态模型提取]",
-                    ".txt" or ".csv" => ExtractText(file.Content),
-                    _ => $"[附件：{file.FileName}，格式{ext}暂不支持自动解析]"
-                };
-
-                if (!string.IsNullOrWhiteSpace(extracted))
-                {
-                    parts.Add($"\n\n===== 附件：{file.FileName} =====\n{extracted}");
+                    if (sb.Length > 0 && !string.IsNullOrWhiteSpace(chunk.Text))
+                        sb.AppendLine();
+                    sb.Append(chunk.Text);
                 }
+                var text = sb.ToString().Trim();
+                if (!string.IsNullOrWhiteSpace(text))
+                    parts.Add(text);
             }
             catch (Exception ex)
             {
@@ -73,103 +63,285 @@ public class AttachmentProcessor : ITransient
             }
         }
 
-        var result = string.Join("", parts);
-        if (result.Length > MaxExtractedLength)
+        return Task.FromResult(string.Join("\n\n", parts));
+    }
+
+    /// <summary>
+    /// 按自然边界分批产出文本块（不截断、不丢中间内容）。
+    /// </summary>
+    public IEnumerable<AttachmentTextChunk> ExtractChunks(AttachmentFile file, int targetChunkChars = DefaultTargetChunkChars)
+    {
+        if (file == null) yield break;
+        if (targetChunkChars < 1_000) targetChunkChars = DefaultTargetChunkChars;
+
+        var ext = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+        IEnumerable<AttachmentTextChunk> chunks;
+        try
         {
-            result = result[..MaxExtractedLength] + "\n\n[... 内容过长，已截断 ...]";
+            chunks = ext switch
+            {
+                ".xlsx" or ".xls" => ExtractExcelChunks(file.Content, targetChunkChars),
+                ".docx" => ExtractWordChunks(file.Content, targetChunkChars),
+                ".pdf" => ExtractPdfChunks(file.Content, targetChunkChars),
+                _ when GateConstants.IsImageFile(file.FileName)
+                    => SingleChunk($"[附件：图片 {file.FileName}，需通过多模态模型提取]", "image"),
+                ".txt" or ".csv" or ".md" => ExtractPlainTextChunks(file.Content, targetChunkChars),
+                _ => SingleChunk($"[附件：{file.FileName}，格式{ext}暂不支持自动解析]", "unsupported"),
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "分批解析失败: {FileName}", file.FileName);
+            chunks = SingleChunk($"[附件 {file.FileName} 处理失败：{ex.Message}]", "error");
         }
 
-        return Task.FromResult(result);
+        var index = 0;
+        foreach (var c in chunks)
+        {
+            var text = SanitizeExtractedText(c.Text);
+            if (string.IsNullOrWhiteSpace(text)) continue;
+            yield return new AttachmentTextChunk(index++, text, c.SourceHint);
+        }
     }
 
-    /// <summary>判断附件中是否包含图片（需走多模态LLM）</summary>
+    public static string SanitizeExtractedText(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        var sb = new StringBuilder(text.Length);
+        char prev = '\0';
+        foreach (var ch in text)
+        {
+            if (ch == '\0' || ch == '\r') continue;
+            if (ch == '\t')
+            {
+                sb.Append(' ');
+                prev = ' ';
+                continue;
+            }
+            if (ch == '\n')
+            {
+                if (prev == '\n' && sb.Length >= 2 && sb[^1] == '\n' && sb[^2] == '\n')
+                    continue;
+                sb.Append('\n');
+                prev = '\n';
+                continue;
+            }
+            if (char.IsControl(ch)) continue;
+            sb.Append(ch);
+            prev = ch;
+        }
+        return sb.ToString().Trim();
+    }
+
     public bool HasImageAttachments(List<AttachmentFile> attachments)
+        => attachments?.Any(a => GateConstants.IsImageFile(a.FileName)) ?? false;
+
+    private static IEnumerable<AttachmentTextChunk> SingleChunk(string text, string hint)
     {
-        return attachments?.Any(a => GateConstants.IsImageFile(a.FileName)) ?? false;
+        yield return new AttachmentTextChunk(0, text, hint);
     }
 
-    // ═══════════════════════════════════════════════════
-    // Excel 提取（修复表头检测 Bug）
-    // 原版：硬编码第 1 行为表头
-    // 修复：DetectHeaderRow 比较第 1/2 行非空单元格数量
-    // ═══════════════════════════════════════════════════
-
-    private string ExtractExcel(byte[] content)
+    private IEnumerable<AttachmentTextChunk> ExtractWordChunks(byte[] content, int targetChars)
     {
-        // using 确保 MemoryStream 和 ExcelPackage 都被释放
+        using var stream = new MemoryStream(content);
+        using var doc = new XWPFDocument(stream);
+
+        var buf = new StringBuilder();
+        var startItem = 1;
+        var item = 0;
+
+        void Flush(string hint, List<AttachmentTextChunk> sink)
+        {
+            if (buf.Length == 0) return;
+            sink.Add(new AttachmentTextChunk(0, buf.ToString(), hint));
+            buf.Clear();
+        }
+
+        var pending = new List<AttachmentTextChunk>();
+        try
+        {
+            foreach (var paragraph in doc.Paragraphs)
+            {
+                item++;
+                var text = paragraph.ParagraphText?.Trim();
+                if (string.IsNullOrWhiteSpace(text)) continue;
+
+                var style = paragraph.Style;
+                var line = (!string.IsNullOrWhiteSpace(style) && style.StartsWith("Heading"))
+                    ? $"## {text}"
+                    : text;
+
+                if (buf.Length > 0 && buf.Length + line.Length + 1 > targetChars)
+                {
+                    Flush($"word-paras {startItem}-{item - 1}", pending);
+                    startItem = item;
+                }
+                if (buf.Length > 0) buf.AppendLine();
+                buf.Append(line);
+            }
+            Flush($"word-paras {startItem}-{item}", pending);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Word 段落分批提取部分失败");
+            if (buf.Length == 0)
+                pending.Add(new AttachmentTextChunk(0, $"[Word 段落提取异常：{ex.Message}]", "word-error"));
+            else
+                Flush($"word-paras {startItem}-{item}-partial", pending);
+        }
+
+        try
+        {
+            var tableIdx = 0;
+            foreach (var table in doc.Tables)
+            {
+                tableIdx++;
+                var tb = new StringBuilder();
+                tb.AppendLine($"[表格 {tableIdx}]");
+                foreach (var row in table.Rows)
+                {
+                    var cells = row.GetTableCells().Select(c => c.GetText()?.Trim() ?? "");
+                    tb.AppendLine(string.Join(" | ", cells));
+                    if (tb.Length >= targetChars)
+                    {
+                        pending.Add(new AttachmentTextChunk(0, tb.ToString(), $"word-table {tableIdx}"));
+                        tb.Clear();
+                        tb.AppendLine($"[表格 {tableIdx} 续]");
+                    }
+                }
+                if (tb.Length > 0)
+                    pending.Add(new AttachmentTextChunk(0, tb.ToString(), $"word-table {tableIdx}"));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Word 表格分批提取失败（段落已保留）");
+            pending.Add(new AttachmentTextChunk(0, $"[表格提取失败：{ex.Message}]", "word-table-error"));
+        }
+
+        return pending;
+    }
+
+    private IEnumerable<AttachmentTextChunk> ExtractPdfChunks(byte[] content, int targetChars)
+    {
+        using var document = PdfDocument.Open(content);
+        var buf = new StringBuilder();
+        var startPage = 1;
+        var pageNo = 0;
+        var pending = new List<AttachmentTextChunk>();
+
+        foreach (var page in document.GetPages())
+        {
+            pageNo++;
+            var text = page.Text;
+            if (string.IsNullOrWhiteSpace(text)) continue;
+
+            if (buf.Length > 0 && buf.Length + text.Length + 1 > targetChars)
+            {
+                pending.Add(new AttachmentTextChunk(0, buf.ToString(), $"pdf-pages {startPage}-{pageNo - 1}"));
+                buf.Clear();
+                startPage = pageNo;
+            }
+            if (buf.Length > 0) buf.AppendLine();
+            buf.AppendLine(text);
+        }
+
+        if (buf.Length > 0)
+            pending.Add(new AttachmentTextChunk(0, buf.ToString(), $"pdf-pages {startPage}-{pageNo}"));
+
+        return pending;
+    }
+
+    private IEnumerable<AttachmentTextChunk> ExtractExcelChunks(byte[] content, int targetChars)
+    {
         using var stream = new MemoryStream(content);
         using var package = new ExcelPackage(stream);
         var workbook = package.Workbook;
-
         if (workbook?.Worksheets == null || workbook.Worksheets.Count == 0)
-            return "";
-
-        var result = new StringBuilder();
+            yield break;
 
         foreach (var worksheet in workbook.Worksheets)
         {
-            result.AppendLine($"【Sheet: {worksheet.Name}】");
-
             if (worksheet.Dimension == null)
             {
-                result.AppendLine("（空表）");
+                yield return new AttachmentTextChunk(0, $"【Sheet: {worksheet.Name}】\n（空表）", $"excel-{worksheet.Name}");
                 continue;
             }
 
-            var colCount = Math.Min(worksheet.Dimension.End.Column, 20);
-
-            // ★ 表头行检测：比较第 1 行和第 2 行的非空单元格数量
-            int headerRow = DetectHeaderRow(worksheet, colCount);
-
-            var rowCount = Math.Min(worksheet.Dimension.End.Row, headerRow + 50);
-
-            // 表头
+            var colCount = Math.Min(worksheet.Dimension.End.Column, MaxExcelColumns);
+            var headerRow = DetectHeaderRow(worksheet, colCount);
             var headers = new List<string>();
             for (int col = 1; col <= colCount; col++)
             {
                 var val = worksheet.Cells[headerRow, col]?.Text?.Trim();
                 headers.Add(string.IsNullOrWhiteSpace(val) ? $"列{col}" : val);
             }
-            result.AppendLine(string.Join(" | ", headers));
-            result.AppendLine(new string('-', headers.Sum(h => h.Length) + headers.Count * 3));
 
-            // 数据行
-            for (int row = headerRow + 1; row <= rowCount; row++)
+            var buf = new StringBuilder();
+            buf.AppendLine($"【Sheet: {worksheet.Name}】");
+            buf.AppendLine(string.Join(" | ", headers));
+            buf.AppendLine(new string('-', Math.Min(120, headers.Sum(h => h.Length) + headers.Count * 3)));
+
+            var startRow = headerRow + 1;
+            for (int row = headerRow + 1; row <= worksheet.Dimension.End.Row; row++)
             {
                 var cells = new List<string>();
                 for (int col = 1; col <= colCount; col++)
-                {
                     cells.Add(worksheet.Cells[row, col]?.Text?.Trim() ?? "");
+                var line = string.Join(" | ", cells);
+
+                if (buf.Length > 0 && buf.Length + line.Length + 1 > targetChars)
+                {
+                    yield return new AttachmentTextChunk(0, buf.ToString(),
+                        $"excel-{worksheet.Name} rows {startRow}-{row - 1}");
+                    buf.Clear();
+                    buf.AppendLine($"【Sheet: {worksheet.Name} 续】");
+                    buf.AppendLine(string.Join(" | ", headers));
+                    startRow = row;
                 }
-                result.AppendLine(string.Join(" | ", cells));
+                buf.AppendLine(line);
             }
 
-            if (worksheet.Dimension.End.Row > headerRow + 50)
+            if (buf.Length > 0)
             {
-                result.AppendLine($"... 共{worksheet.Dimension.End.Row}行，仅显示前50行");
+                yield return new AttachmentTextChunk(0, buf.ToString(),
+                    $"excel-{worksheet.Name} rows {startRow}-{worksheet.Dimension.End.Row}");
             }
-            result.AppendLine();
         }
-
-        return result.ToString();
     }
 
-    /// <summary>
-    /// 检测表头行号
-    /// 规则：如果第 1 行只有 ≤1 个非空单元格，且第 2 行有多个非空单元格，则第 2 行是表头
-    /// </summary>
+    private static IEnumerable<AttachmentTextChunk> ExtractPlainTextChunks(byte[] content, int targetChars)
+    {
+        var text = Encoding.UTF8.GetString(content);
+        if (string.IsNullOrWhiteSpace(text)) yield break;
+
+        using var reader = new StringReader(text);
+        var buf = new StringBuilder();
+        var startLine = 1;
+        var lineNo = 0;
+        string? line;
+        while ((line = reader.ReadLine()) != null)
+        {
+            lineNo++;
+            if (buf.Length > 0 && buf.Length + line.Length + 1 > targetChars)
+            {
+                yield return new AttachmentTextChunk(0, buf.ToString(), $"text-lines {startLine}-{lineNo - 1}");
+                buf.Clear();
+                startLine = lineNo;
+            }
+            if (buf.Length > 0) buf.AppendLine();
+            buf.Append(line);
+        }
+        if (buf.Length > 0)
+            yield return new AttachmentTextChunk(0, buf.ToString(), $"text-lines {startLine}-{lineNo}");
+    }
+
     private static int DetectHeaderRow(ExcelWorksheet worksheet, int colCount)
     {
-        if (worksheet.Dimension.End.Row < 2)
-            return 1; // 只有一行，就当表头
-
+        if (worksheet.Dimension.End.Row < 2) return 1;
         int row1NonEmpty = CountNonEmptyCells(worksheet, 1, colCount);
         int row2NonEmpty = CountNonEmptyCells(worksheet, 2, colCount);
-
-        // 第 1 行几乎为空（标题行），第 2 行有多个单元格（真正的表头）
-        if (row1NonEmpty <= 1 && row2NonEmpty > 1)
-            return 2;
-
+        if (row1NonEmpty <= 1 && row2NonEmpty > 1) return 2;
         return 1;
     }
 
@@ -183,82 +355,10 @@ public class AttachmentProcessor : ITransient
         }
         return count;
     }
-
-    // ═══════════════════════════════════════════════════
-    // Word 提取
-    // 修复 #2：XWPFDocument 加 using（修复内存泄漏）
-    // ═══════════════════════════════════════════════════
-
-    private string ExtractWord(byte[] content)
-    {
-        using var stream = new MemoryStream(content);
-        // 修复 #2：XWPFDocument 实现了 IDisposable，必须 using
-        using var doc = new XWPFDocument(stream);
-
-        var result = new StringBuilder();
-
-        foreach (var paragraph in doc.Paragraphs)
-        {
-            var text = paragraph.ParagraphText?.Trim();
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                var style = paragraph.Style;
-                if (!string.IsNullOrWhiteSpace(style) && style.StartsWith("Heading"))
-                    result.AppendLine($"## {text}");
-                else
-                    result.AppendLine(text);
-            }
-        }
-
-        foreach (var table in doc.Tables)
-        {
-            result.AppendLine("\n[表格]");
-            foreach (var row in table.Rows)
-            {
-                var cells = row.GetTableCells().Select(c => c.GetText()?.Trim() ?? "");
-                result.AppendLine(string.Join(" | ", cells));
-            }
-        }
-
-        return result.ToString();
-    }
-
-    // ═══════════════════════════════════════════════════
-    // PDF 提取
-    // ═══════════════════════════════════════════════════
-
-    private string ExtractPdf(byte[] content)
-    {
-        // PdfPig 的 PdfDocument.Open(byte[]) 内部会复制数据
-        // 返回的 PdfDocument 实现了 IDisposable
-        using var document = PdfDocument.Open(content);
-
-        var result = new StringBuilder();
-        foreach (var page in document.GetPages())
-        {
-            var text = page.Text;
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                result.AppendLine(text);
-            }
-        }
-
-        return result.ToString();
-    }
-
-    // ═══════════════════════════════════════════════════
-    // 纯文本提取
-    // ═══════════════════════════════════════════════════
-
-    private string ExtractText(byte[] content)
-    {
-        return Encoding.UTF8.GetString(content);
-    }
 }
 
-// ═══════════════════════════════════════════════════
-// DTO
-// ═══════════════════════════════════════════════════
+/// <summary>附件解析产出的一批文本。</summary>
+public sealed record AttachmentTextChunk(int Index, string Text, string SourceHint);
 
 public class AttachmentFile
 {

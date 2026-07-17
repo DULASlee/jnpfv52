@@ -33,8 +33,17 @@ export function runAnalystSkill(pipelineId: number, data?: { userRequirement?: s
   });
 }
 
-/** 启动/续跑三轮需求分析编排器（27 号） */
-export function runRequirementAnalysis(pipelineId: number, data?: { providerCode?: string; answers?: unknown }) {
+/** 启动/续跑需求分析编排器（CR-20260714-01：新流程为唯一流程） */
+export function runRequirementAnalysis(
+  pipelineId: number,
+  data?: {
+    providerCode?: string;
+    answers?: unknown;
+    pmClarificationAnswer?: string; // 新流程：PM 追问的自然语言回答
+    specFeedback?: string; // 新流程：用户对需求说明书的修改反馈
+    userMessage?: string; // CR-20260714-01 改动5：用户原始输入（PM 智能判断意图）
+  },
+) {
   return defHttp.post<SkillRunResult>({
     url: `/api/studio/skills/requirement-analysis/${pipelineId}/run`,
     data: data ?? {},

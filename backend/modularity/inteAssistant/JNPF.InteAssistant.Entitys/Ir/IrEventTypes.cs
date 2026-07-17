@@ -79,6 +79,16 @@ public static class IrEventTypes
 
     /// <summary>SA 九表物化失败。</summary>
     public const string SaMaterializationFailed = "SaMaterializationFailed";
+
+    // ── CR-20260713-03：PM 核心流程重构 — 4 步线性（回归"完善需求"初衷）──
+    // 步骤①：PM 用提示词+种子完善需求文本（对话式追问 0~N 次后产出）
+    public const string RequirementEnhanced = "RequirementEnhanced";
+    // 步骤③：PM 分析九步数据反向完善需求文本（可重跑步骤②）
+    public const string RequirementRefined = "RequirementRefined";
+    // 步骤④：渲染需求分析说明书（文本+九步表引用），等用户确认
+    public const string RequirementSpecRendered = "RequirementSpecRendered";
+    // CR-20260714-01 步骤⑤：用户确认需求说明书 → PM 终评 + Analyst Finalize → 进入架构设计
+    public const string RequirementSpecConfirmed = "RequirementSpecConfirmed";
 }
 
 public static class IrFragmentTypes
@@ -100,6 +110,10 @@ public static class IrFragmentTypes
     public const string GeneratedCode = "IR3_GeneratedCode";
     public const string ArchReport = "IR3_ArchReport";
     public const string TestSuite = "IR3_TestSuite";
+
+    // ── CR-20260713-03：PM 核心流程重构 — 需求文本迭代 fragment ──
+    // 步骤①完善后的需求文本；步骤③二次完善覆盖此 fragment。fragmentId = requirement:{projectId}
+    public const string Requirement = "IR0_Requirement";
 }
 
 /// <summary>澄清问答阶段标识（ClarificationSet.stage 取值）。</summary>

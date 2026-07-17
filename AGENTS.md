@@ -48,24 +48,29 @@ Kills stale dotnet/node processes, frees ports 3100+3102+3800+5000+3001, then la
 | API 快测（Vitest） | `E2E_PIPELINE_ID=311 pnpm test:api` | repo root |
 | S0→S2 长链 | `node scripts/phase-sup-s2-e2e.mjs verify` | repo root |
 | Git hooks enable (after clone) | `git config core.hooksPath .githooks` | repo root |
+| Hook 合规（含 L11 占位符） | `node scripts/test-hooks.mjs` | repo root |
 
 **CI gate order:** `lint → type-check → test:unit → build`
 
-**Frontend type-check:** Never run bare `npx vue-tsc --noEmit` (OOM on full `src`). Use `pnpm type-check` (Studio scoped, `tsconfig.typecheck.json`); use `pnpm type-check:full` when editing legacy modules. See `.cursor/rules/frontend-typecheck.mdc`.
+**Frontend type-check:** Never run bare `npx vue-tsc --noEmit` (OOM on full `src`). Use `pnpm type-check` (Studio scoped, `tsconfig.typecheck.json`); use `pnpm type-check:full` when editing legacy modules. See `.cursor/rules/frontend/frontend-typecheck.mdc`.
 
 ## Code Search Rules（强制性 — 所有 Agent 必遵）
 
-> **针式搜索铁律（防卡死）：** `.cursor/rules/needle-search.mdc` · `.claude/rules/needle-search.md`  
+> **针式搜索铁律（防卡死）：** `.cursor/rules/toolchain/needle-search.mdc` · `.claude/rules/needle-search.md`  
 > 先窄后宽 · 并行≤3 · 禁全仓拖网 · 禁为找文件派 explore · 大文件局部 Read · >15s 收窄不盲重试。
 
 | 搜索目标 | 工具 | 说明 |
 |---------|------|------|
 | 已知路径 | 直接 Read（大文件带 offset/limit） | 禁止先全仓扫 |
-| C# 符号（类/方法/接口/引用） | **Serena MCP** `find_symbol` / `find_referencing_symbols` | 语义级精确搜索 |
+| C# 单符号（类/方法/接口/引用） | **Serena MCP** `find_symbol` / `find_referencing_symbols` | 精确到调用点 |
 | C# 文件结构概览 | **Serena MCP** `get_symbols_overview` | 一眼看清文件内容 |
-| 项目架构/领域知识查询 | **Knowledge Graph MCP** `search_nodes` | 知识图谱语义查询 |
+| **跨文件调用链/影响分析** | **Codebase-Memory MCP** `trace_path` / `search_graph` | 多跳 callers/callees、BM25+向量搜索 |
+| **项目架构/模块聚类/复杂度热点** | **Codebase-Memory MCP** `get_architecture` / `query_graph`（Cypher） | Leiden 社区检测、O(n²) 隐患 |
+| 领域知识/设计意图/历史决策 | **Knowledge Graph MCP** `search_nodes` | 人工沉淀的领域知识 |
 | 文本关键词 | Grep（**必须**带 path 和/或 glob） | 禁止无范围全仓扫 |
 | 文件名模式 | 窄 Glob（如 `**/PmSkill*.cs`） | 禁止 `**/*` 拖网 |
+
+> **三大 MCP 分工：** Serena=单符号精确查；Codebase-Memory=跨文件调用链/架构/复杂度（自动索引）；Knowledge Graph=领域知识/设计意图（人工沉淀）。三者互补，非替代。详见 `.claude/rules/mcp-code-search.md`。
 
 > ❌ Shell `find`/`dir /s` 全仓搜索 · ❌ 为「找一个文件」派 explore 子 Agent。详见 [CLAUDE.md](./CLAUDE.md) §Agent Toolchain。
 
@@ -90,7 +95,7 @@ python scripts/jnpf_auth.py GET /api/studio/ir/42/events          # Python 等�
 | 手工调 API | `pnpm sync:http-env` + `api-tests/http/*.http` |
 | 前端 UI 交付 | Playwright → `.claude/evidence/` |
 
-**E2E 知识库：** `openspec/specs/studio-e2e-toolchain/spec.md` · **规则：** `.cursor/rules/testing-toolchain.mdc`
+**E2E 知识库：** `openspec/specs/studio-e2e-toolchain/spec.md` · **规则：** `.cursor/rules/toolchain/testing-toolchain.mdc`
 
 登录：`POST /api/oauth/Login`（form-urlencoded，MD5+AES）· **不是** `/api/auth/login`
 
@@ -146,7 +151,47 @@ jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
 | F3 | 排除并修订旧实现干扰 |
 | F4 | 全链条冒烟测试置后（SG 全绿 → W3） |
 
-**主文件：** `.cursor/rules/fullchain-sprint-iron-law.mdc` · `.claude/rules/fullchain-sprint-iron-law.md` · 30 号计划 §0.6/§5/§16
+**主文件：** `.cursor/rules/iron-laws/fullchain-sprint-iron-law.mdc` · `.claude/rules/fullchain-sprint-iron-law.md` · 30 号计划 §0.6/§5/§16
+
+## 需求分析子链铁律（宪法级, 永远生效, 2026-07-12 立）
+
+**一切编码以阶段 A-B-C 为唯一施工依据（`1、阶段A/B/C.md`）；旧 25–33 已废止归档。未经 CR 擅自修改关键业务方法 = 最严重越权。**
+
+| # | 禁令 |
+|---|------|
+| 一 | 禁止新增 .mjs 脚本（除 hooks）；现有冻结迁移 xUnit/Vitest .ts — guard-write L10c ✅ |
+| 二 | 数据一致性：IR=Write Model；ai_entity_field=字段唯一源；sa_*=投影禁手改 — L10d + xUnit ✅ |
+| 三 | 逐阶段推进：门控→需求分析→架构→总体设计→开发→测试→debug→沙箱 — 审批 + L10 ✅ |
+| 四 | 以阶段 A-B-C 为总纲，编码对照阶段 A/B/C；偏离先改文档再改代码 — 人审 📋 |
+| 五 | 功能点验收：每功能点 = xUnit 绿 + 业务证据 + 用户审批；全验收后才联调 — xUnit + 审批 ✅ |
+| 六 | CR 变更审批：关键业务方法（PmSkillService/Orchestrator/AnalystSkillService/SkillsApiService/DesignSkillOrchestrator/Gates/*）修改前 MUST 提交 CR — guard-write L10a ✅ |
+| 七 | 禁止复活废止模块（ScannerValidator/cascadeUpdate/sa_ddd/Q1-Q9/编排器代问/普通SINGLE）— L10b + JNPF007/008 ✅ |
+
+**CR 流程：** `.claude/change-requests/CR-{日期}-{NN}.md` → 用户审批 → `workflow-state.json` 标 `cr-approved` → L10a 放行。
+
+**主文件：** `.claude/rules/req-analysis-iron-law.md` · `.cursor/rules/iron-laws/req-analysis-iron-law.mdc`
+
+## ADF 三先行（全项目, 2026-07-12 立）
+
+**S/A：架构 → 设计模式 → 接口契约 → 实现；每阶段等用户「继续/通过」。** B 级须 `ADF 豁免：B级 — …`。
+
+| 阶段 | 要点 |
+|------|------|
+| P1 | 层边界、唯一源、三元组、≥2 方案+failure_boundary |
+| P2 | 模式映射 SkillHarness / Gate / IR / IDynamicApiController |
+| P3 | 签名/DTO/事件契约，禁止方法体 |
+| P4 | 实现 + 节点审批 |
+
+模板：`.cursor/templates/adf-*.md` · 启动：`.cursor/templates/task-kickoff.md`  
+零占位符硬拦：`guard-write` L11 · Cursor hooks · `.githooks/pre-commit`
+
+**主文件：** `.cursor/rules/iron-laws/architecture-design-interface-first.mdc` · `.claude/rules/architecture-design-interface-first.md`
+
+### 规则加载与硬门（2026-07-12）
+
+- **唯一 alwaysApply：** `.cursor/rules/00-constitution.mdc`（分层：`iron-laws/` `domain/` `frontend/` `toolchain/` `docs/`，见 README）
+- **ADF L12：** `adfPhase=P0..P3` 锁业务源码；`P4`/`exempt` 放行
+- **四支柱：** `awaitingNodeApproval` + `pillar-claim-current.json` + `pillar-claim-check.mjs --force`
 
 ## Triple-Key Iron Law (R12 — 宪法级, 永远生效)
 
@@ -159,7 +204,7 @@ jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
 - `ResolveProjectAsync` MUST 返回真实 ProjectId（非 pipelineId）
 - 创建 pipeline MUST 写 `F_CREATOR_USER_ID`（同租户用户隔离）
 
-**主文件：** `.cursor/rules/triple-key-iron-law.mdc` · `.claude/rules/triple-key-iron-law.md` · `architecture-redlines.md` §R12
+**主文件：** `.cursor/rules/iron-laws/triple-key-iron-law.mdc` · `.claude/rules/triple-key-iron-law.md` · `architecture-redlines.md` §R12
 
 **违反后果：** IR 投影覆盖数据 / fork 无法继承代码 / 三元组血缘断裂 / 同租户越权 — "多用户多项目多对话"形同虚设。
 
@@ -172,7 +217,7 @@ jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
 | compile（默认） | **否** | **否**（confirm 后 C# 物化） |
 | agent（回归） | 是 | legacy（禁止主链） |
 
-**文档：** `openspec/specs/studio-s2-compile/spec.md` · `.cursor/rules/studio-s2-compile.mdc`  
+**文档：** `openspec/specs/studio-s2-compile/spec.md` · `.cursor/rules/domain/studio-s2-compile.mdc`  
 **验收（快测优先）：** `E2E_PIPELINE_ID=311 pnpm test:api` · mjs verify 仅 evidence/长链
 
 ## 交互式澄清问答（2026-07-06 — ADR-005）
@@ -187,7 +232,7 @@ jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
 
 **关键题硬门控**：`ClarificationQuestion.Required=true` 必答才推进（`Oops.Bah` 拒绝）。**逃生口**："全部跳过直接分析"始终可见。**IR 事件**：`ClarificationRequested`(in-progress) / `ClarificationAnswered`(stable)，可审计回放。
 
-**文档：** `openspec/specs/studio-clarification/spec.md` · `.cursor/rules/studio-clarification.mdc`
+**文档：** `openspec/specs/studio-clarification/spec.md` · `.cursor/rules/domain/studio-clarification.mdc`
 
 ## Eval Pipeline 四层评估（2026-07-08 — 阶段七）
 
@@ -200,11 +245,11 @@ Skill 质量评估管线：L1 组件/L2 轨迹/L3 任务**确定性**（无 LLM�
 
 **验收（快测优先）：** `node scripts/phase7-eval-verify.mjs`（23 项 DoD）· `dotnet build` InteAssistant 0 错误
 
-**文档：** `openspec/specs/studio-eval-pipeline/spec.md` · `.cursor/rules/studio-eval-pipeline.mdc`
+**文档：** `openspec/specs/studio-eval-pipeline/spec.md` · `.cursor/rules/domain/studio-eval-pipeline.mdc`
 
 ## E2E 分层工具链（2026-07-06）
 
-**禁止**日常仅依赖慢速 `.mjs`。见 `openspec/specs/studio-e2e-toolchain/spec.md` · `.cursor/rules/testing-toolchain.mdc`。
+**禁止**日常仅依赖慢速 `.mjs`。见 `openspec/specs/studio-e2e-toolchain/spec.md` · `.cursor/rules/toolchain/testing-toolchain.mdc`。
 
 ## Hooks (自动拦截 · AI 无法绕过)
 
@@ -212,7 +257,7 @@ Three L0 hooks registered in `.claude/settings.json` block dangerous writes, com
 
 | Hook | Guards |
 |------|--------|
-| `guard-write.mjs` | Secrets, empty files, R4 (tenant), R5 (OA boundary), R7 (SQL injection), R8 (auth) |
+| `guard-write.mjs` | Secrets, empty files, R4–R8, L10 req-analysis, **L11 zero-placeholder** |
 | `guard-bash.mjs` | Dangerous shell commands |
 | `guard-finish.mjs` | E2E evidence — blocks if no screenshot/api-smoke output |
 

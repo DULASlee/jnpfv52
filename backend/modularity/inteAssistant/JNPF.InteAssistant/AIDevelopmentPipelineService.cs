@@ -677,13 +677,16 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     }
 
     /// <summary>
-    /// SA 门控入口 — 异步事件驱动
-    /// 前端提交 → 202 Accepted → 后台执行门控 → SSE 推送结果
+    /// <deprecated>SA 门控入口 — 旧 SSE 事件驱动门控流。</deprecated>
+    /// 前端提交 → 202 Accepted → 后台执行门控 → SSE 推送结果。
+    /// F3 铁律：需求分析请使用 POST /api/studio/skills/requirement-analysis/{pipelineId}/run 三轮编排器，
+    ///   本端点保留仅供向后兼容（不含 PM/SystemAnalyst 联动的独立门控场景）。
     /// </summary>
     [HttpPost("{pipelineId:long}/sa-gate")]
     public async Task<object> ExecuteGateAsync(
         long pipelineId, [FromBody] SaGateRequest request)
     {
+        _logger.LogWarning("旧 sa-gate 端点被调用 PipelineId={Id}，建议迁移到 /api/studio/skills/requirement-analysis/{Id}/run 三轮编排器", pipelineId);
         var userText = request?.UserText ?? "";
         var tenantId = TenantResolver.Resolve();
         var userId = GetUserId();
@@ -705,13 +708,16 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         var visionApiKey = visionConfig["ApiKey"] ?? "";
         var visionModel = visionConfig["Model"] ?? "";
 
+        var autoRunPmOnPass = request?.AutoRunPm ?? _gateOptions.CurrentValue.AutoRunPmSkillOnGatePass;
+
         _taskRunner.Run(
             $"SA_Gate_{pipelineId}",
             async (bgCtx, bgCt) =>
             {
                 using var scope = App.RootServices.CreateScope();
                 var attachmentService = scope.ServiceProvider.GetRequiredService<IPipelineAttachmentService>();
-                using var sse = _senderFactory.Create(pipelineId.ToString(), channel);
+                var sse = _senderFactory.Create(pipelineId.ToString(), channel);
+                var pmHandoff = false;
                 try
                 {
                     sse.TrySend("attachments_processing", JsonSerializer.Serialize(new
@@ -789,17 +795,60 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                         sse.TrySend("stage_transition", PipelineStage.Requirement);
 
                         // P2-B14：门控通过后可选自动触发 PM Skill
-                        var autoRunPm = request?.AutoRunPm ?? _gateOptions.CurrentValue.AutoRunPmSkillOnGatePass;
-                        if (autoRunPm)
+                        // ★ PM 失败不得冒充 GATE_INTERNAL_ERROR——门控已通过，应单独上报 pm_skill_failed
+                        // ★ 2026-07-17：PM 不得与门控共用 5min 后台任务——步骤③ LLM 流式可 >5min，会触发 bgCt 取消。
+                        if (autoRunPmOnPass)
                         {
-                            sse.TrySend("pm_skill_started", JsonSerializer.Serialize(new { pipelineId, source = "gate_pass" }));
-                            await _skillHarness.RunAsync(
-                                "pm-skill",
-                                pipelineId,
-                                tenantId.ToString(),
-                                pipelineId.ToString(),
-                                new SkillRunOptions { UserRequirement = gateResult.MergedText ?? userText },
-                                bgCt);
+                            pmHandoff = true;
+                            sse.TrySend("pm_skill_started", JsonSerializer.Serialize(new { pipelineId, source = "gate_pass_new" }));
+                            var mergedTextForPm = gateResult.MergedText;
+                            var tenantIdForPm = tenantId.ToString();
+                            var pipelineIdForPm = pipelineId;
+                            var pmChannel = channel;
+                            _taskRunner.Run(
+                                $"PM_Pipeline_{pipelineId}",
+                                async (pmCtx, pmCt) =>
+                                {
+                                    using var pmScope = App.RootServices.CreateScope();
+                                    var pmSenderFactory = pmScope.ServiceProvider.GetRequiredService<ISseSenderFactory>();
+                                    using var pmSse = pmSenderFactory.Create(pipelineIdForPm.ToString(), pmChannel);
+                                    try
+                                    {
+                                        var newOrchestrator = pmScope.ServiceProvider.GetRequiredService<IRequirementAnalysisOrchestrator>();
+                                        await newOrchestrator.RunAsync(
+                                            pipelineIdForPm,
+                                            tenantIdForPm,
+                                            pipelineIdForPm.ToString(),
+                                            new RequirementAnalysisOptions
+                                            {
+                                                ProviderCode = null,
+                                                InitialUserRequirement = mergedTextForPm,
+                                            },
+                                            pmCt);
+                                        pmSse.Complete();
+                                    }
+                                    catch (OperationCanceledException)
+                                    {
+                                        _logger.LogWarning("PM 流水线超时或取消: PipelineId={Id}", pipelineIdForPm);
+                                        pmSse.TrySend("pm_skill_failed", JsonSerializer.Serialize(new
+                                        {
+                                            message = "PM 需求分析超时或被取消，请稍后在流水线中重新触发。",
+                                            errorCode = "PM_PIPELINE_TIMEOUT",
+                                        }));
+                                        pmSse.Complete();
+                                    }
+                                    catch (Exception pmEx) when (pmEx is not OutOfMemoryException and not StackOverflowException)
+                                    {
+                                        _logger.LogError(pmEx, "新流程 PM 完善需求失败: PipelineId={Id}", pipelineIdForPm);
+                                        pmSse.TrySend("pm_skill_failed", JsonSerializer.Serialize(new
+                                        {
+                                            message = pmEx.Message,
+                                            errorCode = "PM_PIPELINE_FAILED",
+                                        }));
+                                        pmSse.Complete();
+                                    }
+                                },
+                                timeout: TimeSpan.FromMinutes(35));
                         }
                     }
                     else
@@ -821,17 +870,45 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                             tenantId.ToString(), pipelineId, gateResult, prepared.Items, bgCt);
                     }
 
-                    sse.Complete();
+                    if (!pmHandoff)
+                        sse.Complete();
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "SA 门控异常: PipelineId={Id}", pipelineId);
+                    // #region agent log
+                    try
+                    {
+                        var dbg = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            sessionId = "ead5d0",
+                            runId = "post-fix",
+                            hypothesisId = "H5",
+                            location = "AIDevelopmentPipelineService.ExecuteGateAsync:catch",
+                            message = "GATE_INTERNAL_ERROR",
+                            data = new
+                            {
+                                pipelineId,
+                                exType = ex.GetType().FullName,
+                                exMessage = ex.Message
+                            },
+                            timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                        });
+                        System.IO.File.AppendAllText(@"D:\JNPF-v52\debug-ead5d0.log", dbg + "\n");
+                    }
+                    catch { }
+                    // #endregion
                     sse.TrySend("gate_error", JsonSerializer.Serialize(new
                     {
                         message = "需求评估过程中发生异常，请重试。",
                         errorCode = "GATE_INTERNAL_ERROR"
                     }));
                     sse.Complete();
+                }
+                finally
+                {
+                    if (!pmHandoff)
+                        sse.Dispose();
                 }
             },
             timeout: TimeSpan.FromMinutes(5));
@@ -848,8 +925,10 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     // ─── 执行当前阶段（调 LLM 流式输出）───
 
     /// <summary>
+    /// <deprecated>旧 SSE 流式执行端点。</deprecated>
     /// 执行当前阶段 — 保存用户消息，启动后台 LLM 流式任务，立即返回。
     /// 前端随后通过 GET /events 读取 SSE 流式 token。
+    /// F3 铁律：需求分析请使用 POST /api/studio/skills/requirement-analysis/{pipelineId}/run 三轮编排器。
     /// </summary>
     [HttpPost("{pipelineId:long}/execute")]
     public async Task<StageResult> ExecuteStageAsync(
@@ -857,6 +936,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
     {
         await EnsurePipelineTenantAsync(pipelineId, CancellationToken.None);
         await EnsureNotFrozenAsync(pipelineId, CancellationToken.None);
+
+        _logger.LogWarning("旧 execute 端点被调用 PipelineId={PipelineId} Stage={Stage}，建议迁移到 /api/studio/skills/requirement-analysis/{PipelineId}/run 三轮编排器", pipelineId, request.StageName);
 
         // 查询 projectId(三元组血缘):历史数据 projectId≡pipelineId,新数据从 pipeline.ProjectId 读取
         var pipelineEntity = await _db.Queryable<AiPipelineEntity>()
@@ -1006,9 +1087,11 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
             string? systemPrompt = null;
 
+            #region LEGACY_REQUIREMENT_GATE_FLOW
             // ═══════════════════════════════════════════════════
             // 需求门控：附件持久化 + 缓存 + 硬规则校验 + 成熟度评估
             // （仅 requirement 阶段触发，其他阶段走默认 SystemPrompt）
+            // F3 铁律：此块为旧 SSE 门控流 — 新版三轮编排器入口在 POST /api/studio/skills/requirement-analysis/{pipelineId}/run
             // ═══════════════════════════════════════════════════
             if (stageName == PipelineStage.Requirement)
             {
@@ -1299,9 +1382,10 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     logger.LogError(ex, "需求门控执行异常，阻断 LLM 调用 pipelineId={Id}", pipelineId);
                     sse.Error($"门控校验异常: {ex.Message}");
                     sse.Complete();
-                return;
+                    return;
                 }
             }
+            #endregion // LEGACY_REQUIREMENT_GATE_FLOW
 
             // 构造 LLM 请求
             var llmRequest = new ChatCompletionRequest

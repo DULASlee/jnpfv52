@@ -17,6 +17,7 @@
 
 import { execSync } from 'child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
+import { requiresPillarClaim, loadAndValidateClaim, CLAIM_REL } from './pillar-claim-lib.mjs';
 
 // ─── 项目根目录解析（cwd 可能在子目录）─────────────────────────
 function getProjectRoot() {
@@ -87,6 +88,28 @@ console.error('🛑 Stop hook: 冒烟测试 + E2E 证据检查...');
 let hasError = false;
 const errorDetails = [];
 const checks = [];
+
+// ═══════════════════════════════════════════════════════════════════
+// L0-PILLAR: 四大支柱 claim（节点审批态硬门）
+// ═══════════════════════════════════════════════════════════════════
+{
+  if (requiresPillarClaim(ROOT)) {
+    const result = loadAndValidateClaim(ROOT);
+    if (!result.ok) {
+      hasError = true;
+      errorDetails.push('⛔ 四大支柱 claim 无效/缺失 — 禁止在节点审批态结束会话并声称完成。');
+      for (const e of result.errors) errorDetails.push(`   · ${e}`);
+      errorDetails.push(`   填写 ${CLAIM_REL}（模板 .cursor/templates/four-pillars-checkpoint.md）`);
+      errorDetails.push('   校验: node .claude/hooks/pillar-claim-check.mjs --force');
+      checks.push('L0-PILLAR: ❌ pillar claim');
+    } else {
+      console.error(`  ✅ 四大支柱 claim 有效 (node=${result.claim.node})`);
+      checks.push('L0-PILLAR: ✅ pillar claim');
+    }
+  } else {
+    checks.push('L0-PILLAR: ⏭️ 非节点审批态');
+  }
+}
 
 // ─── 变更检测（合并 committed + unstaged + staged）─────────────
 let allFiles = '';

@@ -155,7 +155,14 @@ public sealed class SkillHarness : ISkillHarness, ITransient
 
             _skillLogger.LogPhase("ValidateInput", "passed", sw.ElapsedMilliseconds);
 
-            var requirement = options.UserRequirement ?? await LoadUserRequirementAsync(pipelineId, ct);
+            // CR-20260717-01 §4.1: UserRequirement 硬门控 — 调用方 MUST 显式传入，禁止 DB 兜底
+            if (string.IsNullOrWhiteSpace(options.UserRequirement))
+            {
+                throw Oops.Bah(
+                    $"SkillHarness.RunAsync: UserRequirement 不能为空。调用方 MUST 显式传入 options.UserRequirement，" +
+                    $"禁止依赖 DB 加载兜底。skillId={skillId} pipelineId={pipelineId}");
+            }
+            var requirement = options.UserRequirement;
             var seeds = await _contextBuilder.FindSeedMatchesAsync(requirement, ct);
             var promptContext = _contextBuilder.Build(skill.InformationNeeds, snapshot, seeds);
 
@@ -259,16 +266,6 @@ public sealed class SkillHarness : ISkillHarness, ITransient
             SaStepsCompleted = d.SaStepsCompleted ?? Array.Empty<string>(),
         }).ToList();
         return new IrSnapshot { Fragments = fragments };
-    }
-
-    private async Task<string> LoadUserRequirementAsync(long pipelineId, CancellationToken ct)
-    {
-        var tenantId = TenantResolver.Resolve().ToString();
-        var msg = await _db.Queryable<AiPipelineMessageEntity>()
-            .Where(x => x.PipelineId == pipelineId.ToString() && x.TenantId == tenantId && x.Role == "user")
-            .OrderByDescending(x => x.CreatorTime)
-            .FirstAsync(ct);
-        return msg?.Content ?? string.Empty;
     }
 
     private async Task InsertRunAsync(string runId, string tenantId, string projectId, long pipelineId, string skillId, CancellationToken ct)

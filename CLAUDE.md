@@ -48,7 +48,49 @@ Dev Loop：`dotnet build` → `node scripts/jnpf-api.mjs GET /api/oauth/CurrentU
 | **F3** | 排除旧实现干扰 | 切断旧 Analyst/九步/parse-IR 字段源/311 假绿 |
 | **F4** | 全链冒烟置后 | SG0–SG7 + CONTRACT 全绿后才 W3 |
 
-**顺序：** `W0 → SG-CONTRACT → SG0…SG7 → W3`。细则：`.claude/rules/fullchain-sprint-iron-law.md` · `.cursor/rules/fullchain-sprint-iron-law.mdc` · 30 号计划。
+**顺序：** `W0 → SG-CONTRACT → SG0…SG7 → W3`。细则：`.claude/rules/fullchain-sprint-iron-law.md` · `.cursor/rules/iron-laws/fullchain-sprint-iron-law.mdc` · 30 号计划。
+
+### ⬛ 需求分析子链铁律（2026-07-12 立）
+
+**一切编码以阶段 A-B-C 为唯一施工依据（`1、阶段A.md` / `2、阶段B.md` / `3、阶段C.md`）；旧 25–33 号已废止归档。未经 CR 擅自修改关键业务方法 = 最严重越权。**
+
+| # | 禁令 | 要点 | 机器检测 |
+|---|------|------|----------|
+| 一 | 禁止新增 .mjs 脚本 | 除 hooks 目录外；现有 mjs 冻结迁移 xUnit/Vitest .ts | guard-write L10c ✅ |
+| 二 | 数据一致性 | IR=Write Model；ai_entity_field=字段唯一源；sa_*=投影禁手改 | L10d + xUnit ✅ |
+| 三 | 逐阶段推进 | 门控→需求分析→架构→总体设计→开发→测试→debug→沙箱 | 审批 + L10 ✅ |
+| 四 | 以阶段 A-B-C 为总纲 | 编码对照阶段 A/B/C；偏离先改文档再改代码 | 人审 📋 |
+| 五 | 功能点验收 | 每功能点 = xUnit 绿 + 业务证据 + 用户审批；全验收后才联调 | xUnit + 审批 ✅ |
+| 六 | CR 变更审批 | 关键业务方法修改前 MUST 提交 CR（保护清单见铁律文件） | guard-write L10a ✅ |
+| 七 | 禁止复活废止模块 | ScannerValidator/cascadeUpdate/sa_ddd/Q1-Q9/编排器代问/普通SINGLE | L10b + JNPF007/008 ✅ |
+
+**关键业务方法保护清单：** PmSkillService / RequirementAnalysisOrchestrator / AnalystSkillService / SkillsApiService / DesignSkillOrchestrator / Gates/* — 修改前写 `.claude/change-requests/CR-{日期}-{NN}.md`。
+
+**完整条款：** `.claude/rules/req-analysis-iron-law.md` · `.cursor/rules/iron-laws/req-analysis-iron-law.mdc`
+
+### ⬛ ADF 三先行（2026-07-12 立 · 全项目）
+
+**S/A 级：架构先行 → 设计模式先行 → 接口契约先行 → 才允许实现；每阶段等用户「继续/通过」。**
+
+| 阶段 | 要点 | 模板 |
+|---|---|---|
+| P0 | Business First Q1–Q3 | （复用业务优先铁律） |
+| P1 | 层边界、唯一源、三元组、≥2 方案+failure_boundary、禁改清单 | `.cursor/templates/adf-architecture.md` |
+| P2 | 1–2 模式映射 SkillHarness/Gate/IR/IDynamicApiController | `.cursor/templates/adf-patterns.md` |
+| P3 | 签名/DTO/事件/错误契约，禁止方法体 | `.cursor/templates/adf-contracts.md` |
+| P4 | 实现 + 节点审批 | 实现完整性铁律 |
+
+B 级须声明 `ADF 豁免：B级 — …`。开 Chat 可粘贴 `.cursor/templates/task-kickoff.md`。
+
+**零占位符硬失败：** `guard-write` L11 · Cursor `guard-placeholder` · `.githooks/pre-commit`；豁免 `// placeholder-ok: <理由>`。
+
+**完整条款：** `.claude/rules/architecture-design-interface-first.md` · `.cursor/rules/iron-laws/architecture-design-interface-first.mdc`
+
+### ⬛ 规则加载策略（2026-07-12 · 对抗约束衰减）
+
+- **唯一 alwaysApply：** `.cursor/rules/00-constitution.mdc`；详规在 `iron-laws/` · `domain/` · `frontend/` · `toolchain/` · `docs/`（见 `.cursor/rules/README.md`）。
+- **ADF 写入锁 L12：** `workflow-state.json` → `adfPhase=P0..P3`（或仅设 `currentSg`）时禁止写业务 `.cs/.vue`；`P4`/`exempt` 放行。
+- **四支柱硬门：** 节点验收设 `awaitingNodeApproval`；填 `pillar-claim-current.json`；`pillar-claim-check.mjs --force`。
 
 ---
 
@@ -133,7 +175,7 @@ JNPF v5.2 低代码平台全栈工程师。技术栈：.NET 8 + SqlSugar + Dappe
 | **编码前** | Grep `.claude/memory/mistake-log.md` 避坑 |
 | 写后端 C# | Read `.claude/rules/jnpf-expert-traps.md` + `sql-safety.md` |
 | 写前端 Vue3 | Read `.claude/rules/jnpf-frontend-rules.md` |
-| 前端类型检查 | `pnpm type-check`（禁止裸 `vue-tsc`）→ `.cursor/rules/frontend-typecheck.mdc` |
+| 前端类型检查 | `pnpm type-check`（禁止裸 `vue-tsc`）→ `.cursor/rules/frontend/frontend-typecheck.mdc` |
 | 后端/API/Skill/IR 验证 | `.claude/skills/jnpf-api-cli/SKILL.md` + `scripts/jnpf-api.mjs` |
 | 前端 UI 变更 / E2E | `.claude/skills/playwright/SKILL.md`（产出 E1 截图） |
 | SSE/EventSource/WebSocket/setTimeout | Read `.claude/rules/frontend-memory-leak.md` |
@@ -177,7 +219,7 @@ cd backend && dotnet build
 - **Studio S2（ADR-004）：** compile 默认 → `SaNineViewCompiler`；confirm 后 C# `SaMaterializer` 写 `sa_*` 九表。见 `openspec/specs/studio-s2-compile/spec.md`
 - **交互式澄清（ADR-005）：** 三阶段结构化选择题，IR 事件化。见 `openspec/specs/studio-clarification/spec.md`
 - **Eval Pipeline（阶段七）：** L1-L3 确定性 + L4 LLM Judge 跨家族 mimo，月度 Cohen's kappa。见 `openspec/specs/studio-eval-pipeline/spec.md`
-- **三元组铁律（R12）：** 一切数据/IR/路径 MUST 携带 `(tenantId, projectId, pipelineId)`。见 `.cursor/rules/triple-key-iron-law.mdc`
+- **三元组铁律（R12）：** 一切数据/IR/路径 MUST 携带 `(tenantId, projectId, pipelineId)`。见 `.cursor/rules/iron-laws/triple-key-iron-law.mdc`
 
 ### Agent Toolchain
 
@@ -188,13 +230,17 @@ cd backend && dotnet build
 | jnpf-tester（子 agent） | Phase 5 Dev Loop 验证，产出 test-report-v1 |
 | jnpf-debugger（子 agent） | 数据驱动根因诊断，产出 debug report |
 | Serena MCP | C# 符号级 rename/find-refs/find-symbol/get-overview |
-| Knowledge Graph MCP | 知识图谱搜索/实体查询/关系追溯 |
+| Codebase-Memory MCP | 跨文件调用链(trace_path)/架构总览(get_architecture)/复杂度热点(query_graph Cypher)/BM25+向量搜索(search_graph) |
+| Knowledge Graph MCP | 知识图谱搜索/实体查询/关系追溯（人工沉淀的领域知识） |
 
 **代码/文件搜索规则（强制性）：**
-- **针式搜索铁律** → `.cursor/rules/needle-search.mdc` · `.claude/rules/needle-search.md`（先窄后宽 · 并行≤3 · 禁拖网 · >15s 收窄）
-- C# 符号搜索（找类/方法/接口/引用）→ **Serena MCP**（`mcp__serena__find_symbol` / `mcp__serena__find_referencing_symbols`）
+- **针式搜索铁律** → `.cursor/rules/toolchain/needle-search.mdc` · `.claude/rules/needle-search.md`（先窄后宽 · 并行≤3 · 禁拖网 · >15s 收窄）
+- **MCP 速查手册** → `.claude/rules/mcp-code-search.md`（三大 MCP 分工 + 参数速查 + 场景示例）
+- C# 单符号搜索（找类/方法/接口/引用）→ **Serena MCP**（`mcp__serena__find_symbol` / `mcp__serena__find_referencing_symbols`）
 - C# 文件结构概览 → **Serena MCP**（`mcp__serena__get_symbols_overview`）
-- 项目知识/架构/领域模型查询 → **Knowledge Graph MCP**（`mcp__knowledge-graph__search_nodes`）
+- **跨文件调用链/影响分析** → **Codebase-Memory MCP**（`mcp__codebase-memory__trace_path` / `mcp__codebase-memory__search_graph`）
+- **项目架构/模块聚类/复杂度热点** → **Codebase-Memory MCP**（`mcp__codebase-memory__get_architecture` / `mcp__codebase-memory__query_graph`）
+- 领域知识/设计意图/历史决策查询 → **Knowledge Graph MCP**（`mcp__knowledge-graph__search_nodes`）
 - 文本内容搜索 → Grep（必须带 path/glob）；已知路径直接 Read；文件名用窄 Glob
 - **禁止** Shell 全仓搜索；**禁止**为找一个文件派 explore 子 Agent；**禁止**同轮 8+ 广域并行
 
@@ -202,7 +248,7 @@ cd backend && dotnet build
 
 | Hook | 作用 | 层级 |
 |---|---|---|
-| `guard-write.mjs` | 九层守卫（密钥/空文件/安全/R5/R4/R7/R8/R6/隔离） | L0 |
+| `guard-write.mjs` | 十二层守卫（…/L10 需求铁律/L11 零占位符/L12 ADF 写入锁） | L0 |
 | `guard-bash.mjs` | 危险命令拦截 | L0 |
 | `guard-finish.mjs` | E2E 证据阻断（截图+时效校验） | L0 |
 

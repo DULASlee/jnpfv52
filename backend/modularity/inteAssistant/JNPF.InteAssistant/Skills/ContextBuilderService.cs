@@ -66,12 +66,27 @@ public sealed class DomainSeedService : IDomainSeedService, ITransient
             .ToListAsync(ct);
 
         if (string.IsNullOrWhiteSpace(keyword))
-            return templates.Take(10).Select(Map).ToList();
+            return Array.Empty<SeedTemplateMatch>();
 
+        // CR-20260717-01 §5.2: 关联筛选 — 避免短行业标签（如 "oa"/"hr"）误匹配
+        // 规则：① 事件名（中文短语，如"请假"/"工单"）做双向 Contains；
+        //       ② 行业标签仅当 keyword 显式包含完整行业词（加边界保护）时才匹配，防止 "load" 命中 "oa" 等。
+        var trimmedKeyword = keyword.Trim();
         return templates
-            .Where(t => keyword.Contains(t.EventNamePattern, StringComparison.OrdinalIgnoreCase)
-                || t.EventNamePattern.Contains(keyword, StringComparison.OrdinalIgnoreCase)
-                || keyword.Contains(t.Industry, StringComparison.OrdinalIgnoreCase))
+            .Where(t =>
+            {
+                // 事件名匹配（主要关联信号）
+                if (trimmedKeyword.Contains(t.EventNamePattern, StringComparison.OrdinalIgnoreCase)
+                    || t.EventNamePattern.Contains(trimmedKeyword, StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                // 行业匹配（辅助信号）— 仅当行业标签 ≥3 字符时才做 Contains，避免 2 字符标签误匹配
+                if (t.Industry is { Length: >= 3 } industry
+                    && trimmedKeyword.Contains(industry, StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                return false;
+            })
             .Take(20)
             .Select(Map)
             .ToList();

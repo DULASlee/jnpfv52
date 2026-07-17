@@ -12,25 +12,25 @@ namespace JNPF.OaLeave.Entitys;
 public class LeaveRequestEntity : ITenantFilter
 {
     /// <summary>
-    /// 编号.
+    /// F_Id.
     /// </summary>
     [SugarColumn(ColumnName = "F_Id", IsPrimaryKey = true)]
     public string Id { get; set; }
 
     /// <summary>
-    /// 请假事由.
-    /// </summary>
-    [SugarColumn(ColumnName = "F_Reason")]
-    public string Reason { get; set; }
-
-    /// <summary>
-    /// 请假天数.
+    /// F_Days.
     /// </summary>
     [SugarColumn(ColumnName = "F_Days")]
     public int Days { get; set; }
 
     /// <summary>
-    /// 状态.
+    /// F_Reason.
+    /// </summary>
+    [SugarColumn(ColumnName = "F_Reason")]
+    public string Reason { get; set; }
+
+    /// <summary>
+    /// F_Status.
     /// </summary>
     [SugarColumn(ColumnName = "F_Status")]
     public string Status { get; set; }

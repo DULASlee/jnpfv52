@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Data;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using JNPF.DependencyInjection;
 using JNPF.FriendlyException;
@@ -362,7 +363,7 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
 
     /// <summary>
     /// Round 2 受控语义分析：基于用户澄清与当前骨架，产出 Typed patches 并写回 Skeleton。
-    /// 失败降级为空（不阻断 Compile）；禁止散文改骨架。
+    /// 失败即抛硬错误（禁止静默跳过）；禁止散文改骨架。
     /// </summary>
     private async IAsyncEnumerable<AppendIrEventRequest> EnrichSkeletonViaSemanticAnalysisAsync(
         SkillContext context,
@@ -416,26 +417,28 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
         try
         {
             var response = await Llm.ChatAsync(request, ct);
-            if (response.IsSuccess && !string.IsNullOrWhiteSpace(response.Content))
+            if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
             {
-                var json = response.Content.Trim();
-                if (json.StartsWith("```"))
-                {
-                    var s = json.IndexOf('{');
-                    var e = json.LastIndexOf('}');
-                    if (s >= 0 && e > s) json = json[s..(e + 1)];
-                }
-                using var doc = JsonDocument.Parse(json);
-                patches = AmendmentPatchApplier.ParsePatches(doc.RootElement);
+                // 硬错误：LLM 失败即抛
+                throw Oops.Bah($"分析师语义分析 LLM 失败: {response.Error ?? "(空响应)"} pipeline={context.PipelineId} tenantId={context.TenantId}");
             }
-            else
+
+            var json = response.Content.Trim();
+            if (json.StartsWith("```"))
             {
-                _logger.LogWarning("AnalystSkill 语义分析 LLM 失败，跳过写回: {Error}", response.Error);
+                var s = json.IndexOf('{');
+                var e = json.LastIndexOf('}');
+                if (s >= 0 && e > s) json = json[s..(e + 1)];
             }
+            using var doc = JsonDocument.Parse(json);
+            patches = AmendmentPatchApplier.ParsePatches(doc.RootElement);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException and not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "AnalystSkill 语义分析解析失败，跳过写回");
+            // 硬错误：异常即抛（FriendlyException 透传，其余包装为业务错误）
+            if (ex is JNPF.FriendlyException.AppFriendlyException) throw;
+            _logger.LogError(ex, "AnalystSkill 语义分析解析失败 pipeline={PipelineId}", context.PipelineId);
+            throw Oops.Bah($"分析师语义分析 LLM 失败: {ex.Message} pipeline={context.PipelineId} tenantId={context.TenantId}");
         }
 
         if (patches.Count == 0)
@@ -607,6 +610,27 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
             var documentMarkdown = _documentRenderer.Render(
                 triple, renderCompile, dddResult, projection,
                 consistencyFindings, qualityScore, roundNumber: 3, clarificationAnswers, ct);
+
+            // Gap 2：LLM 审查澄清答案 vs 编译规范完整性（失败即抛，禁止伪成功）
+            if (clarificationAnswers is { Count: > 0 })
+            {
+                try
+                {
+                    var reviewResult = await ReviewClarificationAnswersAgainstSpecAsync(
+                        compileResult.Source, documentMarkdown, clarificationAnswers, context, ct);
+                    if (reviewResult.Executed && !string.IsNullOrWhiteSpace(reviewResult.ReviewMarkdown))
+                    {
+                        documentMarkdown = InjectReviewAppendix(documentMarkdown, reviewResult);
+                        _logger.LogInformation(
+                            "AnalystSkill: 澄清→规范审查完成 missedItems={Count}", reviewResult.MissedItems.Count);
+                    }
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not OperationCanceledException)
+                {
+                    throw Oops.Bah($"分析师澄清答案审查 LLM 失败: {ex.Message} pipeline={context.PipelineId}");
+                }
+            }
+
             await _deliverables.SaveRequirementSpecAsync(
                 context.TenantId, context.PipelineId, documentMarkdown, ct);
             _logger.LogInformation(
@@ -881,11 +905,67 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
             }
         }
 
-        return result
+        var deduped = result
             .GroupBy(x => $"{x.Stage}:{x.Round}", StringComparer.Ordinal)
             .Select(g => g.Last())
             .OrderBy(x => x.Round)
             .ToList();
+
+        return DeduplicateAcrossRounds(deduped);
+    }
+
+    /// <summary>
+    /// Gap 3：跨轮次确定性文本去重。
+    /// 对于 j &gt; i，若第 i 轮答案文本 ≥80% 含于第 j 轮答案文本，
+    /// 则标记第 i 轮为 <see cref="ClarificationAnswerAppendix.ResolvedByLaterRound"/> = j。
+    /// 无 LLM 调用，纯确定性算法。
+    /// </summary>
+    private static List<ClarificationAnswerAppendix> DeduplicateAcrossRounds(
+        IReadOnlyList<ClarificationAnswerAppendix> answers)
+    {
+        if (answers.Count <= 1)
+            return answers.ToList();
+
+        var result = new List<ClarificationAnswerAppendix>(answers.Count);
+        for (var i = 0; i < answers.Count; i++)
+        {
+            var item = answers[i];
+            var resolvedBy = (int?)null;
+            var wordsI = NormalizeWords(item.AnswersText);
+
+            for (var j = i + 1; j < answers.Count; j++)
+            {
+                if (string.IsNullOrWhiteSpace(answers[j].AnswersText))
+                    continue;
+                var wordsJ = NormalizeWords(answers[j].AnswersText);
+                if (wordsI.Count == 0 || wordsJ.Count == 0)
+                    continue;
+
+                var matched = wordsI.Count(w => wordsJ.Contains(w, StringComparer.OrdinalIgnoreCase));
+                var ratio = (double)matched / wordsI.Count;
+                if (ratio >= 0.80)
+                {
+                    resolvedBy = answers[j].Round;
+                    break; // 标记为被最早涵盖的后续轮次
+                }
+            }
+
+            result.Add(item with { ResolvedByLaterRound = resolvedBy });
+        }
+
+        return result;
+    }
+
+    private static HashSet<string> NormalizeWords(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        return text
+            .Split(new[] { ' ', '\n', '\r', '\t', '，', '。', '、', '；', '：', ',', '.', ';', ':' },
+                StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => w.Trim().ToLowerInvariant())
+            .Where(w => w.Length >= 2) // 过滤单字噪音
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     private static string BuildEventSpecPayload(
@@ -919,4 +999,256 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
     }
 
     public sealed record BusinessEventMeta(string EventId, string EventName, string ComplexityHint);
+
+    // ═══════════════════════════════════════════════════════════════
+    // Gap 2：澄清答案 vs 编译规范完整性审查
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// LLM 审查澄清答案与编译规范的覆盖/一致性。
+    /// 失败即抛硬错误（禁止伪成功）；Executed=false 仅在无澄清答案的前置条件分支返回。
+    /// </summary>
+    private async Task<ClarificationSpecReviewResult> ReviewClarificationAnswersAgainstSpecAsync(
+        PreAnalysisModel model,
+        string fullDocumentMarkdown,
+        IReadOnlyList<ClarificationAnswerAppendix> answers,
+        SkillContext context,
+        CancellationToken ct)
+    {
+        if (answers.Count == 0)
+            return new ClarificationSpecReviewResult { Executed = false, Error = "无澄清答案" };
+
+        try
+        {
+            var specSummary = BuildSpecSummaryForReview(model);
+            var answersSummary = BuildAnswersSummaryForReview(answers);
+
+            var request = new ChatCompletionRequest
+            {
+                ProviderCode = Llm.ResolveProvider(SkillId),
+                SystemPrompt = """
+                    你是需求审查专家。请对照编译规范摘要，审查多轮澄清 Q&A 答案是否完整覆盖了规范中的关键要素。
+                    只输出 JSON：{"missedItems":[{"category":"","description":"","suggestion":""}],"reviewMarkdown":""}。
+
+                    审查维度：
+                    - 业务事件：规范中每个事件是否有对应的澄清覆盖？
+                    - 实体/字段：关键实体和字段是否在澄清中被讨论？
+                    - 业务规则：规范中的规则是否在澄清中被确认或细化？
+                    - 状态流转：状态转换是否有澄清覆盖？
+                    - 角色权限：权限矩阵是否被讨论？
+
+                    reviewMarkdown 为附录 F 的完整 Markdown 内容，以「## 附录 F：澄清→规范完整性审查」开头。
+                    若未发现漏项，reviewMarkdown 仍须输出审查通过的结论。
+                    """,
+                Messages = new List<ChatMessage>
+                {
+                    new("user", $"""
+                        三元组：tenant={context.TenantId}, project={context.ProjectId}, pipeline={context.PipelineId}
+
+                        【编译规范摘要】
+                        {specSummary}
+
+                        【多轮澄清答案汇总】
+                        {answersSummary}
+                        """),
+                },
+                Temperature = 0.1,
+                MaxTokens = 2048,
+                TimeoutMs = Llm.ResolveTimeoutMs(SkillId),
+                ResponseFormat = "json",
+            };
+
+            var response = await Llm.ChatAsync(request, ct);
+            if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
+            {
+                // 硬错误：LLM 失败/空响应即抛，禁止返回伪成功对象
+                throw Oops.Bah($"分析师澄清答案审查 LLM 失败: {response.Error ?? "(空响应)"} pipeline={context.PipelineId}");
+            }
+
+            var json = response.Content.Trim();
+            if (json.StartsWith("```"))
+            {
+                var s = json.IndexOf('{');
+                var e = json.LastIndexOf('}');
+                if (s >= 0 && e > s) json = json[s..(e + 1)];
+            }
+
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            var missedItems = new List<ClarificationMissedItem>();
+            if (root.TryGetProperty("missedItems", out var itemsEl) && itemsEl.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in itemsEl.EnumerateArray())
+                {
+                    missedItems.Add(new ClarificationMissedItem
+                    {
+                        Category = item.TryGetProperty("category", out var c) ? c.GetString() ?? "" : "",
+                        Description = item.TryGetProperty("description", out var d) ? d.GetString() ?? "" : "",
+                        Suggestion = item.TryGetProperty("suggestion", out var s2) ? s2.GetString() ?? "" : "",
+                    });
+                }
+            }
+
+            var reviewMarkdown = root.TryGetProperty("reviewMarkdown", out var rm) && rm.ValueKind == JsonValueKind.String
+                ? rm.GetString() ?? ""
+                : "";
+
+            return new ClarificationSpecReviewResult
+            {
+                Executed = true,
+                MissedItems = missedItems,
+                ReviewMarkdown = reviewMarkdown,
+            };
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException and not OperationCanceledException)
+        {
+            // 硬错误：异常即抛（FriendlyException 透传，其余包装为业务错误）
+            if (ex is JNPF.FriendlyException.AppFriendlyException) throw;
+            _logger.LogError(ex, "AnalystSkill 澄清→规范审查异常 pipeline={PipelineId}", context.PipelineId);
+            throw Oops.Bah($"分析师澄清答案审查 LLM 失败: {ex.Message} pipeline={context.PipelineId}");
+        }
+    }
+
+    /// <summary>
+    /// 构建编译规范的结构化文本摘要，供 LLM 审查使用。
+    /// </summary>
+    private static string BuildSpecSummaryForReview(PreAnalysisModel model)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine($"## 系统名称：{model.SystemName ?? "（未指定）"}");
+        sb.AppendLine();
+        sb.AppendLine($"## 需求概要：{TruncateForReview(model.RequirementSummary)}");
+        sb.AppendLine();
+
+        // 业务事件
+        sb.AppendLine($"## 业务事件（{model.BusinessEvents.Count} 个）");
+        foreach (var evt in model.BusinessEvents)
+        {
+            sb.AppendLine($"- [{evt.EventId}] {evt.EventName}（复杂度：{evt.ComplexityHint}）");
+            if (!string.IsNullOrWhiteSpace(evt.Description))
+                sb.AppendLine($"  描述：{TruncateForReview(evt.Description)}");
+            if (evt.DependsOn.Count > 0)
+                sb.AppendLine($"  依赖：{string.Join(", ", evt.DependsOn)}");
+        }
+        sb.AppendLine();
+
+        // 实体草稿
+        sb.AppendLine($"## 实体草稿（{model.EntityDrafts.Count} 个）");
+        foreach (var entity in model.EntityDrafts)
+        {
+            sb.AppendLine($"- {entity.EntityName}" +
+                (string.IsNullOrWhiteSpace(entity.DisplayName) ? "" : $"（{entity.DisplayName}）") +
+                (string.IsNullOrWhiteSpace(entity.Description) ? "" : $"：{TruncateForReview(entity.Description)}"));
+            foreach (var field in entity.Fields)
+            {
+                var flags = new List<string>();
+                if (field.IsPrimaryKey) flags.Add("PK");
+                if (field.Required) flags.Add("必填");
+                if (!string.IsNullOrWhiteSpace(field.References)) flags.Add($"FK→{field.References}");
+                var flagStr = flags.Count > 0 ? $" [{string.Join(", ", flags)}]" : "";
+                sb.AppendLine($"    - {field.Name}: {field.Type}{flagStr}");
+            }
+        }
+        sb.AppendLine();
+
+        // 业务规则
+        if (model.BusinessRules.Count > 0)
+        {
+            sb.AppendLine($"## 业务规则（{model.BusinessRules.Count} 条）");
+            foreach (var rule in model.BusinessRules)
+            {
+                var scope = string.IsNullOrWhiteSpace(rule.ScopeEventId) ? "" : $"（作用事件：{rule.ScopeEventId}）";
+                sb.AppendLine($"- [{rule.RuleId}]{scope} {TruncateForReview(rule.Description)}");
+            }
+            sb.AppendLine();
+        }
+
+        // 状态流转
+        if (model.StateTransitions.Count > 0)
+        {
+            sb.AppendLine($"## 状态流转（{model.StateTransitions.Count} 条）");
+            foreach (var t in model.StateTransitions)
+            {
+                var trigger = string.IsNullOrWhiteSpace(t.TriggerEventId) ? "" : $" 触发：{t.TriggerEventId}";
+                sb.AppendLine($"- {t.Entity}: {t.From} → {t.To}{trigger}");
+            }
+            sb.AppendLine();
+        }
+
+        // 角色矩阵
+        if (model.RoleMatrix is { Roles: { Count: > 0 } })
+        {
+            sb.AppendLine($"## 角色矩阵（{model.RoleMatrix.Roles.Count} 个角色）");
+            sb.AppendLine($"角色：{string.Join(", ", model.RoleMatrix.Roles)}");
+            sb.AppendLine($"事件-角色映射：{model.RoleMatrix.Matrix.Count} 个事件");
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// 构建多轮澄清答案的结构化文本汇总，供 LLM 审查使用。
+    /// </summary>
+    private static string BuildAnswersSummaryForReview(IReadOnlyList<ClarificationAnswerAppendix> answers)
+    {
+        var sb = new StringBuilder();
+        foreach (var a in answers)
+        {
+            sb.AppendLine($"### 第 {a.Round} 轮 — {a.Stage}");
+            sb.AppendLine(a.AnswersText);
+            sb.AppendLine();
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// 将审查结果注入需求文档末尾，追加「附录 F：澄清→规范完整性审查」。
+    /// </summary>
+    private static string InjectReviewAppendix(string documentMarkdown, ClarificationSpecReviewResult review)
+    {
+        if (string.IsNullOrWhiteSpace(review.ReviewMarkdown))
+            return documentMarkdown;
+
+        // 若文档已含附录 F，不重复注入
+        if (documentMarkdown.Contains("## 附录 F", StringComparison.Ordinal))
+            return documentMarkdown;
+
+        var sb = new StringBuilder(documentMarkdown);
+        sb.AppendLine();
+        sb.AppendLine("---");
+        sb.AppendLine();
+        sb.AppendLine(review.ReviewMarkdown);
+        return sb.ToString();
+    }
+
+    private static string TruncateForReview(string? text, int maxLen = 200)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "（无）";
+        var t = text.Trim();
+        return t.Length <= maxLen ? t : t[..maxLen] + "…";
+    }
+
+    /// <summary>
+    /// Gap 2：LLM 审查结果 — 澄清答案 vs 编译规范的完整性分析。
+    /// 在 FinalizeAsync 中调用，失败即抛硬错误（Finalize 会被中断）。
+    /// </summary>
+    internal sealed record ClarificationSpecReviewResult
+    {
+        public bool Executed { get; init; }
+        public string? Error { get; init; }
+        public IReadOnlyList<ClarificationMissedItem> MissedItems { get; init; } = Array.Empty<ClarificationMissedItem>();
+        public string ReviewMarkdown { get; init; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Gap 2：澄清→规范完整性漏项。
+    /// </summary>
+    internal sealed record ClarificationMissedItem
+    {
+        public string Category { get; init; } = string.Empty;
+        public string Description { get; init; } = string.Empty;
+        public string Suggestion { get; init; } = string.Empty;
+    }
 }

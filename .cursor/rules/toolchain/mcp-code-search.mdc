@@ -1,0 +1,107 @@
+---
+description: 三大 MCP 代码搜索工具铁律 — Serena/Codebase-Memory/Knowledge-Graph 分工与参数速查。代码搜索、符号查找、调用链追踪、架构分析时拉取。
+alwaysApply: false
+---
+
+# MCP 代码搜索铁律（永久遵循）
+
+> **一句核心：代码搜索 MUST 用 MCP，禁止逐文件 Grep/Read 遍历。**
+> **Claude 镜像：** `.claude/rules/mcp-code-search.md`（完整版，含场景示例）
+> **关联：** `needle-search.mdc`（针式搜索）· `toolchain-division.mdc`（工具分工）· `AGENTS.md` §Code Search
+
+本仓为大型 .NET 8 monorepo（114k+ 符号）。逐文件 Grep/Read 效率极低且漏引用——MCP 语义级搜索是强制要求，不是建议。
+
+---
+
+## 三大 MCP 分工（核心）
+
+| MCP | 定位 | 核心工具 | 何时用 |
+|-----|------|---------|--------|
+| **Serena** | 单符号精确查 | `find_symbol` / `find_referencing_symbols` / `get_symbols_overview` / `find_implementations` | 已知符号名，要定义/签名/body/引用/实现 |
+| **Codebase-Memory** | 跨文件调用链 / 架构 / 复杂度 | `trace_path` / `search_graph` / `get_architecture` / `query_graph` | 多跳 callers/callees、项目架构、O(n²) 热点 |
+| **Knowledge Graph** | 领域知识 / 设计意图 / 历史决策 | `search_nodes` / `read_graph` | 子链使命、控制流、架构哲学（人工沉淀） |
+
+**三者互补，非替代：**
+- 查"这个方法被谁调用" → **Serena** `find_referencing_symbols`（精确到调用点）
+- 查"这条链路完整经过哪些函数" → **Codebase-Memory** `trace_path`（多跳）
+- 查"这个子链为什么这样设计" → **Knowledge Graph** `search_nodes`（人工记录的设计意图）
+
+---
+
+## Serena 速查
+
+```
+# 看文件结构
+get_symbols_overview(relative_path: "backend/.../Foo.cs", depth: 1)
+
+# 查符号定义
+find_symbol(name_path_pattern: "ClassName/MethodName", include_body: false)
+
+# 追引用（判孤儿/接线）
+find_referencing_symbols(name_path: "InterfaceName", relative_path: "backend/.../Foo.cs")
+# 返回只有自身 implements 行 = 零接线孤儿；多文件 = 已接线
+
+# 查接口实现
+find_implementations(name_path: "IFoo", relative_path: "backend/.../Foo.cs")
+```
+
+---
+
+## Codebase-Memory 速查
+
+> **前置：** 必须先 `index_repository` 一次（已索引 project=jnpf-v52，114k 节点 + 195k 边）。
+
+```
+# 项目架构总览（社区检测 + 热点）
+get_architecture(project: "jnpf-v52", aspects: ["overview", "clusters", "hotspots"])
+
+# 跨文件调用链（影响分析）
+trace_path(function_name: "GenerateSkeletonViaTotAsync", project: "jnpf-v52",
+           direction: "both", depth: 3, mode: "calls")
+
+# 复杂度热点（Cypher）
+query_graph(project: "jnpf-v52",
+  query: "MATCH (f:Function) WHERE f.transitive_loop_depth >= 3 RETURN f.qualified_name")
+
+# 自然语言/关键词搜索（BM25 + 向量）
+search_graph(query: "降级 fallback degradation", project: "jnpf-v52")
+search_graph(semantic_query: ["fallback", "silent", "degradation"], project: "jnpf-v52")
+# semantic_query 能跨词汇匹配（搜"send"找到"publish"）
+```
+
+---
+
+## Knowledge Graph 速查
+
+```
+# 查某主题的已知知识
+search_nodes(query: "需求分析子链")
+
+# 看全部已沉淀知识（开局摸底）
+read_graph()
+
+# 沉淀新知识
+create_entities / add_observations / create_relations
+```
+
+**KG 持久化：** `.ai-memory/knowledge-graph.json`
+
+---
+
+## 配置位置
+
+`.zcode/config.json`（项目级，优先级高于用户级）：
+- **serena**: `--context desktop-app --project D:\JNPF-v52`（⚠️ 禁止 `--context claude-code`，在 ZCode 下握手失败；禁止 `--project-from-cwd`，Serena CLI 不支持）
+- **codebase-memory**: `codebase-memory-mcp.exe`，已索引 jnpf-v52
+- **knowledge-graph**: `@modelcontextprotocol/server-memory` → `.ai-memory/knowledge-graph.json`
+
+**冷启动：** Serena 首次调用需加载 Roslyn LSP（2-5 秒），超时重试一次即可。
+
+---
+
+## 禁止
+
+- ❌ 在能使用 Serena 的情况下用 Grep 搜 C# 符号名再逐文件 Read 验证
+- ❌ 用 Shell `find`/`dir /s` 全仓搜索
+- ❌ 为"找一个文件"派 explore 子 Agent
+- ❌ 同轮 8+ 广域并行搜索

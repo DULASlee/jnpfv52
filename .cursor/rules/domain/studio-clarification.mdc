@@ -1,0 +1,92 @@
+---
+description: Studio 三阶段交互式澄清问答（ADR-005）。改 RequirementGate/Architect/SystemDesign/Clarification 时必读。
+globs:
+  - backend/modularity/inteAssistant/**/Gates/**
+  - backend/modularity/inteAssistant/**/Skills/**Architect*
+  - backend/modularity/inteAssistant/**/Skills/**Clarification*
+  - backend/modularity/inteAssistant/**/Skills/SkillsApiService.cs
+  - jnpf-web-vue3/src/views/studio/**/clarification/**
+alwaysApply: false
+---
+# Studio 交互式澄清问答（ADR-005）
+
+> **知识库：** `openspec/specs/studio-clarification/spec.md`
+> **ADR：** `openspec/adr/ADR-005-interactive-clarification-qa.md`
+> **change：** `openspec/changes/add-interactive-clarification-qa/`
+
+## 2026-07-06 架构变更（三大决策）
+
+1. **三阶段差异化实现** — 需求分析走 sa-gate 对话流暂停；架构/总体设计走两阶段 Skill 重跑（ThinkAsync 单次消费，return 即 run 结束）
+2. **关键题硬门控** — `ClarificationQuestion.Required=true` 必答才推进，仿 `ConfirmRequirementSpecAsync` 范式
+3. **完整 IR 事件化** — `ClarificationRequested`(in-progress) / `ClarificationAnswered`(stable) 落事件可审计；`IrProjectionEngine.UpsertClarificationAsync` 补全投影
+
+## 三阶段对比
+
+| 阶段 | 提问入口 | 暂停/恢复 | 答案注入 | nextAction |
+|------|---------|-----------|---------|------------|
+| 需求分析 | `RequirementGateService.EvaluateMaturity` | sa-gate `sse.Complete();return` | 对话历史→下一轮 maturity | `re-evaluate` |
+| 架构设计 | `ArchitectSkillService.GenerateArchitectureClarificationAsync` | 两阶段 Skill 重跑 | answersText→ToT userPrompt | `rerun-architect` |
+| 总体设计 | `SystemDesignClarificationSkill.GenerateSystemDesignClarificationAsync` | 两阶段 Skill 重跑 | answersText→SystemDesignLocked.assumptions | `rerun-system-design-clarification` |
+
+## IR 事件与 fragment 状态
+
+| 事件 | fragment 状态 | 触发 |
+|------|--------------|------|
+| `ClarificationRequested` | `IR1_Clarification` → in-progress | LLM 生成提问 |
+| `ClarificationAnswered` | `IR1_Clarification` → stable | 用户作答（required 齐全） |
+| `SystemDesignClarificationCompleted` | 留痕（null） | P3 阶段二 |
+
+fragmentId 按 stage 区分：`clarification:{requirement|architecture|system-design}:{projectId}`（同 `IrFragmentTypes.Clarification` 靠前缀区分）
+
+## 主链路（架构阶段两阶段示例）
+
+```
+architect-skill 启动
+  → ThinkAsync 检查 snapshot.Find(Clarification, Stable) == null
+  → GenerateArchitectureClarificationAsync(BudgetGuard LLM)
+  → _sseHub.TryPush("clarification_requested", setJson)
+  → yield ClarificationRequested → yield break（暂停）
+  → ValidateOutputAsync 放行（允许 1 条 ClarificationRequested）
+  ↓ 用户作答 POST /skills/clarification/{id}/answer
+  → ClarificationAnswered → fragment stable → 返回 nextAction=rerun-architect
+  → 前端 runArchitectSkill → architect-skill 重跑
+  → ThinkAsync 检查 stable Clarification → 读 answersText → 注入 ToT userPrompt
+  → ArchitectureDecisionRecorded
+```
+
+## 不变量（BuildClarificationSet / BuildOptions 强制）
+
+- 每题 options 数量 ∈ [3,5]
+- 每题末项恒为 `{id:"o_other",label:"其他",freeText:true}`
+- type ∈ {single, multi, text}
+- required=true 的题 ≤2 个/轮
+- round ∈ [1,7]（`Clarification:MaxRounds` 默认 7，触顶强制 refine）
+
+## 业务验收
+
+```powershell
+# ① 代码层
+dotnet build modularity/inteAssistant/JNPF.InteAssistant/JNPF.InteAssistant.csproj
+pnpm type-check   # 排除预存 MessageBubble.browser.test.ts 错误
+pnpm lint
+# ② 运行时（待验证）
+E2E_PIPELINE_ID=311 pnpm test:api
+```
+
+## 禁止
+
+- ❌ 跳过关键题（required）门控推进流程
+- ❌ 修改 `SystemDesignSkillService` 本体（保持纯约束引擎，由 `SystemDesignClarificationSkill` 自包含完成阶段二）
+- ❌ 在 compile 主链（`SaNineViewCompiler`）插入提问 —— 提问只在真正调 LLM 的环节（gate / Architect / SystemDesignClarification）
+- ❌ LLM 失败不降级 —— 必用 `BuildFallback*` 默认题保证流程不卡死
+- ❌ 移除 ClarificationCard 底部"全部跳过直接分析"逃生口
+
+## 关键代码
+
+- `Gates/RequirementGateService.cs`（BuildClarificationSet · HasStructuredClarifications）
+- `Skills/ArchitectSkillService.cs`（ThinkAsync 两阶段 · ValidateOutputAsync 放宽 · GenerateArchitectureClarificationAsync）
+- `Skills/SystemDesignClarificationSkill.cs`（新建 · 两阶段 · 约束引擎 + SystemDesignLocked.assumptions）
+- `Skills/SkillsApiService.cs`（AnswerClarificationAsync · 关键题门控 · nextAction 三分支）
+- `Ir/IrProjectionEngine.cs`（UpsertClarificationAsync · SystemDesignClarificationCompleted）
+- `jnpf-web-vue3/.../clarification/ClarificationCard.vue` · `composables/useClarification.ts`
+- `jnpf-web-vue3/.../AiChatPanel.vue`（processSseEvent clarification_requested · onClarificationAnswered 三分支）

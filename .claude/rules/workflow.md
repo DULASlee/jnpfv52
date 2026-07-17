@@ -14,12 +14,23 @@
 
 **B 级绝不跳过 Brainstorm（S1 铁律）和 Verify（Law 2）。**
 
+## ADF 三先行（S/A 编码前门控）
+
+规则：`.claude/rules/architecture-design-interface-first.md` · 模板：`.cursor/templates/adf-*.md`
+
+```
+P0 Q1–Q3 → P1 架构 →「继续」→ P2 模式 →「继续」→ P3 契约 →「继续」→ P4 实现
+```
+
+B 级须声明：`ADF 豁免：B级 — …`
+
 ## 强制声明 — 开始任何任务前，输出：
 
 ```
 🔄 Workflow 启动
 - 任务分级：S / A / B
 - 理由：[为什么是这个级别]
+- ADF：P1–P3 待批 / 已批 / 豁免（B级 — …）
 ```
 
 ---

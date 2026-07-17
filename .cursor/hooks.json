@@ -11,6 +11,22 @@
       {
         "command": "node .cursor/hooks/episodic-stop.mjs",
         "timeout": 15
+      },
+      {
+        "command": "node .cursor/hooks/guard-pillar-stop.mjs",
+        "timeout": 10
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "node .cursor/hooks/guard-adf-write.mjs",
+        "matcher": "Write|StrReplace|EditNotebook",
+        "failClosed": false
+      },
+      {
+        "command": "node .cursor/hooks/guard-placeholder.mjs",
+        "matcher": "Write|StrReplace|EditNotebook",
+        "failClosed": false
       }
     ]
   }

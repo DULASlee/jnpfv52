@@ -1,0 +1,15 @@
+---
+description: 编码前知识库查阅顺序（openspec/ADR/episodic）。开始非平凡编码或架构任务时拉取。
+alwaysApply: false
+---
+
+# 知识库查阅（短）
+
+编码前：
+
+1. episodic-memory `search`（project 见 `.cursor/toolchain.manifest.json`）
+2. `openspec/specs/README.md` → 相关 spec（S2 → `studio-s2-compile` + ADR-004）
+3. 规则：先 `00-constitution.mdc`；领域再 @ 对应 mdc（见 `README.md`）
+4. 搜索遵守 `needle-search.mdc`
+
+禁止自建向量库替代上述流程。InteAssistant 日志/异常/三元组细则见 `.claude/rules` 与宪法摘要。

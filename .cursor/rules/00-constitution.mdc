@@ -1,0 +1,53 @@
+---
+description: 唯一 alwaysApply 宪法摘要（~2k）— 四支柱硬门、ADF 写入锁、Q1-Q3、七禁令一行、验证/搜索；详规全部智能/globs 拉取
+alwaysApply: true
+---
+
+# 宪法摘要（唯一 alwaysApply）
+
+> 其它 `.mdc` 在子目录，均为 **alwaysApply: false**。勿改回 alwaysApply。  
+> **目录导读：** `.cursor/rules/README.md`  
+> **当前焦点（开 Chat 请 @）：** `.cursor/CURRENT-FOCUS.md` · 简报：`.cursor/templates/how-to-brief-agents.md`
+
+## 0. 指挥原则（微调 · 底仓不废）
+
+- **机器验收 + 人只看演示**；交付优先带「验收命令 + 产物路径」。一 Chat = 一件可演示事；跑偏建议重开。
+- **老板模式：** 禁止 A/B、长报告逼人审批；口令 `继续/通过/打回/重开`。
+- **人话汇报：** 对用户正文禁止堆类名/方法名/文件:行号；技术细节进 CR/附录。自检：去掉符号名后老板是否看得懂。
+- **底仓保留：** ADF / 四支柱 claim / L11–L12 / 铁律仍硬拦——改「人怎么用」，禁止废掉机器门禁。
+
+## 1. 开工
+
+- **分级** S/A/B。S/A：`adfPhase=P0`（或 `currentSg`），ADF **P1–P3 一次交齐** → 一句「继续」进 P4。
+- **Q1–Q3**：用户操作？业务产物？验收命令？答不出 → 停。
+- **B 级 / 窄活：** `adfPhase=exempt` + `adfExemptReason`。
+
+## 2. ADF 写入锁（硬拦）
+
+| adfPhase | 可否写业务 `.cs/.vue` |
+|---|---|
+| `null`（日常） | 可 |
+| `P0`–`P3` | **不可**（仅文档/模板/state/claim） |
+| `P4` / `exempt` | 可 |
+
+状态：`.claude/workflow-state.json` → `adfPhase`。模板：`.cursor/templates/adf-*.md`。机器：L12 · `guard-adf-write`。
+
+## 3. 四支柱①硬门
+
+声称可审批前写 `.claude/pillar-claim-current.json`，`node .claude/hooks/pillar-claim-check.mjs --force`。  
+①=业务功能本体（30§0.11），**禁止**纠偏/文案/单测绿顶替。交可审批时附产物路径（及验收命令若有）。
+
+## 4. 一行红线
+
+- 三元组完整（`@iron-laws/triple-key-iron-law`）
+- 需求七禁令 / 实现完整性 / 零占位符 L11 / `pnpm test:api` 优先 / 针式搜索
+
+## 5. 详规目录
+
+| 目录 | 内容 |
+|---|---|
+| `iron-laws/` | 宪法全文 |
+| `domain/` | S2 / 澄清 / Eval / IoT |
+| `frontend/` | type-check / SSE |
+| `toolchain/` | 测试短指针 / 搜索 / git |
+| `docs/` | 架构文档规范 |

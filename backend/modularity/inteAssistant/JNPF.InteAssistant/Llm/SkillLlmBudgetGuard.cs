@@ -83,12 +83,12 @@ public sealed class SkillLlmBudgetGuard : ISkillLlmBudgetGuard, ITransient
         string projectId, string tenantId, double reserveRatio = 0.95, CancellationToken ct = default)
     {
         var project = await LoadProjectAsync(projectId, tenantId, ct);
-        // P6-L01 四级降级：fuse 拒绝，red/yellow/green 放行（red 仅 warn 不阻断）
+        // P6-L01 四级 tier：fuse 拒绝；red 仅 warn 预警（实际硬熔断在 AcquireAsync 中触发）
         var tier = TokenBudgetTierService.ComputeTier(project.TokenConsumed, project.TokenBudget);
         if (tier == TokenBudgetTierService.Fuse)
             ThrowBudgetExhausted(project, pipelineId: 0, skillId: null, reason: $"budget fuse (tier={tier})");
         if (tier == TokenBudgetTierService.Red)
-            _logger.LogWarning("项目 {ProjectId} budget tier=red（{Consumed}/{Budget}），strong Skill 将降级为 fast",
+            _logger.LogWarning("项目 {ProjectId} budget tier=red（{Consumed}/{Budget}），strong Skill 调用将被拒绝",
                 projectId, project.TokenConsumed, project.TokenBudget);
     }
 
@@ -101,14 +101,27 @@ public sealed class SkillLlmBudgetGuard : ISkillLlmBudgetGuard, ITransient
                 $"Skill {skillId} 禁止直连 LLM Gateway（MaxLlmCalls=0）");
 
         var project = await LoadProjectAsync(projectId, tenantId, ct);
-        // P6-L01 四级降级：fuse 硬熔断；red 强制 tier=fast（降级路由）；yellow/green 保留 policy tier
+        // P6-L01 四级：fuse 硬熔断（ThrowBudgetExhausted）；red 也即抛硬错误（禁止静默切到 fast）；
+        // yellow/green 保留 policy tier。
         var budgetTier = TokenBudgetTierService.ComputeTier(project.TokenConsumed, project.TokenBudget);
         if (budgetTier == TokenBudgetTierService.Fuse)
             ThrowBudgetExhausted(project, pipelineId, skillId, runId, $"budget fuse (tier={budgetTier})");
 
-        var effectiveModelTier = TokenBudgetTierService.ShouldDegradeToFast(budgetTier)
-            ? "fast"   // red/fuse 已在前面拦截 fuse，此处 red 触发 strong→fast 降级
-            : policy.ModelTier;
+        if (budgetTier == TokenBudgetTierService.Red)
+        {
+            // 硬错误：red tier 已接近预算上限，禁止静默切换 fast 路由（禁止伪成功）
+            PushSseError(pipelineId, skillId, runId, BudgetExhaustedCode, $"budget red (tier={budgetTier})");
+            throw Oops.Bah($"Skill LLM 预算不足: 当前 tier=red，已接近预算上限。pipeline={pipelineId} skillId={skillId}。请充值或等待结算周期重置。")
+                .StatusCode(StatusCodes.Status429TooManyRequests)
+                .WithData(new
+                {
+                    code = BudgetExhaustedCode,
+                    tokenConsumed = project.TokenConsumed,
+                    tokenBudget = project.TokenBudget,
+                });
+        }
+
+        var effectiveModelTier = policy.ModelTier;
 
         var usageKey = UsageKey(runId, skillId);
         var usage = RunUsage.GetOrAdd(usageKey, _ => new SkillRunLlmUsage());
@@ -201,7 +214,7 @@ public sealed class SkillLlmBudgetGuard : ISkillLlmBudgetGuard, ITransient
     {
         var project = await LoadProjectAsync(projectId, tenantId, ct);
         var newConsumed = project.TokenConsumed + delta;
-        // P6-L01 四级降级：用 TokenBudgetTierService 计算 tier（替代原二态判定）
+        // P6-L01 四级 tier：用 TokenBudgetTierService 计算 tier（替代原二态判定）
         var newTier = TokenBudgetTierService.ComputeTier(newConsumed, project.TokenBudget);
         var oldTier = project.LlmBudgetStatus;
 
@@ -224,7 +237,7 @@ public sealed class SkillLlmBudgetGuard : ISkillLlmBudgetGuard, ITransient
 
             try
             {
-                // 推送 SSE budget_tier_changed（供前端实时展示降级状态）
+                // 推送 SSE budget_tier_changed（供前端实时展示 tier 变更状态）
                 if (long.TryParse(projectId, out var pid))
                 {
                     _sseHub?.TryPush(pid, "budget_tier_changed", System.Text.Json.JsonSerializer.Serialize(new

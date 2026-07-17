@@ -269,4 +269,15 @@ public class PhaseB_xUnitAdapter
         await PreviewResourceCleanupTests.T19_SandboxNotCreated_OnExistingSandbox();
         Assert.True(true);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // F3 铁律：旧实现清理不变式守卫
+    // ═══════════════════════════════════════════════════════════
+
+    [Fact]
+    public void F3_LegacyCleanup_All()
+    {
+        F3LegacyCleanupGuardTests.RunAll();
+        Assert.True(true);
+    }
 }

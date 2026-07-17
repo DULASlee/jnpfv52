@@ -1,0 +1,11 @@
+---
+description: episodic-memory 维护细则。跨会话回忆或阶段归档时拉取。
+alwaysApply: false
+---
+
+# episodic-memory
+
+- 会话初：MCP `search`，`project` = `.cursor/toolchain.manifest.json` → `episodic_project_id`
+- 阶段末：progress-registry + 回复「本会话结论」块
+- 禁止跳过 search 重复分析；敏感会话加 DO NOT INDEX 标记
+- 详情：`docs/toolchain/SETUP.md`

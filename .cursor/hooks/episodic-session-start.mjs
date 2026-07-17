@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Cursor sessionStart hook: background episodic sync + inject search workflow.
+ * Cursor sessionStart: episodic sync + 宪法级最高约束注入（对抗衰减）
  */
 import { spawn } from 'child_process';
 import path from 'path';
@@ -19,6 +19,15 @@ spawn(process.execPath, [syncScript, '--background'], {
 }).unref();
 
 const context = [
+  '<CONSTITUTION-PRIORITY>',
+  '最高约束（先于一切实现）：',
+  '1. Q1–Q3 业务锚定；答不出禁止编码。',
+  '2. S/A：workflow-state adfPhase=P0→P3 禁止写业务源码（L12）；用户「继续」后升到 P4 才实现。B级 adfPhase=exempt。',
+  '3. 四支柱①硬门：可审批前写 pillar-claim-current.json + pillar-claim-check.mjs --force。',
+  '4. 零占位符硬拦；唯一 alwaysApply=.cursor/rules/00-constitution.mdc。',
+  '详规入口：.cursor/rules/00-constitution.mdc',
+  '</CONSTITUTION-PRIORITY>',
+  '',
   '<EPISODIC-MEMORY-AUTOMATION>',
   `本项目 episodic-memory 已启用（project=${projectId}，slug=${slug}）。sessionStart/stop 触发 sync。`,
   '',
@@ -30,7 +39,7 @@ const context = [
   '',
   '**阶段完成**：verification → progress-registry + 推进清单 LOG → 定稿写入 openspec/specs/',
   '',
-  `Playbook: ${docs?.playbook || 'docs/架构迭代/4、项目工作推进日程清单/episodic-memory-playbook.md'}`,
+  `Playbook: ${docs?.playbook || 'docs/toolchain/SETUP.md'}`,
   'Manifest: .cursor/toolchain.manifest.json',
   '</EPISODIC-MEMORY-AUTOMATION>',
 ].join('\n');

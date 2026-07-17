@@ -6,7 +6,6 @@ using JNPF.InteAssistant.Entitys.Dto.Skills;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Infrastructure.Background;
-using JNPF.InteAssistant.Infrastructure.Background;
 using JNPF.InteAssistant.Infrastructure.Security;
 using JNPF.InteAssistant.Llm;
 using JNPF.InteAssistant.Runtime;

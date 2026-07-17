@@ -79,8 +79,11 @@ public sealed class SaEventResult
 }
 
 /// <summary>
-/// sa-service 逐步调用适配器（R2：失败直接抛，禁止 BuildFallbackOutput 假产出）。
+/// <deprecated>sa-service 逐步调用适配器。</deprecated>
+/// F3 铁律：默认使用 SaNineViewCompiler C# 编译器；agent 模式仅用于回归对比。
+/// R2：失败直接抛，禁止 BuildFallbackOutput 假产出。
 /// </summary>
+[Obsolete("使用 SaNineViewCompiler C# 编译器；agent 模式仅用于回归对比")]
 public sealed class SaOrchestratorAdapter : ISaOrchestratorAdapter, ITransient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()

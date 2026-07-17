@@ -1,0 +1,51 @@
+{
+  "schema": "pillar-claim-v1",
+  "node": "SG2",
+  "claimedAt": "2026-07-12T17:10:00+08:00",
+  "pillar1_business": {
+    "capability": "需求分析三轮结束后，系统仅在业务终评达标（或不达标但用户显式强制确认并留痕）时才定稿说明书并允许进入设计；终评未过则阻断定稿，说明书须保留用户澄清作答记录可供审阅。",
+    "userAction": "在 Studio 完成澄清与说明书确认；终评未过时看到阻断而非静默进入设计；必要时使用强制确认并留下原因。",
+    "deliverables": [
+      "02-requirement-spec（含澄清附录，可审阅）",
+      "IR：业务终评事件 + 定稿完成事件（定稿须与终评通过或强制确认留痕一致）",
+      ".claude/change-requests/CR-20260712-01.md"
+    ],
+    "evidence": [
+      "pipeline 343：终评未达标却仍定稿进入设计（对照样本，证明门控曾失效）",
+      "CR-20260712-01：恢复「先终评、未过阻断定稿、强制确认须留痕」+ 澄清附录不再丢失",
+      "验收：dotnet build；dotnet test --filter RequirementAnalysisOrchestrator；新 pipeline IR 复核终评与定稿一致性"
+    ],
+    "notBugfixOnly": true
+  },
+  "pillar2_data": {
+    "writeModel": "IR 事件流（终评 / 定稿 / 澄清作答）；字段唯一源 ai_entity_field；sa_* 仅为投影",
+    "fieldSource": "ai_entity_field",
+    "tripleKeyOk": true,
+    "evidence": [
+      "定稿与终评事件均按 pipeline 三元组隔离；强制确认写入事件载荷留痕",
+      "CR-20260712-01 §三：不另立第二评分源"
+    ]
+  },
+  "pillar3_legacy": {
+    "clearedOrNA": "切断「终评结果被丢弃仍定稿」的旧自动主链路径；强制确认对齐既有手动确认语义，不复活编排器代问",
+    "evidence": [
+      "CR-20260712-01 §二 D1/D2/D3 与 §四不改清单",
+      "343 保留为逃逸对照样本，不回改历史 IR"
+    ]
+  },
+  "pillar4_xunit": {
+    "command": "dotnet build backend/application/JNPF.API.Entry/JNPF.API.Entry.csproj && dotnet test backend/zx_lowcode_netcore.sln --filter RequirementAnalysisOrchestrator",
+    "result": "✅ dotnet build 0 errors; ✅ dotnet test --filter RequirementAnalysisOrchestrator 15/15 pass; ⚠️ PhaseB full suite 71/72 (D8 pre-existing DateTime failure unrelated)",
+    "evidence": [
+      "CR-20260712-01 §五验收命令",
+      "新 pipeline：终评 fail 不得出现 finalized=true（除非 forceConfirm 留痕）— xUnit 已覆盖(T4/T9/T10 D1 PM 门控)",
+      "T4: 三轮 stable → PM pass → completed",
+      "T9: 三轮 stable + user confirmed → PM pass → Finalize → completed",
+      "T10: post-complete not finalized → PM pass → Finalize → completed",
+      "✅ D1 E2E (pipeline 361): 3 次 PM fail(score=38) → 3 次 finalized=false — 门控未逃逸",
+      "✅ D2 E2E (pipeline 361): forceConfirm=true + forceReason 留痕 → finalized=true — 逃生口生效且审计完整",
+      "✅ 数据库验证: RequirementSpecPmReviewed payload 含 forceConfirm:true,forceReason:\"E2E测试-强制确认逃生口验证-D2修复\""
+    ]
+  },
+  "agentAttestation": "我确认①描述的是 §0.11 SG2 业务功能本体（终评达标才定稿、澄清可审、强制确认留痕），而非纠偏项或单测绿顶替。"
+}

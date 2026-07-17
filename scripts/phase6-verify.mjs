@@ -105,7 +105,7 @@ function grepCount(relPath, pattern) {
   try {
     const sess = await login();
     const argIdx = process.argv.indexOf('--pipeline-id');
-    const pid = argIdx >= 0 ? Number(process.argv[argIdx + 1]) : (Number(process.env.E2E_PIPELINE_ID) || 311);
+    const pid = argIdx >= 0 ? Number(process.argv[argIdx + 1]) : (Number(process.env.E2E_PIPELINE_ID) || 0);
 
     // rebuild 验证（D2 时间旅行复用）
     const r = await apiRequest('POST', `/api/studio/ir/${pid}/rebuild`, {});

@@ -193,9 +193,6 @@
               </div>
             </div>
 
-            <!-- IR 预览 -->
-            <IrPreviewCard v-if="msg.ir" :ir-data="msg.ir" />
-
             <!-- 阶段确认卡片（在 AI 回复末尾） -->
             <div v-if="msg.stageConfirmable && !msg.stageConfirmed" class="stage-confirm-card">
               <div class="confirm-badge">⬆️ 阶段 {{ currentStage }}: {{ stages[currentStage - 1]?.name }} ✅ 完成</div>
@@ -238,6 +235,14 @@
         @confirm="handleConfirmRequirementSpec"
         @force-confirm="handleForceConfirmRequirementSpec"
         @download="handleDownloadRequirementSpec" />
+
+      <!-- CR-20260713-03：新 4 步线性 PM 流程的需求说明书确认(轻量内联) -->
+      <div v-if="newPipelineSpecConfirm" class="new-pipeline-spec-confirm">
+        <span class="badge">需求说明书确认</span>
+        <span class="hint">需求说明书已生成，请确认通过或提出修改意见。</span>
+        <a-button size="small" type="primary" @click="handleNewPipelineSpecConfirm(false)">✅ 确认通过</a-button>
+        <a-button size="small" @click="handleNewPipelineSpecFeedback">✏️ 我要修改</a-button>
+      </div>
     </div>
 
     <!-- 滚动按钮 -->
@@ -302,7 +307,6 @@
   import { createPipeline, getGeneratedProjectList, getPageRoutes, quickBugfix, quickEnhancement, triggerSaGate, freezePipeline, resumePipeline, forkPipeline } from '../api/studio/pipeline';
   import { runArchitectSkill, runSystemDesignClarificationSkill } from '../api/studio/designSkills';
   import { applyRequirementAmendment, proposeRequirementAmendment, runRequirementAnalysis, type PmAmendProposeResult } from '../api/studio/skills';
-  import IrPreviewCard from './chat/IrPreviewCard.vue';
   import ChatWorkflowProgress from './chat/ChatWorkflowProgress.vue';
   import IrSkeletonConfirmCard from './ir/IrSkeletonConfirmCard.vue';
   import IrRequirementSpecConfirmCard from './ir/IrRequirementSpecConfirmCard.vue';
@@ -313,7 +317,6 @@
     buildAttachmentsReadyMarkdown,
     buildGateErrorMarkdown,
     buildGateFailedMarkdown,
-    buildGatePassedMarkdown,
     gateErrorActions,
     gateFailedActions,
     normalizeSemanticFitness,
@@ -337,8 +340,11 @@
 
   const renderer = new marked.Renderer();
 
-  renderer.table = function ({ header, body }: any) {
-    return `<div class="md-table-wrap"><table><thead>${header}</thead><tbody>${body}</tbody></table></div>`;
+  // marked ≥15：table(token) 的 header/rows 是 token 对象，不是 HTML。
+  // 旧写法 `${header}${body}` → `[object Object],…undefined`（用户可见）。
+  renderer.table = function (token: any) {
+    const base = (marked.Renderer.prototype as any).table.call(this, token);
+    return `<div class="md-table-wrap">${base}</div>`;
   };
 
   renderer.code = function ({ text, lang }: any) {
@@ -401,6 +407,10 @@
   const skeletonConfirmLoading = computed(() => pmSkill?.confirmLoading.value ?? false);
 
   const showRequirementSpecConfirm = computed(() => analystSkill?.needsRequirementSpecConfirmation.value ?? false);
+  // CR-20260713-03：新 4 步线性 PM 流程的需求说明书确认(独立于旧 analystSkill)
+  const newPipelineSpecConfirm = ref(false);
+  /** PM 需求分析流式 token 写入折叠区，不灌正文（CR-20260717-02） */
+  const pmStreamActive = ref(false);
   const requirementSpecConfirmLoading = computed(() => analystSkill?.confirmLoading.value ?? false);
   const requirementSpecDeliverable = computed(() => {
     const items = pipelineMaterials?.deliverables.value ?? [];
@@ -438,6 +448,30 @@
 
   function handleForceConfirmRequirementSpec(autoRunDesign: boolean) {
     void handleConfirmRequirementSpec(autoRunDesign, true);
+  }
+
+  // CR-20260713-03：新流程步骤④确认/修改处理
+  // CR-20260714-01：补全参数传递 — 确认/反馈都走 runRequirementAnalysis 带 specFeedback
+  const pendingSpecFeedback = ref(false); // 用户点了"我要修改"后置 true，下次发送当反馈
+
+  async function handleNewPipelineSpecConfirm(_autoRunDesign: boolean) {
+    newPipelineSpecConfirm.value = false;
+    // 确认通过 → 调编排器推进(新流程检测到 specText 已确认 → 步骤⑤ Finalize → 架构设计)
+    try {
+      await runRequirementAnalysis(pipelineId.value, {});
+      antMessage.success('需求说明书已确认，正在进入架构设计…');
+    } catch (e: any) {
+      antMessage.error(e?.response?.data?.msg ?? e?.message ?? '确认失败');
+      newPipelineSpecConfirm.value = true;
+    }
+  }
+
+  async function handleNewPipelineSpecFeedback() {
+    // 用户点"我要修改" → 关闭确认卡片，激活主输入框让用户打字反馈
+    newPipelineSpecConfirm.value = false;
+    pendingSpecFeedback.value = true;
+    antMessage.info('请在下方输入框描述你的修改意见');
+    inputText.value = '';
   }
 
   async function handleApplyRequirementAmendment(msg: any) {
@@ -885,10 +919,12 @@
         gatePassed.value = true;
         msg.thinkingCollapsed = true;
         msg.actions = [];
+        // UX 收敛（2026-07-17）：门控分析结果是后台处理 + PM 消费，不输出几百行 markdown 到对话流。
+        // 用户只需看到：PM 深度追问卡片 + 最后需求说明书确认。门控通过仅给一句折叠提示。
         const payload = parseGatePayload<GatePassedPayload>(data.data) ?? {};
         const sf = normalizeSemanticFitness(payload) ?? ({ passed: true, score: 0, level: 'sufficient', identified: [], missing: [] } as const);
-        const passedMd = buildGatePassedMarkdown(payload, sf);
-        await streamTextToMessage(msg, passedMd, { onChunk: scrollOnStream });
+        msg.thinking += `\n✅ 需求材料评估通过（${sf.score}/100），正在分析…\n`;
+        scrollOnStream();
         await refreshPipelineMaterials();
         break;
       }
@@ -897,7 +933,7 @@
         gatePassed.value = false;
         msg.thinkingCollapsed = true;
         const failPayload = parseGatePayload<GateFailedPayload>(data.data) ?? {};
-        const failSf = normalizeSemanticFitness(failPayload) ?? ({ passed: false, score: 0, level: 'insufficient', identified: [], missing: [] } as const);
+        const failSf = normalizeSemanticFitness(failPayload) ?? ({ passed: false, score: 0, level: 'insufficient', identified: [], missing: [], nextStepGuidance: undefined } as const);
         msg.actions = gateFailedActions();
         const failMd = buildGateFailedMarkdown(failPayload, failSf);
         // #region agent log
@@ -917,9 +953,34 @@
         break;
       }
       case 'pm_skill_started': {
+        pmStreamActive.value = true;
         const hint = parseGatePayload<{ pipelineId?: number; source?: string }>(data.data);
-        msg.thinking += `\n📋 PM Skill 已启动（${hint?.source ?? 'gate_pass'}），正在提取 IR-0 业务事件骨架…\n`;
+        msg.thinking += `\n📋 PM 需求分析已启动（${hint?.source ?? 'gate_pass'}），正在完善需求…\n`;
         scrollOnStream();
+        break;
+      }
+      case 'pm_skill_failed': {
+        pmStreamActive.value = false;
+        gateProcessing.value = false;
+        msg.thinkingCollapsed = true;
+        const pmFail = parseGatePayload<{ message?: string; errorCode?: string }>(data.data) ?? {};
+        // #region agent log
+        fetch('http://127.0.0.1:7354/ingest/a6dd8c09-a41a-4bdf-b8f4-ed467f774eaa',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ead5d0'},body:JSON.stringify({sessionId:'ead5d0',runId:'post-fix',hypothesisId:'H5',location:'AiChatPanel.vue:pm_skill_failed',message:'pm skill failed event',data:{errorCode:pmFail.errorCode??null,msgPreview:String(pmFail.message??'').slice(0,200)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        const pmErrMd = [
+          '## ⚠️ 门控已通过，但 PM 需求分析未完成',
+          '',
+          pmFail.message || 'PM 流水线执行失败，请重试或稍后在流水线中重新触发。',
+          '',
+          pmFail.errorCode ? `错误代码：\`${pmFail.errorCode}\`` : '',
+          '',
+          '---',
+          '',
+          '需求评估（门控）本身已成功；可稍后在流水线中重新触发 PM Skill。',
+        ]
+          .filter(Boolean)
+          .join('\n');
+        await streamTextToMessage(msg, (msg.content ? msg.content + '\n\n' : '') + pmErrMd, { onChunk: scrollOnStream });
         break;
       }
       case 'stage_transition':
@@ -933,13 +994,32 @@
         break;
       case 'token':
       case 'delta':
-        msg.content += data.data || data.content || data.delta?.content || '';
+        if (pmStreamActive.value) {
+          msg.thinking += data.data || data.content || data.delta?.content || '';
+        } else {
+          msg.content += data.data || data.content || data.delta?.content || '';
+        }
         scrollOnStream();
         break;
       case 'clarification_requested': {
+        pmStreamActive.value = false;
+        msg.thinkingCollapsed = true;
         // ADR-005：后端在需求分析阶段下发结构化选择题，暂停流式 LLM 等待用户作答
         const clarificationData = parseSseJsonPayload(data.data);
         msg.clarification = clarificationData || data.clarification || null;
+        scrollOnStream();
+        break;
+      }
+      case 'spec_confirm_requested': {
+        pmStreamActive.value = false;
+        msg.thinkingCollapsed = true;
+        // CR-20260713-03：新流程步骤④ — 需求说明书已生成，弹出确认/修改按钮（正文不灌整份 markdown）
+        if (!msg.content?.trim()) {
+          msg.content = '需求说明书已生成，请确认通过或提出修改意见。';
+        }
+        newPipelineSpecConfirm.value = true;
+        gateProcessing.value = false;
+        loading.value = false;
         scrollOnStream();
         break;
       }
@@ -948,9 +1028,6 @@
         break;
       case 'document':
         msg.document = data.data || data.document;
-        break;
-      case 'ir':
-        msg.ir = data.data || data.ir;
         break;
       case 'ir_event': {
         const irPayload = parseSseJsonPayload(data.data) as SseIrEventPayload | null;
@@ -965,9 +1042,7 @@
             if (step) appendWorkflowThinking(msg, `✅ SA 编译 · ${step}`);
             scrollOnStream();
           }
-          if (irPayload.fragmentType?.startsWith('IR0')) {
-            msg.ir = irPayload.payloadPreview;
-          }
+          // IR0 片段仅进观测台，不在用户聊天区展示 IR 预览
           if (irPayload.fragmentType?.startsWith('IR2') || irPayload.eventType?.includes('Design')) {
             void designSkill?.refreshDesignContext();
           }
@@ -1289,6 +1364,32 @@
     if ((!content && attachments.value.length === 0) || loading.value) return;
     inputText.value = '';
 
+    // CR-20260714-01 改动5：用户输入第一响应 — pendingSpecFeedback 时作为反馈提交
+    if (pendingSpecFeedback.value && content) {
+      pendingSpecFeedback.value = false;
+      // 作为用户消息展示
+      messages.value.push({
+        id: Date.now(),
+        role: 'user',
+        content,
+        time: new Date().toLocaleTimeString(),
+      });
+      scrollToBottom();
+      loading.value = true;
+      runRequirementAnalysis(pipelineId.value, { specFeedback: content })
+        .then(() => {
+          antMessage.success('已提交修改意见，PM 正在重新分析…');
+        })
+        .catch((e: any) => {
+          antMessage.error(e?.response?.data?.msg ?? e?.message ?? '提交失败，请重试');
+          pendingSpecFeedback.value = true; // 恢复，允许重试
+        })
+        .finally(() => {
+          loading.value = false;
+        });
+      return;
+    }
+
     // ═══ 上传附件到 JNPF 文件服务 ═══
     const filesToUpload = [...attachments.value];
     attachments.value = [];
@@ -1385,6 +1486,7 @@
     msg.clarification = null;
     if (!payload.triggerNextRound || payload.nextAction === 'none') return;
 
+    loading.value = true;
     // 创建新的 assistant 消息占位，承接下一轮 SSE 流
     const aiMsgId = Date.now();
     const thinkingText =
@@ -1429,6 +1531,8 @@
     } catch (e: any) {
       const m = messages.value.find(x => x.id === aiMsgId);
       if (m) m.content += `\n\n⚠️ 重新评估失败：${e?.message || e}`;
+    } finally {
+      loading.value = false;
     }
   }
 
@@ -2256,6 +2360,30 @@
       width: 36px;
       height: 36px;
       flex-shrink: 0;
+    }
+  }
+  .new-pipeline-spec-confirm {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    margin: 8px 0;
+    background: #f6ffed;
+    border: 1px solid #b7eb8f;
+    border-radius: 6px;
+    flex-wrap: wrap;
+    .badge {
+      background: #52c41a;
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .hint {
+      color: #262626;
+      font-size: 13px;
+      flex: 1;
+      min-width: 200px;
     }
   }
 </style>

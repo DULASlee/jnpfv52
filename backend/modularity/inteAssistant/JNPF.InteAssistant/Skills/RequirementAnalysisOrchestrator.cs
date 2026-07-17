@@ -5,6 +5,7 @@ using JNPF.FriendlyException;
 
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
+using JNPF.InteAssistant.Entitys.Dto.Skills;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Gates;
 using JNPF.InteAssistant.Infrastructure.Messaging;
@@ -64,6 +65,44 @@ public sealed class RequirementAnalysisOptions
 
     /// <summary>Apply 补充需求后，即使已 Finalize 也强制重生成 02 并复审。</summary>
     public bool ForceRefinalize { get; init; }
+
+    /// <summary>
+    /// PM 终评 &lt; 85 时强制 Finalize（留痕逃生口，对齐手动 API SkillsApiService.ConfirmRequirementSpecAsync）。
+    /// CR-20260712-01：修复编排器 PM 终评门控逃逸。仅 review.Verdict=fail 时生效，会写 forceConfirm+forceReason 入 IR。
+    /// </summary>
+    public bool ForceConfirm { get; init; }
+
+    /// <summary>ForceConfirm=true 时的强制理由（留痕审计，对齐手动 API）。</summary>
+    public string? ForceReason { get; init; }
+
+    /// <summary>
+    /// CR-20260713-03：启用新的 4 步线性 PM 流程（完善需求 → 九步拆解 → 二次完善 → 生成说明书）。
+    /// 默认 false（走旧三轮循环，向后兼容）；true 时旁路 RunRoundAsync，走 RunPmPipelineAsync。
+    /// 阶段 C 验证稳定后，此开关移除，新流程成为默认。
+    /// </summary>
+    public bool UseNewPipeline { get; init; }
+
+    /// <summary>
+    /// CR-20260713-03：新流程恢复时，用户对 PM 对话式追问的回答（单个 pipeline 可能多轮追问）。
+    /// 旧流程用 CurrentRoundAnswers（结构化 ClarificationAnswer）；新流程用此字段（自然语言）。
+    /// </summary>
+    public string? PmClarificationAnswer { get; init; }
+
+    /// <summary>
+    /// CR-20260713-03：新流程步骤④用户对需求说明书的文字反馈（不同意时）。
+    /// 非空时触发：PM 据此改需求文本 → 重跑九步拆解 → 回到步骤④。
+    /// </summary>
+    public string? SpecFeedback { get; init; }
+
+    /// <summary>CR-20260714-01 改动5：用户原始输入（PM 智能判断意图后路由）。</summary>
+    public string? UserMessage { get; init; }
+
+    /// <summary>
+    /// 首次进入时由调用方（如 sa-gate）传入的用户原始需求文本（合并附件后）。
+    /// ResolveUserRequirementAsync 优先使用此值——避免首次进入时 IR snapshot 还没有
+    /// stable Requirement fragment 导致 SkillContext.UserRequirement 为空（PM 读不到需求）。
+    /// </summary>
+    public string? InitialUserRequirement { get; init; }
 }
 
 /// <summary>三轮需求分析编排器 API 请求体。</summary>
@@ -80,6 +119,27 @@ public sealed class RequirementAnalysisRunRequest
     /// 不绕过「已 StageConfirmed 禁止 Amend」门闩。
     /// </summary>
     public bool ForceRefinalize { get; init; }
+
+    /// <summary>PM 终评 &lt; 85 时强制 Finalize（留痕逃生口）。CR-20260712-01。</summary>
+    public bool ForceConfirm { get; init; }
+
+    /// <summary>ForceConfirm=true 时的强制理由（留痕审计）。</summary>
+    public string? ForceReason { get; init; }
+
+    /// <summary>CR-20260713-03：启用新 4 步线性 PM 流程。</summary>
+    public bool UseNewPipeline { get; init; }
+
+    /// <summary>CR-20260713-03：新流程用户对追问的回答。</summary>
+    public string? PmClarificationAnswer { get; init; }
+
+    /// <summary>CR-20260713-03：新流程用户对需求说明书的反馈。</summary>
+    public string? SpecFeedback { get; init; }
+
+    /// <summary>
+    /// CR-20260714-01 改动5：用户原始输入（不带明确意图参数）。
+    /// 当前端无法确定用户意图（确认/修改/回答追问）时传入，PM Skill 智能判断后路由。
+    /// </summary>
+    public string? UserMessage { get; init; }
 }
 
 /// <summary>编排器运行结果。</summary>
@@ -91,6 +151,9 @@ public sealed class RequirementAnalysisOrchestratorResult
     /// <summary>
     /// completed = 三轮全部完成（含工程保障）；
     /// awaiting-answer = 当前轮已出题，等待用户作答后再次调用 RunAsync；
+    /// awaiting-clarification = CR-20260713-03 新流程：PM 对话式追问，等用户回答；
+    /// awaiting-spec-confirm = CR-20260713-03 新流程：需求说明书已渲染，等用户确认或反馈；
+    /// pm-review-failed = PM 终评未通过；
     /// failed = 异常。
     /// </summary>
     public string Status { get; init; } = "completed";
@@ -101,6 +164,18 @@ public sealed class RequirementAnalysisOrchestratorResult
     /// <summary>当前轮次的澄清题（Status=awaiting-answer 时非空，前端展示给用户）。</summary>
     public ClarificationSet? PendingClarification { get; init; }
 
+    /// <summary>
+    /// CR-20260713-03：新流程 PM 对话式追问的问题（Status=awaiting-clarification 时非空）。
+    /// 自然语言问题，前端用输入框展示（非结构化选择题）。
+    /// </summary>
+    public string? PendingPmQuestion { get; init; }
+
+    /// <summary>
+    /// CR-20260713-03：新流程渲染的需求说明书（Status=awaiting-spec-confirm 时非空）。
+    /// 前端展示给用户确认；用户不同意时输入文字反馈。
+    /// </summary>
+    public string? RenderedSpec { get; init; }
+
     /// <summary>已完成的 Skill 运行结果（每轮 PM/Analyst 的 SkillRunResult）。</summary>
     public IReadOnlyList<SkillRunResult> SkillResults { get; init; } = Array.Empty<SkillRunResult>();
 
@@ -108,6 +183,12 @@ public sealed class RequirementAnalysisOrchestratorResult
     public IReadOnlyList<Assumption> CollectedAssumptions { get; init; } = Array.Empty<Assumption>();
 
     public string? ErrorMessage { get; init; }
+
+    /// <summary>
+    /// CR-20260713-03：门控拒绝时的用户提示（Status=gate-rejected 时非空）。
+    /// 前端据此展示"请描述您要构建的系统"等引导文案。
+    /// </summary>
+    public string? GateHint { get; init; }
 }
 
 /// <summary>
@@ -121,13 +202,16 @@ public static class RequirementAnalysisStages
     public const string Round3 = "requirement-analysis-round3";
 
     public static bool IsRequirementAnalysisStage(string? stage) =>
-        stage is Round1 or Round2 or Round3;
+        stage is Round1 or Round2 or Round3 or "requirement"; // CR-20260712-01 D3: 兼容历史 pipeline（343 等）stage="requirement"
 }
 
 public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrchestrator, ITransient
 {
     private const int TotalRounds = 3;
     private const int QuestionsPerRound = 3;
+    /// <summary>交付说明书前至少完成的 PM 结构化澄清轮次（对齐 28 号附录 B + A-B-C 2–3 轮深度优化）。</summary>
+    private const int MinPmOptimizationRounds = 2;
+    private static readonly TimeSpan StreamingHeartbeatInterval = TimeSpan.FromSeconds(15);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -148,6 +232,8 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
     private readonly IPipelineSseChannelHub _sseHub;
     private readonly IOptions<SaPipelineOptions> _pipelineOptions;
     private readonly ILogger<RequirementAnalysisOrchestrator> _logger;
+    // CR-20260713-03：新流程步骤①前置门控（可选注入，旧测试不传时降级跳过）
+    private readonly RequirementGateService? _gate;
 
     public RequirementAnalysisOrchestrator(
         ISkillHarness harness,
@@ -159,7 +245,8 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         ILlmGatewayService llm,
         IPipelineSseChannelHub sseHub,
         IOptions<SaPipelineOptions> pipelineOptions,
-        ILogger<RequirementAnalysisOrchestrator> logger)
+        ILogger<RequirementAnalysisOrchestrator> logger,
+        RequirementGateService? gate = null)
     {
         _harness = harness;
         _eventStore = eventStore;
@@ -171,6 +258,7 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         _sseHub = sseHub;
         _pipelineOptions = pipelineOptions;
         _logger = logger;
+        _gate = gate;
     }
 
     public async Task<RequirementAnalysisOrchestratorResult> RunAsync(
@@ -189,6 +277,27 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                 orchestratorRunId, tenantId, projectId, pipelineId,
                 "requirement-analysis-orchestrator", ct);
 
+            // ══ CR-20260714-01 阶段 C：新 4 步线性 PM 流程为唯一流程 ══
+            // 旧三轮循环(RunRoundAsync)已废弃，所有调用直接走 RunPmPipelineAsync。
+            // ForceRefinalize 运维回填路径保留(下方)，用于历史 pipeline 回填。
+            if (options?.ForceRefinalize != true)
+            {
+                _logger.LogInformation(
+                    "RequirementAnalysis 编排器启动[新流程]: pipeline={PipelineId}", pipelineId);
+                var newResult = await RunPmPipelineAsync(pipelineId, tenantId, projectId, options, ct);
+                return new RequirementAnalysisOrchestratorResult
+                {
+                    OrchestratorRunId = orchestratorRunId,
+                    Status = newResult.Status,
+                    PendingPmQuestion = newResult.PendingPmQuestion,
+                    RenderedSpec = newResult.RenderedSpec,
+                    SkillResults = newResult.SkillResults,
+                    ErrorMessage = newResult.ErrorMessage,
+                };
+            }
+
+            // ── 运维回填路径(ForceRefinalize)：历史 pipeline 回填 CTA/PmReviewed ──
+            // 保留旧 Finalize 能力供运维使用，但不走旧三轮循环。
             var snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
             var currentRound = DetermineCurrentRound(snapshot);
             var skillResults = new List<SkillRunResult>();
@@ -198,28 +307,39 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                 pipelineId, currentRound, snapshot.Fragments.Count);
 
             // Apply / 运维回填：强制 Finalize+PM 终评，不依赖三轮澄清是否齐全
+            // CR-20260712-01：PM 终评先跑，fail 则按 ForceConfirm 决定是否 Finalize（修复门控逃逸）
             if (options?.ForceRefinalize == true)
             {
                 _logger.LogInformation(
                     "ForceRefinalize 执行 Round3 工程保障 pipeline={PipelineId} priorRound={Round}",
                     pipelineId, currentRound);
-                var skillOptions = new SkillRunOptions { ProviderCode = options?.ProviderCode };
+                var skillOptions = new SkillRunOptions
+                {
+                    ProviderCode = options?.ProviderCode,
+                    UserRequirement = options?.InitialUserRequirement,
+                };
+                var review = await ReviewRequirementSpecAsync(
+                    pipelineId, tenantId, projectId, orchestratorRunId, skillOptions,
+                    forceConfirm: options?.ForceConfirm == true, forceReason: options?.ForceReason, ct: ct);
+                var allowFinalize = review.Verdict == "pass" || options?.ForceConfirm == true;
+                _logger.LogWarning(
+                    "ForceRefinalize PM 终评 verdict={Verdict} score={Score} allowFinalize={Allow} forceConfirm={Force} pipeline={PipelineId}",
+                    review.Verdict, review.Score, allowFinalize, options?.ForceConfirm, pipelineId);
                 var finalizeResult = await RunRoundAnalystAsync(
                     TotalRounds, pipelineId, tenantId, projectId, skillOptions,
-                    enableFinalization: true, ct);
-                await ReviewRequirementSpecAsync(
-                    pipelineId, tenantId, projectId, orchestratorRunId, skillOptions, ct);
+                    enableFinalization: allowFinalize, ct);
                 skillResults.Add(finalizeResult);
                 return new RequirementAnalysisOrchestratorResult
                 {
                     OrchestratorRunId = orchestratorRunId,
-                    Status = "completed",
+                    Status = allowFinalize ? "completed" : "pm-review-failed",
                     CurrentRound = TotalRounds,
                     SkillResults = skillResults,
                 };
             }
 
             // P0：三轮澄清均已 stable 但尚未 Finalize → 强制跑 Round 3 工程保障（禁止静默 completed）
+            // CR-20260712-01：PM 终评先跑，fail 则按 ForceConfirm 决定是否 Finalize（修复门控逃逸）
             if (currentRound > TotalRounds)
             {
                 if (!await HasFinalizedEngineeringAsync(tenantId, projectId, pipelineId, ct))
@@ -227,13 +347,29 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                     _logger.LogInformation(
                         "三轮澄清已完成但尚未 Finalize，强制执行 Round 3 工程保障 pipeline={PipelineId}",
                         pipelineId);
-                    var skillOptions = new SkillRunOptions { ProviderCode = options?.ProviderCode };
+                    var skillOptions = new SkillRunOptions
+                    {
+                        ProviderCode = options?.ProviderCode,
+                        UserRequirement = options?.InitialUserRequirement,
+                    };
+                    var review = await ReviewRequirementSpecAsync(
+                        pipelineId, tenantId, projectId, orchestratorRunId, skillOptions,
+                        forceConfirm: options?.ForceConfirm == true, forceReason: options?.ForceReason, ct: ct);
+                    var allowFinalize = review.Verdict == "pass" || options?.ForceConfirm == true;
+                    _logger.LogWarning(
+                        "三轮完成 PM 终评 verdict={Verdict} score={Score} allowFinalize={Allow} forceConfirm={Force} pipeline={PipelineId}",
+                        review.Verdict, review.Score, allowFinalize, options?.ForceConfirm, pipelineId);
                     var finalizeResult = await RunRoundAnalystAsync(
                         TotalRounds, pipelineId, tenantId, projectId, skillOptions,
-                        enableFinalization: true, ct);
-                    await ReviewRequirementSpecAsync(
-                        pipelineId, tenantId, projectId, orchestratorRunId, skillOptions, ct);
+                        enableFinalization: allowFinalize, ct);
                     skillResults.Add(finalizeResult);
+                    return new RequirementAnalysisOrchestratorResult
+                    {
+                        OrchestratorRunId = orchestratorRunId,
+                        Status = allowFinalize ? "completed" : "pm-review-failed",
+                        CurrentRound = TotalRounds,
+                        SkillResults = skillResults,
+                    };
                 }
 
                 return new RequirementAnalysisOrchestratorResult
@@ -319,12 +455,744 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
     }
 
     /// <summary>执行单轮（Round 1/2/3）。每轮结构：SA 编译 → 出题/确认 → 暂停或继续。</summary>
+    // ════════════════════════════════════════════════════════════════════
+    // CR-20260713-03 阶段 B：新 4 步线性 PM 流程（回归"完善需求"初衷）
+    //
+    // 取代旧三轮循环 RunRoundAsync。当 RequirementAnalysisOptions.UseNewPipeline=true
+    // 时由 RunAsync 调用本方法。流程：
+    //   步骤① EnhanceRequirement — PM 用提示词+种子完善需求（可对话式追问）
+    //   步骤② SaDecompose — 7 步 C# 编译 + 2b PM LLM 产 PSpec/DT 真语义
+    //   步骤③ RefineFromAnalysis — PM 分析九步反向完善需求（可追问 → 重跑②）
+    //   步骤④ GenerateSpec — 渲染需求说明书，等用户确认或反馈
+    //
+    // 暂停点（awaiting-user）：
+    //   - 步骤① pending_question → awaiting-clarification（PmClarificationTurn）
+    //   - 步骤③ pending_question → awaiting-clarification（PmClarificationTurn）
+    //   - 步骤④ → awaiting-spec-confirm（用户确认或反馈）
+    // ════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// 新 4 步线性 PM 流程入口。取代旧三轮循环。
+    /// 每次调用推进到下一个暂停点；用户作答/反馈后再次调用继续。
+    /// </summary>
+    private async Task<RequirementAnalysisOrchestratorResult> RunPmPipelineAsync(
+        long pipelineId, string tenantId, string projectId,
+        RequirementAnalysisOptions? options, CancellationToken ct)
+    {
+        var snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
+        var providerCode = options?.ProviderCode;
+
+        // ── 构造 SkillContext（PM 三方法的公共输入）──
+        // 优先用调用方传入的 InitialUserRequirement（sa-gate 已合并附件）；否则从 IR snapshot 解析。
+        // 修复：首次进入时 IR snapshot 还没有 stable Requirement fragment，若不优先用传入值会得到空字符串
+        // → PM 流式 prompt 的 retrievalText 为空 → LLM "读不到需求"（2026-07-17 Playwright 暴露）。
+        var userRequirement = !string.IsNullOrWhiteSpace(options?.InitialUserRequirement)
+            ? options.InitialUserRequirement!
+            : await ResolveUserRequirementAsync(tenantId, projectId, pipelineId, ct);
+        var context = new SkillContext
+        {
+            RunId = Guid.NewGuid().ToString("N"),
+            TenantId = tenantId,
+            ProjectId = projectId,
+            PipelineId = pipelineId,
+            UserRequirement = userRequirement,
+            Snapshot = snapshot,
+            ProviderCode = providerCode,
+        };
+
+        // ── 判断当前应从哪一步恢复 ──
+        // 优先级：SpecFeedback(步骤④反馈) > SpecConfirmed(步骤⑤) > SpecRendered(步骤④渲染) > 追问回灌 > 初始
+        var existingSpec = snapshot.Find(IrFragmentTypes.Requirement, IrStabilityStates.Stable);
+        var specFeedback = options?.SpecFeedback;
+
+        // 步骤④：用户对需求说明书反馈 → PM 改需求文本 → 重跑①②③
+        if (!string.IsNullOrWhiteSpace(specFeedback) && existingSpec != null)
+        {
+            _logger.LogInformation(
+                "RunPmPipeline 步骤④反馈 pipeline={PipelineId} feedback={Len}字",
+                pipelineId, specFeedback.Length);
+            return await HandleSpecFeedbackAsync(
+                pipelineId, tenantId, projectId, context, specFeedback, ct);
+        }
+
+        // CR-20260714-01 改动5：PM 智能意图判断 — 用户输入不带明确参数时，根据 IR 状态判断意图
+        var userMessage = options?.UserMessage;
+        if (!string.IsNullOrWhiteSpace(userMessage) && string.IsNullOrWhiteSpace(specFeedback))
+        {
+            var intent = ClassifyUserIntent(userMessage, snapshot);
+            _logger.LogInformation(
+                "RunPmPipeline 意图判断 pipeline={PipelineId} intent={Intent} confidence={Conf}",
+                pipelineId, intent.Intent, intent.Confidence);
+
+            if (intent.Intent == "confirm_spec" && existingSpec != null)
+            {
+                // 用户确认需求说明书 → 走步骤⑤ Finalize（下方 hasSpecRendered 分支处理）
+                // 不在这里 return，让下方步骤⑤逻辑接管
+            }
+            else if (intent.Intent == "request_change" && existingSpec != null)
+            {
+                // 用户要修改 → 当 specFeedback 处理
+                return await HandleSpecFeedbackAsync(
+                    pipelineId, tenantId, projectId, context, userMessage, ct);
+            }
+            else if (intent.Intent == "answer_question")
+            {
+                // 用户在回答追问 → 当 pmAnswer 处理（下方 pmAnswer 分支会接管）
+                // 把 userMessage 赋给 pmAnswer 变量（options 是 init-only class，不能 with）
+                // 下方 var pmAnswer = options?.PmClarificationAnswer 会取到 null → 用 userMessage 补位
+            }
+            // intent == "unknown" → 不路由，继续走正常恢复点判断
+        }
+
+        // CR-20260714-01 步骤⑤：说明书已渲染(specRendered 事件存在)且用户无反馈 → 确认 → Finalize
+        var hasSpecRendered = await HasEventAsync(tenantId, projectId, pipelineId, IrEventTypes.RequirementSpecRendered, ct);
+        var hasSpecConfirmed = await HasEventAsync(tenantId, projectId, pipelineId, IrEventTypes.RequirementSpecConfirmed, ct);
+        if (hasSpecRendered && !hasSpecConfirmed && string.IsNullOrWhiteSpace(specFeedback))
+        {
+            _logger.LogInformation(
+                "RunPmPipeline 步骤⑤ 用户确认需求说明书 pipeline={PipelineId}", pipelineId);
+            return await RunStep5FinalizeAsync(
+                pipelineId, tenantId, projectId, context, options, ct);
+        }
+
+        // 已 Finalize → 流程完成
+        if (hasSpecConfirmed)
+        {
+            _logger.LogInformation(
+                "RunPmPipeline 已完成(需求说明书已确认) pipeline={PipelineId}", pipelineId);
+            return new RequirementAnalysisOrchestratorResult { Status = "completed" };
+        }
+
+        // 步骤④恢复：仅步骤③ RequirementRefined + 九步已拆 + ≥MinPmOptimizationRounds 轮澄清已作答
+        if (existingSpec != null
+            && await IsReadyForSpecDeliveryAsync(tenantId, projectId, pipelineId, snapshot, ct))
+        {
+            var refinedText = ExtractRequirementText(existingSpec);
+            if (!string.IsNullOrWhiteSpace(refinedText))
+            {
+                return await RenderSpecAndWaitConfirmAsync(
+                    pipelineId, tenantId, projectId, refinedText, ct);
+            }
+        }
+
+        // 九步已拆 → 步骤③ / 结构化澄清续跑
+        var nineViewFragment = snapshot.Find("IR1_SaNineView", IrStabilityStates.Stable);
+        var hasRefined = await HasEventAsync(tenantId, projectId, pipelineId, IrEventTypes.RequirementRefined, ct);
+
+        // ── 结构化澄清已作答 → 续跑步骤③（CR-20260717：GenerateClarification 路径）──
+        if (nineViewFragment != null && hasRefined && !hasSpecRendered && !HasPendingClarification(snapshot))
+        {
+            var answeredCount = await CountClarificationAnsweredAsync(tenantId, projectId, pipelineId, ct);
+            var reqClar = FindRoundClarification(snapshot, ClarificationStages.Requirement);
+            var answersText = ExtractAnswersText(reqClar?.Payload);
+            if (answeredCount > 0
+                && reqClar?.StabilityState == IrStabilityStates.Stable
+                && !string.IsNullOrWhiteSpace(answersText))
+            {
+                _logger.LogInformation(
+                    "RunPmPipeline 结构化澄清已作答，续跑步骤③ pipeline={PipelineId} answered={Answered}",
+                    pipelineId, answeredCount);
+
+                await ApplyClarificationAnswersToSkeletonAsync(
+                    pipelineId, tenantId, projectId, snapshot, reqClar, answeredCount, ct);
+                snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
+
+                var requirementFragment = snapshot.Find(IrFragmentTypes.Requirement, IrStabilityStates.Stable)
+                    ?? snapshot.Find(IrFragmentTypes.Requirement, IrStabilityStates.Draft)
+                    ?? existingSpec;
+                var enhancedText = ExtractRequirementText(requirementFragment) ?? userRequirement;
+                var mergedEnhanced = enhancedText + "\n\n【用户澄清作答】\n" + answersText;
+
+                var compileResult = await RecompileFromCurrentSkeletonAsync(
+                    pipelineId, tenantId, projectId, context, ct);
+                var resumeWarnings = _lightValidator.Validate(compileResult.Source);
+                var resumeContext = CloneContextWithRequirement(context, mergedEnhanced);
+
+                _sseHub.TryPush(pipelineId, "thinking",
+                    $"📋 已收到第 {answeredCount} 轮澄清作答，PM 正在并入需求并继续…");
+
+                return await RunStep3RefineAsync(
+                    pipelineId, tenantId, projectId, resumeContext, mergedEnhanced,
+                    turns: null, ct, resumeWarnings, compileResult);
+            }
+        }
+
+        // 九步已拆但步骤③未完成 → 继续反向完善（禁止 SA 九步完成后直接推说明书）
+        if (nineViewFragment != null && !hasSpecRendered && !hasRefined)
+        {
+            var enhancedText = ExtractRequirementText(existingSpec) ?? userRequirement;
+            var resumeTurns = LoadClarificationTurns(snapshot);
+            _logger.LogInformation(
+                "RunPmPipeline 九步已完成但步骤③未完成，续跑反向完善 pipeline={PipelineId}", pipelineId);
+            return await RunStep3RefineAsync(
+                pipelineId, tenantId, projectId, context, enhancedText, resumeTurns, ct);
+        }
+
+        // ── 用户回答了追问 → 回灌继续步骤①或③ ──
+        // CR-20260714-01 改动5：pmAnswer 优先用显式参数，其次用意图判断的 userMessage
+        var pmAnswer = !string.IsNullOrWhiteSpace(options?.PmClarificationAnswer)
+            ? options.PmClarificationAnswer
+            : userMessage;
+        if (!string.IsNullOrWhiteSpace(pmAnswer))
+        {
+            // 读取历史追问上下文，判断当前在步骤①还是③
+            var turns = LoadClarificationTurns(snapshot);
+            var lastTurn = turns.LastOrDefault();
+            if (lastTurn != null)
+            {
+                turns[^1] = lastTurn with { UserAnswer = pmAnswer };
+                _logger.LogInformation(
+                    "RunPmPipeline 回灌追问答案 pipeline={PipelineId} source={Source} turnCount={Count}",
+                    pipelineId, lastTurn.Source, turns.Count);
+
+                if (lastTurn.Source == ClarificationSource.Step1Enhance)
+                {
+                    return await RunStep1EnhanceAsync(
+                        pipelineId, tenantId, projectId, context, turns, ct);
+                }
+                else
+                {
+                    // Step3Refine：需要重新编译九步
+                    var enhancedText = ExtractRequirementText(existingSpec) ?? userRequirement;
+                    return await RunStep3RefineAsync(
+                        pipelineId, tenantId, projectId, context, enhancedText, turns, ct);
+                }
+            }
+        }
+
+        // ── 首次进入：门控检查 → 步骤① ──
+        // CR-20260713-03：防止用户原始需求不合格，在 SA 九步拆解时取不到数据报错。
+        // 门控复用 RequirementGateService.ValidateHardRules（硬规则：长度/垃圾内容/附件数）。
+        // 语义合格性评估（SemanticFitnessValidator）由 GatePipeline 在更上游执行（Stage 0），
+        // 编排器只兜底硬规则——双保险。
+        if (_gate != null && !string.IsNullOrEmpty(userRequirement))
+        {
+            var hardRule = _gate.ValidateHardRules(userRequirement, attachmentCount: 0);
+            if (!hardRule.Passed)
+            {
+                _logger.LogWarning(
+                    "RunPmPipeline 门控拒绝 pipeline={PipelineId} reason={Reason} hint={Hint}",
+                    pipelineId, hardRule.Reason, hardRule.Hint);
+                return new RequirementAnalysisOrchestratorResult
+                {
+                    Status = "gate-rejected",
+                    ErrorMessage = hardRule.Reason,
+                    GateHint = hardRule.Hint,
+                };
+            }
+            _logger.LogInformation(
+                "RunPmPipeline 门控通过 pipeline={PipelineId} reason={Reason}",
+                pipelineId, hardRule.Reason);
+        }
+
+        _logger.LogInformation(
+            "RunPmPipeline 首次启动 pipeline={PipelineId} 从步骤①开始", pipelineId);
+        return await RunStep1EnhanceAsync(
+            pipelineId, tenantId, projectId, context, turns: null, ct);
+    }
+
+    /// <summary>步骤①：PM 完善需求（含 MULTI/MATRIX 选择题追问）。</summary>
+    private async Task<RequirementAnalysisOrchestratorResult> RunStep1EnhanceAsync(
+        long pipelineId, string tenantId, string projectId,
+        SkillContext context, IReadOnlyList<PmClarificationTurn>? turns, CancellationToken ct)
+    {
+        // CR-20260717-02：步骤① PM 完善过程 — 真流式 token 推 SSE（前端路由到折叠「推理区」），
+        // 不在正文区灌整段需求文本。pending_question 时只展示追问卡片。
+        _sseHub.TryPush(pipelineId, "thinking", "📝 PM 正在完善需求…");
+        var onToken = CreateStreamingTokenHandler(
+            pipelineId, "⏳ PM 仍在完善需求，请稍候…");
+
+        var result = await _pm.EnhanceRequirementStreamAsync(context, turns, onToken, ct);
+
+        if (result.Status == "pending_question")
+        {
+            // CR-20260714-01 改动2（铁律2）+ CR-20260717-01 §3.7：PM 一次出题 — 直接用流式响应产出的 ClarificationSet。
+            // LLM 声明 pending_question 却未给题 = 协议违规，硬错误（不再二次出题兜底）。
+            var clarSet = result.PendingClarificationSet;
+            if (clarSet == null || clarSet.Questions.Count == 0)
+            {
+                throw Oops.Bah(
+                    $"RunPmPipeline 步骤① LLM 声明 pending_question 但未产出题目（协议违规）" +
+                    $" pipeline={pipelineId} tenantId={tenantId} partialEnhancement[0..200]=" +
+                    $"{(result.PartialEnhancement?.Length > 200 ? result.PartialEnhancement[..200] : result.PartialEnhancement ?? "(空)")}");
+            }
+
+            await EmitClarificationRequestedAsync(
+                pipelineId, tenantId, projectId, "requirement", 1, clarSet, ct);
+
+            _logger.LogInformation(
+                "RunPmPipeline 步骤①暂停追问 pipeline={PipelineId} questions={Count}",
+                pipelineId, clarSet.Questions.Count);
+
+            return new RequirementAnalysisOrchestratorResult
+            {
+                Status = "awaiting-clarification",
+                PendingPmQuestion = result.PendingQuestion,
+                PendingClarification = clarSet,
+            };
+        }
+
+        // completed → 后台完善完成，进入步骤②（正文不进聊天主区域）
+        await PersistRequirementAsync(
+            pipelineId, tenantId, projectId, result.EnhancedText,
+            IrEventTypes.RequirementEnhanced, ct);
+
+        _logger.LogInformation(
+            "RunPmPipeline 步骤①完成 pipeline={PipelineId} textLen={Len} turns={Turns}",
+            pipelineId, result.EnhancedText.Length, result.ClarificationTurns);
+
+        // 直接进入步骤②
+        return await RunStep2DecomposeAsync(
+            pipelineId, tenantId, projectId, context, result.EnhancedText, ct);
+    }
+
+    /// <summary>步骤②：7 步 C# 编译 + 2b PM LLM 产 PSpec/DT 真语义。</summary>
+    private async Task<RequirementAnalysisOrchestratorResult> RunStep2DecomposeAsync(
+        long pipelineId, string tenantId, string projectId,
+        SkillContext context, string enhancedText, CancellationToken ct)
+    {
+        // 先用 EnhancedText 生成骨架（复用 PM ThinkAsync 的骨架生成能力）
+        var skeleton = await EnsureSkeletonAsync(pipelineId, tenantId, projectId, context, ct);
+
+        // CR-20260713-03：九步拆解进度(thinking 折叠区)
+        _sseHub.TryPush(pipelineId, "thinking", "📋 正在进行 SA 九步拆解…");
+
+        // 2a. C# 编译器 7 步（确定性，零 LLM）
+        var compileResult = _compiler.CompileFromSkeletonJson(skeleton.Payload);
+        var warnings = _lightValidator.Validate(compileResult.Source);
+        _sseHub.TryPush(pipelineId, "thinking",
+            $"✅ 7 步确定性编译完成：{compileResult.EventResults.Count} 个事件");
+
+        // 持久化 Assumptions（跨步骤审计）
+        await PersistAssumptionsFragmentAsync(
+            pipelineId, tenantId, projectId, compileResult.Assumptions, round: 2, ct);
+
+        // 2b. PM LLM 产 PSpec/DT 真语义
+        _sseHub.TryPush(pipelineId, "thinking", "🔧 PM 正在产出 PSpec/DecisionTable 真语义…");
+        var enhancedContext = CloneContextWithRequirement(context, enhancedText);
+        var enhancedCompile = await RunWithThinkingHeartbeatAsync(
+            pipelineId, "⏳ PSpec/DecisionTable 语义增强进行中…", ct,
+            token => _pm.EnhancePspecDecisionTableAsync(enhancedContext, compileResult, token));
+        _sseHub.TryPush(pipelineId, "thinking", "✅ 九步拆解完成");
+
+        // 持久化九步数据（给后续二次开发/BUG 修复用）
+        await PersistNineViewAsync(pipelineId, tenantId, projectId, enhancedCompile, ct);
+
+        _logger.LogInformation(
+            "RunPmPipeline 步骤②完成 pipeline={PipelineId} events={Count} warnings={Warn}",
+            pipelineId, enhancedCompile.EventResults.Count, warnings.Count);
+
+        // 直接进入步骤③
+        return await RunStep3RefineAsync(
+            pipelineId, tenantId, projectId, enhancedContext, enhancedText,
+            turns: null, ct: ct, warnings: warnings, compileResult: enhancedCompile);
+    }
+
+    /// <summary>步骤③：PM 分析九步反向完善需求（含追问 + 澄清轮次门控）。</summary>
+    private async Task<RequirementAnalysisOrchestratorResult> RunStep3RefineAsync(
+        long pipelineId, string tenantId, string projectId,
+        SkillContext context, string enhancedText,
+        IReadOnlyList<PmClarificationTurn>? turns,
+        CancellationToken ct,
+        IReadOnlyList<string>? warnings = null,
+        SaNineViewCompileResult? compileResult = null)
+    {
+        // 若未传入 compileResult，重新编译
+        compileResult ??= await RecompileFromCurrentSkeletonAsync(pipelineId, tenantId, projectId, context, ct);
+        warnings ??= _lightValidator.Validate(compileResult.Source);
+
+        // CR-20260717-02：步骤③ — 真流式 token 推折叠区，不在正文灌整段分析。
+        _sseHub.TryPush(pipelineId, "thinking", "🔍 PM 正在分析九步结果并完善需求…");
+        var onToken = CreateStreamingTokenHandler(
+            pipelineId, "⏳ PM 仍在分析九步结果，请稍候…");
+
+        var result = await _pm.RefineFromAnalysisStreamAsync(
+            context, enhancedText, compileResult, warnings, turns, onToken, ct);
+
+        if (result.Status == "pending_question")
+        {
+            // CR-20260714-01 改动2（铁律2）+ CR-20260717-01 §3.7：PM 一次出题 — 用流式响应产出的 ClarificationSet。
+            // LLM 声明 pending_question 却未给题 = 协议违规，硬错误。
+            var clarSet = result.PendingClarificationSet;
+            if (clarSet == null || clarSet.Questions.Count == 0)
+            {
+                throw Oops.Bah(
+                    $"RunPmPipeline 步骤③ LLM 声明 pending_question 但未产出题目（协议违规）" +
+                    $" pipeline={pipelineId} tenantId={tenantId} partialEnhancement[0..200]=" +
+                    $"{(result.PartialEnhancement?.Length > 200 ? result.PartialEnhancement[..200] : result.PartialEnhancement ?? "(空)")}");
+            }
+
+            var clarRound = await CountClarificationAnsweredAsync(tenantId, projectId, pipelineId, ct) + 1;
+            await EmitClarificationRequestedAsync(
+                pipelineId, tenantId, projectId, "requirement", clarRound, clarSet, ct);
+
+            _logger.LogInformation(
+                "RunPmPipeline 步骤③暂停追问 pipeline={PipelineId} questions={Count}",
+                pipelineId, clarSet.Questions.Count);
+
+            return new RequirementAnalysisOrchestratorResult
+            {
+                Status = "awaiting-clarification",
+                PendingPmQuestion = result.PendingQuestion,
+                PendingClarification = clarSet,
+            };
+        }
+
+        // completed → 完善完成，进入步骤④（正文不进聊天主区域）
+        await PersistRequirementAsync(
+            pipelineId, tenantId, projectId, result.EnhancedText,
+            IrEventTypes.RequirementRefined, ct);
+
+        _logger.LogInformation(
+            "RunPmPipeline 步骤③完成 pipeline={PipelineId} gaps={Gaps}",
+            pipelineId, result.CompletenessNotes.Count);
+
+        var answeredRounds = await CountClarificationAnsweredAsync(tenantId, projectId, pipelineId, ct);
+        if (answeredRounds < MinPmOptimizationRounds)
+        {
+            var nextRound = answeredRounds + 1;
+            _logger.LogInformation(
+                "RunPmPipeline 澄清轮次不足({Answered}/{Min})，专用出题路径 pipeline={PipelineId} round={Round}",
+                answeredRounds, MinPmOptimizationRounds, pipelineId, nextRound);
+            _sseHub.TryPush(pipelineId, "thinking",
+                $"📋 已完成 {answeredRounds} 轮澄清，PM 继续第 {nextRound} 轮深度优化…");
+            _sseHub.TryPush(pipelineId, "thinking", "📝 PM 正在基于九步分析准备结构化追问…");
+
+            var previousAnswers = ExtractAnswersText(
+                FindRoundClarification(
+                    await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct),
+                    ClarificationStages.Requirement)?.Payload);
+
+            var clarSet = await GenerateStepClarificationAsync(
+                pipelineId, tenantId, projectId, context,
+                compileResult, warnings, previousAnswers,
+                stage: "requirement", round: nextRound, ct, forceQuestions: true);
+
+            if (clarSet.Questions.Count == 0)
+            {
+                throw Oops.Bah(
+                    $"RunPmPipeline 步骤③ 强制澄清轮未产出题目" +
+                    $" pipeline={pipelineId} answered={answeredRounds} required={MinPmOptimizationRounds}");
+            }
+
+            await EmitClarificationRequestedAsync(
+                pipelineId, tenantId, projectId, "requirement", nextRound, clarSet, ct);
+
+            _logger.LogInformation(
+                "RunPmPipeline 步骤③强制澄清暂停 pipeline={PipelineId} questions={Count}",
+                pipelineId, clarSet.Questions.Count);
+
+            return new RequirementAnalysisOrchestratorResult
+            {
+                Status = "awaiting-clarification",
+                PendingClarification = clarSet,
+            };
+        }
+
+        return await RenderSpecAndWaitConfirmAsync(
+            pipelineId, tenantId, projectId, result.EnhancedText, ct);
+    }
+
+    /// <summary>步骤④：渲染需求说明书 IR + 推确认按钮（不在聊天正文灌整份 markdown）。</summary>
+    private async Task<RequirementAnalysisOrchestratorResult> RenderSpecAndWaitConfirmAsync(
+        long pipelineId, string tenantId, string projectId, string specText, CancellationToken ct)
+    {
+        await PersistRequirementAsync(
+            pipelineId, tenantId, projectId, specText,
+            IrEventTypes.RequirementSpecRendered, ct);
+
+        // CR-20260717-02：用户只需确认卡片 + 交付物预览，不在正文区逐行推几百行说明书。
+        _sseHub.TryPush(pipelineId, "thinking", "✅ 需求说明书已生成，请在下方确认。");
+        _sseHub.TryPush(pipelineId, "spec_confirm_requested", JsonSerializer.Serialize(new
+        {
+            specFragmentId = $"requirement:{projectId}",
+            message = "需求说明书已生成，请确认通过或提出修改意见。",
+            deliverablePath = "02-requirement-spec.md",
+        }, JsonOptions));
+
+        _logger.LogInformation(
+            "RunPmPipeline 步骤④渲染完成，等用户确认 pipeline={PipelineId} specLen={Len}",
+            pipelineId, specText.Length);
+
+        return new RequirementAnalysisOrchestratorResult
+        {
+            Status = "awaiting-spec-confirm",
+            RenderedSpec = specText,
+        };
+    }
+
+    /// <summary>步骤④用户反馈：PM 据反馈改需求文本 → 重跑② → 回到④。</summary>
+    private async Task<RequirementAnalysisOrchestratorResult> HandleSpecFeedbackAsync(
+        long pipelineId, string tenantId, string projectId,
+        SkillContext context, string feedback, CancellationToken ct)
+    {
+        // 简化策略：把用户反馈作为新一轮完善需求，重跑步骤①②③
+        // （CR-20260713-03：阶段 B 先用简化版；阶段 C 可细化反馈处理）
+        var feedbackRequirement = context.UserRequirement + "\n\n【用户对需求说明书的反馈】\n" + feedback;
+        var feedbackContext = CloneContextWithRequirement(context, feedbackRequirement);
+
+        _logger.LogInformation(
+            "RunPmPipeline 步骤④反馈处理 pipeline={PipelineId} 重跑步骤①", pipelineId);
+
+        return await RunStep1EnhanceAsync(pipelineId, tenantId, projectId, feedbackContext, turns: null, ct);
+    }
+
+    /// <summary>
+    /// CR-20260714-01 步骤⑤：用户确认需求说明书后，执行 PM 终评 + Analyst Finalize → 进入架构设计。
+    /// 迁移自旧三轮流程的 Finalize 能力（ReviewRequirementSpecAsync + RunRoundAnalystAsync）。
+    /// </summary>
+    private async Task<RequirementAnalysisOrchestratorResult> RunStep5FinalizeAsync(
+        long pipelineId, string tenantId, string projectId,
+        SkillContext context, RequirementAnalysisOptions? options, CancellationToken ct)
+    {
+        var orchestratorRunId = Guid.NewGuid().ToString("N");
+
+        // 5a. 投 RequirementSpecConfirmed 事件（标记用户已确认，防重复 Finalize）
+        await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
+        {
+            EventType = IrEventTypes.RequirementSpecConfirmed,
+            FragmentId = $"requirement-confirmed:{projectId}",
+            FragmentType = IrFragmentTypes.Requirement,
+            FragmentVersion = 1,
+            Payload = JsonSerializer.Serialize(new
+            {
+                pipelineId,
+                confirmedBy = "user",
+                timestamp = DateTimeOffset.UtcNow.ToString("O"),
+            }, JsonOptions),
+            SkillId = "pm-skill",
+        }, ct);
+
+        _sseHub.TryPush(pipelineId, "thinking", "📋 PM 正在进行需求终评…");
+
+        // 5b. PM 终评（复用 ReviewRequirementSpecAsync）
+        var skillOptions = new SkillRunOptions
+        {
+            ProviderCode = options?.ProviderCode,
+            UserRequirement = options?.InitialUserRequirement,
+        };
+        var review = await ReviewRequirementSpecAsync(
+            pipelineId, tenantId, projectId, orchestratorRunId, skillOptions, ct: ct);
+
+        _logger.LogInformation(
+            "RunStep5 PM 终评 verdict={Verdict} score={Score} pipeline={PipelineId}",
+            review.Verdict, review.Score, pipelineId);
+
+        _sseHub.TryPush(pipelineId, "thinking", "🔧 正在执行工程保障 Finalize…");
+
+        // 5c. Analyst Finalize（复用 RunRoundAnalystAsync，enableFinalization=true）
+        var finalizeResult = await RunRoundAnalystAsync(
+            3, pipelineId, tenantId, projectId, skillOptions,
+            enableFinalization: true, ct);
+
+        _logger.LogInformation(
+            "RunStep5 Finalize 完成 pipeline={PipelineId}", pipelineId);
+
+        // 5d. 推进架构设计阶段
+        _sseHub.TryPush(pipelineId, "stage_transition", "design");
+
+        return new RequirementAnalysisOrchestratorResult
+        {
+            OrchestratorRunId = orchestratorRunId,
+            Status = "completed",
+            SkillResults = new List<SkillRunResult> { finalizeResult },
+        };
+    }
+
+    // ── 新流程辅助方法 ──
+
+    /// <summary>从 IR 获取用户原始需求文本。</summary>
+    private async Task<string> ResolveUserRequirementAsync(
+        string tenantId, string projectId, long pipelineId, CancellationToken ct)
+    {
+        // 简化版：从 pipeline 元数据读取；实际可从 IrSnapshot 或项目表读
+        var snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
+        var reqFragment = snapshot.Find(IrFragmentTypes.Requirement, IrStabilityStates.Stable);
+        if (reqFragment != null)
+        {
+            var text = ExtractRequirementText(reqFragment);
+            if (!string.IsNullOrWhiteSpace(text)) return text;
+        }
+        // 降级：返回占位（实际应由调用方传入）
+        return string.Empty;
+    }
+
+    /// <summary>从 Requirement fragment 提取需求文本。</summary>
+    private static string? ExtractRequirementText(IrSnapshotFragment fragment)
+    {
+        if (string.IsNullOrWhiteSpace(fragment.Payload)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(fragment.Payload);
+            if (doc.RootElement.TryGetProperty("text", out var t) && t.ValueKind == JsonValueKind.String)
+                return t.GetString();
+            // 兼容：payload 直接是纯文本
+            return fragment.Payload;
+        }
+        catch (JsonException)
+        {
+            return fragment.Payload;
+        }
+    }
+
+    /// <summary>持久化需求文本到 IR（步骤①/③/④共用）。</summary>
+    private async Task PersistRequirementAsync(
+        long pipelineId, string tenantId, string projectId,
+        string text, string eventType, CancellationToken ct)
+    {
+        var fragmentId = $"requirement:{projectId}";
+        var payload = JsonSerializer.Serialize(new { text, updatedAt = DateTimeOffset.UtcNow }, JsonOptions);
+        await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
+        {
+            EventType = eventType,
+            FragmentId = fragmentId,
+            FragmentType = IrFragmentTypes.Requirement,
+            FragmentVersion = 1,
+            Payload = payload,
+        });
+    }
+
+    /// <summary>持久化追问轮次到 IR（新流程对话式追问）。</summary>
+    private async Task PersistClarificationTurnAsync(
+        long pipelineId, string tenantId, string projectId,
+        PmClarificationTurn turn, string? partialEnhancement, CancellationToken ct)
+    {
+        var fragmentId = $"pm-clarification:{projectId}";
+        var payload = JsonSerializer.Serialize(new
+        {
+            turn = new { turn.TurnId, turn.Question, turn.QuestionReason, source = turn.Source.ToString() },
+            partialEnhancement,
+        }, JsonOptions);
+        await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
+        {
+            EventType = "PmClarificationRequested",
+            FragmentId = fragmentId,
+            FragmentType = IrFragmentTypes.Clarification,
+            FragmentVersion = 1,
+            Payload = payload,
+        });
+    }
+
+    /// <summary>从 IR 加载历史追问轮次。</summary>
+    private List<PmClarificationTurn> LoadClarificationTurns(IrSnapshot snapshot)
+    {
+        var turns = new List<PmClarificationTurn>();
+        var clarFragment = snapshot.Find(IrFragmentTypes.Clarification, IrStabilityStates.Draft)
+            ?? snapshot.Find(IrFragmentTypes.Clarification, IrStabilityStates.InProgress);
+        if (clarFragment == null || string.IsNullOrWhiteSpace(clarFragment.Payload)) return turns;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(clarFragment.Payload);
+            if (doc.RootElement.TryGetProperty("turn", out var t))
+            {
+                var source = t.TryGetProperty("source", out var s) && s.ValueKind == JsonValueKind.String
+                    ? Enum.Parse<ClarificationSource>(s.GetString()!)
+                    : ClarificationSource.Step1Enhance;
+                turns.Add(new PmClarificationTurn
+                {
+                    TurnId = t.TryGetProperty("turnId", out var id) ? id.GetString() ?? "" : "",
+                    Question = t.TryGetProperty("question", out var q) ? q.GetString() ?? "" : "",
+                    QuestionReason = t.TryGetProperty("questionReason", out var r) ? r.GetString() : null,
+                    Source = source,
+                });
+            }
+        }
+        catch (JsonException) { /* 容错 */ }
+        return turns;
+    }
+
+    /// <summary>克隆 SkillContext 并替换 UserRequirement（SkillContext 是 class 非 record，不能 with）。</summary>
+    private static SkillContext CloneContextWithRequirement(SkillContext context, string userRequirement)
+        => new()
+        {
+            RunId = context.RunId,
+            TenantId = context.TenantId,
+            ProjectId = context.ProjectId,
+            PipelineId = context.PipelineId,
+            UserRequirement = userRequirement,
+            Snapshot = context.Snapshot,
+            ProviderCode = context.ProviderCode,
+            SeedMatches = context.SeedMatches,
+            PromptContext = context.PromptContext,
+            EnableFinalization = context.EnableFinalization,
+            EnableSemanticAnalysis = context.EnableSemanticAnalysis,
+        };
+
+    /// <summary>持久化九步数据到 IR（给后续二次开发/BUG 修复用）。</summary>
+    private async Task PersistNineViewAsync(
+        long pipelineId, string tenantId, string projectId,
+        SaNineViewCompileResult compileResult, CancellationToken ct)
+    {
+        var fragmentId = $"nine-view:{projectId}";
+        var payload = JsonSerializer.Serialize(new
+        {
+            projectSteps = compileResult.ProjectSteps,
+            eventResults = compileResult.EventResults,
+            bundleHash = compileResult.BundleHash,
+        }, JsonOptions);
+        await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
+        {
+            EventType = IrEventTypes.SaNineViewCompiled,
+            FragmentId = fragmentId,
+            FragmentType = "IR1_SaNineView",
+            FragmentVersion = 1,
+            Payload = payload,
+        });
+    }
+
+    /// <summary>确保 skeleton 存在（复用 PM ThinkAsync 骨架生成）。</summary>
+    private async Task<IrSnapshotFragment> EnsureSkeletonAsync(
+        long pipelineId, string tenantId, string projectId,
+        SkillContext context, CancellationToken ct)
+    {
+        var snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
+        var skeleton = FindSkeletonAny(snapshot);
+        if (skeleton != null && skeleton.StabilityState is IrStabilityStates.Stable or IrStabilityStates.Locked)
+            return skeleton;
+
+        // 跑 PM Skill 生成骨架
+        if (skeleton == null)
+        {
+            await _harness.RunAsync("pm-skill", pipelineId, tenantId, projectId,
+                new SkillRunOptions
+                {
+                    ProviderCode = context.ProviderCode,
+                    UserRequirement = context.UserRequirement,
+                }, ct);
+            snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
+            skeleton = FindSkeletonAny(snapshot);
+        }
+
+        if (skeleton == null)
+            throw Oops.Bah("PM Skill 已运行但未找到骨架 fragment");
+
+        await StabilizeSkeletonAsync(pipelineId, tenantId, projectId, skeleton, ct);
+        snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
+        return snapshot.Find(IrFragmentTypes.Skeleton, IrStabilityStates.Stable)
+            ?? FindSkeletonAny(snapshot)
+            ?? throw Oops.Bah("骨架 Stabilize 后仍无法读取");
+    }
+
+    /// <summary>从当前 skeleton 重新编译九步。</summary>
+    private async Task<SaNineViewCompileResult> RecompileFromCurrentSkeletonAsync(
+        long pipelineId, string tenantId, string projectId,
+        SkillContext context, CancellationToken ct)
+    {
+        var skeleton = await EnsureSkeletonAsync(pipelineId, tenantId, projectId, context, ct);
+        return _compiler.CompileFromSkeletonJson(skeleton.Payload);
+    }
+
     private async Task<RequirementAnalysisOrchestratorResult> RunRoundAsync(
         int round, long pipelineId, string tenantId, string projectId,
         IrSnapshot snapshot, RequirementAnalysisOptions? options, CancellationToken ct)
     {
         var stage = StageForRound(round);
-        var skillOptions = new SkillRunOptions { ProviderCode = options?.ProviderCode };
+        var skillOptions = new SkillRunOptions
+        {
+            ProviderCode = options?.ProviderCode,
+            UserRequirement = options?.InitialUserRequirement,
+        };
 
         // ── Round 1 前置：若无 Stable 骨架，先跑 PM（或复用 Draft）并 Stabilize ──
         // 注意：SkeletonCreated 投影稳定性为 Draft（IrProjectionEngine.UpsertSkeletonAsync），
@@ -386,6 +1254,41 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             };
         }
 
+        // Round 1 with pre-existing Stable skeleton (e.g., from confirm-skeleton):
+        // skeleton 已确认 → 直接编译 + 生成澄清题 + 暂停等用户作答。
+        // 严禁在此跑 analyst（语义分析是 Round 2 的职责），否则 FinalizeAsync
+        // 即使 enableFinalization=false 也会写 AnalysisCompleted → SSE 推送 →
+        // 前端误判需求分析完成 → 过早弹出需求说明书推进架构设计。
+        if (round == 1)
+        {
+            _logger.LogInformation(
+                "Round 1 骨架已确认（Stable），直接编译生成澄清题 pipeline={PipelineId}", pipelineId);
+
+            var compileResult = _compiler.CompileFromSkeletonJson(skeleton!.Payload);
+            var warnings = _lightValidator.Validate(compileResult.Source);
+
+            _logger.LogInformation(
+                "Round 1 编译完成 skeleton hash={Hash} events={Count} warnings={Warn}",
+                compileResult.BundleHash, compileResult.EventResults.Count, warnings.Count);
+
+            await PersistAssumptionsFragmentAsync(
+                pipelineId, tenantId, projectId, compileResult.Assumptions, round, ct);
+
+            var clarSet = await GenerateRoundClarificationAsync(
+                round, stage, tenantId, projectId, pipelineId, compileResult, warnings,
+                previousAnswersText: null, ct);
+
+            await EmitClarificationRequestedAsync(
+                pipelineId, tenantId, projectId, stage, round, clarSet, ct);
+
+            return new RequirementAnalysisOrchestratorResult
+            {
+                Status = "awaiting-answer",
+                CurrentRound = round,
+                PendingClarification = clarSet,
+            };
+        }
+
         // ── 检查本轮澄清是否已有用户作答（stable）──
         var roundClar = FindRoundClarification(snapshot, stage);
         if (roundClar is { StabilityState: IrStabilityStates.Stable })
@@ -398,16 +1301,22 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             // Round 3 专属：用户已答最终确认题 → 此时才执行工程一次性保障（确认后落库，非确认前）
             // 架构哲学（KG 记载）："Round3 确认+出3题+工程一次性保障"——确认在先，保障在后。
             // FinalizeAsync 内含：投影→门禁→Materializer→DDD→一致性→质量→渲染需求分析书。
+            // CR-20260712-01：PM 终评先跑，fail 则按 ForceConfirm 决定是否 Finalize（修复门控逃逸）。
             if (round == TotalRounds)
             {
+                var review = await ReviewRequirementSpecAsync(
+                    pipelineId, tenantId, projectId, Guid.NewGuid().ToString("N"), skillOptions,
+                    forceConfirm: options?.ForceConfirm == true, forceReason: options?.ForceReason, ct: ct);
+                var allowFinalize = review.Verdict == "pass" || options?.ForceConfirm == true;
+                _logger.LogWarning(
+                    "Round3 PM 终评 verdict={Verdict} score={Score} allowFinalize={Allow} forceConfirm={Force} pipeline={PipelineId}",
+                    review.Verdict, review.Score, allowFinalize, options?.ForceConfirm, pipelineId);
                 var finalizeResult = await RunRoundAnalystAsync(
-                    round, pipelineId, tenantId, projectId, skillOptions, enableFinalization: true, ct);
-                await ReviewRequirementSpecAsync(
-                    pipelineId, tenantId, projectId, Guid.NewGuid().ToString("N"), skillOptions, ct);
-                _logger.LogInformation("Round {Round} 用户已确认，工程一次性保障完成", round);
+                    round, pipelineId, tenantId, projectId, skillOptions, enableFinalization: allowFinalize, ct);
+                _logger.LogInformation("Round {Round} 用户已确认，PM 终评 verdict={Verdict} allowFinalize={Allow}", round, review.Verdict, allowFinalize);
                 return new RequirementAnalysisOrchestratorResult
                 {
-                    Status = "completed",
+                    Status = allowFinalize ? "completed" : "pm-review-failed",
                     CurrentRound = round,
                     SkillResults = new[] { finalizeResult },
                 };
@@ -455,6 +1364,11 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             var prevClar = FindRoundClarification(snapshot, prevStage);
             if (prevClar is not { StabilityState: IrStabilityStates.Stable })
                 throw new InvalidOperationException($"第 {round} 轮前置未满足：第 {round - 1} 轮澄清未完成");
+
+            // GAP1: 将上一轮澄清答案写入骨架（复用既有 PM 管线：确定性基线 + LLM 补丁）
+            await ApplyClarificationAnswersToSkeletonAsync(
+                pipelineId, tenantId, projectId, snapshot, prevClar, round - 1, ct);
+            snapshot = await BuildSnapshotAsync(tenantId, projectId, pipelineId.ToString(), ct);
         }
 
         // SA 全量重编译（C# 毫秒级，零工程步骤）
@@ -565,13 +1479,15 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             "analyst-skill", pipelineId, tenantId, projectId, runOptions, ct);
     }
 
-    private async Task ReviewRequirementSpecAsync(
+    private async Task<PmSpecReviewResult> ReviewRequirementSpecAsync(
         long pipelineId,
         string tenantId,
         string projectId,
         string orchestratorRunId,
         SkillRunOptions skillOptions,
-        CancellationToken ct)
+        bool forceConfirm = false,
+        string? forceReason = null,
+        CancellationToken ct = default)
     {
         var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString(), ct);
         var requirementSpecMarkdown = BuildRequirementSpecReviewInput(snapshots);
@@ -618,8 +1534,9 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             }
             catch (Exception ex) when (ex is JsonException or InvalidOperationException or ArgumentException)
             {
-                _logger.LogWarning(ex,
-                    "PM 终评骨架编译失败，降级为无图 gaps pipeline={PipelineId}", pipelineId);
+                throw Oops.Bah(
+                    $"PM 终评骨架编译失败（IR 骨架 JSON 损坏）: {ex.Message}" +
+                    $" pipeline={pipelineId} tenantId={tenantId}", ex);
             }
         }
 
@@ -639,6 +1556,8 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
                 threshold = 85,
                 pipelineId,
                 reviewedBy = "pm-skill",
+                forceConfirm,
+                forceReason = forceConfirm ? forceReason : null,
             }, JsonOptions),
             SkillId = "pm-skill",
         }, ct);
@@ -646,6 +1565,7 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
         _logger.LogInformation(
             "PM 终评完成 pipeline={PipelineId} score={Score} verdict={Verdict} gaps={GapCount}",
             pipelineId, review.Score, review.Verdict, review.Gaps.Count);
+        return review;
     }
 
     private static string BuildRequirementSpecReviewInput(IReadOnlyList<IrFragmentSnapshotDto> snapshots)
@@ -707,6 +1627,122 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
     {
         return await _pm.GenerateClarificationAsync(
             round, stage, tenantId, projectId, pipelineId, compileResult, warnings, previousAnswersText, ct);
+    }
+
+    /// <summary>
+    /// CR-20260713-03：新流程步骤①③的出题封装。
+    /// 复用 PM GenerateClarificationAsync 产出 MULTI/MATRIX 题；
+    /// compileResult 为 null 时(步骤①尚未九步拆解)用空 compileResult 兜底。
+    /// </summary>
+    private async Task<ClarificationSet> GenerateStepClarificationAsync(
+        long pipelineId, string tenantId, string projectId,
+        SkillContext context,
+        SaNineViewCompileResult? compileResult,
+        IReadOnlyList<string> warnings,
+        string? previousAnswersText,
+        string stage, int round,
+        CancellationToken ct,
+        bool forceQuestions = false)
+    {
+        // 步骤①尚未九步拆解，构造空 compileResult 兜底（PM 出题靠需求文本+种子，不强依赖九步）
+        var effectiveCompile = compileResult ?? BuildEmptyCompileResult(context.UserRequirement);
+
+        return await _pm.GenerateClarificationAsync(
+            round, stage, tenantId, projectId, pipelineId,
+            effectiveCompile, warnings, previousAnswersText, ct, forceQuestions);
+    }
+
+    private Func<string, CancellationToken, Task> CreateStreamingTokenHandler(
+        long pipelineId, string heartbeatMessage)
+    {
+        var lastHeartbeat = DateTime.UtcNow;
+        return (token, _) =>
+        {
+            if (!string.IsNullOrEmpty(token))
+                _sseHub.TryPush(pipelineId, "token", token);
+
+            var now = DateTime.UtcNow;
+            if (now - lastHeartbeat >= StreamingHeartbeatInterval)
+            {
+                lastHeartbeat = now;
+                _sseHub.TryPush(pipelineId, "thinking", heartbeatMessage);
+            }
+
+            return Task.CompletedTask;
+        };
+    }
+
+    private async Task<T> RunWithThinkingHeartbeatAsync<T>(
+        long pipelineId, string heartbeatMessage, CancellationToken ct,
+        Func<CancellationToken, Task<T>> work)
+    {
+        using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var heartbeatTask = PushPeriodicThinkingAsync(pipelineId, heartbeatMessage, heartbeatCts.Token);
+        try
+        {
+            return await work(heartbeatCts.Token);
+        }
+        finally
+        {
+            heartbeatCts.Cancel();
+            try { await heartbeatTask.ConfigureAwait(false); }
+            catch (OperationCanceledException) { /* expected */ }
+        }
+    }
+
+    private async Task PushPeriodicThinkingAsync(
+        long pipelineId, string message, CancellationToken ct)
+    {
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                await Task.Delay(StreamingHeartbeatInterval, ct).ConfigureAwait(false);
+                _sseHub.TryPush(pipelineId, "thinking", message);
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // heartbeat cancelled when work completes
+        }
+    }
+
+    private static string? BuildPreviousAnswersText(IReadOnlyList<PmClarificationTurn>? turns)
+    {
+        if (turns == null || turns.Count == 0) return null;
+        var answered = turns
+            .Where(t => !string.IsNullOrWhiteSpace(t.UserAnswer))
+            .ToList();
+        if (answered.Count == 0) return null;
+        return string.Join("\n\n", answered.Select(t => $"Q: {t.Question}\nA: {t.UserAnswer}"));
+    }
+
+    /// <summary>构造空 compileResult（步骤①出题兜底，PM 靠需求文本+种子出题）。</summary>
+    private static SaNineViewCompileResult BuildEmptyCompileResult(string userRequirement)
+    {
+        var emptyModel = new PreAnalysisModel
+        {
+            BusinessEvents = new List<PreAnalysisBusinessEvent>
+            {
+                new() { EventId = "EV-PLACEHOLDER", EventName = "待拆解", ComplexityHint = "simple" },
+            },
+            EntityDrafts = new List<PreAnalysisEntityDraft>(),
+            BusinessRules = new List<PreAnalysisBusinessRule>(),
+            StateTransitions = new List<PreAnalysisStateTransition>(),
+            RoleMatrix = new PreAnalysisRoleMatrix
+            {
+                Roles = new List<string>(),
+            },
+        };
+        return new SaNineViewCompileResult
+        {
+            Source = emptyModel,
+            ProjectSteps = new Dictionary<string, object>(),
+            EventResults = new List<SaEventResult>(),
+            CompileDurationMs = 0,
+            BundleHash = "empty",
+            Assumptions = new List<Assumption>(),
+        };
     }
 
     /// <summary>
@@ -1292,6 +2328,84 @@ public sealed class RequirementAnalysisOrchestrator : IRequirementAnalysisOrches
             catch (JsonException) { /* 忽略坏 payload */ }
         }
         return false;
+    }
+
+    /// <summary>
+    /// CR-20260714-01：检查 IR 事件流中是否存在指定事件类型。
+    /// </summary>
+    private async Task<bool> HasEventAsync(
+        string tenantId, string projectId, long pipelineId, string eventType, CancellationToken ct)
+    {
+        var events = await _eventStore.ListEventsAsync(projectId, tenantId, pipelineId.ToString(), ct);
+        return events.Any(e => string.Equals(e.EventType, eventType, StringComparison.Ordinal));
+    }
+
+    private async Task<int> CountClarificationAnsweredAsync(
+        string tenantId, string projectId, long pipelineId, CancellationToken ct)
+    {
+        var events = await _eventStore.ListEventsAsync(projectId, tenantId, pipelineId.ToString(), ct);
+        return events.Count(e =>
+            string.Equals(e.EventType, IrEventTypes.ClarificationAnswered, StringComparison.Ordinal));
+    }
+
+    private static bool HasPendingClarification(IrSnapshot snapshot)
+        => snapshot.Find(IrFragmentTypes.Clarification, IrStabilityStates.InProgress) != null;
+
+    /// <summary>
+    /// 步骤④前置条件：步骤③ RequirementRefined + 九步 stable + ≥MinPmOptimizationRounds 轮 ClarificationAnswered + 无在途追问。
+    /// </summary>
+    private async Task<bool> IsReadyForSpecDeliveryAsync(
+        string tenantId, string projectId, long pipelineId, IrSnapshot snapshot, CancellationToken ct)
+    {
+        if (HasPendingClarification(snapshot)) return false;
+        if (!await HasEventAsync(tenantId, projectId, pipelineId, IrEventTypes.RequirementRefined, ct))
+            return false;
+        if (snapshot.Find("IR1_SaNineView", IrStabilityStates.Stable) == null) return false;
+        var answered = await CountClarificationAnsweredAsync(tenantId, projectId, pipelineId, ct);
+        return answered >= MinPmOptimizationRounds;
+    }
+
+    /// <summary>
+    /// CR-20260714-01 改动5：PM 智能意图判断 — 根据用户输入文本 + 当前 IR 状态判断意图。
+    /// 启发式规则（轻量，不调 LLM）：基于当前状态(待确认/待追问) + 文本特征判断。
+    /// </summary>
+    private static (string Intent, double Confidence) ClassifyUserIntent(
+        string userInput, IrSnapshot snapshot)
+    {
+        var trimmed = userInput.Trim();
+
+        // 检查当前状态
+        var hasSpecRendered = snapshot.Find(IrFragmentTypes.Requirement, IrStabilityStates.Stable) != null;
+        var hasPendingClarification = snapshot.Find(IrFragmentTypes.Clarification, IrStabilityStates.InProgress) != null;
+
+        // 确认意图关键词（用户确认需求说明书）
+        var confirmKeywords = new[] { "确认", "通过", "没问题", "可以", "同意", "ok", "OK", "好的", "行", "同意" };
+        if (hasSpecRendered && confirmKeywords.Any(k => trimmed.Equals(k, StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith(k, StringComparison.OrdinalIgnoreCase)))
+        {
+            return ("confirm_spec", 0.9);
+        }
+
+        // 修改意图关键词（用户要改需求）
+        var changeKeywords = new[] { "修改", "改", "不对", "调整", "增加", "删除", "换", "不要", "改成" };
+        if (hasSpecRendered && changeKeywords.Any(k => trimmed.Contains(k, StringComparison.OrdinalIgnoreCase)))
+        {
+            return ("request_change", 0.85);
+        }
+
+        // 回答追问意图（当前有 pending clarification）
+        if (hasPendingClarification)
+        {
+            return ("answer_question", 0.8);
+        }
+
+        // 默认：有 specRendered 时，短文本倾向确认，长文本倾向修改
+        if (hasSpecRendered)
+        {
+            return trimmed.Length <= 10 ? ("confirm_spec", 0.6) : ("request_change", 0.6);
+        }
+
+        return ("unknown", 0.3);
     }
 
     private static string StageForRound(int round) => round switch

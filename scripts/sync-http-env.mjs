@@ -33,7 +33,7 @@ async function main() {
         || JSON.parse(fs.existsSync(path.join(__dirname, '.sup-e2e-state.json'))
           ? fs.readFileSync(path.join(__dirname, '.sup-e2e-state.json'), 'utf8')
           : '{}').pipelineId
-        || '311',
+        || '',
       ),
     },
   };

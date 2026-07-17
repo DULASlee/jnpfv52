@@ -327,16 +327,49 @@ public sealed class IrEventStoreService : IIrEventStoreService, ITransient
 
         _sseHub.TryPush(pipelineId, SseEventType.FragmentUpdated, fragmentPayload);
 
+        // Bug 2 fix: AnalystSkillService.FinalizeAsync 在 enableFinalization=false（Round 1/2）
+        // 时仍写 AnalysisCompleted IR 事件（finalized=false）。此处若无条件推 SSE，
+        // 前端收到即认为需求分析完成 → 弹出需求说明书推进架构设计 → 跳过三轮澄清。
+        // 修复：仅当 finalized=true（Round 3 工程保障完成）时才推送 AnalysisCompleted SSE。
         if (evt.EventType == IrEventTypes.AnalysisCompleted)
         {
-            var analysisPayload = JsonSerializer.Serialize(new
+            if (TryParseFinalized(evt.Payload))
             {
-                projectId = evt.ProjectId,
-                eventSpecCount = TryParseEventSpecCount(evt.Payload),
-                allStable = true,
-            }, JsonOptions);
-            _sseHub.TryPush(pipelineId, SseEventType.AnalysisCompleted, analysisPayload);
+                var analysisPayload = JsonSerializer.Serialize(new
+                {
+                    projectId = evt.ProjectId,
+                    eventSpecCount = TryParseEventSpecCount(evt.Payload),
+                    allStable = true,
+                }, JsonOptions);
+                _sseHub.TryPush(pipelineId, SseEventType.AnalysisCompleted, analysisPayload);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "AnalysisCompleted 事件写入但 finalized=false，抑制 SSE 推送（Round 1/2 不应触发前端完成进度）pipeline={PipelineId}",
+                    pipelineId);
+            }
         }
+    }
+
+    /// <summary>
+    /// 解析 AnalysisCompleted Payload 中的 finalized 标志。
+    /// 若 Payload 无法解析则默认返回 true（向后兼容历史事件）。
+    /// </summary>
+    private static bool TryParseFinalized(string payload)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(payload);
+            if (doc.RootElement.TryGetProperty("finalized", out var finalizedEl))
+                return finalizedEl.GetBoolean();
+        }
+        catch
+        {
+            /* ignore — 向后兼容：无法解析的历史事件默认为已 finalize */
+        }
+
+        return true;
     }
 
     private static int TryParseEventSpecCount(string payload)

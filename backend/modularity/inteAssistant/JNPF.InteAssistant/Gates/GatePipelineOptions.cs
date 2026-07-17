@@ -65,4 +65,10 @@ public sealed class GatePipelineOptions
 
     /// <summary>门控通过后自动触发 PM Skill（P2-B14）</summary>
     public bool AutoRunPmSkillOnGatePass { get; set; } = true;
+
+    /// <summary>
+    /// CR-20260713-03：门控通过后走新 4 步线性 PM 流程(完善需求)还是旧 PM 骨架。
+    /// 默认 true(新流程)；设 false 回退旧骨架(向后兼容)。
+    /// </summary>
+    public bool? AutoRunPmSkillUseNewPipeline { get; set; } = true;
 }

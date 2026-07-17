@@ -115,8 +115,9 @@ Phase REVIEW_FIX (我) → Phase REVIEW (Reviewer)
 
 ## 7. Phase 4 Build 明细
 
+- **ADF 前置（S/A）：** 编码前确认 P1 架构 / P2 模式 / P3 契约已获用户「继续」；否则 STOP。B 级须声明 `ADF 豁免：B级 — …`。规则：`.claude/rules/architecture-design-interface-first.md`
 - **SP：** `superpowers:executing-plans` / `subagent-driven-development`（S 级） / `dispatching-parallel-agents` / `using-git-worktrees`
-- **Hooks：** 7 guard hooks（L0 自动阻断：`guard-write.mjs` 九层 L1-L9）
+- **Hooks：** guard hooks（L0：`guard-write.mjs` L1–L11，含零占位符 L11）
 - **Hooks：** `format-and-lint.mjs`（自动，PostToolUse）；共享约束自动注入（论断+错题本+调试）
 - **Rule：** `.claude/rules/sql-safety.md`（if .cs）+ `.claude/rules/frontend-memory-leak.md`（if SSE/timer）
 - **todo 强制注入：** `🔍 代码审查(子代理)` + `📝 错题本追加`
