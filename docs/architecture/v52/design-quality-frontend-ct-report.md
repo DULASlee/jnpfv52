@@ -92,7 +92,7 @@ npx vue-mess-detector analyze src -a "rrd,vue-essential" -g rule -s desc \
 | warnings | **4,989** |
 | Code Health points | **95**（工具自评 GOOD；**不等于业务健康**） |
 | 原始 JSON（2 规则集：rrd+essential） | `.claude/evidence/frontend-ct/vmd-rrd-essential.json`（~3.8MB） |
-| 原始 JSON（全 6 规则集，53 规则） | `.claude/evidence/frontend-ct/vmd-all-rulesets.json`（~5.9MB；warning 升至 11,384，多出 `vue-strong` 的 5,735 多属性等风格项） |
+| 全 6 规则集（53 规则） | 命令复现：`npx vue-mess-detector analyze src --output json`（~5.9MB；warning 升至 11,384，多出 `vue-strong` 的 5,735 多属性等风格项） |
 | 汇总 | `.claude/evidence/frontend-ct/vmd-summary.json` |
 
 > **读 Health 的正确姿势**：95% 会被「大量低危警告摊薄」。真正要盯的是 **高复杂度 / computed 副作用 / 巨型 SFC / v-if+v-for**，不是 curly braces 计数。
@@ -194,7 +194,7 @@ npx vue-mess-detector analyze src -a "rrd,vue-essential" -g rule -s desc \
 
 ### 5.1 复跑成功 — madge 已产出可信环依赖报告（2026-08-06 更新）
 
-> 用 `--ts-config` 显式喂入 TS 配置后，上表「Processed 0 files」**已解决**。证据：[`.claude/evidence/frontend-ct/madge-circular.txt`](../../../.claude/evidence/frontend-ct/madge-circular.txt)
+> 用 `--ts-config` 显式喂入 TS 配置后，上表「Processed 0 files」**已解决**。复现：`npx madge --circular --extensions ts,vue src --ts-config tsconfig.json`
 
 ```bash
 cd jnpf-web-vue3

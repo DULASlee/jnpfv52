@@ -30,7 +30,6 @@
 ```bash
 cd jnpf-web-vue3
 npx knip --no-exit-code --reporter symbols
-# 证据：.claude/evidence/frontend-ct/knip-result.txt（598 行）
 ```
 
 > ⚠️ **可信度声明**：Knip 报告了一处 `vite.config.ts` 解析错误（`Cannot read properties of undefined (reading 'split')`）。这会导致**少量漏报**（少报死代码），但**不会误报**——已列出的 104 个文件仍是高置信度的死代码。完整死代码量应 ≥ 104。
@@ -76,7 +75,7 @@ cropperjs             dompurify             （共 14 项，见证据文件）
 
 | 路径 | 用途 |
 |------|------|
-| `.claude/evidence/frontend-ct/knip-result.txt` | Knip 全量输出 |
+| `npx knip --no-exit-code --reporter symbols` | Knip 全量输出（命令复现，证据未持久化） |
 | `jnpf-web-vue3/package.json` | 未用依赖清单源 |
 | `src/components/FlowChart/` | 死组件 + 死依赖（@logicflow）联动案例 |
 
@@ -100,9 +99,8 @@ cropperjs             dompurify             （共 14 项，见证据文件）
 ### 2.2 多版本包（pnpm-lock 实测）
 
 ```bash
-# 解析 pnpm-lock.yaml (lockfileVersion 6.0) 的 packages 段
-python d5-dups.py
-# 证据：本节内联（脚本已删除，可由 §5 命令复现）
+# 解析 pnpm-lock.yaml (lockfileVersion 6.0) 的 packages 段，统计同名多版本
+# 结果已存：.claude/evidence/frontend-ct/d5-multiversion.txt（196 个多版本包）
 ```
 
 | 指标 | 数值 |
@@ -144,7 +142,6 @@ python d5-dups.py
 ```bash
 cd jnpf-web-vue3
 npx stylelint "**/*.{vue,less,postcss,css,scss}" --formatter compact
-# 证据：.claude/evidence/frontend-ct/stylelint-result.txt（2285 行）
 ```
 
 ### 3.2 汇总
@@ -176,7 +173,7 @@ npx stylelint "**/*.{vue,less,postcss,css,scss}" --formatter compact
 
 | 路径 | 用途 |
 |------|------|
-| `.claude/evidence/frontend-ct/stylelint-result.txt` | 全量违规明细 |
+| `npx stylelint "**/*.{vue,less,postcss,css,scss}" --formatter compact` | 全量违规明细（命令复现） |
 | `jnpf-web-vue3/.stylelintrc` | 规则配置源 |
 
 ---
@@ -238,21 +235,17 @@ Top5 JS chunk (parsed):
 cd D:\JNPF-v52\jnpf-web-vue3
 EVD=../.claude/evidence/frontend-ct
 
-# D6 死代码
-npx knip --no-exit-code --reporter symbols > $EVD/knip-result.txt
+# D6 死代码（原始输出大，结论已提炼进本文 §1；按需重跑）
+npx knip --no-exit-code --reporter symbols
 
-# D5 多版本依赖（pnpm-lock v6 解析，见 §2.2 内联脚本）
+# D5 多版本依赖 → 结果已存 $EVD/d5-multiversion.txt（解析 pnpm-lock.yaml v6.0 packages 段）
+pnpm why axios          # 追溯单个包的多版本来源
 
-# D7 CSS
-npx stylelint "**/*.{vue,less,postcss,css,scss}" --formatter compact > $EVD/stylelint-result.txt
+# D7 CSS（原始输出大，结论已提炼进本文 §3；按需重跑）
+npx stylelint "**/*.{vue,less,postcss,css,scss}" --formatter compact
 
-# D4 Bundle（需 ~5min + 8GB 内存）
+# D4 Bundle → 结果已存 $EVD/d4-bundle-stats.txt（需 ~5min + 8GB 内存）
 REPORT=true npx vite build --mode production
-# 产物：node_modules/.cache/visualizer/stats.html
-
-# D5 追溯多版本来源
-pnpm why axios
-pnpm why @vue/compiler-sfc
 ```
 
 ---
