@@ -37,6 +37,11 @@
 | 第五批 | [`10-workflow-engine-deep-dive.md`](10-workflow-engine-deep-dive.md) | ✅ v2.0-final（2026-05-24 审核通过；编写指南原 11§3） |
 | 第五批 | [`11-plugins-integration-deep-dive.md`](11-plugins-integration-deep-dive.md) | ✅ v2.0-final（2026-05-24 审核闭合） |
 | **运行态第一期** | [`runtime-phase1-detailed-design-OUTLINE.md`](runtime-phase1-detailed-design-OUTLINE.md) | 🔴 v0.1-OUTLINE（2026-06-15 起草 · 待各章填充） |
+| **质量诊断** | [`design-quality-diagnostics.md`](design-quality-diagnostics.md) | ✅ v1.0（2026-08-06）八类方法手册 |
+| 质量诊断 | [`design-quality-hotspot-top20.md`](design-quality-hotspot-top20.md) | ✅ Hotspot Top20 快照 |
+| 质量诊断 | [`design-quality-frontend-index-summary.md`](design-quality-frontend-index-summary.md) | ✅ 三前端索引摘要 |
+| 质量诊断 | [`design-quality-frontend-ct-report.md`](design-quality-frontend-ct-report.md) | ✅ 前端 CT 实测（vue-mess-detector） |
+| 质量诊断 | [`design-quality-baseline-gates.md`](design-quality-baseline-gates.md) | ✅ 基线门禁设计（未实现） |
 
 ---
 

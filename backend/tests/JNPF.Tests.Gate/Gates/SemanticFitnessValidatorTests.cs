@@ -237,6 +237,51 @@ public class SemanticFitnessValidatorTests
     }
 
     [Fact]
+    public async Task LLM返回markdown包裹JSON_应该解析成功()
+    {
+        _fakeLlm.NextResponse = new ChatCompletionResponse
+        {
+            IsSuccess = true,
+            Content = """
+            ```json
+            {
+                "passed": true,
+                "score": 80,
+                "level": "sufficient",
+                "identified": [
+                    {"category":"业务事件","description":"工人报工","evidence":"报工"},
+                    {"category":"角色","description":"工人","evidence":"工人"},
+                    {"category":"数据实体","description":"工单","evidence":"工单"}
+                ],
+                "missing": [],
+                "nextStepGuidance": "ok"
+            }
+            ```
+            """
+        };
+
+        var result = await _validator.EvaluateAsync("报工系统", _options, CancellationToken.None);
+
+        Assert.True(result.Passed);
+        Assert.True(result.Score >= 60);
+    }
+
+    [Fact]
+    public async Task LLM返回空内容_应该FailClosed且标记EMPTY()
+    {
+        _fakeLlm.NextResponse = new ChatCompletionResponse
+        {
+            IsSuccess = true,
+            Content = "   "
+        };
+
+        var result = await _validator.EvaluateAsync("test", _options, CancellationToken.None);
+
+        Assert.False(result.Passed);
+        Assert.Contains("GATE_LLM_EMPTY", result.NextStepGuidance);
+    }
+
+    [Fact]
     public async Task LLM返回JSON缺少核心字段_应该FailClosed()
     {
         _fakeLlm.NextResponse = new ChatCompletionResponse

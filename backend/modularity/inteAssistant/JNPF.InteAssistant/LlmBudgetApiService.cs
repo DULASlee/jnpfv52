@@ -37,20 +37,39 @@ public class LlmBudgetApiService : IDynamicApiController, ITransient
         if (project == null)
             throw Oops.Oh("项目不存在");
 
+        // 旧默认 50 万 → 500 万（未跑迁移脚本时自动升级）
+        if (project.TokenBudget > 0 && project.TokenBudget <= 500_000)
+        {
+            project.TokenBudget = LlmBudgetDefaults.DefaultProjectTokenBudget;
+            var tier = TokenBudgetTierService.ComputeTier(project.TokenConsumed, project.TokenBudget);
+            await _db.Updateable<AiProjectEntity>()
+                .SetColumns(x => new AiProjectEntity
+                {
+                    TokenBudget = project.TokenBudget,
+                    LlmBudgetStatus = tier,
+                    LastModifyTime = DateTime.UtcNow,
+                })
+                .Where(x => x.Id == projectId && x.TenantId == tenantId)
+                .ExecuteCommandAsync();
+            project.LlmBudgetStatus = tier;
+        }
+
         var recentCalls = await TryLoadRecentCallsAsync(projectId, tenantId);
 
-        var remaining = Math.Max(0, project.TokenBudget - project.TokenConsumed);
-        var reserveThreshold = (long)(project.TokenBudget * 0.95);
+        var tokenBudget = project.TokenBudget > 0 ? project.TokenBudget : LlmBudgetDefaults.DefaultProjectTokenBudget;
+        var remaining = Math.Max(0, tokenBudget - project.TokenConsumed);
+        var reserveThreshold = (long)(tokenBudget * 0.95);
+        var budgetStatus = TokenBudgetTierService.ComputeTier(project.TokenConsumed, tokenBudget);
 
         return new
         {
             projectId,
             tenantId,
-            tokenBudget = project.TokenBudget,
+            tokenBudget,
             tokenConsumed = project.TokenConsumed,
             tokenRemaining = remaining,
             reserveThreshold,
-            budgetStatus = project.LlmBudgetStatus,
+            budgetStatus,
             canRunDesign = project.TokenConsumed < reserveThreshold,
             recentCalls = recentCalls.Select(c => new
             {

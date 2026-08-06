@@ -32,7 +32,8 @@ public sealed class LlmCallPolicyService : ILlmCallPolicyService, ITransient
         [DesignSkillIds.DbDesign] = new() { SkillId = DesignSkillIds.DbDesign, MaxLlmCalls = 2, MaxTokensPerCall = 8192, MaxTotalTokens = 60_000, ModelTier = "strong" },
         [DesignSkillIds.UiDesign] = new() { SkillId = DesignSkillIds.UiDesign, MaxLlmCalls = 2, MaxTokensPerCall = 4096, MaxTotalTokens = 40_000, ModelTier = "strong" },
         [DesignSkillIds.SystemDesign] = new() { SkillId = DesignSkillIds.SystemDesign, MaxLlmCalls = 1, MaxTokensPerCall = 4096, MaxTotalTokens = 20_000, ModelTier = "strong" },
-        ["pm-skill"] = new() { SkillId = "pm-skill", MaxLlmCalls = 3, MaxTokensPerCall = 16384, MaxTotalTokens = 80_000, ModelTier = "strong" },
+        // PM 主链 ①完善→②九步+PSpec→③反向完善：单 run 需多次 LLM，40k/3 次不足（15 事件常见超 40k）
+        ["pm-skill"] = new() { SkillId = "pm-skill", MaxLlmCalls = 12, MaxTokensPerCall = 16384, MaxTotalTokens = 160_000, ModelTier = "strong" },
         ["analyst-skill"] = new() { SkillId = "analyst-skill", MaxLlmCalls = 0, MaxTokensPerCall = 0, MaxTotalTokens = 0, ModelTier = "strong", TimeoutMs = 0 },
         [DeploySkillIds.Deploy] = new() { SkillId = DeploySkillIds.Deploy, MaxLlmCalls = 0, MaxTokensPerCall = 0, MaxTotalTokens = 0, ModelTier = "fast", TimeoutMs = 0 },
     };

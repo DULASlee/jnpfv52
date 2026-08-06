@@ -13,8 +13,22 @@
         "timeout": 15
       },
       {
+        "command": "node .cursor/hooks/session-archive-stop.mjs",
+        "timeout": 20
+      },
+      {
+        "command": "node .cursor/hooks/archive-banner-stop.mjs",
+        "timeout": 10
+      },
+      {
         "command": "node .cursor/hooks/guard-pillar-stop.mjs",
         "timeout": 10
+      }
+    ],
+    "sessionEnd": [
+      {
+        "command": "node .cursor/hooks/session-end.mjs",
+        "timeout": 30
       }
     ],
     "preToolUse": [

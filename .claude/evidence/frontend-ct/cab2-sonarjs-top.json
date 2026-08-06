@@ -1,0 +1,433 @@
+{
+  "generatedAt": "2026-08-06T12:22:54.889Z",
+  "scope": "full-src",
+  "scannedFiles": 1376,
+  "errorCount": 548,
+  "warnCount": 126,
+  "cognitiveHits": 126,
+  "top50": [
+    {
+      "file": "src/views/workFlow/workFlowForm/dynamicForm/index.vue",
+      "line": 93,
+      "cc": 146,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 146 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/Form.vue",
+      "line": 144,
+      "cc": 140,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 140 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/index.vue",
+      "line": 1748,
+      "cc": 119,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 119 to the 15 allowed."
+    },
+    {
+      "file": "src/components/PrintDesign/printBrowse/index.vue",
+      "line": 149,
+      "cc": 118,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 118 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/CustomForm.vue",
+      "line": 87,
+      "cc": 112,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 112 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/CustomBatchForm.vue",
+      "line": 85,
+      "cc": 111,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 111 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/ExtendForm.vue",
+      "line": 43,
+      "cc": 106,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 106 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/form/FormPopup.vue",
+      "line": 48,
+      "cc": 92,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 92 to the 15 allowed."
+    },
+    {
+      "file": "src/components/FormGenerator/src/FormGenerator.vue",
+      "line": 367,
+      "cc": 89,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 89 to the 15 allowed."
+    },
+    {
+      "file": "src/views/studio/components/AiChatPanel.vue",
+      "line": 1415,
+      "cc": 85,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 85 to the 15 allowed."
+    },
+    {
+      "file": "src/components/VisualPortal/Design/components/PortalDesigner.vue",
+      "line": 253,
+      "cc": 78,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 78 to the 15 allowed."
+    },
+    {
+      "file": "src/views/studio/components/AiChatPanel.vue",
+      "line": 1059,
+      "cc": 72,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 72 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/index.vue",
+      "line": 952,
+      "cc": 71,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 71 to the 15 allowed."
+    },
+    {
+      "file": "src/core/expression/tokenizer.ts",
+      "line": 86,
+      "cc": 59,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 59 to the 15 allowed."
+    },
+    {
+      "file": "src/components/FormGenerator/src/helper/transform.ts",
+      "line": 93,
+      "cc": 57,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 57 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Jnpf/InputTable/src/InputTable.vue",
+      "line": 359,
+      "cc": 57,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 57 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Jnpf/InputTable/src/InputTable.vue",
+      "line": 408,
+      "cc": 50,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 50 to the 15 allowed."
+    },
+    {
+      "file": "src/core/ir/flow-types.ts",
+      "line": 177,
+      "cc": 47,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 47 to the 15 allowed."
+    },
+    {
+      "file": "src/router/helper/routeHelper.ts",
+      "line": 102,
+      "cc": 43,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 43 to the 15 allowed."
+    },
+    {
+      "file": "src/components/PrintDesign/index.vue",
+      "line": 220,
+      "cc": 42,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 42 to the 15 allowed."
+    },
+    {
+      "file": "src/components/IntegrateProcess/src/propPanel/index.vue",
+      "line": 156,
+      "cc": 41,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 41 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Table/src/hooks/useTableScroll.ts",
+      "line": 60,
+      "cc": 38,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 38 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Jnpf/InputTable/src/InputTable.vue",
+      "line": 190,
+      "cc": 36,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 36 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/detail/Item.vue",
+      "line": 332,
+      "cc": 36,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 36 to the 15 allowed."
+    },
+    {
+      "file": "src/components/VisualPortal/Design/helper/calendar.ts",
+      "line": 781,
+      "cc": 34,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 34 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/detail/index.vue",
+      "line": 85,
+      "cc": 34,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 34 to the 15 allowed."
+    },
+    {
+      "file": "src/utils/jnpf.ts",
+      "line": 316,
+      "cc": 33,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 33 to the 15 allowed."
+    },
+    {
+      "file": "src/views/workFlow/components/FlowParser.vue",
+      "line": 368,
+      "cc": 33,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 33 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Jnpf/DatePicker/src/TimePicker.vue",
+      "line": 86,
+      "cc": 32,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 32 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Jnpf/DatePicker/src/TimeRange.vue",
+      "line": 89,
+      "cc": 32,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 32 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Jnpf/InputTable/src/InputTable.vue",
+      "line": 326,
+      "cc": 32,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 32 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/formShortLink/list/detail/index.vue",
+      "line": 67,
+      "cc": 32,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 32 to the 15 allowed."
+    },
+    {
+      "file": "src/components/PrintDesign/printBrowse/index.vue",
+      "line": 314,
+      "cc": 31,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 31 to the 15 allowed."
+    },
+    {
+      "file": "src/router/guard/permissionGuard.ts",
+      "line": 35,
+      "cc": 31,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 31 to the 15 allowed."
+    },
+    {
+      "file": "src/views/studio/components/clarification/ClarificationCard.vue",
+      "line": 167,
+      "cc": 31,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 31 to the 15 allowed."
+    },
+    {
+      "file": "src/views/workFlow/workFlowForm/hooks/useFlowForm.ts",
+      "line": 91,
+      "cc": 31,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 31 to the 15 allowed."
+    },
+    {
+      "file": "src/components/ColumnDesign/src/components/Main.vue",
+      "line": 1047,
+      "cc": 30,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 30 to the 15 allowed."
+    },
+    {
+      "file": "src/components/ColumnDesign/src/components/MainApp.vue",
+      "line": 626,
+      "cc": 30,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 30 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Jnpf/DatePicker/src/DatePicker.vue",
+      "line": 76,
+      "cc": 30,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 30 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Jnpf/DatePicker/src/DatePicker.vue",
+      "line": 114,
+      "cc": 30,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 30 to the 15 allowed."
+    },
+    {
+      "file": "src/views/workFlow/workFlowForm/hooks/useFlowForm.ts",
+      "line": 153,
+      "cc": 30,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 30 to the 15 allowed."
+    },
+    {
+      "file": "src/components/ColumnDesign/src/components/Main.vue",
+      "line": 742,
+      "cc": 29,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 29 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Jnpf/ColorPicker/src/lib/color.ts",
+      "line": 184,
+      "cc": 28,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 28 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Jnpf/DatePicker/src/TimePicker.vue",
+      "line": 49,
+      "cc": 28,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 28 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Jnpf/DatePicker/src/TimeRange.vue",
+      "line": 52,
+      "cc": 28,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 28 to the 15 allowed."
+    },
+    {
+      "file": "src/views/studio/components/AiChatPanel.vue",
+      "line": 682,
+      "cc": 28,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 28 to the 15 allowed."
+    },
+    {
+      "file": "src/views/systemData/dataInterface/Form.vue",
+      "line": 633,
+      "cc": 27,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 27 to the 15 allowed."
+    },
+    {
+      "file": "src/components/FlowProcess/src/helper/util.ts",
+      "line": 79,
+      "cc": 26,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed."
+    },
+    {
+      "file": "src/components/IntegrateProcess/src/helper/util.ts",
+      "line": 88,
+      "cc": 26,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed."
+    },
+    {
+      "file": "src/components/VisualPortal/Design/hooks/useEChart.ts",
+      "line": 87,
+      "cc": 26,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 26 to the 15 allowed."
+    }
+  ],
+  "top20": [
+    {
+      "file": "src/views/workFlow/workFlowForm/dynamicForm/index.vue",
+      "line": 93,
+      "cc": 146,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 146 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/Form.vue",
+      "line": 144,
+      "cc": 140,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 140 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/index.vue",
+      "line": 1748,
+      "cc": 119,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 119 to the 15 allowed."
+    },
+    {
+      "file": "src/components/PrintDesign/printBrowse/index.vue",
+      "line": 149,
+      "cc": 118,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 118 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/CustomForm.vue",
+      "line": 87,
+      "cc": 112,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 112 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/CustomBatchForm.vue",
+      "line": 85,
+      "cc": 111,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 111 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/ExtendForm.vue",
+      "line": 43,
+      "cc": 106,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 106 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/form/FormPopup.vue",
+      "line": 48,
+      "cc": 92,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 92 to the 15 allowed."
+    },
+    {
+      "file": "src/components/FormGenerator/src/FormGenerator.vue",
+      "line": 367,
+      "cc": 89,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 89 to the 15 allowed."
+    },
+    {
+      "file": "src/views/studio/components/AiChatPanel.vue",
+      "line": 1415,
+      "cc": 85,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 85 to the 15 allowed."
+    },
+    {
+      "file": "src/components/VisualPortal/Design/components/PortalDesigner.vue",
+      "line": 253,
+      "cc": 78,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 78 to the 15 allowed."
+    },
+    {
+      "file": "src/views/studio/components/AiChatPanel.vue",
+      "line": 1059,
+      "cc": 72,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 72 to the 15 allowed."
+    },
+    {
+      "file": "src/views/common/dynamicModel/list/index.vue",
+      "line": 952,
+      "cc": 71,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 71 to the 15 allowed."
+    },
+    {
+      "file": "src/core/expression/tokenizer.ts",
+      "line": 86,
+      "cc": 59,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 59 to the 15 allowed."
+    },
+    {
+      "file": "src/components/FormGenerator/src/helper/transform.ts",
+      "line": 93,
+      "cc": 57,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 57 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Jnpf/InputTable/src/InputTable.vue",
+      "line": 359,
+      "cc": 57,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 57 to the 15 allowed."
+    },
+    {
+      "file": "src/components/Jnpf/InputTable/src/InputTable.vue",
+      "line": 408,
+      "cc": 50,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 50 to the 15 allowed."
+    },
+    {
+      "file": "src/core/ir/flow-types.ts",
+      "line": 177,
+      "cc": 47,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 47 to the 15 allowed."
+    },
+    {
+      "file": "src/router/helper/routeHelper.ts",
+      "line": 102,
+      "cc": 43,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 43 to the 15 allowed."
+    },
+    {
+      "file": "src/components/PrintDesign/index.vue",
+      "line": 220,
+      "cc": 42,
+      "message": "Refactor this function to reduce its Cognitive Complexity from 42 to the 15 allowed."
+    }
+  ],
+  "compareNote": "SonarJS = cognitive complexity; VMD cyclomaticComplexity = different metric. Cross-rank by file, not raw number."
+}

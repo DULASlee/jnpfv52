@@ -8,7 +8,9 @@ using JNPF.InteAssistant.Runtime;
 using JNPF.InteAssistant.Skills;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using SqlSugar;
+using JNPF;
 
 namespace JNPF.InteAssistant.Pipeline;
 
@@ -42,6 +44,7 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
     private readonly ITenantPipelineQuotaGuard _quotaGuard;
     private readonly ISkillRunGuard _runGuard;
     private readonly IConfiguration _configuration;
+    private readonly IUserRequirementLoader _requirementLoader;
     private readonly ILogger<StageConfirmSkillTrigger> _logger;
 
     public StageConfirmSkillTrigger(
@@ -52,6 +55,7 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
         ITenantPipelineQuotaGuard quotaGuard,
         ISkillRunGuard runGuard,
         IConfiguration configuration,
+        IUserRequirementLoader requirementLoader,
         ILogger<StageConfirmSkillTrigger> logger)
     {
         _db = db;
@@ -61,6 +65,7 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
         _quotaGuard = quotaGuard;
         _runGuard = runGuard;
         _configuration = configuration;
+        _requirementLoader = requirementLoader;
         _logger = logger;
     }
 
@@ -154,9 +159,16 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
 
         _taskRunner.Run(taskName, async (_, ct) =>
         {
+            using var scope = App.RootServices.CreateScope();
+            var requirementLoader = scope.ServiceProvider.GetRequiredService<IUserRequirementLoader>();
+            var harness = scope.ServiceProvider.GetRequiredService<ISkillHarness>();
             try
             {
-                await _harness.RunAsync(skillId, pipelineId, tenantId, projectId, new SkillRunOptions(), ct);
+                var userRequirement = await requirementLoader.LoadAsync(tenantId, projectId, pipelineId, ct);
+                await harness.RunAsync(skillId, pipelineId, tenantId, projectId, new SkillRunOptions
+                {
+                    UserRequirement = userRequirement,
+                }, ct);
             }
             finally
             {
@@ -194,17 +206,29 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
         triggered.Add(DesignSkillIds.SystemDesign);
 
         var providerCode = _configuration.GetValue<string>("AI:DefaultProvider") ?? "mimo";
-        var skillOptions = new SkillRunOptions { ProviderCode = providerCode };
 
         _taskRunner.Run(taskName, async (_, ct) =>
         {
+            using var scope = App.RootServices.CreateScope();
+            var requirementLoader = scope.ServiceProvider.GetRequiredService<IUserRequirementLoader>();
             try
             {
+                var userRequirement = await requirementLoader.LoadAsync(tenantId, projectId, pipelineId, ct);
+                var skillOptions = new SkillRunOptions
+                {
+                    ProviderCode = providerCode,
+                    UserRequirement = userRequirement,
+                };
                 var parallel = new[] { DesignSkillIds.DbDesign, DesignSkillIds.UiDesign };
-                await Task.WhenAll(parallel.Select(skillId =>
-                    _harness.RunAsync(skillId, pipelineId, tenantId, projectId, skillOptions, ct)));
+                await Task.WhenAll(parallel.Select(async skillId =>
+                {
+                    using var skillScope = App.RootServices.CreateScope();
+                    var harness = skillScope.ServiceProvider.GetRequiredService<ISkillHarness>();
+                    await harness.RunAsync(skillId, pipelineId, tenantId, projectId, skillOptions, ct);
+                }));
 
-                await _harness.RunAsync(
+                var sysHarness = scope.ServiceProvider.GetRequiredService<ISkillHarness>();
+                await sysHarness.RunAsync(
                     DesignSkillIds.SystemDesign, pipelineId, tenantId, projectId, skillOptions, ct);
             }
             finally
@@ -247,9 +271,11 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
 
         _taskRunner.Run(taskName, async (_, ct) =>
         {
+            using var scope = App.RootServices.CreateScope();
+            var developerOrchestrator = scope.ServiceProvider.GetRequiredService<IDeveloperSkillOrchestrator>();
             try
             {
-                await _developerOrchestrator.RunAsync(
+                await developerOrchestrator.RunAsync(
                     pipelineId, tenantId, projectId, new DeveloperOrchestratorOptions(), ct);
             }
             finally
@@ -290,9 +316,11 @@ public sealed class StageConfirmSkillTrigger : IStageConfirmSkillTrigger, ITrans
 
         _taskRunner.Run(taskName, async (_, ct) =>
         {
+            using var scope = App.RootServices.CreateScope();
+            var harness = scope.ServiceProvider.GetRequiredService<ISkillHarness>();
             try
             {
-                await _harness.RunAsync(
+                await harness.RunAsync(
                     DeploySkillIds.Deploy,
                     pipelineId,
                     tenantId,

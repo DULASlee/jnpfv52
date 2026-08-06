@@ -35,6 +35,7 @@ docs/token.txt
 scripts/.jnpf-session.json
 api-tests/http/http-client.env.json
 .cursor/episodic/sync-status.json
+.cursor/episodic/hook-run-log.json
 .cursor/edge-debug-profile/
 .env.toolchain
 # Claude Code settings — 区分团队共享与个人本地

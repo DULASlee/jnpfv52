@@ -6,12 +6,16 @@ using JNPF.InteAssistant.Entitys.Dto.Skills;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Infrastructure.Background;
+using JNPF.InteAssistant.Infrastructure.Messaging;
 using JNPF.InteAssistant.Infrastructure.Security;
 using JNPF.InteAssistant.Llm;
 using JNPF.InteAssistant.Runtime;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using SqlSugar;
+using System.Text.Json;
+using JNPF;
 
 namespace JNPF.InteAssistant.Skills;
 
@@ -22,6 +26,8 @@ namespace JNPF.InteAssistant.Skills;
 [Route("api/studio/skills")]
 public class DesignSkillsApiService : IDynamicApiController, ITransient
 {
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
     private readonly ISqlSugarClient _db;
     private readonly IDesignSkillOrchestrator _orchestrator;
     private readonly ISkillHarness _harness;
@@ -30,6 +36,9 @@ public class DesignSkillsApiService : IDynamicApiController, ITransient
     private readonly ITenantPipelineQuotaGuard _quotaGuard;
     private readonly ISkillRunGuard _runGuard;
     private readonly ISkillLlmBudgetGuard _budgetGuard;
+    private readonly IPipelineSseChannelHub _sseHub;
+    private readonly ISseSenderFactory _sseSenderFactory;
+    private readonly IUserRequirementLoader _requirementLoader;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public DesignSkillsApiService(
@@ -41,6 +50,9 @@ public class DesignSkillsApiService : IDynamicApiController, ITransient
         ITenantPipelineQuotaGuard quotaGuard,
         ISkillRunGuard runGuard,
         ISkillLlmBudgetGuard budgetGuard,
+        IPipelineSseChannelHub sseHub,
+        ISseSenderFactory sseSenderFactory,
+        IUserRequirementLoader requirementLoader,
         IHttpContextAccessor httpContextAccessor)
     {
         _db = db;
@@ -51,6 +63,9 @@ public class DesignSkillsApiService : IDynamicApiController, ITransient
         _quotaGuard = quotaGuard;
         _runGuard = runGuard;
         _budgetGuard = budgetGuard;
+        _sseHub = sseHub;
+        _sseSenderFactory = sseSenderFactory;
+        _requirementLoader = requirementLoader;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -116,17 +131,50 @@ public class DesignSkillsApiService : IDynamicApiController, ITransient
             throw;
         }
 
+        var channel = _sseHub.ReplaceChannel(pipelineId);
+
         _taskRunner.Run(taskName, async (ctx, ct) =>
         {
+            using var scope = App.RootServices.CreateScope();
+            var orchestrator = scope.ServiceProvider.GetRequiredService<IDesignSkillOrchestrator>();
+            using var sse = _sseSenderFactory.Create(pipelineId.ToString(), channel);
+            sse.TrySend("design_orchestrator_started", JsonSerializer.Serialize(new
+            {
+                pipelineId,
+                runId,
+                source = "design-orchestrator-run",
+            }, JsonOptions));
             try
             {
-                await _orchestrator.RunAsync(pipelineId, tenantId, projectId, new DesignOrchestratorOptions
+                var result = await orchestrator.RunAsync(pipelineId, tenantId, projectId, new DesignOrchestratorOptions
                 {
                     ProviderCode = request?.ProviderCode,
                 }, ct);
+                if (result.Status is "completed")
+                {
+                    sse.TrySend("stage_transition", "architecture");
+                    sse.TrySend("design_orchestrator_completed", JsonSerializer.Serialize(result, JsonOptions));
+                }
+                else
+                {
+                    sse.TrySend("design_orchestrator_failed", JsonSerializer.Serialize(new
+                    {
+                        status = result.Status,
+                        message = result.ErrorMessage ?? "设计编排未完成",
+                    }, JsonOptions));
+                }
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+            {
+                sse.TrySend("design_orchestrator_failed", JsonSerializer.Serialize(new
+                {
+                    status = "failed",
+                    message = ex.Message,
+                }, JsonOptions));
             }
             finally
             {
+                sse.Complete();
                 _quotaGuard.Release(tenantId, pipelineId);
             }
         }, timeout: TimeSpan.FromMinutes(30));
@@ -163,13 +211,56 @@ public class DesignSkillsApiService : IDynamicApiController, ITransient
             }
         }
 
+        // 与编排器对齐：先建 SSE 通道，Harness/Architect 的 TryPush 才能送达前端
+        var channel = _sseHub.ReplaceChannel(pipelineId);
+
         _taskRunner.Run(taskName, async (ctx, ct) =>
         {
-            await _harness.RunAsync(skillId, pipelineId, tenantId, projectId, new SkillRunOptions
+            using var scope = App.RootServices.CreateScope();
+            var harness = scope.ServiceProvider.GetRequiredService<ISkillHarness>();
+            var requirementLoader = scope.ServiceProvider.GetRequiredService<IUserRequirementLoader>();
+            using var sse = _sseSenderFactory.Create(pipelineId.ToString(), channel);
+            sse.TrySend("skill_run_started", JsonSerializer.Serialize(new
             {
-                UserRequirement = request?.UserRequirement,
-                ProviderCode = request?.ProviderCode,
-            }, ct);
+                pipelineId,
+                skillId,
+                runId,
+                source = "design-single-skill-run",
+            }, JsonOptions));
+            try
+            {
+                var userRequirement = request?.UserRequirement;
+                if (string.IsNullOrWhiteSpace(userRequirement))
+                    userRequirement = await requirementLoader.LoadAsync(tenantId, projectId, pipelineId, ct);
+
+                await harness.RunAsync(skillId, pipelineId, tenantId, projectId, new SkillRunOptions
+                {
+                    UserRequirement = userRequirement,
+                    ProviderCode = request?.ProviderCode,
+                }, ct);
+                sse.TrySend("skill_run_completed", JsonSerializer.Serialize(new
+                {
+                    pipelineId,
+                    skillId,
+                    runId,
+                    status = "completed",
+                }, JsonOptions));
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+            {
+                sse.TrySend("skill_run_failed", JsonSerializer.Serialize(new
+                {
+                    pipelineId,
+                    skillId,
+                    runId,
+                    status = "failed",
+                    message = ex.Message,
+                }, JsonOptions));
+            }
+            finally
+            {
+                sse.Complete();
+            }
         }, timeout: TimeSpan.FromMinutes(15));
 
         return new
@@ -193,6 +284,12 @@ public class DesignSkillsApiService : IDynamicApiController, ITransient
             if (status.QualityCriticalCount > 0)
                 return $"一致性存在 {status.QualityCriticalCount} 条 CRITICAL，禁止启动设计 Skill";
             return $"质量门控未通过：总分={status.QualityTotalScore:0.#}（须≥60）、结构分须≥70";
+        }
+        if (!status.PmReviewGatePasses)
+        {
+            if (status.PmReviewScore is > 0)
+                return $"PM 终评 {status.PmReviewScore} 分（须≥85）。请补充需求说明书后重试，或在确认卡片使用「强制确认」";
+            return "PM 终评尚未通过：请先完成需求说明书确认与 Finalize";
         }
         return "设计前置条件未满足";
     }

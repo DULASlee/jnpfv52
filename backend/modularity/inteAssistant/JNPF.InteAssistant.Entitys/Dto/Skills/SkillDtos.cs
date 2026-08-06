@@ -39,6 +39,25 @@ public record ConfirmSkeletonRequest
     public string? RunId { get; init; }
 }
 
+/// <summary>02-requirement-spec.md 刷新/预览结果（正式版 RequirementDocumentRenderer 产出）。</summary>
+public record RequirementSpecRefreshResult
+{
+    public bool Success { get; init; }
+    public string RelativePath { get; init; } = "02-requirement-spec.md";
+    public int ContentLength { get; init; }
+    /// <summary>true = 经 RequirementDocumentRenderer 正式渲染；false = 仅落盘/读取失败。</summary>
+    public bool Rendered { get; init; }
+    /// <summary>预览接口返回全文；刷新/下载接口为 null（读 deliverables/content）。</summary>
+    public string? Markdown { get; init; }
+    public string? ErrorMessage { get; init; }
+    public RequirementSpecPhase? Phase { get; init; }
+    public S2PipelineStage? PipelineStage { get; init; }
+    public string? ContentHash { get; init; }
+    public bool CanUserConfirm { get; init; }
+    public bool CanUserFeedback { get; init; }
+    public bool AwaitingUser { get; init; }
+}
+
 public record ConfirmRequirementSpecRequest
 {
     /// <summary>确认后自动启动设计 Skill（architect-skill）</summary>

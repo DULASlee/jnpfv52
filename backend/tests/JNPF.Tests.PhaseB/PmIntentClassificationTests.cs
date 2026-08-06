@@ -24,6 +24,9 @@ public class PmIntentClassificationTests
     [InlineData("把审批改成3级", "request_change")]
     [InlineData("不对，需要增加一个角色", "request_change")]
     [InlineData("调整一下流程", "request_change")]
+    [InlineData("请进入架构设计", "confirm_spec")]
+    [InlineData("进入架构设计", "confirm_spec")]
+    [InlineData("开始架构设计", "confirm_spec")]
     public void IntentClassification_ConfirmAndChange_KeywordsRecognized(string input, string expectedIntent)
     {
         // 验证关键词能被正确分类（通过反射调 private static 方法）

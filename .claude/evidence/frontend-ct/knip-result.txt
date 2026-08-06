@@ -1,0 +1,599 @@
+
+ ERROR  ERROR: Error loading vite.config.ts (Cannot read properties of undefined (reading 'split'))
+
+
+ ERROR  ERROR: Please fix or visit https://knip.dev/reference/known-issues
+
+Unused files (104)
+build/generate/icon/index.ts                                       
+build/script/buildConf.ts                                          
+build/script/postBuild.ts                                          
+src/components/Authority/index.ts                                  
+src/components/Authority/src/Authority.vue                         
+src/components/CardList/index.ts                                   
+src/components/CardList/src/CardList.vue                           
+src/components/CardList/src/data.ts                                
+src/components/ClickOutSide/index.ts                               
+src/components/ClickOutSide/src/ClickOutSide.vue                   
+src/components/CodeEditor/index.ts                                 
+src/components/CodeEditor/src/json-preview/JsonPreview.vue         
+src/components/CodeEditor/src/JsonPreviewWrapper.ts                
+src/components/Cropper/index.ts                                    
+src/components/Cropper/src/CopperModal.vue                         
+src/components/Cropper/src/Cropper.vue                             
+src/components/Cropper/src/CropperAvatar.vue                       
+src/components/Cropper/src/typing.ts                               
+src/components/Excel/index.ts                                      
+src/components/Excel/src/Export2Excel.ts                           
+src/components/Excel/src/ExportExcelModal.vue                      
+src/components/Excel/src/ImportExcel.vue                           
+src/components/Excel/src/typing.ts                                 
+src/components/FlowChart/index.ts                                  
+src/components/FlowChart/src/adpterForTurbo.ts                     
+src/components/FlowChart/src/config.ts                             
+src/components/FlowChart/src/enum.ts                               
+src/components/FlowChart/src/FlowChart.vue                         
+src/components/FlowChart/src/FlowChartToolbar.vue                  
+src/components/FlowChart/src/types.ts                              
+src/components/FlowChart/src/useFlowContext.ts                     
+src/components/IntegrateProcess/index.ts                           
+src/components/Jnpf/Cron/validator.ts                              
+src/components/Markdown/index.ts                                   
+src/components/Markdown/src/getTheme.ts                            
+src/components/Markdown/src/Markdown.vue                           
+src/components/Markdown/src/MarkdownViewer.vue                     
+src/components/Markdown/src/typing.ts                              
+src/components/Page/index.ts                                       
+src/components/Page/src/PageFooter.vue                             
+src/components/Page/src/PageWrapper.vue                            
+src/components/SimpleMenu/src/components/MenuCollapseTransition.vue
+src/components/Table/src/types/column.ts                           
+src/components/Time/index.ts                                       
+src/components/Time/src/Time.vue                                   
+src/components/Verify/index.ts                                     
+src/components/Verify/src/DragVerify.vue                           
+src/components/Verify/src/ImgRotate.vue                            
+src/components/Verify/src/props.ts                                 
+src/components/Verify/src/typing.ts                                
+src/components/VirtualScroll/index.ts                              
+src/components/VirtualScroll/src/VirtualScroll.vue                 
+src/core/ai/composables/useOnboarding.ts                           
+src/core/ai/composables/usePipelineSSE.ts                          
+src/core/ai/composables/useSSEConnection.ts                        
+src/core/ai/expert-mode.ts                                         
+src/core/ai/llm/deepseek-v4.ts                                     
+src/core/ai/llm/deepseek.ts                                        
+src/core/ai/llm/fallback.ts                                        
+src/core/ai/llm/index.ts                                           
+src/core/ai/llm/mimo.ts                                            
+src/core/ai/llm/ollama.ts                                          
+src/core/ai/llm/openai.ts                                          
+src/core/ai/llm/tongyi.ts                                          
+src/core/component-registry/builtin-dashboard.ts                   
+src/core/expression/compat.ts                                      
+src/directives/repeatClick.ts                                      
+src/directives/ripple/index.ts                                     
+src/hooks/core/useLockFn.ts                                        
+src/hooks/event/useScroll.ts                                       
+src/hooks/web/useContentHeight.ts                                  
+src/hooks/web/useScript.ts                                         
+src/hooks/web/useWatermark.ts                                      
+src/layouts/default/content/useContentContext.ts                   
+src/layouts/default/footer/index.vue                               
+src/layouts/default/tabs/components/FoldButton.vue                 
+src/locales/lang/en.ts                                             
+src/locales/lang/en/common.ts                                      
+src/locales/lang/en/component.ts                                   
+src/locales/lang/en/layout.ts                                      
+src/locales/lang/en/routes.ts                                      
+src/locales/lang/en/sys.ts                                         
+src/locales/lang/zh_CN.ts                                          
+src/locales/lang/zh_TW.ts                                          
+src/locales/lang/zh-CN/agent.ts                                    
+src/locales/lang/zh-CN/common.ts                                   
+src/locales/lang/zh-CN/component.ts                                
+src/locales/lang/zh-CN/founder.ts                                  
+src/locales/lang/zh-CN/layout.ts                                   
+src/locales/lang/zh-CN/pipeline.ts                                 
+src/locales/lang/zh-CN/routes.ts                                   
+src/locales/lang/zh-CN/sandbox.ts                                  
+src/locales/lang/zh-CN/sys.ts                                      
+src/locales/lang/zh-TW/common.ts                                   
+src/locales/lang/zh-TW/component.ts                                
+src/locales/lang/zh-TW/layout.ts                                   
+src/locales/lang/zh-TW/routes.ts                                   
+src/locales/lang/zh-TW/sys.ts                                      
+src/router/guard/paramMenuGuard.ts                                 
+src/views/basic/exception/index.ts                                 
+src/views/studio/composables/parseSseStream.ts                     
+src/views/studio/composables/sanitize.ts                           
+src/views/studio/composables/useClarification.ts                   
+src/views/studio/permission.ts                                     
+Unused dependencies (14)
+@iconify/iconify               package.json:83:6 
+@logicflow/core                package.json:84:6 
+@logicflow/extension           package.json:85:6 
+@microsoft/fetch-event-source  package.json:86:6 
+@vue/runtime-core              package.json:87:6 
+@vueuse/shared                 package.json:90:6 
+cropperjs                      package.json:96:6 
+dompurify                      package.json:99:6 
+intro.js                       package.json:105:6
+path-to-regexp                 package.json:112:6
+showdown                       package.json:119:6
+vditor                         package.json:124:6
+vue-json-pretty                package.json:128:6
+xlsx                           package.json:135:6
+Unused devDependencies (13)
+@commitlint/cli               package.json:138:6
+@iconify/json                 package.json:140:6
+@vitest/browser               package.json:161:6
+@vue/compiler-sfc             package.json:162:6
+@vue/test-utils               package.json:163:6
+cz-git                        package.json:167:6
+eslint-plugin-sonarjs         package.json:174:6
+fs-extra                      package.json:177:6
+inquirer                      package.json:178:6
+npm-run-all                   package.json:182:6
+picocolors                    package.json:183:6
+ts-node                       package.json:197:6
+vite-plugin-vue-setup-extend  package.json:209:6
+Unresolved imports (2)
+*.vue  src/router/helper/routeHelper.ts:21:63
+*.vue  src/router/types.ts:4:100             
+Unused exports (214)
+darkMode                               build/config/themeConfig.ts:5:14                           
+isDevFn                      function  build/utils.ts:5:17                                        
+isProdFn                     function  build/utils.ts:9:17                                        
+getEnvConfig                 function  build/utils.ts:63:17                                       
+getRootPath                  function  build/utils.ts:86:17                                       
+getGoodsListByType           function  src/api/extend/saleOrder.ts:40:17                          
+clearFounderToken            function  src/api/founder/index.ts:21:17                             
+configurePrompt              function  src/api/founder/index.ts:72:17                             
+startPipeline                function  src/api/founder/pipeline.ts:25:17                          
+executeNextStage             function  src/api/founder/pipeline.ts:30:17                          
+confirmStage                 function  src/api/founder/pipeline.ts:35:17                          
+getPipelineDetail            function  src/api/founder/pipeline.ts:40:17                          
+downloadSourceCode           function  src/api/founder/pipeline.ts:50:17                          
+fixBug                       function  src/api/founder/pipeline.ts:59:17                          
+implementFeature             function  src/api/founder/pipeline.ts:64:17                          
+testHealth                   function  src/api/founder/pipeline.ts:78:17                          
+getSandboxStatus             function  src/api/founder/sandbox.ts:20:17                           
+deployToSandbox              function  src/api/founder/sandbox.ts:28:17                           
+testMsgTemplate              function  src/api/msgCenter/msgTemplate.ts:32:17                     
+getMyFlowTodoList            function  src/api/onlineDev/portal.ts:80:17                          
+rollbackTemplate             function  src/api/onlineDev/visualDev.ts:54:17                       
+getColumnData                function  src/api/onlineDev/visualDev.ts:72:17                       
+getFormData                  function  src/api/onlineDev/visualDev.ts:76:17                       
+getTemplate                  function  src/api/onlineDev/visualDev.ts:112:17                      
+getOrganizeSelector          function  src/api/permission/organize.ts:14:17                       
+getOrganizeTree              function  src/api/permission/organize.ts:22:17                       
+getOrganizeTrator            function  src/api/permission/organize.ts:42:17                       
+setOrganizeTrator            function  src/api/permission/organize.ts:46:17                       
+getSocialsLoginList          function  src/api/permission/socialsUser.ts:8:17                     
+getUserListAll               function  src/api/permission/user.ts:12:17                           
+getUserSelector              function  src/api/permission/user.ts:16:17                           
+updateUserState              function  src/api/permission/user.ts:40:17                           
+getUsersByRoleId             function  src/api/permission/user.ts:73:17                           
+getUsersByUserCondition      function  src/api/permission/user.ts:81:17                           
+updateTheme                  function  src/api/permission/userSetting.ts:24:17                    
+getUserRoles                 function  src/api/permission/userSetting.ts:52:17                    
+getInfo                      function  src/api/system/advancedQuery.ts:20:17                      
+getDataInterfaceLog          function  src/api/systemData/dataInterface.ts:44:17                  
+getDataInterfaceFields       function  src/api/systemData/dataInterface.ts:60:17                  
+getInterfaceList             function  src/api/systemData/interfaceOauth.ts:36:17                 
+getFlowEngineListAll         function  src/api/workFlow/flowEngine.ts:49:17                       
+getFlowEngineSelector        function  src/api/workFlow/flowEngine.ts:61:17                       
+assist                       function  src/api/workFlow/flowEngine.ts:93:17                       
+getAssistList                function  src/api/workFlow/flowEngine.ts:97:17                       
+getFormField                 function  src/api/workFlow/formDesign.ts:40:17                       
+defaultBtnFunc                         src/components/ColumnDesign/src/helper/config.ts:141:3     
+SelectModal                            src/components/CommonModal/index.ts:13:14                  
+LazyContainer                          src/components/Container/index.ts:8:14                     
+CountButton                            src/components/CountDown/index.ts:6:14                     
+useComponentRegister                   src/components/Form/index.ts:6:10                          
+processDateValue             function  src/components/Form/src/helper.ts:48:17                    
+useComponentRegister         function  src/components/Form/src/hooks/useComponentRegister.ts:6:17 
+generalWidthOptions                    src/components/FormGenerator/src/helper/rightPanel.ts:25:14
+fullScreenWidthOptions                 src/components/FormGenerator/src/helper/rightPanel.ts:27:14
+getFormSchemaItem                      src/components/FormGenerator/src/helper/transform.ts:32:14 
+getFormSchemas                         src/components/FormGenerator/src/helper/transform.ts:71:14 
+getFormConfig                          src/components/FormGenerator/src/helper/transform.ts:84:14 
+IconPicker                             src/components/Icon/index.ts:5:16                          
+interfaceSourceTypeOptions             src/components/IntegrateProcess/src/helper/define.ts:37:29 
+triggerRuleTypeOptions                 src/components/IntegrateProcess/src/helper/define.ts:37:57 
+CronInner                              src/components/Jnpf/Cron/index.ts:7:14                     
+CronModal                              src/components/Jnpf/Cron/index.ts:8:14                     
+baseProps                              src/components/Jnpf/Organize/src/props.ts:1:14             
+checkFileType                function  src/components/Jnpf/Upload/src/helper.ts:1:17              
+isImgTypeByName              function  src/components/Jnpf/Upload/src/helper.ts:13:17             
+Loading                                src/components/Loading/index.ts:3:10                       
+useLoading                             src/components/Loading/index.ts:4:10                       
+useLoading                   function  src/components/Loading/src/useLoading.ts:15:17             
+modalProps                             src/components/Modal/src/props.ts:8:14                     
+ImagePreview                           src/components/Preview/index.ts:1:21                       
+default                                src/components/Preview/src/Preview.vue:28:18               
+EditTableHeaderIcon                    src/components/Table/index.ts:3:21                         
+TableImg                               src/components/Table/index.ts:4:21                         
+add                          function  src/components/Table/src/componentMap.ts:16:17             
+del                          function  src/components/Table/src/componentMap.ts:20:17             
+default                                src/components/Table/src/components/TableImg.vue:8:18      
+formatCell                   function  src/components/Table/src/hooks/useColumns.ts:281:17        
+PaginationConfig             class     src/components/Table/src/types/pagination.ts:12:22         
+FadeTransition                         src/components/Transition/index.ts:7:14                    
+ScaleTransition                        src/components/Transition/index.ts:8:14                    
+SlideYTransition                       src/components/Transition/index.ts:9:14                    
+ScrollYTransition                      src/components/Transition/index.ts:10:14                   
+SlideYReverseTransition                src/components/Transition/index.ts:11:14                   
+ScrollYReverseTransition               src/components/Transition/index.ts:12:14                   
+SlideXTransition                       src/components/Transition/index.ts:13:14                   
+ScrollXTransition                      src/components/Transition/index.ts:14:14                   
+SlideXReverseTransition                src/components/Transition/index.ts:15:14                   
+ScrollXReverseTransition               src/components/Transition/index.ts:16:14                   
+ScaleRotateTransition                  src/components/Transition/index.ts:17:14                   
+ExpandXTransition                      src/components/Transition/index.ts:19:14                   
+ExpandTransition                       src/components/Transition/index.ts:21:14                   
+upperFirst                   function  src/components/Transition/src/ExpandTransition.ts:4:17     
+appLayoutStyleList                     src/components/VisualPortal/Design/helper/dataMap.ts:577:14
+getKnowledgeGraph            function  src/core/ai/dkee/v1.ts:191:17                              
+compileAgentPages            function  src/core/ai/integration/compile-bridge.ts:143:23           
+DEFAULT_TIMEOUT_CONFIGS                src/core/ai/services/pipeline-sse-types.ts:55:14           
+ComponentRegistry                      src/core/component-registry/index.ts:19:10                 
+BUILTIN_COMPONENTS                     src/core/component-registry/index.ts:21:10                 
+COMPONENT_MAPPING                      src/core/ir/component-mapping.ts:18:14                     
+THREE_D_WIDGETS                        src/core/ir/dashboard-types.ts:69:14                       
+is3DWidget                   function  src/core/ir/dashboard-types.ts:71:17                       
+getWidgetCategory            function  src/core/ir/dashboard-types.ts:78:17                       
+serializeSnapshot            function  src/core/ir/flow-serializer.ts:107:17                      
+deserializeSnapshot          function  src/core/ir/flow-serializer.ts:114:17                      
+NODE_TYPE_TO_STAGE                     src/core/ir/impact-analysis.ts:23:14                       
+flowIRToSchema                         src/core/ir/ir-to-schema.ts:117:10                         
+buildCompactNodeSummaryList  function  src/core/ir/node-summary.ts:46:17                          
+hasErrors                    function  src/core/ir/validator.ts:84:17                             
+default                      variable  src/directives/loading.ts:39:16                            
+default                      variable  src/directives/permission.ts:44:16                         
+ROLES_KEY                              src/enums/cacheEnum.ts:13:14                               
+sizeMap                                src/enums/sizeEnum.ts:13:14                                
+usePageContext               function  src/hooks/component/usePageContext.ts:16:17                
+entries                      function  src/hooks/core/useAttrs.ts:12:17                           
+useTimeoutRef                function  src/hooks/core/useTimeout.ts:25:17                         
+copyTextToClipboard          function  src/hooks/web/useCopyToClipboard.ts:26:17                  
+SettingFooter                          src/layouts/default/setting/components/index.ts:5:14       
+SelectItem                             src/layouts/default/setting/components/index.ts:7:14       
+InputNumberItem                        src/layouts/default/setting/components/index.ts:8:14       
+contentModeOptions                     src/layouts/default/setting/enum.ts:59:14                  
+topMenuAlignOptions                    src/layouts/default/setting/enum.ts:70:14                  
+routerTransitionOptions                src/layouts/default/setting/enum.ts:106:14                 
+mixSidebarTriggerOptions               src/layouts/default/setting/enum.ts:144:14                 
+handler                      function  src/layouts/default/setting/handler.ts:29:17               
+genMessage                   function  src/locales/helper.ts:15:17                                
+scriptErrorHandler           function  src/logics/error-handle/index.ts:90:17                     
+clearObsoleteStorage         function  src/logics/initAppConfig.ts:73:17                          
+PARENT_LAYOUT_NAME                     src/router/constant.ts:3:14                                
+createMessageGuard           function  src/router/guard/index.ts:132:17                           
+createProgressGuard          function  src/router/guard/index.ts:148:17                           
+transformMenuModule          function  src/router/helper/menuHelper.ts:35:17                      
+transformRouteToMenu         function  src/router/helper/menuHelper.ts:45:17                      
+configureDynamicParamsMenu   function  src/router/helper/menuHelper.ts:88:17                      
+RootRoute                              src/router/routes/index.ts:10:14                           
+LoginRoute                             src/router/routes/index.ts:17:14                           
+FormShortLinkRoute                     src/router/routes/index.ts:24:14                           
+StudioExpertRoute                      src/router/routes/index.ts:34:14                           
+StudioFounderRoute                     src/router/routes/index.ts:59:14                           
+StudioDevRoute                         src/router/routes/index.ts:75:14                           
+StudioAiRoute                          src/router/routes/index.ts:87:14                           
+StudioPipelineRoute                    src/router/routes/index.ts:111:14                          
+StudioKnowledgeRoute                   src/router/routes/index.ts:129:14                          
+StudioAgentRoute                       src/router/routes/index.ts:158:14                          
+StudioTenantRoute                      src/router/routes/index.ts:172:14                          
+mainOutRouteNames                      src/router/routes/mainOut.ts:32:14                         
+LOCALE                                 src/settings/localeSetting.ts:4:14                         
+SITE_URL                               src/settings/siteSetting.ts:3:14                           
+useMultipleTabWithOutStore   function  src/store/modules/multipleTab.ts:350:17                    
+clearAuthCache               function  src/utils/auth/index.ts:23:17                              
+buildBEM                     function  src/utils/bem.ts:32:17                                     
+createNamespace              function  src/utils/bem.ts:49:17                                     
+WebStorage                             src/utils/cache/index.ts:18:14                             
+createStorage                          src/utils/cache/index.ts:20:14                             
+default                      variable  src/utils/cache/index.ts:32:16                             
+isHexColor                   function  src/utils/color.ts:8:17                                    
+rgbToHex                     function  src/utils/color.ts:22:17                                   
+hexToRGB                     function  src/utils/color.ts:33:17                                   
+calculateBestTextColor       function  src/utils/color.ts:125:17                                  
+getBoundingClientRect        function  src/utils/domUtils.ts:13:17                                
+hackCss                      function  src/utils/domUtils.ts:122:17                               
+once                         function  src/utils/domUtils.ts:150:17                               
+useRafThrottle               function  src/utils/domUtils.ts:160:17                               
+devMode                                src/utils/env.ts:43:14                                     
+prodMode                               src/utils/env.ts:48:14                                     
+getEnv                       function  src/utils/env.ts:55:17                                     
+downloadByOnlineUrl          function  src/utils/file/download.ts:13:17                           
+downloadByBase64             function  src/utils/file/download.ts:26:17                           
+listToTree                   function  src/utils/helper/treeHelper.ts:25:17                       
+findNode                     function  src/utils/helper/treeHelper.ts:54:17                       
+findPathAll                  function  src/utils/helper/treeHelper.ts:100:17                      
+treeMapEach                  function  src/utils/helper/treeHelper.ts:171:17                      
+getPendingUrl                          src/utils/http/axios/axiosCancel.ts:8:14                   
+buildSSEUrl                            src/utils/http/sseUrl.ts:29:14                             
+is                           function  src/utils/is.ts:3:17                                       
+isDate                       function  src/utils/is.ts:35:17                                      
+isPromise                    function  src/utils/is.ts:55:17                                      
+isRegExp                     function  src/utils/is.ts:71:17                                      
+isWindow                     function  src/utils/is.ts:79:17                                      
+isElement                    function  src/utils/is.ts:83:17                                      
+handleRequest                function  src/utils/jnpf.ts:232:17                                   
+interfaceDataHandler         function  src/utils/jnpf.ts:235:17                                   
+dynamicText                  function  src/utils/jnpf.ts:242:17                                   
+dynamicTreeText              function  src/utils/jnpf.ts:263:17                                   
+propKey                                src/utils/props.ts:13:14                                   
+buildProp                    function  src/utils/props.ts:75:17                                   
+definePropType                         src/utils/props.ts:147:14                                  
+keyOf                                  src/utils/props.ts:149:14                                  
+mutable                                src/utils/props.ts:150:14                                  
+componentSize                          src/utils/props.ts:152:14                                  
+useLoginState                function  src/views/basic/login/useLogin.ts:16:17                    
+markBadgeRead                function  src/views/studio/api/menu.ts:17:17                         
+getTotpStatus                function  src/views/studio/api/menu.ts:31:17                         
+runDbDesignSkill             function  src/views/studio/api/studio/designSkills.ts:124:17         
+runUiDesignSkill             function  src/views/studio/api/studio/designSkills.ts:131:17         
+runSystemDesignSkill         function  src/views/studio/api/studio/designSkills.ts:138:17         
+uploadPipelineMaterials      function  src/views/studio/api/studio/pipeline.ts:54:17              
+getSkillReviews              function  src/views/studio/api/studio/skillQuality.ts:66:17          
+submitSkillReview            function  src/views/studio/api/studio/skillQuality.ts:72:17          
+getEvalRun                   function  src/views/studio/api/studio/skillQuality.ts:113:17         
+runAnalystSkill              function  src/views/studio/api/studio/skills.ts:29:17                
+refreshRequirementSpec       function  src/views/studio/api/studio/skills.ts:57:17                
+listSkillRuns                function  src/views/studio/api/studio/skills.ts:151:17               
+listSeedTemplates            function  src/views/studio/api/studio/skills.ts:157:17               
+normalizeIdentified          function  src/views/studio/composables/gateStreamFormatter.ts:49:17  
+normalizeMissing             function  src/views/studio/composables/gateStreamFormatter.ts:57:17  
+REQUIREMENT_WRITING_GUIDE              src/views/studio/composables/gateStreamFormatter.ts:195:14 
+GATE_EXAMPLE_PROMPT                    src/views/studio/composables/gateStreamFormatter.ts:201:14 
+notifyConstraintViolations   function  src/views/studio/composables/useDesignSkills.ts:37:17      
+parseConstraintPayload       function  src/views/studio/composables/useDesignSkills.ts:61:17      
+IR3_FRAGMENT_TYPES                     src/views/studio/composables/useDeveloperSkill.ts:18:14    
+REQUIREMENT_SPEC_TITLE                 src/views/studio/utils/requirementSpec.ts:5:14             
+REQUIREMENT_SPEC_CTA                   src/views/studio/utils/requirementSpec.ts:8:14             
+pickRequirementSpecPhase     function  src/views/studio/utils/requirementSpec.ts:67:17            
+pickRequirementSpecPath      function  src/views/studio/utils/requirementSpec.ts:83:17            
+Unused exported types (212)
+LlmRequest                interface  src/ai/gateway/types.ts:15:18                                      
+LlmResponse               interface  src/ai/gateway/types.ts:24:18                                      
+PipelineStage             type       src/ai/gateway/types.ts:55:13                                      
+PipelineRole              type       src/ai/gateway/types.ts:58:13                                      
+PipelineRunStatus         type       src/ai/gateway/types.ts:61:13                                      
+PipelineMessage           interface  src/ai/gateway/types.ts:64:18                                      
+PipelineStatus            interface  src/ai/gateway/types.ts:80:18                                      
+PromptCategory            type       src/ai/gateway/types.ts:102:13                                     
+PromptTemplate            interface  src/ai/gateway/types.ts:105:18                                     
+RouteItem                 interface  src/api/basic/model/userModel.ts:36:18                             
+PipelineSummary           interface  src/api/founder/pipeline.ts:90:18                                  
+StageInfo                 interface  src/api/founder/pipeline.ts:99:18                                  
+PipelineDetail            interface  src/api/founder/pipeline.ts:107:18                                 
+StageConfirmation         interface  src/api/founder/pipeline.ts:135:18                                 
+BugFixRequest             interface  src/api/founder/pipeline.ts:140:18                                 
+FeatureRequest            interface  src/api/founder/pipeline.ts:148:18                                 
+IterationResult           interface  src/api/founder/pipeline.ts:154:18                                 
+ChangedFile               interface  src/api/founder/pipeline.ts:164:18                                 
+TestHealthRequest         interface  src/api/founder/pipeline.ts:175:18                                 
+FoldingStrategy           type       src/components/CodeEditor/src/monacoEditor/monacoEditorType.ts:4:13
+RenderLineHighlight       type       src/components/CodeEditor/src/monacoEditor/monacoEditorType.ts:5:13
+LineNumbersType           type       src/components/CodeEditor/src/monacoEditor/monacoEditorType.ts:6:13
+WordWrapType              type       src/components/CodeEditor/src/monacoEditor/monacoEditorType.ts:7:13
+ScrollType                type       src/components/Container/src/typing.ts:1:13                        
+Register                  type       src/components/Description/src/typing.ts:42:13                     
+RegisterFn                type       src/components/Drawer/src/typing.ts:16:13                          
+ReturnInnerMethods        interface  src/components/Drawer/src/typing.ts:18:18                          
+DrawerFooterProps         interface  src/components/Drawer/src/typing.ts:30:18                          
+DrawerActionType          interface  src/components/Drawer/src/typing.ts:199:18                         
+ValidateFields            type       src/components/Form/src/hooks/useForm.ts:9:21                      
+Rule                      type       src/components/Form/src/types/form.ts:12:13                        
+RenderCallbackParams      interface  src/components/Form/src/types/form.ts:16:18                        
+ButtonProps               interface  src/components/Form/src/types/form.ts:23:18                        
+RegisterFn                type       src/components/Form/src/types/form.ts:43:13                        
+HelpComponentProps        interface  src/components/Form/src/types/form.ts:195:18                       
+ItemOn                    interface  src/components/FormGenerator/src/types/genItem.ts:62:18            
+BasicGenItem              interface  src/components/FormGenerator/src/types/genItem.ts:69:18            
+InputGenItem              interface  src/components/FormGenerator/src/types/genItem.ts:78:18            
+TextareaGenItem           interface  src/components/FormGenerator/src/types/genItem.ts:95:18            
+InputNumberGenItem        interface  src/components/FormGenerator/src/types/genItem.ts:105:18           
+SwitchGenItem             interface  src/components/FormGenerator/src/types/genItem.ts:119:18           
+RadioGenItem              interface  src/components/FormGenerator/src/types/genItem.ts:127:18           
+CheckboxGenItem           interface  src/components/FormGenerator/src/types/genItem.ts:137:18           
+SelectGenItem             interface  src/components/FormGenerator/src/types/genItem.ts:144:18           
+TreeSelectGenItem         interface  src/components/FormGenerator/src/types/genItem.ts:154:18           
+CascaderGenItem           type       src/components/FormGenerator/src/types/genItem.ts:158:13           
+DatePickerGenItem         interface  src/components/FormGenerator/src/types/genItem.ts:160:18           
+TimePickerGenItem         interface  src/components/FormGenerator/src/types/genItem.ts:169:18           
+UploadImgGenItem          interface  src/components/FormGenerator/src/types/genItem.ts:178:18           
+UploadFileGenItem         interface  src/components/FormGenerator/src/types/genItem.ts:190:18           
+ColorPickerGenItem        interface  src/components/FormGenerator/src/types/genItem.ts:194:18           
+RateGenItem               interface  src/components/FormGenerator/src/types/genItem.ts:200:18           
+SliderGenItem             interface  src/components/FormGenerator/src/types/genItem.ts:206:18           
+EditorGenItem             interface  src/components/FormGenerator/src/types/genItem.ts:213:18           
+LinkGenItem               interface  src/components/FormGenerator/src/types/genItem.ts:218:18           
+ButtonGenItem             interface  src/components/FormGenerator/src/types/genItem.ts:225:18           
+TextGenItem               interface  src/components/FormGenerator/src/types/genItem.ts:232:18           
+AlertGenItem              interface  src/components/FormGenerator/src/types/genItem.ts:237:18           
+QrcodeGenItem             interface  src/components/FormGenerator/src/types/genItem.ts:248:18           
+BarcodeGenItem            interface  src/components/FormGenerator/src/types/genItem.ts:257:18           
+CalculateGenItem          interface  src/components/FormGenerator/src/types/genItem.ts:268:18           
+OrgGenItem                interface  src/components/FormGenerator/src/types/genItem.ts:277:18           
+UserSelectGenItem         interface  src/components/FormGenerator/src/types/genItem.ts:286:18           
+TableGenItem              interface  src/components/FormGenerator/src/types/genItem.ts:291:18           
+PopupSelectGenItem        interface  src/components/FormGenerator/src/types/genItem.ts:300:18           
+RelationFormGenItem       interface  src/components/FormGenerator/src/types/genItem.ts:319:18           
+AttrGenItem               interface  src/components/FormGenerator/src/types/genItem.ts:337:18           
+AutoCompleteGenItem       interface  src/components/FormGenerator/src/types/genItem.ts:343:18           
+AreaSelectGenItem         interface  src/components/FormGenerator/src/types/genItem.ts:353:18           
+LocationGenItem           interface  src/components/FormGenerator/src/types/genItem.ts:362:18           
+IframeGenItem             interface  src/components/FormGenerator/src/types/genItem.ts:372:18           
+CurrOrganizeGenItem       interface  src/components/FormGenerator/src/types/genItem.ts:380:18           
+DividerGenItem            interface  src/components/FormGenerator/src/types/genItem.ts:387:18           
+GroupTitleGenItem         interface  src/components/FormGenerator/src/types/genItem.ts:392:18           
+CollapseGenItem           interface  src/components/FormGenerator/src/types/genItem.ts:396:18           
+TabGenItem                interface  src/components/FormGenerator/src/types/genItem.ts:402:18           
+RowGenItem                interface  src/components/FormGenerator/src/types/genItem.ts:407:18           
+CardGenItem               interface  src/components/FormGenerator/src/types/genItem.ts:413:18           
+TableGridGenItem          type       src/components/FormGenerator/src/types/genItem.ts:418:13           
+AutoCompleteProps         type       src/components/Jnpf/AutoComplete/index.ts:7:21                     
+ButtonProps               type       src/components/Jnpf/Button/index.ts:7:21                           
+FieldNames                interface  src/components/Jnpf/Cascader/src/Cascader.vue:6:20                 
+PopupSelectProps          type       src/components/Jnpf/PopupSelect/index.ts:9:21                      
+RelationFormProps         type       src/components/Jnpf/RelationForm/index.ts:7:21                     
+SwitchProps               type       src/components/Jnpf/Switch/index.ts:7:21                           
+TreeSelectProps           type       src/components/Jnpf/TreeSelect/index.ts:7:21                       
+UseLoadingOptions         interface  src/components/Loading/src/useLoading.ts:6:18                      
+ReturnInnerMethods        interface  src/components/Modal/src/typing.ts:22:18                           
+RegisterFn                type       src/components/Popup/src/typing.ts:16:13                           
+ReturnInnerMethods        interface  src/components/Popup/src/typing.ts:18:18                           
+PopupHeaderProps          interface  src/components/Popup/src/typing.ts:30:18                           
+PopupActionType           interface  src/components/Popup/src/typing.ts:139:18                          
+PreviewActions            interface  src/components/Preview/src/typing.ts:24:18                         
+ImageProps                interface  src/components/Preview/src/typing.ts:33:18                         
+ImageItem                 type       src/components/Preview/src/typing.ts:49:13                         
+ToCanvasFn                type       src/components/Qrcode/src/typing.ts:29:13                          
+Props                     interface  src/components/SimpleMenu/src/components/types.ts:3:18             
+FormSchema                type       src/components/Table/index.ts:10:15                                
+EditRecordRow             type       src/components/Table/index.ts:11:15                                
+ComponentProps            interface  src/components/Table/src/components/editable/CellComponent.ts:8:18 
+SortOrder                 type       src/components/Table/src/types/table.ts:10:21                      
+TableCurrentDataSource    interface  src/components/Table/src/types/table.ts:12:18                      
+ExpandedRowRenderRecord   interface  src/components/Table/src/types/table.ts:47:18                      
+ColumnFilterItem          interface  src/components/Table/src/types/table.ts:51:18                      
+PopConfirm                interface  src/components/Table/src/types/tableAction.ts:19:18                
+modelConfirm              interface  src/components/Table/src/types/tableAction.ts:40:18                
+ContextMenuItem           type       src/components/Tree/index.ts:6:15                                  
+TreeProps                 type       src/components/Tree/src/types/tree.ts:133:13                       
+IRNodeType                type       src/core/ai/agents/agent-scope.ts:18:13                            
+PromptVariable            interface  src/core/ai/llm/prompts.ts:21:18                                   
+LLMProvider               type       src/core/ai/llm/types.ts:19:13                                     
+LLMConfig                 interface  src/core/ai/llm/types.ts:26:18                                     
+ChatRole                  type       src/core/ai/llm/types.ts:48:13                                     
+ChatMessage               interface  src/core/ai/llm/types.ts:51:18                                     
+TokenUsage                interface  src/core/ai/llm/types.ts:75:18                                     
+ChatStreamChunk           interface  src/core/ai/llm/types.ts:99:18                                     
+ProviderUsageStats        interface  src/core/ai/llm/types.ts:161:18                                    
+AgentRole                 type       src/core/ai/pipeline/stages.ts:8:13                                
+StageHistoryEntry         interface  src/core/ai/pipeline/state-machine.ts:10:18                        
+PipelineStage             type       src/core/ai/services/pipeline-sse-types.ts:15:13                   
+ComponentEntry            type       src/core/component-registry/index.ts:20:15                         
+ComponentCategory         type       src/core/component-registry/index.ts:20:31                         
+PropSchema                type       src/core/component-registry/index.ts:20:50                         
+PropSchema                interface  src/core/component-registry/types.ts:52:18                         
+LiteralNode               interface  src/core/expression/parser.ts:26:18                                
+IdentifierNode            interface  src/core/expression/parser.ts:31:18                                
+MemberExprNode            interface  src/core/expression/parser.ts:36:18                                
+IndexExprNode             interface  src/core/expression/parser.ts:42:18                                
+CallExprNode              interface  src/core/expression/parser.ts:48:18                                
+UnaryExprNode             interface  src/core/expression/parser.ts:54:18                                
+BinaryExprNode            interface  src/core/expression/parser.ts:60:18                                
+LogicalExprNode           interface  src/core/expression/parser.ts:67:18                                
+ConditionalExprNode       interface  src/core/expression/parser.ts:74:18                                
+ChartWidgetType           type       src/core/ir/dashboard-types.ts:37:13                               
+BorderWidgetType          type       src/core/ir/dashboard-types.ts:40:13                               
+DecorationWidgetType      type       src/core/ir/dashboard-types.ts:43:13                               
+TextWidgetType            type       src/core/ir/dashboard-types.ts:46:13                               
+DataWidgetType            type       src/core/ir/dashboard-types.ts:49:13                               
+MediaWidgetType           type       src/core/ir/dashboard-types.ts:52:13                               
+ThreeDWidgetType          type       src/core/ir/dashboard-types.ts:55:13                               
+WidgetType                type       src/core/ir/dashboard-types.ts:58:13                               
+WidgetCategory            type       src/core/ir/dashboard-types.ts:76:13                               
+DashboardWidget           interface  src/core/ir/dashboard-types.ts:93:18                               
+WidgetPosition            interface  src/core/ir/dashboard-types.ts:121:18                              
+DashboardDataSource       interface  src/core/ir/dashboard-types.ts:133:18                              
+IRNode                    interface  src/core/ir/dependency-graph.ts:28:18                              
+FlowNodeType              type       src/core/ir/flow-types.ts:30:13                                    
+FlowNodeConfig            type       src/core/ir/flow-types.ts:42:13                                    
+StartNodeConfig           interface  src/core/ir/flow-types.ts:53:18                                    
+EndNodeConfig             interface  src/core/ir/flow-types.ts:58:18                                    
+ApprovalNodeConfig        interface  src/core/ir/flow-types.ts:63:18                                    
+ParallelNodeConfig        interface  src/core/ir/flow-types.ts:85:18                                    
+SubprocessNodeConfig      interface  src/core/ir/flow-types.ts:91:18                                    
+NotificationNodeConfig    interface  src/core/ir/flow-types.ts:98:18                                    
+ScriptNodeConfig          interface  src/core/ir/flow-types.ts:105:18                                   
+TimerNodeConfig           interface  src/core/ir/flow-types.ts:111:18                                   
+ApplicationIR             interface  src/core/ir/types.ts:15:18                                         
+PageIR                    type       src/core/ir/types.ts:20:13                                         
+ListPageIR                interface  src/core/ir/types.ts:46:18                                         
+ComponentMapping          interface  src/core/ir/types.ts:110:18                                        
+FieldConfig               interface  src/core/ir/types.ts:118:18                                        
+ActionIR                  interface  src/core/ir/types.ts:215:18                                        
+ExceptionEnum             enum       src/enums/exceptionEnum.ts:4:13                                    
+Mode                      type       src/enums/menuEnum.ts:25:13                                        
+SizeNumberEnum            enum       src/enums/sizeEnum.ts:7:13                                         
+ContextMenuItem           type       src/hooks/web/useContextMenu.ts:4:15                               
+NotifyApi                 interface  src/hooks/web/useMessage.tsx:10:18                                 
+NotificationPlacement     type       src/hooks/web/useMessage.tsx:22:21                                 
+IconType                  type       src/hooks/web/useMessage.tsx:23:21                                 
+ModalOptionsEx            interface  src/hooks/web/useMessage.tsx:24:18                                 
+ModalOptionsPartial       type       src/hooks/web/useMessage.tsx:27:13                                 
+PathAsPageEnum            type       src/hooks/web/usePage.ts:9:13                                      
+TabContentEnum            enum       src/layouts/default/tabs/types.ts:4:13                             
+DropMenu                  type       src/layouts/default/tabs/types.ts:9:15                             
+LayoutMapKey              type       src/router/helper/routeHelper.ts:14:13                             
+Component                 type       src/router/types.ts:4:13                                           
+MenuTag                   interface  src/router/types.ts:17:18                                          
+BEM                       type       src/utils/bem.ts:6:13                                              
+WithInstall               type       src/utils/index.ts:99:13                                           
+EventType                 type       src/utils/mitt.ts:6:13                                             
+Handler                   type       src/utils/mitt.ts:10:13                                            
+WildcardHandler           type       src/utils/mitt.ts:11:13                                            
+EventHandlerList          type       src/utils/mitt.ts:14:13                                            
+WildCardEventHandlerList  type       src/utils/mitt.ts:15:13                                            
+PropWrapper               type       src/utils/props.ts:11:13                                           
+BuildPropDefault          type       src/utils/props.ts:43:13                                           
+EventEmitter              type       src/utils/types.ts:15:13                                           
+AnyFunction               type       src/utils/types.ts:17:13                                           
+PartialReturnType         type       src/utils/types.ts:19:13                                           
+SFCWithInstall            type       src/utils/types.ts:21:13                                           
+Nullable                  type       src/utils/types.ts:23:13                                           
+RefElement                type       src/utils/types.ts:25:13                                           
+CustomizedHTMLElement     type       src/utils/types.ts:27:13                                           
+Indexable                 type       src/utils/types.ts:29:13                                           
+Hash                      type       src/utils/types.ts:33:13                                           
+TimeoutHandle             type       src/utils/types.ts:35:13                                           
+ComponentSize             type       src/utils/types.ts:37:13                                           
+StyleValue                type       src/utils/types.ts:39:13                                           
+BasicProps                interface  src/views/basic/home/components/props.ts:3:18                      
+LoginStateEnum            enum       src/views/basic/login/useLogin.ts:6:13                             
+PipelineAttachmentItem    interface  src/views/studio/api/studio/pipeline.ts:36:18                      
+UploadMaterialsResult     interface  src/views/studio/api/studio/pipeline.ts:44:18                      
+SkillReview               interface  src/views/studio/api/studio/skillQuality.ts:38:18                  
+InterRaterStats           interface  src/views/studio/api/studio/skillQuality.ts:50:18                  
+ReviewListResult          interface  src/views/studio/api/studio/skillQuality.ts:60:18                  
+LayerResult               interface  src/views/studio/api/studio/skillQuality.ts:86:18                  
+EvalRunDetail             interface  src/views/studio/api/studio/skillQuality.ts:93:18                  
+SkillRunRecord            interface  src/views/studio/api/studio/skills.ts:11:18                        
+AmendmentPatch            interface  src/views/studio/api/studio/skills.ts:102:18                       
+SSEMessage                interface  src/views/studio/composables/useSSE.ts:8:18                        
+IrStabilityState          type       src/views/studio/types/ir.ts:30:13                                 
+RequirementSpecPhase      type       src/views/studio/utils/requirementSpec.ts:10:13                    
+Unused exported enum members (4)
+POST    RequestEnum    src/enums/httpEnum.ts:16:3            
+PUT     RequestEnum    src/enums/httpEnum.ts:17:3            
+DELETE  RequestEnum    src/enums/httpEnum.ts:18:3            
+SCALE   MenuEventEnum  src/layouts/default/tabs/types.ts:24:3
+Duplicate exports (2)
+WebStorage|default               src/utils/cache/index.ts
+buildEventSourceUrl|buildSSEUrl  src/utils/http/sseUrl.ts
+
+ WARN  Configuration hints (15)
+
+
+ WARN  src/core/e2e/**               knip.json  Remove from ignore                                           
+**/__tests__/**               knip.json  Remove from ignore                                           
+mock/**                       knip.json  Remove from ignore                                           
+examples/**                   knip.json  Remove from ignore                                           
+dist/**                       knip.json  Remove from ignore                                           
+commitizen                    knip.json  Remove from ignoreDependencies                               
+czg                           knip.json  Remove from ignoreDependencies                               
+conventional-changelog-cli    knip.json  Remove from ignoreDependencies                               
+husky                         knip.json  Remove from ignoreDependencies                               
+lint-staged                   knip.json  Remove from ignoreDependencies                               
+rimraf                        knip.json  Remove from ignoreDependencies                               
+cross-env                     knip.json  Remove from ignoreDependencies                               
+src/main.ts                   knip.json  Remove redundant entry pattern                               
+vite.config.ts                knip.json  Remove redundant entry pattern                               
+.less                         knip.json  Compiled extension excluded by project (imports not followed)
+

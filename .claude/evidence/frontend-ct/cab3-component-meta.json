@@ -1,0 +1,533 @@
+{
+  "generatedAt": "2026-08-06T12:07:25.509Z",
+  "tsconfig": "D:\\JNPF-v52\\jnpf-web-vue3\\tsconfig.json",
+  "components": [
+    {
+      "file": "src/views/studio/components/AiChatPanel.vue",
+      "props": [
+        {
+          "name": "pipelineId",
+          "required": false,
+          "type": "number | undefined",
+          "description": ""
+        },
+        {
+          "name": "initialMessage",
+          "required": false,
+          "type": "string | undefined",
+          "description": ""
+        },
+        {
+          "name": "showObservatoryToggle",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "key",
+          "required": false,
+          "type": "string | number | symbol | undefined",
+          "description": ""
+        },
+        {
+          "name": "ref",
+          "required": false,
+          "type": "VNodeRef | undefined",
+          "description": ""
+        },
+        {
+          "name": "ref_for",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "ref_key",
+          "required": false,
+          "type": "string | undefined",
+          "description": ""
+        },
+        {
+          "name": "class",
+          "required": false,
+          "type": "unknown",
+          "description": ""
+        },
+        {
+          "name": "style",
+          "required": false,
+          "type": "unknown",
+          "description": ""
+        }
+      ],
+      "events": [
+        {
+          "name": "pipeline-complete",
+          "type": "any[]"
+        },
+        {
+          "name": "new-chat",
+          "type": "any[]"
+        },
+        {
+          "name": "pipeline-id-change",
+          "type": "any[]"
+        }
+      ],
+      "slots": [],
+      "exposed": [
+        "pipelineId",
+        "initialMessage",
+        "showObservatoryToggle",
+        "onPipeline-complete",
+        "onNew-chat",
+        "onPipeline-id-change",
+        "currentStage",
+        "stages",
+        "switchPipeline"
+      ]
+    },
+    {
+      "file": "src/components/Jnpf/InputTable/src/InputTable.vue",
+      "props": [
+        {
+          "name": "value",
+          "required": false,
+          "type": "unknown[] | undefined",
+          "description": ""
+        },
+        {
+          "name": "config",
+          "required": false,
+          "type": "Record<string, any> | undefined",
+          "description": ""
+        },
+        {
+          "name": "disabled",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "key",
+          "required": false,
+          "type": "string | number | symbol | undefined",
+          "description": ""
+        },
+        {
+          "name": "ref",
+          "required": false,
+          "type": "VNodeRef | undefined",
+          "description": ""
+        },
+        {
+          "name": "ref_for",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "ref_key",
+          "required": false,
+          "type": "string | undefined",
+          "description": ""
+        },
+        {
+          "name": "class",
+          "required": false,
+          "type": "unknown",
+          "description": ""
+        },
+        {
+          "name": "style",
+          "required": false,
+          "type": "unknown",
+          "description": ""
+        },
+        {
+          "name": "formData",
+          "required": false,
+          "type": "Record<string, any> | undefined",
+          "description": ""
+        },
+        {
+          "name": "relations",
+          "required": false,
+          "type": "Record<string, any> | undefined",
+          "description": ""
+        },
+        {
+          "name": "vModel",
+          "required": false,
+          "type": "string | undefined",
+          "description": ""
+        }
+      ],
+      "events": [
+        {
+          "name": "update:value",
+          "type": "any[]"
+        },
+        {
+          "name": "change",
+          "type": "any[]"
+        }
+      ],
+      "slots": [],
+      "exposed": [
+        "value",
+        "config",
+        "disabled",
+        "formData",
+        "relations",
+        "vModel",
+        "onUpdate:value",
+        "onChange",
+        "handleRelationForParent",
+        "submit",
+        "setTableFormData",
+        "setTableShowOrHide",
+        "setTableDisabled",
+        "resetTable"
+      ]
+    },
+    {
+      "file": "src/components/Form/src/BasicForm.vue",
+      "props": [
+        {
+          "name": "layout",
+          "required": false,
+          "type": "string | undefined",
+          "description": ""
+        },
+        {
+          "name": "labelAlign",
+          "required": false,
+          "type": "string | undefined",
+          "description": ""
+        },
+        {
+          "name": "model",
+          "required": false,
+          "type": "Recordable<any> | undefined",
+          "description": ""
+        },
+        {
+          "name": "size",
+          "required": false,
+          "type": "string | undefined",
+          "description": ""
+        },
+        {
+          "name": "showActionButtonGroup",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "showResetButton",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "showSubmitButton",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "labelWidth",
+          "required": false,
+          "type": "string | number | undefined",
+          "description": ""
+        },
+        {
+          "name": "fieldMapToTime",
+          "required": false,
+          "type": "FieldMapToTime | undefined",
+          "description": ""
+        },
+        {
+          "name": "schemas",
+          "required": false,
+          "type": "FormSchema[] | undefined",
+          "description": ""
+        },
+        {
+          "name": "mergeDynamicData",
+          "required": false,
+          "type": "Recordable<any> | undefined",
+          "description": ""
+        },
+        {
+          "name": "baseColProps",
+          "required": false,
+          "type": "Partial<ColEx> | undefined",
+          "description": ""
+        },
+        {
+          "name": "autoSetPlaceHolder",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "autoSubmitOnEnter",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "emptySpan",
+          "required": false,
+          "type": "number | Recordable<any> | undefined",
+          "description": ""
+        },
+        {
+          "name": "transformDateFunc",
+          "required": false,
+          "type": "Fn<any, any> | undefined",
+          "description": ""
+        },
+        {
+          "name": "rulesMessageJoinLabel",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "autoAdvancedLine",
+          "required": false,
+          "type": "number | undefined",
+          "description": ""
+        },
+        {
+          "name": "alwaysShowLines",
+          "required": false,
+          "type": "number | undefined",
+          "description": ""
+        },
+        {
+          "name": "key",
+          "required": false,
+          "type": "string | number | symbol | undefined",
+          "description": ""
+        },
+        {
+          "name": "ref",
+          "required": false,
+          "type": "VNodeRef | undefined",
+          "description": ""
+        },
+        {
+          "name": "ref_for",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "ref_key",
+          "required": false,
+          "type": "string | undefined",
+          "description": ""
+        },
+        {
+          "name": "class",
+          "required": false,
+          "type": "unknown",
+          "description": ""
+        },
+        {
+          "name": "style",
+          "required": false,
+          "type": "unknown",
+          "description": ""
+        },
+        {
+          "name": "disabled",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "tableAction",
+          "required": false,
+          "type": "TableActionType | undefined",
+          "description": ""
+        },
+        {
+          "name": "labelCol",
+          "required": false,
+          "type": "Partial<ColEx> | undefined",
+          "description": ""
+        },
+        {
+          "name": "wrapperCol",
+          "required": false,
+          "type": "Partial<ColEx> | undefined",
+          "description": ""
+        },
+        {
+          "name": "colon",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "hideRequiredMark",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "showAdvancedButton",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "resetButtonOptions",
+          "required": false,
+          "type": "Partial<Partial<ExtractPropTypes<{ prefixCls: StringConstructor; type: PropType<ButtonType>; htmlType: { type: PropType<ButtonHTMLType>; default: string; }; ... 12 more ...; onMousedown: { ...; }; }>>> | undefined",
+          "description": ""
+        },
+        {
+          "name": "submitButtonOptions",
+          "required": false,
+          "type": "Partial<Partial<ExtractPropTypes<{ prefixCls: StringConstructor; type: PropType<ButtonType>; htmlType: { type: PropType<ButtonHTMLType>; default: string; }; ... 12 more ...; onMousedown: { ...; }; }>>> | undefined",
+          "description": ""
+        },
+        {
+          "name": "actionColOptions",
+          "required": false,
+          "type": "Partial<ColEx> | undefined",
+          "description": ""
+        },
+        {
+          "name": "compact",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "baseRowStyle",
+          "required": false,
+          "type": "CSSProperties | undefined",
+          "description": ""
+        },
+        {
+          "name": "submitOnReset",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "submitOnChange",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "autoFocusFirstItem",
+          "required": false,
+          "type": "boolean | undefined",
+          "description": ""
+        },
+        {
+          "name": "resetFunc",
+          "required": false,
+          "type": "(() => Promise<void>) | undefined",
+          "description": ""
+        },
+        {
+          "name": "submitFunc",
+          "required": false,
+          "type": "(() => Promise<void>) | undefined",
+          "description": ""
+        },
+        {
+          "name": "rowProps",
+          "required": false,
+          "type": "Partial<ExtractPropTypes<{ align: PropType<\"middle\" | \"stretch\" | \"bottom\" | \"top\">; justify: PropType<\"space-around\" | \"space-between\" | \"center\" | \"end\" | \"start\">; prefixCls: StringConstructor; gutter: { ...; }; wrap: { ...; }; }>> | undefined",
+          "description": ""
+        }
+      ],
+      "events": [],
+      "slots": [],
+      "exposed": [
+        "layout",
+        "labelAlign",
+        "model",
+        "size",
+        "showActionButtonGroup",
+        "showResetButton",
+        "showSubmitButton",
+        "labelWidth",
+        "fieldMapToTime",
+        "schemas",
+        "mergeDynamicData",
+        "baseColProps",
+        "autoSetPlaceHolder",
+        "autoSubmitOnEnter",
+        "emptySpan",
+        "transformDateFunc",
+        "rulesMessageJoinLabel",
+        "autoAdvancedLine",
+        "alwaysShowLines",
+        "disabled",
+        "tableAction",
+        "labelCol",
+        "wrapperCol",
+        "colon",
+        "hideRequiredMark",
+        "showAdvancedButton",
+        "resetButtonOptions",
+        "submitButtonOptions",
+        "actionColOptions",
+        "compact",
+        "baseRowStyle",
+        "submitOnReset",
+        "submitOnChange",
+        "autoFocusFirstItem",
+        "resetFunc",
+        "submitFunc",
+        "rowProps",
+        "onSubmit",
+        "onReset",
+        "onAdvanced-change",
+        "onRegister",
+        "onField-value-change",
+        "getFormName",
+        "submit",
+        "setFieldsValue",
+        "resetFields",
+        "getFieldsValue",
+        "clearValidate",
+        "updateSchema",
+        "resetSchema",
+        "setProps",
+        "removeSchemaByField",
+        "appendSchemaByField",
+        "validateFields",
+        "validate",
+        "scrollToField",
+        "getBindValue",
+        "handleToggleAdvanced",
+        "handleEnterPress",
+        "formModel",
+        "defaultValueRef",
+        "advanceState",
+        "getRow",
+        "getProps",
+        "formElRef",
+        "getSchema",
+        "formActionType",
+        "setFormModel",
+        "getFormClass",
+        "getFormActionBindProps",
+        "fieldsIsAdvancedMap"
+      ]
+    }
+  ]
+}

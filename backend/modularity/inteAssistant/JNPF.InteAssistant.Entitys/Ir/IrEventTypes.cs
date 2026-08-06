@@ -87,8 +87,10 @@ public static class IrEventTypes
     public const string RequirementRefined = "RequirementRefined";
     // 步骤④：渲染需求分析说明书（文本+九步表引用），等用户确认
     public const string RequirementSpecRendered = "RequirementSpecRendered";
-    // CR-20260714-01 步骤⑤：用户确认需求说明书 → PM 终评 + Analyst Finalize → 进入架构设计
+    // CR-20260714-01 步骤⑤：用户确认需求说明书 → PM 终评 + Analyst Finalize
     public const string RequirementSpecConfirmed = "RequirementSpecConfirmed";
+    // CR-20260718：用户反馈作废旧版说明书 → Superseded
+    public const string RequirementSpecSuperseded = "RequirementSpecSuperseded";
 }
 
 public static class IrFragmentTypes
@@ -112,8 +114,11 @@ public static class IrFragmentTypes
     public const string TestSuite = "IR3_TestSuite";
 
     // ── CR-20260713-03：PM 核心流程重构 — 需求文本迭代 fragment ──
-    // 步骤①完善后的需求文本；步骤③二次完善覆盖此 fragment。fragmentId = requirement:{projectId}
+    // 步骤①完善后的需求文本；步骤③二次完善覆盖此 fragment。fragmentId = requirement:{pipelineId}
     public const string Requirement = "IR0_Requirement";
+
+    /// <summary>说明书 Phase/Version/Hash 投影（P4 阶段 3）。fragmentId = requirement-spec-state:{pipelineId}</summary>
+    public const string RequirementSpecState = "IR0_RequirementSpecState";
 }
 
 /// <summary>澄清问答阶段标识（ClarificationSet.stage 取值）。</summary>

@@ -125,7 +125,7 @@ export function useDeveloperSkill(pipelineId: Ref<number>, snapshots: Ref<IrFrag
     if (payload.phase === 'completed' || payload.phase === 'failed' || payload.phase === 'aborted') {
       void refreshAll();
       void loadStatus();
-      if (payload.skillId === DEPLOY_SKILL_ID || payload.percent >= 100) {
+      if (payload.skillId === DEPLOY_SKILL_ID || (payload.percent ?? 0) >= 100) {
         developerLoading.value = false;
         deployLoading.value = false;
         stopPolling();

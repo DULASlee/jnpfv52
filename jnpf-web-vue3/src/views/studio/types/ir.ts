@@ -93,9 +93,15 @@ export interface SseSkillProgressPayload {
   phase: string;
   eventId?: string;
   saStepName?: string;
-  percent: number;
+  percent?: number;
   message: string;
   code?: string;
+  technicalMessage?: string;
+  /** PM 流水线步骤 ①–⑤（skill_progress 扩展字段） */
+  pmStep?: number;
+  nextStep?: number;
+  clarRound?: number;
+  pipelineStage?: string;
 }
 
 export interface SseAnalysisCompletedPayload {

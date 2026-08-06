@@ -7,7 +7,17 @@ import {
   getPipelineDeliverables,
   startPreview,
 } from '../api/studio/pipeline';
+import { getRequirementSpecContent } from '../api/studio/skills';
 import { downloadByData } from '/@/utils/file/download';
+import {
+  isFormalRequirementSpec,
+  isRequirementSpecPath,
+  isRequirementSpecRendered,
+  pickRequirementSpecMarkdown,
+  REQUIREMENT_SPEC_PATH,
+  unwrapStudioApi,
+  type RequirementSpecContentPayload,
+} from '../utils/requirementSpec';
 import { message as antMessage } from 'ant-design-vue';
 
 export interface PipelineMaterialsContext {
@@ -121,12 +131,22 @@ export function usePipelineMaterials(
     const pid = pipelineId.value;
     if (!pid) return;
     try {
-      const relativePath = d.relativePath ?? d.RelativePath;
+      const relativePath = (d.relativePath ?? d.RelativePath ?? '').replace(/\\/g, '/');
+      if (isRequirementSpecPath(relativePath)) {
+        const payload = unwrapStudioApi<RequirementSpecContentPayload>(await getRequirementSpecContent(pid));
+        const text = pickRequirementSpecMarkdown(payload);
+        if (!text || !isRequirementSpecRendered(payload) || !isFormalRequirementSpec(text)) {
+          throw new Error('正式版需求说明书尚未就绪');
+        }
+        const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+        downloadByData(blob, d.fileName ?? d.FileName ?? REQUIREMENT_SPEC_PATH);
+        return;
+      }
       const res = await downloadPipelineDeliverableBlob(pid, relativePath);
       const blob = res?.data ?? res;
       downloadByData(blob, d.fileName ?? d.FileName ?? 'deliverable');
     } catch (e: any) {
-      antMessage.error(e?.message ?? '下载失败');
+      antMessage.error(e?.response?.data?.msg ?? e?.message ?? '下载失败');
     }
   }
 

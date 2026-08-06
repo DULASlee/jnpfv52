@@ -101,10 +101,10 @@ public class PmNewPipelineTests
         Assert.Equal(source, turn.Source);
     }
 
-    // ── UseNewPipeline 开关默认 false(向后兼容关键) ──
+    // ── UseNewPipeline 历史字段（RunAsync 已固定新主链，字段保留兼容）──
 
     [Fact]
-    public void RequirementAnalysisOptions_UseNewPipeline_DefaultFalse()
+    public void RequirementAnalysisOptions_UseNewPipeline_DefaultFalse_LegacyField()
     {
         var options = new RequirementAnalysisOptions();
         Assert.False(options.UseNewPipeline);

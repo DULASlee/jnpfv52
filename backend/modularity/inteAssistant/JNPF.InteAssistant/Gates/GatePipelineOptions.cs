@@ -63,6 +63,12 @@ public sealed class GatePipelineOptions
     /// <summary>语义评估使用的 LLM Provider（默认 deepseek）</summary>
     public string SemanticProvider { get; set; } = "deepseek";
 
+    /// <summary>语义评估输入最大字符数（超长附件截断，防 LLM 输出截断/乱码 JSON）</summary>
+    public int SemanticMaxInputChars { get; set; } = 24_000;
+
+    /// <summary>语义评估 LLM 最大输出 token</summary>
+    public int SemanticMaxOutputTokens { get; set; } = 4096;
+
     /// <summary>门控通过后自动触发 PM Skill（P2-B14）</summary>
     public bool AutoRunPmSkillOnGatePass { get; set; } = true;
 

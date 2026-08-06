@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using JNPF.Common.Core.MultiTenancy;
 using JNPF.DependencyInjection;
@@ -10,6 +10,7 @@ using JNPF.InteAssistant.Entitys.Dto.Skills;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Infrastructure.Background;
+using JNPF.InteAssistant.Infrastructure.Messaging;
 using JNPF.InteAssistant.Infrastructure.Security;
 using JNPF.InteAssistant.Ir;
 using JNPF.InteAssistant.Runtime;
@@ -41,6 +42,8 @@ public class SkillsApiService : IDynamicApiController, ITransient
     private readonly IRequirementAnalysisOrchestrator _requirementOrchestrator;
     private readonly PmSkillService _pm;
     private readonly ISaNineViewCompiler _compiler;
+    private readonly IPipelineSseChannelHub _sseHub;
+    private readonly ISseSenderFactory _sseSenderFactory;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -63,7 +66,9 @@ public class SkillsApiService : IDynamicApiController, ITransient
         ISaMaterializationService materializationService,
         IRequirementAnalysisOrchestrator requirementOrchestrator,
         ISaNineViewCompiler compiler,
-        PmSkillService pm)
+        PmSkillService pm,
+        IPipelineSseChannelHub sseHub,
+        ISseSenderFactory sseSenderFactory)
     {
         _db = db;
         _harness = harness;
@@ -81,6 +86,8 @@ public class SkillsApiService : IDynamicApiController, ITransient
         _requirementOrchestrator = requirementOrchestrator;
         _compiler = compiler;
         _pm = pm;
+        _sseHub = sseHub;
+        _sseSenderFactory = sseSenderFactory;
     }
 
     /// <summary>
@@ -117,8 +124,28 @@ public class SkillsApiService : IDynamicApiController, ITransient
         long pipelineId, [FromBody] RequirementAnalysisRunRequest? request)
     {
         var runId = Guid.NewGuid().ToString("N");
-        var taskName = $"req-analysis:{pipelineId}:{runId}";
+        // 每 pipeline 单任务：与门控 handoff 共用 req-analysis:{id}，避免 PM_Pipeline 与续跑双任务抢锁
+        var taskName = $"req-analysis:{pipelineId}";
         var tenantSnapshot = RequestContext.Capture(_httpContextAccessor).TenantId;
+
+        var userMessage = request?.UserMessage;
+        if (IsContinueResumeKeyword(userMessage))
+            userMessage = null;
+
+        // 已在跑：不 ReplaceChannel（否则前端连到新空通道而后台仍写旧通道），只让前端重连 SSE
+        if (_taskRunner.GetAllActive().ContainsKey(taskName))
+        {
+            return new
+            {
+                runId,
+                pipelineId,
+                status = "already_running",
+                message = "PM 需求分析仍在后台运行，请展开推理区查看进度，无需重复发送「继续」",
+            };
+        }
+
+        // 续跑/澄清作答必须先 ReplaceChannel，再启动任务（与门控主链一致）
+        var channel = _sseHub.ReplaceChannel(pipelineId);
 
         _taskRunner.Run(taskName, async (ctx, ct) =>
         {
@@ -133,9 +160,50 @@ public class SkillsApiService : IDynamicApiController, ITransient
                 UseNewPipeline = request?.UseNewPipeline == true,
                 PmClarificationAnswer = request?.PmClarificationAnswer,
                 SpecFeedback = request?.SpecFeedback,
-                UserMessage = request?.UserMessage,
+                UserMessage = userMessage,
             };
-            await _requirementOrchestrator.RunAsync(pipelineId, tenantId, projectId, options, ct);
+            using var sse = _sseSenderFactory.Create(pipelineId.ToString(), channel);
+            sse.TrySend("pm_skill_started", JsonSerializer.Serialize(new
+            {
+                pipelineId,
+                source = "requirement-analysis-run",
+            }, JsonOptions));
+            try
+            {
+                var result = await _requirementOrchestrator.RunAsync(
+                    pipelineId, tenantId, projectId, options, ct);
+                if (result.Status is "failed" or "gate-rejected")
+                {
+                    sse.TrySend("pm_skill_failed", JsonSerializer.Serialize(new
+                    {
+                        message = !string.IsNullOrWhiteSpace(result.ErrorMessage)
+                            ? result.ErrorMessage
+                            : result.GateHint ?? "PM 需求分析未能继续，请检查需求材料后重试。",
+                        errorCode = result.Status == "gate-rejected"
+                            ? "PM_GATE_REJECTED"
+                            : "PM_PIPELINE_FAILED",
+                    }, JsonOptions));
+                }
+                sse.Complete();
+            }
+            catch (OperationCanceledException)
+            {
+                sse.TrySend("pm_skill_failed", JsonSerializer.Serialize(new
+                {
+                    message = "PM 需求分析超时或被取消，请稍后重试。",
+                    errorCode = "PM_PIPELINE_TIMEOUT",
+                }, JsonOptions));
+                sse.Complete();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+            {
+                sse.TrySend("pm_skill_failed", JsonSerializer.Serialize(new
+                {
+                    message = ex.Message,
+                    errorCode = "PM_PIPELINE_FAILED",
+                }, JsonOptions));
+                sse.Complete();
+            }
         }, timeout: TimeSpan.FromMinutes(35));
 
         return new
@@ -144,6 +212,52 @@ public class SkillsApiService : IDynamicApiController, ITransient
             pipelineId,
             status = "running",
             message = "三轮需求分析编排器已启动",
+        };
+    }
+
+    /// <summary>从当前 IR 重新渲染 02-requirement-spec.md（预览/下载前刷新旧版/raw 落盘）。</summary>
+    [HttpPost("requirement-analysis/{pipelineId:long}/refresh-spec")]
+    public async Task<object> RefreshRequirementSpecDeliverableAsync(
+        long pipelineId, CancellationToken ct = default)
+    {
+        var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
+        var result = await _requirementOrchestrator.RefreshSpecDeliverableAsync(
+            pipelineId, tenantId, projectId, ct);
+        if (!result.Success)
+            throw Oops.Bah(result.ErrorMessage ?? "无法刷新需求说明书");
+        return new
+        {
+            pipelineId,
+            status = "refreshed",
+            relativePath = result.RelativePath,
+            contentLength = result.ContentLength,
+            rendered = result.Rendered,
+        };
+    }
+
+    /// <summary>刷新并返回正式版需求说明书 Markdown 全文（预览专用）。</summary>
+    [HttpGet("requirement-analysis/{pipelineId:long}/spec-content")]
+    public async Task<object> GetRequirementSpecContentAsync(
+        long pipelineId, CancellationToken ct = default)
+    {
+        var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
+        var result = await _requirementOrchestrator.GetRequirementSpecContentAsync(
+            pipelineId, tenantId, projectId, ct);
+        if (!result.Success || string.IsNullOrWhiteSpace(result.Markdown))
+            throw Oops.Bah(result.ErrorMessage ?? "无法加载正式版需求说明书");
+        return new
+        {
+            pipelineId,
+            relativePath = result.RelativePath,
+            contentLength = result.ContentLength,
+            rendered = result.Rendered,
+            markdown = result.Markdown,
+            phase = result.Phase?.ToString(),
+            pipelineStage = result.PipelineStage?.ToString(),
+            contentHash = result.ContentHash,
+            canUserConfirm = result.CanUserConfirm,
+            canUserFeedback = result.CanUserFeedback,
+            awaitingUser = result.AwaitingUser,
         };
     }
 
@@ -248,67 +362,38 @@ public class SkillsApiService : IDynamicApiController, ITransient
         };
     }
 
+    /// <summary>
+    /// <para><b>[已废止]</b> 旧 analyst 确认路径。</para>
+    /// <para>新 PM 主链请用 <c>POST /api/studio/skills/requirement-analysis/{pipelineId}/run</c>（用户确认后自动 Finalize）。</para>
+    /// </summary>
+    [Obsolete("Use POST requirement-analysis/{pipelineId}/run")]
     [HttpPost("analyst/{pipelineId:long}/confirm-requirement-spec")]
-    public async Task<object> ConfirmRequirementSpecAsync(long pipelineId, [FromBody] ConfirmRequirementSpecRequest? request)
+    public async Task<object> ConfirmRequirementSpecAsync(
+        long pipelineId, [FromBody] ConfirmRequirementSpecRequest? request, CancellationToken ct = default)
     {
         var (projectId, tenantId) = await ResolveProjectAsync(pipelineId);
-        var snapshots = await _eventStore.ListSnapshotsAsync(projectId, tenantId, pipelineId.ToString());
-        var eventSpecs = snapshots
-            .Where(s => s.FragmentType == IrFragmentTypes.EventSpec && s.StabilityState is IrStabilityStates.Stable or IrStabilityStates.Locked)
-            .ToList();
-
-        if (eventSpecs.Count == 0)
-            throw Oops.Bah("无稳定 EventSpec，请先完成 Analyst Skill 生成需求分析说明书");
-
-        var pmReview = await LoadLatestPmReviewAsync(projectId, tenantId, pipelineId);
-        var forceConfirm = request?.ForceConfirm == true;
-        if (!forceConfirm && (pmReview == null || pmReview.Score < 85))
-        {
-            var gapsText = pmReview?.Gaps is { Count: > 0 }
-                ? "；缺口：" + string.Join("；", pmReview.Gaps)
-                : "；请等待 PM 终评完成或选择强制确认";
-            throw Oops.Bah($"PM 终评分数不足 85，当前分数：{pmReview?.Score.ToString() ?? "未评审"}{gapsText}");
-        }
-
-        await _eventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
-        {
-            EventType = IrEventTypes.StageConfirmed,
-            Payload = JsonSerializer.Serialize(new
+        var result = await _requirementOrchestrator.RunAsync(
+            pipelineId,
+            tenantId,
+            projectId,
+            new RequirementAnalysisOptions
             {
-                stage = "S2",
-                confirmedBy = "user-hitl",
-                eventSpecCount = eventSpecs.Count,
-                forceConfirm,
-                pmScore = pmReview?.Score,
-            }, JsonOptions),
-            SkillId = "analyst-skill",
-        });
+                ForceConfirm = request?.ForceConfirm == true,
+                UseNewPipeline = true,
+            },
+            ct);
 
-        if (request?.AutoRunDesign == true)
-            await RunSkillAsync(DesignSkillIds.Architect, pipelineId, null);
+        if (string.Equals(result.Status, "failed", StringComparison.OrdinalIgnoreCase))
+            throw Oops.Bah(result.ErrorMessage ?? "需求说明书确认失败");
 
-        await _experience.RecordReviewAsync(
-            projectId, tenantId, "analyst-skill",
-            request?.RunId ?? $"hitl-requirement-spec-{pipelineId}",
-            "approved",
-            JsonSerializer.Serialize(new
-            {
-                source = "confirm-requirement-spec",
-                autoRunDesign = request?.AutoRunDesign == true,
-                eventSpecCount = eventSpecs.Count,
-                forceConfirm,
-                pmScore = pmReview?.Score,
-            }, JsonOptions));
-
-        var taskName = $"sa-materialize:{pipelineId}";
-        var tenantSnapshot = RequestContext.Capture(_httpContextAccessor).TenantId;
-        _taskRunner.Run(taskName, async (ctx, ct) =>
+        return new
         {
-            var triple = await _tripleResolver.ResolveAsync(pipelineId, ctx, tenantSnapshot, ct);
-            await _materializationService.MaterializeAfterConfirmAsync(triple, ct);
-        }, timeout: TimeSpan.FromMinutes(10));
-
-        return new { status = "confirmed", stage = "S2", autoRunDesign = request?.AutoRunDesign == true, materialization = "enqueued" };
+            status = result.Status,
+            stage = "S2",
+            deprecated = true,
+            message = "已转调 requirement-analysis 编排器；请优先使用 POST requirement-analysis/{pipelineId}/run",
+            autoRunDesign = request?.AutoRunDesign == true,
+        };
     }
 
     [HttpPost("requirement-analysis/{pipelineId:long}/amend/propose")]
@@ -1058,6 +1143,16 @@ public class SkillsApiService : IDynamicApiController, ITransient
             status = "running",
             message = "Skill 已在后台启动",
         };
+    }
+
+    private static bool IsContinueResumeKeyword(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var trimmed = text.Trim();
+        return trimmed.Equals("继续", StringComparison.Ordinal)
+            || trimmed.Equals("继续分析", StringComparison.Ordinal)
+            || trimmed.Equals("ok", StringComparison.OrdinalIgnoreCase)
+            || trimmed.Equals("好的", StringComparison.Ordinal);
     }
 
     private async Task<(string ProjectId, string TenantId)> ResolveProjectAsync(

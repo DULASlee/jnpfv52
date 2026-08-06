@@ -6,6 +6,8 @@ import {
   DESIGN_SKILL_IDS,
   getDesignStatus,
   getLlmBudget,
+  normalizeDesignOrchestratorStatus,
+  normalizeLlmBudgetInfo,
   runDesignOrchestrator,
   type DesignOrchestratorStatus,
   type DesignSkillPhaseStatus,
@@ -147,7 +149,7 @@ export function useDesignSkills(pipelineId: Ref<number>, snapshots: Ref<IrFragme
     statusLoading.value = true;
     try {
       const res = await getDesignStatus(pipelineId.value);
-      const data = unwrap(res);
+      const data = normalizeDesignOrchestratorStatus(unwrap(res) as unknown as Record<string, unknown>);
       orchestratorStatus.value = data;
       if (data.constraintCriticalCount != null) constraintCritical.value = data.constraintCriticalCount;
       if (data.constraintWarningCount != null) constraintWarning.value = data.constraintWarningCount;
@@ -159,11 +161,13 @@ export function useDesignSkills(pipelineId: Ref<number>, snapshots: Ref<IrFragme
   }
 
   async function loadBudget() {
-    if (!projectId.value) return;
+    // R12：预算按真实 ProjectId 查（勿用 pipelineId 冒充）
+    const pid = orchestratorStatus.value?.projectId || projectId.value;
+    if (!pid) return;
     budgetLoading.value = true;
     try {
-      const res = await getLlmBudget(projectId.value);
-      budgetInfo.value = unwrap(res);
+      const res = await getLlmBudget(pid);
+      budgetInfo.value = normalizeLlmBudgetInfo(unwrap(res) as unknown as Record<string, unknown>);
     } catch {
       /* 后端未迁移时静默 */
     } finally {
@@ -172,7 +176,8 @@ export function useDesignSkills(pipelineId: Ref<number>, snapshots: Ref<IrFragme
   }
 
   async function refreshDesignContext() {
-    await Promise.all([loadStatus(), loadBudget()]);
+    await loadStatus();
+    await loadBudget();
   }
 
   function startPolling() {
@@ -256,8 +261,39 @@ export function useDesignSkills(pipelineId: Ref<number>, snapshots: Ref<IrFragme
     notifyConstraintViolations(parsed);
   }
 
+  function buildDesignBlockedMessage(status: DesignOrchestratorStatus | null): string {
+    if (!status) return '无法读取设计门禁状态，请刷新后重试';
+    if (status.designComplete) return '设计阶段已完成，无需重复启动';
+    if (!status.analysisFinalized) return '需求分析尚未 Finalize，请先确认需求说明书';
+    if (!status.hasEntityFields) return '实体字段尚未投影（ai_entity_field 为空），请先完成 Round 3 工程保障';
+    if (!status.qualityGatePasses) {
+      if ((status.qualityCriticalCount ?? 0) > 0)
+        return `质量一致性存在 ${status.qualityCriticalCount} 条 CRITICAL，禁止启动设计`;
+      return `质量门控未通过（总分 ${status.qualityTotalScore ?? '—'}，须≥60）`;
+    }
+    if (status.pmReviewGatePasses === false) {
+      if (status.pmReviewScore != null && status.pmReviewScore > 0)
+        return `PM 终评 ${status.pmReviewScore} 分（须≥85），请补充说明书或使用强制确认`;
+      return 'PM 终评尚未通过，请先完成需求说明书确认';
+    }
+    if (budgetInfo.value?.canRunDesign === false) {
+      const b = budgetInfo.value;
+      const pct = b.tokenBudget > 0 ? ((b.tokenConsumed / b.tokenBudget) * 100).toFixed(1) : '—';
+      return `LLM Token 预算不足（已用 ${b.tokenConsumed}/${b.tokenBudget}，${pct}%，须低于 95% 阈值 ${b.reserveThreshold}）`;
+    }
+    return '设计前置条件未满足（canRunDesign=false）';
+  }
+
   async function runDesign(): Promise<boolean> {
-    if (!pipelineId.value || designLoading.value || !canRunDesign.value) return false;
+    if (!pipelineId.value) return false;
+    await refreshDesignContext();
+    if (designComplete.value) return true;
+    if (designLoading.value) return false;
+    if (!canRunDesign.value) {
+      const msg = buildDesignBlockedMessage(orchestratorStatus.value);
+      lastError.value = msg;
+      throw new Error(msg);
+    }
     designLoading.value = true;
     lastError.value = null;
     abortController = new AbortController();
@@ -346,6 +382,7 @@ export function useDesignSkills(pipelineId: Ref<number>, snapshots: Ref<IrFragme
     refreshDesignContext,
     checkConstraints,
     applyConstraintEvent,
+    buildDesignBlockedMessage,
     runDesign,
     handleSkillProgress,
     phaseForSkill,

@@ -124,5 +124,13 @@ public static class ExperienceR4Tests
 
         public Task EnsureProjectAsync(string projectId, string tenantId, string projectName, string creatorUserId, CancellationToken ct = default)
             => Task.CompletedTask;
+
+        public Task<string?> GetLatestEventPayloadAsync(
+            string projectId, string tenantId, string pipelineId, string eventType, CancellationToken ct = default)
+            => Task.FromResult<string?>(null);
+
+        public Task<List<string>> ListFullEventPayloadsAsync(
+            string projectId, string tenantId, string pipelineId, string eventType, CancellationToken ct = default)
+            => Task.FromResult(new List<string>());
     }
 }

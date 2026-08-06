@@ -5,6 +5,7 @@
 using JNPF.DependencyInjection;
 using JNPF.InteAssistant.Entitys.Dto.InteAssistant;
 using JNPF.InteAssistant.Interfaces;
+using JNPF.InteAssistant.Llm;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -56,6 +57,30 @@ public class SemanticFitnessValidator : ITransient
     public async Task<SemanticFitnessResult> EvaluateAsync(
         string text, GatePipelineOptions options, CancellationToken ct = default)
     {
+        var evaluationText = PrepareEvaluationText(text, options);
+        SemanticFitnessResult? lastJsonErr = null;
+
+        for (var attempt = 1; attempt <= 2; attempt++)
+        {
+            var result = await EvaluateOnceAsync(evaluationText, options, attempt, ct);
+            if (result.NextStepGuidance?.Contains("GATE_JSON_ERR", StringComparison.Ordinal) != true
+                && result.NextStepGuidance?.Contains("GATE_SCHEMA_ERR", StringComparison.Ordinal) != true)
+            {
+                return result;
+            }
+
+            lastJsonErr = result;
+            _logger.LogWarning(
+                "语义评估 JSON 解析失败，尝试重试 attempt={Attempt}/{Max}",
+                attempt, 2);
+        }
+
+        return lastJsonErr ?? FailClosed("需求评估结果格式异常，请稍后重试。", "GATE_JSON_ERR");
+    }
+
+    private async Task<SemanticFitnessResult> EvaluateOnceAsync(
+        string text, GatePipelineOptions options, int attempt, CancellationToken ct)
+    {
         try
         {
             var systemPrompt = BuildSystemPrompt(options);
@@ -65,8 +90,8 @@ public class SemanticFitnessValidator : ITransient
                 ProviderCode = options.SemanticProvider,
                 SystemPrompt = systemPrompt,
                 Messages = new List<ChatMessage> { new() { Role = "user", Content = text } },
-                MaxTokens = 3000,
-                Temperature = 0.1,
+                MaxTokens = Math.Max(1024, options.SemanticMaxOutputTokens),
+                Temperature = attempt == 1 ? 0.1 : 0.0,
                 ResponseFormat = "json",
                 // 大附件评估：给 primary（deepseek）足够瞬时重试；勿 1 次失败就掉进失效 fallback
                 MaxRetries = 3,
@@ -76,33 +101,18 @@ public class SemanticFitnessValidator : ITransient
             if (!response.IsSuccess)
             {
                 _logger.LogWarning("语义评估 LLM 调用失败: {Error}", response.Error);
-                // #region agent log
-                try
-                {
-                    var dbg = System.Text.Json.JsonSerializer.Serialize(new
-                    {
-                        sessionId = "ead5d0",
-                        runId = "gate-llm",
-                        hypothesisId = "H3",
-                        location = "SemanticFitnessValidator.EvaluateAsync:fail",
-                        message = "GATE_LLM_ERR",
-                        data = new
-                        {
-                            provider = options.SemanticProvider,
-                            error = response.Error,
-                            modelUsed = response.ModelUsed,
-                            latencyMs = response.LatencyMs
-                        },
-                        timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                    });
-                    System.IO.File.AppendAllText(@"D:\JNPF-v52\debug-ead5d0.log", dbg + "\n");
-                }
-                catch { }
-                // #endregion
                 return FailClosed("需求评估服务暂时不可用，请稍后重试。", "GATE_LLM_ERR");
             }
 
-            // 宽容 JSON 提取（缺陷2修复）
+            if (string.IsNullOrWhiteSpace(response.Content))
+            {
+                _logger.LogWarning(
+                    "语义评估 LLM 返回空内容 provider={Provider} model={Model} tokensOut={Out}",
+                    options.SemanticProvider, response.ModelUsed, response.TokensOut);
+                return FailClosed("需求评估服务返回空结果，请稍后重试。", "GATE_LLM_EMPTY");
+            }
+
+            // 宽容 JSON 提取（LlmJsonFixer + 尾逗号修复）
             string json;
             try
             {
@@ -110,13 +120,20 @@ public class SemanticFitnessValidator : ITransient
             }
             catch (JsonException ex)
             {
-                // LLM 输出截断/格式异常（JsonReaderException 等）→ fail-closed，避免 GATE_UNEXPECTED
-                _logger.LogWarning("JSON 提取失败（LLM 输出可能截断）: {Message}", ex.Message);
+                _logger.LogWarning(
+                    "JSON 提取失败 attempt={Attempt} snippet={Snippet}: {Message}",
+                    attempt,
+                    TruncateForLog(response.Content, 400),
+                    ex.Message);
                 return FailClosed("需求评估结果格式异常，请稍后重试。", "GATE_JSON_ERR");
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogWarning("JSON 提取失败: {Message}", ex.Message);
+                _logger.LogWarning(
+                    "JSON 提取失败 attempt={Attempt} snippet={Snippet}: {Message}",
+                    attempt,
+                    TruncateForLog(response.Content, 400),
+                    ex.Message);
                 return FailClosed("需求评估结果格式异常，请稍后重试。", "GATE_JSON_ERR");
             }
 
@@ -128,11 +145,11 @@ public class SemanticFitnessValidator : ITransient
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogWarning("JSON 结构校验失败: {Message}", ex.Message);
+                _logger.LogWarning("JSON 结构校验失败 attempt={Attempt}: {Message}", attempt, ex.Message);
                 return FailClosed("需求评估结果结构异常，请稍后重试。", "GATE_SCHEMA_ERR");
             }
 
-            // 硬阈值覆盖（缺陷3修复 — 通过 with 表达式保持不可变性）
+            // 硬阈值覆盖
             return PostProcess(result, options);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -145,6 +162,22 @@ public class SemanticFitnessValidator : ITransient
             _logger.LogError(ex, "语义评估未预期异常: {Message}", ex.Message);
             return FailClosed("需求评估服务异常，请稍后重试。", "GATE_UNEXPECTED");
         }
+    }
+
+    private static string PrepareEvaluationText(string text, GatePipelineOptions options)
+    {
+        var max = Math.Max(4000, options.SemanticMaxInputChars);
+        if (string.IsNullOrWhiteSpace(text) || text.Length <= max)
+            return text;
+
+        return text[..max] +
+               "\n\n【系统提示】以上需求材料因长度已截断至前段内容，请基于可见片段评估语义合格性。";
+    }
+
+    private static string TruncateForLog(string? text, int max)
+    {
+        if (string.IsNullOrEmpty(text)) return "(空)";
+        return text.Length <= max ? text : text[..max] + "…";
     }
 
     // ═══════════════════════════════════════════
@@ -169,16 +202,25 @@ public class SemanticFitnessValidator : ITransient
         - 表格的列头可直接作为字段来源
         - 截图中识别出的界面元素可作为字段来源
 
-        【输出格式——严格JSON，不要输出任何其他内容】
+        【输出格式——严格合法 JSON，禁止 markdown/注释/中文占位符】
+        - passed 必须是 true 或 false（布尔值，不要写「true或false」文字）
+        - score 必须是 0-100 的数字
+        - level 必须是 sufficient、partial、insufficient 三者之一
+        - severity 必须是 critical 或 warning
+        - 只输出一个 JSON 对象，不要任何解释文字
+
+        示例（结构参考，请按实际评估结果填写）：
         {
-          "passed": true或false,
-          "score": 0到100的数字,
-          "level": "sufficient|partial|insufficient",
+          "passed": true,
+          "score": 85,
+          "level": "sufficient",
           "identified": [
-            {"category": "业务事件|角色|数据实体|字段|流程", "description": "描述", "evidence": "原文证据"}
+            {"category": "业务事件", "description": "工人提交工序报工", "evidence": "原文片段"},
+            {"category": "角色", "description": "车间工人", "evidence": "原文片段"},
+            {"category": "数据实体", "description": "工单", "evidence": "原文片段"}
           ],
           "missing": [
-            {"category": "类别", "description": "描述", "severity": "critical或warning", "howToFix": "具体的修复建议，要给出示例"}
+            {"category": "业务事件", "description": "缺失说明", "severity": "critical", "howToFix": "具体补充建议"}
           ],
           "nextStepGuidance": "整体改进建议"
         }
@@ -190,52 +232,19 @@ public class SemanticFitnessValidator : ITransient
     // ═══════════════════════════════════════════
 
     /// <summary>
-    /// 宽容提取：从 LLM 原始输出中提取 JSON
-    /// 处理：markdown 包裹、前后文字、截断
+    /// 宽容提取：从 LLM 原始输出中提取 JSON（复用 LlmJsonFixer 修复截断/尾逗号/markdown 包裹）
     /// </summary>
     private static string ExtractJson(string rawContent)
     {
         if (string.IsNullOrWhiteSpace(rawContent))
             throw new InvalidOperationException("LLM 返回空内容");
 
-        var cleaned = rawContent.Trim();
+        var fixedJson = LlmJsonFixer.FixJsonResponse(rawContent);
+        if (!string.IsNullOrWhiteSpace(fixedJson))
+            return fixedJson;
 
-        // Step 1: 去掉 markdown 代码块包裹
-        if (cleaned.StartsWith("```json"))
-            cleaned = cleaned[7..];
-        else if (cleaned.StartsWith("```"))
-            cleaned = cleaned[3..];
-        if (cleaned.EndsWith("```"))
-            cleaned = cleaned[..^3];
-        cleaned = cleaned.Trim();
-
-        // Step 2: 提取第一个 { 到最后一个 } 的内容
-        var start = cleaned.IndexOf('{');
-        var end = cleaned.LastIndexOf('}');
-
-        if (start < 0 || end <= start)
-            throw new InvalidOperationException(
-                $"LLM 返回内容中未找到有效 JSON: {cleaned[..Math.Min(200, cleaned.Length)]}");
-
-        var candidate = cleaned[start..(end + 1)];
-
-        // Step 3: 预校验——确保是合法 JSON
-        try
-        {
-            using var doc = JsonDocument.Parse(candidate);
-            return candidate;
-        }
-        catch (JsonException)
-        {
-            // 尝试修复常见问题：尾逗号（最常见的 LLM 错误）
-            var fixed_ = candidate
-                .Replace(",\n}", "\n}")
-                .Replace(",\r\n}", "\r\n}")
-                .Replace(",}", "}");
-
-            using var doc = JsonDocument.Parse(fixed_);
-            return fixed_;
-        }
+        throw new JsonException(
+            $"LLM 返回内容无法解析为 JSON: {TruncateForLog(rawContent, 200)}");
     }
 
     // ═══════════════════════════════════════════

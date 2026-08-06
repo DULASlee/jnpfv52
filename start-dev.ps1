@@ -185,7 +185,9 @@ function Clear-DevEnvironment {
     )
 
     try {
-        $cimProcs = Get-CimInstance Win32_Process -ErrorAction Stop |
+        # -OperationTimeoutSec: WMI provider can hang indefinitely (observed 2026-07-18);
+        # timeout -> CimException -> name-only fallback below instead of blocking startup forever
+        $cimProcs = Get-CimInstance Win32_Process -OperationTimeoutSec 10 -ErrorAction Stop |
             Where-Object { $targetNames -contains $_.Name }
     } catch {
         Write-Host "  WARN: CIM scan failed ($($_.Exception.Message)) - name-only fallback" -ForegroundColor DarkYellow
@@ -611,7 +613,7 @@ if (Test-Path $viteCache) {
 Start-DevWindow -Title 'JNPF PC :3100' -WorkDir $frontendDir -Command `
     "Write-Host 'Vite PC starting...'; pnpm dev"
 
-$null = Wait-HttpReady -Url 'http://127.0.0.1:3100' -TimeoutSec 90 -Label 'PC frontend :3100'
+$null = Wait-HttpReady -Url 'http://127.0.0.1:3100' -TimeoutSec 180 -Label 'PC frontend :3100'
 
 # ================================================================
 # Step 7/8: 启动数字大屏
@@ -635,7 +637,7 @@ if (-not (Test-Path (Join-Path $datascreenDir 'node_modules'))) {
 Start-DevWindow -Title 'JNPF DataV :3102' -WorkDir $datascreenDir -Command `
     "Write-Host 'DataScreen starting on :3102...'; pnpm dev"
 
-$null = Wait-HttpReady -Url 'http://127.0.0.1:3102/DataV/' -TimeoutSec 90 -Label 'DataScreen :3102'
+$null = Wait-HttpReady -Url 'http://127.0.0.1:3102/DataV/' -TimeoutSec 180 -Label 'DataScreen :3102'
 
 # ================================================================
 # Step 8/8: 启动 UniApp H5（小程序 Web 预览）

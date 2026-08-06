@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/main.ts"],
+  "project": ["src/**/*.{ts,tsx,vue}"],
+  "ignore": [
+    "src/core/compiler/**",
+    "src/core/e2e/**",
+    "**/__tests__/**",
+    "mock/**",
+    "examples/**",
+    "dist/**",
+    "build/**",
+    "types/**"
+  ],
+  "include": ["files"],
+  "vite": false,
+  "vue": true,
+  "eslint": false
+}

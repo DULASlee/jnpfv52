@@ -8,6 +8,7 @@ using JNPF.InteAssistant.Entitys.Dto.Ir;
 using JNPF.InteAssistant.Entitys.Dto.Skills;
 using JNPF.InteAssistant.Entitys.Ir;
 using JNPF.InteAssistant.Gates;
+using JNPF.InteAssistant.Llm;
 using JNPF.InteAssistant.Sa;
 using JNPF.InteAssistant.Skills.Cognitive;
 using Microsoft.Extensions.Logging;
@@ -36,18 +37,21 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
     private readonly IRequirementEvolutionContext? _evolutionContext;
     private readonly RequirementGateService _gate;
     private readonly IDomainSeedService _seedService;
+    private readonly IRequirementAnalysisLlmInvoker _llmInvoker;
 
     public PmSkillService(
         ICognitiveSkillToolkit toolkit,
         ILogger<PmSkillService> logger,
         RequirementGateService gate,
         IDomainSeedService seedService,
+        IRequirementAnalysisLlmInvoker llmInvoker,
         IRequirementEvolutionContext? evolutionContext = null)
         : base(toolkit)
     {
         _logger = logger;
         _gate = gate;
         _seedService = seedService;
+        _llmInvoker = llmInvoker;
         _evolutionContext = evolutionContext;
     }
 
@@ -230,7 +234,7 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             ResponseFormat = "json",
         };
 
-        var response = await ChatWithSchemaRetryAsync(request, "requirement-enhance", ct);
+        var response = await ChatWithSchemaRetryAsync(context, request, "requirement-enhance", ct);
 
         if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
         {
@@ -443,7 +447,11 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             ResponseFormat = "json",
         };
 
-        var response = await Llm.ChatAsync(request, ct);
+        var response = await _llmInvoker.ChatAsync(
+            context,
+            request,
+            new PmLlmCallOptions { Purpose = "pspec-dt", ProviderTask = SkillId },
+            ct);
         if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
         {
             _logger.LogWarning(
@@ -617,7 +625,7 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             ResponseFormat = "json",
         };
 
-        var response = await ChatWithSchemaRetryAsync(request, "requirement-refine", ct);
+        var response = await ChatWithSchemaRetryAsync(context, request, "requirement-refine", ct);
 
         if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
         {
@@ -708,7 +716,8 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             TimeoutMs = Llm.ResolveTimeoutMs(SkillId),
         };
 
-        var (bodyText, metaJson, hasMeta) = await ConsumeStreamWithMetaAsync(request, onToken, ct);
+        var (bodyText, metaJson, hasMeta) = await ConsumeStreamWithMetaAsync(
+            context, "refine-from-analysis", request, onToken, ct);
 
         _logger.LogInformation(
             "pm-skill RefineFromAnalysisStream 完成 bodyLen={BodyLen} hasMeta={HasMeta} tenant={TenantId} pipeline={PipelineId}",
@@ -823,8 +832,8 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             // 不设 ResponseFormat=json — 第一段是 markdown，不能强制 JSON
         };
 
-        // ── 3. 流式消费（共享内核：正文实时推 SSE，===META=== 缓冲待解析）──
-        var (bodyText, metaJson, hasMeta) = await ConsumeStreamWithMetaAsync(request, onToken, ct);
+        var (bodyText, metaJson, hasMeta) = await ConsumeStreamWithMetaAsync(
+            context, "enhance-requirement-stream", request, onToken, ct);
 
         _logger.LogInformation(
             "pm-skill EnhanceRequirementStream 完成 bodyLen={BodyLen} hasMeta={HasMeta} tenant={TenantId} pipeline={PipelineId}",
@@ -963,6 +972,8 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
     /// </summary>
     /// <returns>(bodyText, metaJson, hasMeta)</returns>
     private async Task<(string Body, string MetaJson, bool HasMeta)> ConsumeStreamWithMetaAsync(
+        SkillContext context,
+        string purpose,
         ChatCompletionRequest request,
         Func<string, CancellationToken, Task> onToken,
         CancellationToken ct)
@@ -973,7 +984,11 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
         const string metaStart = "===META===";
         var inMeta = false;
 
-        await foreach (var json in Llm.ChatStreamAsync(request, ct))
+        await foreach (var json in _llmInvoker.ChatStreamAsync(
+            context,
+            request,
+            new PmLlmCallOptions { Purpose = purpose, ProviderTask = SkillId },
+            ct))
         {
             if (json.StartsWith("[ERROR]") || json.StartsWith("[error]"))
             {
@@ -1195,7 +1210,18 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             ResponseFormat = "json",
         };
 
-        var response = await ChatWithSchemaRetryAsync(request, "clarification", ct);
+        var response = await ChatWithSchemaRetryAsync(
+            new SkillContext
+            {
+                RunId = Guid.NewGuid().ToString("N"),
+                TenantId = tenantId,
+                ProjectId = projectId,
+                PipelineId = pipelineId,
+                UserRequirement = retrievalText,
+            },
+            request,
+            "clarification",
+            ct);
         if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
         {
             throw Oops.Bah(
@@ -1289,7 +1315,7 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
 
         try
         {
-            var response = await ChatWithSchemaRetryAsync(request, "review", ct);
+            var response = await ChatWithSchemaRetryAsync(context, request, "review", ct);
             if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
             {
                 _logger.LogWarning("pm-skill ReviewSpec LLM 失败: {Error}", response.Error);
@@ -1381,7 +1407,7 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             ResponseFormat = "json",
         };
 
-        var response = await ChatWithSchemaRetryAsync(request, "amend", ct);
+        var response = await ChatWithSchemaRetryAsync(context, request, "amend", ct);
         if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
         {
             throw Oops.Bah(
@@ -1494,7 +1520,7 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
         };
 
         IReadOnlyList<AmendmentPatch> llmPatches;
-        var response = await ChatWithSchemaRetryAsync(request, "amend", ct);
+        var response = await ChatWithSchemaRetryAsync(context, request, "skeleton-refine", ct);
         if (!response.IsSuccess || string.IsNullOrWhiteSpace(response.Content))
         {
             throw Oops.Bah(
@@ -2000,11 +2026,16 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
     }
 
     private async Task<ChatCompletionResponse> ChatWithSchemaRetryAsync(
+        SkillContext context,
         ChatCompletionRequest request,
         string schemaKind,
         CancellationToken ct)
     {
-        var response = await Llm.ChatAsync(request, ct);
+        var response = await _llmInvoker.ChatAsync(
+            context,
+            request,
+            new PmLlmCallOptions { Purpose = schemaKind, ProviderTask = SkillId },
+            ct);
         var error = ValidateJsonShape(response.Content, schemaKind);
         if (!response.IsSuccess || error == null)
             return response;
@@ -2022,7 +2053,11 @@ public sealed class PmSkillService : CognitiveSkill, ITransient
             TimeoutMs = request.TimeoutMs,
             ResponseFormat = request.ResponseFormat,
         };
-        return await Llm.ChatAsync(retry, ct);
+        return await _llmInvoker.ChatAsync(
+            context,
+            retry,
+            new PmLlmCallOptions { Purpose = $"{schemaKind}-retry", ProviderTask = SkillId },
+            ct);
     }
 
     private static string? ValidateJsonShape(string? content, string schemaKind)

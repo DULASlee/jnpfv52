@@ -13,7 +13,7 @@
 |---|------|------|
 | **0** | **先钉死本节点业务功能（①）再动手**：编码/验收前必须说清「本阶段业务能力是什么、用户操作、完整产物」；禁止用表头/文案/待确认节/单测绿顶替业务功能正确完整 | **M035** · 业务优先铁律 · 30号§0.6① |
 | **0b** | **S/A 先走 ADF**：架构先行 → 设计模式先行 → 接口契约先行 → 再实现；每阶段等「继续」；B 级须声明豁免 | ADF 三先行 · `architecture-design-interface-first` |
-| **0c** | **四支柱硬门**：声称可审批前写 `pillar-claim-current.json` 并 `pillar-claim-check.mjs --force`；①禁止纠偏顶替 | 00-constitution · L0-PILLAR |
+| **0d** | **会话收尾必归档**：有代码变更或调试闭环后 MUST 更新 CURRENT-FOCUS + progress-registry session_log + mistake-log `## 今日` + session-summaries；禁止只靠 Chat 记忆 | **M036–M038** · episodic-memory-automation |
 | 1 | **验证三路径**：改了防御代码 → 正向/异常/缺失全测，不能只测修的那条 | M030 |
 | 2 | **改 prompt = 改代码**：改完逐条对照原始 spec 审计，不能凭"感觉对了" | M031 |
 | 3 | **先抓包再分析源码**：前端无响应 → Playwright `page.on('response')` → 看实际返回体 | M011 |
@@ -23,6 +23,430 @@
 
 ---
 
+## 2026-07-18
+
+| 日期 | 类别 | 症状 | 根因 | 修复 | 关键词 |
+|------|------|------|------|------|--------|
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（157 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +153 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（156 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +152 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（155 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +151 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（154 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +150 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（152 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +148 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（152 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +148 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（151 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +147 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（150 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +146 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（149 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +145 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（148 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +144 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（147 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +143 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（145 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +141 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（143 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +139 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（142 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +138 |
+| 2026-07-18 | 工具链 | hook 自动：设计 Skill 编排（141 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +137 |
+| 2026-07-18 | 编排器 | 第2轮答完「继续」重弹第1轮澄清 | HasPending 先于已答轮次；ClarificationAnswered 未按 stage/轮次合并 | 重排续跑；pendingRound>answeredCount 才 replay | `澄清轮次回退`, `stale pending`, `ClarificationAnswered` |
+| 2026-07-18 | 空指针 | Round2 写回骨架后编排器崩溃 | ExtractRequirementText(null)；Requirement 片段尚未投影 | 可空安全 + 事件/骨架 summary 兜底 | `NullReferenceException`, `Requirement fragment` |
+| 2026-07-18 | 前端 UX | 门控通过后误弹 IR-0 骨架审阅 | needsConfirmation 见 skeleton draft；骨架审阅应 PM 内部自动 Stabilize | gatePassed 后隐藏 IrSkeletonConfirmCard | `骨架审阅`, `IR-0`, `gatePassed` |
+| 2026-07-18 | 前端 | 下载提示「未返回正式渲染版」 | API 返回 PascalCase `Rendered`；前端只读 `rendered` | unwrapStudioApi + spec-content 统一下载 | `Rendered`, `PascalCase` |
+| 2026-07-18 | 门控 | 上传文档 GATE_JSON_ERR 0分 | Prompt 含 `true或false` 非法 JSON；ExtractJson 弱 | LlmJsonFixer + 合法示例 + 重试 | `GATE_JSON_ERR`, `SemanticFitness` |
+| 2026-07-18 | 交付物 | 02 可能是 PM raw 文本 | 步骤④曾 silent 回退 raw | requireFormal + 封面/CTA 校验 | `02-requirement-spec`, `RequirementDocumentRenderer` |
+| 2026-07-18 | 前端 | 预览弹窗不打开 | `v-model:open` 误用于 Ant Design Vue 3.2 | 改为 `v-model:visible` | `IrRequirementSpecConfirmCard` |
+| 2026-07-18 | 工具链 | start-dev.ps1 卡死 [1/8] 无输出 | WMI 挂起 + Get-CimInstance 无超时 | `-OperationTimeoutSec 10` → CimException → name-only fallback | `WMI 挂起`, `Get-CimInstance`, `start-dev 卡死` |
+| 2026-07-18 | 工具链 | Bash 下 jnpf-api.mjs 全部 404 | Git Bash 把 `/api/...` 参数改写成 `C:/Program Files/Git/api/...` | `MSYS_NO_PATHCONV=1` 或用 PowerShell | `MSYS_NO_PATHCONV`, `路径转换` |
+
+### M036 | 「继续」澄清轮次回退：重播过期 pending 题
+
+- **症状**：第2轮已作答并说「继续」，系统弹出「第 1 轮澄清题等待作答」
+- **根因**：续跑判据先走 HasPendingClarification 重推 in-progress 片段（可能是第1轮 stale 题），后判已答轮次；CountClarificationAnswered 未按 requirement stage 合并多轮 ClarificationAnswered
+- **修复**：LoadRequirementClarificationAnswerStateAsync 合并全部轮次；仅 pendingRound > answeredCount 才 ReturnPending；「继续」优先续跑步骤③
+- **铁律**：澄清续跑 MUST 比较 ClarificationSet.round 与已答轮次，禁止 replay 已答轮
+- **日期**：2026-07-18 | **关键词**：`澄清轮次`, `继续`, `stale pending`, `ClarificationAnswered`
+
+### M037 | Requirement 片段未投影时 ExtractRequirementText 空指针
+
+- **症状**：日志「Round 2 PM 完善已写回骨架」后立即 RequirementAnalysis 编排器失败 NullReferenceException
+- **根因**：续跑步骤③时 snapshot 无 Requirement stable/draft 片段，ExtractRequirementText 未判 null；?? ResolveUserRequirementAsync 来不及执行
+- **修复**：ExtractRequirementText(IrSnapshotFragment?) 可空；ResolveEnhancedRequirementTextAsync 链式兜底（fragment→事件→骨架 summary→上下文）
+- **铁律**：IR 续跑判据不得假设 snapshot.Find(Requirement) 非空；事件流与骨架 summary 为合法兜底源
+- **日期**：2026-07-18 | **关键词**：`NullReferenceException`, `Requirement fragment`, `IrProjectionEngine`
+
+### M038 | 门控通过后仍向用户展示 IR-0 骨架审阅
+
+- **症状**：编排器崩溃或骨架 patch 后，对话区出现「IR-0 骨架审阅 · 待确认」
+- **根因**：usePmSkill.needsConfirmation 在 skeleton stabilityState=draft 时为 true；新 PM 流程内编排器应自动 Stabilize，用户不参与 HITL
+- **修复**：AiChatPanel showSkeletonConfirm 增加 !gatePassed 条件
+- **铁律**：PM 新 4 步流程中骨架确认是编排器内部动作，禁止要求用户 confirm-skeleton
+- **日期**：2026-07-18 | **关键词**：`IR-0`, `骨架审阅`, `gatePassed`, `StabilizeSkeletonAsync`
+
+### M039 | 说明书预览弹窗 v-model:open 无效
+
+- **症状**：点击「预览全文」无反应
+- **根因**：Ant Design Vue 3.2 Modal 使用 `visible` 非 `open`
+- **修复**：IrRequirementSpecConfirmCard 改为 `v-model:visible`
+- **日期**：2026-07-18
+
+### M040 | 02 落盘 raw PM 文本非正式渲染版
+
+- **症状**：下载/预览内容是 PM 草稿，非九步+附录正式说明书
+- **根因**：步骤④曾直接落盘 specText；refresh 无 RequirementSpecRendered 门禁
+- **修复**：BuildConfirmSpecMarkdownAsync(requireFormal) + spec-content/refresh-spec API
+- **日期**：2026-07-18
+
+### M041 | 门控 GATE_JSON_ERR 误报需求不合格
+
+- **症状**：上传文档 → 0 分 + 评估格式异常
+- **根因**：SemanticFitness Prompt 含非法 JSON 占位；ExtractJson 未用 LlmJsonFixer
+- **修复**：合法 JSON 示例 + LlmJsonFixer + 重试 + 输入截断
+- **日期**：2026-07-18
+
+### M042 | 下载「服务端未返回正式渲染版」
+
+- **症状**：refresh-spec 成功但前端报未返回正式版
+- **根因**：JNPF API PascalCase `Rendered`；前端只判断 `rendered`
+- **修复**：unwrapStudioApi 双兼容；下载改走 spec-content
+- **日期**：2026-07-18
+
+### M043 | start-dev.ps1 卡死在 [1/8]：WMI 查询无超时保护
+
+- **症状**：start-dev.ps1 输出 `[1/8] Cleaning...` 后无任何反应（>3 分钟）
+- **根因**：Layer 2 僵尸扫描 `Get-CimInstance Win32_Process` 在 WMI provider 挂起时无限阻塞；脚本对 CIM **报错**有 try/catch fallback，但对 CIM **挂起**无超时（Get-CimInstance 默认不超时）。对照数据：netstat 91ms 正常，CIM >3min 不返回
+- **修复**：`Get-CimInstance -OperationTimeoutSec 10`（实测挂起时 5.1s 抛 CimException → 走已有 name-only fallback）
+- **铁律**：脚本内任何 WMI/CIM/外部 IPC 查询 MUST 带操作超时；「服务 Running」≠「查询会返回」
+- **日期**：2026-07-18 | **关键词**：`Get-CimInstance`, `WMI 挂起`, `OperationTimeoutSec`, `start-dev 卡死`
+
+### M044 | Git Bash 路径转换把 `/api/...` 参数改写成 Windows 路径 → 404
+
+- **症状**：`node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser` 在 Bash 工具下返回 404 空体；同一函数 Node 内直调 200
+- **根因**：MSYS/Git Bash 自动路径转换把 argv 中 `/api/oauth/CurrentUser` 改写为 `C:/Program Files/Git/api/oauth/CurrentUser`，实际请求了不存在的 URL；与后端/token 无关
+- **修复**：Bash 下加 `MSYS_NO_PATHCONV=1` 前缀，或改用 PowerShell 运行 jnpf-api.mjs（项目主 shell，无此问题）
+- **铁律**：Git Bash 里给 CLI 传 `/xxx` 开头的非文件参数 MUST 加 `MSYS_NO_PATHCONV=1`；404+空体先查实际发出的 URL，再查服务端
+- **日期**：2026-07-18 | **关键词**：`MSYS_NO_PATHCONV`, `Git Bash 路径转换`, `jnpf-api 404`
+
+---
+
+
+### M045 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 141 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 20260718144858
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +137`
+
+### M046 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 142 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 20260718144904
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +138`
+
+### M047 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 143 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 167fac99-d1fe-4012-a00a-554e1aac6c0b
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +139`
+
+### M048 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 145 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 20260718145147
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +141`
+
+### M049 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 147 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 20260718145204
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +143`
+
+### M050 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 148 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 167fac99-d1fe-4012-a00a-554e1aac6c0b
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +144`
+
+### M051 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 149 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 167fac99-d1fe-4012-a00a-554e1aac6c0b
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +145`
+
+### M052 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 150 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 167fac99-d1fe-4012-a00a-554e1aac6c0b
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +146`
+
+### M053 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 151 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 20260718145418
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +147`
+
+### M054 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 152 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 20260718145427
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +148`
+
+### M055 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 152 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 20260718145428
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +148`
+
+### M056 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 154 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 167fac99-d1fe-4012-a00a-554e1aac6c0b
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +150`
+
+### M057 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 155 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 167fac99-d1fe-4012-a00a-554e1aac6c0b
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +151`
+
+### M058 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 156 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 167fac99-d1fe-4012-a00a-554e1aac6c0b
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +152`
+
+### M059 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 157 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 167fac99-d1fe-4012-a00a-554e1aac6c0b
+- **日期**：2026-07-18 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +153`
+
+## 2026-07-19
+
+| 日期 | 类别 | 症状 | 根因 | 修复 | 关键词 |
+|------|------|------|------|------|--------|
+| 2026-07-19 | 工具链 | hook 自动：设计 Skill 编排（165 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +161 |
+| 2026-07-19 | 工具链 | hook 自动：设计 Skill 编排（163 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +159 |
+| 2026-07-19 | 工具链 | hook 自动：设计 Skill 编排（162 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +158 |
+| 2026-07-19 | 工具链 | hook 自动：设计 Skill 编排（161 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +157 |
+| 2026-07-19 | 工具链 | hook 自动：设计 Skill 编排（160 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +156 |
+| 2026-07-19 | 工具链 | hook 自动：设计 Skill 编排（159 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +155 |
+| 2026-07-19 | 工具链 | hook 自动：设计 Skill 编排（158 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +154 |
+
+### M060 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 158 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: d9fb7ff6-ca1c-4379-9c50-b0312a486446
+- **日期**：2026-07-19 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +154`
+
+### M061 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 159 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 72dcf581-5f3a-461a-a110-b8a7f784092f
+- **日期**：2026-07-19 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +155`
+
+### M062 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 160 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 061bdc77-a564-4b5c-b2a8-af54e25edf4d
+- **日期**：2026-07-19 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +156`
+
+### M063 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 161 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 0e398890-36e7-4eed-97df-6fe6dc4d5b27
+- **日期**：2026-07-19 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +157`
+
+### M064 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 162 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: fed47cdd-c1bf-40bb-95c9-1fbe1e254553
+- **日期**：2026-07-19 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +158`
+
+### M065 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 163 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: ef3d3ee0-4639-4584-828d-1680dd326602
+- **日期**：2026-07-19 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +159`
+
+### M066 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 165 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 340ba3fc-c099-4383-bbfc-f64e30bd0523
+- **日期**：2026-07-19 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +161`
+
+## 2026-08-06
+
+| 日期 | 类别 | 症状 | 根因 | 修复 | 关键词 |
+|------|------|------|------|------|--------|
+| 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（181 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +177 |
+| 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（180 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +176 |
+| 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（179 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +175 |
+| 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（175 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +171 |
+| 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（172 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +168 |
+| 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（172 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +168 |
+| 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（170 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +166 |
+| 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（169 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +165 |
+| 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（168 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +164 |
+| 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（167 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +163 |
+| 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（166 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +162 |
+
+### M067 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 166 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +162`
+
+### M068 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 167 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +163`
+
+### M069 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 168 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +164`
+
+### M070 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 169 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +165`
+
+### M071 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 170 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +166`
+
+### M072 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 172 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +168`
+
+### M073 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 172 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +168`
+
+### M074 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 175 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +171`
+
+### M075 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 179 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +175`
+
+### M076 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 180 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +176`
+
+### M077 | 设计 Skill 编排（hook 自动归档）
+
+- **症状**：stop hook 检测到 181 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +177`
 ## 一、方法论（最贵——每条都导致 ≥1 小时浪费）
 
 ### M035 | 未钉死业务功能就开发/验收：用纠偏项冒充四大支柱①（方向性错误）

@@ -84,9 +84,7 @@ export function useAnalystSkill(pipelineId: Ref<number>, snapshots: Ref<IrFragme
     };
   });
 
-  const needsRequirementSpecConfirmation = computed(
-    () => (analysisCompleted.value || hasAnalysisCompletedEvent.value || pmReview.value.score != null) && !s2Confirmed.value,
-  );
+  const needsRequirementSpecConfirmation = computed(() => false);
 
   const eventProgressList = computed<EventSaProgress[]>(() => {
     const specs = snapshots.value.filter(s => s.fragmentType === 'IR1_EventSpec' || s.fragmentId?.startsWith('eventspec:'));

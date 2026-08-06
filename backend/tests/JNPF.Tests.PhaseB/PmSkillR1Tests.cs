@@ -57,7 +57,12 @@ public static class PmSkillR1Tests
 
     private static void T4_ValidateOutput_RequiresSingleSkeletonCreated()
     {
-        var pm = new PmSkillService(new FakePmToolkit(), null!, null!, new NullDomainSeedService());
+        var pm = new PmSkillService(
+            new FakePmToolkit(),
+            null!,
+            null!,
+            new NullDomainSeedService(),
+            PassThroughPmLlmInvoker.NoOp());
         var ok = pm.ValidateOutputAsync(new[]
         {
             new JNPF.InteAssistant.Entitys.Dto.Ir.AppendIrEventRequest

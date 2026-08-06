@@ -90,6 +90,56 @@ else fail('Cursor hooks.json');
 if (fs.existsSync(path.join(repoRoot, 'scripts', 'episodic-sync.mjs'))) ok('episodic-sync.mjs');
 else fail('episodic-sync.mjs');
 
+const archiveStop = path.join(repoRoot, '.cursor', 'hooks', 'session-archive-stop.mjs');
+const archiveLib = path.join(repoRoot, '.cursor', 'hooks', 'session-archive-lib.mjs');
+if (fs.existsSync(archiveStop) && fs.existsSync(archiveLib)) ok('session-archive-stop hook');
+else fail('session-archive-stop hook', 'missing .cursor/hooks/session-archive-*.mjs');
+
+const archiveBanner = path.join(repoRoot, '.cursor', 'hooks', 'archive-banner-stop.mjs');
+if (fs.existsSync(archiveBanner)) ok('archive-banner-stop hook');
+else fail('archive-banner-stop hook', 'missing .cursor/hooks/archive-banner-stop.mjs');
+
+const hooksPath = path.join(repoRoot, '.cursor', 'hooks.json');
+if (fs.existsSync(hooksPath)) {
+  try {
+    const hooksCfg = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
+    if (hooksCfg.hooks?.sessionEnd?.length) ok('hooks sessionEnd', `${hooksCfg.hooks.sessionEnd.length} command(s)`);
+    else warn('hooks sessionEnd', 'missing — 关 Chat 不会自动归档');
+  } catch (e) {
+    warn('hooks.json parse', e.message);
+  }
+}
+
+const archiveSmoke = spawnSync(process.execPath, [archiveStop], {
+  cwd: repoRoot,
+  encoding: 'utf8',
+  timeout: 15000,
+  env: { ...process.env, CURSOR_HOOK_EVENT: 'stop' },
+});
+if (archiveSmoke.status === 0) {
+  const hookLog = path.join(repoRoot, '.cursor', 'episodic', 'hook-run-log.json');
+  if (fs.existsSync(hookLog)) ok('session-archive smoke', 'hook-run-log.json updated');
+  else warn('session-archive smoke', 'hook-run-log.json missing after run');
+
+  try {
+    const digest = JSON.parse(fs.readFileSync(
+      path.join(repoRoot, '.claude/memory/session-digest/latest.json'),
+      'utf8',
+    ));
+    if (digest.machineArchival?.applied || digest.archiveStatus === 'complete') {
+      ok('session-archive machine', digest.machineArchival?.applied
+        ? `machineArchival ${digest.machineArchival.mistakeId || 'ok'}`
+        : 'archive complete');
+    } else if (digest.codeFilesChanged > 0) {
+      warn('session-archive machine', 'code changed but machineArchival not applied');
+    }
+  } catch (e) {
+    warn('session-archive digest', e.message);
+  }
+} else {
+  warn('session-archive smoke', archiveSmoke.stderr?.trim() || `exit ${archiveSmoke.status}`);
+}
+
 if (EPISODIC_CLI && fs.existsSync(EPISODIC_CLI)) ok('episodic CLI', path.basename(path.dirname(path.dirname(EPISODIC_CLI))));
 else fail('episodic CLI', 'install plugin episodic-memory@superpowers-marketplace in Cursor');
 

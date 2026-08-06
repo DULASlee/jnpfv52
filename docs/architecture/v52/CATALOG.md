@@ -84,6 +84,20 @@
 
 ---
 
+## 专项设计（质量与架构诊断 · 2026-08-06）
+
+| 编号 | 文件 | 状态 | 说明 |
+|------|------|------|------|
+| Q-D | [`design-quality-diagnostics.md`](design-quality-diagnostics.md) | ✅ v1.0 | 八类诊断方法 + 本仓命令映射 + 整改排序公式 |
+| Q-H | [`design-quality-hotspot-top20.md`](design-quality-hotspot-top20.md) | ✅ 快照 | 复杂度 × git 变更频率 Top20 + 41 重症清单 |
+| Q-F | [`design-quality-frontend-index-summary.md`](design-quality-frontend-index-summary.md) | ✅ 快照 | 三前端 Codebase-Memory 索引摘要（图谱辅助） |
+| Q-CT | [`design-quality-frontend-ct-report.md`](design-quality-frontend-ct-report.md) | ✅ 实测 | 前端 X光/CT：vue-mess-detector 全量 + LOC/类型债 |
+| Q-CAB | [`design-quality-frontend-cabinets.md`](design-quality-frontend-cabinets.md) | ✅ 快照 | 专科五柜执行快照 + pnpm quality:* 命令 |
+| Q-ADR | [`design-quality-frontend-tooling-adr.md`](design-quality-frontend-tooling-adr.md) | ✅ Accepted | 五柜工具选型 ADR（depcruise/Knip/SonarJS/meta/fuite） |
+| Q-G | [`design-quality-baseline-gates.md`](design-quality-baseline-gates.md) | ✅ 设计稿 | 复杂度基线 Analyzer + NetArchTest（先设计后实现） |
+
+---
+
 ## 关联
 
 - 编写铁律：[`../ARCHITECTURE_DOC_RULES.md`](../ARCHITECTURE_DOC_RULES.md)  

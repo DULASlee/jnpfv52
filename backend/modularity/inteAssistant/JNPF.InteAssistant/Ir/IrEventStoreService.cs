@@ -28,6 +28,14 @@ public interface IIrEventStoreService
     Task<IrFragmentSnapshotDto?> GetSnapshotAtVersionAsync(
         string projectId, string tenantId, string pipelineId, string fragmentId, int? version, CancellationToken ct = default);
 
+    /// <summary>读取最新一条事件的完整 Payload（续跑判据/答案回放，避免 PayloadPreview 截断）。</summary>
+    Task<string?> GetLatestEventPayloadAsync(
+        string projectId, string tenantId, string pipelineId, string eventType, CancellationToken ct = default);
+
+    /// <summary>按 Sequence 升序读取某事件类型的全部完整 Payload（多轮澄清合并）。</summary>
+    Task<List<string>> ListFullEventPayloadsAsync(
+        string projectId, string tenantId, string pipelineId, string eventType, CancellationToken ct = default);
+
     Task EnsureProjectAsync(string projectId, string tenantId, string projectName, string creatorUserId, CancellationToken ct = default);
 }
 
@@ -259,6 +267,28 @@ public sealed class IrEventStoreService : IIrEventStoreService, ITransient
             Payload = ParseIrContentPayload(evt.Payload),
             UpdatedAt = evt.CreatedAt,
         };
+    }
+
+    public async Task<string?> GetLatestEventPayloadAsync(
+        string projectId, string tenantId, string pipelineId, string eventType, CancellationToken ct = default)
+    {
+        return await _db.Queryable<AiIrEventEntity>()
+            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId && x.PipelineId == pipelineId
+                && x.EventType == eventType)
+            .OrderByDescending(x => x.Sequence)
+            .Select(x => x.Payload)
+            .FirstAsync(ct);
+    }
+
+    public async Task<List<string>> ListFullEventPayloadsAsync(
+        string projectId, string tenantId, string pipelineId, string eventType, CancellationToken ct = default)
+    {
+        return await _db.Queryable<AiIrEventEntity>()
+            .Where(x => x.ProjectId == projectId && x.TenantId == tenantId && x.PipelineId == pipelineId
+                && x.EventType == eventType)
+            .OrderBy(x => x.Sequence)
+            .Select(x => x.Payload)
+            .ToListAsync(ct);
     }
 
     private async Task EnsureRouteAsync(string projectId, string tenantId, CancellationToken ct)

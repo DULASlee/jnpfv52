@@ -806,7 +806,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                             var pipelineIdForPm = pipelineId;
                             var pmChannel = channel;
                             _taskRunner.Run(
-                                $"PM_Pipeline_{pipelineId}",
+                                $"req-analysis:{pipelineId}",
                                 async (pmCtx, pmCt) =>
                                 {
                                     using var pmScope = App.RootServices.CreateScope();
@@ -815,7 +815,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                                     try
                                     {
                                         var newOrchestrator = pmScope.ServiceProvider.GetRequiredService<IRequirementAnalysisOrchestrator>();
-                                        await newOrchestrator.RunAsync(
+                                        var pmResult = await newOrchestrator.RunAsync(
                                             pipelineIdForPm,
                                             tenantIdForPm,
                                             pipelineIdForPm.ToString(),
@@ -825,6 +825,18 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                                                 InitialUserRequirement = mergedTextForPm,
                                             },
                                             pmCt);
+                                        if (pmResult.Status is "failed" or "gate-rejected")
+                                        {
+                                            pmSse.TrySend("pm_skill_failed", JsonSerializer.Serialize(new
+                                            {
+                                                message = !string.IsNullOrWhiteSpace(pmResult.ErrorMessage)
+                                                    ? pmResult.ErrorMessage
+                                                    : pmResult.GateHint ?? "PM 需求分析未能继续，请检查需求材料后重试。",
+                                                errorCode = pmResult.Status == "gate-rejected"
+                                                    ? "PM_GATE_REJECTED"
+                                                    : "PM_PIPELINE_FAILED",
+                                            }));
+                                        }
                                         pmSse.Complete();
                                     }
                                     catch (OperationCanceledException)

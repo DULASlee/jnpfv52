@@ -20,6 +20,12 @@ public interface ISkillLlmBudgetGuard
     Task ValidateProjectBudgetAsync(string projectId, string tenantId, double reserveRatio = 0.95, CancellationToken ct = default);
     Task<LlmCallSlot> AcquireAsync(string projectId, string skillId, string runId, string tenantId, long pipelineId, CancellationToken ct = default);
     Task<ChatCompletionResponse> ExecuteAsync(LlmCallSlot slot, ChatCompletionRequest request, CancellationToken ct = default);
+
+    /// <summary>
+    /// 流式 LLM 调用（与 ExecuteAsync 共享 call 计数与 token 预算；流结束后按字符估算记账）。
+    /// </summary>
+    IAsyncEnumerable<string> ExecuteStreamAsync(LlmCallSlot slot, ChatCompletionRequest request, CancellationToken ct = default);
+
     void ReleaseRun(string runId, string skillId);
 
     /// <summary>
@@ -196,6 +202,81 @@ public sealed class SkillLlmBudgetGuard : ISkillLlmBudgetGuard, ITransient
         return response;
     }
 
+    public async IAsyncEnumerable<string> ExecuteStreamAsync(
+        LlmCallSlot slot,
+        ChatCompletionRequest request,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var usageKey = UsageKey(slot.RunId, slot.SkillId);
+        var usage = RunUsage.GetOrAdd(usageKey, _ => new SkillRunLlmUsage());
+
+        if (usage.CallCount >= slot.Policy.MaxLlmCalls)
+            ThrowCallRejected(slot.PipelineId, slot.SkillId, slot.RunId, CallLimitCode,
+                $"Skill {slot.SkillId} 已达 maxCalls={slot.Policy.MaxLlmCalls}");
+
+        if (usage.TotalTokens >= slot.Policy.MaxTotalTokens)
+            ThrowCallRejected(slot.PipelineId, slot.SkillId, slot.RunId, SkillTokenLimitCode,
+                $"Skill {slot.SkillId} 已达 maxTotalTokens={slot.Policy.MaxTotalTokens}");
+
+        usage.CallCount++;
+
+        _logger.LogInformation(
+            "LlmStreamStart RunId={RunId} SkillId={SkillId} ProjectId={ProjectId} Call={Call}",
+            slot.RunId, slot.SkillId, slot.ProjectId, usage.CallCount);
+
+        var providerCode = !string.IsNullOrWhiteSpace(request.ProviderCode)
+            ? request.ProviderCode
+            : !string.IsNullOrWhiteSpace(slot.ProviderCode)
+                ? slot.ProviderCode
+                : _configuration.GetValue("AI:DefaultProvider", "mimo")!;
+
+        var adjusted = request with
+        {
+            ProviderCode = providerCode,
+            MaxTokens = request.MaxTokens > 0
+                ? Math.Min(request.MaxTokens, slot.MaxTokens)
+                : slot.MaxTokens,
+            TimeoutMs = request.TimeoutMs > 0
+                ? Math.Min(request.TimeoutMs, slot.TimeoutMs)
+                : slot.TimeoutMs,
+        };
+
+        var streamed = new System.Text.StringBuilder();
+        using (LlmCallAuditContext.Begin(slot.RunId, slot.SkillId, slot.ProjectId, slot.TenantId))
+        {
+            await foreach (var chunk in _gateway.ChatStreamAsync(adjusted, ct))
+            {
+                if (!string.IsNullOrEmpty(chunk))
+                    streamed.Append(chunk);
+                yield return chunk;
+            }
+        }
+
+        var inputEstimate = LlmTokenEstimator.EstimateTokens(adjusted.SystemPrompt)
+            + (adjusted.Messages?.Sum(m => LlmTokenEstimator.EstimateTokens(m.Content)) ?? 0);
+        var outputEstimate = LlmTokenEstimator.EstimateTokens(streamed.ToString());
+        var tokensUsed = inputEstimate + outputEstimate;
+        usage.TotalTokens += tokensUsed;
+
+        if (tokensUsed > 0)
+        {
+            try
+            {
+                await AccumulateProjectTokensAsync(slot.ProjectId, slot.TenantId, tokensUsed, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "流式 Token 记账失败(非阻断) RunId={RunId} SkillId={SkillId}",
+                    slot.RunId, slot.SkillId);
+            }
+        }
+
+        _logger.LogInformation(
+            "LlmStreamComplete RunId={RunId} SkillId={SkillId} Tokens≈{Tokens} Chars={Chars}",
+            slot.RunId, slot.SkillId, tokensUsed, streamed.Length);
+    }
+
     public void ReleaseRun(string runId, string skillId)
         => RunUsage.TryRemove(UsageKey(runId, skillId), out _);
 
@@ -295,12 +376,26 @@ public sealed class SkillLlmBudgetGuard : ISkillLlmBudgetGuard, ITransient
     {
         if (pipelineId <= 0) return;
 
+        var userMessage = code switch
+        {
+            SkillTokenLimitCode =>
+                "PM 大模型本轮 token 预算已用尽，后续步骤（如 PSpec/决策表增强）无法继续。请重开 pipeline 续跑，或联系管理员调高 pm-skill 策略。",
+            CallLimitCode =>
+                "PM 大模型本轮调用次数已达上限，后续步骤无法继续。请重开 pipeline 续跑，或联系管理员调高 pm-skill 策略。",
+            BudgetExhaustedCode =>
+                "项目 LLM 总预算不足，请充值或等待结算周期重置。",
+            _ => message,
+        };
+
         var payload = System.Text.Json.JsonSerializer.Serialize(new
         {
             skillId,
             runId,
             code,
-            message,
+            message = userMessage,
+            technicalMessage = message,
+            phase = "failed",
+            percent = 0,
         });
         _sseHub.TryPush(pipelineId, SseEventType.SkillProgress, payload);
     }

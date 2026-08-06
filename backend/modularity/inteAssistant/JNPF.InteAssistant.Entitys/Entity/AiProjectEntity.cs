@@ -33,7 +33,7 @@ public class AiProjectEntity
     public long TokenConsumed { get; set; }
 
     [SugarColumn(ColumnName = "F_TokenBudget")]
-    public long TokenBudget { get; set; } = 500_000;
+    public long TokenBudget { get; set; } = 5_000_000;
 
     [SugarColumn(ColumnName = "F_CreatorUserId")]
     public string CreatorUserId { get; set; } = string.Empty;

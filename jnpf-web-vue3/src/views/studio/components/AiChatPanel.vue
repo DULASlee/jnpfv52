@@ -223,26 +223,18 @@
         @confirm="handleConfirmSkeleton" />
 
       <IrRequirementSpecConfirmCard
-        v-if="showRequirementSpecConfirm"
-        :visible="showRequirementSpecConfirm"
+        v-if="newPipelineSpecConfirm"
+        :visible="newPipelineSpecConfirm"
         :pipeline-id="pipelineId"
-        :document-title="requirementSpecTitle"
-        :relative-path="requirementSpecDeliverable?.relativePath ?? requirementSpecDeliverable?.RelativePath"
-        :confirm-loading="requirementSpecConfirmLoading"
-        :pm-score="analystSkill?.pmReview.value.score"
-        :pm-gaps="analystSkill?.pmReview.value.gaps"
-        :pm-verdict="analystSkill?.pmReview.value.verdict"
-        @confirm="handleConfirmRequirementSpec"
-        @force-confirm="handleForceConfirmRequirementSpec"
+        :document-title="requirementSpecTitle ?? '需求说明书'"
+        :relative-path="requirementSpecDeliverable?.relativePath ?? requirementSpecDeliverable?.RelativePath ?? '02-requirement-spec.md'"
+        :confirm-loading="newPipelineConfirmLoading"
+        :pm-score="requirementSpecPmScore"
+        :pm-gaps="requirementSpecPmGaps"
+        :pm-verdict="requirementSpecPmVerdict"
+        @confirm="handleNewPipelineSpecConfirm"
+        @force-confirm="handleNewPipelineSpecForceConfirm"
         @download="handleDownloadRequirementSpec" />
-
-      <!-- CR-20260713-03：新 4 步线性 PM 流程的需求说明书确认(轻量内联) -->
-      <div v-if="newPipelineSpecConfirm" class="new-pipeline-spec-confirm">
-        <span class="badge">需求说明书确认</span>
-        <span class="hint">需求说明书已生成，请确认通过或提出修改意见。</span>
-        <a-button size="small" type="primary" @click="handleNewPipelineSpecConfirm(false)">✅ 确认通过</a-button>
-        <a-button size="small" @click="handleNewPipelineSpecFeedback">✏️ 我要修改</a-button>
-      </div>
     </div>
 
     <!-- 滚动按钮 -->
@@ -305,7 +297,7 @@
   import { defHttp } from '/@/utils/http/axios';
   import { ContentTypeEnum } from '/@/enums/httpEnum';
   import { createPipeline, getGeneratedProjectList, getPageRoutes, quickBugfix, quickEnhancement, triggerSaGate, freezePipeline, resumePipeline, forkPipeline } from '../api/studio/pipeline';
-  import { runArchitectSkill, runSystemDesignClarificationSkill } from '../api/studio/designSkills';
+  import { runArchitectSkill, runDesignOrchestrator, runSystemDesignClarificationSkill } from '../api/studio/designSkills';
   import { applyRequirementAmendment, proposeRequirementAmendment, runRequirementAnalysis, type PmAmendProposeResult } from '../api/studio/skills';
   import ChatWorkflowProgress from './chat/ChatWorkflowProgress.vue';
   import IrSkeletonConfirmCard from './ir/IrSkeletonConfirmCard.vue';
@@ -328,6 +320,13 @@
   import { buildFetchSseUrl } from '/@/utils/http/sseUrl';
   import { getAuthHeader, getTenantId } from '/@/utils/auth';
   import { getPipelineDeliverableText } from '../api/studio/pipeline';
+  import { getRequirementSpecContent } from '../api/studio/skills';
+  import {
+    isRequirementSpecPath,
+    pickRequirementSpecMarkdown,
+    unwrapStudioApi,
+    type RequirementSpecContentPayload,
+  } from '../utils/requirementSpec';
   import { marked } from 'marked';
   import hljs from 'highlight.js';
   import 'highlight.js/styles/github.css';
@@ -402,13 +401,17 @@
   const designSkill = inject(DESIGN_SKILL_KEY, null);
   const developerSkill = inject(DEVELOPER_SKILL_KEY, null);
 
-  const showSkeletonConfirm = computed(() => pmSkill?.needsConfirmation.value ?? false);
+  // 门控通过后骨架由 PM 编排器内部自动 Stabilize，用户不参与 IR-0 审阅
+  const showSkeletonConfirm = computed(
+    () => (pmSkill?.needsConfirmation.value ?? false) && !gatePassed.value,
+  );
   const skeletonPayload = computed(() => pmSkill?.skeletonSnapshot.value?.payload);
   const skeletonConfirmLoading = computed(() => pmSkill?.confirmLoading.value ?? false);
 
-  const showRequirementSpecConfirm = computed(() => analystSkill?.needsRequirementSpecConfirmation.value ?? false);
-  // CR-20260713-03：新 4 步线性 PM 流程的需求说明书确认(独立于旧 analystSkill)
+  const showRequirementSpecConfirm = computed(() => false);
+  // CR-20260713-03：新 4 步线性 PM 流程的需求说明书确认（唯一卡片）
   const newPipelineSpecConfirm = ref(false);
+  const newPipelineConfirmLoading = ref(false);
   /** PM 需求分析流式 token 写入折叠区，不灌正文（CR-20260717-02） */
   const pmStreamActive = ref(false);
   const requirementSpecConfirmLoading = computed(() => analystSkill?.confirmLoading.value ?? false);
@@ -421,6 +424,9 @@
     if (name && name !== '02-requirement-spec.md') return name.replace(/\.md$/i, '');
     return undefined;
   });
+  const requirementSpecPmScore = computed(() => analystSkill?.pmReview.value?.score ?? null);
+  const requirementSpecPmGaps = computed(() => analystSkill?.pmReview.value?.gaps ?? []);
+  const requirementSpecPmVerdict = computed(() => analystSkill?.pmReview.value?.verdict ?? '');
 
   async function handleConfirmSkeleton(autoRunAnalyst: boolean) {
     if (!pmSkill) return;
@@ -454,15 +460,149 @@
   // CR-20260714-01：补全参数传递 — 确认/反馈都走 runRequirementAnalysis 带 specFeedback
   const pendingSpecFeedback = ref(false); // 用户点了"我要修改"后置 true，下次发送当反馈
 
-  async function handleNewPipelineSpecConfirm(_autoRunDesign: boolean) {
+  async function handleNewPipelineSpecConfirm(autoRunDesign: boolean, forceConfirm = false) {
     newPipelineSpecConfirm.value = false;
-    // 确认通过 → 调编排器推进(新流程检测到 specText 已确认 → 步骤⑤ Finalize → 架构设计)
+    newPipelineConfirmLoading.value = true;
+    loading.value = true;
+    const aiMsgId = Date.now();
+    messages.value.push({
+      id: aiMsgId,
+      role: 'assistant',
+      content: '',
+      thinking: forceConfirm
+        ? '✅ 已强制确认需求说明书（低分留痕），PM 正在 Finalize…\n'
+        : '✅ 需求说明书已确认，PM 正在进入终评与 Finalize…\n',
+      thinkingCollapsed: false,
+      strategies: [],
+      document: null,
+      ir: null,
+      actions: [] as ChatStreamAction[],
+      stageConfirmable: false,
+      stageConfirmed: false,
+      clarification: null,
+    });
+    scrollToBottom();
     try {
-      await runRequirementAnalysis(pipelineId.value, {});
-      antMessage.success('需求说明书已确认，正在进入架构设计…');
+      const runData: Parameters<typeof runRequirementAnalysis>[1] = {};
+      if (forceConfirm || autoRunDesign) {
+        runData.forceConfirm = true;
+        runData.forceReason = forceConfirm
+          ? '用户强制确认-低分留痕'
+          : '全链条赶进度-确认并进入架构设计';
+      }
+      await runRequirementAnalysisWithSse(aiMsgId, runData);
+      advanceToArchitectureStage();
+      if (autoRunDesign) {
+        await startArchitectureDesign(aiMsgId);
+        antMessage.success('需求说明书已确认，架构设计已启动');
+      } else {
+        antMessage.success('需求说明书已确认');
+      }
     } catch (e: any) {
       antMessage.error(e?.response?.data?.msg ?? e?.message ?? '确认失败');
       newPipelineSpecConfirm.value = true;
+    } finally {
+      loading.value = false;
+      newPipelineConfirmLoading.value = false;
+    }
+  }
+
+  function handleNewPipelineSpecForceConfirm(autoRunDesign: boolean) {
+    void handleNewPipelineSpecConfirm(autoRunDesign, true);
+  }
+
+  function advanceToArchitectureStage() {
+    currentStage.value = 2;
+    gatePassed.value = true;
+    updateStageStatus();
+    void irObservatory?.refreshAll();
+    void refreshPipelineMaterials();
+  }
+
+  /** 步骤⑤ Finalize 完成后启动设计编排器（POST → 轮询/SSE 进度） */
+  async function pollDesignProgress(msg: any, maxMs = 30 * 60 * 1000) {
+    if (!designSkill) return;
+    const start = Date.now();
+    let lastLine = '';
+    while (Date.now() - start < maxMs) {
+      await designSkill.refreshDesignContext();
+      const phases = designSkill.phases.value ?? [];
+      const line = phases.map(p => `${designSkill!.skillLabel(p.skillId)}: ${p.phase}`).join(' · ');
+      if (line && line !== lastLine && msg) {
+        lastLine = line;
+        msg.thinking += `\n📊 ${line}\n`;
+        scrollOnStream();
+      }
+      if (designSkill.designComplete.value) {
+        if (msg) {
+          msg.thinking += '\n✅ 设计阶段完成（SystemDesignLocked）\n';
+          msg.content =
+            '## ✅ 架构与总体设计已完成\n\n可在 IR 观测台查看 Architecture / DDL / UI / SystemDesign 片段。';
+          msg.thinkingCollapsed = true;
+        }
+        currentStage.value = Math.max(currentStage.value, 3);
+        updateStageStatus();
+        void irObservatory?.refreshAll();
+        return;
+      }
+      if (designSkill.lastError.value) {
+        if (msg) {
+          msg.content = `## ⚠️ 设计 Skill 异常\n\n${designSkill.lastError.value}`;
+          msg.thinkingCollapsed = true;
+        }
+        return;
+      }
+      const failedPhase = phases.find(p => p.phase === 'failed');
+      if (failedPhase && msg) {
+        msg.content = `## ⚠️ 设计 Skill 失败\n\n${designSkill.skillLabel(failedPhase.skillId)} 运行失败，请查看 IR 观测台或后端日志。`;
+        msg.thinkingCollapsed = true;
+        return;
+      }
+      await new Promise<void>(resolve => setTimeout(resolve, 3000));
+    }
+    if (msg) {
+      msg.content = '## ⏱️ 设计仍在后台运行\n\n请展开 IR 观测台查看进度，或稍后刷新页面。';
+      msg.thinkingCollapsed = true;
+    }
+  }
+
+  async function startArchitectureDesign(aiMsgId: number) {
+    const msg = messages.value.find(m => m.id === aiMsgId);
+    if (msg) {
+      msg.thinking += '\n🏗️ 正在启动架构设计编排器（architect / db-design / ui-design 并行）…\n';
+      scrollOnStream();
+    }
+    loading.value = true;
+    try {
+      if (designSkill) {
+        await designSkill.refreshDesignContext();
+        if (designSkill.designComplete.value) {
+          if (msg) {
+            msg.thinking += '\n✅ 检测到设计阶段已完成（SystemDesignLocked）\n';
+            msg.content = '## ✅ 架构与总体设计已完成\n\nIR-2 已锁定，可在 IR 观测台查看各片段。';
+            msg.thinkingCollapsed = true;
+          }
+          currentStage.value = Math.max(currentStage.value, 3);
+          updateStageStatus();
+          return;
+        }
+        await designSkill.runDesign();
+        const sseTask = readSseStream(aiMsgId).catch(() => {});
+        await Promise.all([pollDesignProgress(msg), sseTask]);
+      } else {
+        await runDesignOrchestrator(pipelineId.value, { providerCode: selectedProvider.value });
+        await readSseStream(aiMsgId).catch(() => {});
+      }
+      void designSkill?.refreshDesignContext();
+    } catch (e: any) {
+      const err = e?.response?.data?.msg ?? e?.message ?? '架构设计启动失败';
+      if (msg) {
+        msg.thinkingCollapsed = true;
+        msg.content = `## ⚠️ 架构设计启动失败\n\n${err}`;
+      }
+      antMessage.error(err);
+    } finally {
+      loading.value = false;
     }
   }
 
@@ -540,14 +680,37 @@
   }
 
   function formatSkillProgressLine(progress: SseSkillProgressPayload): string {
+    const pct = typeof progress.percent === 'number' ? progress.percent : null;
+    const pctLabel = pct != null ? ` (${pct}%)` : '';
+    if (progress.code) {
+      return `❌ **${progress.skillId}**${pctLabel} — ${progress.message || progress.code}`;
+    }
+    if (progress.pmStep != null && progress.skillId === 'pm-skill') {
+      const phaseIcon =
+        progress.phase === 'completed'
+          ? '✅'
+          : progress.phase === 'awaiting_user'
+            ? '⏸️'
+            : progress.phase === 'handoff'
+              ? '🔗'
+              : progress.phase === 'failed' || progress.phase === 'aborted'
+                ? '❌'
+                : '▸';
+      const next =
+        progress.nextStep != null && progress.phase === 'handoff' ? ` → 步骤${progress.nextStep}` : '';
+      const round = progress.clarRound ? ` · 第${progress.clarRound}轮` : '';
+      return `${phaseIcon} **PM 步骤${progress.pmStep}**${round}${next}${pctLabel} — ${progress.message || progress.phase}`;
+    }
     const step = progress.saStepName ? ` · ${progress.saStepName}` : '';
     const icon =
       progress.phase === 'completed' || progress.phase === 'stable' ? '✅' : progress.phase === 'failed' || progress.phase === 'aborted' ? '❌' : '▸';
-    return `${icon} **${progress.skillId}** ${progress.percent}%${step} — ${progress.message || progress.phase}`;
+    return `${icon} **${progress.skillId}**${pctLabel}${step} — ${progress.message || progress.phase}`;
   }
 
   function appendWorkflowThinking(msg: any, line: string) {
-    if (!line || msg.thinking?.includes(line)) return;
+    if (!line) return;
+    const normalized = line.replace(/\*\*/g, '').trim();
+    if (msg.thinking?.includes(normalized)) return;
     msg.thinking = (msg.thinking || '') + `\n${line}\n`;
     msg.thinkingCollapsed = false;
   }
@@ -962,6 +1125,7 @@
       case 'pm_skill_failed': {
         pmStreamActive.value = false;
         gateProcessing.value = false;
+        loading.value = false;
         msg.thinkingCollapsed = true;
         const pmFail = parseGatePayload<{ message?: string; errorCode?: string }>(data.data) ?? {};
         // #region agent log
@@ -983,10 +1147,37 @@
         await streamTextToMessage(msg, (msg.content ? msg.content + '\n\n' : '') + pmErrMd, { onChunk: scrollOnStream });
         break;
       }
-      case 'stage_transition':
-        msg.thinking += `\n✅ 已进入阶段：${data.data || data.content || 'requirement'}\n`;
+      case 'stage_transition': {
+        const stage = String(data.data || data.content || 'requirement');
+        msg.thinking += `\n✅ 已进入阶段：${stage}\n`;
+        if (stage === 'design' || stage === 'architecture') {
+          advanceToArchitectureStage();
+        }
         scrollOnStream();
         break;
+      }
+      case 'design_orchestrator_started':
+        msg.thinking += `\n🏗️ 设计编排已启动…\n`;
+        loading.value = true;
+        scrollOnStream();
+        break;
+      case 'design_orchestrator_completed':
+        pmStreamActive.value = false;
+        loading.value = false;
+        msg.thinking += `\n✅ 设计编排已完成\n`;
+        msg.thinkingCollapsed = true;
+        void designSkill?.refreshDesignContext();
+        scrollOnStream();
+        break;
+      case 'design_orchestrator_failed': {
+        pmStreamActive.value = false;
+        loading.value = false;
+        msg.thinkingCollapsed = true;
+        const fail = parseGatePayload<{ message?: string; status?: string }>(data.data) ?? {};
+        msg.content = `## ⚠️ 设计编排失败\n\n${fail.message || '设计 Skill 未能完成，请查看 IR 观测台或重试。'}`;
+        scrollOnStream();
+        break;
+      }
       case 'thinking':
       case 'info':
         msg.thinking += (data.data || data.content || '') + '\n';
@@ -1004,22 +1195,27 @@
       case 'clarification_requested': {
         pmStreamActive.value = false;
         msg.thinkingCollapsed = true;
+        loading.value = false;
         // ADR-005：后端在需求分析阶段下发结构化选择题，暂停流式 LLM 等待用户作答
         const clarificationData = parseSseJsonPayload(data.data);
         msg.clarification = clarificationData || data.clarification || null;
+        if (msg.thinking && !msg.thinking.includes('等待您的作答')) {
+          msg.thinking += '\n⏸️ 等待您的作答（请在下方澄清卡片中选择）\n';
+        }
         scrollOnStream();
         break;
       }
       case 'spec_confirm_requested': {
         pmStreamActive.value = false;
         msg.thinkingCollapsed = true;
-        // CR-20260713-03：新流程步骤④ — 需求说明书已生成，弹出确认/修改按钮（正文不灌整份 markdown）
+        // CR-20260713-03：新流程步骤④ — 需求说明书已生成，弹出预览/下载/确认卡片
         if (!msg.content?.trim()) {
           msg.content = '需求说明书已生成，请确认通过或提出修改意见。';
         }
         newPipelineSpecConfirm.value = true;
         gateProcessing.value = false;
         loading.value = false;
+        void refreshPipelineMaterials();
         scrollOnStream();
         break;
       }
@@ -1064,10 +1260,28 @@
           designSkill?.handleSkillProgress(progress);
           developerSkill?.handleSkillProgress(progress);
           appendWorkflowThinking(msg, formatSkillProgressLine(progress));
+          if (progress.skillId === 'pm-skill' && progress.pmStep != null) {
+            msg.thinkingCollapsed = progress.phase === 'awaiting_user';
+            if (progress.phase === 'awaiting_user') {
+              loading.value = false;
+            } else if (progress.phase !== 'completed') {
+              loading.value = true;
+              pmStreamActive.value =
+                progress.phase === 'started' || progress.phase === 'progress' || progress.phase === 'handoff';
+            }
+          }
           scrollOnStream();
-          if (progress.phase === 'failed' || progress.phase === 'aborted') {
-            msg.content += `\n\n**⚠️ Skill 执行异常（${progress.skillId}）**\n\n${progress.message || '未知错误'}\n`;
+          if (progress.code || progress.phase === 'failed' || progress.phase === 'aborted') {
+            const skillLabel =
+              progress.skillId === 'analyst-skill'
+                ? '需求分析 Finalize'
+                : progress.skillId === 'pm-skill'
+                ? 'PM 需求分析'
+                : progress.skillId ?? 'Skill';
+            msg.content += `\n\n**⚠️ ${skillLabel} 异常**\n\n${progress.message || '未知错误'}\n`;
             if (progress.code) msg.content += `\n错误码：\`${progress.code}\`\n`;
+            loading.value = false;
+            pmStreamActive.value = false;
             scrollOnStream();
           }
         }
@@ -1122,6 +1336,30 @@
     }
   }
 
+  /** PM 新流程：先 POST 再订阅 SSE（ReplaceChannel 在 POST 内执行，先连 SSE 会挂到已废弃通道） */
+  async function runRequirementAnalysisWithSse(
+    aiMsgId: number,
+    data?: Parameters<typeof runRequirementAnalysis>[1],
+  ) {
+    pmStreamActive.value = true;
+    loading.value = true;
+    const msg = messages.value.find(m => m.id === aiMsgId);
+    if (msg) {
+      msg.thinkingCollapsed = false;
+      if (!String(msg.thinking || '').includes('PM 需求分析')) {
+        msg.thinking += '📋 PM 需求分析进行中…\n';
+        scrollOnStream();
+      }
+    }
+    const res: any = await runRequirementAnalysis(pipelineId.value, data ?? {});
+    const body = res?.data ?? res;
+    if (body?.status === 'already_running' && msg) {
+      msg.thinking += '📋 检测到 PM 仍在后台运行，已重新连接进度流（请勿重复点继续）…\n';
+      scrollOnStream();
+    }
+    await readSseStream(aiMsgId);
+  }
+
   async function readSseStream(aiMsgId: number): Promise<void> {
     abortController.value = new AbortController();
     const sseUrl = buildFetchSseUrl('/api/studio/pipeline/execute/' + pipelineId.value + '/events');
@@ -1165,12 +1403,33 @@
     }
   }
 
+  /** 用户明确要求进入架构设计（勿当作 PM 需求补充） */
+  function isArchitectureAdvanceIntent(text: string): boolean {
+    const t = text.trim();
+    return (
+      /^(请)?(进入|开始|启动|进入到?)\s*架构(\s*设计)?(\s*阶段)?$/i.test(t) ||
+      /^架构设计(\s*阶段)?$/i.test(t)
+    );
+  }
+
   async function sendMessage(content: string, uploadedFiles?: Array<{ name: string; url: string }>) {
     if (!content.trim() && (!uploadedFiles || uploadedFiles.length === 0)) return;
+    const submittedText = content.trim();
+    const isResumeKeyword = /^(继续|继续分析|ok|OK|好的)$/i.test(submittedText);
+    const isArchAdvance = isArchitectureAdvanceIntent(submittedText);
+    if (isResumeKeyword && loading.value) {
+      antMessage.info('PM 分析仍在进行中，请展开下方「推理与工作流」查看进度，无需重复发送「继续」');
+      return;
+    }
     loading.value = true;
     autoScroll.value = true;
-    const submittedText = content.trim();
-    const initialThinking = submittedText
+    const initialThinking = isResumeKeyword
+      ? '📋 收到继续指令，正在连接 PM 分析进度…\n'
+      : isArchAdvance
+      ? '🏗️ 收到进入架构设计指令…\n'
+      : currentStage.value === 2
+      ? '🏗️ 收到指令，准备启动架构设计…\n'
+      : submittedText
       ? `📝 已收到原始需求：${submittedText.slice(0, 180)}${submittedText.length > 180 ? '…' : ''}\n`
       : uploadedFiles?.length
       ? `📎 已收到 ${uploadedFiles.length} 个附件，正在解析需求材料…\n`
@@ -1226,49 +1485,9 @@
       }
     }
 
-    if (showRequirementSpecConfirm.value) {
-      if (!submittedText) {
-        loading.value = false;
-        antMessage.warning('请先输入你对需求分析说明书的修改意见');
-        return;
-      }
-      try {
-        const proposal = await proposeRequirementAmendment(pipelineId.value, {
-          userMessage: submittedText,
-          providerCode: selectedProvider.value,
-        });
-        const data = (proposal as any)?.data ?? proposal;
-        messages.value.push({
-          id: Date.now() + 1,
-          role: 'assistant',
-          content: '我先复述一下对补充需求的理解，请确认是否应用到 02 需求分析说明书。',
-          thinking: '',
-          thinkingCollapsed: true,
-          strategies: [],
-          document: null,
-          ir: null,
-          actions: [] as ChatStreamAction[],
-          stageConfirmable: false,
-          stageConfirmed: false,
-          clarification: null,
-          amendmentProposal: data,
-          amendmentUserMessage: submittedText,
-          amendmentApplying: false,
-          amendmentApplied: false,
-        });
-        scrollToBottom();
-      } catch (e: any) {
-        messages.value.push({
-          id: Date.now() + 1,
-          role: 'assistant',
-          content: `## 补充需求理解失败\n\n${e?.response?.data?.msg ?? e?.message ?? '请稍后重试'}`,
-          actions: gateErrorActions(),
-        });
-        scrollToBottom();
-      } finally {
-        loading.value = false;
-        gateProcessing.value = false;
-      }
+    if (newPipelineSpecConfirm.value && !pendingSpecFeedback.value && !isArchAdvance) {
+      loading.value = false;
+      antMessage.info('请使用下方确认卡片操作：确认进入下一阶段，或选择修改后在输入框描述意见');
       return;
     }
 
@@ -1293,6 +1512,7 @@
     });
 
     try {
+      let sseHandled = false;
       if (isQuickBugfix) {
         gateProcessing.value = false;
         gatePassed.value = true;
@@ -1315,6 +1535,60 @@
           scrollOnStream();
         }
         await triggerSaGate(pipelineId.value, content, true, uploadedFiles);
+      } else if (
+        isArchAdvance &&
+        gatePassed.value &&
+        workMode.value === 'greenfield'
+      ) {
+        // 「进入架构设计」等指令：Finalize → 切阶段 → 启动设计编排器（禁止误走 PM 续跑）
+        gateProcessing.value = false;
+        const aiMsg = messages.value.find(m => m.id === aiMsgId);
+        if (aiMsg) {
+          aiMsg.thinking += '🏗️ 正在 Finalize 需求并启动架构设计…\n';
+          scrollOnStream();
+        }
+        newPipelineSpecConfirm.value = false;
+        if (currentStage.value >= 2) {
+          await startArchitectureDesign(aiMsgId);
+          sseHandled = true;
+        } else {
+          await designSkill?.refreshDesignContext();
+          if (!designSkill?.analysisFinalized.value) {
+            await runRequirementAnalysisWithSse(aiMsgId, {
+              forceConfirm: true,
+              forceReason: '用户指令-进入架构设计',
+            });
+          }
+          advanceToArchitectureStage();
+          await startArchitectureDesign(aiMsgId);
+          antMessage.success('已进入架构设计阶段');
+          sseHandled = true;
+        }
+      } else if (gatePassed.value && currentStage.value === 1 && workMode.value === 'greenfield') {
+        // CR-20260718：门控通过后「继续/补充」必须走 PM 编排器 + SSE，禁止误走旧 execute LLM 流
+        gateProcessing.value = false;
+        const aiMsg = messages.value.find(m => m.id === aiMsgId);
+        if (aiMsg) {
+          aiMsg.thinking += isResumeKeyword
+            ? '📋 正在续连 PM 需求分析进度…\n'
+            : '📋 PM 正在处理您的补充并续跑分析…\n';
+          scrollOnStream();
+        }
+        await runRequirementAnalysisWithSse(
+          aiMsgId,
+          isResumeKeyword ? {} : { userMessage: submittedText },
+        );
+        sseHandled = true;
+      } else if (currentStage.value === 2) {
+        // 架构设计阶段：走 design 编排器，禁止误走 execute 通用 LLM / 门控
+        gateProcessing.value = false;
+        const aiMsg = messages.value.find(m => m.id === aiMsgId);
+        if (aiMsg) {
+          aiMsg.thinking += '🏗️ 正在启动架构设计编排器…\n';
+          scrollOnStream();
+        }
+        await startArchitectureDesign(aiMsgId);
+        sseHandled = true;
       } else {
         gateProcessing.value = false;
         await defHttp.post({
@@ -1327,7 +1601,7 @@
           },
         });
       }
-      await readSseStream(aiMsgId);
+      if (!sseHandled) await readSseStream(aiMsgId);
     } catch (e: any) {
       const msg = messages.value.find(m => m.id === aiMsgId);
       if (e.name === 'AbortError') {
@@ -1367,7 +1641,6 @@
     // CR-20260714-01 改动5：用户输入第一响应 — pendingSpecFeedback 时作为反馈提交
     if (pendingSpecFeedback.value && content) {
       pendingSpecFeedback.value = false;
-      // 作为用户消息展示
       messages.value.push({
         id: Date.now(),
         role: 'user',
@@ -1376,13 +1649,29 @@
       });
       scrollToBottom();
       loading.value = true;
-      runRequirementAnalysis(pipelineId.value, { specFeedback: content })
+      const aiMsgId = Date.now() + 1;
+      messages.value.push({
+        id: aiMsgId,
+        role: 'assistant',
+        content: '',
+        thinking: '📝 已收到修改意见，PM 正在重新分析需求…\n',
+        thinkingCollapsed: false,
+        strategies: [],
+        document: null,
+        ir: null,
+        actions: [] as ChatStreamAction[],
+        stageConfirmable: false,
+        stageConfirmed: false,
+        clarification: null,
+      });
+      scrollToBottom();
+      runRequirementAnalysisWithSse(aiMsgId, { specFeedback: content })
         .then(() => {
           antMessage.success('已提交修改意见，PM 正在重新分析…');
         })
         .catch((e: any) => {
           antMessage.error(e?.response?.data?.msg ?? e?.message ?? '提交失败，请重试');
-          pendingSpecFeedback.value = true; // 恢复，允许重试
+          pendingSpecFeedback.value = true;
         })
         .finally(() => {
           loading.value = false;
@@ -1484,7 +1773,10 @@
   // ADR-005 / 27 号：用户完成澄清作答后，清空卡片并触发下一轮
   async function onClarificationAnswered(msg: any, payload: { setId: string; triggerNextRound: boolean; nextAction: string; stage: string }) {
     msg.clarification = null;
-    if (!payload.triggerNextRound || payload.nextAction === 'none') return;
+    if (!payload.triggerNextRound || payload.nextAction === 'none') {
+      antMessage.warning('作答已保存，但未能自动续跑 PM 分析；请发送「继续」恢复进度');
+      return;
+    }
 
     loading.value = true;
     // 创建新的 assistant 消息占位，承接下一轮 SSE 流
@@ -1495,7 +1787,7 @@
         : payload.nextAction === 'rerun-system-design-clarification'
         ? '📐 已收到总体设计澄清作答，正在运行约束引擎并锁定系统设计…\n'
         : payload.nextAction === 'continue-requirement-analysis'
-        ? '📋 已收到需求分析澄清作答，正在继续三轮精化…\n'
+        ? '📋 已收到需求澄清作答，正在合并答案 → 更新骨架 → 九步重编译 → PM 反向完善（约 1–3 分钟，请展开下方推理区）…\n'
         : '🔄 已收到澄清补充，正在重新评估需求成熟度…\n';
     messages.value.push({
       id: aiMsgId,
@@ -1515,19 +1807,20 @@
 
     try {
       if (payload.nextAction === 'rerun-architect') {
-        // 架构阶段二：重跑 architect-skill（读已 stable 的澄清答案，跑 ToT）
+        // 架构阶段二：先 POST 建 SSE 通道，再订阅（对齐 runRequirementAnalysisWithSse）
         await runArchitectSkill(pipelineId.value, {});
+        await readSseStream(aiMsgId).catch(() => {});
+        void designSkill?.refreshDesignContext();
       } else if (payload.nextAction === 'rerun-system-design-clarification') {
-        // 总体设计阶段二：重跑 system-design-clarification-skill（读已 stable 的澄清答案，跑约束引擎 + 锁定）
         await runSystemDesignClarificationSkill(pipelineId.value, {});
+        await readSseStream(aiMsgId).catch(() => {});
+        void designSkill?.refreshDesignContext();
       } else if (payload.nextAction === 'continue-requirement-analysis') {
-        // 27 号三轮编排器：续跑 requirement-analysis/run
-        await runRequirementAnalysis(pipelineId.value, {});
+        await runRequirementAnalysisWithSse(aiMsgId, {});
       } else {
-        // 需求阶段：触发 sa-gate，后端读取最新对话历史（含澄清补充）重新做 maturity 评估
         await triggerSaGate(pipelineId.value, '继续分析', false, []);
+        await readSseStream(aiMsgId);
       }
-      await readSseStream(aiMsgId);
     } catch (e: any) {
       const m = messages.value.find(x => x.id === aiMsgId);
       if (m) m.content += `\n\n⚠️ 重新评估失败：${e?.message || e}`;
@@ -1693,14 +1986,22 @@
   async function previewDoc(doc: any) {
     if (doc?.relativePath && pipelineId.value) {
       try {
-        const text = await getPipelineDeliverableText(pipelineId.value, doc.relativePath);
+        const rel = String(doc.relativePath).replace(/\\/g, '/');
+        let text: string;
+        if (isRequirementSpecPath(rel)) {
+          const payload = unwrapStudioApi<RequirementSpecContentPayload>(await getRequirementSpecContent(pipelineId.value));
+          text = pickRequirementSpecMarkdown(payload);
+          if (!text?.trim()) throw new Error('正式版需求说明书尚未生成');
+        } else {
+          text = await getPipelineDeliverableText(pipelineId.value, rel);
+        }
         const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         blobUrls.push(url);
         window.open(url, '_blank');
         return;
       } catch (e: any) {
-        antMessage.error(e?.message || '预览失败');
+        antMessage.error((e?.response?.data?.msg ?? e?.message) || '预览失败');
         return;
       }
     }

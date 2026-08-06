@@ -3,9 +3,50 @@ description: episodic-memory 维护细则。跨会话回忆或阶段归档时拉
 alwaysApply: false
 ---
 
-# episodic-memory
+# episodic-memory + 跨会话进度归档
 
-- 会话初：MCP `search`，`project` = `.cursor/toolchain.manifest.json` → `episodic_project_id`
-- 阶段末：progress-registry + 回复「本会话结论」块
-- 禁止跳过 search 重复分析；敏感会话加 DO NOT INDEX 标记
-- 详情：`docs/toolchain/SETUP.md`
+## 读写分工（重要）
+
+| 层 | 读 | 写 | 载体 |
+|---|---|---|---|
+| **对话全文** | MCP `search` / `read` | **stop + sessionEnd hooks** → `scripts/episodic-sync.mjs` → episodic CLI `index` | Cursor jsonl 桥接到 `~/.claude/projects/D--JNPF-v52/` |
+| **结构化进度** | 文件 + sessionStart 注入 | **stop + sessionEnd** → `session-archive-stop.mjs` **机器自动写** CURRENT-FOCUS · progress-registry · mistake-log M0xx + session-digest · `session-summaries/*-AUTO` |
+
+**MCP 无 write 工具是设计如此**——写入由 hooks 在 sessionEnd 自动完成，不靠 Agent 手调 MCP。
+
+手动验证 episodic 写入：`node scripts/episodic-sync.mjs --stats`（应见 D--JNPF-v52 计数增长）
+
+## 会话初（读）
+
+1. sessionStart 已注入 `<SESSION-ARCHIVE-PENDING>` 若有未归档上会话
+2. MCP `search`，`project` = `D--JNPF-v52`（manifest）
+3. **必读：** `.cursor/CURRENT-FOCUS.md` → `docs/progress-registry.yaml` session_log[0] → `.claude/memory/session-digest/latest.json`
+4. Grep mistake-log 相关关键词
+
+## 会话末（自动 · 无 LLM）
+
+**自动（Cursor stop + sessionEnd hooks）：**
+
+| Hook | 触发 | 作用 |
+|------|------|------|
+| `episodic-stop.mjs` | stop / sessionEnd | 后台 episodic 全文索引（`--no-summaries`） |
+| `session-archive-stop.mjs` | stop / sessionEnd | digest + **机器写** CURRENT-FOCUS / progress-registry / mistake-log M0xx + AUTO summary |
+| `archive-banner-stop.mjs` | stop | 写 `last-archive-banner.txt` + followup 指令 → **Agent 助手回复正文**原样输出 |
+| `session-end.mjs` | **sessionEnd** | 串联上述两步（关 Chat 时） |
+| `guard-pillar-stop.mjs` | stop | 节点审批 claim 硬门 |
+
+**机器归档实现：** `session-archive-lib.mjs` → `applyMachineArchival()`（deterministic：git 变更列表 + 主题推断 + 验收命令推断，**不调 LLM**）。
+
+**可选（非必须）：** Agent 润色 mistake-log 根因/修复语义。
+
+**聊天框抬头：** 机器归档成功时 `archive-banner-stop.mjs` 注入 `followup_message`（① episodic / ② 焦点+清单 / ③ 错题本）；新 Chat 的 sessionStart 另注入 `<ARCHIVE-BANNER-LATEST>`。归档失败仍由 `session-archive-stop` followup。
+
+**Agent 在阶段完成时 SHOULD 补全（若需定稿）：** openspec/specs/ 定稿；人工 session-summaries（非 AUTO）。
+
+## Cursor 与 Claude Code
+
+- Claude Code `guard-finish.mjs` Stop hook 额外校验错题本/E2E
+- Cursor 靠 `.cursor/hooks.json`：`sessionStart` + `stop` + **`sessionEnd`**
+- 修改 hooks 后保存 `hooks.json` 或重启 Cursor 生效
+
+详情：`docs/toolchain/SETUP.md` §6

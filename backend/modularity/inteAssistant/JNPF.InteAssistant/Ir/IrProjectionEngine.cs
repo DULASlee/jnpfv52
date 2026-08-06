@@ -3,6 +3,7 @@ using System.Text.Json;
 using JNPF.DependencyInjection;
 using JNPF.InteAssistant.Codegen;
 using JNPF.InteAssistant.Entitys.Dto.Ir;
+using JNPF.InteAssistant.Entitys.Dto.Skills;
 using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.InteAssistant.Entitys.Ir;
 using SqlSugar;
@@ -81,6 +82,15 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
             IrEventTypes.ClarificationAnswered => await UpsertClarificationAsync(evt, IrStabilityStates.Stable, ct),
             // 27 号 P1：跨轮 Assumptions 持久化 → in-progress（Round 3 Finalize 合并后仍可读）
             IrEventTypes.AssumptionsCollected => await UpsertAssumptionsAsync(evt, ct),
+            // CR-20260718：PM 新流程事件投影 — 续跑判据依赖 snapshot.Find(IR1_SaNineView / IR0_Requirement)
+            IrEventTypes.SaNineViewCompiled => await UpsertIr2FragmentAsync(evt, IrStabilityStates.Stable, ct),
+            IrEventTypes.RequirementEnhanced => await UpsertIr2FragmentAsync(evt, IrStabilityStates.Stable, ct),
+            IrEventTypes.RequirementRefined => await UpsertIr2FragmentAsync(evt, IrStabilityStates.Stable, ct),
+            IrEventTypes.RequirementSpecRendered => await UpsertRequirementSpecStateAsync(evt, RequirementSpecPhase.Rendered, ct),
+            IrEventTypes.RequirementSpecConfirmed => await UpsertRequirementSpecStateAsync(evt, RequirementSpecPhase.Confirmed, ct),
+            IrEventTypes.RequirementSpecPmReviewed => await UpsertRequirementSpecStateAsync(evt, RequirementSpecPhase.PmReviewed, ct),
+            IrEventTypes.RequirementSpecSuperseded => await UpsertRequirementSpecStateAsync(evt, RequirementSpecPhase.Superseded, ct),
+            IrEventTypes.AnalysisCompleted => await ProjectAnalysisCompletedSpecStateAsync(evt, ct),
             // ADR-005 P3：总体设计澄清完成事件，仅留痕（不更新 fragment 状态，SystemDesignLocked 才更新）
             IrEventTypes.SystemDesignClarificationCompleted => null,
             _ => null,
@@ -671,5 +681,111 @@ public sealed class IrProjectionEngine : IIrProjectionEngine, ITransient
         }
 
         return null;
+    }
+
+    /// <summary>AnalysisCompleted.finalized=true 时投影说明书 Finalized 态。</summary>
+    private async Task<AiIrFragmentSnapshotEntity?> ProjectAnalysisCompletedSpecStateAsync(
+        AiIrEventEntity evt, CancellationToken ct)
+    {
+        if (!TryReadBoolFromPayload(evt.Payload, "finalized"))
+            return null;
+
+        return await UpsertRequirementSpecStateAsync(evt, RequirementSpecPhase.Finalized, ct);
+    }
+
+    /// <summary>
+    /// 说明书生命周期 fragment 投影（fragmentId = requirement-spec-state:{pipelineId}）。
+    /// 事件 payload 仅 metadata，禁止存 Markdown 全文。
+    /// </summary>
+    private async Task<AiIrFragmentSnapshotEntity?> UpsertRequirementSpecStateAsync(
+        AiIrEventEntity evt, RequirementSpecPhase phase, CancellationToken ct)
+    {
+        _ = long.TryParse(evt.PipelineId, out var pipelineId);
+        var fragmentId = evt.FragmentId;
+        if (string.IsNullOrWhiteSpace(fragmentId)
+            || !fragmentId.StartsWith("requirement-spec-state:", StringComparison.Ordinal))
+        {
+            fragmentId = RequirementSpecConstants.SpecStateFragmentId(pipelineId);
+        }
+
+        var payload = MergeSpecStatePayload(evt.Payload, phase, pipelineId);
+        var existing = await _db.Queryable<AiIrFragmentSnapshotEntity>()
+            .Where(x => x.ProjectId == evt.ProjectId && x.TenantId == evt.TenantId && x.PipelineId == evt.PipelineId
+                && x.FragmentId == fragmentId && !x.DeleteMark)
+            .FirstAsync(ct);
+
+        if (existing != null)
+        {
+            existing.IrContent = payload;
+            existing.CurrentVersion = evt.FragmentVersion;
+            existing.FragmentType = IrFragmentTypes.RequirementSpecState;
+            existing.StabilityState = IrStabilityStates.Stable;
+            existing.LastEventId = evt.Id;
+            existing.UpdatedAt = evt.CreatedAt;
+            await _db.Updateable(existing).ExecuteCommandAsync(ct);
+            return existing;
+        }
+
+        var snap = new AiIrFragmentSnapshotEntity
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            ProjectId = evt.ProjectId,
+            PipelineId = evt.PipelineId,
+            TenantId = evt.TenantId,
+            FragmentId = fragmentId,
+            FragmentType = IrFragmentTypes.RequirementSpecState,
+            CurrentVersion = evt.FragmentVersion,
+            StabilityState = IrStabilityStates.Stable,
+            IrContent = payload,
+            SaStepsCompleted = "[]",
+            LastEventId = evt.Id,
+            UpdatedAt = evt.CreatedAt,
+        };
+        await _db.Insertable(snap).ExecuteCommandAsync(ct);
+        return snap;
+    }
+
+    private static string MergeSpecStatePayload(string? eventPayload, RequirementSpecPhase phase, long pipelineId)
+    {
+        var phaseName = phase.ToString();
+        if (string.IsNullOrWhiteSpace(eventPayload))
+        {
+            return JsonSerializer.Serialize(new { phase = phaseName, pipelineId });
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(eventPayload);
+            using var stream = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(stream))
+            {
+                writer.WriteStartObject();
+                foreach (var prop in doc.RootElement.EnumerateObject())
+                    prop.WriteTo(writer);
+                writer.WriteString("phase", phaseName);
+                writer.WriteNumber("pipelineId", pipelineId);
+                writer.WriteEndObject();
+            }
+
+            return System.Text.Encoding.UTF8.GetString(stream.ToArray());
+        }
+        catch (JsonException)
+        {
+            return JsonSerializer.Serialize(new { phase = phaseName, pipelineId, raw = eventPayload });
+        }
+    }
+
+    private static bool TryReadBoolFromPayload(string? json, string property)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty(property, out var el) && el.ValueKind == JsonValueKind.True;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 }

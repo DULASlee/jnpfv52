@@ -28,11 +28,16 @@ namespace JNPF.InteAssistant.Skills;
 /// </summary>
 public sealed class AnalystSkillService : CognitiveSkill, ITransient
 {
+    /// <summary>与 RequirementAnalysisOrchestrator.PersistNineViewAsync / IrProjectionEngine 契约一致。</summary>
+    private const string SaNineViewFragmentType = "IR1_SaNineView";
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true,
     };
+
+    private static string SaNineViewFragmentId(string projectId) => $"nine-view:{projectId}";
 
     private readonly ISaOrchestratorAdapter _saAdapter;
     private readonly ISaNineViewCompiler _compiler;
@@ -200,6 +205,9 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
                 yield return new AppendIrEventRequest
                 {
                     EventType = IrEventTypes.SaNineViewCompiled,
+                    FragmentId = SaNineViewFragmentId(context.ProjectId),
+                    FragmentType = SaNineViewFragmentType,
+                    FragmentVersion = 1,
                     Payload = JsonSerializer.Serialize(new
                     {
                         tenantId = context.TenantId,
@@ -309,6 +317,9 @@ public sealed class AnalystSkillService : CognitiveSkill, ITransient
             yield return new AppendIrEventRequest
             {
                 EventType = IrEventTypes.SaNineViewCompiled,
+                FragmentId = SaNineViewFragmentId(context.ProjectId),
+                FragmentType = SaNineViewFragmentType,
+                FragmentVersion = 1,
                 Payload = JsonSerializer.Serialize(new
                 {
                     tenantId = context.TenantId,

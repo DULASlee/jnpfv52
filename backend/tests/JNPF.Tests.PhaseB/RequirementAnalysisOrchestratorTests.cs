@@ -379,7 +379,12 @@ public static class RequirementAnalysisOrchestratorTests
             registry ?? new FakeSkillRegistry(hasPm: false),
             compiler ?? new FakeCompiler(),
             validator ?? new FakeLightValidator(),
-            new PmSkillService(new FakePmToolkit(llmService), NullLogger<PmSkillService>.Instance, gate, new NullDomainSeedService()),
+            new PmSkillService(
+                new FakePmToolkit(llmService),
+                NullLogger<PmSkillService>.Instance,
+                gate,
+                new NullDomainSeedService(),
+                new PassThroughPmLlmInvoker(llmService)),
             llmService,
             sseHub ?? new FakeSseHub(),
             Microsoft.Extensions.Options.Options.Create(new SaPipelineOptions()),
@@ -437,6 +442,14 @@ public static class RequirementAnalysisOrchestratorTests
 
         public Task EnsureProjectAsync(string projectId, string tenantId, string projectName, string creatorUserId, CancellationToken ct = default)
             => Task.CompletedTask;
+
+        public Task<string?> GetLatestEventPayloadAsync(
+            string projectId, string tenantId, string pipelineId, string eventType, CancellationToken ct = default)
+            => Task.FromResult(_events.LastOrDefault(e => e.EventType == eventType)?.PayloadPreview);
+
+        public Task<List<string>> ListFullEventPayloadsAsync(
+            string projectId, string tenantId, string pipelineId, string eventType, CancellationToken ct = default)
+            => Task.FromResult(_events.Where(e => e.EventType == eventType).Select(e => e.PayloadPreview).ToList());
     }
 
     private sealed class ThrowingEventStore : IIrEventStoreService
@@ -457,6 +470,14 @@ public static class RequirementAnalysisOrchestratorTests
             => throw new InvalidOperationException("DB 不可用");
 
         public Task EnsureProjectAsync(string projectId, string tenantId, string projectName, string creatorUserId, CancellationToken ct = default)
+            => throw new InvalidOperationException("DB 不可用");
+
+        public Task<string?> GetLatestEventPayloadAsync(
+            string projectId, string tenantId, string pipelineId, string eventType, CancellationToken ct = default)
+            => throw new InvalidOperationException("DB 不可用");
+
+        public Task<List<string>> ListFullEventPayloadsAsync(
+            string projectId, string tenantId, string pipelineId, string eventType, CancellationToken ct = default)
             => throw new InvalidOperationException("DB 不可用");
     }
 

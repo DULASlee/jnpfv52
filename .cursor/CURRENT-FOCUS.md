@@ -65,12 +65,301 @@ Agent 是执行者，不是项目经理。
 
 | 字段 | 填写 |
 |---|---|
-| **阶段** | **阶段 C**（PM 新流程端到端；澄清续跑 2026-07-17 已修） |
-| **本 Chat 成果** | ① deepen→专用出题 ② 答题后续跑步骤③ ③ SSE heartbeat ④ E2E 路由修复 |
-| **对照计划** | **阶段 A-B-C**；OpenSpec delta：`openspec/changes/20260717-pm-pipeline-clarification-resume/` |
+| **阶段** | **阶段 C**（PM 新流程；2026-07-18 说明书正式版 + 门控 JSON + 下载） |
+| **本 Chat 成果** | 设计 Skill 编排（hook 自动 · 181 文件） |
+| **对照计划** | **阶段 A-B-C**；OpenSpec：`openspec/changes/20260717-pm-pipeline-clarification-resume/` |
 | **工作区分级** | S |
 | **adfPhase** | P4（见 workflow-state.json） |
-| **待你验** | 重启后端 → 答题后应见第2轮题或「需求说明书确认」 |
+| **跨会话归档** | .claude/memory/session-summaries/2026-08-06-设计-Skill-编排-AUTO.md |
+| **待你验** | cd backend && dotnet build |## 2026-07-18 会话结论（hook 自动 · 22:49）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +137 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M046 |
+| **hook-auto-archive** | `20260718144904` |## 2026-07-18 会话结论（hook 自动 · 22:49）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +138 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M047 |
+| **hook-auto-archive** | `167fac99-d1fe-4012-a00a-554e1aac6c0b` |## 2026-07-18 会话结论（hook 自动 · 22:51）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +140 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M048 |
+| **hook-auto-archive** | `20260718145147` |## 2026-07-18 会话结论（hook 自动 · 22:52）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +142 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M049 |
+| **hook-auto-archive** | `20260718145204` |## 2026-07-18 会话结论（hook 自动 · 22:52）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +143 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M050 |
+| **hook-auto-archive** | `167fac99-d1fe-4012-a00a-554e1aac6c0b` |## 2026-07-18 会话结论（hook 自动 · 22:52）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +144 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M051 |
+| **hook-auto-archive** | `167fac99-d1fe-4012-a00a-554e1aac6c0b` |## 2026-07-18 会话结论（hook 自动 · 22:54）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +145 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M052 |
+| **hook-auto-archive** | `167fac99-d1fe-4012-a00a-554e1aac6c0b` |## 2026-07-18 会话结论（hook 自动 · 22:54）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +146 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M053 |
+| **hook-auto-archive** | `20260718145418` |## 2026-07-18 会话结论（hook 自动 · 22:54）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +147 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M054 |
+| **hook-auto-archive** | `20260718145427` |## 2026-07-18 会话结论（hook 自动 · 22:54）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +147 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M055 |
+| **hook-auto-archive** | `20260718145428` |## 2026-07-18 会话结论（hook 自动 · 22:55）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +149 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M056 |
+| **hook-auto-archive** | `167fac99-d1fe-4012-a00a-554e1aac6c0b` |## 2026-07-18 会话结论（hook 自动 · 23:00）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +150 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M057 |
+| **hook-auto-archive** | `167fac99-d1fe-4012-a00a-554e1aac6c0b` |## 2026-07-18 会话结论（hook 自动 · 23:00）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +151 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M058 |
+| **hook-auto-archive** | `167fac99-d1fe-4012-a00a-554e1aac6c0b` |## 2026-07-18 会话结论（hook 自动 · 23:01）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +152 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M059 |
+| **hook-auto-archive** | `167fac99-d1fe-4012-a00a-554e1aac6c0b` |## 2026-07-19 会话结论（hook 自动 · 08:56）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +153 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-07-19-设计-Skill-编排-AUTO.md` |
+| **错题本** | M060 |
+| **hook-auto-archive** | `d9fb7ff6-ca1c-4379-9c50-b0312a486446` |## 2026-07-19 会话结论（hook 自动 · 08:56）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +154 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-07-19-设计-Skill-编排-AUTO.md` |
+| **错题本** | M061 |
+| **hook-auto-archive** | `72dcf581-5f3a-461a-a110-b8a7f784092f` |## 2026-07-19 会话结论（hook 自动 · 08:56）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +155 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-07-19-设计-Skill-编排-AUTO.md` |
+| **错题本** | M062 |
+| **hook-auto-archive** | `061bdc77-a564-4b5c-b2a8-af54e25edf4d` |## 2026-07-19 会话结论（hook 自动 · 08:56）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +156 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-07-19-设计-Skill-编排-AUTO.md` |
+| **错题本** | M063 |
+| **hook-auto-archive** | `0e398890-36e7-4eed-97df-6fe6dc4d5b27` |## 2026-07-19 会话结论（hook 自动 · 08:56）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +157 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-07-19-设计-Skill-编排-AUTO.md` |
+| **错题本** | M064 |
+| **hook-auto-archive** | `fed47cdd-c1bf-40bb-95c9-1fbe1e254553` |## 2026-07-19 会话结论（hook 自动 · 08:56）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +158 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-07-19-设计-Skill-编排-AUTO.md` |
+| **错题本** | M065 |
+| **hook-auto-archive** | `ef3d3ee0-4639-4584-828d-1680dd326602` |## 2026-07-19 会话结论（hook 自动 · 16:18）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +160 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-07-19-设计-Skill-编排-AUTO.md` |
+| **错题本** | M066 |
+| **hook-auto-archive** | `340ba3fc-c099-4383-bbfc-f64e30bd0523` |## 2026-08-06 会话结论（hook 自动 · 18:39）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +161 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-08-06-设计-Skill-编排-AUTO.md` |
+| **错题本** | M067 |
+| **hook-auto-archive** | `4ea6c159-9f34-4df9-af9a-ab4378e89c78` |## 2026-08-06 会话结论（hook 自动 · 18:46）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +162 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-08-06-设计-Skill-编排-AUTO.md` |
+| **错题本** | M068 |
+| **hook-auto-archive** | `4ea6c159-9f34-4df9-af9a-ab4378e89c78` |## 2026-08-06 会话结论（hook 自动 · 18:56）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +163 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-08-06-设计-Skill-编排-AUTO.md` |
+| **错题本** | M069 |
+| **hook-auto-archive** | `4ea6c159-9f34-4df9-af9a-ab4378e89c78` |## 2026-08-06 会话结论（hook 自动 · 19:03）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +164 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-08-06-设计-Skill-编排-AUTO.md` |
+| **错题本** | M070 |
+| **hook-auto-archive** | `4ea6c159-9f34-4df9-af9a-ab4378e89c78` |## 2026-08-06 会话结论（hook 自动 · 19:13）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +165 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-08-06-设计-Skill-编排-AUTO.md` |
+| **错题本** | M071 |
+| **hook-auto-archive** | `4ea6c159-9f34-4df9-af9a-ab4378e89c78` |## 2026-08-06 会话结论（hook 自动 · 19:33）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +167 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-08-06-设计-Skill-编排-AUTO.md` |
+| **错题本** | M072 |
+| **hook-auto-archive** | `4ea6c159-9f34-4df9-af9a-ab4378e89c78` |## 2026-08-06 会话结论（hook 自动 · 19:40）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +167 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-08-06-设计-Skill-编排-AUTO.md` |
+| **错题本** | M073 |
+| **hook-auto-archive** | `4ea6c159-9f34-4df9-af9a-ab4378e89c78` |## 2026-08-06 会话结论（hook 自动 · 20:08）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +170 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-08-06-设计-Skill-编排-AUTO.md` |
+| **错题本** | M074 |
+| **hook-auto-archive** | `4ea6c159-9f34-4df9-af9a-ab4378e89c78` |## 2026-08-06 会话结论（hook 自动 · 20:17）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +174 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-08-06-设计-Skill-编排-AUTO.md` |
+| **错题本** | M075 |
+| **hook-auto-archive** | `4ea6c159-9f34-4df9-af9a-ab4378e89c78` |## 2026-08-06 会话结论（hook 自动 · 20:22）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +175 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-08-06-设计-Skill-编排-AUTO.md` |
+| **错题本** | M076 |
+| **hook-auto-archive** | `4ea6c159-9f34-4df9-af9a-ab4378e89c78` |## 2026-08-06 会话结论（hook 自动 · 20:22）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +176 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-08-06-设计-Skill-编排-AUTO.md` |
+| **错题本** | M077 |
+| **hook-auto-archive** | `4ea6c159-9f34-4df9-af9a-ab4378e89c78` |
+## 2026-07-18 会话结论（hook 自动 · 22:48）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 设计 Skill 编排 |
+| **变更** | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json, episodic-session-start.mjs +136 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-digest/latest.json` |
+| **错题本** | M045 |
+| **hook-auto-archive** | `20260718144858` |
+## 2026-07-18 会话结论（跨 Chat 用 · 续）
+
+| 问题 | 结论 |
+|---|---|
+| 预览按钮无效 | Ant Design Vue 3.2 弹窗用 `v-model:visible` |
+| 下载非正式版 | 步骤④走 RequirementDocumentRenderer；refresh/spec-content API |
+| 02 是否最终版 | 是 S2 正式交付物；中间态在 IR 事件，不等于 02 |
+| 新对话门控 GATE_JSON_ERR | Prompt 非法 JSON 占位 + 接入 LlmJsonFixer + 重试 |
+| 下载「未返回正式渲染版」 | 后端 PascalCase `Rendered`；前端 unwrapStudioApi |
+| **你怎么验** | 重启后端 → 新 pipeline → 门控 → 澄清2轮 → 预览/下载 02 |
+| **摘要** | `.claude/memory/session-summaries/2026-07-18-requirement-spec-gate-download.md` |
+| **错题本** | M039–M042 |
+
+## 2026-07-18 会话结论（跨 Chat 用）
+
+| 问题 | 结论 |
+|---|---|
+| 「继续」弹第1轮题 | 已答轮次须优先于 stale pending；仅 pendingRound>answeredCount 才重推 |
+| Round2 后编排器崩溃 | Requirement 片段可空；需求文本从事件/骨架 summary 兜底 |
+| 误弹 IR-0 骨架审阅 | 门控通过后用户不参与；前端 gatePassed 隐藏卡片 |
+| 无说明书预览/下载 | 步骤④落盘 02 + 完整确认卡片 |
+| **你怎么验** | 404 答2轮 →「继续」→ S2 说明书卡片 |
+| **错题本** | M036–M038 · mistake-log `## 2026-07-18` |
 
 ## 2026-07-17 会话结论（跨 Chat 用）
 

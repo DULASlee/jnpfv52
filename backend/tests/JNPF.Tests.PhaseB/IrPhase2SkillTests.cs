@@ -117,7 +117,12 @@ public static class IrPhase2SkillTests
 
     private static void TestPmSkill_ValidateOutput()
     {
-        var pm = new PmSkillService(new FakePmToolkit(), null!, null!, new NullDomainSeedService());
+        var pm = new PmSkillService(
+            new FakePmToolkit(),
+            null!,
+            null!,
+            new NullDomainSeedService(),
+            PassThroughPmLlmInvoker.NoOp());
         var result = pm.ValidateOutputAsync(new[]
         {
             new JNPF.InteAssistant.Entitys.Dto.Ir.AppendIrEventRequest

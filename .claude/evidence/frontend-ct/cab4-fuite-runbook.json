@@ -1,0 +1,29 @@
+{
+  "generatedAt": "2026-08-06T12:07:40.032Z",
+  "cabinet": 4,
+  "purpose": "Detect retained heaps / EventSource / timer leaks on Studio chat path",
+  "url": "http://localhost:3100/",
+  "steps": [
+    "Open Studio pipeline page (or home if auth redirect).",
+    "Open AiChatPanel / PipelineSSEPanel if available.",
+    "Trigger one SSE stream or chat send if UI allows.",
+    "Navigate away (hash/route change) and return — fuite iterates this."
+  ],
+  "r6Checklist": [
+    "Every setTimeout/setInterval stored and cleared in onUnmounted",
+    "EventSource reconnect capped; onerror never sync-reconnects",
+    "SSE URL via buildEventSourceUrl() with ?token="
+  ],
+  "env": {
+    "PUPPETEER_EXECUTABLE_PATH": "(unset — set to Chrome if puppeteer browser missing)"
+  },
+  "command": [
+    "pnpm",
+    "exec",
+    "fuite",
+    "http://localhost:3100/",
+    "--heapsnapshot",
+    "--output",
+    "D:/JNPF-v52/.claude/evidence/frontend-ct/cab4-fuite.json"
+  ]
+}
