@@ -11,6 +11,7 @@
 | studio-clarification | [`studio-clarification/spec.md`](studio-clarification/spec.md) | studio-clarification | 2026-07-17 |
 | studio-e2e-toolchain | [`studio-e2e-toolchain/spec.md`](studio-e2e-toolchain/spec.md) | Capability: studio-e2e-toolchain | 2026-07-07 |
 | studio-eval-pipeline | [`studio-eval-pipeline/spec.md`](studio-eval-pipeline/spec.md) | Capability: studio-eval-pipeline | 2026-07-06 |
+| studio-requirement-spec-lifecycle | [`studio-requirement-spec-lifecycle/spec.md`](studio-requirement-spec-lifecycle/spec.md) | Studio 需求说明书生命周期（Requirement Spec Lifecycle） | 2026-08-06 |
 | studio-s2-compile | [`studio-s2-compile/spec.md`](studio-s2-compile/spec.md) | Capability: studio-s2-compile | 2026-07-07 |
 
 ## 维护规则
