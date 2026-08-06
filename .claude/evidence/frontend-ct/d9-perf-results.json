@@ -1,0 +1,54 @@
+{
+  "timestamp": "2026-08-06T12:58:52.676Z",
+  "authed": true,
+  "summary": {
+    "routes": 3,
+    "avgLCP": 676,
+    "maxLCP": 1020,
+    "totalLongTasks": 7,
+    "maxHeapMB": 30
+  },
+  "details": [
+    {
+      "route": "login",
+      "path": "/login",
+      "lcp": 76,
+      "ttfb": 7,
+      "domContentLoaded": 1043,
+      "domInteractive": 44,
+      "longTaskCount": 2,
+      "longTaskOver100ms": 1,
+      "longTaskTotalMs": 182,
+      "heapUsedMB": 30
+    },
+    {
+      "route": "home",
+      "path": "/home",
+      "lcp": 1020,
+      "ttfb": 10,
+      "domContentLoaded": 465,
+      "domInteractive": 33,
+      "longTaskCount": 2,
+      "longTaskOver100ms": 2,
+      "longTaskTotalMs": 276,
+      "heapUsedMB": 30
+    },
+    {
+      "route": "workStation",
+      "path": "/workStation",
+      "lcp": 932,
+      "ttfb": 6,
+      "domContentLoaded": 429,
+      "domInteractive": 26,
+      "longTaskCount": 3,
+      "longTaskOver100ms": 3,
+      "longTaskTotalMs": 375,
+      "heapUsedMB": 30
+    }
+  ],
+  "legend": {
+    "lcp": "Largest Contentful Paint (ms): 好<2500 需改进2500-4000 慢>4000",
+    "longTaskOver100ms": "超100ms长任务(阻塞主线程,影响交互响应INP)",
+    "heapUsedMB": "JS堆内存(反映组件/状态规模)"
+  }
+}

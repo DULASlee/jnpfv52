@@ -1,0 +1,90 @@
+{
+  "name": "login",
+  "violations": [
+    {
+      "id": "aria-roles",
+      "impact": "critical",
+      "description": "Ensure all elements with a role attribute use a valid value",
+      "help": "ARIA roles used must conform to valid values",
+      "tags": [
+        "cat.aria",
+        "wcag2a",
+        "wcag412",
+        "EN-301-549",
+        "EN-9.4.1.2",
+        "RGAAv4",
+        "RGAA-7.1.1"
+      ],
+      "nodeCount": 2,
+      "sample": [
+        {
+          "target": [
+            ".bar"
+          ],
+          "html": "<div class=\"bar\" role=\"bar\" style=\"transform: translate3d(0%, 0px, 0px); transition: 200ms;\"><div class=\"peg\"></div></div>"
+        },
+        {
+          "target": [
+            ".spinner"
+          ],
+          "html": "<div class=\"spinner\" role=\"spinner\"><div class=\"spinner-icon\"></div></div>"
+        }
+      ]
+    },
+    {
+      "id": "html-lang-valid",
+      "impact": "serious",
+      "description": "Ensure the lang attribute of the <html> element has a valid value",
+      "help": "<html> element must have a valid value for the lang attribute",
+      "tags": [
+        "cat.language",
+        "wcag2a",
+        "wcag311",
+        "TTv5",
+        "TT11.a",
+        "EN-301-549",
+        "EN-9.3.1.1",
+        "ACT",
+        "RGAAv4",
+        "RGAA-8.4.1"
+      ],
+      "nodeCount": 1,
+      "sample": [
+        {
+          "target": [
+            "#htmlRoot"
+          ],
+          "html": "<html lang=\"zh_CN\" id=\"htmlRoot\" data-theme=\"light\" style=\"--header-bg-color: #ffffff; --header-bg-hover-color: #ffffff; --header-active-menu-bg-color: #ffffff; --sider-dark-bg-color: #001529; --sider"
+        }
+      ]
+    },
+    {
+      "id": "meta-viewport",
+      "impact": "moderate",
+      "description": "Ensure <meta name=\"viewport\"> does not disable text scaling and zooming",
+      "help": "Zooming and scaling must not be disabled",
+      "tags": [
+        "cat.sensory-and-visual-cues",
+        "wcag2aa",
+        "wcag144",
+        "EN-301-549",
+        "EN-9.1.4.4",
+        "ACT",
+        "RGAAv4",
+        "RGAA-10.4.2"
+      ],
+      "nodeCount": 1,
+      "sample": [
+        {
+          "target": [
+            "meta[name=\"viewport\"]"
+          ],
+          "html": "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=0\">"
+        }
+      ]
+    }
+  ],
+  "passes": 20,
+  "incomplete": 1,
+  "inapplicable": 40
+}
