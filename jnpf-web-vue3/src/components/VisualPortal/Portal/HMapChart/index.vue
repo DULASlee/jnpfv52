@@ -37,6 +37,7 @@
   import { onMounted, ref, reactive, watch, inject, nextTick } from 'vue';
   import { getAtlas, getMapData } from '/@/api/onlineDev/portal';
   import CardHeader from '../CardHeader/index.vue';
+  // 地图图表依赖动态 geoJson + registerMap，保持全量 echarts（走 vendor-echarts 懒分包）
   import * as echarts from 'echarts';
   import { useDebounceFn } from '@vueuse/core';
   import { getDataInterfaceRes } from '/@/api/systemData/dataInterface';
@@ -80,7 +81,7 @@
   const updateMapChart = useDebounceFn(resetChart, 200);
   const updateBarChart = useDebounceFn(setBarMapChart, 200);
   const chartRef = ref<any>();
-  const props = defineProps(['activeData']);
+  const props = defineProps({ activeData: { type: Object } });
   const emitter: any = inject('emitter');
 
   watch(

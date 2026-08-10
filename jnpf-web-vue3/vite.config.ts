@@ -165,7 +165,8 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
               if (id.includes('/@ant-design/')) {
                 return 'vendor-icons';
               }
-              // ECharts + ZRender (图表引擎，~1MB)
+              // ECharts + ZRender（图表引擎）。注意：expert/AI 等页面仍全量引入 echarts，
+              // 因此该分包保留全量；按需注册（useECharts）保证未来移除全量引用后自动瘦身。
               if (id.includes('/echarts/') || id.includes('/zrender/')) {
                 return 'vendor-echarts';
               }
@@ -239,7 +240,9 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
               if (id.includes('/vditor/')) {
                 return 'vendor-vditor';
               }
-              // 其余 node_modules 适度收敛，避免碎片化
+              // 其余 node_modules 适度收敛，避免碎片化。
+              // 注意：兜底会把懒用库卷进入口（highcharts/jszip 等已通过上方具体规则拆出）；
+              // 彻底移除兜底需先解决主题初始化（tinycolor/插件）的 chunk 循环，暂保留。
               return 'vendor-common';
             }
             // 注意：不要在此处按「设计器目录」手工分包。
