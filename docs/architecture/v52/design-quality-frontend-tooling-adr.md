@@ -32,11 +32,10 @@
 | B. madge only | 拒绝作主工具（规则表达弱） |
 | C. skott | 可选增强，不阻塞 |
 
-**实测基线（cab1）**
+**实测基线（cab1 · 全量复跑）**
 
-- dependency-cruiser：`1418` modules / `4965` deps；`1174` violations（`854` error / `320` warn）
-- `no-circular`：`854` 行，涉及 **314** 个唯一模块；枢纽含 `Jnpf/index.ts`、`router/routes`、`dynamicModel/list`、`FlowParser`、`AiChatPanel`
-- Knip（`include: files`，8GB 堆）：**592** unused files（其中 `.vue` 约 443 行命中）——**含动态路由假阳性**，禁止批量删
+- dependency-cruiser：`1418` modules / `4965` deps；`1124` violations（`854` error / `270` warn）
+- Knip（`include: files`，16GB 堆）：**592** unused files（未用 `.vue` 全清单见 `cab3-unused-vue-full.json`，约 443）——**含动态路由假阳性**，禁止批量删
 
 配置：`jnpf-web-vue3/.dependency-cruiser.cjs` · `knip.json` · `depcruise-webpack.resolve.cjs`
 
@@ -48,15 +47,13 @@
 | B. 仅 VMD | 不足（无 eslint 集成路径） |
 | C. 仅 SonarJS recommended 全开当 CI | 拒绝（噪音过大） |
 
-**实测基线（cab2，热点目录 223 文件）**
+**实测基线（cab2 · 全量 `src` 1376 文件）**
 
 | 文件 | SonarJS 认知 CC（函数） |
 |------|-------------------------|
+| `workFlowForm/dynamicForm/index.vue` | 146 |
 | `dynamicModel/list/Form.vue` | 140 |
-| `dynamicModel/list/index.vue` | 119 |
-| `dynamicModel/list/CustomForm.vue` | 112 |
-| `AiChatPanel.vue` | 85 / 72 |
-| `InputTable.vue` | 57 / 50 |
+| （其余见 `cab2-sonarjs-top.json` top50） | … |
 
 与 VMD 对照原则：**按文件交叉排名，禁止直接比绝对数值**。
 
@@ -69,13 +66,10 @@
 | A. vue-component-meta + Knip `.vue` | **采纳**。公开 npm 无稳定「vue-unused」主包 |
 | B. 自研未用组件扫描 | 暂缓（动态 `import()` / 菜单路由假阳高） |
 
-**实测（cab3）**
+**实测（cab3 · 全量 787 `.vue`）**
 
-| 组件 | props | events |
-|------|-------|--------|
-| AiChatPanel | 9 | 3 |
-| InputTable | 12 | 2 |
-| BasicForm | 43 | 0 |
+- meta：**787/787** 成功；props Top：`BasicTable` 55、`BasicModal` 49、`BasicForm` 43  
+- 未用 `.vue` 全清单：**443**（`cab3-unused-vue-full.json`）
 
 脚本：`scripts/quality/cab3-component-meta.cjs`
 
@@ -86,9 +80,13 @@
 | A. fuite 场景 + R6 清单 | **采纳** |
 | B. 仅静态 grep EventSource | 不足（需堆快照） |
 
-说明：`fuite` 依赖 Puppeteer/Chrome；本机 Chrome 可用时设 `PUPPETEER_EXECUTABLE_PATH`。前端未启动时只落 runbook，不伪造泄漏结论。
+**实测（cab4 · 真跑）**
 
-脚本：`scripts/quality/cab4-fuite-scenario.cjs`（`--run` 才真正测）
+- URL：`http://127.0.0.1:3100/index.html`；场景 `cab4-fuite-scenario-def.cjs`；5 迭代 + heapsnapshot  
+- 结果：**Leak detected: No**；Memory change **-87.5 kB**（详见 `cab4-fuite-stdout.txt` / `cab4-fuite-summary.json`）  
+- 边界：入口 reload 基线，非登录后 Studio/SSE 深路径
+
+脚本：`scripts/quality/cab4-fuite-scenario.cjs`（`--run`）· 设 `PUPPETEER_EXECUTABLE_PATH` 指向本机 Chrome
 
 ### 3.5 明确不选
 

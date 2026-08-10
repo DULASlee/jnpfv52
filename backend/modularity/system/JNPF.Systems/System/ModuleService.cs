@@ -12,6 +12,7 @@ using JNPF.DynamicApiController;
 using JNPF.Extras.DatabaseAccessor.SqlSugar.Models;
 using JNPF.FriendlyException;
 using JNPF.LinqBuilder;
+using JNPF.Systems.Common.ModuleImport;
 using JNPF.Systems.Entitys.Dto.Module;
 using JNPF.Systems.Entitys.Permission;
 using JNPF.Systems.Entitys.System;
@@ -773,7 +774,7 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
             {
                 var random = new Random().NextLetterAndNumberString(5);
                 moduleModel.id = SnowflakeIdHelper.NextId();
-                moduleModel.fullName = string.Format("{0}.副本{1}", moduleModel.fullName, random);
+                moduleModel.fullName = ModuleImportHelpers.FormatImportCopySuffix(moduleModel.fullName, random);
 
                 var oldCode = moduleModel.enCode;
                 moduleModel.enCode += random;
@@ -1078,10 +1079,7 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     {
                         if (await _repository.AsSugarClient().Queryable<ModuleButtonEntity>().AnyAsync(it => it.DeleteMark == null && it.Id.Equals(item.Id)))
                         {
-                            if (buttonDic.ContainsKey("ID"))
-                                buttonDic["ID"] = string.Format("{0}、{1}", buttonDic["ID"], item.Id);
-                            else
-                                buttonDic.Add("ID", item.Id);
+                            ModuleImportHelpers.RecordImportDuplicateKey(buttonDic, "ID", item.Id);
                             isExist = true;
                         }
                     }
@@ -1091,18 +1089,12 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     }
                     if (await _repository.AsSugarClient().Queryable<ModuleButtonEntity>().AnyAsync(it => it.DeleteMark == null && it.ModuleId.Equals(data.id) && it.EnCode.Equals(item.EnCode)))
                     {
-                        if (buttonDic.ContainsKey("编码"))
-                            buttonDic["编码"] = string.Format("{0}、{1}", buttonDic["编码"], item.EnCode);
-                        else
-                            buttonDic.Add("编码", item.EnCode);
+                        ModuleImportHelpers.RecordImportDuplicateKey(buttonDic, "编码", item.EnCode);
                         isExist = true;
                     }
                     if (await _repository.AsSugarClient().Queryable<ModuleButtonEntity>().AnyAsync(it => it.DeleteMark == null && it.ModuleId.Equals(data.id) && it.FullName.Equals(item.FullName)))
                     {
-                        if (buttonDic.ContainsKey("名称"))
-                            buttonDic["名称"] = string.Format("{0}、{1}", buttonDic["名称"], item.FullName);
-                        else
-                            buttonDic.Add("名称", item.FullName);
+                        ModuleImportHelpers.RecordImportDuplicateKey(buttonDic, "名称", item.FullName);
                         isExist = true;
                     }
 
@@ -1114,21 +1106,14 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     }
                     else if (isExist && type.Equals(1)) // 追加时，子表重复
                     {
-                        item.FullName = string.Format("{0}.副本{1}", item.FullName, random);
-                        item.EnCode += random;
+                        (item.FullName, item.EnCode) = ModuleImportHelpers.ApplyAppendRename(item.FullName, item.EnCode, random);
                         await _repository.AsSugarClient().Insertable(item).ExecuteCommandAsync();
                     }
                 }
 
                 // 组装子表提示语
                 if (type.Equals(0) && buttonDic.Any())
-                {
-                    var buttonMsg = new List<string>();
-                    foreach (var item in buttonDic)
-                        buttonMsg.Add(string.Format("{0}({1})", item.Key, item.Value));
-
-                    errorMsg.Add(string.Format("buttonEntityList：{0}重复", string.Join("、", buttonMsg)));
-                }
+                    errorMsg.Add(ModuleImportHelpers.FormatSubTableDuplicateMessage("buttonEntityList", buttonDic));
             }
             if (data.columnEntityList.Any())
             {
@@ -1148,10 +1133,7 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     {
                         if (await _repository.AsSugarClient().Queryable<ModuleColumnEntity>().AnyAsync(it => it.DeleteMark == null && it.Id.Equals(item.Id)))
                         {
-                            if (columDic.ContainsKey("ID"))
-                                columDic["ID"] = string.Format("{0}、{1}", columDic["ID"], item.Id);
-                            else
-                                columDic.Add("ID", item.Id);
+                            ModuleImportHelpers.RecordImportDuplicateKey(columDic, "ID", item.Id);
                             isExist = true;
                         }
                     }
@@ -1161,10 +1143,7 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     }
                     if (await _repository.AsSugarClient().Queryable<ModuleColumnEntity>().AnyAsync(it => it.DeleteMark == null && it.ModuleId.Equals(data.id) && it.FullName.Equals(item.FullName)))
                     {
-                        if (columDic.ContainsKey("名称"))
-                            columDic["名称"] = string.Format("{0}、{1}", columDic["名称"], item.FullName);
-                        else
-                            columDic.Add("名称", item.FullName);
+                        ModuleImportHelpers.RecordImportDuplicateKey(columDic, "名称", item.FullName);
                         isExist = true;
                     }
 
@@ -1176,21 +1155,14 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     }
                     else if (isExist && type.Equals(1)) // 追加时，子表重复
                     {
-                        item.FullName = string.Format("{0}.副本{1}", item.FullName, random);
-                        item.EnCode += random;
+                        (item.FullName, item.EnCode) = ModuleImportHelpers.ApplyAppendRename(item.FullName, item.EnCode, random);
                         await _repository.AsSugarClient().Insertable(item).ExecuteCommandAsync();
                     }
                 }
 
                 // 组装子表提示语
                 if (type.Equals(0) && columDic.Any())
-                {
-                    var columMsg = new List<string>();
-                    foreach (var item in columDic)
-                        columMsg.Add(string.Format("{0}({1})", item.Key, item.Value));
-
-                    errorMsg.Add(string.Format("columnEntityList：{0}重复", string.Join("、", columMsg)));
-                }
+                    errorMsg.Add(ModuleImportHelpers.FormatSubTableDuplicateMessage("columnEntityList", columDic));
             }
             if (data.formEntityList.Any())
             {
@@ -1210,10 +1182,7 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     {
                         if (await _repository.AsSugarClient().Queryable<ModuleFormEntity>().AnyAsync(it => it.DeleteMark == null && it.Id.Equals(item.Id)))
                         {
-                            if (formDic.ContainsKey("ID"))
-                                formDic["ID"] = string.Format("{0}、{1}", formDic["ID"], item.Id);
-                            else
-                                formDic.Add("ID", item.Id);
+                            ModuleImportHelpers.RecordImportDuplicateKey(formDic, "ID", item.Id);
                             isExist = true;
                         }
                     }
@@ -1223,10 +1192,7 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     }
                     if (await _repository.AsSugarClient().Queryable<ModuleFormEntity>().AnyAsync(it => it.DeleteMark == null && it.ModuleId.Equals(data.id) && it.FullName.Equals(item.FullName)))
                     {
-                        if (formDic.ContainsKey("名称"))
-                            formDic["名称"] = string.Format("{0}、{1}", formDic["名称"], item.FullName);
-                        else
-                            formDic.Add("名称", item.FullName);
+                        ModuleImportHelpers.RecordImportDuplicateKey(formDic, "名称", item.FullName);
                         isExist = true;
                     }
 
@@ -1238,21 +1204,14 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     }
                     else if (isExist && type.Equals(1)) // 追加时，子表重复
                     {
-                        item.FullName = string.Format("{0}.副本{1}", item.FullName, random);
-                        item.EnCode += random;
+                        (item.FullName, item.EnCode) = ModuleImportHelpers.ApplyAppendRename(item.FullName, item.EnCode, random);
                         await _repository.AsSugarClient().Insertable(item).ExecuteCommandAsync();
                     }
                 }
 
                 // 组装子表提示语
                 if (type.Equals(0) && formDic.Any())
-                {
-                    var formMsg = new List<string>();
-                    foreach (var item in formDic)
-                        formMsg.Add(string.Format("{0}({1})", item.Key, item.Value));
-
-                    errorMsg.Add(string.Format("formEntityList：{0}重复", string.Join("、", formMsg)));
-                }
+                    errorMsg.Add(ModuleImportHelpers.FormatSubTableDuplicateMessage("formEntityList", formDic));
             }
 
             var dic = new Dictionary<string, string>();
@@ -1274,10 +1233,7 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     {
                         if (await _repository.AsSugarClient().Queryable<ModuleDataAuthorizeEntity>().AnyAsync(it => it.DeleteMark == null && it.Id.Equals(item.Id)))
                         {
-                            if (dataAuthorizeDic.ContainsKey("ID"))
-                                dataAuthorizeDic["ID"] = string.Format("{0}、{1}", dataAuthorizeDic["ID"], item.Id);
-                            else
-                                dataAuthorizeDic.Add("ID", item.Id);
+                            ModuleImportHelpers.RecordImportDuplicateKey(dataAuthorizeDic, "ID", item.Id);
                             isExist = true;
                         }
                     }
@@ -1289,10 +1245,7 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     }
                     if (await _repository.AsSugarClient().Queryable<ModuleDataAuthorizeEntity>().AnyAsync(it => it.DeleteMark == null && it.ModuleId.Equals(data.id) && it.FullName.Equals(item.FullName)))
                     {
-                        if (dataAuthorizeDic.ContainsKey("名称"))
-                            dataAuthorizeDic["名称"] = string.Format("{0}、{1}", dataAuthorizeDic["名称"], item.FullName);
-                        else
-                            dataAuthorizeDic.Add("名称", item.FullName);
+                        ModuleImportHelpers.RecordImportDuplicateKey(dataAuthorizeDic, "名称", item.FullName);
                         isExist = true;
                     }
 
@@ -1304,21 +1257,14 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     }
                     else if (isExist && type.Equals(1)) // 追加时，子表重复
                     {
-                        item.FullName = string.Format("{0}.副本{1}", item.FullName, random);
-                        item.EnCode += random;
+                        (item.FullName, item.EnCode) = ModuleImportHelpers.ApplyAppendRename(item.FullName, item.EnCode, random);
                         await _repository.AsSugarClient().Insertable(item).ExecuteCommandAsync();
                     }
                 }
 
                 // 组装子表提示语
                 if (type.Equals(0) && dataAuthorizeDic.Any())
-                {
-                    var dataAuthorizeMsg = new List<string>();
-                    foreach (var item in dataAuthorizeDic)
-                        dataAuthorizeMsg.Add(string.Format("{0}({1})", item.Key, item.Value));
-
-                    errorMsg.Add(string.Format("authorizeEntityList：{0}重复", string.Join("、", dataAuthorizeMsg)));
-                }
+                    errorMsg.Add(ModuleImportHelpers.FormatSubTableDuplicateMessage("authorizeEntityList", dataAuthorizeDic));
             }
             if (data.schemeEntityList.Any())
             {
@@ -1338,10 +1284,7 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     {
                         if (await _repository.AsSugarClient().Queryable<ModuleDataAuthorizeSchemeEntity>().AnyAsync(it => it.DeleteMark == null && it.Id.Equals(item.Id)))
                         {
-                            if (dataAuthorizeSchemeDic.ContainsKey("ID"))
-                                dataAuthorizeSchemeDic["ID"] = string.Format("{0}、{1}", dataAuthorizeSchemeDic["ID"], item.Id);
-                            else
-                                dataAuthorizeSchemeDic.Add("ID", item.Id);
+                            ModuleImportHelpers.RecordImportDuplicateKey(dataAuthorizeSchemeDic, "ID", item.Id);
                             isExist = true;
                         }
                     }
@@ -1351,18 +1294,12 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     }
                     if (await _repository.AsSugarClient().Queryable<ModuleDataAuthorizeSchemeEntity>().AnyAsync(it => it.DeleteMark == null && it.ModuleId.Equals(data.id) && it.EnCode.Equals(item.EnCode)))
                     {
-                        if (dataAuthorizeSchemeDic.ContainsKey("编码"))
-                            dataAuthorizeSchemeDic["编码"] = string.Format("{0}、{1}", dataAuthorizeSchemeDic["编码"], item.EnCode);
-                        else
-                            dataAuthorizeSchemeDic.Add("编码", item.EnCode);
+                        ModuleImportHelpers.RecordImportDuplicateKey(dataAuthorizeSchemeDic, "编码", item.EnCode);
                         isExist = true;
                     }
                     if (await _repository.AsSugarClient().Queryable<ModuleDataAuthorizeSchemeEntity>().AnyAsync(it => it.DeleteMark == null && it.ModuleId.Equals(data.id) && it.FullName.Equals(item.FullName)))
                     {
-                        if (dataAuthorizeSchemeDic.ContainsKey("名称"))
-                            dataAuthorizeSchemeDic["名称"] = string.Format("{0}、{1}", dataAuthorizeSchemeDic["名称"], item.FullName);
-                        else
-                            dataAuthorizeSchemeDic.Add("名称", item.FullName);
+                        ModuleImportHelpers.RecordImportDuplicateKey(dataAuthorizeSchemeDic, "名称", item.FullName);
                         isExist = true;
                     }
 
@@ -1374,28 +1311,16 @@ public class ModuleService : IModuleService, IDynamicApiController, ITransient
                     }
                     else if (isExist && type.Equals(1)) // 追加时，子表重复
                     {
-                        item.FullName = string.Format("{0}.副本{1}", item.FullName, random);
-                        item.EnCode += random;
+                        (item.FullName, item.EnCode) = ModuleImportHelpers.ApplyAppendRename(item.FullName, item.EnCode, random);
                         if (item.ConditionJson.IsNotEmptyOrNull())
-                        {
-                            foreach (var key in dic.Keys)
-                            {
-                                item.ConditionJson = item.ConditionJson.Replace(key, dic[key]);
-                            }
-                        }
+                            item.ConditionJson = ModuleImportHelpers.RewriteConditionJsonIds(item.ConditionJson, dic);
                         await _repository.AsSugarClient().Insertable(item).ExecuteCommandAsync();
                     }
                 }
 
                 // 组装子表提示语
                 if (type.Equals(0) && dataAuthorizeSchemeDic.Any())
-                {
-                    var dataAuthorizeSchemeMsg = new List<string>();
-                    foreach (var item in dataAuthorizeSchemeDic)
-                        dataAuthorizeSchemeMsg.Add(string.Format("{0}({1})", item.Key, item.Value));
-
-                    errorMsg.Add(string.Format("schemeEntityList：{0}重复", string.Join("、", dataAuthorizeSchemeMsg)));
-                }
+                    errorMsg.Add(ModuleImportHelpers.FormatSubTableDuplicateMessage("schemeEntityList", dataAuthorizeSchemeDic));
             }
 
             var module = data.Adapt<ModuleEntity>();

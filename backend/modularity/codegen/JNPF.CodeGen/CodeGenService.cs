@@ -19,6 +19,7 @@ using JNPF.ViewEngine;
 using JNPF.VisualDev.Engine;
 using JNPF.VisualDev.Engine.CodeGen;
 using JNPF.VisualDev.Engine.Security;
+using JNPF.CodeGen.Helpers;
 using JNPF.VisualDev.Entitys;
 using JNPF.VisualDev.Entitys.Dto.CodeGen;
 using JNPF.VisualDev.Entitys.Enum;
@@ -252,70 +253,23 @@ public class CodeGenService : IDynamicApiController, ITransient
         pcColumnDesignModel ??= new ColumnDesignModel();
         appColumnDesignModel ??= new ColumnDesignModel();
 
-        // 既是行内编辑又是纯表单 强制改成普通列表.
-        if (templateEntity.WebType.Equals(1) && pcColumnDesignModel.type.Equals(4))
-        {
-            var columnData = templateEntity.ColumnData.ToObject<Dictionary<string, object>>();
-            columnData["type"] = 1;
-            templateEntity.ColumnData = columnData.ToJsonString();
-        }
-
-        // 分组和树形表格去掉复杂表头
-        if (pcColumnDesignModel.type.Equals(3) || pcColumnDesignModel.type.Equals(5))
-        {
-            var columnData = templateEntity.ColumnData.ToObject<Dictionary<string, object>>();
-            columnData["complexHeaderList"] = new List<object>();
-            templateEntity.ColumnData = columnData.ToJsonString();
-        }
+        templateEntity.ColumnData = TemplatesDataAggregationHelpers.ApplyColumnDataAggregationPatches(
+            templateEntity.ColumnData, templateEntity.WebType, pcColumnDesignModel.type);
 
         // 开启数据权限
-        bool useDataPermission = false;
-
-        if (pcColumnDesignModel.useDataPermission && appColumnDesignModel.useDataPermission)
-        {
-            useDataPermission = true;
-        }
-        else if (!pcColumnDesignModel.useDataPermission && appColumnDesignModel.useDataPermission)
-        {
-            useDataPermission = true;
-        }
-        else if (pcColumnDesignModel.useDataPermission && !appColumnDesignModel.useDataPermission)
-        {
-            useDataPermission = true;
-        }
-        else
-        {
-            useDataPermission = false;
-        }
-
-        switch (templateEntity.WebType)
-        {
-            case 1:
-                useDataPermission = false;
-                break;
-        }
+        bool useDataPermission = TemplatesDataAggregationHelpers.ResolveUseDataPermission(
+            pcColumnDesignModel.useDataPermission, appColumnDesignModel.useDataPermission, templateEntity.WebType);
 
         // 剔除多余布局控件组
         var controls = TemplateAnalysis.AnalysisTemplateData(formDataModel.fields);
         var fieldsCopy = formDataModel.fields.Copy();
         TemplateAnalysis.DataFormatReplace(controls);
 
-        switch (templateEntity.Type)
+        if (TemplatesDataAggregationHelpers.ShouldApplyUnifiedFormControls(templateEntity.Type, templateEntity.WebType))
         {
-            case 4:
-            case 5:
-                switch (templateEntity.WebType)
-                {
-                    case 1:
-                        break;
-                    default:
-                        // 统一处理下表单内控件
-                        controls = CodeGenUnifiedHandlerHelper.UnifiedHandlerFormDataModel(controls, pcColumnDesignModel, appColumnDesignModel);
-                        controls = CodeGenUnifiedHandlerHelper.UnifiedHandlerControlRelationship(controls);
-                        break;
-                }
-
-                break;
+            // 统一处理下表单内控件
+            controls = CodeGenUnifiedHandlerHelper.UnifiedHandlerFormDataModel(controls, pcColumnDesignModel, appColumnDesignModel);
+            controls = CodeGenUnifiedHandlerHelper.UnifiedHandlerControlRelationship(controls);
         }
 
         List<string> targetPathList = new List<string>();
@@ -340,7 +294,7 @@ public class CodeGenService : IDynamicApiController, ITransient
          * 远端数据与静态数据无法列表转换所以全部ThenMapper内转换
          * 数据字典又分为两种值转换ID与EnCode
          */
-        var modelType = JudgmentGenerationModel(tableRelation, controls);
+        var modelType = TemplatesDataAggregationHelpers.JudgeGenerationModel(tableRelation, controls);
         switch (modelType)
         {
             case GeneratePatterns.MainBelt:
@@ -411,32 +365,8 @@ public class CodeGenService : IDynamicApiController, ITransient
                             File.WriteAllText(targetPathList[i], tResult, Encoding.UTF8);
                         }
 
-                        tableRelationsList.Add(new CodeGenTableRelationsModel
-                        {
-                            ClassName = item.className,
-                            OriginalTableName = item.table,
-                            RelationTable = item.relationTable,
-                            TableName = item.table.ParseToPascalCase(),
-                            PrimaryKey = codeGenConfigModel.TableField.Find(it => it.PrimaryKey).ColumnName,
-                            TableField = codeGenConfigModel.TableField.Find(it => it.ForeignKeyField).ColumnName,
-                            OriginalTableField = codeGenConfigModel.TableField.Find(it => it.ForeignKeyField).OriginalColumnName,
-                            RelationField = item.relationField.ReplaceRegex("^f_", string.Empty).ParseToPascalCase(),
-                            OriginalRelationField = item.relationField,
-                            ControlTableComment = codeGenConfigModel.BusName,
-                            TableComment = item.tableName,
-                            ChilderColumnConfigList = codeGenConfigModel.TableField,
-                            ChilderColumnConfigListCount = codeGenConfigModel.TableField.FindAll(it => !it.PrimaryKey && !it.ForeignKeyField && it.jnpfKey != null).Count(),
-                            TableNo = tableNo,
-                            ControlModel = controlId,
-                            IsQueryWhether = codeGenConfigModel.TableField.Any(it => it.QueryWhether),
-                            IsShowField = codeGenConfigModel.TableField.Any(it => it.IsShow),
-                            IsUnique = codeGenConfigModel.TableField.Any(it => it.IsUnique),
-                            IsConversion = codeGenConfigModel.TableField.Any(it => it.IsConversion.Equals(true)),
-                            IsDetailConversion = codeGenConfigModel.TableField.Any(it => it.IsDetailConversion.Equals(true)),
-                            IsImportData = codeGenConfigModel.TableField.Any(it => it.IsImportField.Equals(true)),
-                            IsSearchMultiple = codeGenConfigModel.IsSearchMultiple,
-                            IsControlParsing = codeGenConfigModel.TableField.Any(it => it.IsControlParsing),
-                        });
+                        tableRelationsList.Add(TemplatesDataAggregationHelpers.BuildChildTableRelation(
+                            item, codeGenConfigModel, controlId, tableNo));
 
                         // 还原全部控件
                         controls = TemplateAnalysis.AnalysisTemplateData(formDataModel.fields);
@@ -472,52 +402,13 @@ public class CodeGenService : IDynamicApiController, ITransient
                         codeGenConfigModel.BusName = item.tableName;
                         codeGenConfigModel.TableRelations = tableRelationsList;
                         codeGenConfigModel.IsChildConversion = tableRelationsList.Any(it => it.IsConversion);
-                        switch (templateEntity.WebType)
+                        var mainBeltPaths = TemplatesDataAggregationHelpers.ResolveMainBackendPaths(
+                            templateEntity.WebType, templateEntity.Type, templateEntity.EnableFlow,
+                            codeGenConfigModel.TableType, item.className, fileName, codeGenConfigModel.IsMapper, "2-MainBelt");
+                        if (mainBeltPaths != null)
                         {
-                            case 1:
-                                switch (templateEntity.Type)
-                                {
-                                    case 3:
-                                        targetPathList = CodeGenTargetPathHelper.BackendFlowTargetPathList(item.className, fileName, codeGenConfigModel.IsMapper);
-                                        templatePathList = CodeGenTargetPathHelper.BackendFlowTemplatePathList("2-MainBelt", codeGenConfigModel.IsMapper);
-                                        break;
-                                    default:
-                                        targetPathList = CodeGenTargetPathHelper.BackendTargetPathList(item.className, fileName, templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.TableType == 4, codeGenConfigModel.IsMapper);
-                                        templatePathList = CodeGenTargetPathHelper.BackendTemplatePathList("2-MainBelt", templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.IsMapper);
-                                        break;
-                                }
-                                break;
-                            case 2:
-                                switch (codeGenConfigModel.TableType)
-                                {
-                                    case 4:
-                                        switch (templateEntity.Type)
-                                        {
-                                            case 3:
-                                                break;
-                                            default:
-                                                targetPathList = CodeGenTargetPathHelper.BackendTargetPathList(item.className, fileName, templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.TableType == 4, codeGenConfigModel.IsMapper);
-                                                templatePathList = CodeGenTargetPathHelper.BackendInlineEditorTemplatePathList("2-MainBelt", templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.IsMapper);
-                                                break;
-                                        }
-
-                                        break;
-                                    default:
-                                        switch (templateEntity.Type)
-                                        {
-                                            case 3:
-                                                targetPathList = CodeGenTargetPathHelper.BackendFlowTargetPathList(item.className, fileName, codeGenConfigModel.IsMapper);
-                                                templatePathList = CodeGenTargetPathHelper.BackendFlowTemplatePathList("2-MainBelt", codeGenConfigModel.IsMapper);
-                                                break;
-                                            default:
-                                                targetPathList = CodeGenTargetPathHelper.BackendTargetPathList(item.className, fileName, templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.TableType == 4, codeGenConfigModel.IsMapper);
-                                                templatePathList = CodeGenTargetPathHelper.BackendTemplatePathList("2-MainBelt", templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.IsMapper);
-                                                break;
-                                        }
-
-                                        break;
-                                }
-                                break;
+                            targetPathList = mainBeltPaths.Value.TargetPathList;
+                            templatePathList = mainBeltPaths.Value.TemplatePathList;
                         }
 
                         // 生成后端文件
@@ -679,29 +570,8 @@ public class CodeGenService : IDynamicApiController, ITransient
                         }
 
                         var count = controls.Count(x => x.__vModel__.Contains(item.table));
-                        tableRelationsList.Add(new CodeGenTableRelationsModel
-                        {
-                            ClassName = codeGenConfigModel.ClassName,
-                            OriginalTableName = item.table,
-                            RelationTable = item.relationTable,
-                            TableName = item.table.ParseToPascalCase(),
-                            PrimaryKey = codeGenConfigModel.TableField.Find(it => it.PrimaryKey).ColumnName,
-                            TableField = codeGenConfigModel.TableField.Find(it => it.ForeignKeyField).ColumnName,
-                            ChilderColumnConfigList = codeGenConfigModel.TableField,
-                            OriginalTableField = codeGenConfigModel.TableField.Find(it => it.ForeignKeyField).OriginalColumnName,
-                            RelationField = item.relationField.ReplaceRegex("^f_", string.Empty).ParseToPascalCase(),
-                            OriginalRelationField = item.relationField,
-                            TableComment = item.tableName,
-                            TableNo = tableNo,
-                            IsConversion = codeGenConfigModel.TableField.Any(it => it.IsConversion.Equals(true)),
-                            IsDetailConversion = codeGenConfigModel.TableField.Any(it => it.IsDetailConversion.Equals(true)),
-                            IsImportData = codeGenConfigModel.TableField.Any(it => it.IsImportField.Equals(true)),
-                            IsSystemControl = codeGenConfigModel.TableField.Any(it => it.IsSystemControl),
-                            IsUpdate = codeGenConfigModel.TableField.Any(it => it.IsUpdate),
-                            IsSearchMultiple = codeGenConfigModel.IsSearchMultiple,
-                            IsControlParsing = codeGenConfigModel.TableField.Any(it => it.IsControlParsing),
-                            FieldCount = count,
-                        });
+                        tableRelationsList.Add(TemplatesDataAggregationHelpers.BuildAuxiliaryTableRelation(
+                            item, codeGenConfigModel, tableNo, count));
 
                         auxiliaryTableColumnList.AddRange(codeGenConfigModel.TableField.FindAll(it => it.jnpfKey != null));
                     }
@@ -733,50 +603,13 @@ public class CodeGenService : IDynamicApiController, ITransient
                         // 后端生成
                         codeGenConfigModel = CodeGenWay.MainBeltViceBackEnd(item.table, fieldList, auxiliaryTableColumnList, controls, templateEntity);
 
-                        switch (templateEntity.WebType)
+                        var mainBeltVicePaths = TemplatesDataAggregationHelpers.ResolveMainBackendPaths(
+                            templateEntity.WebType, templateEntity.Type, templateEntity.EnableFlow,
+                            codeGenConfigModel.TableType, codeGenConfigModel.ClassName, fileName, codeGenConfigModel.IsMapper, "4-MainBeltVice");
+                        if (mainBeltVicePaths != null)
                         {
-                            case 1:
-                                switch (templateEntity.Type)
-                                {
-                                    case 3:
-                                        targetPathList = CodeGenTargetPathHelper.BackendFlowTargetPathList(codeGenConfigModel.ClassName, fileName, codeGenConfigModel.IsMapper);
-                                        templatePathList = CodeGenTargetPathHelper.BackendFlowTemplatePathList("4-MainBeltVice", codeGenConfigModel.IsMapper);
-                                        break;
-                                    default:
-                                        targetPathList = CodeGenTargetPathHelper.BackendTargetPathList(codeGenConfigModel.ClassName, fileName, templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.TableType == 4, codeGenConfigModel.IsMapper);
-                                        templatePathList = CodeGenTargetPathHelper.BackendTemplatePathList("4-MainBeltVice", templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.IsMapper);
-                                        break;
-                                }
-                                break;
-                            case 2:
-                                switch (codeGenConfigModel.TableType)
-                                {
-                                    case 4:
-                                        switch (templateEntity.Type)
-                                        {
-                                            case 3:
-                                                break;
-                                            default:
-                                                targetPathList = CodeGenTargetPathHelper.BackendTargetPathList(codeGenConfigModel.ClassName, fileName, templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.TableType == 4, codeGenConfigModel.IsMapper);
-                                                templatePathList = CodeGenTargetPathHelper.BackendInlineEditorTemplatePathList("4-MainBeltVice", templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.IsMapper);
-                                                break;
-                                        }
-                                        break;
-                                    default:
-                                        switch (templateEntity.Type)
-                                        {
-                                            case 3:
-                                                targetPathList = CodeGenTargetPathHelper.BackendFlowTargetPathList(codeGenConfigModel.ClassName, fileName, codeGenConfigModel.IsMapper);
-                                                templatePathList = CodeGenTargetPathHelper.BackendFlowTemplatePathList("4-MainBeltVice", codeGenConfigModel.IsMapper);
-                                                break;
-                                            default:
-                                                targetPathList = CodeGenTargetPathHelper.BackendTargetPathList(codeGenConfigModel.ClassName, fileName, templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.TableType == 4, codeGenConfigModel.IsMapper);
-                                                templatePathList = CodeGenTargetPathHelper.BackendTemplatePathList("4-MainBeltVice", templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.IsMapper);
-                                                break;
-                                        }
-                                        break;
-                                }
-                                break;
+                            targetPathList = mainBeltVicePaths.Value.TargetPathList;
+                            templatePathList = mainBeltVicePaths.Value.TemplatePathList;
                         }
 
                         for (var i = 0; i < templatePathList.Count; i++)
@@ -866,23 +699,9 @@ public class CodeGenService : IDynamicApiController, ITransient
                     var link = await _repository.AsSugarClient().Queryable<DbLinkEntity>().FirstAsync(m => m.Id == templateEntity.DbLinkId && m.DeleteMark == null);
                     var targetLink = link ?? _databaseManager.GetTenantDbLink(_userManager.TenantId, _userManager.TenantDbName);
 
-                    // 解析子表
-                    var subTable = new List<DbTableRelationModel>();
-                    var secondaryTable = new List<DbTableRelationModel>();
-                    foreach (DbTableRelationModel? item in tableRelation.FindAll(it => it.typeId == "0"))
-                    {
-                        // 解析子表比副表效率
-                        // 先获取出子表 其他的默认为副表
-                        switch (controls.Any(it => it.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE) && it.__config__.tableName.Equals(item.table)))
-                        {
-                            case true:
-                                subTable.Add(item);
-                                break;
-                            default:
-                                secondaryTable.Add(item);
-                                break;
-                        }
-                    }
+                    // 解析子表比副表效率：先获取出子表 其他的默认为副表
+                    var (subTable, secondaryTable) = TemplatesDataAggregationHelpers.SplitSubAndSecondaryTables(
+                        tableRelation.FindAll(it => it.typeId == "0"), controls);
 
                     List<CodeGenTableRelationsModel> subTableRelationsList = new List<CodeGenTableRelationsModel>();
                     List<CodeGenTableRelationsModel> secondaryTableRelationsList = new List<CodeGenTableRelationsModel>();
@@ -948,32 +767,8 @@ public class CodeGenService : IDynamicApiController, ITransient
                             File.WriteAllText(targetPathList[i], tResult, Encoding.UTF8);
                         }
 
-                        subTableRelationsList.Add(new CodeGenTableRelationsModel
-                        {
-                            ClassName = item.className,
-                            OriginalTableName = item.table,
-                            RelationTable = item.relationTable,
-                            TableName = item.table.ParseToPascalCase(),
-                            PrimaryKey = codeGenConfigModel.TableField.Find(it => it.PrimaryKey).ColumnName,
-                            TableField = codeGenConfigModel.TableField.Find(it => it.ForeignKeyField).ColumnName,
-                            OriginalTableField = codeGenConfigModel.TableField.Find(it => it.ForeignKeyField).OriginalColumnName,
-                            RelationField = item.relationField.ReplaceRegex("^f_", string.Empty).ParseToPascalCase(),
-                            OriginalRelationField = item.relationField,
-                            ControlTableComment = codeGenConfigModel.BusName,
-                            TableComment = item.tableName,
-                            ChilderColumnConfigList = codeGenConfigModel.TableField,
-                            ChilderColumnConfigListCount = codeGenConfigModel.TableField.FindAll(it => !it.PrimaryKey && !it.ForeignKeyField && it.jnpfKey != null).Count(),
-                            TableNo = tableNo,
-                            ControlModel = controlId,
-                            IsQueryWhether = codeGenConfigModel.TableField.Any(it => it.QueryWhether),
-                            IsShowField = codeGenConfigModel.TableField.Any(it => it.IsShow),
-                            IsUnique = codeGenConfigModel.TableField.Any(it => it.IsUnique),
-                            IsConversion = codeGenConfigModel.TableField.Any(it => it.IsConversion.Equals(true)),
-                            IsDetailConversion = codeGenConfigModel.TableField.Any(it => it.IsDetailConversion.Equals(true)),
-                            IsImportData = codeGenConfigModel.TableField.Any(it => it.IsImportField.Equals(true)),
-                            IsSearchMultiple = codeGenConfigModel.IsSearchMultiple,
-                            IsControlParsing = codeGenConfigModel.TableField.Any(it => it.IsControlParsing),
-                        });
+                        subTableRelationsList.Add(TemplatesDataAggregationHelpers.BuildChildTableRelation(
+                            item, codeGenConfigModel, controlId, tableNo));
                         tableNo++;
 
                         // 还原全部控件
@@ -1036,29 +831,8 @@ public class CodeGenService : IDynamicApiController, ITransient
                         }
 
                         var count = controls.Count(x => x.__vModel__.Contains(item.table));
-                        secondaryTableRelationsList.Add(new CodeGenTableRelationsModel
-                        {
-                            ClassName = codeGenConfigModel.ClassName,
-                            OriginalTableName = item.table,
-                            RelationTable = item.relationTable,
-                            TableName = item.table.ParseToPascalCase(),
-                            PrimaryKey = codeGenConfigModel.TableField.Find(it => it.PrimaryKey).ColumnName,
-                            TableField = codeGenConfigModel.TableField.Find(it => it.ForeignKeyField).ColumnName,
-                            ChilderColumnConfigList = codeGenConfigModel.TableField,
-                            OriginalTableField = codeGenConfigModel.TableField.Find(it => it.ForeignKeyField).OriginalColumnName,
-                            RelationField = item.relationField.ReplaceRegex("^f_", string.Empty).ParseToPascalCase(),
-                            OriginalRelationField = item.relationField,
-                            TableComment = item.tableName,
-                            TableNo = tableNo,
-                            IsConversion = codeGenConfigModel.TableField.Any(it => it.IsConversion.Equals(true)),
-                            IsDetailConversion = codeGenConfigModel.TableField.Any(it => it.IsDetailConversion.Equals(true)),
-                            IsImportData = codeGenConfigModel.TableField.Any(it => it.IsImportField.Equals(true)),
-                            IsSystemControl = codeGenConfigModel.TableField.Any(it => it.IsSystemControl),
-                            IsUpdate = codeGenConfigModel.TableField.Any(it => it.IsUpdate),
-                            IsSearchMultiple = codeGenConfigModel.IsSearchMultiple,
-                            IsControlParsing = codeGenConfigModel.TableField.Any(it => it.IsControlParsing),
-                            FieldCount = count,
-                        });
+                        secondaryTableRelationsList.Add(TemplatesDataAggregationHelpers.BuildAuxiliaryTableRelation(
+                            item, codeGenConfigModel, tableNo, count));
 
                         auxiliaryTableColumnList.AddRange(codeGenConfigModel.TableField.FindAll(it => it.jnpfKey != null));
                     }
@@ -1095,52 +869,13 @@ public class CodeGenService : IDynamicApiController, ITransient
                         codeGenConfigModel.TableRelations = subTableRelationsList;
                         codeGenConfigModel.IsChildConversion = subTableRelationsList.Any(it => it.IsConversion);
 
-                        switch (templateEntity.WebType)
+                        var primarySecondaryPaths = TemplatesDataAggregationHelpers.ResolveMainBackendPaths(
+                            templateEntity.WebType, templateEntity.Type, templateEntity.EnableFlow,
+                            codeGenConfigModel.TableType, item.className, fileName, codeGenConfigModel.IsMapper, "5-PrimarySecondary");
+                        if (primarySecondaryPaths != null)
                         {
-                            case 1:
-                                switch (templateEntity.Type)
-                                {
-                                    case 3:
-                                        targetPathList = CodeGenTargetPathHelper.BackendFlowTargetPathList(item.className, fileName, codeGenConfigModel.IsMapper);
-                                        templatePathList = CodeGenTargetPathHelper.BackendFlowTemplatePathList("5-PrimarySecondary", codeGenConfigModel.IsMapper);
-                                        break;
-                                    default:
-                                        targetPathList = CodeGenTargetPathHelper.BackendTargetPathList(item.className, fileName, templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.TableType == 4, codeGenConfigModel.IsMapper);
-                                        templatePathList = CodeGenTargetPathHelper.BackendTemplatePathList("5-PrimarySecondary", templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.IsMapper);
-                                        break;
-                                }
-                                break;
-                            case 2:
-                                switch (codeGenConfigModel.TableType)
-                                {
-                                    case 4:
-                                        switch (templateEntity.Type)
-                                        {
-                                            case 3:
-                                                break;
-                                            default:
-                                                targetPathList = CodeGenTargetPathHelper.BackendTargetPathList(item.className, fileName, templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.TableType == 4, codeGenConfigModel.IsMapper);
-                                                templatePathList = CodeGenTargetPathHelper.BackendInlineEditorTemplatePathList("5-PrimarySecondary", templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.IsMapper);
-                                                break;
-                                        }
-
-                                        break;
-                                    default:
-                                        switch (templateEntity.Type)
-                                        {
-                                            case 3:
-                                                targetPathList = CodeGenTargetPathHelper.BackendFlowTargetPathList(item.className, fileName, codeGenConfigModel.IsMapper);
-                                                templatePathList = CodeGenTargetPathHelper.BackendFlowTemplatePathList("5-PrimarySecondary", codeGenConfigModel.IsMapper);
-                                                break;
-                                            default:
-                                                targetPathList = CodeGenTargetPathHelper.BackendTargetPathList(item.className, fileName, templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.TableType == 4, codeGenConfigModel.IsMapper);
-                                                templatePathList = CodeGenTargetPathHelper.BackendTemplatePathList("5-PrimarySecondary", templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.IsMapper);
-                                                break;
-                                        }
-
-                                        break;
-                                }
-                                break;
+                            targetPathList = primarySecondaryPaths.Value.TargetPathList;
+                            templatePathList = primarySecondaryPaths.Value.TemplatePathList;
                         }
 
                         // 生成后端文件
@@ -1258,52 +993,13 @@ public class CodeGenService : IDynamicApiController, ITransient
                     // 后端生成
                     codeGenConfigModel = CodeGenWay.SingleTableBackEnd(tableName, fieldList, controls, templateEntity);
 
-                    switch (templateEntity.WebType)
+                    var singleTablePaths = TemplatesDataAggregationHelpers.ResolveMainBackendPaths(
+                        templateEntity.WebType, templateEntity.Type, templateEntity.EnableFlow,
+                        codeGenConfigModel.TableType, codeGenConfigModel.ClassName, fileName, codeGenConfigModel.IsMapper, "1-SingleTable");
+                    if (singleTablePaths != null)
                     {
-                        case 1:
-                            switch (templateEntity.Type)
-                            {
-                                case 3:
-                                    targetPathList = CodeGenTargetPathHelper.BackendFlowTargetPathList(codeGenConfigModel.ClassName, fileName, codeGenConfigModel.IsMapper);
-                                    templatePathList = CodeGenTargetPathHelper.BackendFlowTemplatePathList("1-SingleTable", codeGenConfigModel.IsMapper);
-                                    break;
-                                default:
-                                    targetPathList = CodeGenTargetPathHelper.BackendTargetPathList(codeGenConfigModel.ClassName, fileName, templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.TableType == 4, codeGenConfigModel.IsMapper);
-                                    templatePathList = CodeGenTargetPathHelper.BackendTemplatePathList("1-SingleTable", templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.IsMapper);
-                                    break;
-                            }
-
-                            break;
-                        case 2:
-                            switch (codeGenConfigModel.TableType)
-                            {
-                                case 4:
-                                    switch (templateEntity.Type)
-                                    {
-                                        // 流程表单没有行内编辑
-                                        case 3:
-                                            break;
-                                        default:
-                                            targetPathList = CodeGenTargetPathHelper.BackendTargetPathList(codeGenConfigModel.ClassName, fileName, templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.TableType == 4, codeGenConfigModel.IsMapper);
-                                            templatePathList = CodeGenTargetPathHelper.BackendInlineEditorTemplatePathList("1-SingleTable", templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.IsMapper);
-                                            break;
-                                    }
-                                    break;
-                                default:
-                                    switch (templateEntity.Type)
-                                    {
-                                        case 3:
-                                            targetPathList = CodeGenTargetPathHelper.BackendFlowTargetPathList(codeGenConfigModel.ClassName, fileName, codeGenConfigModel.IsMapper);
-                                            templatePathList = CodeGenTargetPathHelper.BackendFlowTemplatePathList("1-SingleTable", codeGenConfigModel.IsMapper);
-                                            break;
-                                        default:
-                                            targetPathList = CodeGenTargetPathHelper.BackendTargetPathList(codeGenConfigModel.ClassName, fileName, templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.TableType == 4, codeGenConfigModel.IsMapper);
-                                            templatePathList = CodeGenTargetPathHelper.BackendTemplatePathList("1-SingleTable", templateEntity.WebType, templateEntity.EnableFlow, codeGenConfigModel.IsMapper);
-                                            break;
-                                    }
-                                    break;
-                            }
-                            break;
+                        targetPathList = singleTablePaths.Value.TargetPathList;
+                        templatePathList = singleTablePaths.Value.TemplatePathList;
                     }
 
                     // 生成后端文件
@@ -1395,14 +1091,8 @@ public class CodeGenService : IDynamicApiController, ITransient
         controls = TemplateAnalysis.AnalysisTemplateData(fieldsCopy);
 
         // 捞取子表主键
-        if (modelType.Equals(GeneratePatterns.MainBelt) || modelType.Equals(GeneratePatterns.PrimarySecondary))
-        {
-            foreach (var item in controls)
-            {
-                if (item.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE))
-                    item.TablePrimaryKey = ctPrimaryKey[item.__config__.tableName].ReplaceRegex("^f_", string.Empty).ParseToPascalCase().ToLowerCase();
-            }
-        }
+        if (TemplatesDataAggregationHelpers.NeedsChildTablePrimaryKeyInjection(modelType))
+            TemplatesDataAggregationHelpers.ApplyChildTablePrimaryKeys(controls, ctPrimaryKey);
 
         // 生成前端
         await GenFrondEnd(tableName.ToLowerCase(), codeGenConfigModel.DefaultSidx, formDataModel, controls, codeGenMainTableConfigModel.TableField, templateEntity, fileName);
@@ -1494,36 +1184,6 @@ public class CodeGenService : IDynamicApiController, ITransient
         }
 
         return allDatas;
-    }
-
-    /// <summary>
-    /// 判断生成模式.
-    /// </summary>
-    /// <returns>1-纯主表、2-主带子、3-主带副、4-主带副与子.</returns>
-    private GeneratePatterns JudgmentGenerationModel(List<DbTableRelationModel> tableRelation, List<FieldsModel> controls)
-    {
-        // 默认纯主表
-        var codeModel = GeneratePatterns.PrimaryTable;
-
-        // 找副表控件
-        if (tableRelation.Count > 1 && controls.Any(x => x.__vModel__.Contains("_jnpf_")) && controls.Any(it => it.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE)))
-            codeModel = GeneratePatterns.PrimarySecondary;
-        else if (tableRelation.Count > 1 && controls.Any(x => x.__vModel__.Contains("_jnpf_")))
-            codeModel = GeneratePatterns.MainBeltVice;
-        else if (tableRelation.Count > 1 && controls.Any(it => it.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE)))
-            codeModel = GeneratePatterns.MainBelt;
-        switch (codeModel)
-        {
-            case GeneratePatterns.MainBelt:
-                // 在子表模式下 设计子表控件数量对不上表扣除主表后数量 强制定义为主子副模式
-                if (controls.Count(it => it.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE)) < tableRelation.Count - 1)
-                {
-                    codeModel = GeneratePatterns.PrimarySecondary;
-                }
-                break;
-        }
-
-        return codeModel;
     }
 
     /// <summary>

@@ -95,6 +95,10 @@
 | Q-CAB | [`design-quality-frontend-cabinets.md`](design-quality-frontend-cabinets.md) | ✅ 快照 | 专科五柜执行快照 + pnpm quality:* 命令 |
 | Q-ADR | [`design-quality-frontend-tooling-adr.md`](design-quality-frontend-tooling-adr.md) | ✅ Accepted | 五柜工具选型 ADR（depcruise/Knip/SonarJS/meta/fuite） |
 | Q-G | [`design-quality-baseline-gates.md`](design-quality-baseline-gates.md) | ✅ 设计稿 | 复杂度基线 Analyzer + NetArchTest（先设计后实现） |
+| Q-SPEC-BE | [`../../superpowers/specs/2026-08-06-backend-quality-remediation-design.md`](../../superpowers/specs/2026-08-06-backend-quality-remediation-design.md) | ✅ Draft | 后端质量迭代·设计规格（Hotspot/门禁） |
+| Q-PLAN-BE | [`../../superpowers/plans/2026-08-06-backend-quality-remediation-plan.md`](../../superpowers/plans/2026-08-06-backend-quality-remediation-plan.md) | ✅ Draft | 后端质量迭代·实施计划 W0–W3 |
+| Q-SPEC-FE | [`../../superpowers/specs/2026-08-06-frontend-quality-remediation-design.md`](../../superpowers/specs/2026-08-06-frontend-quality-remediation-design.md) | ✅ Draft | 前端质量迭代·设计规格（五柜） |
+| Q-PLAN-FE | [`../../superpowers/plans/2026-08-06-frontend-quality-remediation-plan.md`](../../superpowers/plans/2026-08-06-frontend-quality-remediation-plan.md) | ✅ Draft | 前端质量迭代·实施计划 F0–F3 |
 
 ---
 

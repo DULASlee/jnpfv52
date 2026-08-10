@@ -207,6 +207,10 @@ powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1
 
 # 独立编译验证
 cd backend && dotnet build
+
+# 后端质量门禁（2026-08 整改落地）
+cd backend && dotnet build /p:CI_BUILD=true   # 含 JNPF009 复杂度硬门 + baseline
+dotnet test --filter FullyQualifiedName~Architecture   # ARCH-01；Common.Core 硬失败
 ```
 
 ### Context at a Glance

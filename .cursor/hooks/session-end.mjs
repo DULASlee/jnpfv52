@@ -54,11 +54,9 @@ function run(script) {
   });
 }
 
-// 1) episodic 全文索引（后台）
-run('episodic-stop.mjs');
-// 2) 结构化 digest + AUTO summary
+// 1) 结构化 digest + AUTO summary
 const archive = run('session-archive-stop.mjs');
-// 3) pillar 仅校验，sessionEnd 不 followup
+// 2) pillar 仅校验，sessionEnd 不 followup
 run('guard-pillar-stop.mjs');
 
 let payload = { ok: true, hookEvent: 'sessionEnd' };

@@ -23,6 +23,7 @@ using JNPF.FriendlyException;
 using JNPF.Logging.Attributes;
 using JNPF.Message.Interfaces;
 using JNPF.OAuth.Dto;
+using JNPF.OAuth.Helpers;
 using JNPF.OAuth.Model;
 using JNPF.RemoteRequest.Extensions;
 using JNPF.Systems.Entitys.Dto.Module;
@@ -232,29 +233,23 @@ public class OAuthService : IDynamicApiController, ITransient
         // 域名租户
         if (_tenant.MultiTenancy && tenantId.Equals("default") && App.HttpContext.Request.Headers["origin"].IsNotEmptyOrNull())
         {
-            // 本地url地址
             var address = _userManager.UserOrigin.Equals("pc") ? App.Configuration["Message:DoMainPc"] : App.Configuration["Message:DoMainApp"];
-            address = address.Replace("https://", string.Empty).Replace("http://", string.Empty).Replace("www.", string.Empty);
-            var host = App.HttpContext.Request.Headers["origin"].ToString().Replace("https://", string.Empty).Replace("http://", string.Empty).Replace("www.", string.Empty);
-
-            if (host.Contains(address) && !host.Equals(address))
+            if (LoginFlowHelpers.TryRewriteAccountFromDomainHost(
+                    App.HttpContext.Request.Headers["origin"].ToString(),
+                    address,
+                    account,
+                    out var domainTenantId,
+                    out var rewrittenAccount))
             {
-                tenantId = host.Split(".").FirstOrDefault();
-                account = string.Format("{0}@{1}", tenantId, account);
+                tenantId = domainTenantId;
+                account = rewrittenAccount;
             }
         }
 
         if (_tenant.MultiTenancy)
         {
             string tenantAccout = string.Empty;
-
-            // 分割账号
-            var tenantAccount = account.Split('@');
-            tenantId = tenantAccount.FirstOrDefault();
-
-            if (tenantAccount.Length == 1) account = "admin";
-            else account = tenantAccount[1];
-
+            (tenantId, account) = LoginFlowHelpers.SplitTenantAccount(account);
             tenantAccout = account;
             tenantInterFaceOutput = await _tenantManager.ChangTenant(_sqlSugarClient, tenantId, false);
             options = tenantInterFaceOutput.options;
@@ -280,36 +275,17 @@ public class OAuthService : IDynamicApiController, ITransient
         * 不存在添加缓存
         * 存在更新缓存
         */
-        if (!await IsAnyByTenantIdAsync(tenantId))
         {
+            var exists = await IsAnyByTenantIdAsync(tenantId);
             List<GlobalTenantCacheModel>? list = _userManager.GetGlobalTenantCache();
-            list.Add(new GlobalTenantCacheModel
-            {
-                TenantId = tenantId,
-                SingleLogin = (int)sysConfig.singleLogin,
-                connectionConfig = options,
-                type = tenantInterFaceOutput.type,
-                tenantName = tenantInterFaceOutput.tenantName,
-                validTime = tenantInterFaceOutput.validTime,
-                domain = tenantInterFaceOutput.domain,
-                accountNum = tenantInterFaceOutput.accountNum,
-                moduleIdList = tenantInterFaceOutput.moduleIdList,
-                urlAddressList = tenantInterFaceOutput.urlAddressList,
-                unitInfoJson = tenantInterFaceOutput.unitInfoJson,
-                userInfoJson = tenantInterFaceOutput.userInfoJson,
-
-            });
-            await SetGlobalTenantCache(list);
-        }
-        else
-        {
-            List<GlobalTenantCacheModel>? list = _userManager.GetGlobalTenantCache();
-            list.FindAll(it => it.TenantId.Equals(tenantId)).ForEach(item =>
-            {
-                item.TenantId = tenantId;
-                item.SingleLogin = (int)sysConfig.singleLogin;
-                item.connectionConfig = options;
-            });
+            LoginFlowHelpers.UpsertGlobalTenantCache(
+                list,
+                exists,
+                tenantId,
+                (int)sysConfig.singleLogin,
+                options,
+                tenantInterFaceOutput,
+                updateExtendedFields: false);
             await SetGlobalTenantCache(list);
         }
 
@@ -731,10 +707,8 @@ public class OAuthService : IDynamicApiController, ITransient
     [LogPolicy(LogPolicy.IgnoreRequest)]
     public async Task<dynamic> Login([FromForm] LoginInput input, CancellationToken cancellationToken = default)
     {
-        try
-        {
         // 普通登录 密码 AES 解密.
-        if (!input.isSocialsLoginCallBack && (input.grant_type.IsNullOrEmpty() || !input.grant_type.Equals("official")))
+        if (LoginFlowHelpers.ShouldAesDecryptPassword(input.isSocialsLoginCallBack, input.grant_type))
             input.password = AESEncryption.AesDecrypt(input.password, App.GetConfig<AppOptions>("JNPF_App", true).AesKey);
 
         var defaultConnection = _connectionStrings.DefaultConnectionConfig;
@@ -749,27 +723,22 @@ public class OAuthService : IDynamicApiController, ITransient
         // 域名租户
         if (_tenant.MultiTenancy && tenantId.Equals("default") && App.HttpContext.Request.Headers["origin"].IsNotEmptyOrNull())
         {
-            // 本地url地址
             var address = _userManager.UserOrigin.Equals("pc") ? App.Configuration["Message:DoMainPc"] : App.Configuration["Message:DoMainApp"];
-            address = address.Replace("https://", string.Empty).Replace("http://", string.Empty).Replace("www.", string.Empty);
-            var host = App.HttpContext.Request.Headers["origin"].ToString().Replace("https://", string.Empty).Replace("http://", string.Empty).Replace("www.", string.Empty);
-
-            if (host.Contains(address) && !host.Equals(address))
+            if (LoginFlowHelpers.TryRewriteAccountFromDomainHost(
+                    App.HttpContext.Request.Headers["origin"].ToString(),
+                    address,
+                    input.account,
+                    out var domainTenantId,
+                    out var rewrittenAccount))
             {
-                tenantId = host.Split(".").FirstOrDefault();
-                input.account = string.Format("{0}@{1}", tenantId, input.account);
+                tenantId = domainTenantId;
+                input.account = rewrittenAccount;
             }
         }
 
         if (_tenant.MultiTenancy)
         {
-            // 分割账号
-            var tenantAccount = input.account.Split('@');
-            tenantId = tenantAccount.FirstOrDefault();
-            if (tenantAccount.Length == 1)
-                input.account = "admin";
-            else
-                input.account = tenantAccount[1];
+            (tenantId, input.account) = LoginFlowHelpers.SplitTenantAccount(input.account);
             tenantAccout = input.account;
 
             if (input.socialsOptions == null)
@@ -851,32 +820,15 @@ public class OAuthService : IDynamicApiController, ITransient
             // 验证账号是否被禁用
             if (user.EnabledMark == 0) throw Oops.Oh(ErrorCode.D1019);
 
-            // 是否延迟登录
-            if (sysConfig.lockType.Equals(ErrorStrategy.Delay) && user.UnLockTime.IsNullOrEmpty())
-            {
-                if (user.UnLockTime > DateTime.Now)
-                {
-                    int unlockTime = ((user.UnLockTime - DateTime.Now)?.TotalMinutes).ParseToInt();
-                    if (unlockTime < 1) unlockTime = 1;
-                    throw Oops.Oh(ErrorCode.D1027, unlockTime);
-                }
-                else if (user.UnLockTime <= DateTime.Now)
-                {
-                    user.EnabledMark = 1;
-                    user.LogErrorCount = 0;
-                    await _sqlSugarClient.Updateable(user).UpdateColumns(it => new { it.LogErrorCount, it.EnabledMark }).ExecuteCommandAsync();
-                }
-            }
-
-            // 是否 延迟登录
-            if (sysConfig.lockType.Equals(ErrorStrategy.Delay) && user.UnLockTime.IsNotEmptyOrNull() && user.UnLockTime > DateTime.Now)
-            {
-                int? t3 = (user.UnLockTime - DateTime.Now)?.TotalMinutes.ParseToInt();
-                if (t3 < 1) t3 = 1;
-                throw Oops.Oh(ErrorCode.D1027, t3?.ToString());
-            }
-
-            if (sysConfig.lockType.Equals(ErrorStrategy.Delay) && user.UnLockTime.IsNotEmptyOrNull() && user.UnLockTime <= DateTime.Now)
+            // 是否延迟登录 / 解锁
+            var delayLockOutcome = LoginFlowHelpers.EvaluateDelayLock(
+                sysConfig.lockType,
+                user.UnLockTime,
+                DateTime.Now,
+                out var unlockMinutes);
+            if (delayLockOutcome == LoginDelayLockOutcome.ThrowStillLocked)
+                throw Oops.Oh(ErrorCode.D1027, unlockMinutes);
+            if (delayLockOutcome == LoginDelayLockOutcome.ClearLockCounters)
             {
                 user.EnabledMark = 1;
                 user.LogErrorCount = 0;
@@ -887,8 +839,11 @@ public class OAuthService : IDynamicApiController, ITransient
             if (user.EnabledMark == 2) throw Oops.Oh(ErrorCode.D1031);
 
             // 获取加密后的密码
-            var encryptPasswod = MD5Encryption.Encrypt(input.password + user.Secretkey);
-            if (input.isSocialsLoginCallBack || (input.grant_type.IsNotEmptyOrNull() && input.grant_type.Equals("official"))) encryptPasswod = input.password;
+            var encryptPasswod = LoginFlowHelpers.ResolvePasswordForCompare(
+                input.password,
+                user.Secretkey,
+                input.isSocialsLoginCallBack,
+                input.grant_type);
 
             // 账户密码是否匹配
             var userAnyPwd = await _sqlSugarClient.Queryable<UserEntity>().FirstAsync(u => u.Account == input.account && u.Password == encryptPasswod && u.DeleteMark == null);
@@ -910,9 +865,11 @@ public class OAuthService : IDynamicApiController, ITransient
             if (userAnyPwd.IsNullOrEmpty()) throw Oops.Oh(ErrorCode.D1000);
 
             // 登录成功时 判断单点登录信息
-            int whitelistSwitch = Convert.ToInt32(sysConfig.whitelistSwitch);
-            string whiteListIp = sysConfig.whiteListIp;
-            if (whitelistSwitch.Equals(1) && user.IsAdministrator.Equals(0) && !whiteListIp.Split(",").Contains(ip))
+            if (LoginFlowHelpers.IsIpBlockedByWhitelist(
+                    sysConfig.whitelistSwitch,
+                    user.IsAdministrator,
+                    sysConfig.whiteListIp,
+                    ip))
                 throw Oops.Oh(ErrorCode.D9002);
 
             // token过期时间
@@ -949,44 +906,17 @@ public class OAuthService : IDynamicApiController, ITransient
             * 不存在添加缓存
             * 存在更新缓存
             */
-            if (!await IsAnyByTenantIdAsync(tenantId))
             {
+                var exists = await IsAnyByTenantIdAsync(tenantId);
                 List<GlobalTenantCacheModel>? list = _userManager.GetGlobalTenantCache();
-                list.Add(new GlobalTenantCacheModel
-                {
-                    TenantId = tenantId,
-                    SingleLogin = (int)sysConfig.singleLogin,
-                    connectionConfig = options,
-                    type = tenantInterFaceOutput.type,
-                    tenantName = tenantInterFaceOutput.tenantName,
-                    validTime = tenantInterFaceOutput.validTime,
-                    domain = tenantInterFaceOutput.domain,
-                    accountNum = tenantInterFaceOutput.accountNum,
-                    moduleIdList = tenantInterFaceOutput.moduleIdList,
-                    urlAddressList = tenantInterFaceOutput.urlAddressList,
-                    unitInfoJson = tenantInterFaceOutput.unitInfoJson,
-                    userInfoJson = tenantInterFaceOutput.userInfoJson,
-                });
-                await SetGlobalTenantCache(list);
-            }
-            else
-            {
-                List<GlobalTenantCacheModel>? list = _userManager.GetGlobalTenantCache();
-                list.FindAll(it => it.TenantId.Equals(tenantId)).ForEach(item =>
-                {
-                    item.TenantId = tenantId;
-                    item.SingleLogin = (int)sysConfig.singleLogin;
-                    item.connectionConfig = options;
-                    item.type = tenantInterFaceOutput.type;
-                    item.tenantName = tenantInterFaceOutput.tenantName;
-                    item.validTime = tenantInterFaceOutput.validTime;
-                    item.domain = tenantInterFaceOutput.domain;
-                    item.accountNum = tenantInterFaceOutput.accountNum;
-                    item.moduleIdList = tenantInterFaceOutput.moduleIdList;
-                    item.urlAddressList = tenantInterFaceOutput.urlAddressList;
-                    item.unitInfoJson = tenantInterFaceOutput.unitInfoJson;
-                    item.userInfoJson = tenantInterFaceOutput.userInfoJson;
-                });
+                LoginFlowHelpers.UpsertGlobalTenantCache(
+                    list,
+                    exists,
+                    tenantId,
+                    (int)sysConfig.singleLogin,
+                    options,
+                    tenantInterFaceOutput,
+                    updateExtendedFields: true);
                 await SetGlobalTenantCache(list);
             }
 
@@ -1048,7 +978,7 @@ public class OAuthService : IDynamicApiController, ITransient
             }
 
             return new {
-                theme = user.Theme == null ? "classic" : user.Theme,
+                theme = LoginFlowHelpers.ResolveTheme(user.Theme),
                 token = string.Format("Bearer {0}", accessToken),
                 refreshToken = JWTEncryption.GenerateRefreshToken(accessToken, 30 * 24 * 60),
                 wl_qrcode = tenantInterFaceOutput.wl_qrcode
@@ -1058,11 +988,6 @@ public class OAuthService : IDynamicApiController, ITransient
         {
             sw.Stop();
             await AddLoginLog(tenantId, user, logUserName, input.grant_type, userAgent, (int)sw.ElapsedMilliseconds, loginType, 0, ex.Message);
-            throw;
-        }
-        }
-        catch (Exception)
-        {
             throw;
         }
     }

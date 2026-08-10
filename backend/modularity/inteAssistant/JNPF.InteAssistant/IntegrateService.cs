@@ -5,6 +5,7 @@ using JNPF.Common.Dtos.Message;
 using JNPF.Common.Enums;
 using JNPF.Common.Extension;
 using JNPF.Common.Filter;
+using JNPF.Common.Models.InteAssistant;
 using JNPF.Common.Models.Job;
 using JNPF.Common.Security;
 using JNPF.DatabaseAccessor;
@@ -596,7 +597,12 @@ public class IntegrateService : IDynamicApiController, ITransient
                         field = "@CreatorUserName",
                         value = _userManager.GetUserName(input.creatorUserId)
                     });
-                    await _messageManager.SendDefinedMsg(item, new Dictionary<string, object>(), input.taskEntity);
+                    await _messageManager.SendDefinedMsg(
+                        item,
+                        new Dictionary<string, object>(),
+                        input.taskEntity is null
+                            ? null
+                            : IntegrateTaskMessageDto.From(input.taskEntity.Data, input.taskEntity.TemplateJson));
                 }
                 break;
         }

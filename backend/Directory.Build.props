@@ -45,6 +45,10 @@
         </PackageReference>
         <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Link="Properties\stylecop.json" />
         <AdditionalFiles Include="$(MSBuildThisFileDirectory).editorconfig" Link="Properties\.editorconfig" />
+        <!-- W0 ComplexityAnalyzer baseline (JNPF009); consumed when CI_BUILD enables analyzers -->
+        <AdditionalFiles Include="$(MSBuildThisFileDirectory)tools\JNPF.Analyzers\complexity-baseline.json"
+                         Link="Properties\complexity-baseline.json"
+                         Condition="Exists('$(MSBuildThisFileDirectory)tools\JNPF.Analyzers\complexity-baseline.json')" />
     </ItemGroup>
 
     <!-- JNPF 自定义分析器 — 仅 CI 启用（与 Roslynator/StyleCop 一致），排除自身项目和测试项目 -->

@@ -473,19 +473,12 @@ export function buildArchiveStatusBanner(digest, syncStatus) {
   const ma = digest.machineArchival || {};
   const icon = (ok) => (ok ? '✅' : '❌');
 
-  let episodicDetail = '已触发（后台 index）';
-  if (syncStatus?.ok && syncStatus.phase === 'sync-complete') episodicDetail = '已完成';
-  else if (syncStatus?.ok && /^background-/.test(syncStatus.phase || '')) episodicDetail = '后台进行中';
-  else if (syncStatus?.ok && syncStatus.phase === 'stats') episodicDetail = '已触发（后台 index）';
-  else if (syncStatus?.ok) episodicDetail = '已触发';
-
   const structOk = checks.focusOk && checks.registryOk;
   const lines = [
     '【跨会话归档完成】',
     '',
-    `${icon(true)} ① episodic 对话全文索引 — ${episodicDetail}`,
-    `${icon(structOk)} ② CURRENT-FOCUS + progress-registry — ${structOk ? '已更新' : '未完成'}`,
-    `${icon(checks.mistakeOk)} ③ mistake-log — ${ma.mistakeId || (checks.mistakeOk ? '已更新' : '未完成')}`,
+    `${icon(structOk)} ① CURRENT-FOCUS + progress-registry — ${structOk ? '已更新' : '未完成'}`,
+    `${icon(checks.mistakeOk)} ② mistake-log — ${ma.mistakeId || (checks.mistakeOk ? '已更新' : '未完成')}`,
     '',
     `主题：${digest.topic || '代码变更'} · ${digest.codeFilesChanged ?? 0} 个代码文件`,
     `归档：${digest.archiveStatus || 'unknown'} · ${digest.endedAt || ''}`,

@@ -10,7 +10,6 @@ import {
   buildArchiveBannerAgentFollowup,
   buildArchiveStatusBanner,
   getProjectRoot,
-  readEpisodicSyncStatus,
   readSessionDigest,
   writeArchiveBannerFile,
 } from './session-archive-lib.mjs';
@@ -71,8 +70,7 @@ if (!digest || digest.codeFilesChanged === 0 || digest.archiveStatus !== 'comple
   process.exit(0);
 }
 
-const syncStatus = readEpisodicSyncStatus(root);
-const banner = buildArchiveStatusBanner(digest, syncStatus);
+const banner = buildArchiveStatusBanner(digest, null);
 writeArchiveBannerFile(root, banner, digest);
 
 process.stdout.write(JSON.stringify({

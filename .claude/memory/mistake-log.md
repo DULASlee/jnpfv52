@@ -337,6 +337,30 @@
 
 | 日期 | 类别 | 症状 | 根因 | 修复 | 关键词 |
 |------|------|------|------|------|--------|
+| 2026-08-06 | 后端 | hook 自动：代码变更（26 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +22 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（25 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +21 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（24 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +20 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（23 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +19 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（22 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +18 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（21 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +17 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（20 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +16 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（19 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +15 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（18 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +14 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（17 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +13 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（16 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +12 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（15 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +11 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（14 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +10 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（13 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +9 |
+| 2026-08-06 | 后端 | hook 自动：代码变更（12 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +8 |
+| 2026-08-06 | 代码变更 | hook 自动：代码变更（10 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +6 |
+| 2026-08-06 | 代码变更 | hook 自动：代码变更（9 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +5 |
+| 2026-08-06 | 代码变更 | hook 自动：代码变更（8 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +4 |
+| 2026-08-06 | 代码变更 | hook 自动：代码变更（7 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +3 |
+| 2026-08-06 | 代码变更 | hook 自动：代码变更（8 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, d8-a11y-scan.spec.ts, d9-render-perf.spec.ts, 2026-08-06-20260806122716.json +4 |
+| 2026-08-06 | 代码变更 | hook 自动：代码变更（3 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, d8-a11y-scan.spec.ts, d9-render-perf.spec.ts |
+| 2026-08-06 | 代码变更 | hook 自动：代码变更（4 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json |
+| 2026-08-06 | 代码变更 | hook 自动：代码变更（3 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json |
+| 2026-08-06 | 代码变更 | hook 自动：代码变更（2 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json |
 | 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（181 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +177 |
 | 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（180 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +176 |
 | 2026-08-06 | 工具链 | hook 自动：设计 Skill 编排（179 文件） | 见 session-digest | 见 AUTO summary / digest | knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +175 |
@@ -447,6 +471,972 @@
 - **变更**：`.ai-memory/knowledge-graph.json`, `.claude/.session-init-lock.json`, `.claude/.skill-load-state.json`, `.cursor/hooks.json`, `.cursor/hooks/episodic-session-start.mjs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Dto/Skills/SkillDtos.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiProjectEntity.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/IrEventTypes.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/GatePipelineOptions.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/SemanticFitnessValidator.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/Infrastructure/Background/BackgroundTaskRunner.cs` …
 - **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
 - **日期**：2026-08-06 | **关键词**：`knowledge-graph.json, .session-init-lock.json, .skill-load-state.json, hooks.json +177`
+
+### M078 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 2 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json`
+
+### M079 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 3 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json`
+
+### M080 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 4 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json`
+
+### M081 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 3 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `e2e/admin/d8-a11y-scan.spec.ts`, `e2e/admin/d9-render-perf.spec.ts`
+- **hook-auto-archive**: 20260806124741
+- **日期**：2026-08-06 | **关键词**：`latest.json, d8-a11y-scan.spec.ts, d9-render-perf.spec.ts`
+
+### M082 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 8 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `e2e/admin/d8-a11y-scan.spec.ts`, `e2e/admin/d9-render-perf.spec.ts`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, d8-a11y-scan.spec.ts, d9-render-perf.spec.ts, 2026-08-06-20260806122716.json +4`
+
+### M083 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 7 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +3`
+
+### M084 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 8 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +4`
+
+### M085 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 9 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +5`
+
+### M086 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 10 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +6`
+
+### M087 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 12 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `backend/tests/JNPF.Tests.Architecture/LayeringTests.cs`
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +8`
+
+### M088 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 13 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +9`
+
+### M089 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 14 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +10`
+
+### M090 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 15 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +11`
+
+### M091 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 16 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +12`
+
+### M092 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 17 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +13`
+
+### M093 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 18 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +14`
+
+### M094 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 19 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +15`
+
+### M095 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 20 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +16`
+
+### M096 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 21 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +17`
+
+### M097 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 22 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 24f18f42-4d50-4b0e-ab76-1ff6581d511f
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +18`
+
+### M098 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 23 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 24f18f42-4d50-4b0e-ab76-1ff6581d511f
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +19`
+
+### M099 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 24 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +20`
+
+### M100 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 25 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 24f18f42-4d50-4b0e-ab76-1ff6581d511f
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +21`
+
+### M101 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 26 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 4ea6c159-9f34-4df9-af9a-ab4378e89c78
+- **日期**：2026-08-06 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +22`
+
+## 2026-08-07
+
+| 日期 | 类别 | 症状 | 根因 | 修复 | 关键词 |
+|------|------|------|------|------|--------|
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（161 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +157 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（160 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +156 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（159 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +155 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（156 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +152 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（153 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +149 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（150 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +146 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（143 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +139 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（140 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +136 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（137 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +133 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（134 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +130 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（131 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +127 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（128 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +124 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（125 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +121 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（120 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +116 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（117 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +113 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（113 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +109 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（110 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +106 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（106 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +102 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（99 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +95 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（98 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +94 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（97 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +93 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（96 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +92 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（95 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +91 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（95 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +91 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（95 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +91 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（95 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +91 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（94 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +90 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（93 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +89 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（93 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +89 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（93 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +89 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（93 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +89 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（92 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +88 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（91 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +87 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（90 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +86 |
+| 2026-08-07 | 后端 | hook 自动：工具链/跨会话归档（87 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +83 |
+| 2026-08-07 | 后端 | hook 自动：代码变更（81 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +77 |
+| 2026-08-07 | 后端 | hook 自动：代码变更（79 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +75 |
+| 2026-08-07 | 后端 | hook 自动：代码变更（78 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +74 |
+| 2026-08-07 | 后端 | hook 自动：代码变更（74 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +70 |
+| 2026-08-07 | 后端 | hook 自动：代码变更（73 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +69 |
+| 2026-08-07 | 后端 | hook 自动：代码变更（72 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +68 |
+| 2026-08-07 | 后端 | hook 自动：代码变更（63 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, ExportImportDataHelper.cs, UserManager.cs, FormDataParsing.cs +59 |
+| 2026-08-07 | 后端 | hook 自动：代码变更（62 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, ExportImportDataHelper.cs, UserManager.cs, FormDataParsing.cs +58 |
+| 2026-08-07 | 后端 | hook 自动：代码变更（61 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, ExportImportDataHelper.cs, UserManager.cs, FormDataParsing.cs +57 |
+| 2026-08-07 | 后端 | hook 自动：代码变更（54 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, UserManager.cs, FormDataParsing.cs, RunService.cs +50 |
+| 2026-08-07 | 后端 | hook 自动：代码变更（44 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, UserManager.cs, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json +40 |
+| 2026-08-07 | 后端 | hook 自动：代码变更（42 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +38 |
+| 2026-08-07 | 后端 | hook 自动：代码变更（33 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +29 |
+
+### M102 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 33 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +29`
+
+### M103 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 42 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json`, `.claude/memory/session-digest/2026-08-06-20260806145307.json` …
+- **hook-auto-archive**: 24f18f42-4d50-4b0e-ab76-1ff6581d511f
+- **日期**：2026-08-07 | **关键词**：`latest.json, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json, 2026-08-06-20260806123432.json +38`
+
+### M104 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 44 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json`, `.claude/memory/session-digest/2026-08-06-20260806141843.json`, `.claude/memory/session-digest/2026-08-06-20260806142227.json`, `.claude/memory/session-digest/2026-08-06-20260806142838.json` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, UserManager.cs, 2026-08-06-20260806122716.json, 2026-08-06-20260806122811.json +40`
+
+### M105 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 54 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json`, `.claude/memory/session-digest/2026-08-06-20260806141036.json`, `.claude/memory/session-digest/2026-08-06-20260806141651.json` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, UserManager.cs, FormDataParsing.cs, RunService.cs +50`
+
+### M106 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 61 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, ExportImportDataHelper.cs, UserManager.cs, FormDataParsing.cs +57`
+
+### M107 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 62 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, ExportImportDataHelper.cs, UserManager.cs, FormDataParsing.cs +58`
+
+### M108 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 63 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json`, `.claude/memory/session-digest/2026-08-06-20260806123958.json`, `.claude/memory/session-digest/2026-08-06-20260806124741.json` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, ExportImportDataHelper.cs, UserManager.cs, FormDataParsing.cs +59`
+
+### M109 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 72 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +68`
+
+### M110 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 73 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +69`
+
+### M111 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 74 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json`, `.claude/memory/session-digest/2026-08-06-20260806123432.json` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +70`
+
+### M112 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 78 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +74`
+
+### M113 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 79 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `.claude/memory/session-digest/2026-08-06-20260806122716.json`, `.claude/memory/session-digest/2026-08-06-20260806122811.json` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +75`
+
+### M114 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 81 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-vue3/src/settings/projectSetting.ts`, `.claude/memory/session-digest/2026-08-06-20260806122716.json` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +77`
+
+### M115 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 87 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-vue3/src/settings/projectSetting.ts`, `jnpf-web-vue3/src/views/onlineDev/integrate/index.vue` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +83`
+
+### M116 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 90 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +86`
+
+### M117 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 91 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: 5033078d-9a77-4bab-a183-8cfbc12cfa03
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +87`
+
+### M118 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 92 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: 5033078d-9a77-4bab-a183-8cfbc12cfa03
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +88`
+
+### M119 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 93 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +89`
+
+### M120 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 93 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: bda8a373-957b-41e1-a1ef-7eaded58e3bd
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +89`
+
+### M121 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 93 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: 0e398890-36e7-4eed-97df-6fe6dc4d5b27
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +89`
+
+### M122 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 93 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: fed47cdd-c1bf-40bb-95c9-1fbe1e254553
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +89`
+
+### M123 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 94 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: d6ac4899-9d0e-496a-a4c1-afc8cc53416b
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +90`
+
+### M124 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 95 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: 061bdc77-a564-4b5c-b2a8-af54e25edf4d
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +91`
+
+### M125 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 95 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: d9fb7ff6-ca1c-4379-9c50-b0312a486446
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +91`
+
+### M126 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 95 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: 72dcf581-5f3a-461a-a110-b8a7f784092f
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +91`
+
+### M127 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 95 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: 340ba3fc-c099-4383-bbfc-f64e30bd0523
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +91`
+
+### M128 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 96 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +92`
+
+### M129 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 97 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +93`
+
+### M130 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 98 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +94`
+
+### M131 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 99 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `jnpf-web-datascreen/vite.config.js`, `jnpf-web-vue3/src/components/Form/src/componentMap.ts` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +95`
+
+### M132 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 106 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs`, `jnpf-web-datascreen/vite.config.js` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +102`
+
+### M133 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 110 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs`, `jnpf-web-datascreen/vite.config.js` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +106`
+
+### M134 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 113 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs`, `jnpf-web-datascreen/vite.config.js` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +109`
+
+### M135 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 117 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs`, `jnpf-web-datascreen/vite.config.js` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +113`
+
+### M136 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 120 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs`, `jnpf-web-datascreen/vite.config.js` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +116`
+
+### M137 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 125 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs`, `jnpf-web-datascreen/vite.config.js` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +121`
+
+### M138 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 128 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs`, `jnpf-web-datascreen/vite.config.js` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +124`
+
+### M139 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 131 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs`, `jnpf-web-datascreen/vite.config.js` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +127`
+
+### M140 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 134 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs`, `jnpf-web-datascreen/vite.config.js` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +130`
+
+### M141 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 137 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs`, `jnpf-web-datascreen/vite.config.js` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +133`
+
+### M142 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 140 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs`, `jnpf-web-datascreen/vite.config.js` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +136`
+
+### M143 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 143 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualDevService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs`, `jnpf-web-datascreen/vite.config.js` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +139`
+
+### M144 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 150 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/IntegrateService.cs`, `backend/modularity/message/JNPF.Message.Interfaces/IMessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/MessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/WechatMiniProgramService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +146`
+
+### M145 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 153 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/IntegrateService.cs`, `backend/modularity/message/JNPF.Message.Interfaces/IMessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/MessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/WechatMiniProgramService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +149`
+
+### M146 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 156 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/IntegrateService.cs`, `backend/modularity/message/JNPF.Message.Interfaces/IMessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/MessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/WechatMiniProgramService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +152`
+
+### M147 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 159 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/IntegrateService.cs`, `backend/modularity/message/JNPF.Message.Interfaces/IMessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/MessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/WechatMiniProgramService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +155`
+
+### M148 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 160 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/IntegrateService.cs`, `backend/modularity/message/JNPF.Message.Interfaces/IMessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/MessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/WechatMiniProgramService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +156`
+
+### M149 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 161 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/IntegrateService.cs`, `backend/modularity/message/JNPF.Message.Interfaces/IMessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/MessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/WechatMiniProgramService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-07 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +157`
+
+## 2026-08-08
+
+| 日期 | 类别 | 症状 | 根因 | 修复 | 关键词 |
+|------|------|------|------|------|--------|
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（211 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +207 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（210 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（210 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（210 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（210 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（210 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（210 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（210 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（210 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（209 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +205 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（208 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +204 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（207 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +203 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（206 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +202 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（205 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +201 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（204 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +200 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（203 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +199 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（202 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +198 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（201 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +197 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（188 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +184 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（184 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +180 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（179 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, Program.cs, ExportImportDataHelper.cs +175 |
+| 2026-08-08 | 工具链 | hook 自动：工具链/跨会话归档（176 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, hooks.json, Program.cs, ExportImportDataHelper.cs +172 |
+| 2026-08-08 | 后端 | hook 自动：工具链/跨会话归档（171 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +167 |
+| 2026-08-08 | 后端 | hook 自动：工具链/跨会话归档（168 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +164 |
+| 2026-08-08 | 后端 | hook 自动：工具链/跨会话归档（165 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +161 |
+| 2026-08-08 | 后端 | hook 自动：工具链/跨会话归档（162 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +158 |
+
+### M150 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 162 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/IntegrateService.cs`, `backend/modularity/message/JNPF.Message.Interfaces/IMessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/MessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/WechatMiniProgramService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs` …
+- **hook-auto-archive**: 20260807160832
+- **日期**：2026-08-08 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +158`
+
+### M151 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 165 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/IntegrateService.cs`, `backend/modularity/message/JNPF.Message.Interfaces/IMessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/MessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/WechatMiniProgramService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-08 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +161`
+
+### M152 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 168 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/IntegrateService.cs`, `backend/modularity/message/JNPF.Message.Interfaces/IMessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/MessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/WechatMiniProgramService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-08 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +164`
+
+### M153 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 171 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/IntegrateService.cs`, `backend/modularity/message/JNPF.Message.Interfaces/IMessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/MessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/WechatMiniProgramService.cs`, `backend/modularity/visualdev/JNPF.VisualDev/RunService.cs` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-08 | **关键词**：`latest.json, Program.cs, ExportImportDataHelper.cs, IntegreateEventSubscriber.cs +167`
+
+### M154 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 176 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/IntegrateService.cs`, `backend/modularity/message/JNPF.Message.Interfaces/IMessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/MessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/WechatMiniProgramService.cs` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, Program.cs, ExportImportDataHelper.cs +172`
+
+### M155 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 179 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/IntegrateService.cs`, `backend/modularity/message/JNPF.Message.Interfaces/IMessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/MessageManager.cs`, `backend/modularity/message/JNPF.Message/Service/WechatMiniProgramService.cs` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, Program.cs, ExportImportDataHelper.cs +175`
+
+### M156 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 184 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +180`
+
+### M157 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 188 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs`, `backend/modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs` …
+- **hook-auto-archive**: cb285622-b647-4ade-9ebc-fd4fd14cff5c
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +184`
+
+### M158 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 201 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: cb285622-b647-4ade-9ebc-fd4fd14cff5c
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +197`
+
+### M159 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 202 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: cb285622-b647-4ade-9ebc-fd4fd14cff5c
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +198`
+
+### M160 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 203 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: cb285622-b647-4ade-9ebc-fd4fd14cff5c
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +199`
+
+### M161 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 204 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: cb285622-b647-4ade-9ebc-fd4fd14cff5c
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +200`
+
+### M162 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 205 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: cb285622-b647-4ade-9ebc-fd4fd14cff5c
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +201`
+
+### M163 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 206 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: cb285622-b647-4ade-9ebc-fd4fd14cff5c
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +202`
+
+### M164 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 207 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: cb285622-b647-4ade-9ebc-fd4fd14cff5c
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +203`
+
+### M165 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 208 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: c2ec3765-9f0d-424e-856d-33797d3c47b2
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +204`
+
+### M166 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 209 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: cb285622-b647-4ade-9ebc-fd4fd14cff5c
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +205`
+
+### M167 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 210 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: ef3d3ee0-4639-4584-828d-1680dd326602
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206`
+
+### M168 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 210 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: 340ba3fc-c099-4383-bbfc-f64e30bd0523
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206`
+
+### M169 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 210 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: d9fb7ff6-ca1c-4379-9c50-b0312a486446
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206`
+
+### M170 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 210 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: 08a75fbc-2bc4-4e97-9bb6-c9fc6dfcb467
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206`
+
+### M171 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 210 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: 5033078d-9a77-4bab-a183-8cfbc12cfa03
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206`
+
+### M172 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 210 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: 061bdc77-a564-4b5c-b2a8-af54e25edf4d
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206`
+
+### M173 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 210 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: 72dcf581-5f3a-461a-a110-b8a7f784092f
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206`
+
+### M174 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 210 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: bda8a373-957b-41e1-a1ef-7eaded58e3bd
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +206`
+
+### M175 | 工具链/跨会话归档（hook 自动归档）
+
+- **症状**：stop hook 检测到 211 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
+- **hook-auto-archive**: fed47cdd-c1bf-40bb-95c9-1fbe1e254553
+- **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +207`
 ## 一、方法论（最贵——每条都导致 ≥1 小时浪费）
 
 ### M035 | 未钉死业务功能就开发/验收：用纠偏项冒充四大支柱①（方向性错误）
@@ -645,3 +1635,148 @@ JNPF 框架: 6 ██████
 ```
 
 > **解读**：C# 语法错误虽然最多，但都是"查文档即可"的一次性错误。方法论错误只占 7/32（22%），但每条都导致 ≥1 小时浪费——**方法论是 ROI 最高的改进方向**。
+
+### 2026-08-07 — 质量整改不能只做门禁/表征测（止损≠疗效）
+- **错**: W0–W4 结案后只剩「行为不变」的抽取与基线挂账，重症 CC 仍 41、无性能数字，被判定为打麻药
+- **对**: 本刀对批删去掉非集成助手路径的 N 次逐条取数；映射改 HashSet；SQL/规则抽可测；CR 抓到 TREE/POPUP→CHECKBOX 误放行并修掉
+- **验收**: `dotnet test backend/tests/JNPF.Tests.VisualDev --filter FullyQualifiedName~BatchDeleteSqlPlanner|FullyQualifiedName~FlowFormMapRule` → 14/14；全套 25/25
+
+### 2026-08-07 — GetListResult 权限字段重写是死代码
+- **错**: `pvalueJson.Replace(...)` 未接返回值，且 Contains(Key) 却 Replace(Value→Key)，权限 FieldName 重写从未生效
+- **对**: `ListResultShapeHelpers.RewritePermissionFieldNames` 按 AllTableFields Key→Value 赋值替换；单测钉住
+- **验收**: `dotnet test … --filter FullyQualifiedName~ListResultShape` 8/8
+
+### 2026-08-07 — 行编辑回显系统字段用 Any 扫全表
+- **错**: GetListResult 每个单元格 `AllFieldsModel.Any(...)` 判断系统控件
+- **对**: 先建 jnpfKey→vModel HashSet 再 Contains；抽 `ListRowEditEchoHelpers`
+- **验收**: `dotnet test … --filter FullyQualifiedName~ListRowEditEcho` 5/5
+
+### 2026-08-07 — 导入系统自动生成控件双端 switch 漂移
+- **错**: VisualDev/CodeGen 各维护一套 BILLRULE/CREATEUSER/组织岗位赋值，magic string「单据规则不存在」易漂移
+- **对**: 抽 `ImportSystemFieldAssembler`（静态字段 + MapBillRule/MapCurrPosition）；I/O 留 call site；CreateUser 来源分叉经 Context 注入
+- **验收**: `dotnet test … --filter FullyQualifiedName~ImportSystemField` 13/13；全套 VisualDev 75/75；CR PASS
+
+### 2026-08-07 — GetCondition 短路勿丢掉 primaryKeyPolicy
+- **错**: 若直接复用默认 AllowAll/DenyAll（仅 string Convert），整型主键代码生成路径会漂
+- **对**: ShortCircuits 增加 `primaryKeyAsInt`；GetCondition 四处短路透传 `primaryKeyPolicy`；QueryType 大 switch 抽可测 appender
+- **验收**: `dotnet test backend/tests/JNPF.Tests.Common` 16→18+；CR PASS
+
+### 2026-08-07 — 按表名拆条件 RemoveAt 后未回退索引会跳叶
+- **错**: CodeGen `GetIConditionalModelListByTableName` 在 Model/Collections 删除后不 `i--`/`j--`，前一个不匹配会跳过下一个应保留字段（树分支却有 j--）
+- **对**: 抽 `ConditionalByTableNameFilter` 并统一回退索引；**禁止**与 RunService 同名私有方法合并（首子 Key=Null、无 strip）
+- **验收**: `dotnet test … --filter ConditionalByTableName` 8/8；Common 全套 25+；CR PASS
+
+### 2026-08-07 — LEGACY 门控决策与流错误检测勿混装
+- **错**: 把 Gateway `[ERROR]` 哨兵检测塞进门控 Planner，职责漂移
+- **对**: 决策/文案→`LegacyRequirementGatePlanner`；流错误→`StreamLlmFlowHelpers.IsGatewayStreamError`；附件 I/O 仍留 call site
+- **验收**: Architecture 滤测 Legacy+StreamLlm 全绿；CR PASS
+
+### 2026-08-07 — LEGACY 附件状态码与错误截断要有单测常量
+- **错**: 魔法数 0/1/2/3 与 2000 字截断散落在 Stream 方法里，改一处易漏
+- **对**: `LegacyGateAttachmentHelpers` 集中状态常量、缓存命中、截断、实体装配；下载/解析仍 call site
+- **验收**: `dotnet test …Architecture --filter LegacyGateAttachment`；CR PASS
+
+### 2026-08-07 — 附件 URL 去重勿对空串早退
+- **错**: `UrlAlreadyExists` 加 `IsNullOrEmpty` 早退，空 URL 重复附件会反复入库并抬高硬规则附件计数
+- **对**: 保持 `existing.Any(e => e == url)`（含 ""/null）；表征测钉住空串去重
+- **验收**: Architecture LegacyGateAttachment 测绿；CR 复审 PASS
+
+### 2026-08-07 — 子表默认值会被布局递归覆盖
+- **错**: 以为 TABLE 分支按父级 multiple 写的 defaultValue 即终态
+- **对**: 随后 `children` 递归会按子控件自身 multiple 再绑一次；表征测钉终态，勿误「修」成只走 TABLE 分支
+- **验收**: FieldBindDefaultValueHelpers 8/8
+
+### 2026-08-07 — IsNotEmptyOrNull(空 List) 在业务里当「有值」
+- **错**: 以为 `new List<string>()` 对 IsNotEmptyOrNull 为 false；GenerateFeilds 的 create 旗标会漂
+- **对**: 空 List.ToString() 是类型名 ≠ ""，仍为 true；表征测钉住；勿擅自改成 Count>0
+- **验收**: SystemFieldGenerateHelpers 12/12
+
+### 2026-08-07 — GenerateFeilds 时间戳勿 hoist 到 await 前
+- **错**: 入口一次 `DateTime.Now` 供全方法复用，异步取号/查组织后创建时间会偏早
+- **对**: 每个 CREATETIME/MODIFYTIME 赋值点再取 `DateTime.Now`（与旧行为一致）
+- **验收**: SystemFieldGenerateHelpers 12/12；CR High 已修
+
+### 2026-08-07 — Message.Interfaces 勿再挂 InteAssistant 实体
+- **错**: 消息接口为传小程序任务体直接引用集成实体程序集，ARCH-01 只能长期豁免
+- **对**: 公共 DTO 只带 Data/TemplateJson；接口层去 ProjectReference；调用侧实体→DTO 映射；豁免只留 API 入口
+- **验收**: Architecture 60/60；evidence w4-message-interfaces-surgery-summary.json；CR PASS
+
+### 2026-08-07 — GetListChildTable Strip 后值类型可能变 JsonElement
+- **错**: 表征测对 Copy() 后的字典值用 Assert.Equal("x", obj) 直接比
+- **对**: System.Text.Json 反序列化后 object 常为 JsonElement；比业务内容用 ToString()，或钉序列化契约
+- **验收**: ListChildTableHelpers 10/10；VisualDev 109/109；CR PASS
+
+### 2026-08-07 — RunService 表名过滤勿与 CodeGen 合并；跳叶测要能假红
+- **错**: 把在线开发 Contains(表名)无去前缀 与代码生成 table.去前缀 合成一套；跳叶测用 [other,keep,other] 无 i-- 仍绿
+- **对**: VisualDev 独立过滤器；首子树 WhereType.Null；Collections 透传；跳叶测用 [other,other,keep]
+- **验收**: ListConditionalByTableNameFilter 6/6；VisualDev 115；CodeGen 过滤器回归 8/8
+
+### 2026-08-07 — 导入弹窗缓存勿当普通下拉 MapSelectLike
+- **错**: GetDynamicList 对弹窗返回多列整行，用 BuildLabelToKeyIndex 会把显示名映射成列名（如 name）而非主键
+- **对**: 专用映射：显示列(relationField/columnOptions)匹配行 → 写 propsValue；GetCDataList 同时建 POPUPSELECT 缓存
+- **验收**: ImportAssembleHelperTests 18/18；VisualDev 126；evidence w3-import-popup-surgery-summary.json
+
+### 2026-08-07 — StreamLlm 视觉告警勿在无图时打
+- **错**: 抽 DecideVision 时若对 SkipNoImages 也打「未配置」warning，会噪声淹没真缺配置
+- **对**: 仅 SkipNotConfigured（有图且 ApiUrl/ApiKey 缺）打 warning；BuildDefaultStreamRequest 须钉 MaxRetries=2（覆盖 DTO 默认 3）
+- **验收**: StreamLlmFlowHelpers + Legacy* 61；Architecture 73；evidence w-continue-streamllm-post-gate-summary.json
+
+### 2026-08-07 — 附件下载缓存键用 FileUrl 非解析后 URL
+- **错**: Remember 用 Resolve 后的绝对 URL，vision TryTake 用原始 FileUrl → 二次下载
+- **对**: 两端统一 att.FileUrl；SHA256 小写 hex；Bearer 空白跳过设头；抽走私有 ComputeSha256 时删悬空 XML 注释
+- **验收**: LegacyGateAttachmentHelpersTests 全绿；Architecture 87；evidence w-continue-streamllm-attachment-io-summary.json
+
+### 2026-08-07 — GetListResult 搜项补全内层 searchMultiple 是死分支
+- **错**: 「修」外层 !Any 后又 Any 的 searchMultiple 赋值，或把树表 pageSize 当成 SQL 片段依赖而乱挪
+- **对**: EnrichSearchList 原样保留死分支；pageSize 合并在 GetListQuerySql 后、GetInterFaceData 前；流程主键 remap 用 Dictionary Value→Key；表征测钉 Dictionary 入参
+- **验收**: ListQueryInputHelpersTests 全绿；VisualDev 178；evidence w2-list-query-input-helpers-surgery-summary.json
+
+### 2026-08-07 — SaveDataToDataByFId 特殊表单 splitKey="-" 勿误置空
+- **错**: 统一用 tablefield 判断子表，或对 leaveApply/salesOrder/crmOrder 仍走 CanTransfer 失败置 null
+- **对**: ResolveChildTableSplitKey 先判定特殊 EnCode；"-" 时跳过主字段不兼容置空；prevNodeFormId 含 tablefield 时写子表每行 + 顶层 key
+- **验收**: FlowFormDataMapperTests 全绿；evidence w2-flow-form-data-mapper-surgery-summary.json
+
+### 2026-08-07 — GetCDataList 地址缓存保留双写与 Id 就地改写
+- **错**: 「优化」掉 typed 走中+末尾 ForEach 的重复 Add；或修 GetAddressIdByPList 不改 Id；把 FormDataParsing 另一套地址树硬并进来
+- **对**: ImportAddressCacheHelpers 只服务导入 GetCDataList；钉 duplicate pairs + noType Id 变异；DB/Redis 仍在调用点；COMSELECT 空树回退 Id
+- **验收**: ImportAddressCacheHelpersTests 8/8；VisualDev 套件绿；evidence w3-import-address-cache-surgery-summary.json
+
+### 2026-08-07 — RunService 高级查询勿并 SuperQueryHelper；字典键序与死 quirks 要钉
+- **错**: 把列表 JSON 改写与 CodeGen typed ConvertSuper 合成一套；或「修」`ContainsKey.Equals("[]")` / 假定缺 fieldValue 的 == 走 EqualNull
+- **对**: VisualDev 只抽 ListSuperQueryInputRewriter；First/Last 依赖 JSON 键序；else 插入 null 后 == 实为 Equal；EqualNull 活路径是 symbol=null；COMSELECT in 追加 `\"]`
+- **验收**: ListSuperQueryInputRewriterTests 9/9；VisualDev 套件绿；evidence w2-superquery-input-rewriter-surgery-summary.json
+
+### 2026-08-07 — ImportFirstVerify 勿用 STJ Copy 再 ToObject 子表
+- **错**: Seed/必填用 `T.Copy()`（System.Text.Json）深拷贝 `Dictionary<string,object>`，值变成 JsonElement，子表 `ToObject<List<...>>` 炸或假绿
+- **对**: 导入初验用浅拷贝字典（只动 errorsInfo / 替换子表 List）；DB 唯一仍分叉在 VisualDev/CodeGen 调用点；表征测钉 List 类型不被 JsonElement 化
+- **验收**: ImportFirstVerifyHelpersTests 7/7；VisualDev 套件绿；evidence w3-import-first-verify-surgery-summary.json；CR PASS
+
+### 2026-08-07 — 附件状态更新 Now 勿 hoist；失败文案走统一截断
+- **错**: 入口一次 DateTime.Now 供 Running/Done/Failed 共用；失败路径手写截断与 helper 漂移
+- **对**: 每次 Build*Update 在调用点传 DateTime.Now；BuildFailedUpdate 内 TruncateProcessError
+- **验收**: LegacyGateAttachmentHelpersTests 33/33；evidence w-continue-streamllm-attachment-status-summary.json
+
+### 2026-08-08 — Login 抽取勿改延迟锁三分支语义
+- **错**: 「合并」延迟锁时丢掉 UnLockTime 为空的首段（虽多为空操作）、或把 GetConfig 的租户缓存部分更新改成全量字段
+- **对**: EvaluateDelayLock 原样保留三分支；UpsertGlobalTenantCache 用 updateExtendedFields 区分 Login 全量 / GetConfig 部分；删只 rethrow 的外层 catch；域名改写与账号拆分两处共用
+- **验收**: LoginFlowHelpersTests 20/20；evidence w-oauth-login-flow-helpers-surgery-summary.json；CR PASS
+
+### 2026-08-08 — Module ImportData 抽刀勿并 DictionaryData / 勿改跳过语义
+- **错**: 把菜单导入与字典导入合成一套 helper，或「修」scheme 仅在追加重复分支才 remap ConditionJson
+- **对**: ModuleImportHelpers 只服务 ModuleService 副本后缀/顿号冲突累计/子表文案/ConditionJson id 替换；DB 仍在服务；表征测钉文案模板与键序
+- **验收**: ModuleImportHelpersTests 7/7；Tests.Systems 入 sln；evidence w-systems-module-import-helpers-surgery-summary.json；CR PASS
+
+### 2026-08-08 — GetSelector 抽刀勿并 Save 子层展开常量；Strip -1 保持 ToObject 副本语义
+- **错**: 把 Selector 子层展开 inheritAs=3 与 Save 的常量 1 合成无参 helper；或「修好」Strip 写回树（改变 ToObject 副本丢弃行为）
+- **对**: ResolveExpandedFlag/ApplyInheritedSubLayerFlags 带 inheritAs；StripNegativePermissionKeys 仍只跑在 ToObject 副本上；合并矩阵与 user-only/admin-only 映射原样抽出
+- **验收**: OrganizeAdminSelectorHelpersTests 24/24；evidence w-systems-organize-admin-selector-surgery-summary.json；CR PASS
+
+### 2026-08-08 — TemplatesDataAggregation 抽刀勿改路径空 break / 生成模式升级
+- **错**: 把 WebType=2+行内编辑+流程表单(Type=3)的空 break 改成清空路径列表，或把 MainBelt 子表控件数不足时的 PrimarySecondary 升级漏掉
+- **对**: ResolveMainBackendPaths 该分支返回 null（调用方不覆盖原列表）；JudgeGenerationModel 原样保留 MainBelt 升级；DB/模板渲染/写盘仍在 CodeGenService
+- **验收**: TemplatesDataAggregationHelpersTests 27/27；Tests.CodeGen 入 sln；evidence w-codegen-templates-aggregation-surgery-summary.json；CR PASS
+
+### 2026-08-08 — GetListQuerySql 片段抽取勿改 WHERE 拼缝
+- **错**: 「美化」Merge/Inject WHERE 的空格与 and 粘连，或把子表空值 11/14 判定改成枚举解析
+- **对**: MergeWhereIntoExisting / InjectWhereIntoPlaceholder 原样保留 Split 拼缝；IsEmptyOrNullConditionalTypeJson 只认 JSON 字面 11/14；权限 FieldName 主表/联表两套 Rewrite 分叉
+- **验收**: ListQuerySqlFragmentHelpersTests + VisualDev 184；evidence w2-list-query-sql-fragments-surgery-summary.json；CR PASS

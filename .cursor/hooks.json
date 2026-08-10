@@ -1,44 +1,34 @@
 {
   "version": 1,
   "hooks": {
-    "sessionStart": [
-      {
-        "command": "node .cursor/hooks/episodic-session-start.mjs",
-        "timeout": 15
-      }
-    ],
     "stop": [
       {
-        "command": "node .cursor/hooks/episodic-stop.mjs",
-        "timeout": 15
-      },
-      {
-        "command": "node .cursor/hooks/session-archive-stop.mjs",
+        "command": "powershell -NoProfile -NonInteractive -WindowStyle Hidden -Command \"& node .cursor/hooks/session-archive-stop.mjs\"",
         "timeout": 20
       },
       {
-        "command": "node .cursor/hooks/archive-banner-stop.mjs",
+        "command": "powershell -NoProfile -NonInteractive -WindowStyle Hidden -Command \"& node .cursor/hooks/archive-banner-stop.mjs\"",
         "timeout": 10
       },
       {
-        "command": "node .cursor/hooks/guard-pillar-stop.mjs",
+        "command": "powershell -NoProfile -NonInteractive -WindowStyle Hidden -Command \"& node .cursor/hooks/guard-pillar-stop.mjs\"",
         "timeout": 10
       }
     ],
     "sessionEnd": [
       {
-        "command": "node .cursor/hooks/session-end.mjs",
+        "command": "powershell -NoProfile -NonInteractive -WindowStyle Hidden -Command \"& node .cursor/hooks/session-end.mjs\"",
         "timeout": 30
       }
     ],
     "preToolUse": [
       {
-        "command": "node .cursor/hooks/guard-adf-write.mjs",
+        "command": "powershell -NoProfile -NonInteractive -WindowStyle Hidden -Command \"& node .cursor/hooks/guard-adf-write.mjs\"",
         "matcher": "Write|StrReplace|EditNotebook",
         "failClosed": false
       },
       {
-        "command": "node .cursor/hooks/guard-placeholder.mjs",
+        "command": "powershell -NoProfile -NonInteractive -WindowStyle Hidden -Command \"& node .cursor/hooks/guard-placeholder.mjs\"",
         "matcher": "Write|StrReplace|EditNotebook",
         "failClosed": false
       }

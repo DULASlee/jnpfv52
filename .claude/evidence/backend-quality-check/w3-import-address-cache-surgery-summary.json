@@ -1,0 +1,23 @@
+{
+  "wave": "W3+",
+  "knife": "ImportAddressCacheHelpers",
+  "date": "2026-08-07",
+  "status": "PASS",
+  "summary": "Extract GetCDataList ADDRESS/COMSELECT/Id-EnCode pure builders shared by VisualDev+CodeGen; cache/DB stay at call sites.",
+  "artifacts": {
+    "helper": "backend/modularity/engine/JNPF.VisualDev.Engine/Import/ImportAddressCacheHelpers.cs",
+    "callSites": [
+      "backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs",
+      "backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs"
+    ],
+    "tests": "backend/tests/JNPF.Tests.VisualDev/ImportAddressCacheHelpersTests.cs"
+  },
+  "verification": {
+    "ImportAddressCacheHelpersTests": "8/8",
+    "VisualDevSuite": "149+",
+    "CodeGenBuild": "0 errors",
+    "codeReview": "PASS (0 Critical)"
+  },
+  "leftAtCallSite": "Province/Organize/Group/Role queries, Redis Import_Address get/set, custom ableIds filtering"
+}
+

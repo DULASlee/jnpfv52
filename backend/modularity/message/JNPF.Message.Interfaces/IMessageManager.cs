@@ -1,5 +1,5 @@
 ﻿using JNPF.Common.Dtos.Message;
-using JNPF.InteAssistant.Entitys.Entity;
+using JNPF.Common.Models.InteAssistant;
 using JNPF.Message.Entitys;
 
 namespace JNPF.Message.Interfaces;
@@ -11,7 +11,7 @@ public interface IMessageManager
 {
     Task SendDefaultMsg(List<string> toUserIds, List<MessageEntity> messageList);
 
-    Task<string> SendDefinedMsg(MessageSendModel messageSendModel, Dictionary<string, object> bodyDic, IntegrateTaskEntity? taskEntity = null);
+    Task<string> SendDefinedMsg(MessageSendModel messageSendModel, Dictionary<string, object> bodyDic, IntegrateTaskMessageDto? taskEntity = null);
 
     Task<List<MessageSendModel>> GetMessageSendModels(string sendConfigId);
 

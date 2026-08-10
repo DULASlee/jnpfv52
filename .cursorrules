@@ -14,7 +14,7 @@
 | 移动 | `jnpf-app-vue3/` | :3800 |
 | SA | `sa-service/` | :3001 |
 
-启动：`powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1`  
+启动：`powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1`（已开一套会 BLOCK；停：`-CleanupOnly`；重开：`-Force`）  
 账号：`admin` / `123456` · 文档：`http://localhost:5000/newapi`
 
 ## 红线一行（细节进 mdc / CLAUDE.md）

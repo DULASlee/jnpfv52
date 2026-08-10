@@ -1,0 +1,22 @@
+{
+  "wave": "W-oauth",
+  "knife": "LoginFlowHelpers",
+  "date": "2026-08-08",
+  "status": "PASS",
+  "summary": "Extract Login/GetConfigCode pure shaping: domain tenant rewrite, account split, delay-lock, whitelist, password compare, theme, global tenant cache upsert; removed outer no-op catch; DB/token/remote stay in OAuthService.",
+  "artifacts": {
+    "helper": "backend/modularity/oauth/JNPF.OAuth/Helpers/LoginFlowHelpers.cs",
+    "callSites": [
+      "OAuthService.Login",
+      "OAuthService.GetConfigCode"
+    ],
+    "tests": "backend/tests/JNPF.Tests.OAuth/LoginFlowHelpersTests.cs",
+    "removed": "Login outer try/catch that only rethrew"
+  },
+  "verification": {
+    "LoginFlowHelpersTests": "20/20",
+    "command": "dotnet test tests/JNPF.Tests.OAuth/JNPF.Tests.OAuth.csproj --filter FullyQualifiedName~LoginFlowHelpersTests",
+    "apiSmoke": "SKIP - localhost:5000 not reachable this session",
+    "codeReview": "PASS"
+  }
+}

@@ -42,7 +42,6 @@
   import { downloadByUrl } from '/@/utils/file/download';
   import { useLazyComponent } from '/@/hooks/web/useLazyComponent';
   import { useLazyModal } from '/@/hooks/web/useLazyModal';
-
   // ── 四层防御：useLazyModal = useLazyComponent + useModal 一体化 ──
   // Layer 1: safeOpen 加载感知队列（组件未就绪时排队，register 后自动回放）
   // Layer 2: isLoaded + prefetch 供按钮绑定 :loading + @mouseenter
@@ -279,10 +278,13 @@
     });
   }
   async function getOptions() {
-    const res = await baseStore.getDictionaryData('webDesign');
-    categoryList.value = res as any[];
-    getForm().updateSchema({ field: 'category', componentProps: { options: res } });
-    enginCategoryList.value = (await baseStore.getDictionaryData('WorkFlowCategory')) as any[];
+    const [webDesignDict, workFlowCategory] = await Promise.all([
+      baseStore.getDictionaryData('webDesign'),
+      baseStore.getDictionaryData('WorkFlowCategory'),
+    ]);
+    categoryList.value = webDesignDict as any[];
+    getForm().updateSchema({ field: 'category', componentProps: { options: webDesignDict } });
+    enginCategoryList.value = workFlowCategory as any[];
   }
   function handleAdd(webType) {
     addOrUpdateHandle('', webType);

@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-08-07T23:30:00+08:00",
+  "wave": "W3+",
+  "knife": "import-popup-cache-assemble",
+  "verdict": "PASS",
+  "summary": "ImportCacheBagHelpers for GetCDataList; ImportPopupValueMapper maps multi-column popup rows (relationField→propsValue); both VisualDev and CodeGen wired; CR first FAIL then fixed",
+  "behaviorChange": "POPUPSELECT/POPUPTABLESELECT import now maps Excel display to stored key (previously left raw text)",
+  "verification": {
+    "importAssembleHelperTests": 18,
+    "visualDevTotal": 126,
+    "failed": 0
+  },
+  "codeReview": "PASS after popup-specific mapper (do not reuse MapSelectLike on multi-column cache)"
+}

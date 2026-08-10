@@ -15,4 +15,8 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.8.0" PrivateAssets="all" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="JNPF.Analyzers.Tests" />
+  </ItemGroup>
+
 </Project>

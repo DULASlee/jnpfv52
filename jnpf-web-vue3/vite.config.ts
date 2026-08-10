@@ -84,6 +84,10 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
                 './src/layouts/page/index.vue',
                 './src/views/basic/login/Login.vue',
                 './src/components/Table/src/BasicTable.vue',
+                // 在线开发三列表：首次进菜单时减少 Vite 现场编译等待
+                './src/views/onlineDev/webDesign/index.vue',
+                './src/views/onlineDev/visualPortal/index.vue',
+                './src/views/onlineDev/integrate/index.vue',
               ],
             },
           }
@@ -116,7 +120,13 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
           // 禁止 Rollup 生成大型内联 asset（如图片 base64），减少内存占用
           inlineDynamicImports: false,
           // 手动分包策略：将第三方库与业务代码分离，避免巨型 chunk 撑爆内存
-          manualChunks: (id) => {
+          manualChunks: id => {
+            // Vite 的 __vitePreload 辅助函数（\0vite/preload-helper）单独成 chunk：
+            // 否则 Rollup 会把它放进某个 vendor 分包（实测常进 monaco），
+            // 导致入口为了取辅助函数而静态加载 monaco（3.4MB 每次进首屏）。
+            if (id.includes('vite/preload-helper')) {
+              return 'preload-helper';
+            }
             if (id.includes('node_modules')) {
               // Vue 生态
               if (id.includes('/vue/') || id.includes('/pinia/') || id.includes('/vue-router/') || id.includes('/vue-i18n/') || id.includes('/@vue/')) {
@@ -142,10 +152,40 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
               if (id.includes('/@vueuse/')) {
                 return 'vendor-vueuse';
               }
+              // 巨型编辑器/图表库独立分包：仅在对应页面/组件打开时加载，不再随 vendor-common 进首屏。
+              // monaco-editor 仅在设计器/演示页使用（动态导入），
+              // 独立分包可避免它落进 vendor-common 被每个页面静态解析。
+              if (id.includes('/monaco-editor/')) {
+                return 'vendor-monaco';
+              }
+              if (id.includes('/highcharts/')) {
+                return 'vendor-highcharts';
+              }
+              if (id.includes('/tinymce/')) {
+                return 'vendor-tinymce';
+              }
+              if (id.includes('/xlsx/')) {
+                return 'vendor-xlsx';
+              }
+              if (id.includes('/codemirror/')) {
+                return 'vendor-codemirror';
+              }
+              if (id.includes('/@fullcalendar/')) {
+                return 'vendor-fullcalendar';
+              }
+              if (id.includes('/@amap/')) {
+                return 'vendor-amap';
+              }
+              if (id.includes('/vditor/')) {
+                return 'vendor-vditor';
+              }
               // 其余 node_modules 适度收敛，避免碎片化
               return 'vendor-common';
             }
-            // 业务代码由 Rollup 基于动态 import() 自动代码分割
+            // 注意：不要在此处按「设计器目录」手工分包。
+            // 设计器与入口共享 FormGenerator helper 等模块时，整目录分包会把共享模块卷进设计器 chunk，
+            // 导致入口静态依赖设计器 → monaco/tinymce/highcharts 等被拖进首屏 modulepreload。
+            // 让 Rollup 按动态 import 自然分包：设计器随懒加载路由/组件独立成 chunk，共享模块进公共 chunk。
           },
         },
       },

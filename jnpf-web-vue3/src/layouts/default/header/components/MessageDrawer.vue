@@ -20,23 +20,25 @@
       </div>
     </div>
     <ScrollContainer ref="infiniteBody" class="msg-list">
-      <div v-for="(item, i) in list" :key="i" class="msg-list-item" :title="item.title" @click="readInfo(item)" v-if="list.length">
-        <Badge :dot="item.isRead != '1'" status="warning">
-          <i class="icon-ym icon-ym-xitong item-icon" v-if="item.type == 1"></i>
-          <i class="icon-ym icon-ym-generator-notice item-icon notice-icon" v-else-if="item.type == 3"></i>
-          <i class="icon-ym icon-ym-portal-schedule item-icon schedule-icon" v-else-if="item.type == 4"></i>
-          <i class="icon-ym icon-ym icon-ym-generator-flow item-icon flow-icon" v-else></i>
-        </Badge>
-        <div class="msg-list-txt">
-          <p class="title">
-            <span class="title-left">{{ item.title }}</span>
-          </p>
-          <p class="name">
-            <span class="content">{{ item.releaseUser }}</span>
-            <span class="time">{{ toDateValue(item.releaseTime) }}</span>
-          </p>
+      <template v-if="list.length">
+        <div v-for="(item, i) in list" :key="i" class="msg-list-item" :title="item.title" @click="readInfo(item)">
+          <Badge :dot="item.isRead != '1'" status="warning">
+            <i class="icon-ym icon-ym-xitong item-icon" v-if="item.type == 1"></i>
+            <i class="icon-ym icon-ym-generator-notice item-icon notice-icon" v-else-if="item.type == 3"></i>
+            <i class="icon-ym icon-ym-portal-schedule item-icon schedule-icon" v-else-if="item.type == 4"></i>
+            <i class="icon-ym icon-ym icon-ym-generator-flow item-icon flow-icon" v-else></i>
+          </Badge>
+          <div class="msg-list-txt">
+            <p class="title">
+              <span class="title-left">{{ item.title }}</span>
+            </p>
+            <p class="name">
+              <span class="content">{{ item.releaseUser }}</span>
+              <span class="time">{{ toDateValue(item.releaseTime) }}</span>
+            </p>
+          </div>
         </div>
-      </div>
+      </template>
       <jnpf-empty v-if="!list.length" />
     </ScrollContainer>
     <div class="bottom-box" @click="readAll">全部已读</div>
@@ -51,7 +53,7 @@
   import { ScrollContainer, ScrollActionType } from '/@/components/Container';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
-  import { reactive, toRefs, nextTick, ref } from 'vue';
+  import { reactive, toRefs, nextTick, ref, defineAsyncComponent } from 'vue';
   import { Badge } from 'ant-design-vue';
   import { useWebSocket } from '/@/hooks/web/useWebSocket';
   import { useRouter } from 'vue-router';
@@ -60,7 +62,8 @@
   import { encryptByBase64 } from '/@/utils/cipher';
   import Detail from '/@/views/system/notice/Detail.vue';
   import { useBaseStore } from '/@/store/modules/base';
-  import ScheduleDetail from '/@/components/VisualPortal/Portal/HSchedule/Detail.vue';
+  // 懒加载：站内消息抽屉不承载门户排期详情，避免把 VisualPortal/设计器链拖进首屏（性能优化）
+  const ScheduleDetail = defineAsyncComponent(() => import('/@/components/VisualPortal/Portal/HSchedule/Detail.vue'));
   import { getScheduleDetail } from '/@/api/onlineDev/portal';
 
   interface State {

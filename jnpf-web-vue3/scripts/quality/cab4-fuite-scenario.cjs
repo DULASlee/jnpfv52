@@ -25,18 +25,21 @@ fs.mkdirSync(evidence, { recursive: true });
 const args = process.argv.slice(2);
 const run = args.includes('--run');
 const urlIdx = args.indexOf('--url');
-const url = urlIdx >= 0 ? args[urlIdx + 1] : 'http://localhost:3100/';
+// Prefer index.html — bare `/` can 404 under some Vite states; SPA still boots from index.html
+const url = urlIdx >= 0 ? args[urlIdx + 1] : 'http://127.0.0.1:3100/index.html';
+const scenarioFile = path.join(__dirname, 'cab4-fuite-scenario-def.cjs');
+const outJson = path.join(evidence, 'cab4-fuite.json').replace(/\\/g, '/');
 
 const scenario = {
   generatedAt: new Date().toISOString(),
   cabinet: 4,
-  purpose: 'Detect retained heaps / EventSource / timer leaks on Studio chat path',
+  purpose: 'Detect retained heaps via reload iterations on PC Vite entry',
   url,
+  scenarioFile,
   steps: [
-    'Open Studio pipeline page (or home if auth redirect).',
-    'Open AiChatPanel / PipelineSSEPanel if available.',
-    'Trigger one SSE stream or chat send if UI allows.',
-    'Navigate away (hash/route change) and return — fuite iterates this.',
+    'Load Vite index.html (domcontentloaded, not networkidle).',
+    'Reload N times; fuite compares heap growth.',
+    'For Studio/SSE deep path: pass --url after login cookie setup later.',
   ],
   r6Checklist: [
     'Every setTimeout/setInterval stored and cleared in onUnmounted',
@@ -53,9 +56,13 @@ const scenario = {
     'exec',
     'fuite',
     url,
+    '--scenario',
+    scenarioFile.replace(/\\/g, '/'),
+    '--iterations',
+    '5',
     '--heapsnapshot',
     '--output',
-    path.join(evidence, 'cab4-fuite.json').replace(/\\/g, '/'),
+    outJson,
   ],
 };
 

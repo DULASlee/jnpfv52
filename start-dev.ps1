@@ -1,8 +1,15 @@
-﻿# start-dev.ps1 v4.1 — JNPF v5.2 全栈开发环境一键启动
+﻿# start-dev.ps1 v4.2 — JNPF v5.2 全栈开发环境一键启动
 # Encoding: UTF-8 with BOM (PowerShell 5.1 requirement)
 # 启动：PC 前端 :3100 | 数字大屏 :3102 | UniApp H5 :3800 | 后端 :5000 | SA :3001
+# v4.2: hard single-stack lock — refuse second start unless -Force / -CleanupOnly
 param(
-    [switch]$CleanupOnly
+    [switch]$CleanupOnly,
+    # Legacy switch: Vite optimizeDeps cache is kept by default since v4.3.
+    [switch]$KeepViteCache,
+    # Explicitly clear Vite optimizeDeps cache (slower cold start; use after dependency upgrades).
+    [switch]$NoKeepViteCache,
+    # Tear down the running stack (if any) then start a new one.
+    [switch]$Force
 )
 
 $ErrorActionPreference = 'Continue'
@@ -151,6 +158,7 @@ function Test-IsJnpfDevCommandLine {
 }
 
 function Clear-DevEnvironment {
+    param([switch]$KillBuildServers)
     $freedPorts = 0
     $zombies = 0
     $freedMB = 0
@@ -176,13 +184,16 @@ function Clear-DevEnvironment {
     # --- Layer 2: CIM CommandLine scan (real zombie detection) ---
     # Process.Path is always ...\dotnet.exe / ...\node.exe — useless for repo matching.
     # Win32_Process.CommandLine carries the project args / absolute module paths.
+    # 常规启动保留 Roslyn(VBCSCompiler)/MSBuild 驻留进程，避免每次把构建打回冷态（v4.3）；
+    # 仅在 DLL 锁 / 失败重试路径（-KillBuildServers）才清理构建服务器。
     $targetNames = @(
         'dotnet.exe', 'node.exe', 'nodejs.exe',
         'JNPF.API.Entry.exe',
-        'python.exe', 'python3.exe', 'py.exe',
-        'MSBuild.exe',
-        'VBCSCompiler.exe'
+        'python.exe', 'python3.exe', 'py.exe'
     )
+    if ($KillBuildServers) {
+        $targetNames += @('MSBuild.exe', 'VBCSCompiler.exe')
+    }
 
     try {
         # -OperationTimeoutSec: WMI provider can hang indefinitely (observed 2026-07-18);
@@ -193,7 +204,9 @@ function Clear-DevEnvironment {
         Write-Host "  WARN: CIM scan failed ($($_.Exception.Message)) - name-only fallback" -ForegroundColor DarkYellow
         $cimProcs = @()
         # Minimal fallback without CommandLine: kill API host by name only
-        foreach ($n in @('JNPF.API.Entry', 'VBCSCompiler')) {
+        $fallbackNames = @('JNPF.API.Entry')
+        if ($KillBuildServers) { $fallbackNames += 'VBCSCompiler' }
+        foreach ($n in $fallbackNames) {
             foreach ($p in @(Get-Process -Name $n -ErrorAction SilentlyContinue)) {
                 if ($killedPids.ContainsKey($p.Id)) { continue }
                 $mb = [math]::Round($p.WorkingSet64 / 1MB, 0)
@@ -214,8 +227,8 @@ function Clear-DevEnvironment {
         $procName = [System.IO.Path]::GetFileNameWithoutExtension($cim.Name)
         $cmd = $cim.CommandLine
 
-        # VBCSCompiler: shared Roslyn server; restarting it unlocks stale DLL handles (MSB3027)
-        $isVbcs = ($procName -eq 'VBCSCompiler')
+        # VBCSCompiler: shared Roslyn server; only killed on lock/retry path (KillBuildServers)
+        $isVbcs = $KillBuildServers -and ($procName -eq 'VBCSCompiler')
         $isApiEntry = ($procName -eq 'JNPF.API.Entry')
         $isJnpf = $isApiEntry -or $isVbcs -or (Test-IsJnpfDevCommandLine -CommandLine $cmd -ProcessName $procName)
 
@@ -289,6 +302,116 @@ function Clear-DevEnvironment {
 
     $totalKilled = $killedPids.Count
     Write-Host "  Cleanup done: ports=$freedPorts zombies=$zombies totalPids=$totalKilled approx ${freedMB}MB" -ForegroundColor Green
+}
+
+# --- Single-stack hard lock (v4.2) ---
+# Mutex: only one start-dev.ps1 may run for this repo at a time.
+# Port gate: ANY of DevPorts listening ⇒ refuse unless -Force / -CleanupOnly (no steal).
+function Get-DevStackLockPath {
+    return (Join-Path $root '.jnpf-dev.lock')
+}
+
+function Get-DevStackMutexName {
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes(($root.ToLowerInvariant()))
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hash = ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString('x2') }) -join ''
+    } finally {
+        $sha.Dispose()
+    }
+    return "Local\JNPF-v52-devstack-$($hash.Substring(0, 16))"
+}
+
+function Test-PortListening {
+    param([int]$Port)
+    $map = Get-PortProcessMap
+    return ($map.ContainsKey($Port) -and @($map[$Port]).Count -gt 0)
+}
+
+function Get-OccupiedDevPorts {
+    $occupied = @()
+    foreach ($p in $script:DevPorts) {
+        if (Test-PortListening -Port $p) { $occupied += $p }
+    }
+    return $occupied
+}
+
+function Test-JnpfDevStackRunning {
+    # Half-stack counts: e.g. only :5000 up still blocks a second start-dev.
+    return (@(Get-OccupiedDevPorts).Count -gt 0)
+}
+
+function Write-DevStackLock {
+    $path = Get-DevStackLockPath
+    $payload = [ordered]@{
+        pid       = $PID
+        startedAt = (Get-Date).ToString('o')
+        root      = $root
+        ports     = $script:DevPorts
+        force     = [bool]$Force
+    }
+    ($payload | ConvertTo-Json) | Set-Content -Path $path -Encoding UTF8
+}
+
+function Remove-DevStackLock {
+    $path = Get-DevStackLockPath
+    if (Test-Path $path) {
+        Remove-Item -Force $path -ErrorAction SilentlyContinue
+    }
+}
+
+function Release-DevStackMutex {
+    if ($script:DevMutexOwned -and $null -ne $script:DevMutex) {
+        try { $script:DevMutex.ReleaseMutex() } catch { }
+        try { $script:DevMutex.Dispose() } catch { }
+        $script:DevMutexOwned = $false
+    }
+}
+
+function Enter-DevStackSingleInstanceGate {
+    $mutexName = Get-DevStackMutexName
+    $script:DevMutex = New-Object System.Threading.Mutex($false, $mutexName)
+    $script:DevMutexOwned = $false
+
+    if (-not $script:DevMutex.WaitOne(0)) {
+        Write-Host ''
+        Write-Host 'BLOCKED: another start-dev.ps1 is already running for this repo.' -ForegroundColor Red
+        Write-Host '  Wait for it to finish, or close that console. Do not start a second stack.' -ForegroundColor Yellow
+        Write-Host "  Mutex: $mutexName" -ForegroundColor DarkGray
+        exit 2
+    }
+    $script:DevMutexOwned = $true
+
+    $occupied = @(Get-OccupiedDevPorts)
+    $stackUp = ($occupied.Count -gt 0)
+
+    if ($CleanupOnly) {
+        Write-Step '1' '1' 'Cleanup-only: tearing down ports / zombies / lock...'
+        Clear-DevEnvironment -KillBuildServers
+        Remove-DevStackLock
+        Write-Host 'Cleanup-only mode - exiting.' -ForegroundColor Cyan
+        Release-DevStackMutex
+        exit 0
+    }
+
+    if ($stackUp -and -not $Force) {
+        Write-Host ''
+        Write-Host 'BLOCKED: JNPF dev stack already occupying ports — only ONE stack allowed.' -ForegroundColor Red
+        Write-Host ("  Occupied: " + ($occupied -join ', ')) -ForegroundColor Yellow
+        Write-Host '  Second start is refused (will NOT kill/steal the running set).' -ForegroundColor Yellow
+        Write-Host '  Stop:    powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1 -CleanupOnly' -ForegroundColor Cyan
+        Write-Host '  Restart: powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1 -Force' -ForegroundColor Cyan
+        $lockPath = Get-DevStackLockPath
+        if (Test-Path $lockPath) {
+            Write-Host "  Lock:    $lockPath" -ForegroundColor DarkGray
+        }
+        Release-DevStackMutex
+        exit 2
+    }
+
+    if ($Force -and $stackUp) {
+        Write-Host ("  -Force: tearing down existing stack (ports: {0})..." -f ($occupied -join ', ')) -ForegroundColor DarkYellow
+    }
 }
 
 function Wait-HttpReady {
@@ -420,18 +543,19 @@ function Invoke-PreflightChecks {
     }
 }
 
-Write-Host "=== JNPF v5.2 Dev Startup (v4.1) ===" -ForegroundColor Cyan
+Write-Host "=== JNPF v5.2 Dev Startup (v4.2 · single-stack lock) ===" -ForegroundColor Cyan
+
+# Hard gate BEFORE cleanup: refuse second stack (unless -Force / -CleanupOnly).
+# Previous behavior always Clear-DevEnvironment first = steal; that is forbidden now.
+try {
+Enter-DevStackSingleInstanceGate
 
 # ================================================================
-# Step 1/8: 清理端口 + node/.NET 僵尸进程（CIM CommandLine，确保编译前无 DLL 锁）
+# Step 1/8: 清理端口 + node/.NET 僵尸进程（仅在获准启动后执行）
 # ================================================================
 Write-Step '1' '8' 'Cleaning ports and zombie processes (node / .NET host)...'
 Clear-DevEnvironment
-
-if ($CleanupOnly) {
-    Write-Host 'Cleanup-only mode - exiting.' -ForegroundColor Cyan
-    exit 0
-}
+Remove-DevStackLock
 
 # ================================================================
 # Step 2/8: 环境预检（SDK / SQL / node_modules）
@@ -465,6 +589,7 @@ Push-Location $backendDir
 try {
     $buildOutput = & {
         dotnet build $backendProjectPath `
+            --no-restore `
             -v q /nologo `
             -p:RunAnalyzers=false `
             -p:CI_BUILD=false 2>&1
@@ -481,7 +606,7 @@ if ($buildExit -ne 0) {
         Write-Host "  DLL file lock detected (MSB3027/MSB3021) - killing residual processes..." -ForegroundColor DarkYellow
         Write-Host "  Locked files:" -ForegroundColor DarkGray
         $lockErrors | Select-Object -First 8 | ForEach-Object { Write-Host "    $_" -ForegroundColor DarkGray }
-        Clear-DevEnvironment
+        Clear-DevEnvironment -KillBuildServers
         Start-Sleep -Seconds 3
         Write-Host "  Retrying with single-thread (-m:1) to avoid parallel DLL race..."
         Enable-CleanDotnetCliOutput
@@ -499,7 +624,7 @@ if ($buildExit -ne 0) {
         $buildExit = $LASTEXITCODE
     } else {
         Write-Host '  First build failed - cleaning zombies and retrying once...' -ForegroundColor DarkYellow
-        Clear-DevEnvironment
+        Clear-DevEnvironment -KillBuildServers
         $buildExit = Invoke-BackendBuild $backendProjectPath
     }
 }
@@ -529,6 +654,12 @@ if (-not $backendReady) {
     Write-Host '  Check the Backend window for startup errors' -ForegroundColor Red
     exit 1
 }
+
+# 预热（v4.3）：登录 + CurrentUser 首查的 JIT/缓存冷启动移到用户点页面前；失败不阻塞启动。
+Write-Host '  Warming up backend (login + CurrentUser)...' -ForegroundColor DarkGray
+$env:JNPF_API_URL = 'http://127.0.0.1:5000'
+& node (Join-Path $root 'scripts\lib\jnpf-auth.mjs') --force --json 2>$null | Out-Null
+& node (Join-Path $root 'scripts\jnpf-api.mjs') GET '/api/oauth/CurrentUser?type=0&systemCode=' 2>$null | Out-Null
 
 # ================================================================
 # Step 5/8: 启动 SA Service（仅 agent 模式；compile 模式下跳过 — ADR-004）
@@ -605,9 +736,12 @@ Write-Step '6' '8' 'Starting PC frontend (Vite)...'
 
 $frontendDir = Join-Path $root 'jnpf-web-vue3'
 $viteCache = Join-Path $frontendDir 'node_modules\.vite'
-if (Test-Path $viteCache) {
+$clearVite = $NoKeepViteCache -or ($env:JNPF_CLEAR_VITE_CACHE -eq '1')
+if ((Test-Path $viteCache) -and $clearVite) {
     Write-Host '  Clearing Vite optimize cache...'
     Remove-Item -Recurse -Force $viteCache -ErrorAction SilentlyContinue
+} elseif ((Test-Path $viteCache) -and -not $clearVite) {
+    Write-Host '  Keeping Vite optimize cache (default since v4.3; use -NoKeepViteCache to clear)' -ForegroundColor DarkGray
 }
 
 Start-DevWindow -Title 'JNPF PC :3100' -WorkDir $frontendDir -Command `
@@ -672,6 +806,7 @@ if (Test-Path (Join-Path $h5Root 'index.html')) {
 # ================================================================
 # Done
 # ================================================================
+Write-DevStackLock
 Write-Host ''
 Write-Host '=== Dev environment ready ===' -ForegroundColor Green
 Write-Host '  Backend:    http://127.0.0.1:5000' -ForegroundColor Cyan
@@ -680,5 +815,10 @@ Write-Host '  DataScreen: http://127.0.0.1:3102/DataV/' -ForegroundColor Cyan
 Write-Host '  UniApp H5:  http://127.0.0.1:3800' -ForegroundColor Cyan
 Write-Host '  SA:         http://127.0.0.1:3001' -ForegroundColor Cyan
 Write-Host '  Login:      admin / 123456' -ForegroundColor White
+Write-Host '  Single-stack lock: ON (second start-dev → BLOCKED; use -Force / -CleanupOnly)' -ForegroundColor DarkGray
 Write-Host ''
 Write-Host 'Open http://127.0.0.1:3100 to start' -ForegroundColor White
+} finally {
+    # Release start-dev script mutex only (stack keeps ports; lock file remains until CleanupOnly/-Force).
+    Release-DevStackMutex
+}

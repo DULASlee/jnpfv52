@@ -1,0 +1,53 @@
+{
+  "generatedAt": "2026-08-06T14:10:30.615Z",
+  "status": "ALL_FULL",
+  "cabinets": {
+    "1_arch": {
+      "status": "full",
+      "depcruise": {
+        "violations": 1124,
+        "errors": 854,
+        "warnings": 270,
+        "modules": 1418,
+        "dependencies": 4965
+      },
+      "knip": {
+        "unusedFiles": 592
+      }
+    },
+    "2_complexity": {
+      "status": "full",
+      "scope": "full-src",
+      "scannedFiles": 1376,
+      "cognitiveHits": 126,
+      "top1": {
+        "file": "src/views/workFlow/workFlowForm/dynamicForm/index.vue",
+        "line": 93,
+        "cc": 146,
+        "message": "Refactor this function to reduce its Cognitive Complexity from 146 to the 15 allowed."
+      }
+    },
+    "3_components": {
+      "status": "full",
+      "mode": "full-src",
+      "total": 787,
+      "ok": 787,
+      "failed": 0,
+      "unusedVueCount": 443
+    },
+    "4_memory": {
+      "status": "full",
+      "generatedAt": "2026-08-06T14:10:04.359Z",
+      "fullRun": true,
+      "url": "http://127.0.0.1:3100/index.html",
+      "iterations": 5,
+      "leakDetected": false,
+      "memoryChange": "-87.5 kB",
+      "jsonTests": 1,
+      "resultFiles": [
+        "cab4-fuite.json",
+        "cab4-fuite-stdout.txt"
+      ]
+    }
+  }
+}

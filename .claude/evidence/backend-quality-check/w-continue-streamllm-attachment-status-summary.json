@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-08-08T00:05:00+08:00",
+  "wave": "W-continue",
+  "knife": "streamllm-attachment-status-updates",
+  "verdict": "PASS",
+  "skills": ["using-superpowers", "executing-plans", "test-driven-development", "coder-mode", "code-reviewer"],
+  "summary": "ProcessStatus Running/Done/Failed payloads + cache-hit/extracted collectors extracted; DB Updateable remains at call site; DateTime.Now per update",
+  "verification": {
+    "legacyGateAttachmentHelpersTests": 33,
+    "failed": 0
+  },
+  "codeReview": "PASS"
+}

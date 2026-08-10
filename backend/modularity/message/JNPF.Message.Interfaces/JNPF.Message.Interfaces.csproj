@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\inteAssistant\JNPF.InteAssistant.Entitys\JNPF.InteAssistant.Entitys.csproj" />
 		<ProjectReference Include="..\JNPF.Message.Entitys\JNPF.Message.Entitys.csproj" />
 	</ItemGroup>
 

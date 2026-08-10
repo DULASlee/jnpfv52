@@ -32,6 +32,7 @@ docs/token.txt
 
 # Cursor / toolchain
 .cursor/logs/
+.jnpf-dev.lock
 scripts/.jnpf-session.json
 api-tests/http/http-client.env.json
 .cursor/episodic/sync-status.json
@@ -95,3 +96,6 @@ test-results/
 
 # Analysis artifacts (regenerable)
 ureport2-analysis/
+
+# Serena LSP tool cache (never commit)
+jnpf-web-vue3/.serena/

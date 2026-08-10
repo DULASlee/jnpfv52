@@ -1,0 +1,21 @@
+{
+  "wave": "续",
+  "title": "StreamLlmResponseAsync pure-helper extract",
+  "boundary": {
+    "mainChain": "POST studio/skills/requirement-analysis/{pipelineId}/run (SkillsApiService)",
+    "legacySse": "LEGACY_REQUIREMENT_GATE_FLOW region inside StreamLlmResponseAsync — not deleted this wave",
+    "extracted": "URL resolve / chat filter / append user / clarification clamp / token estimate / ExtractToken / mode label"
+  },
+  "helpers": "JNPF.InteAssistant/Studio/Streaming/StreamLlmFlowHelpers.cs",
+  "tests": {
+    "command": "dotnet test backend/tests/JNPF.Tests.Architecture/JNPF.Tests.Architecture.csproj --filter FullyQualifiedName~StreamLlmFlowHelpers",
+    "passed": 14
+  },
+  "deferred": [
+    "LEGACY gate block strangler / delete after traffic proof",
+    "attachment download loop extract",
+    "CM reindex for CC drop on StreamLlmResponseAsync"
+  ],
+  "status": "awaiting-approval",
+  "date": "2026-08-07"
+}

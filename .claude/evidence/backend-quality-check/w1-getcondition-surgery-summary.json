@@ -1,0 +1,13 @@
+{
+  "wave": "W1-GetCondition-deep-split",
+  "date": "2026-08-07",
+  "summary": "GetCondition wires DataPermissionShortCircuits(primaryKeyAsInt) + GetConditionQueryClauseAppender; preserves DenyAll when resourceList empty",
+  "tests": { "JNPF.Tests.Common": "18/18 expected" },
+  "review": "PASS (0 Critical)",
+  "efficacy": [
+    "Removed duplicated short-circuit + ~80-line QueryType switch from GetCondition",
+    "primaryKeyPolicy int convert preserved and unit-tested",
+    "CodeGen GetCodeGenAuthorizeModuleResource benefits via GetCondition call"
+  ],
+  "next": "GetIConditionalModelListByTableName extract or StreamLlm LEGACY gate block"
+}

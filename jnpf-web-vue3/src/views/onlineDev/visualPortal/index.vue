@@ -4,7 +4,9 @@
       <div class="jnpf-content-wrapper-content">
         <BasicTable @register="registerTable">
           <template #tableTitle>
-            <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" @click="addOrUpdateHandle()">{{ t('common.addText') }}</a-button>
+            <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" :loading="!formLoaded" @mouseenter="prefetchForm" @click="addOrUpdateHandle()">{{
+              t('common.addText')
+            }}</a-button>
             <jnpf-upload-btn url="/api/visualdev/Portal/Actions/Import" accept=".vp" @on-success="reload" />
           </template>
           <template #bodyCell="{ column, record }">
@@ -28,34 +30,51 @@
   </div>
 </template>
 <script lang="ts" setup>
-  import { onMounted, ref } from 'vue';
+  import { onMounted, ref, onErrorCaptured } from 'vue';
   import { getPortalList, delPortal, copyPortal, exportPortal } from '/@/api/onlineDev/portal';
   import { BasicTable, useTable, TableAction, BasicColumn, ActionItem } from '/@/components/Table';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
-  import { useModal } from '/@/components/Modal';
   import { useBaseStore } from '/@/store/modules/base';
   import { downloadByUrl } from '/@/utils/file/download';
-  import { useLazyComponent } from '/@/hooks/web/useLazyComponent';
-
-  // 弹窗/设计器组件按需异步加载 — 减少首屏 bundle 体积
+  import { useLazyModal } from '/@/hooks/web/useLazyModal';
+  // 进页只渲染列表；弹窗/设计器交互时再挂载并拉 chunk（对齐功能设计）
   const MODULE = 'onlineDev/visualPortal';
-  const { component: Form } = useLazyComponent(() => import('./Form.vue'), MODULE);
-  const { component: PortalDesign } = useLazyComponent(() => import('/@/components/VisualPortal/Design/index.vue'), MODULE);
-  const { component: ReleaseModal } = useLazyComponent(() => import('./components/ReleaseModal.vue'), MODULE);
-  const { component: Preview } = useLazyComponent(() => import('/@/components/VisualPortal/Design/components/Preview.vue'), MODULE);
-  const { component: PreviewModal } = useLazyComponent(() => import('/@/components/CommonModal/src/PreviewModal.vue'), MODULE);
+  const {
+    component: Form,
+    register: registerForm,
+    openModal: openFormModal,
+    isLoaded: formLoaded,
+    prefetch: prefetchForm,
+  } = useLazyModal(() => import('./Form.vue'), MODULE);
+  const { component: PortalDesign, register: registerPortalDesign, openModal: openPortalDesign } = useLazyModal(
+    () => import('/@/components/VisualPortal/Design/index.vue'),
+    MODULE,
+  );
+  const { component: ReleaseModal, register: registerReleaseModal, openModal: openReleaseModal } = useLazyModal(
+    () => import('./components/ReleaseModal.vue'),
+    MODULE,
+  );
+  const { component: Preview, register: registerPreview, openModal: openPreview, prefetch: prefetchPreview } = useLazyModal(
+    () => import('/@/components/VisualPortal/Design/components/Preview.vue'),
+    MODULE,
+  );
+  const { component: PreviewModal, register: registerPreviewModal, openModal: openPreviewModal } = useLazyModal(
+    () => import('/@/components/CommonModal/src/PreviewModal.vue'),
+    MODULE,
+  );
 
-  defineOptions({ name: 'OnlineDevWebDesign' });
+  defineOptions({ name: 'OnlineDevVisualPortal' });
 
   const { createMessage } = useMessage();
   const baseStore = useBaseStore();
   const { t } = useI18n();
-  const [registerForm, { openModal: openFormModal }] = useModal();
-  const [registerPortalDesign, { openModal: openPortalDesign }] = useModal();
-  const [registerReleaseModal, { openModal: openReleaseModal }] = useModal();
-  const [registerPreviewModal, { openModal: openPreviewModal }] = useModal();
-  const [registerPreview, { openModal: openPreview }] = useModal();
+
+  onErrorCaptured((err, _instance, info) => {
+    console.error('[visualPortal] 子组件异常已捕获', { err, info });
+    createMessage.error('页面组件异常，请刷新页面后重试');
+    return false;
+  });
 
   const columns: BasicColumn[] = [
     { title: '名称', dataIndex: 'fullName', width: 200 },
@@ -217,6 +236,7 @@
     openPreviewModal(true, { type: 'portal', id });
   }
   function previewPc({ id }) {
+    prefetchPreview();
     openPreview(true, { id });
   }
   function handleCopy(id) {

@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-08-06T12:07:40.032Z",
+  "generatedAt": "2026-08-06T12:47:27.538Z",
   "cabinet": 4,
-  "purpose": "Detect retained heaps / EventSource / timer leaks on Studio chat path",
-  "url": "http://localhost:3100/",
+  "purpose": "Detect retained heaps via reload iterations on PC Vite entry",
+  "url": "http://127.0.0.1:3100/index.html",
+  "scenarioFile": "D:\\JNPF-v52\\jnpf-web-vue3\\scripts\\quality\\cab4-fuite-scenario-def.cjs",
   "steps": [
-    "Open Studio pipeline page (or home if auth redirect).",
-    "Open AiChatPanel / PipelineSSEPanel if available.",
-    "Trigger one SSE stream or chat send if UI allows.",
-    "Navigate away (hash/route change) and return — fuite iterates this."
+    "Load Vite index.html (domcontentloaded, not networkidle).",
+    "Reload N times; fuite compares heap growth.",
+    "For Studio/SSE deep path: pass --url after login cookie setup later."
   ],
   "r6Checklist": [
     "Every setTimeout/setInterval stored and cleared in onUnmounted",
@@ -15,13 +15,17 @@
     "SSE URL via buildEventSourceUrl() with ?token="
   ],
   "env": {
-    "PUPPETEER_EXECUTABLE_PATH": "(unset — set to Chrome if puppeteer browser missing)"
+    "PUPPETEER_EXECUTABLE_PATH": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
   },
   "command": [
     "pnpm",
     "exec",
     "fuite",
-    "http://localhost:3100/",
+    "http://127.0.0.1:3100/index.html",
+    "--scenario",
+    "D:/JNPF-v52/jnpf-web-vue3/scripts/quality/cab4-fuite-scenario-def.cjs",
+    "--iterations",
+    "5",
     "--heapsnapshot",
     "--output",
     "D:/JNPF-v52/.claude/evidence/frontend-ct/cab4-fuite.json"

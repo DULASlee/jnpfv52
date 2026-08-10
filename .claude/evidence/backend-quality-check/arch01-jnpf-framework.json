@@ -1,0 +1,8 @@
+{
+  "generatedAt": "2026-08-08T15:19:31.6872064+00:00",
+  "rule": "arch01-jnpf-framework",
+  "assembly": "JNPF",
+  "isSuccessful": true,
+  "failingTypeCount": 0,
+  "failingTypeNamesSample": []
+}

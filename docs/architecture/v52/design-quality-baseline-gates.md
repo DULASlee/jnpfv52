@@ -1,8 +1,21 @@
 # 复杂度基线与分层架构门禁 — 设计（先设计后实现）
 
 > **父文档**：[`design-quality-diagnostics.md`](design-quality-diagnostics.md)  
-> **状态**：设计稿 v1.0（2026-08-06）— **本文不实现代码**；落地须另开任务 + ADF/CR（若触碰受保护方法）  
-> **依据数据**：[`design-quality-hotspot-top20.md`](design-quality-hotspot-top20.md) · `get_architecture(boundaries)` on `jnpf-v52`
+> **状态**：v1.2（2026-08-07）— JNPF009 + baseline **已落地**；ARCH-01 Common.Core **硬失败**；见施工包 W0–W4  
+> **依据数据**：[`design-quality-hotspot-top20.md`](design-quality-hotspot-top20.md) · `get_architecture(boundaries)` on `jnpf-v52` · [`.claude/evidence/backend-quality-check/`](../../../.claude/evidence/backend-quality-check/)  
+> **施工包**：[`../../superpowers/plans/2026-08-06-backend-quality-remediation-plan.md`](../../superpowers/plans/2026-08-06-backend-quality-remediation-plan.md)  
+> **设计规格**：[`../../superpowers/specs/2026-08-06-backend-quality-remediation-design.md`](../../superpowers/specs/2026-08-06-backend-quality-remediation-design.md)
+
+---
+
+## 0. 盘点快照（2026-08-06 · 检查项 1-2-4）
+
+| 项 | 结果 |
+|----|------|
+| ARCH-01 NetArchTest | 框架 **PASS**；Common.Core **硬失败 PASS**（W4 桥）；csproj 仅剩 API.Entry 豁免（Message.Interfaces 已清） |
+| 复杂度 | CC>29=**41**（CM 2026-08-07 复核）；JNPF009 + `complexity-baseline.json`（119 entries）**已上** |
+| Security Code Scan | SCS0006×1（`ElemeAuthRequest.cs:256`）；SARIF 已归档 |
+| 汇总报告 | `checks-1-2-4-report.md` |
 
 ---
 
@@ -10,9 +23,10 @@
 
 | 缺口 | 现状 | 后果 |
 |------|------|------|
-| 无复杂度门禁 | [`JNPF.Analyzers`](../../../backend/tools/JNPF.Analyzers/) 仅有 AsyncVoid / SqlSugar / Outbox / CreateScope / AppServiceLocator / DataExecuting / RequirementAnalysisGuard | 新代码可继续贡献 CC≥30 方法 |
-| 无分层架构测试 | 依赖约定 + Codebase-Memory 人工查 | `JNPF → inteAssistant` 已有 **626** 次调用边，可持续恶化 |
+| 无复杂度门禁 | [`JNPF.Analyzers`](../../../backend/tools/JNPF.Analyzers/) 仅有 AsyncVoid / SqlSugar / Outbox / CreateScope / AppServiceLocator / DataExecuting / RequirementAnalysisGuard；**41 重症仅有盘点、无 baseline 硬门** | 新代码可继续贡献 CC≥30 方法 |
+| 分层架构测试 | **已有** `JNPF.Tests.Architecture` 清单模式；框架已绿；Common.Core 已断；Message.Interfaces 已清；仅 API.Entry 组合根仍挂 InteAssistant | 未抽 Contracts 前反向边可继续恶化；调用图约 **626** 边 |
 | Hotspot 未进 CI | Top20 为手册快照 | 变更频率变化时清单过期 |
+| 安全扫描 | 全解已跑通（1 warning）；未进 CI | 新高危可能漏拦 |
 
 ---
 
@@ -30,7 +44,7 @@
 
 #### 设计要点（实现阶段遵守）
 
-1. **诊断 ID**：建议 `JNPF0xx`（实现时在 Analyzers 内分配，避开已有 JNPF007/008）  
+1. **诊断 ID**：**`JNPF009`**（已落地；避开 JNPF007/008）  
 2. **度量**：优先 **圈复杂度**（Roslyn 可算）；认知复杂度可作为 informational  
 3. **触发**：仅对**本次编译触及的语法树中新增或行级变更的方法**报错；纯格式化不触发  
 4. **基线格式**（建议路径 `backend/tools/JNPF.Analyzers/complexity-baseline.json`）：
@@ -102,7 +116,8 @@ flowchart LR
 | 阶段 | 命令 |
 |------|------|
 | 编译 + analyzer | `cd backend; dotnet build /p:CI_BUILD=true` |
-| 架构测试 | `dotnet test backend/tests/JNPF.Tests.Architecture/...`（实现后） |
+| 架构测试 | `dotnet test D:\JNPF-v52\backend\tests\JNPF.Tests.Architecture`（**已可跑**，3/3） |
+| 安全盘点 | `security-scan backend/zx_lowcode_netcore.sln --export=.claude/evidence/backend-quality-check/security-scan.sarif` |
 | Hook 行为红线 | `node scripts/test-hooks.mjs`（已有，不替代本设计） |
 | 三元组 | `node scripts/diagnose-triple-key.mjs` |
 
@@ -113,11 +128,12 @@ flowchart LR
 | 序号 | 任务 | 预估 | 依赖 |
 |------|------|------|------|
 | G1 | 增加 `ComplexityAnalyzer` + baseline 生成脚本（**PowerShell 或 xUnit 生成器**；禁止新增业务 `.mjs`） | 2–3d | 无 |
-| G2 | 用当前 41 个 CC&gt;29 方法灌入基线 | 0.5d | G1 |
-| G3 | 新建 `JNPF.Tests.Architecture` + NetArchTest 包引用 | 1d | 无 |
-| G4 | ARCH-01 统计模式 → 列违规清单 | 1d | G3 |
+| G2 | 用当前 41 个 CC&gt;29 方法灌入基线（种子：`check02-complexity-inventory.json`） | 0.5d | G1 |
+| G3 | 新建 `JNPF.Tests.Architecture` + NetArchTest 包引用 | — | **已完成** |
+| G4 | ARCH-01 统计模式 → 列违规清单 | — | **已完成**（evidence `arch01-*.json`） |
 | G5 | 依赖反转设计（Contracts）+ 消反向引用 | 按违规量 | G4 + 可能 CR |
-| G6 | CI 工作流接入 G1/G3 | 0.5d | G1+G3 |
+| G6 | CI 工作流接入 G1/G3（Architecture 入 solution） | 0.5d | G1+G3 |
+| G7 | SCS0006 评估（迁哈希 / 豁免） | 0.5d | 安全 SARIF 已有 |
 
 **受保护方法**：若 G5 改到 `PmSkillService` / Orchestrator / Gates 等，须先写 `.claude/change-requests/CR-*.md`。
 
@@ -154,4 +170,5 @@ flowchart LR
 - `backend/tools/JNPF.Analyzers/JNPF.Analyzers.Tests/` — 分析器单测范式  
 - `backend/framework/JNPF/` — ARCH-01 约束主体  
 - `backend/modularity/inteAssistant/` — 反向依赖源  
-- 拟建：`backend/tests/JNPF.Tests.Architecture/`（未创建）
+- **已建**：`backend/tests/JNPF.Tests.Architecture/`（`LayeringTests.cs`）  
+- 盘点：`.claude/evidence/backend-quality-check/`

@@ -26,7 +26,7 @@ function buildCliArgs() {
   if (process.env.EPISODIC_SYNC_WITH_SUMMARIES === '1') {
     return ['sync', ...(background ? ['--background'] : [])];
   }
-  return ['index', 'index-cleanup', '--no-summaries'];
+  return ['index', '--cleanup', '--no-summaries'];
 }
 
 const cliArgs = buildCliArgs();

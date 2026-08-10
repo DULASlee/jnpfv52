@@ -115,8 +115,8 @@ const setting: ProjectConfig = {
 
   // 多标签
   multiTabsSetting: {
-    // 刷新后是否保留已经打开的标签页
-    cache: false,
+    // 刷新后是否保留已经打开的标签页（演示期开启，提升切换体验；演示后可改回 false）
+    cache: true,
     // 开启
     show: true,
     // 是否显示标签图标
@@ -148,8 +148,8 @@ const setting: ProjectConfig = {
     openNProgress: true,
   },
 
-  // 是否开启KeepAlive缓存  开发时候最好关闭,不然每次都需要清除缓存
-  openKeepAlive: false,
+  // 是否开启KeepAlive缓存（演示期开启提升切换体验；日常开发建议关，改完需硬刷）
+  openKeepAlive: true,
 
   // 自动锁屏时间，为0不锁屏。 单位分钟 默认1个小时
   lockTime: 0,

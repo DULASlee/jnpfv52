@@ -44,6 +44,9 @@ public class WebComponent : IWebComponent
         });
 
         // ═══ Infrastructure 架构组件注册 ═══
+        // W4: Common.Core → InteAssistant 依赖反转桥（组合根显式注册；实现亦标 ISingleton 供扫描）
+        builder.Services.AddSingleton<JNPF.Bridges.IInteAssistantBridge, JNPF.InteAssistant.Bridges.InteAssistantBridge>();
+
         // 后台任务执行器（Singleton——全局唯一，追踪所有任务）
         builder.Services.AddSingleton<JNPF.InteAssistant.Infrastructure.Background.IBackgroundTaskRunner, JNPF.InteAssistant.Infrastructure.Background.BackgroundTaskRunner>();
 

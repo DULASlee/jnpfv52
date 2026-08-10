@@ -3,7 +3,7 @@
 > **类型**：跨模块专项设计（诊断手册）  
 > **适用源码**：JNPF v5.2  
 > **状态**：v1.0（2026-08-06）  
-> **关联产物**：[`design-quality-hotspot-top20.md`](design-quality-hotspot-top20.md) · [`design-quality-frontend-index-summary.md`](design-quality-frontend-index-summary.md) · [`design-quality-frontend-ct-report.md`](design-quality-frontend-ct-report.md)（**前端 X光/CT 实测**） · [`design-quality-frontend-cabinets.md`](design-quality-frontend-cabinets.md) · [`design-quality-frontend-tooling-adr.md`](design-quality-frontend-tooling-adr.md) · [`design-quality-baseline-gates.md`](design-quality-baseline-gates.md)  
+> **关联产物**：[`design-quality-hotspot-top20.md`](design-quality-hotspot-top20.md) · [`design-quality-frontend-index-summary.md`](design-quality-frontend-index-summary.md) · [`design-quality-frontend-ct-report.md`](design-quality-frontend-ct-report.md) · [`design-quality-frontend-cabinets.md`](design-quality-frontend-cabinets.md) · [`design-quality-frontend-tooling-adr.md`](design-quality-frontend-tooling-adr.md) · [`design-quality-baseline-gates.md`](design-quality-baseline-gates.md) · [后端整改规格](../../superpowers/specs/2026-08-06-backend-quality-remediation-design.md) · [前端整改规格](../../superpowers/specs/2026-08-06-frontend-quality-remediation-design.md)  
 > **编写规范**：[`../ARCHITECTURE_DOC_RULES.md`](../ARCHITECTURE_DOC_RULES.md)
 
 ---

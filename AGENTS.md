@@ -29,7 +29,9 @@ JNPF v5.2 low-code platform — .NET 8 backend + Vue 3 frontends. Full architect
 powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1
 ```
 
-Kills stale dotnet/node processes, frees ports 3100+3102+3800+5000+3001, then launches frontend (`:3100`), datascreen (`:3102`), mobile (`:3800`), and backend (`:5000` with hot-reload).
+**Single-stack lock (v4.2):** if any of 3100/3102/3800/5000/3001 is already listening, a second `start-dev` **exits 2** (does not kill/steal). Stop with `-CleanupOnly`; restart with `-Force`. Concurrent `start-dev` processes are also blocked by a named Mutex.
+
+Otherwise: kills stale processes on those ports, then launches frontend (`:3100`), datascreen (`:3102`), mobile (`:3800`), and backend (`:5000` with hot-reload).
 
 ## Key Commands
 
@@ -38,6 +40,8 @@ Kills stale dotnet/node processes, frees ports 3100+3102+3800+5000+3001, then la
 | Backend build | `dotnet build` | `backend/` |
 | Backend Release build | `dotnet build -c Release` | `backend/` |
 | Backend CI build (with analyzers) | `dotnet build /p:CI_BUILD=true` | `backend/` |
+| Complexity gate (JNPF009) | baseline: `backend/tools/JNPF.Analyzers/complexity-baseline.json`；测：`dotnet test tools/JNPF.Analyzers/JNPF.Analyzers.Tests` | `backend/` |
+| ARCH-01 layering | `dotnet test --filter FullyQualifiedName~Architecture`（Common.Core 硬失败；Message.Interfaces 豁免） | `backend/` |
 | Backend tests | `dotnet test backend/zx_lowcode_netcore.sln` | repo root |
 | Frontend lint | `pnpm lint` | `jnpf-web-vue3/` |
 | Frontend type-check (Studio, default) | `pnpm type-check` | `jnpf-web-vue3/` |

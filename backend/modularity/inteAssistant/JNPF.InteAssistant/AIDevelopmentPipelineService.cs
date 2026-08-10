@@ -24,6 +24,7 @@ using JNPF.InteAssistant.Skills;
 using JNPF.InteAssistant.Skills.Bugfix;
 using JNPF.InteAssistant.Pipeline;
 using JNPF.InteAssistant.Studio;
+using JNPF.InteAssistant.Studio.Streaming;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -1081,10 +1082,8 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                 .OrderBy(x => x.CreatorTime)
                 .ToListAsync();
 
-            var chatMessages = history
-                .Where(x => x.Role is "user" or "assistant")
-                .Select(x => new ChatMessage(x.Role, x.Content))
-                .ToList();
+            var chatMessages = StreamLlmFlowHelpers.ToChatMessages(
+                history.Select(x => (x.Role, x.Content)));
 
             logger.LogInformation("LLM 历史消息数: {Count}", chatMessages.Count);
 
@@ -1104,8 +1103,9 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             // 需求门控：附件持久化 + 缓存 + 硬规则校验 + 成熟度评估
             // （仅 requirement 阶段触发，其他阶段走默认 SystemPrompt）
             // F3 铁律：此块为旧 SSE 门控流 — 新版三轮编排器入口在 POST /api/studio/skills/requirement-analysis/{pipelineId}/run
+            // 决策/文案：LegacyRequirementGatePlanner；I/O 仍在本块
             // ═══════════════════════════════════════════════════
-            if (stageName == PipelineStage.Requirement)
+            if (LegacyRequirementGatePlanner.ShouldRunLegacyGate(stageName))
             {
                 try
                 {
@@ -1113,9 +1113,10 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     var attachmentProcessor = scope.ServiceProvider.GetRequiredService<AttachmentProcessor>();
                     var http = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient();
                     // 健壮性修复：默认 HttpClient 无超时会无限挂起；附件下载自调用需带 Authorization + 超时
-                    http.Timeout = TimeSpan.FromSeconds(30);
-                    if (!string.IsNullOrWhiteSpace(ctx.Authorization))
-                        http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", ctx.Authorization.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase));
+                    http.Timeout = LegacyGateAttachmentHelpers.AttachmentDownloadTimeout;
+                    var bearer = LegacyGateAttachmentHelpers.StripBearerPrefix(ctx.Authorization);
+                    if (bearer != null)
+                        http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", bearer);
                     var tenantId = ctx.TenantId;
 
                     // ── 第1步：将请求带的新附件保存到数据库 ──
@@ -1127,26 +1128,19 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                     {
                         foreach (var att in requestAttachments)
                         {
-                            var exists = existingAttachments.Any(e => e.FileUrl == att.Url);
-                            if (exists) continue;
+                            if (LegacyGateAttachmentHelpers.UrlAlreadyExists(
+                                    existingAttachments.Select(e => e.FileUrl), att.Url))
+                                continue;
 
-                            var entity = new InteAssistantAttachment
-                            {
-                                F_Id = Guid.NewGuid().ToString("N"),
-                                PipelineId = pipelineId.ToString(),
-                                ProjectId = projectId,
-                                FileName = att.Name,
-                                FileUrl = att.Url,
-                                FileSize = 0,
-                                FileType = Path.GetExtension(att.Name)?.TrimStart('.') ?? "",
-                                FileHash = null, // 下载后计算
-                                ProcessStatus = 0,
-                                CreatorUserId = ctx.UserId,
-                                CreatorUserName = ctx.UserName,
-                                TenantId = tenantId,
-                                CreateTime = DateTime.Now,
-                                DeleteMark = false
-                            };
+                            var entity = LegacyGateAttachmentHelpers.CreatePendingEntity(
+                                pipelineId.ToString(),
+                                projectId,
+                                att.Name,
+                                att.Url,
+                                ctx.UserId,
+                                ctx.UserName,
+                                tenantId,
+                                DateTime.Now);
 
                             await db.Insertable(entity).ExecuteCommandAsync();
                             existingAttachments.Add(entity);
@@ -1160,50 +1154,45 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
 
                     foreach (var att in existingAttachments)
                     {
-                        if (att.ProcessStatus == 2 && !string.IsNullOrWhiteSpace(att.ExtractedText))
+                        if (LegacyGateAttachmentHelpers.TryCollectCacheHitText(
+                                att.ProcessStatus, att.ExtractedText, attachmentTexts))
                         {
-                            attachmentTexts.Add(att.ExtractedText);
-                            _logger.LogInformation("附件命中缓存: {Name} ({Len}字)", att.FileName, att.ExtractedText.Length);
+                            _logger.LogInformation("附件命中缓存: {Name} ({Len}字)", att.FileName, att.ExtractedText!.Length);
                             continue;
                         }
 
                         try
                         {
+                            var running = LegacyGateAttachmentHelpers.BuildRunningUpdate(DateTime.Now);
                             await db.Updateable<InteAssistantAttachment>()
-                                .SetColumns(a => a.ProcessStatus == 1)
-                                .SetColumns(a => a.LastModifyTime == DateTime.Now)
+                                .SetColumns(a => a.ProcessStatus == running.ProcessStatus)
+                                .SetColumns(a => a.LastModifyTime == running.LastModifyTime)
                                 .Where(a => a.F_Id == att.F_Id)
                                 .ExecuteCommandAsync();
 
-                            var fileUrl = att.FileUrl;
-                            if (!fileUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                            {
-                                var baseUrl = ctx.GetBaseUrl();
-                                if (string.IsNullOrEmpty(baseUrl))
-                                {
-                                    throw new InvalidOperationException($"无法解析附件下载基 URL（ctx.Host 为空），跳过附件 {att.FileName}");
-                                }
-                                fileUrl = $"{baseUrl}{fileUrl}";
-                            }
+                            var fileUrl = StreamLlmFlowHelpers.ResolveAttachmentDownloadUrl(
+                                att.FileUrl, ctx.GetBaseUrl(), att.FileName);
                             var bytes = await http.GetByteArrayAsync(fileUrl, ct);
-                            var fileHash = ComputeSha256(bytes);
-                            downloadedBytes[att.FileUrl] = bytes; // 缓存，避免图片二次下载
+                            var fileHash = LegacyGateAttachmentHelpers.ComputeSha256Hex(bytes);
+                            LegacyGateAttachmentHelpers.RememberDownloadedBytes(
+                                downloadedBytes, att.FileUrl, bytes); // 缓存，避免图片二次下载
 
                             var extracted = await attachmentProcessor.ProcessAttachmentsAsync(
-                                new List<AttachmentFile> { new() { FileName = att.FileName, Content = bytes } });
+                                new List<AttachmentFile>
+                                {
+                                    LegacyGateAttachmentHelpers.ToProcessorFile(att.FileName, bytes),
+                                });
 
+                            var done = LegacyGateAttachmentHelpers.BuildDoneUpdate(extracted, fileHash, DateTime.Now);
                             await db.Updateable<InteAssistantAttachment>()
-                                .SetColumns(a => a.ProcessStatus == 2)
-                                .SetColumns(a => a.ExtractedText == extracted)
-                                .SetColumns(a => a.FileHash == fileHash)
-                                .SetColumns(a => a.LastModifyTime == DateTime.Now)
+                                .SetColumns(a => a.ProcessStatus == done.ProcessStatus)
+                                .SetColumns(a => a.ExtractedText == done.ExtractedText)
+                                .SetColumns(a => a.FileHash == done.FileHash)
+                                .SetColumns(a => a.LastModifyTime == done.LastModifyTime)
                                 .Where(a => a.F_Id == att.F_Id)
                                 .ExecuteCommandAsync();
 
-                            if (!string.IsNullOrWhiteSpace(extracted))
-                            {
-                                attachmentTexts.Add(extracted);
-                            }
+                            LegacyGateAttachmentHelpers.CollectExtractedIfPresent(extracted, attachmentTexts);
 
                             processedCount++;
                             _logger.LogInformation("附件解析完成: {Name}, {Len}字", att.FileName, extracted.Length);
@@ -1211,173 +1200,152 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                         catch (Exception ex)
                         {
                             logger.LogError(ex, "附件处理失败: {Name}", att.FileName);
-                            var errMsg = ex.Message.Length > 2000 ? ex.Message[..2000] : ex.Message;
+                            var failed = LegacyGateAttachmentHelpers.BuildFailedUpdate(ex.Message, DateTime.Now);
                             await db.Updateable<InteAssistantAttachment>()
-                                .SetColumns(a => a.ProcessStatus == 3)
-                                .SetColumns(a => a.ProcessError == errMsg)
-                                .SetColumns(a => a.LastModifyTime == DateTime.Now)
+                                .SetColumns(a => a.ProcessStatus == failed.ProcessStatus)
+                                .SetColumns(a => a.ProcessError == failed.ProcessError)
+                                .SetColumns(a => a.LastModifyTime == failed.LastModifyTime)
                                 .Where(a => a.F_Id == att.F_Id)
                                 .ExecuteCommandAsync();
                         }
                     }
 
-                    var attachmentText = string.Join("\n\n", attachmentTexts);
+                    var attachmentText = LegacyGateAttachmentHelpers.JoinExtractedTexts(attachmentTexts);
                     _logger.LogInformation("附件处理完成: 文件数={Count}, 提取文本长度={Len}",
                         existingAttachments.Count, attachmentText.Length);
 
                     // ── 第3步：合并用户文字 + 附件提取内容 ──
                     var lastUserMsg = chatMessages.LastOrDefault(m => m.Role == "user")?.Content ?? "";
-                    var fullText = lastUserMsg + attachmentText;
+                    var fullText = LegacyRequirementGatePlanner.ComposeFullText(lastUserMsg, attachmentText);
 
                     // ── 第4步：硬规则校验 ──
                     var hardRule = gateService.ValidateHardRules(fullText, existingAttachments.Count);
                     if (!hardRule.Passed)
                     {
-                        await sse.TokenAsync($"❌ {hardRule.Reason}\n\n{hardRule.Hint}", ct);
+                        await sse.TokenAsync(
+                            LegacyRequirementGatePlanner.FormatHardRuleReject(hardRule.Reason, hardRule.Hint), ct);
                         sse.Complete();
                 return;
                     }
 
                     // ── 第5步：将附件内容追加到最后一条用户消息 ──
-                    if (!string.IsNullOrWhiteSpace(attachmentText))
-                    {
-                        var lastIdx = chatMessages.FindLastIndex(m => m.Role == "user");
-                        if (lastIdx >= 0)
-                        {
-                            chatMessages[lastIdx] = new ChatMessage("user",
-                                chatMessages[lastIdx].Content + attachmentText);
-                        }
-                    }
+                    StreamLlmFlowHelpers.AppendToLastUserMessage(chatMessages, attachmentText);
 
                     // ── 第6步：追问轮次 + 模式判定 + SystemPrompt ──
                     var assistantMsgCount = chatMessages.Count(m => m.Role == "assistant");
+                    var promptBranch = LegacyRequirementGatePlanner.DecidePromptBranch(
+                        gateService.IsForceRefine(lastUserMsg),
+                        gateService.IsMaxRoundsReached(assistantMsgCount));
 
-                    if (gateService.IsForceRefine(lastUserMsg))
+                    if (promptBranch == LegacyGatePromptBranch.ForceRefine)
                     {
                         _logger.LogInformation("用户要求直接分析 pipelineId={Id}", pipelineId);
                         systemPrompt = gateService.GetSystemPrompt("refine", new MaturityResult());
-                        sse.TrySend("info", "\n\n> 📊 已进入精化模式 — 开始深度分析\n\n");
+                        sse.TrySend("info", LegacyRequirementGatePlanner.FormatForceRefineInfo());
                     }
-                    else if (gateService.IsMaxRoundsReached(assistantMsgCount))
+                    else if (promptBranch == LegacyGatePromptBranch.MaxRoundsForceRefine)
                     {
                         _logger.LogInformation("追问{Count}轮，强制分析 pipelineId={Id}", assistantMsgCount, pipelineId);
                         systemPrompt = gateService.GetSystemPrompt("refine", new MaturityResult
                         {
                             Score = 50,
                             Mode = "refine",
-                            Strengths = chatMessages
-                                .Where(m => m.Role == "user")
-                                .Select(m => m.Content.Length > 50 ? m.Content[..50] + "..." : m.Content)
-                                .ToList()
+                            Strengths = LegacyRequirementGatePlanner.SummarizeUserContentsForStrengths(chatMessages)
                         });
-                        sse.TrySend("info", $"\n\n> 📊 已进行{assistantMsgCount}轮追问，系统将基于当前信息开始分析\n\n");
+                        sse.TrySend("info", LegacyRequirementGatePlanner.FormatMaxRoundsInfo(assistantMsgCount));
                     }
                     else
                     {
                         var maturity = await gateService.EvaluateMaturity(chatMessages, provider, ct);
                         _logger.LogInformation("需求成熟度评估: score={Score} mode={Mode} clarifications={Count} pipelineId={Id}",
                             maturity.Score, maturity.Mode, maturity.Clarifications?.Count ?? 0, pipelineId);
-                        var modeLabel = maturity.Mode switch
-                        {
-                            "explore" => "探索模式 — 需要补充更多信息",
-                            "confirm" => "确认模式 — 需要确认部分细节",
-                            "refine" => "精化模式 — 开始深度分析",
-                            _ => maturity.Mode
-                        };
-                        sse.TrySend("info", $"\n\n> 📊 需求成熟度：{maturity.Score}/100（{modeLabel}）\n\n");
+                        sse.TrySend("info", LegacyRequirementGatePlanner.FormatMaturityInfo(maturity.Score, maturity.Mode));
                         systemPrompt = gateService.GetSystemPrompt(maturity.Mode, maturity);
 
                         // ── ADR-005 交互式澄清问答：explore/confirm 模式向用户发结构化选择题 ──
-                        // refine 模式信息已充分，直接进入深度分析（保持既有行为）。
-                        if (maturity.Mode is "explore" or "confirm")
+                        var maxRounds = StreamLlmFlowHelpers.ClampClarificationMaxRounds(
+                            _configuration.GetValue<int?>("Clarification:MaxRounds"));
+                        var clarificationRound = StreamLlmFlowHelpers.ComputeClarificationRound(
+                            assistantMsgCount, maxRounds);
+                        var clarAction = LegacyRequirementGatePlanner.DecideClarificationAction(
+                            maturity.Mode, clarificationRound, maxRounds);
+
+                        if (clarAction == LegacyClarificationAction.ForceRefineAtCap)
                         {
-                            var maxRounds = _configuration.GetValue<int?>("Clarification:MaxRounds") ?? 7;
-                            if (maxRounds < 1) maxRounds = 7;
-                            if (maxRounds > 20) maxRounds = 20;
+                            _logger.LogInformation("澄清提问已达上限 {Max} 轮，强制 refine pipelineId={Id}", maxRounds, pipelineId);
+                            systemPrompt = gateService.GetSystemPrompt("refine", maturity);
+                        }
+                        else if (clarAction == LegacyClarificationAction.RequestClarification)
+                        {
+                            var clarificationSet = gateService.BuildClarificationSet(maturity, clarificationRound);
+                            var fragmentId = LegacyRequirementGatePlanner.BuildClarificationFragmentId(projectId);
 
-                            var clarificationRound = Math.Min(assistantMsgCount / 2 + 1, maxRounds);
-
-                            // 轮次触顶则强制进入 refine（保持既有 ForceRefine 语义，避免无限提问）
-                            if (clarificationRound >= maxRounds)
+                            await _irEventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
                             {
-                                _logger.LogInformation("澄清提问已达上限 {Max} 轮，强制 refine pipelineId={Id}", maxRounds, pipelineId);
-                                systemPrompt = gateService.GetSystemPrompt("refine", maturity);
-                            }
-                            else
-                            {
-                                var clarificationSet = gateService.BuildClarificationSet(maturity, clarificationRound);
-                                var fragmentId = $"clarification:{ClarificationStages.Requirement}:{projectId}";
+                                EventType = IrEventTypes.ClarificationRequested,
+                                FragmentId = fragmentId,
+                                FragmentType = IrFragmentTypes.Clarification,
+                                FragmentVersion = clarificationRound,
+                                Payload = JsonSerializer.Serialize(clarificationSet, JsonCamelOptions),
+                                SkillId = "requirement-gate",
+                            }, ct);
 
-                                await _irEventStore.AppendAsync(projectId, tenantId, new AppendIrEventRequest
-                                {
-                                    EventType = IrEventTypes.ClarificationRequested,
-                                    FragmentId = fragmentId,
-                                    FragmentType = IrFragmentTypes.Clarification,
-                                    FragmentVersion = clarificationRound,
-                                    Payload = JsonSerializer.Serialize(clarificationSet, JsonCamelOptions),
-                                    SkillId = "requirement-gate",
-                                }, ct);
+                            // 显式推 clarification_requested（AppendAsync 内部的 ir_event 仅供观测台，前端聊天面板靠此事件名渲染问卷卡）
+                            sse.TrySend("clarification_requested", JsonSerializer.Serialize(clarificationSet, JsonCamelOptions));
+                            _logger.LogInformation(
+                                "已发出澄清提问 round={Round} questions={Count} pipelineId={Id}",
+                                clarificationRound, clarificationSet.Questions.Count, pipelineId);
 
-                                // 显式推 clarification_requested（AppendAsync 内部的 ir_event 仅供观测台，前端聊天面板靠此事件名渲染问卷卡）
-                                sse.TrySend("clarification_requested", JsonSerializer.Serialize(clarificationSet, JsonCamelOptions));
-                                _logger.LogInformation(
-                                    "已发出澄清提问 round={Round} questions={Count} pipelineId={Id}",
-                                    clarificationRound, clarificationSet.Questions.Count, pipelineId);
-
-                                // 本轮结束：暂停流式 LLM，等待用户作答（POST /skills/clarification/{id}/answer）
-                                sse.Complete();
-                                return;
-                            }
+                            // 本轮结束：暂停流式 LLM，等待用户作答（POST /skills/clarification/{id}/answer）
+                            sse.Complete();
+                            return;
                         }
                     }
 
                     // ── 图片附件提取（多模态）──
-                    if (existingAttachments.Any(a => GateConstants.IsImageFile(a.FileName)))
+                    var visionConfig = _configuration.GetSection("MultimodalVision");
+                    var visionApiUrl = visionConfig["ApiUrl"];
+                    var visionApiKey = visionConfig["ApiKey"];
+                    var visionModel = visionConfig["Model"];
+                    var visionDecision = StreamLlmFlowHelpers.DecideVisionExtraction(
+                        StreamLlmFlowHelpers.HasImageFileNames(existingAttachments.Select(a => a.FileName)),
+                        visionApiUrl,
+                        visionApiKey);
+
+                    if (visionDecision == VisionExtractionDecision.SkipNotConfigured)
                     {
-                        var visionConfig = _configuration.GetSection("MultimodalVision");
-                        var apiUrl = visionConfig["ApiUrl"];
-                        var apiKey = visionConfig["ApiKey"];
-                        var model = visionConfig["Model"];
-
-                        if (!string.IsNullOrWhiteSpace(apiKey) && !string.IsNullOrWhiteSpace(apiUrl))
+                        logger.LogWarning("多模态API未配置，跳过图片分析。请配置 MultimodalVision 节点。");
+                    }
+                    else if (visionDecision == VisionExtractionDecision.Run)
+                    {
+                        // 图片附件需要重新下载（因为内容在AttachmentFile中需要byte[]）
+                        var imageFiles = new List<AttachmentFile>();
+                        foreach (var att in existingAttachments.Where(a => GateConstants.IsImageFile(a.FileName)))
                         {
-                            // 图片附件需要重新下载（因为内容在AttachmentFile中需要byte[]）
-                            var imageFiles = new List<AttachmentFile>();
-                            foreach (var att in existingAttachments.Where(a => GateConstants.IsImageFile(a.FileName)))
+                            // 优先取缓存（步骤2已下载），避免二次下载
+                            if (LegacyGateAttachmentHelpers.TryTakeCachedBytes(
+                                    downloadedBytes, att.FileUrl, out var cachedBytes))
                             {
-                                // 优先取缓存（步骤2已下载），避免二次下载
-                                if (downloadedBytes.TryGetValue(att.FileUrl, out var cachedBytes))
-                                {
-                                    imageFiles.Add(new AttachmentFile { FileName = att.FileName, Content = cachedBytes });
-                                }
-                                else
-                                {
-                                    var imgUrl = att.FileUrl;
-                                    if (!imgUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-                                        imgUrl = $"{ctx.GetBaseUrl()}{imgUrl}";
-                                    var imgBytes = await http.GetByteArrayAsync(imgUrl, ct);
-                                    imageFiles.Add(new AttachmentFile { FileName = att.FileName, Content = imgBytes });
-                                }
+                                imageFiles.Add(LegacyGateAttachmentHelpers.ToProcessorFile(att.FileName, cachedBytes));
                             }
-
-                            if (imageFiles.Count > 0)
+                            else
                             {
-                                var imageAnalysis = await gateService.ExtractFromImages(
-                                    imageFiles, apiUrl, apiKey, model, ct);
-                                if (!string.IsNullOrWhiteSpace(imageAnalysis))
-                                {
-                                    var lastIdx = chatMessages.FindLastIndex(m => m.Role == "user");
-                                    if (lastIdx >= 0)
-                                    {
-                                        chatMessages[lastIdx] = new ChatMessage("user",
-                                            chatMessages[lastIdx].Content + "\n\n" + imageAnalysis);
-                                    }
-                                }
+                                var imgUrl = StreamLlmFlowHelpers.ResolveAttachmentDownloadUrl(
+                                    att.FileUrl, ctx.GetBaseUrl());
+                                var imgBytes = await http.GetByteArrayAsync(imgUrl, ct);
+                                imageFiles.Add(LegacyGateAttachmentHelpers.ToProcessorFile(att.FileName, imgBytes));
                             }
                         }
-                        else
+
+                        if (imageFiles.Count > 0)
                         {
-                            logger.LogWarning("多模态API未配置，跳过图片分析。请配置 MultimodalVision 节点。");
+                            var imageAnalysis = await gateService.ExtractFromImages(
+                                imageFiles, visionApiUrl, visionApiKey, visionModel, ct);
+                            if (!string.IsNullOrWhiteSpace(imageAnalysis))
+                            {
+                                StreamLlmFlowHelpers.AppendToLastUserMessage(
+                                    chatMessages, StreamLlmFlowHelpers.PrefixVisionAnalysis(imageAnalysis));
+                            }
                         }
                     }
                 }
@@ -1400,29 +1368,23 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             #endregion // LEGACY_REQUIREMENT_GATE_FLOW
 
             // 构造 LLM 请求
-            var llmRequest = new ChatCompletionRequest
-            {
-                ProviderCode = provider,
-                SystemPrompt = systemPrompt ?? GetStageSystemPrompt(stageName),
-                Messages = chatMessages,
-                MaxTokens = 4096,
-                Temperature = 0.7,
-                MaxRetries = 2,
-                TimeoutMs = 120000
-            };
+            var llmRequest = StreamLlmFlowHelpers.BuildDefaultStreamRequest(
+                provider,
+                systemPrompt ?? GetStageSystemPrompt(stageName),
+                chatMessages);
 
             // 流式调用 LLM Gateway
             var chunkCount = 0;
             await foreach (var json in llmGateway.ChatStreamAsync(llmRequest))
             {
-                if (json.StartsWith("[ERROR]") || json.StartsWith("[error]"))
+                if (StreamLlmFlowHelpers.IsGatewayStreamError(json))
                 {
                     logger.LogWarning("LLM Gateway 返回错误: {Error}", json);
                     sse.Error(json);
                 return;
                 }
 
-                var token = ExtractToken(json);
+                var token = StreamLlmFlowHelpers.ExtractToken(json);
                 if (string.IsNullOrEmpty(token)) continue;
 
                 chunkCount++;
@@ -1443,10 +1405,11 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
                 // 行业标准粗估,后续可改为解析流式最后一条 chunk 的 usage
                 try
                 {
-                    var estimatedInputTokens = chatMessages.Sum(m => m.Content.Length) / 4;
-                    var estimatedOutputTokens = fullResponse.Length / 4;
-                    var estimatedTotal = estimatedInputTokens + estimatedOutputTokens;
-                    if (estimatedTotal > 0 && !string.IsNullOrEmpty(ctx.TenantId))
+                    var (estimatedInputTokens, estimatedOutputTokens, estimatedTotal) =
+                        StreamLlmFlowHelpers.EstimateStreamTokens(
+                            chatMessages.Sum(m => m.Content.Length),
+                            fullResponse.Length);
+                    if (StreamLlmFlowHelpers.ShouldAccumulateEstimatedTokens(estimatedTotal, ctx.TenantId))
                     {
                         await budgetGuard.AccumulateProjectTokensAsync(
                             projectId, ctx.TenantId, estimatedTotal, ct);
@@ -1463,7 +1426,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             }
 
             // development 阶段完成后：上传 generated/ 产物到沙箱
-            if (stageName == PipelineStage.Development)
+            if (StreamLlmFlowHelpers.ShouldUploadDevelopmentArtifacts(stageName))
             {
                 try
                 {
@@ -1499,10 +1462,7 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         catch (Exception ex)
         {
             logger.LogError(ex, "LLM 流式调用失败: PipelineId={Id}, Stage={Stage}", pipelineId, stageName);
-            var llmErrorDetail = ex.InnerException != null
-                ? $"LLM 调用失败: {ex.Message} (Inner: {ex.InnerException.Message})"
-                : $"LLM 调用失败: {ex.Message}";
-            sse.Error(llmErrorDetail);
+            sse.Error(StreamLlmFlowHelpers.FormatLlmStreamFailure(ex));
         }
         finally
         {
@@ -1837,30 +1797,6 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
             .Where(x => x.PipelineId == pipelineId && x.TenantId == tenantId && x.Stage == stage)
             .MaxAsync(x => (int?)x.Sequence) ?? 0;
         return maxSeq + 1;
-    }
-
-    private static string? ExtractToken(string json)
-    {
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            if (root.TryGetProperty("delta", out var delta) &&
-                delta.TryGetProperty("text", out var text))
-                return text.GetString();
-
-            if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
-            {
-                var choice = choices[0];
-                if (choice.TryGetProperty("delta", out var delta2) &&
-                    delta2.TryGetProperty("content", out var content))
-                    return content.GetString();
-            }
-
-            return null;
-        }
-        catch { return null; }
     }
 
     private static string GetStageSystemPrompt(string stage) => stage switch
@@ -2394,17 +2330,6 @@ public class AIDevelopmentPipelineService : IDynamicApiController, ITransient
         if (json.Length <= maxLen) return json;
         return json[..maxLen] + "\n... (已截断，完整数据见 IR 字段)";
     }
-
-    /// <summary>
-    /// 计算文件内容的 SHA256 哈希（用于附件去重）
-    /// </summary>
-    private static string ComputeSha256(byte[] data)
-    {
-        var hash = System.Security.Cryptography.SHA256.HashData(data);
-        return Convert.ToHexString(hash).ToLowerInvariant();
-    }
-
-
 
     // ═══════════════════════════════════════════════════
     // SA 结果 DTO

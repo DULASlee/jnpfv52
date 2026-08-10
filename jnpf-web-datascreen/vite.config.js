@@ -84,6 +84,30 @@ export default ({ mode, command }) => {
         },
       },
       open: true,
+      // 演示/日常：预构建重型依赖，避免首次打开大屏白屏数分钟
+      warmup: {
+        clientFiles: ['./index.html', './src/main.js', './src/App.vue'],
+      },
+    },
+    optimizeDeps: {
+      include: [
+        'vue',
+        'vue-router',
+        'vue-i18n',
+        'element-plus',
+        'element-plus/dist/locale/zh-cn.mjs',
+        '@element-plus/icons-vue',
+        '@smallwei/avue',
+        '@kjgl77/datav-vue3',
+        'axios',
+        'dayjs',
+        'mqtt',
+        'highlight.js',
+        'vue-json-viewer',
+        'vuedraggable',
+      ],
+      // monaco 按需进编辑页再加载，不挡大屏首页
+      exclude: ['monaco-editor'],
     },
   })
 }

@@ -26,6 +26,7 @@ using JNPF.Systems.Entitys.System;
 using JNPF.Systems.Interfaces.Permission;
 using JNPF.Systems.Interfaces.System;
 using JNPF.VisualDev.Engine.Core;
+using JNPF.VisualDev.Engine.Import;
 using JNPF.VisualDev.Entitys;
 using JNPF.VisualDev.Entitys.Dto.VisualDev;
 using JNPF.VisualDev.Entitys.Dto.VisualDevModelData;
@@ -1374,143 +1375,21 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
     /// </summary>
     private List<Dictionary<string, object>> ImportFirstVerify(TemplateParsingBase tInfo, List<Dictionary<string, object>> list)
     {
-        var errorKey = "errorsInfo";
-        var resList = new List<Dictionary<string, object>>();
-        list.ForEach(item =>
-        {
-            var addItem = item.Copy();
-            addItem.Add(errorKey, string.Empty);
-            resList.Add(addItem);
-        });
+        var errorKey = ImportAssembleErrors.ErrorKey;
+        var resList = ImportFirstVerifyHelpers.SeedWithEmptyErrors(list);
+        var childTableList = ImportFirstVerifyHelpers.CollectChildTableVModels(tInfo.AllFieldsModel);
 
         #region 验证必填控件
-        var childTableList = tInfo.AllFieldsModel.Where(x => x.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE)).Select(x => x.__vModel__).ToList();
-        var requiredList = tInfo.AllFieldsModel.Where(x => x.__config__.required).ToList();
-        var VModelList = requiredList.Select(x => x.__vModel__).ToList();
-
-        if (VModelList.Any())
-        {
-            var newResList = new List<Dictionary<string, object>>();
-            resList.ForEach(items =>
-            {
-                var newItems = items.Copy();
-                foreach (var item in items)
-                {
-                    if (item.Value.IsNullOrEmpty() && VModelList.Contains(item.Key))
-                    {
-                        var errorInfo = requiredList.Find(x => x.__vModel__.Equals(item.Key)).__config__.label + ": 值不能为空";
-                        if (newItems.ContainsKey(errorKey)) newItems[errorKey] = newItems[errorKey] + "," + errorInfo;
-                        else newItems.Add(errorKey, errorInfo);
-                    }
-
-                    // 子表
-                    if (childTableList.Contains(item.Key))
-                    {
-                        item.Value.ToObject<List<Dictionary<string, object>>>().ForEach(childItems =>
-                        {
-                            foreach (var childItem in childItems)
-                            {
-                                if (childItem.Value.IsNullOrEmpty() && VModelList.Contains(item.Key + "-" + childItem.Key))
-                                {
-                                    var errorInfo = tInfo.AllFieldsModel.Find(x => x.__vModel__.Equals(item.Key)).__config__.children.Find(x => x.__vModel__.Equals(item.Key + "-" + childItem.Key)).__config__.label + ": 值不能为空";
-                                    if (newItems.ContainsKey(errorKey)) newItems[errorKey] = newItems[errorKey] + "," + errorInfo;
-                                    else newItems.Add(errorKey, errorInfo);
-                                }
-                            }
-                        });
-                    }
-                }
-                newResList.Add(newItems);
-            });
-            resList = newResList;
-        }
+        ImportFirstVerifyHelpers.ValidateRequired(resList, tInfo.AllFieldsModel, childTableList);
         #endregion
 
         #region 验证唯一
         var uniqueList = tInfo.AllFieldsModel.Where(x => x.__config__.unique).ToList();
-        VModelList = uniqueList.Select(x => x.__vModel__).ToList();
 
         if (uniqueList.Any())
         {
-            resList.ForEach(items =>
-            {
-                foreach (var item in items)
-                {
-                    if (VModelList.Contains(item.Key))
-                    {
-                        var vlist = new List<Dictionary<string, object>>();
-                        resList.Where(x => x.ContainsKey(item.Key) && x.ContainsValue(item.Value)).ToList().ForEach(it =>
-                        {
-                            foreach (var dic in it)
-                            {
-                                if (dic.Value != null && item.Value != null && dic.Key.Equals(item.Key) && dic.Value.Equals(item.Value))
-                                {
-                                    vlist.Add(it);
-                                    break;
-                                }
-                            }
-                        });
-
-                        if (vlist.Count > 1)
-                        {
-                            for (var i = 1; i < vlist.Count; i++)
-                            {
-                                var errorInfo = tInfo.AllFieldsModel.Find(x => x.__vModel__.Equals(item.Key)).__config__.label + ": 值不能重复";
-                                items[errorKey] = items[errorKey] + "," + errorInfo;
-                            }
-                        }
-                    }
-
-                    // 子表
-                    var updateItemCList = new List<Dictionary<string, object>>();
-                    var ctItemErrors = new List<string>();
-                    if (childTableList.Contains(item.Key))
-                    {
-                        var itemCList = item.Value.ToObject<List<Dictionary<string, object>>>();
-                        itemCList.ForEach(childItems =>
-                        {
-                            if (tInfo.dataType.Equals("2"))
-                            {
-                                foreach (var childItem in childItems)
-                                {
-                                    var uniqueKey = item.Key + "-" + childItem.Key;
-                                    if (VModelList.Contains(uniqueKey))
-                                    {
-                                        var vlist = itemCList.Where(x => x.ContainsKey(childItem.Key) && x.ContainsValue(childItem.Value)).ToList();
-                                        if (!updateItemCList.Any(x => x.ContainsKey(childItem.Key) && x.ContainsValue(childItem.Value)))
-                                            updateItemCList.Add(vlist.Last());
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                foreach (var childItem in childItems)
-                                {
-                                    var uniqueKey = item.Key + "-" + childItem.Key;
-                                    if (VModelList.Contains(uniqueKey) && childItem.Value != null)
-                                    {
-                                        var vlist = itemCList.Where(x => x.ContainsKey(childItem.Key) && x.ContainsValue(childItem.Value)).ToList();
-                                        if (vlist.Count > 1)
-                                        {
-                                            for (var i = 1; i < vlist.Count; i++)
-                                            {
-                                                var errorTxt = tInfo.AllFieldsModel.Find(x => x.__vModel__.Equals(uniqueKey)).__config__.label + ": 值不能重复";
-                                                if (!ctItemErrors.Any(x => x.Equals(errorTxt))) ctItemErrors.Add(errorTxt);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        });
-                    }
-
-                    if (tInfo.dataType.Equals("2") && updateItemCList.Any()) items[item.Key] = updateItemCList;
-                    if (ctItemErrors.Any())
-                    {
-                        items[errorKey] = items[errorKey].IsNullOrEmpty() ? string.Join(",", ctItemErrors) : items[errorKey] + "," + string.Join(",", ctItemErrors);
-                    }
-                }
-            });
+            ImportFirstVerifyHelpers.ValidateBatchUnique(
+                resList, tInfo.AllFieldsModel, childTableList, tInfo.dataType);
 
             // 表里的数据验证唯一
             List<string>? relationKey = new List<string>();
@@ -1656,20 +1535,7 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
                             {
                                 dataList = allDataList;
                             }
-                            dataList.ForEach(item =>
-                            {
-                                if (item.OrganizeIdTree.IsNullOrEmpty()) item.OrganizeIdTree = item.Id;
-                                var orgNameList = new List<string>();
-                                item.OrganizeIdTree.Split(",").ToList().ForEach(it =>
-                                {
-                                    var org = allDataList.Find(x => x.Id == it);
-                                    if (org != null) orgNameList.Add(org.FullName);
-                                });
-                                Dictionary<string, string> dictionary = new Dictionary<string, string>();
-                                dictionary.Add(item.OrganizeIdTree, string.Join("/", orgNameList));
-                                addItem.Add(dictionary);
-                            });
-
+                            addItem = ImportAddressCacheHelpers.BuildOrganizeTreePairs(allDataList, dataList);
                             resData.Add(item.__vModel__, addItem);
                         }
                     }
@@ -1677,80 +1543,18 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
                     break;
                 case JnpfKeyConst.ADDRESS:
                     {
-                        string? addCacheKey = "Import_Address";
-
                         if (!resData.ContainsKey(JnpfKeyConst.ADDRESS))
                         {
-                            if (_cacheManager.Exists(addCacheKey))
+                            if (_cacheManager.Exists(ImportAddressCacheHelpers.CacheKey))
                             {
-                                addItem = _cacheManager.Get(addCacheKey).ToObject<List<Dictionary<string, string>>>();
+                                addItem = _cacheManager.Get(ImportAddressCacheHelpers.CacheKey).ToObject<List<Dictionary<string, string>>>();
                                 resData.Add(JnpfKeyConst.ADDRESS, addItem);
                             }
                             else
                             {
                                 var dataList = await _visualDevRepository.AsSugarClient().Queryable<ProvinceEntity>().Select(x => new ProvinceEntity { Id = x.Id, ParentId = x.ParentId, Type = x.Type, FullName = x.FullName }).ToListAsync();
-
-                                // 处理省市区树
-                                dataList.Where(x => x.Type == "1").ToList().ForEach(item =>
-                                {
-                                    item.QuickQuery = item.FullName;
-                                    item.Description = item.Id;
-                                    Dictionary<string, string> address = new Dictionary<string, string>();
-                                    address.Add(item.Description, item.QuickQuery);
-                                    addItem.Add(address);
-                                });
-                                dataList.Where(x => x.Type == "2").ToList().ForEach(item =>
-                                {
-                                    item.QuickQuery = dataList.Find(x => x.Id == item.ParentId).QuickQuery + "/" + item.FullName;
-                                    item.Description = dataList.Find(x => x.Id == item.ParentId).Description + "," + item.Id;
-                                    Dictionary<string, string> address = new Dictionary<string, string>();
-                                    address.Add(item.Description, item.QuickQuery);
-                                    addItem.Add(address);
-                                });
-                                dataList.Where(x => x.Type == "3").ToList().ForEach(item =>
-                                {
-                                    item.QuickQuery = dataList.Find(x => x.Id == item.ParentId).QuickQuery + "/" + item.FullName;
-                                    item.Description = dataList.Find(x => x.Id == item.ParentId).Description + "," + item.Id;
-                                    Dictionary<string, string> address = new Dictionary<string, string>();
-                                    address.Add(item.Description, item.QuickQuery);
-                                    addItem.Add(address);
-                                });
-                                dataList.Where(x => x.Type == "4").ToList().ForEach(item =>
-                                {
-                                    ProvinceEntity? it = dataList.Find(x => x.Id == item.ParentId);
-                                    if (it != null)
-                                    {
-                                        item.QuickQuery = it.QuickQuery + "/" + item.FullName;
-                                        item.Description = it.Description + "," + item.Id;
-                                        Dictionary<string, string> address = new Dictionary<string, string>();
-                                        address.Add(item.Description, item.QuickQuery);
-                                        addItem.Add(address);
-                                    }
-                                });
-                                dataList.ForEach(it =>
-                                {
-                                    if (it.Description.IsNotEmptyOrNull())
-                                    {
-                                        Dictionary<string, string> dictionary = new Dictionary<string, string>();
-                                        dictionary.Add(it.Description, it.QuickQuery);
-                                        addItem.Add(dictionary);
-                                    }
-                                });
-
-                                var noTypeList = dataList.Where(x => x.Type.IsNullOrWhiteSpace()).ToList();
-                                foreach (var it in noTypeList)
-                                {
-                                    it.QuickQuery = GetAddressByPList(noTypeList, it);
-                                    it.Description = GetAddressIdByPList(noTypeList, it);
-                                }
-                                foreach (var it in noTypeList)
-                                {
-                                    Dictionary<string, string> address = new Dictionary<string, string>();
-                                    address.Add(it.Description, it.QuickQuery);
-                                    addItem.Add(address);
-                                }
-
-                                _cacheManager.Set(addCacheKey, addItem, TimeSpan.FromDays(7)); // 缓存七天
+                                addItem = ImportAddressCacheHelpers.BuildPairs(dataList);
+                                _cacheManager.Set(ImportAddressCacheHelpers.CacheKey, addItem, TimeSpan.FromDays(7)); // 缓存七天
                                 resData.Add(JnpfKeyConst.ADDRESS, addItem);
                             }
                         }
@@ -1766,12 +1570,7 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
                             {
                                 dataList = dataList.Where(it => item.ableIds.Contains(it.Id)).ToList();
                             }
-                            dataList.ForEach(item =>
-                            {
-                                Dictionary<string, string> dictionary = new Dictionary<string, string>();
-                                dictionary.Add(item.Id, item.EnCode);
-                                addItem.Add(dictionary);
-                            });
+                            addItem = ImportAddressCacheHelpers.BuildIdEncodePairs(dataList.Select(x => (x.Id, x.EnCode)));
                             resData.Add(item.__vModel__, addItem);
                         }
                     }
@@ -1791,12 +1590,7 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
                                 item.ableIds.AddRange(relationIds);
                                 dataList = dataList.Where(it => item.ableIds.Contains(it.Id)).ToList();
                             }
-                            dataList.ForEach(item =>
-                            {
-                                Dictionary<string, string> dictionary = new Dictionary<string, string>();
-                                dictionary.Add(item.Id, item.EnCode);
-                                addItem.Add(dictionary);
-                            });
+                            addItem = ImportAddressCacheHelpers.BuildIdEncodePairs(dataList.Select(x => (x.Id, x.EnCode)));
                             resData.Add(item.__vModel__, addItem);
                         }
                     }
@@ -1804,16 +1598,10 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
                     break;
                 case JnpfKeyConst.SWITCH:
                     {
-                        if (!resData.ContainsKey(item.__vModel__))
-                        {
-                            Dictionary<string, string> dictionary = new Dictionary<string, string>();
-                            dictionary.Add("1", item.activeTxt);
-                            addItem.Add(dictionary);
-                            Dictionary<string, string> dictionary2 = new Dictionary<string, string>();
-                            dictionary2.Add("0", item.inactiveTxt);
-                            addItem.Add(dictionary2);
-                            resData.Add(item.__vModel__, addItem);
-                        }
+                        ImportCacheBagHelpers.TryAdd(
+                            resData,
+                            item.__vModel__,
+                            ImportCacheBagHelpers.BuildSwitchPairs(item.activeTxt, item.inactiveTxt));
                     }
 
                     break;
@@ -1837,13 +1625,10 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
                             {
                                 if (item != null && item.options != null)
                                 {
-                                    item.options.ForEach(option =>
-                                    {
-                                        Dictionary<string, string> dictionary = new Dictionary<string, string>();
-                                        dictionary.Add(option[propsValue].ToString(), option[propsLabel].ToString());
-                                        addItem.Add(dictionary);
-                                    });
-                                    resData.Add(item.__vModel__, addItem);
+                                    ImportCacheBagHelpers.TryAdd(
+                                        resData,
+                                        item.__vModel__,
+                                        ImportCacheBagHelpers.BuildStaticOptionPairs(item.options, propsValue, propsLabel));
                                 }
                             }
                             else if (item.__config__.dataType.Equals("dictionary"))
@@ -1852,20 +1637,18 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
                                     .WhereIF(item.__config__.dictionaryType.IsNotEmptyOrNull(), (a, b) => b.Id == item.__config__.dictionaryType || b.EnCode == item.__config__.dictionaryType)
                                     .Where(a => a.DeleteMark == null).Select(a => new { a.Id, a.EnCode, a.FullName }).ToListAsync();
 
-                                foreach (var it in dictionaryDataList)
-                                {
-                                    Dictionary<string, string> dictionary = new Dictionary<string, string>();
-                                    if (propsValue.Equals("id")) dictionary.Add(it.Id, it.FullName);
-                                    if (propsValue.Equals("enCode")) dictionary.Add(it.EnCode, it.FullName);
-                                    addItem.Add(dictionary);
-                                }
-
-                                resData.Add(item.__vModel__, addItem);
+                                ImportCacheBagHelpers.TryAdd(
+                                    resData,
+                                    item.__vModel__,
+                                    ImportCacheBagHelpers.BuildDictionaryPairs(
+                                        dictionaryDataList.Select(it => (it.Id, it.EnCode, it.FullName)),
+                                        propsValue,
+                                        ImportCacheBagHelpers.DictionaryPropsMode.VisualDevExact));
                             }
                             else if (item.__config__.dataType.Equals("dynamic"))
                             {
                                 var popDataList = await _formDataParsing.GetDynamicList(item);
-                                resData.Add(item.__vModel__, popDataList);
+                                ImportCacheBagHelpers.TryAdd(resData, item.__vModel__, popDataList);
                             }
                         }
                     }
@@ -1885,42 +1668,30 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
                                 var dictionaryDataList = await _visualDevRepository.AsSugarClient().Queryable<DictionaryDataEntity, DictionaryTypeEntity>((a, b) => new JoinQueryInfos(JoinType.Left, b.Id == a.DictionaryTypeId))
                                     .WhereIF(item.__config__.dictionaryType.IsNotEmptyOrNull(), (a, b) => b.Id == item.__config__.dictionaryType || b.EnCode == item.__config__.dictionaryType)
                                     .Where(a => a.DeleteMark == null).Select(a => new { a.Id, a.EnCode, a.FullName }).ToListAsync();
-                                if (item.props.value.ToLower().Equals("encode"))
-                                {
-                                    foreach (var it in dictionaryDataList)
-                                    {
-                                        Dictionary<string, string> dictionary = new Dictionary<string, string>();
-                                        dictionary.Add(it.EnCode, it.FullName);
-                                        addItem.Add(dictionary);
-                                    }
-                                }
-                                else
-                                {
-                                    foreach (var it in dictionaryDataList)
-                                    {
-                                        Dictionary<string, string> dictionary = new Dictionary<string, string>();
-                                        dictionary.Add(it.Id, it.FullName);
-                                        addItem.Add(dictionary);
-                                    }
-                                }
-
-                                resData.Add(item.__vModel__, addItem);
+                                ImportCacheBagHelpers.TryAdd(
+                                    resData,
+                                    item.__vModel__,
+                                    ImportCacheBagHelpers.BuildDictionaryPairs(
+                                        dictionaryDataList.Select(it => (it.Id, it.EnCode, it.FullName)),
+                                        item.props.value,
+                                        ImportCacheBagHelpers.DictionaryPropsMode.EncodeCaseInsensitive));
                             }
                             else if (item.__config__.dataType.Equals("dynamic"))
                             {
                                 var popDataList = await _formDataParsing.GetDynamicList(item);
-                                resData.Add(item.__vModel__, popDataList);
+                                ImportCacheBagHelpers.TryAdd(resData, item.__vModel__, popDataList);
                             }
                         }
                     }
 
                     break;
                 case JnpfKeyConst.POPUPTABLESELECT:
+                case JnpfKeyConst.POPUPSELECT:
                     {
                         if (!resData.ContainsKey(item.__vModel__))
                         {
                             var popDataList = await _formDataParsing.GetDynamicList(item);
-                            resData.Add(item.__vModel__, popDataList);
+                            ImportCacheBagHelpers.TryAdd(resData, item.__vModel__, popDataList);
                         }
                     }
                     break;
@@ -2140,12 +1911,13 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
                         if (!resData.ContainsKey(item.__vModel__))
                         {
                             //暂时只获取缓存数据，因为查询界面就会生成缓存数据
-                            var redisName = CommonConst.VISUALDEV + _userManager.TenantId + "_" + item.__config__.jnpfKey + "_" + item.__config__.renderKey;
+                            var redisName = ImportCacheBagHelpers.BuildRelationFormRedisKey(
+                                _userManager.TenantId, item.__config__.jnpfKey, item.__config__.renderKey?.ToString());
 
                             if (_cacheManager.Exists(redisName))
                             {
                                 var relationFormDataList = _cacheManager.Get(redisName).ToObject<List<Dictionary<string, string>>>();
-                                resData.Add(item.__vModel__, relationFormDataList);
+                                ImportCacheBagHelpers.TryAdd(resData, item.__vModel__, relationFormDataList);
 
                                 item.options = _cacheManager.Get(redisName).ToObject<List<Dictionary<string, object>>>();
                             }
@@ -2175,7 +1947,7 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
     /// <returns></returns>
     private async Task<List<Dictionary<string, object>>> ImportDataAssemble(List<FieldsModel> fieldsModelList, List<Dictionary<string, object>> dataList, Dictionary<string, List<Dictionary<string, string>>> cDataList)
     {
-        var errorKey = "errorsInfo";
+        var errorKey = ImportAssembleErrors.ErrorKey;
         var resList = new List<Dictionary<string, object>>();
         foreach (var dataItems in dataList)
         {
@@ -2184,821 +1956,103 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
             {
                 var vModel = fieldsModelList.Find(x => x.__vModel__.Equals(item.Key));
                 if (vModel == null) continue;
-                var dicList = new List<Dictionary<string, string>>();
-                if (cDataList.ContainsKey(vModel.__config__.jnpfKey)) dicList = cDataList[vModel.__config__.jnpfKey];
-                if ((dicList == null || !dicList.Any()) && cDataList.ContainsKey(vModel.__vModel__)) dicList = cDataList[vModel.__vModel__];
+                var dicList = ImportFieldCacheLookup.Resolve(vModel, cDataList);
 
                 switch (vModel.__config__.jnpfKey)
                 {
                     case JnpfKeyConst.DATE:
-                        try
-                        {
-                            if (item.Value.IsNotEmptyOrNull())
-                            {
-                                // 判断格式是否正确
-                                var value = DateTime.ParseExact(item.Value.ToString().TrimEnd(), vModel.format, System.Globalization.CultureInfo.CurrentCulture);
-                                if (vModel.__config__.startTimeRule)
-                                {
-                                    var minDate = string.Format("{0:" + vModel.format + "}", DateTime.Now).ParseToDateTime();
-                                    switch (vModel.__config__.startTimeType)
-                                    {
-                                        case 1:
-                                            {
-                                                if (vModel.__config__.startTimeValue.IsNotEmptyOrNull())
-                                                    minDate = vModel.__config__.startTimeValue.TimeStampToDateTime();
-                                            }
-
-                                            break;
-                                        case 2:
-                                            {
-                                                if (vModel.__config__.startRelationField.IsNotEmptyOrNull() && dataItems.ContainsKey(vModel.__config__.startRelationField))
-                                                {
-                                                    if (dataItems[vModel.__config__.startRelationField] == null)
-                                                    {
-                                                        minDate = DateTime.MinValue;
-                                                    }
-                                                    else
-                                                    {
-                                                        var data = dataItems[vModel.__config__.startRelationField].ToString();
-                                                        minDate = data.TrimEnd().ParseToDateTime();
-                                                    }
-                                                }
-                                            }
-
-                                            break;
-                                        case 3:
-                                            break;
-                                        case 4:
-                                            {
-                                                switch (vModel.__config__.startTimeTarget)
-                                                {
-                                                    case 1:
-                                                        minDate = minDate.AddYears(-vModel.__config__.startTimeValue.ParseToInt());
-                                                        break;
-                                                    case 2:
-                                                        minDate = minDate.AddMonths(-vModel.__config__.startTimeValue.ParseToInt());
-                                                        break;
-                                                    case 3:
-                                                        minDate = minDate.AddDays(-vModel.__config__.startTimeValue.ParseToInt());
-                                                        break;
-                                                }
-                                            }
-
-                                            break;
-                                        case 5:
-                                            {
-                                                switch (vModel.__config__.startTimeTarget)
-                                                {
-                                                    case 1:
-                                                        minDate = minDate.AddYears(vModel.__config__.startTimeValue.ParseToInt());
-                                                        break;
-                                                    case 2:
-                                                        minDate = minDate.AddMonths(vModel.__config__.startTimeValue.ParseToInt());
-                                                        break;
-                                                    case 3:
-                                                        minDate = minDate.AddDays(vModel.__config__.startTimeValue.ParseToInt());
-                                                        break;
-                                                }
-                                            }
-
-                                            break;
-                                    }
-
-                                    if (minDate > value && !minDate.Equals(DateTime.MinValue))
-                                    {
-                                        var errorInfo = vModel.__config__.label + ": 日期选择值不在范围内";
-                                        if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                        else newDataItems.Add(errorKey, errorInfo);
-                                    }
-                                }
-
-                                if (vModel.__config__.endTimeRule)
-                                {
-                                    var maxDate = string.Format("{0:" + vModel.format + "}", DateTime.Now).ParseToDateTime();
-                                    switch (vModel.__config__.endTimeType)
-                                    {
-                                        case 1:
-                                            {
-                                                if (vModel.__config__.endTimeValue.IsNotEmptyOrNull())
-                                                    maxDate = vModel.__config__.endTimeValue.TimeStampToDateTime();
-                                            }
-
-                                            break;
-                                        case 2:
-                                            {
-                                                if (vModel.__config__.endRelationField.IsNotEmptyOrNull() && dataItems.ContainsKey(vModel.__config__.endRelationField))
-                                                {
-                                                    if (dataItems[vModel.__config__.endRelationField] == null)
-                                                    {
-                                                        maxDate = DateTime.MinValue;
-                                                    }
-                                                    else
-                                                    {
-                                                        var data = dataItems[vModel.__config__.endRelationField].ToString();
-                                                        maxDate = data.TrimEnd().ParseToDateTime();
-                                                    }
-                                                }
-                                            }
-
-                                            break;
-                                        case 3:
-                                            break;
-                                        case 4:
-                                            {
-                                                switch (vModel.__config__.startTimeTarget)
-                                                {
-                                                    case 1:
-                                                        maxDate = maxDate.AddYears(-vModel.__config__.endTimeValue.ParseToInt());
-                                                        break;
-                                                    case 2:
-                                                        maxDate = maxDate.AddMonths(-vModel.__config__.endTimeValue.ParseToInt());
-                                                        break;
-                                                    case 3:
-                                                        maxDate = maxDate.AddDays(-vModel.__config__.endTimeValue.ParseToInt());
-                                                        break;
-                                                }
-                                            }
-
-                                            break;
-                                        case 5:
-                                            {
-                                                switch (vModel.__config__.startTimeTarget)
-                                                {
-                                                    case 1:
-                                                        maxDate = maxDate.AddYears(vModel.__config__.endTimeValue.ParseToInt());
-                                                        break;
-                                                    case 2:
-                                                        maxDate = maxDate.AddMonths(vModel.__config__.endTimeValue.ParseToInt());
-                                                        break;
-                                                    case 3:
-                                                        maxDate = maxDate.AddDays(vModel.__config__.endTimeValue.ParseToInt());
-                                                        break;
-                                                }
-                                            }
-
-                                            break;
-                                    }
-
-                                    if (maxDate < value && !maxDate.Equals(DateTime.MinValue))
-                                    {
-                                        var errorInfo = vModel.__config__.label + ": 日期选择值不在范围内";
-                                        if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                        else newDataItems.Add(errorKey, errorInfo);
-                                    }
-                                }
-
-                                newDataItems[item.Key] = value.ParseToUnixTime();
-                            }
-                        }
-                        catch
-                        {
-                            var errorInfo = vModel.__config__.label + ": 值不正确";
-                            if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                            else newDataItems.Add(errorKey, errorInfo);
-                        }
-
+                        ImportDateTimeFieldAssembler.MapDate(
+                            vModel, item.Key, item.Value, dataItems, newDataItems, ImportDateTimeSemantics.VisualDev);
                         break;
                     case JnpfKeyConst.TIME: // 时间选择
-                        try
-                        {
-                            if (item.Value.IsNotEmptyOrNull())
-                            {
-                                var value = DateTime.ParseExact(item.Value.ToString().TrimEnd(), vModel.format, System.Globalization.CultureInfo.CurrentCulture);
-                                if (vModel.__config__.startTimeRule)
-                                {
-                                    var minTime = value;
-                                    switch (vModel.__config__.startTimeType)
-                                    {
-                                        case 1:
-                                            {
-                                                if (vModel.__config__.startTimeValue.IsNotEmptyOrNull())
-                                                    minTime = DateTime.Parse(vModel.__config__.startTimeValue);
-                                            }
-
-                                            break;
-                                        case 2:
-                                            {
-                                                if (vModel.__config__.startRelationField.IsNotEmptyOrNull() && dataItems.ContainsKey(vModel.__config__.startRelationField))
-                                                {
-                                                    if (dataItems[vModel.__config__.startRelationField] == null)
-                                                    {
-                                                        minTime = DateTime.MinValue;
-                                                    }
-                                                    else
-                                                    {
-                                                        minTime = dataItems[vModel.__config__.startRelationField].ToString().ParseToDateTime();
-                                                    }
-                                                }
-                                            }
-
-                                            break;
-                                        case 3:
-                                            break;
-                                        case 4:
-                                            {
-                                                switch (vModel.__config__.startTimeTarget)
-                                                {
-                                                    case 1:
-                                                        minTime = minTime.AddHours(-vModel.__config__.startTimeValue.ParseToInt());
-                                                        break;
-                                                    case 2:
-                                                        minTime = minTime.AddMinutes(-vModel.__config__.startTimeValue.ParseToInt());
-                                                        break;
-                                                    case 3:
-                                                        minTime = minTime.AddSeconds(-vModel.__config__.startTimeValue.ParseToInt());
-                                                        break;
-                                                }
-                                            }
-
-                                            break;
-                                        case 5:
-                                            {
-                                                switch (vModel.__config__.startTimeTarget)
-                                                {
-                                                    case 1:
-                                                        minTime = minTime.AddHours(vModel.__config__.startTimeValue.ParseToInt());
-                                                        break;
-                                                    case 2:
-                                                        minTime = minTime.AddMinutes(vModel.__config__.startTimeValue.ParseToInt());
-                                                        break;
-                                                    case 3:
-                                                        minTime = minTime.AddSeconds(vModel.__config__.startTimeValue.ParseToInt());
-                                                        break;
-                                                }
-                                            }
-
-                                            break;
-                                    }
-
-                                    if (minTime > value && !minTime.Equals(DateTime.MinValue))
-                                    {
-                                        var errorInfo = vModel.__config__.label + ": 时间选择值不在范围内";
-                                        if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                        else newDataItems.Add(errorKey, errorInfo);
-                                    }
-                                }
-
-                                if (vModel.__config__.endTimeRule)
-                                {
-                                    var maxTime = value;
-                                    switch (vModel.__config__.endTimeType)
-                                    {
-                                        case 1:
-                                            {
-                                                if (vModel.__config__.endTimeValue.IsNotEmptyOrNull())
-                                                    maxTime = DateTime.Parse(vModel.__config__.endTimeValue);
-                                            }
-
-                                            break;
-                                        case 2:
-                                            {
-                                                if (vModel.__config__.endRelationField.IsNotEmptyOrNull() && dataItems.ContainsKey(vModel.__config__.endRelationField))
-                                                {
-                                                    if (dataItems[vModel.__config__.endRelationField] == null)
-                                                    {
-                                                        maxTime = DateTime.MinValue;
-                                                    }
-                                                    else
-                                                    {
-                                                        maxTime = dataItems[vModel.__config__.endRelationField].ToString().ParseToDateTime();
-                                                    }
-                                                }
-                                            }
-
-                                            break;
-                                        case 3:
-                                            break;
-                                        case 4:
-                                            {
-                                                switch (vModel.__config__.startTimeTarget)
-                                                {
-                                                    case 1:
-                                                        maxTime = maxTime.AddHours(-vModel.__config__.endTimeValue.ParseToInt());
-                                                        break;
-                                                    case 2:
-                                                        maxTime = maxTime.AddMinutes(-vModel.__config__.endTimeValue.ParseToInt());
-                                                        break;
-                                                    case 3:
-                                                        maxTime = maxTime.AddSeconds(-vModel.__config__.endTimeValue.ParseToInt());
-                                                        break;
-                                                }
-                                            }
-
-                                            break;
-                                        case 5:
-                                            {
-                                                switch (vModel.__config__.startTimeTarget)
-                                                {
-                                                    case 1:
-                                                        maxTime = maxTime.AddHours(vModel.__config__.endTimeValue.ParseToInt());
-                                                        break;
-                                                    case 2:
-                                                        maxTime = maxTime.AddMinutes(vModel.__config__.endTimeValue.ParseToInt());
-                                                        break;
-                                                    case 3:
-                                                        maxTime = maxTime.AddSeconds(vModel.__config__.endTimeValue.ParseToInt());
-                                                        break;
-                                                }
-                                            }
-
-                                            break;
-                                    }
-
-                                    if (maxTime < value && !maxTime.Equals(DateTime.MinValue))
-                                    {
-                                        var errorInfo = vModel.__config__.label + ": 时间选择值不在范围内";
-                                        if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                        else newDataItems.Add(errorKey, errorInfo);
-                                    }
-                                }
-                            }
-                        }
-                        catch
-                        {
-                            var errorInfo = vModel.__config__.label + ": 值不正确";
-                            if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                            else newDataItems.Add(errorKey, errorInfo);
-                        }
-
+                        ImportDateTimeFieldAssembler.MapTime(
+                            vModel, item.Key, item.Value, dataItems, newDataItems, ImportDateTimeSemantics.VisualDev);
                         break;
                     case JnpfKeyConst.COMSELECT:
                     case JnpfKeyConst.ADDRESS:
-                        {
-                            if (item.Value.IsNotEmptyOrNull())
-                            {
-                                if (vModel.multiple)
-                                {
-                                    var addList = new List<object>();
-                                    item.Value.ToString().Split(",").ToList().ForEach(it =>
-                                    {
-                                        if (vModel.__config__.jnpfKey.Equals(JnpfKeyConst.COMSELECT) || (it.Count(x => x == '/') == vModel.level))
-                                        {
-                                            if (dicList.Where(x => x.ContainsValue(it)).Any())
-                                            {
-                                                var value = dicList.Where(x => x.ContainsValue(it)).FirstOrDefault().FirstOrDefault();
-                                                addList.Add(value.Key.Split(",").ToList());
-                                            }
-                                            else
-                                            {
-                                                var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                                if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                                else newDataItems.Add(errorKey, errorInfo);
-                                            }
-                                        }
-                                        else
-                                        {
-                                            var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                            if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                            else newDataItems.Add(errorKey, errorInfo);
-                                        }
-                                    });
-                                    newDataItems[item.Key] = addList;
-                                }
-                                else
-                                {
-                                    if (vModel.__config__.jnpfKey.Equals(JnpfKeyConst.COMSELECT) || (item.Value?.ToString().Count(x => x == '/') == vModel.level))
-                                    {
-                                        if (dicList.Where(x => x.ContainsValue(item.Value?.ToString())).Any())
-                                        {
-                                            var value = dicList.Where(x => x.ContainsValue(item.Value?.ToString())).FirstOrDefault().FirstOrDefault();
-                                            newDataItems[item.Key] = value.Key.Split(",").ToList();
-                                        }
-                                        else
-                                        {
-                                            var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                            if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                            else newDataItems.Add(errorKey, errorInfo);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                        if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                        else newDataItems.Add(errorKey, errorInfo);
-                                    }
-                                }
-                            }
-                        }
-
+                        ImportPathSelectMapper.MapComOrAddress(
+                            vModel, item.Key, item.Value, dicList, newDataItems,
+                            clearWhenEmpty: false, allowMunicipalDistrictShortcut: false);
                         break;
                     case JnpfKeyConst.CHECKBOX:
                     case JnpfKeyConst.SWITCH:
                     case JnpfKeyConst.SELECT:
                     case JnpfKeyConst.RADIO:
-                        {
-                            if (item.Value.IsNotEmptyOrNull())
-                            {
-                                if (vModel.multiple || vModel.__config__.jnpfKey.Equals(JnpfKeyConst.CHECKBOX))
-                                {
-                                    var addList = new List<object>();
-                                    item.Value.ToString().Split(",").ToList().ForEach(it =>
-                                    {
-                                        if (dicList.Where(x => x.ContainsValue(it)).Any())
-                                        {
-                                            var value = dicList.Where(x => x.ContainsValue(it)).FirstOrDefault().LastOrDefault();
-                                            addList.Add(value.Key);
-                                        }
-                                        else
-                                        {
-                                            var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                            if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                            else newDataItems.Add(errorKey, errorInfo);
-                                        }
-                                    });
-                                    newDataItems[item.Key] = addList;
-                                }
-                                else
-                                {
-                                    if (dicList.Where(x => x.ContainsValue(item.Value.ToString())).Any())
-                                    {
-                                        var value = dicList.Where(x => x.ContainsValue(item.Value?.ToString())).FirstOrDefault().LastOrDefault();
-                                        newDataItems[item.Key] = value.Key;
-                                    }
-                                    else
-                                    {
-                                        var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                        if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                        else newDataItems.Add(errorKey, errorInfo);
-                                    }
-                                }
-                            }
-                        }
-
+                        ImportOptionValueMapper.MapSelectLike(
+                            vModel, item.Key, item.Value, dicList, newDataItems, clearWhenEmpty: false);
                         break;
                     case JnpfKeyConst.DEPSELECT:
                     case JnpfKeyConst.POSSELECT:
                     case JnpfKeyConst.GROUPSELECT:
                     case JnpfKeyConst.ROLESELECT:
                     case JnpfKeyConst.USERSELECT:
+                        if (item.Value.IsNotEmptyOrNull() && ImportOptionValueMapper.IsAllOrCustomSelectType(vModel))
                         {
-                            if (item.Value.IsNotEmptyOrNull() && (vModel.selectType.IsNullOrEmpty() || vModel.selectType.Equals("all") || vModel.selectType.Equals("custom")))
-                            {
-                                if (vModel.multiple)
-                                {
-                                    var addList = new List<object>();
-                                    item.Value.ToString().Split(",").ToList().ForEach(it =>
-                                    {
-                                        if (dicList.Where(x => x.ContainsValue(it.Split("/").Last())).Any())
-                                        {
-                                            var value = dicList.Where(x => x.ContainsValue(it.Split("/").Last())).FirstOrDefault().LastOrDefault();
-                                            addList.Add(value.Key);
-                                        }
-                                        else
-                                        {
-                                            var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                            if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                            else newDataItems.Add(errorKey, errorInfo);
-                                        }
-                                    });
-                                    newDataItems[item.Key] = addList;
-                                }
-                                else
-                                {
-                                    if (dicList.Where(x => x.ContainsValue(item.Value.ToString().Split("/").Last())).Any())
-                                    {
-                                        var value = dicList.Where(x => x.ContainsValue(item.Value?.ToString().Split("/").Last())).FirstOrDefault().LastOrDefault();
-                                        newDataItems[item.Key] = value.Key;
-                                    }
-                                    else
-                                    {
-                                        var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                        if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                        else newDataItems.Add(errorKey, errorInfo);
-                                    }
-                                }
-                            }
-                            else newDataItems[item.Key] = null;
+                            ImportOptionValueMapper.MapOrgPathSelect(
+                                vModel, item.Key, item.Value, dicList, newDataItems, clearWhenEmpty: false);
                         }
 
                         break;
                     case JnpfKeyConst.USERSSELECT:
-                        {
-                            if (item.Value.IsNotEmptyOrNull() && (vModel.selectType.IsNullOrEmpty() || vModel.selectType.Equals("all") || vModel.selectType.Equals("custom")))
-                            {
-                                if (vModel.multiple)
-                                {
-                                    var addList = new List<object>();
-                                    item.Value.ToString().Split(",").ToList().ForEach(it =>
-                                    {
-                                        if (dicList.Where(x => x.ContainsValue(it)).Any())
-                                        {
-                                            var value = dicList.Where(x => x.ContainsValue(it)).FirstOrDefault().LastOrDefault();
-                                            addList.Add(value.Key);
-                                        }
-                                        else
-                                        {
-                                            if (dicList.Where(x => x.ContainsValue(it.Split("/").Last())).Any())
-                                            {
-                                                var value = dicList.Where(x => x.ContainsValue(it.Split("/").Last())).FirstOrDefault().LastOrDefault();
-                                                addList.Add(value.Key);
-                                            }
-                                            else
-                                            {
-                                                var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                                if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                                else newDataItems.Add(errorKey, errorInfo);
-                                            }
-                                        }
-                                    });
-                                    newDataItems[item.Key] = addList;
-                                }
-                                else
-                                {
-                                    if (dicList.Where(x => x.ContainsValue(item.Value.ToString())).Any())
-                                    {
-                                        var value = dicList.Where(x => x.ContainsValue(item.Value?.ToString())).FirstOrDefault().LastOrDefault();
-                                        newDataItems[item.Key] = value.Key;
-                                    }
-                                    else
-                                    {
-                                        if (dicList.Where(x => x.ContainsValue(item.Value.ToString().Split("/").Last())).Any())
-                                        {
-                                            var value = dicList.Where(x => x.ContainsValue(item.Value?.ToString().Split("/").Last())).FirstOrDefault().LastOrDefault();
-                                            newDataItems[item.Key] = value.Key;
-                                        }
-                                        else
-                                        {
-                                            var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                            if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                            else newDataItems.Add(errorKey, errorInfo);
-                                        }
-                                    }
-                                }
-                            }
-                            else newDataItems[item.Key] = null;
-                        }
-
+                        ImportPathSelectMapper.MapUsersSelect(
+                            vModel, item.Key, item.Value, dicList, newDataItems);
                         break;
                     case JnpfKeyConst.TREESELECT:
-                        {
-                            if (item.Value.IsNotEmptyOrNull())
-                            {
-                                if (vModel.multiple)
-                                {
-                                    var addList = new List<object>();
-                                    item.Value.ToString().Split(",").ToList().ForEach(it =>
-                                    {
-                                        if (dicList.Where(x => x.ContainsValue(it)).Any())
-                                        {
-                                            var value = dicList.Where(x => x.ContainsValue(it)).FirstOrDefault().LastOrDefault();
-                                            addList.Add(value.Key);
-                                        }
-                                        else
-                                        {
-                                            var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                            if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                            else newDataItems.Add(errorKey, errorInfo);
-                                        }
-                                    });
-                                    newDataItems[item.Key] = addList;
-                                }
-                                else
-                                {
-                                    if (dicList.Where(x => x.ContainsValue(item.Value.ToString())).Any())
-                                    {
-                                        var value = dicList.Where(x => x.ContainsValue(item.Value?.ToString())).FirstOrDefault().LastOrDefault();
-                                        newDataItems[item.Key] = value.Key;
-                                    }
-                                    else
-                                    {
-                                        var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                        if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                        else newDataItems.Add(errorKey, errorInfo);
-                                    }
-                                }
-                            }
-                        }
-
+                        ImportOptionValueMapper.MapSelectLike(
+                            vModel, item.Key, item.Value, dicList, newDataItems, clearWhenEmpty: false);
+                        break;
+                    case JnpfKeyConst.POPUPTABLESELECT:
+                    case JnpfKeyConst.POPUPSELECT:
+                        ImportPopupValueMapper.Map(
+                            vModel, item.Key, item.Value, dicList, newDataItems, clearWhenEmpty: false);
                         break;
                     case JnpfKeyConst.CASCADER:
-                        {
-                            if (item.Value.IsNotEmptyOrNull())
-                            {
-                                if (vModel.multiple)
-                                {
-                                    var addsList = new List<object>();
-                                    item.Value.ToString().Split(",").ToList().ForEach(its =>
-                                    {
-                                        var txtList = its.Split(vModel.separator).ToList();
-
-                                        var add = new List<object>();
-                                        txtList.ForEach(it =>
-                                        {
-                                            if (dicList.Where(x => x.ContainsValue(it)).Any())
-                                            {
-                                                var value = dicList.Where(x => x.ContainsValue(it)).FirstOrDefault().LastOrDefault();
-                                                add.Add(value.Key);
-                                            }
-                                            else
-                                            {
-                                                var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                                if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                                else newDataItems.Add(errorKey, errorInfo);
-                                            }
-                                        });
-                                        addsList.Add(add);
-                                    });
-                                    newDataItems[item.Key] = addsList;
-                                }
-                                else
-                                {
-                                    var txtList = item.Value.ToString().Split(vModel.separator).ToList();
-
-                                    var addList = new List<object>();
-                                    txtList.ForEach(it =>
-                                    {
-                                        if (dicList.Where(x => x.ContainsValue(it)).Any())
-                                        {
-                                            var value = dicList.Where(x => x.ContainsValue(it)).FirstOrDefault().LastOrDefault();
-                                            addList.Add(value.Key);
-                                        }
-                                        else
-                                        {
-                                            var errorInfo = vModel.__config__.label + ": 值无法匹配";
-                                            if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                            else newDataItems.Add(errorKey, errorInfo);
-                                        }
-                                    });
-                                    newDataItems[item.Key] = addList;
-                                }
-                            }
-                        }
-
+                        ImportPathSelectMapper.MapCascader(
+                            vModel, item.Key, item.Value, dicList, newDataItems, clearWhenEmpty: false);
                         break;
                     case JnpfKeyConst.TABLE:
-                        {
-                            if (item.Value != null)
-                            {
-                                var valueList = item.Value.ToObject<List<Dictionary<string, object>>>();
-                                var newValueList = new List<Dictionary<string, object>>();
-                                valueList.ForEach(it =>
-                                {
-                                    var addValue = new Dictionary<string, object>();
-                                    foreach (var value in it) addValue.Add(vModel.__vModel__ + "-" + value.Key, value.Value);
-                                    newValueList.Add(addValue);
-                                });
-
-                                var res = await ImportDataAssemble(vModel.__config__.children, newValueList, cDataList);
-                                if (res.Any(x => x.ContainsKey(errorKey)))
-                                {
-                                    if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + res.FirstOrDefault(x => x.ContainsKey(errorKey))[errorKey].ToString();
-                                    else newDataItems.Add(errorKey, res.FirstOrDefault(x => x.ContainsKey(errorKey))[errorKey].ToString());
-                                    res.Remove(res.FirstOrDefault(x => x.ContainsKey(errorKey)));
-                                }
-
-                                var result = new List<Dictionary<string, object>>();
-                                res.ForEach(it =>
-                                {
-                                    var addValue = new Dictionary<string, object>();
-                                    foreach (var value in it) addValue.Add(value.Key.Replace(vModel.__vModel__ + "-", string.Empty), value.Value);
-                                    result.Add(addValue);
-                                });
-                                newDataItems[item.Key] = result;
-                            }
-                        }
+                        await ImportChildTableAssembler.MapAsync(
+                            vModel, item.Key, item.Value, cDataList, newDataItems, ImportDataAssemble, clearWhenEmpty: false);
                         break;
                     case JnpfKeyConst.RATE:
-                        if (item.Value.IsNotEmptyOrNull())
-                        {
-                            try
-                            {
-                                var value = double.Parse(item.Value.ToString());
-
-                                if (value < 0) throw new Exception(string.Empty);
-
-                                if (vModel.allowHalf)
-                                {
-                                    if (value % 0.5 != 0)
-                                        throw new Exception(string.Empty);
-                                }
-                                else
-                                {
-                                    if (value % 1 != 0)
-                                        throw new Exception(string.Empty);
-                                }
-
-                                if (vModel.count != null && vModel.count < value)
-                                {
-                                    var errorInfo = vModel.__config__.label + ": 评分超过设置的最大值";
-                                    if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                    else newDataItems.Add(errorKey, errorInfo);
-                                }
-                            }
-                            catch
-                            {
-                                var errorInfo = vModel.__config__.label + ": 值不正确";
-                                if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                else newDataItems.Add(errorKey, errorInfo);
-                            }
-                        }
+                        ImportNumericFieldAssembler.MapRate(
+                            vModel, item.Key, item.Value, newDataItems, ImportNumericSemantics.VisualDev);
                         break;
                     case JnpfKeyConst.SLIDER:
-                        if (item.Value.IsNotEmptyOrNull())
-                        {
-                            try
-                            {
-                                var value = decimal.Parse(item.Value.ToString());
-                                if (vModel.max != null)
-                                {
-                                    if (vModel.max < value)
-                                    {
-                                        var errorInfo = vModel.__config__.label + ": 滑块超过设置的最大值";
-                                        if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                        else newDataItems.Add(errorKey, errorInfo);
-                                    }
-                                }
-                                if (vModel.min != null)
-                                {
-                                    if (vModel.min > value)
-                                    {
-                                        var errorInfo = vModel.__config__.label + ": 滑块超过设置的最小值";
-                                        if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                        else newDataItems.Add(errorKey, errorInfo);
-                                    }
-                                }
-                            }
-                            catch
-                            {
-                                var errorInfo = vModel.__config__.label + ": 值不正确";
-                                if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                else newDataItems.Add(errorKey, errorInfo);
-                            }
-                        }
+                        ImportNumericFieldAssembler.MapSlider(
+                            vModel, item.Key, item.Value, newDataItems, ImportNumericSemantics.VisualDev);
                         break;
                     case JnpfKeyConst.NUMINPUT:
-                        if (item.Value.IsNotEmptyOrNull())
-                        {
-                            try
-                            {
-                                var value = decimal.Parse(item.Value.ToString());
-                                if (vModel.max != null)
-                                {
-                                    if (vModel.max < value)
-                                    {
-                                        var errorInfo = vModel.__config__.label + ": 数字输入超过设置的最大值";
-                                        if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                        else newDataItems.Add(errorKey, errorInfo);
-                                    }
-                                }
-                                if (vModel.min != null)
-                                {
-                                    if (vModel.min > value)
-                                    {
-                                        var errorInfo = vModel.__config__.label + ": 数字输入超过设置的最小值";
-                                        if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                        else newDataItems.Add(errorKey, errorInfo);
-                                    }
-                                }
-                            }
-                            catch
-                            {
-                                var errorInfo = vModel.__config__.label + ": 值不正确";
-                                if (newDataItems.ContainsKey(errorKey)) newDataItems[errorKey] = newDataItems[errorKey] + "," + errorInfo;
-                                else newDataItems.Add(errorKey, errorInfo);
-                            }
-                        }
+                        ImportNumericFieldAssembler.MapNumberInput(
+                            vModel, item.Key, item.Value, newDataItems, ImportNumericSemantics.VisualDev);
                         break;
                 }
             }
 
             // 系统自动生成控件
+            var systemCtx = new ImportSystemFieldContext(
+                _userManager.UserId, _userManager.User.OrganizeId, DateTime.Now);
             foreach (var item in dataItems)
             {
                 if (newDataItems.ContainsKey(errorKey)) continue; // 如果存在错误信息 则 不生成
                 var vModel = fieldsModelList.Find(x => x.__vModel__.Equals(item.Key));
                 if (vModel == null) continue;
+                var jnpfKey = vModel.__config__.jnpfKey;
+                if (!ImportSystemFieldAssembler.IsSystemAutoKey(jnpfKey)) continue;
 
-                switch (vModel.__config__.jnpfKey)
+                if (ImportSystemFieldAssembler.TryMapStatic(jnpfKey, item.Key, newDataItems, systemCtx))
+                    continue;
+
+                if (jnpfKey.Equals(JnpfKeyConst.BILLRULE))
                 {
-                    case JnpfKeyConst.BILLRULE:
-                        string billNumber = await _billRuleService.GetBillNumber(vModel.__config__.rule);
-                        if (!"单据规则不存在".Equals(billNumber)) newDataItems[item.Key] = billNumber;
-                        else newDataItems[item.Key] = string.Empty;
-
-                        break;
-                    case JnpfKeyConst.MODIFYUSER:
-                        newDataItems[item.Key] = string.Empty;
-                        break;
-                    case JnpfKeyConst.CREATEUSER:
-                        newDataItems[item.Key] = _userManager.UserId;
-                        break;
-                    case JnpfKeyConst.MODIFYTIME:
-                        newDataItems[item.Key] = string.Empty;
-                        break;
-                    case JnpfKeyConst.CREATETIME:
-                        newDataItems[item.Key] = string.Format("{0:yyyy-MM-dd HH:mm:ss}", DateTime.Now);
-                        break;
-                    case JnpfKeyConst.CURRPOSITION:
-                        string? pid = await _visualDevRepository.AsSugarClient().Queryable<UserEntity, PositionEntity>((a, b) => new JoinQueryInfos(JoinType.Left, b.Id == a.PositionId))
-                            .Where((a, b) => a.Id == _userManager.UserId && a.DeleteMark == null).Select((a, b) => a.PositionId).FirstAsync();
-                        if (pid.IsNotEmptyOrNull()) newDataItems[item.Key] = pid;
-                        else newDataItems[item.Key] = string.Empty;
-
-                        break;
-                    case JnpfKeyConst.CURRORGANIZE:
-                        if (_userManager.User.OrganizeId != null) newDataItems[item.Key] = _userManager.User.OrganizeId;
-                        else newDataItems[item.Key] = string.Empty;
-                        break;
+                    string billNumber = await _billRuleService.GetBillNumber(vModel.__config__.rule);
+                    ImportSystemFieldAssembler.MapBillRule(item.Key, billNumber, newDataItems);
+                }
+                else if (jnpfKey.Equals(JnpfKeyConst.CURRPOSITION))
+                {
+                    string? pid = await _visualDevRepository.AsSugarClient().Queryable<UserEntity, PositionEntity>((a, b) => new JoinQueryInfos(JoinType.Left, b.Id == a.PositionId))
+                        .Where((a, b) => a.Id == _userManager.UserId && a.DeleteMark == null).Select((a, b) => a.PositionId).FirstAsync();
+                    ImportSystemFieldAssembler.MapCurrPosition(item.Key, pid, newDataItems);
                 }
             }
 
@@ -3102,40 +2156,6 @@ public class VisualDevModelDataService : IDynamicApiController, ITransient
     /// 递归获取手动添加的省市区,名称处理成树形结构.
     /// </summary>
     /// <param name="addressEntityList"></param>
-    private string GetAddressByPList(List<ProvinceEntity> addressEntityList, ProvinceEntity pEntity)
-    {
-        if (pEntity.ParentId == null || pEntity.ParentId.Equals("-1"))
-        {
-            return pEntity.FullName;
-        }
-        else
-        {
-            var pItem = addressEntityList.Find(x => x.Id == pEntity.ParentId);
-            if (pItem != null) pEntity.QuickQuery = GetAddressByPList(addressEntityList, pItem) + "/" + pEntity.FullName;
-            else pEntity.QuickQuery = pEntity.FullName;
-            return pEntity.QuickQuery;
-        }
-    }
-
-    /// <summary>
-    /// 递归获取手动添加的省市区,Id处理成树形结构.
-    /// </summary>
-    /// <param name="addressEntityList"></param>
-    private static string GetAddressIdByPList(List<ProvinceEntity> addressEntityList, ProvinceEntity pEntity)
-    {
-        if (pEntity.ParentId == null || pEntity.ParentId.Equals("-1"))
-        {
-            return pEntity.Id;
-        }
-        else
-        {
-            var pItem = addressEntityList.Find(x => x.Id == pEntity.ParentId);
-            if (pItem != null) pEntity.Id = GetAddressIdByPList(addressEntityList, pItem) + "," + pEntity.Id;
-            else pEntity.Id = pEntity.Id;
-            return pEntity.Id;
-        }
-    }
-
     /// <summary>
     /// 处理模板默认值.
     /// 用户选择 , 部门选择 , 岗位选择 , 角色选择 , 分组选择 ， 用户组件.

@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-08-07T23:40:00+08:00",
+  "wave": "W-continue",
+  "knife": "streamllm-post-gate-helpers",
+  "verdict": "PASS",
+  "skills": ["using-superpowers", "executing-plans", "test-driven-development", "coder-mode", "verification-before-completion", "code-reviewer"],
+  "summary": "TDD extract: vision decision, default ChatCompletionRequest, LLM error format, sandbox/budget gates, vision prefix; wired StreamLlmResponseAsync",
+  "verification": {
+    "streamLlmRelated": 61,
+    "architectureTotal": 73,
+    "failed": 0
+  },
+  "codeReview": "PASS"
+}

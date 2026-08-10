@@ -1,5 +1,5 @@
 {
-  "note": "From Knip unused files; many are dynamic-route false positives — verify before delete",
+  "note": "see cab3-unused-vue-full.json",
   "sampleCount": 50,
   "sample": [
     "src/components/Authority/src/Authority.vue",
