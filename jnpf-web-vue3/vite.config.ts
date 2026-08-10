@@ -88,6 +88,13 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
                 './src/views/onlineDev/webDesign/index.vue',
                 './src/views/onlineDev/visualPortal/index.vue',
                 './src/views/onlineDev/integrate/index.vue',
+                // 常用业务页（实际菜单）：工作流六页
+                './src/views/workFlow/flowTodo/index.vue',
+                './src/views/workFlow/flowLaunch/index.vue',
+                './src/views/workFlow/flowDone/index.vue',
+                './src/views/workFlow/flowCirculate/index.vue',
+                './src/views/workFlow/flowQuickLaunch/index.vue',
+                './src/views/workFlow/entrust/index.vue',
               ],
             },
           }
@@ -145,7 +152,7 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
                 return 'vendor-echarts';
               }
               // 通用工具库
-              if (id.includes('/lodash/') || id.includes('/dayjs/') || id.includes('/axios/') || id.includes('/moment/')) {
+              if (id.includes('/lodash-es/') || id.includes('/lodash/') || id.includes('/dayjs/') || id.includes('/axios/') || id.includes('/moment/')) {
                 return 'vendor-utils';
               }
               // VueUse (按需加载的大型工具库)
@@ -158,8 +165,43 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
               if (id.includes('/monaco-editor/')) {
                 return 'vendor-monaco';
               }
-              if (id.includes('/highcharts/')) {
+              if (id.includes('/highcharts/') || id.includes('/highcharts-vue/')) {
                 return 'vendor-highcharts';
+              }
+              // 懒用大库独立分包：以下库只被懒路由/懒组件引用，
+              // 若不单独分包会被 vendor-common 兜底，随入口在每一页静态执行。
+              if (id.includes('/highlight.js/')) {
+                return 'vendor-highlight';
+              }
+              if (id.includes('/jszip/')) {
+                return 'vendor-jszip';
+              }
+              if (id.includes('/jsbarcode/')) {
+                return 'vendor-jsbarcode';
+              }
+              if (id.includes('/@zxcvbn-ts/')) {
+                return 'vendor-zxcvbn';
+              }
+              if (id.includes('/qrcode/')) {
+                return 'vendor-qrcode';
+              }
+              if (id.includes('/cron-parser/')) {
+                return 'vendor-cron';
+              }
+              if (id.includes('/vue3-draggable-resizable/')) {
+                return 'vendor-drag-resize';
+              }
+              if (id.includes('/print-js/')) {
+                return 'vendor-print';
+              }
+              if (id.includes('/vue3-tree-org/')) {
+                return 'vendor-tree-org';
+              }
+              if (id.includes('/marked/')) {
+                return 'vendor-marked';
+              }
+              if (id.includes('/vue-simple-uploader/') || id.includes('/spark-md5/')) {
+                return 'vendor-uploader';
               }
               if (id.includes('/tinymce/')) {
                 return 'vendor-tinymce';

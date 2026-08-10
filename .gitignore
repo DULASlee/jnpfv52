@@ -89,6 +89,7 @@ workspace/generated/[0-9]*/
 scripts/.e2e-state.json
 scripts/.events-*.txt
 scripts/.jnpf-*.json
+scripts/*-pid.txt
 
 # Playwright / vitest runner output
 test-output/
