@@ -95,6 +95,14 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
                 './src/views/workFlow/flowCirculate/index.vue',
                 './src/views/workFlow/flowQuickLaunch/index.vue',
                 './src/views/workFlow/entrust/index.vue',
+                // 设计器页面（功能表单/流程表单/大屏门户）：预转换 FormGenerator/ColumnDesign/monaco 图，
+                // 避免首次打开设计器时逐个模块现场编译
+                './src/views/generator/webForm/Form.vue',
+                './src/views/generator/webForm/index.vue',
+                './src/views/generator/flowForm/Form.vue',
+                './src/views/onlineDev/webDesign/Form.vue',
+                './src/views/onlineDev/webDesign/ViewForm.vue',
+                './src/views/onlineDev/visualPortal/Form.vue',
               ],
             },
           }

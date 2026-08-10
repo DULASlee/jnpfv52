@@ -84,9 +84,10 @@ export default ({ mode, command }) => {
         },
       },
       open: true,
-      // 演示/日常：预构建重型依赖，避免首次打开大屏白屏数分钟
+      // 演示/日常：预构建重型依赖 + 预转换页面图（列表/设计器/运行时），
+      // 避免首次打开大屏白屏数分钟（性能优化 2026-08-10）
       warmup: {
-        clientFiles: ['./index.html', './src/main.js', './src/App.vue'],
+        clientFiles: ['./index.html', './src/main.js', './src/App.vue', './src/page/login.vue', './src/page/index.vue', './src/page/build.vue', './src/page/view.vue'],
       },
     },
     optimizeDeps: {
