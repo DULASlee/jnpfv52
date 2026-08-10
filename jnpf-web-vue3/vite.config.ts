@@ -136,7 +136,17 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
             }
             if (id.includes('node_modules')) {
               // Vue 生态
-              if (id.includes('/vue/') || id.includes('/pinia/') || id.includes('/vue-router/') || id.includes('/vue-i18n/') || id.includes('/@vue/')) {
+              // vue-demi / @intlify 是 vue/pinia/router/i18n 的依赖：若落入 vendor-common，
+              // 会形成 vendor-vue <-> vendor-common 循环导入，生产包启动即 TDZ 崩溃。
+              if (
+                id.includes('/vue/') ||
+                id.includes('/pinia/') ||
+                id.includes('/vue-router/') ||
+                id.includes('/vue-i18n/') ||
+                id.includes('/@vue/') ||
+                id.includes('/vue-demi/') ||
+                id.includes('/@intlify/')
+              ) {
                 return 'vendor-vue';
               }
               // Ant Design Vue (核心组件库 ~600KB)
