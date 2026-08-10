@@ -84,7 +84,11 @@
   import { useDefineSetting } from '/@/hooks/setting/useDefineSetting';
   import { usePopup } from '/@/components/Popup';
   import { useModal } from '/@/components/Modal';
-  import FlowParser from '/@/views/workFlow/components/FlowParser.vue';
+import { useLazyPopup } from '/@/hooks/web/useLazyPopup';
+const { component: FlowParser, register: registerFlowParser, openPopup: openFlowParser } = useLazyPopup(
+  () => import('/@/views/workFlow/components/FlowParser.vue'),
+  'workFlow/FlowParser',
+);
   import FlowPopup from '../flowLaunch/FlowPopup.vue';
   import AddModal from './AddModal.vue';
   import Form from './Form.vue';
@@ -101,7 +105,6 @@
   const { t } = useI18n();
   const { getUrgentText } = useDefineSetting();
   const [registerFlowPopup, { openPopup: openFlowPopup }] = usePopup();
-  const [registerFlowParser, { openPopup: openFlowParser }] = usePopup();
   const [registerAdd, { openModal: openAddModal }] = useModal();
   const [registerForm, { openModal: openFormModal }] = useModal();
   const state = reactive<State>({

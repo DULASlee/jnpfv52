@@ -31,9 +31,12 @@
   import { BasicTable, useTable, TableAction, BasicColumn, ActionItem } from '/@/components/Table';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
-  import { usePopup } from '/@/components/Popup';
   import { useBaseStore } from '/@/store/modules/base';
-  import FlowParser from '/@/views/workFlow/components/FlowParser.vue';
+import { useLazyPopup } from '/@/hooks/web/useLazyPopup';
+const { component: FlowParser, register: registerFlowParser, openPopup: openFlowParser } = useLazyPopup(
+  () => import('/@/views/workFlow/components/FlowParser.vue'),
+  'workFlow/FlowParser',
+);
   import { useDefineSetting } from '/@/hooks/setting/useDefineSetting';
   import dayjs from 'dayjs';
 
@@ -43,7 +46,6 @@
   const baseStore = useBaseStore();
   const { t } = useI18n();
   const { flowUrgentList, getUrgentText } = useDefineSetting();
-  const [registerFlowParser, { openPopup: openFlowParser }] = usePopup();
 
   const columns: BasicColumn[] = [
     { title: '流程标题', dataIndex: 'fullName', width: 200 },

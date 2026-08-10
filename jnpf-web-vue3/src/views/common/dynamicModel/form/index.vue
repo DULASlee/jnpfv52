@@ -13,7 +13,11 @@
   import { useModal } from '/@/components/Modal';
   import { usePopup } from '/@/components/Popup';
   import FormPopup from './FormPopup.vue';
-  import FlowParser from '/@/views/workFlow/components/FlowParser.vue';
+import { useLazyPopup } from '/@/hooks/web/useLazyPopup';
+const { component: FlowParser, register: registerFlowParser, openPopup: openFlowParser } = useLazyPopup(
+  () => import('/@/views/workFlow/components/FlowParser.vue'),
+  'workFlow/FlowParser',
+);
   import { SelectFlowModal } from '/@/components/CommonModal';
 
   interface State {
@@ -24,7 +28,6 @@
   const props = defineProps(['config', 'modelId', 'isPreview']);
   const { createMessage } = useMessage();
   const [registerFormPopup, { openPopup: openFormPopup }] = usePopup();
-  const [registerFlowParser, { openPopup: openFlowParser }] = usePopup();
   const [registerSelectFlowModal, { openModal: openSelectFlowModal }] = useModal();
   const state = reactive<State>({
     flowList: [],

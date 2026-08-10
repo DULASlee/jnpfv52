@@ -6,11 +6,13 @@
 </template>
 
 <script lang="ts" setup>
-  import { usePopup } from '/@/components/Popup';
   import FlowList from './FlowList.vue';
-  import FlowParser from '/@/views/workFlow/components/FlowParser.vue';
+  import { useLazyPopup } from '/@/hooks/web/useLazyPopup';
+  const { component: FlowParser, register: registerFlowParser, openPopup: openFlowParser } = useLazyPopup(
+    () => import('/@/views/workFlow/components/FlowParser.vue'),
+    'workFlow/FlowParser',
+  );
 
-  const [registerFlowParser, { openPopup: openFlowParser }] = usePopup();
 
   defineOptions({ name: 'WorkFlowAddFlow' });
 

@@ -182,14 +182,16 @@ export function useLazyComponent(loader: () => Promise<Record<string, any>>, mod
   });
 
   function prefetch(): Promise<void> {
-    return triggerLoad().catch(() => {
-      // prefetch 失败不阻塞 UI，仅记录
-    });
+    return triggerLoad()
+      .then(() => undefined)
+      .catch(() => {
+        // prefetch 失败不阻塞 UI，仅记录
+      });
   }
 
   /** 语义化别名：等待加载完成（失败抛出异常，调用方可 try/catch） */
-  function load(): Promise<void> {
-    return triggerLoad().then(() => {});
+  async function load(): Promise<void> {
+    await triggerLoad();
   }
 
   return {
