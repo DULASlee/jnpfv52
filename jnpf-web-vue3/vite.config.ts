@@ -157,6 +157,13 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
               ) {
                 return 'vendor-vue';
               }
+              // tinycolor2 / @ctrl/tinycolor（antd 颜色工具 + 主题初始化依赖）：
+              // 兜底移除后若落入 vendor-antd，会与入口主题初始化形成部分初始化顺序问题
+              // （tinycolor 的 names 映射在 vendor-antd 顶层求值被中断后不可用，报 #f5222d）。
+              // 独立分包保证其早期加载，破环（同 vue-demi 模式）。
+              if (id.includes('/tinycolor2/') || id.includes('/@ctrl/tinycolor/')) {
+                return 'vendor-tinycolor';
+              }
               // Ant Design Vue (核心组件库 ~600KB)
               if (id.includes('/ant-design-vue/')) {
                 return 'vendor-antd';
@@ -240,10 +247,10 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
               if (id.includes('/vditor/')) {
                 return 'vendor-vditor';
               }
-              // 其余 node_modules 适度收敛，避免碎片化。
-              // 注意：兜底会把懒用库卷进入口（highcharts/jszip 等已通过上方具体规则拆出）；
-              // 彻底移除兜底需先解决主题初始化（tinycolor/插件）的 chunk 循环，暂保留。
-              return 'vendor-common';
+              // 不再为未匹配的 node_modules 提供兜底 vendor-common：
+              // 兜底会把「只有懒路由才用的库」也卷进入口必载包。
+              // 入口必需的库由 Rollup 内联进入口，懒用库进各自的懒 chunk。
+              return undefined;
             }
             // 注意：不要在此处按「设计器目录」手工分包。
             // 设计器与入口共享 FormGenerator helper 等模块时，整目录分包会把共享模块卷进设计器 chunk，
