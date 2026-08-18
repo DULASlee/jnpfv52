@@ -12,6 +12,7 @@ using JNPF.DatabaseAccessor;
 using JNPF.DependencyInjection;
 using JNPF.DynamicApiController;
 using JNPF.FriendlyException;
+using JNPF.Systems.Common.OrganizeAdmin;
 using JNPF.Systems.Entitys.Dto.OrganizeAdministrator;
 using JNPF.Systems.Entitys.Dto.Permission.OrganizeAdministrator;
 using JNPF.Systems.Entitys.Permission;
@@ -166,15 +167,7 @@ public class OrganizeAdministratorService : IOrganizeAdministratorService, IDyna
         {
             orgTreeNameList.ForEach(orgItem =>
             {
-                var addItem = new OrganizeAdministratorSelectorOutput();
-
-                addItem.id = orgItem.Id;
-                addItem.fullName = orgItem.FullName;
-                addItem.organizeId = orgItem.Id;
-                addItem.parentId = orgItem.ParentId;
-                addItem.category = orgItem.Category;
-                addItem.icon = orgItem.Category.Equals("company") ? "icon-ym icon-ym-tree-organization3" : "icon-ym icon-ym-tree-department1";
-                addItem.organizeIdTree = orgItem.OrganizeIdTree;
+                var addItem = OrganizeAdminSelectorHelpers.MapOrganizeToSelectorNode(orgItem, useDescriptionAsFullName: false);
 
                 var item = currList.FirstOrDefault(x => x.OrganizeId.Equals(orgItem.Id) && x.UserId.Equals(userId));
                 if (item != null && userId != _userManager.UserId)
@@ -204,11 +197,9 @@ public class OrganizeAdministratorService : IOrganizeAdministratorService, IDyna
             });
 
             var resultTree = result.ToTree("-1");
-            resultTree.ToObject<List<Dictionary<string, object>>>().ForEach(item =>
-            {
-                if (item.ContainsValue(-1))
-                    foreach (var key in item.Where(x => x.Value.Equals(-1))) item.Remove(key.Key);
-            });
+            // Legacy: strip runs on ToObject copy (same as pre-surgery; does not mutate resultTree).
+            OrganizeAdminSelectorHelpers.StripNegativePermissionKeys(
+                resultTree.ToObject<List<Dictionary<string, object>>>());
 
             var resTree = await GetSystemAndModuleListByUserId(userId);
             resTree.orgAdminList = resultTree;
@@ -221,9 +212,9 @@ public class OrganizeAdministratorService : IOrganizeAdministratorService, IDyna
             .WhereIF(!userId.Equals(_userManager.UserId), x => x.UserId == _userManager.UserId || x.UserId == userId).ToList();
 
         // 捞取编辑用户权限
-        var userList = currList.Where(x => x.ThisLayerAdd.Equals(1) || x.ThisLayerEdit.Equals(1) || x.ThisLayerDelete.Equals(1) || x.ThisLayerSelect.Equals(1) ||
-          x.SubLayerAdd.Equals(1) || x.SubLayerEdit.Equals(1) || x.SubLayerDelete.Equals(1) || x.SubLayerSelect.Equals(1)).Where(x => x.UserId.Equals(userId)).ToList().Copy();
-        userList.Where(x => x.SubLayerAdd.Equals(1) || x.SubLayerEdit.Equals(1) || x.SubLayerDelete.Equals(1) || x.SubLayerSelect.Equals(1)).ToList().ForEach(item =>
+        var userList = currList.Where(OrganizeAdminSelectorHelpers.HasAnyLayerPermission)
+            .Where(x => x.UserId.Equals(userId)).ToList().Copy();
+        userList.Where(OrganizeAdminSelectorHelpers.HasAnySubLayerPermission).ToList().ForEach(item =>
         {
             var orgIds = orgTreeNameList.Where(x => x.OrganizeIdTree.Contains(item.OrganizeId) && !x.Id.Equals(item.OrganizeId)).Select(x => x.Id).ToList();
             var subList = currList.Where(x => orgIds.Contains(x.OrganizeId) && x.UserId.Equals(_userManager.UserId)).ToList().Copy();
@@ -231,38 +222,18 @@ public class OrganizeAdministratorService : IOrganizeAdministratorService, IDyna
             subList.ForEach(it =>
             {
                 var userIt = userList.Find(x => x.OrganizeId.Equals(it.OrganizeId));
-                if (userIt == null)
-                {
-                    it.ThisLayerAdd = item.SubLayerAdd.Equals(1) ? 3 : 0;
-                    it.ThisLayerEdit = item.SubLayerEdit.Equals(1) ? 3 : 0;
-                    it.ThisLayerDelete = item.SubLayerDelete.Equals(1) ? 3 : 0;
-                    it.ThisLayerSelect = item.SubLayerSelect.Equals(1) ? 3 : 0;
-                    it.SubLayerAdd = item.SubLayerAdd.Equals(1) ? 3 : 0;
-                    it.SubLayerEdit = item.SubLayerEdit.Equals(1) ? 3 : 0;
-                    it.SubLayerDelete = item.SubLayerDelete.Equals(1) ? 3 : 0;
-                    it.SubLayerSelect = item.SubLayerSelect.Equals(1) ? 3 : 0;
-                }
-                else
-                {
-                    it.ThisLayerAdd = userIt.ThisLayerAdd.Equals(1) || userIt.ThisLayerAdd.Equals(3) ? userIt.ThisLayerAdd : item.SubLayerAdd.Equals(1) ? 3 : 0;
-                    it.ThisLayerEdit = userIt.ThisLayerEdit.Equals(1) || userIt.ThisLayerEdit.Equals(3) ? userIt.ThisLayerEdit : item.SubLayerEdit.Equals(1) ? 3 : 0;
-                    it.ThisLayerDelete = userIt.ThisLayerDelete.Equals(1) || userIt.ThisLayerDelete.Equals(3) ? userIt.ThisLayerDelete : item.SubLayerDelete.Equals(1) ? 3 : 0;
-                    it.ThisLayerSelect = userIt.ThisLayerSelect.Equals(1) || userIt.ThisLayerSelect.Equals(3) ? userIt.ThisLayerSelect : item.SubLayerSelect.Equals(1) ? 3 : 0;
-                    it.SubLayerAdd = userIt.SubLayerAdd.Equals(1) || userIt.SubLayerAdd.Equals(3) ? userIt.SubLayerAdd : item.SubLayerAdd.Equals(1) ? 3 : 0;
-                    it.SubLayerEdit = userIt.SubLayerEdit.Equals(1) || userIt.SubLayerEdit.Equals(3) ? userIt.SubLayerEdit : item.SubLayerEdit.Equals(1) ? 3 : 0;
-                    it.SubLayerDelete = userIt.SubLayerDelete.Equals(1) || userIt.SubLayerDelete.Equals(3) ? userIt.SubLayerDelete : item.SubLayerDelete.Equals(1) ? 3 : 0;
-                    it.SubLayerSelect = userIt.SubLayerSelect.Equals(1) || userIt.SubLayerSelect.Equals(3) ? userIt.SubLayerSelect : item.SubLayerSelect.Equals(1) ? 3 : 0;
+                OrganizeAdminSelectorHelpers.ApplyInheritedSubLayerFlags(it, userIt, item, inheritAs: 3);
+                if (userIt != null)
                     userList.Remove(userIt);
-                }
             });
 
             userList.AddRange(subList);
         });
 
         // 捞取管理员权限
-        var adminList = currList.Where(x => x.ThisLayerAdd.Equals(1) || x.ThisLayerEdit.Equals(1) || x.ThisLayerDelete.Equals(1) || x.ThisLayerSelect.Equals(1) ||
-           x.SubLayerAdd.Equals(1) || x.SubLayerEdit.Equals(1) || x.SubLayerDelete.Equals(1) || x.SubLayerSelect.Equals(1)).Where(x => x.UserId.Equals(_userManager.UserId)).ToList().Copy();
-        adminList.Where(x => x.SubLayerAdd.Equals(1) || x.SubLayerEdit.Equals(1) || x.SubLayerDelete.Equals(1) || x.SubLayerSelect.Equals(1)).ToList().ForEach(item =>
+        var adminList = currList.Where(OrganizeAdminSelectorHelpers.HasAnyLayerPermission)
+            .Where(x => x.UserId.Equals(_userManager.UserId)).ToList().Copy();
+        adminList.Where(OrganizeAdminSelectorHelpers.HasAnySubLayerPermission).ToList().ForEach(item =>
         {
             var orgIds = orgTreeNameList.Where(x => x.OrganizeIdTree.Contains(item.OrganizeId) && !x.Id.Equals(item.OrganizeId)).Select(x => x.Id).ToList();
             var subList = currList.Where(x => orgIds.Contains(x.OrganizeId) && x.UserId.Equals(_userManager.UserId)).ToList().Copy();
@@ -270,29 +241,9 @@ public class OrganizeAdministratorService : IOrganizeAdministratorService, IDyna
             subList.ForEach(it =>
             {
                 var adminIt = adminList.Find(x => x.OrganizeId.Equals(it.OrganizeId));
-                if (adminIt == null)
-                {
-                    it.ThisLayerAdd = item.SubLayerAdd.Equals(1) ? 3 : 0;
-                    it.ThisLayerEdit = item.SubLayerEdit.Equals(1) ? 3 : 0;
-                    it.ThisLayerDelete = item.SubLayerDelete.Equals(1) ? 3 : 0;
-                    it.ThisLayerSelect = item.SubLayerSelect.Equals(1) ? 3 : 0;
-                    it.SubLayerAdd = item.SubLayerAdd.Equals(1) ? 3 : 0;
-                    it.SubLayerEdit = item.SubLayerEdit.Equals(1) ? 3 : 0;
-                    it.SubLayerDelete = item.SubLayerDelete.Equals(1) ? 3 : 0;
-                    it.SubLayerSelect = item.SubLayerSelect.Equals(1) ? 3 : 0;
-                }
-                else
-                {
-                    it.ThisLayerAdd = adminIt.ThisLayerAdd.Equals(1) || adminIt.ThisLayerAdd.Equals(3) ? adminIt.ThisLayerAdd : item.SubLayerAdd.Equals(1) ? 3 : 0;
-                    it.ThisLayerEdit = adminIt.ThisLayerEdit.Equals(1) || adminIt.ThisLayerEdit.Equals(3) ? adminIt.ThisLayerEdit : item.SubLayerEdit.Equals(1) ? 3 : 0;
-                    it.ThisLayerDelete = adminIt.ThisLayerDelete.Equals(1) || adminIt.ThisLayerDelete.Equals(3) ? adminIt.ThisLayerDelete : item.SubLayerDelete.Equals(1) ? 3 : 0;
-                    it.ThisLayerSelect = adminIt.ThisLayerSelect.Equals(1) || adminIt.ThisLayerSelect.Equals(3) ? adminIt.ThisLayerSelect : item.SubLayerSelect.Equals(1) ? 3 : 0;
-                    it.SubLayerAdd = adminIt.SubLayerAdd.Equals(1) || adminIt.SubLayerAdd.Equals(3) ? adminIt.SubLayerAdd : item.SubLayerAdd.Equals(1) ? 3 : 0;
-                    it.SubLayerEdit = adminIt.SubLayerEdit.Equals(1) || adminIt.SubLayerEdit.Equals(3) ? adminIt.SubLayerEdit : item.SubLayerEdit.Equals(1) ? 3 : 0;
-                    it.SubLayerDelete = adminIt.SubLayerDelete.Equals(1) || adminIt.SubLayerDelete.Equals(3) ? adminIt.SubLayerDelete : item.SubLayerDelete.Equals(1) ? 3 : 0;
-                    it.SubLayerSelect = adminIt.SubLayerSelect.Equals(1) || adminIt.SubLayerSelect.Equals(3) ? adminIt.SubLayerSelect : item.SubLayerSelect.Equals(1) ? 3 : 0;
+                OrganizeAdminSelectorHelpers.ApplyInheritedSubLayerFlags(it, adminIt, item, inheritAs: 3);
+                if (adminIt != null)
                     adminList.Remove(adminIt);
-                }
             });
 
             adminList.AddRange(subList);
@@ -302,76 +253,12 @@ public class OrganizeAdministratorService : IOrganizeAdministratorService, IDyna
         {
             var user = userList.Find(x => x.OrganizeId.Equals(item.OrganizeId));
             var orgItem = orgTreeNameList.Find(x => x.Id.Equals(item.OrganizeId));
-            var resultItem = new OrganizeAdministratorSelectorOutput();
-            resultItem.id = orgItem.Id;
-            resultItem.organizeId = orgItem.Id;
-            resultItem.fullName = orgItem.Description;
-            resultItem.parentId = orgItem.ParentId;
-            resultItem.category = orgItem.Category;
-            resultItem.icon = orgItem.Category.Equals("company") ? "icon-ym icon-ym-tree-organization3" : "icon-ym icon-ym-tree-department1";
-            resultItem.organizeIdTree = orgItem.OrganizeIdTree;
+            var resultItem = OrganizeAdminSelectorHelpers.MapOrganizeToSelectorNode(orgItem, useDescriptionAsFullName: true);
 
             if (user != null && userId != _userManager.UserId)
-            {
-                if (item.ThisLayerAdd.Equals(0) && user.ThisLayerAdd.Equals(0)) resultItem.thisLayerAdd = -1;
-                else if ((item.ThisLayerAdd.Equals(1) || item.ThisLayerAdd.Equals(3)) && user.ThisLayerAdd.Equals(1)) resultItem.thisLayerAdd = 1;
-                else if ((item.ThisLayerAdd.Equals(1) || item.ThisLayerAdd.Equals(3)) && user.ThisLayerAdd.Equals(0)) resultItem.thisLayerAdd = 0;
-                else if (item.ThisLayerAdd.Equals(0) && user.ThisLayerAdd.Equals(1)) resultItem.thisLayerAdd = 2;
-                else if (item.ThisLayerAdd.Equals(0) && user.ThisLayerAdd.Equals(3)) resultItem.thisLayerAdd = 3;
-
-                if (item.ThisLayerEdit.Equals(0) && user.ThisLayerEdit.Equals(0)) resultItem.thisLayerEdit = -1;
-                else if ((item.ThisLayerEdit.Equals(1) || item.ThisLayerEdit.Equals(3)) && user.ThisLayerEdit.Equals(1)) resultItem.thisLayerEdit = 1;
-                else if ((item.ThisLayerEdit.Equals(1) || item.ThisLayerEdit.Equals(3)) && user.ThisLayerEdit.Equals(0)) resultItem.thisLayerEdit = 0;
-                else if (item.ThisLayerEdit.Equals(0) && user.ThisLayerEdit.Equals(1)) resultItem.thisLayerEdit = 2;
-                else if (item.ThisLayerEdit.Equals(0) && user.ThisLayerEdit.Equals(3)) resultItem.thisLayerEdit = 3;
-
-                if (item.ThisLayerDelete.Equals(0) && user.ThisLayerDelete.Equals(0)) resultItem.thisLayerDelete = -1;
-                else if ((item.ThisLayerDelete.Equals(1) || item.ThisLayerDelete.Equals(3)) && user.ThisLayerDelete.Equals(1)) resultItem.thisLayerDelete = 1;
-                else if ((item.ThisLayerDelete.Equals(1) || item.ThisLayerDelete.Equals(3)) && user.ThisLayerDelete.Equals(0)) resultItem.thisLayerDelete = 0;
-                else if (item.ThisLayerDelete.Equals(0) && user.ThisLayerDelete.Equals(1)) resultItem.thisLayerDelete = 2;
-                else if (item.ThisLayerDelete.Equals(0) && user.ThisLayerDelete.Equals(3)) resultItem.thisLayerDelete = 3;
-
-                if (item.ThisLayerSelect.Equals(0) && user.ThisLayerSelect.Equals(0)) resultItem.thisLayerSelect = -1;
-                else if ((item.ThisLayerSelect.Equals(1) || item.ThisLayerSelect.Equals(3)) && user.ThisLayerSelect.Equals(1)) resultItem.thisLayerSelect = 1;
-                else if ((item.ThisLayerSelect.Equals(1) || item.ThisLayerSelect.Equals(3)) && user.ThisLayerSelect.Equals(0)) resultItem.thisLayerSelect = 0;
-                else if (item.ThisLayerSelect.Equals(0) && user.ThisLayerSelect.Equals(1)) resultItem.thisLayerSelect = 2;
-                else if (item.ThisLayerSelect.Equals(0) && user.ThisLayerSelect.Equals(3)) resultItem.thisLayerSelect = 3;
-
-                if (item.SubLayerAdd.Equals(0) && user.SubLayerAdd.Equals(0)) resultItem.subLayerAdd = -1;
-                else if ((item.SubLayerAdd.Equals(1) || item.SubLayerAdd.Equals(3)) && user.SubLayerAdd.Equals(1)) resultItem.subLayerAdd = 1;
-                else if ((item.SubLayerAdd.Equals(1) || item.SubLayerAdd.Equals(3)) && user.SubLayerAdd.Equals(0)) resultItem.subLayerAdd = 0;
-                else if (item.SubLayerAdd.Equals(0) && user.SubLayerAdd.Equals(1)) resultItem.subLayerAdd = 2;
-                else if (item.SubLayerAdd.Equals(0) && user.SubLayerAdd.Equals(3)) resultItem.subLayerAdd = 3;
-
-                if (item.SubLayerEdit.Equals(0) && user.SubLayerEdit.Equals(0)) resultItem.subLayerEdit = -1;
-                else if ((item.SubLayerEdit.Equals(1) || item.SubLayerEdit.Equals(3)) && user.SubLayerEdit.Equals(1)) resultItem.subLayerEdit = 1;
-                else if ((item.SubLayerEdit.Equals(1) || item.SubLayerEdit.Equals(3)) && user.SubLayerEdit.Equals(0)) resultItem.subLayerEdit = 0;
-                else if (item.SubLayerEdit.Equals(0) && user.SubLayerEdit.Equals(1)) resultItem.subLayerEdit = 2;
-                else if (item.SubLayerEdit.Equals(0) && user.SubLayerEdit.Equals(3)) resultItem.subLayerEdit = 3;
-
-                if (item.SubLayerDelete.Equals(0) && user.SubLayerDelete.Equals(0)) resultItem.subLayerDelete = -1;
-                else if ((item.SubLayerDelete.Equals(1) || item.SubLayerDelete.Equals(3)) && user.SubLayerDelete.Equals(1)) resultItem.subLayerDelete = 1;
-                else if ((item.SubLayerDelete.Equals(1) || item.SubLayerDelete.Equals(3)) && user.SubLayerDelete.Equals(0)) resultItem.subLayerDelete = 0;
-                else if (item.SubLayerDelete.Equals(0) && user.SubLayerDelete.Equals(1)) resultItem.subLayerDelete = 2;
-                else if (item.SubLayerDelete.Equals(0) && user.SubLayerDelete.Equals(3)) resultItem.subLayerDelete = 3;
-
-                if (item.SubLayerSelect.Equals(0) && user.SubLayerSelect.Equals(0)) resultItem.subLayerSelect = -1;
-                else if ((item.SubLayerSelect.Equals(1) || item.SubLayerSelect.Equals(3)) && user.SubLayerSelect.Equals(1)) resultItem.subLayerSelect = 1;
-                else if ((item.SubLayerSelect.Equals(1) || item.SubLayerSelect.Equals(3)) && user.SubLayerSelect.Equals(0)) resultItem.subLayerSelect = 0;
-                else if (item.SubLayerSelect.Equals(0) && user.SubLayerSelect.Equals(1)) resultItem.subLayerSelect = 2;
-                else if (item.SubLayerSelect.Equals(0) && user.SubLayerSelect.Equals(3)) resultItem.subLayerSelect = 3;
-            }
+                OrganizeAdminSelectorHelpers.ApplyMergedAdminUserPermissionFlags(item, user, resultItem);
             else
-            {
-                resultItem.thisLayerAdd = item.ThisLayerAdd.Equals(1) || item.ThisLayerAdd.Equals(3) ? resultItem.thisLayerAdd = 0 : resultItem.thisLayerAdd = -1;
-                resultItem.thisLayerEdit = item.ThisLayerEdit.Equals(1) || item.ThisLayerEdit.Equals(3) ? resultItem.thisLayerEdit = 0 : resultItem.thisLayerEdit = -1;
-                resultItem.thisLayerDelete = item.ThisLayerDelete.Equals(1) || item.ThisLayerDelete.Equals(3) ? resultItem.thisLayerDelete = 0 : resultItem.thisLayerDelete = -1;
-                resultItem.thisLayerSelect = item.ThisLayerSelect.Equals(1) || item.ThisLayerSelect.Equals(3) ? resultItem.thisLayerSelect = 0 : resultItem.thisLayerSelect = -1;
-                resultItem.subLayerAdd = item.SubLayerAdd.Equals(1) || item.SubLayerAdd.Equals(3) ? resultItem.subLayerAdd = 0 : resultItem.subLayerAdd = -1;
-                resultItem.subLayerEdit = item.SubLayerEdit.Equals(1) || item.SubLayerEdit.Equals(3) ? resultItem.subLayerEdit = 0 : resultItem.subLayerEdit = -1;
-                resultItem.subLayerDelete = item.SubLayerDelete.Equals(1) || item.SubLayerDelete.Equals(3) ? resultItem.subLayerDelete = 0 : resultItem.subLayerDelete = -1;
-                resultItem.subLayerSelect = item.SubLayerSelect.Equals(1) || item.SubLayerSelect.Equals(3) ? resultItem.subLayerSelect = 0 : resultItem.subLayerSelect = -1;
-            }
+                OrganizeAdminSelectorHelpers.ApplyAdminOnlyPermissionFlags(item, resultItem);
 
             result.Add(resultItem);
         });
@@ -382,81 +269,21 @@ public class OrganizeAdministratorService : IOrganizeAdministratorService, IDyna
             if (adminItem == null)
             {
                 var orgItem = orgTreeNameList.Find(x => x.Id.Equals(userItem.OrganizeId));
-                var resultItem = new OrganizeAdministratorSelectorOutput();
-                resultItem.id = orgItem.Id;
-                resultItem.organizeId = orgItem.Id;
-                resultItem.fullName = orgItem.Description;
-                resultItem.parentId = orgItem.ParentId;
-                resultItem.category = orgItem.Category;
-                resultItem.icon = orgItem.Category.Equals("company") ? "icon-ym icon-ym-tree-organization3" : "icon-ym icon-ym-tree-department1";
-                resultItem.organizeIdTree = orgItem.OrganizeIdTree;
-
-                if (userItem.ThisLayerAdd.Equals(0)) resultItem.thisLayerAdd = -1;
-                else if (userItem.ThisLayerAdd.Equals(1)) resultItem.thisLayerAdd = 2;
-                else if (userItem.ThisLayerAdd.Equals(3) || userItem.ThisLayerAdd.Equals(1)) resultItem.thisLayerAdd = 3;
-
-                if (userItem.ThisLayerEdit.Equals(0)) resultItem.thisLayerEdit = -1;
-                else if (userItem.ThisLayerEdit.Equals(1)) resultItem.thisLayerEdit = 2;
-                else if (userItem.ThisLayerEdit.Equals(3) || userItem.ThisLayerEdit.Equals(1)) resultItem.thisLayerEdit = 3;
-
-                if (userItem.ThisLayerDelete.Equals(0)) resultItem.thisLayerDelete = -1;
-                else if (userItem.ThisLayerDelete.Equals(1)) resultItem.thisLayerDelete = 2;
-                else if (userItem.ThisLayerDelete.Equals(3) || userItem.ThisLayerDelete.Equals(1)) resultItem.thisLayerDelete = 3;
-
-                if (userItem.ThisLayerSelect.Equals(0)) resultItem.thisLayerSelect = -1;
-                else if (userItem.ThisLayerSelect.Equals(1)) resultItem.thisLayerSelect = 2;
-                else if (userItem.ThisLayerSelect.Equals(3) || userItem.ThisLayerSelect.Equals(1)) resultItem.thisLayerSelect = 3;
-
-                if (userItem.SubLayerAdd.Equals(0)) resultItem.subLayerAdd = -1;
-                else if (userItem.SubLayerAdd.Equals(1)) resultItem.subLayerAdd = 2;
-                else if (userItem.SubLayerAdd.Equals(3) || userItem.SubLayerAdd.Equals(1)) resultItem.subLayerAdd = 3;
-
-                if (userItem.SubLayerEdit.Equals(0)) resultItem.subLayerEdit = -1;
-                else if (userItem.SubLayerEdit.Equals(1)) resultItem.subLayerEdit = 2;
-                else if (userItem.SubLayerEdit.Equals(3) || userItem.SubLayerEdit.Equals(1)) resultItem.subLayerEdit = 3;
-
-                if (userItem.SubLayerDelete.Equals(0)) resultItem.subLayerDelete = -1;
-                else if (userItem.SubLayerDelete.Equals(1)) resultItem.subLayerDelete = 2;
-                else if (userItem.SubLayerDelete.Equals(3) || userItem.SubLayerDelete.Equals(1)) resultItem.subLayerDelete = 3;
-
-                if (userItem.SubLayerSelect.Equals(0)) resultItem.subLayerSelect = -1;
-                else if (userItem.SubLayerSelect.Equals(1)) resultItem.subLayerSelect = 2;
-                else if (userItem.SubLayerSelect.Equals(3) || userItem.SubLayerSelect.Equals(1)) resultItem.subLayerSelect = 3;
+                var resultItem = OrganizeAdminSelectorHelpers.MapOrganizeToSelectorNode(orgItem, useDescriptionAsFullName: true);
+                OrganizeAdminSelectorHelpers.ApplyUserOnlyPermissionFlags(userItem, resultItem);
 
                 if (!result.Any(x => x.organizeId.Equals(resultItem.organizeId))) result.Add(resultItem);
             }
         });
 
         // 组织断层处理
-        result.Where(x => x.parentId != "-1").OrderByDescending(x => x.organizeIdTree.Length).ToList().ForEach(item =>
-        {
-            if (!result.Any(x => x.id.Equals(item.parentId)))
-            {
-                var pItem = result.Find(x => x.id != item.id && item.organizeIdTree.Contains(x.organizeIdTree));
-                if (pItem != null)
-                {
-                    item.parentId = pItem.id;
-                    item.fullName = item.fullName.Replace(pItem.fullName + "/", string.Empty);
-                }
-                else
-                {
-                    item.parentId = "-1";
-                }
-            }
-            else
-            {
-                var pItem = result.Find(x => x.id.Equals(item.parentId));
-                item.fullName = item.fullName.Replace(pItem.fullName + "/", string.Empty);
-            }
-        });
+        OrganizeAdminSelectorHelpers.RepairOrgSelectorTreeGaps(result);
 
         var orgAdminList = result.ToTree("-1");
 
-        orgAdminList.ToObject<List<Dictionary<string, object>>>().ForEach(item =>
-        {
-            if (item.ContainsValue(-1))
-                foreach (var key in item.Where(x => x.Value.Equals(-1))) item.Remove(key.Key);
-        });
+        // Legacy: strip runs on ToObject copy (same as pre-surgery; does not mutate orgAdminList).
+        OrganizeAdminSelectorHelpers.StripNegativePermissionKeys(
+            orgAdminList.ToObject<List<Dictionary<string, object>>>());
 
         var res = await GetSystemAndModuleListByUserId(userId);
         res.orgAdminList = orgAdminList;

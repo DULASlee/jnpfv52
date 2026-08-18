@@ -34,3 +34,43 @@
 - 长期应修复以保持构建干净
 
 ---
+
+## 🔴 ISSUE-002：guard-write.mjs 八层守卫合并未完成 —— R4-R8 L0 防护实质性缺失
+
+**发现日期**：2026-07-07
+**严重程度**：🔴 高（P1 —— L0 防护宣称但未实现，R4 多租户漏过滤可能致跨租户数据泄漏）
+**状态**：✅ 已解决（2026-07-07 同会话修复）
+**发现来源**：jnpf-tester/jnpf-debugger 子 agent 任务 T9 回归步骤（pre-existing，与本会话改动无关）
+
+**问题描述**：
+CLAUDE.md Hooks 表与 `.claude/rules/architecture-redlines.md` 宣称 `guard-write.mjs` 实现"统一八层守卫 L1-L8"，其中 L4=模块边界R5 / L5=多租户R4 / L6=注入R7 / L7=权限R8 / L8=前端泄漏R6（全部 L0 硬阻断，AI 无法绕过）。实际：
+
+1. 旧独立 guard（`guard-oa-module.mjs` / `guard-sql-injection.mjs` / `guard-auth.mjs` / `guard-tenant-filter.mjs` / `guard-frontend-leak.mjs`）**已删除**（Glob `.claude/hooks/*.mjs` 仅余 7 个：guard-bash / guard-finish / guard-reviewer / guard-skill-load / guard-write / hook-lib / session-scheduler）
+2. `guard-write.mjs` 全文仅含 **L1/L2/L3/L4** 四层，且 **L4 是"AI 开发态工作区隔离"**，与 CLAUDE.md 宣称的"L4=模块边界R5"不符
+3. **L5/L6/L7/L8 根本不存在于文件中** —— R4/R5/R6/R7(完整)/R8 均未实现
+4. `scripts/test-hooks.mjs` 仍 `runHook('guard-oa-module.mjs', …)` 等引用旧文件名 → MODULE_NOT_FOUND → exit 1 → **28 用例全 FAIL**
+
+**复现步骤**：
+1. `echo '{"tool_name":"Write","tool_input":{"file_path":"backend/application/JNPF.OA.API.Entry/Foo.cs","content":"x"}}' | node .claude/hooks/guard-write.mjs; echo "exit=$?"` → 期望 exit=2（R5 BLOCK），**实际 exit=0**（放行）
+2. `node scripts/test-hooks.mjs` → 28 用例全 FAIL，失败模式统一"期望 2 实际 1"（BLOCK 类）/ "期望 0 实际 1"（ALLOW 类）
+
+**根因分析**：
+CLAUDE.md 记载"已删除的独立 guard (oa/sql/auth/tenant/leak) 已合并为 guard-write L4-L8"。但合并**从未完成**——只迁移了 L1(密钥)/L2(空文件)/L3(通用安全扫描，含部分 SQL/eval/XSS)，L4 被替换为新的"工作区隔离"用途，原 R4-R8 逻辑随旧文件删除而丢失。test-hooks.mjs 未同步更新。
+
+**修复方案**（代码级）：
+1. **恢复守卫逻辑**：从 git 历史（旧独立 guard 文件最后的提交）提取 R4/R5/R6/R7/R8 检测逻辑，在 `guard-write.mjs` 补为 L5-L9（或恢复独立文件 + settings.json hook 注册）
+   - L5 R4：拦截 `DisableGlobalFilter("TenantFilter")` / `Updateable<T>()` 无 `.Where(...)` / 原生 SQL 无 `WHERE TenantId`
+   - L6 R5：拦截 `JNPF.OA.*` 写入 / `JNPF.IoT.*` / `JNPF.MES.*` 创建
+   - L7 R7：完整 SQL 注入（L3 现仅部分覆盖 `$"SELECT/INSERT/UPDATE/DELETE/DROP..."` + `string.Format(SQL)` + `Ado+$`）
+   - L8 R8：拦截含 `IDynamicApiController` 但无 `[AllowAnonymous]/[SecurityDefine]/[Authorize]` 的 .cs
+   - L9 R6：拦截 `setTimeout/setInterval/EventSource` 无 clear / 无 retry cap / onerror 直连
+2. **修测试**：`scripts/test-hooks.mjs` 的 `runHook` 调用从旧文件名改为 `guard-write.mjs`，payload 契约对齐（content 而非独立 guard 的字段）
+3. **跑回归**：`node scripts/test-hooks.mjs` 28 用例全绿
+4. **修文档**：核对 CLAUDE.md Hooks 表 L4-L8 标签与实际实现一致
+
+**影响评估**：
+- 不修复会导致：R4 多租户 / R5 模块边界 / R6 前端泄漏 / R8 权限声明 四条 L0 红线**无 hook 防护**，仅靠 AI 自觉（L2，长会话漂移率 ~50%）。R7 部分覆盖。`architecture-redlines.md` 的"AI 无法绕过"承诺**虚假**
+- 修复工作量：~2-4 小时（恢复 5 个 guard 逻辑 + 修 28 用例测试 + 文档核对）
+- 临时缓解：code-reviewer 子代理在 Phase 6 仍会检测 R4-R8（L2 约定），但非硬阻断
+
+---

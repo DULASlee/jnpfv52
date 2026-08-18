@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-08-06T14:10:04.359Z",
+  "fullRun": true,
+  "url": "http://127.0.0.1:3100/index.html",
+  "iterations": 5,
+  "leakDetected": false,
+  "memoryChange": "-87.5 kB",
+  "jsonTests": 1,
+  "resultFiles": [
+    "cab4-fuite.json",
+    "cab4-fuite-stdout.txt"
+  ]
+}

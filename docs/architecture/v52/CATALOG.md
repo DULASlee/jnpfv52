@@ -12,7 +12,7 @@
 |------|------|------|------|
 | 01 | [`01-core-framework.md`](01-core-framework.md) | ✅ v2.0-final | Serve.Run、DynamicApi、SqlSugar、JWT、中间件、部署拓扑 |
 | — | [`00-outline-core-framework.md`](00-outline-core-framework.md) | ✅ 总纲 | 专项01 章节与产出清单 |
-| ENV | 内嵌 01 第一章 / 独立 `00-environment-topology.md`（可选） | 规划 | :30000 / :3100 / :8100 / :3800；与操作手册对齐 |
+| ENV | 内嵌 01 第一章 / 独立 `00-environment-topology.md`（可选） | 规划 | :30000 / :3100 / :3102 / :3800；与操作手册对齐 |
 
 **第一批完成标准**：新人仅读 01 + 操作手册环境章，可正确启动 v5.2 全链路。
 
@@ -32,7 +32,7 @@
 
 | 编号 | 文件 | 状态 | 说明 |
 |------|------|------|------|
-| 05 | [`05-visual-data-deep-dive.md`](05-visual-data-deep-dive.md) | ✅ v2.0-final | `jnpf-web-datascreen-vue3`；`:8100`；`/api/blade-visual/`；BLADE_*；lazy-list 已知缺陷 |
+| 05 | [`05-visual-data-deep-dive.md`](05-visual-data-deep-dive.md) | ✅ v2.0-final | `jnpf-web-datascreen`；`:3102`；`/api/blade-visual/`；BLADE_*；lazy-list 已知缺陷 |
 | 06 | [`06-mobile-uniapp-deep-dive.md`](06-mobile-uniapp-deep-dive.md) | ✅ v2.0-final | `jnpf-app-vue3`；HBuilderX / `:3800`；`jnpf-origin: app` |
 | 07 | [`07-cache-middleware-deep-dive.md`](07-cache-middleware-deep-dive.md) | ✅ v2.0-final | `ICacheManager`、Cache.json、28 项键清单、Cache-Aside |
 | 08 | [`08-mq-and-events-deep-dive.md`](08-mq-and-events-deep-dive.md) | ✅ v2.0-final | EventBus Memory 默认；8 事件；TaskQueue 对比 |
@@ -81,6 +81,24 @@
 | `archive/v36/` | v3.6 业务背景、术语 |
 | 三份操作手册 | 环境端口、操作流程（使用者视角） |
 | **禁止** | 复制粘贴配置片段、端口、类名路径未验证段落 |
+
+---
+
+## 专项设计（质量与架构诊断 · 2026-08-06）
+
+| 编号 | 文件 | 状态 | 说明 |
+|------|------|------|------|
+| Q-D | [`design-quality-diagnostics.md`](design-quality-diagnostics.md) | ✅ v1.0 | 八类诊断方法 + 本仓命令映射 + 整改排序公式 |
+| Q-H | [`design-quality-hotspot-top20.md`](design-quality-hotspot-top20.md) | ✅ 快照 | 复杂度 × git 变更频率 Top20 + 41 重症清单 |
+| Q-F | [`design-quality-frontend-index-summary.md`](design-quality-frontend-index-summary.md) | ✅ 快照 | 三前端 Codebase-Memory 索引摘要（图谱辅助） |
+| Q-CT | [`design-quality-frontend-ct-report.md`](design-quality-frontend-ct-report.md) | ✅ 实测 | 前端 X光/CT：vue-mess-detector 全量 + LOC/类型债 |
+| Q-CAB | [`design-quality-frontend-cabinets.md`](design-quality-frontend-cabinets.md) | ✅ 快照 | 专科五柜执行快照 + pnpm quality:* 命令 |
+| Q-ADR | [`design-quality-frontend-tooling-adr.md`](design-quality-frontend-tooling-adr.md) | ✅ Accepted | 五柜工具选型 ADR（depcruise/Knip/SonarJS/meta/fuite） |
+| Q-G | [`design-quality-baseline-gates.md`](design-quality-baseline-gates.md) | ✅ 设计稿 | 复杂度基线 Analyzer + NetArchTest（先设计后实现） |
+| Q-SPEC-BE | [`../../superpowers/specs/2026-08-06-backend-quality-remediation-design.md`](../../superpowers/specs/2026-08-06-backend-quality-remediation-design.md) | ✅ Draft | 后端质量迭代·设计规格（Hotspot/门禁） |
+| Q-PLAN-BE | [`../../superpowers/plans/2026-08-06-backend-quality-remediation-plan.md`](../../superpowers/plans/2026-08-06-backend-quality-remediation-plan.md) | ✅ Draft | 后端质量迭代·实施计划 W0–W3 |
+| Q-SPEC-FE | [`../../superpowers/specs/2026-08-06-frontend-quality-remediation-design.md`](../../superpowers/specs/2026-08-06-frontend-quality-remediation-design.md) | ✅ Draft | 前端质量迭代·设计规格（五柜） |
+| Q-PLAN-FE | [`../../superpowers/plans/2026-08-06-frontend-quality-remediation-plan.md`](../../superpowers/plans/2026-08-06-frontend-quality-remediation-plan.md) | ✅ Draft | 前端质量迭代·实施计划 F0–F3 |
 
 ---
 

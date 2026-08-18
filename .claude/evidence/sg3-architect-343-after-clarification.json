@@ -1,0 +1,34 @@
+{
+  "pipelineId": 343,
+  "at": "2026-07-11T01:11:33.188Z",
+  "setId": "584a2f8ad62144148b61fe4c33a06fd1",
+  "nextAction": "rerun-architect",
+  "terminal": {
+    "status": "completed",
+    "error": ""
+  },
+  "hasArchitectureDecisionRecorded": true,
+  "hasClarificationAnswered": true,
+  "has03": true,
+  "deliverables": [
+    "00-gate-report.json",
+    "00-merged-requirement.md",
+    "01-skeleton.md",
+    "02-requirement-spec.md",
+    "03-architecture.md"
+  ],
+  "recentEvents": [
+    "ArchitectureDecisionRecorded",
+    "ClarificationAnswered",
+    "ClarificationRequested",
+    "AnalysisCompleted",
+    "SaMaterializationCompleted",
+    "SkillReviewRecorded",
+    "StageConfirmed",
+    "SkillFailureRecorded",
+    "SkillFailureRecorded",
+    "SkillFailureRecorded",
+    "ClarificationRequested",
+    "AnalysisCompleted"
+  ]
+}

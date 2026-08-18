@@ -1,0 +1,842 @@
+﻿{
+  "version": 1,
+  "threshold": 30,
+  "source": "Roslyn CyclomaticComplexityWalker scan \u002B check02 seed merge",
+  "generatedAt": "2026-08-06T15:53:23.4241741+00:00",
+  "note": "Stock exemption for CC\u003E=threshold. Do not raise maxComplexity without CR; lower when methods are split.",
+  "entries": [
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Security/FrontEnd/CodeGenFormControlDesignHelper.cs::FormScriptDesign",
+      "name": "FormScriptDesign",
+      "maxComplexity": 593,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Security/FrontEnd/CodeGenFormControlDesignHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Security/FrontEnd/CodeGenFormControlDesignHelper.cs::FormControlDesign",
+      "name": "FormControlDesign",
+      "maxComplexity": 323,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Security/FrontEnd/CodeGenFormControlDesignHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/OrganizeAdministratorService.cs::GetSelector",
+      "name": "GetSelector",
+      "maxComplexity": 258,
+      "file": "modularity/system/JNPF.Systems/Permission/OrganizeAdministratorService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs::ImportDataAssemble",
+      "name": "ImportDataAssemble",
+      "maxComplexity": 216,
+      "file": "modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs::ImportDataAssemble",
+      "name": "ImportDataAssemble",
+      "maxComplexity": 209,
+      "file": "modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/codegen/JNPF.CodeGen/CodeGenService.cs::TemplatesDataAggregation",
+      "name": "TemplatesDataAggregation",
+      "maxComplexity": 201,
+      "file": "modularity/codegen/JNPF.CodeGen/CodeGenService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/VisualDevService.cs::FuncToMenu",
+      "name": "FuncToMenu",
+      "maxComplexity": 188,
+      "file": "modularity/visualdev/JNPF.VisualDev/VisualDevService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs::GetKeyData",
+      "name": "GetKeyData",
+      "maxComplexity": 183,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/CodeGen/CodeGenWay.cs::SingleTableFrontEnd",
+      "name": "SingleTableFrontEnd",
+      "maxComplexity": 151,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/CodeGen/CodeGenWay.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::GetListQuerySql",
+      "name": "GetListQuerySql",
+      "maxComplexity": 140,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs::TemplateControlsDataConversion",
+      "name": "TemplateControlsDataConversion",
+      "maxComplexity": 112,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant.Engine/InteAssistantRun.cs::GetIntegrateNodeList",
+      "name": "GetIntegrateNodeList",
+      "maxComplexity": 109,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant.Engine/InteAssistantRun.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::GetListResult",
+      "name": "GetListResult",
+      "maxComplexity": 96,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs::GetCodeGenAuthorizeModuleResource",
+      "name": "GetCodeGenAuthorizeModuleResource",
+      "maxComplexity": 94,
+      "file": "modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs::GetCDataList",
+      "name": "GetCDataList",
+      "maxComplexity": 93,
+      "file": "modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs::GetCDataList",
+      "name": "GetCDataList",
+      "maxComplexity": 92,
+      "file": "modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/System/ModuleService.cs::ImportData",
+      "name": "ImportData",
+      "maxComplexity": 92,
+      "file": "modularity/system/JNPF.Systems/System/ModuleService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant/Skills/RequirementAnalysisOrchestrator.cs::RunPmPipelineAsync",
+      "name": "RunPmPipelineAsync",
+      "maxComplexity": 91,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant/Skills/RequirementAnalysisOrchestrator.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::SaveDataToDataByFId",
+      "name": "SaveDataToDataByFId",
+      "maxComplexity": 90,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Security/BackEnd/CodeGenControlsAttributeHelper.cs::GetItemRule",
+      "name": "GetItemRule",
+      "maxComplexity": 88,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Security/BackEnd/CodeGenControlsAttributeHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Security/FrontEnd/CodeGenFormControlDesignHelper.cs::FormControlProps",
+      "name": "FormControlProps",
+      "maxComplexity": 85,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Security/FrontEnd/CodeGenFormControlDesignHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/OrganizeAdministratorService.cs::Save",
+      "name": "Save",
+      "maxComplexity": 85,
+      "file": "modularity/system/JNPF.Systems/Permission/OrganizeAdministratorService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs::GetCondition",
+      "name": "GetCondition",
+      "maxComplexity": 84,
+      "file": "modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::GetSuperQueryInput",
+      "name": "GetSuperQueryInput",
+      "maxComplexity": 84,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs::GetConditionAsync",
+      "name": "GetConditionAsync",
+      "maxComplexity": 82,
+      "file": "modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs::GetDataConditionAsync",
+      "name": "GetDataConditionAsync",
+      "maxComplexity": 82,
+      "file": "modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common/Security/SuperQueryHelper.cs::GetSuperQueryInput",
+      "name": "GetSuperQueryInput",
+      "maxComplexity": 82,
+      "file": "modularity/common/JNPF.Common/Security/SuperQueryHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::FieldBindDefaultValue",
+      "name": "FieldBindDefaultValue",
+      "maxComplexity": 82,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::GenerateFeilds",
+      "name": "GenerateFeilds",
+      "maxComplexity": 81,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/oauth/JNPF.OAuth/OAuthService.cs::Login",
+      "name": "Login",
+      "maxComplexity": 74,
+      "file": "modularity/oauth/JNPF.OAuth/OAuthService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::DataTransferVerify",
+      "name": "DataTransferVerify",
+      "maxComplexity": 74,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::GetQueryJson",
+      "name": "GetQueryJson",
+      "maxComplexity": 72,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common.Core/Handlers/IMHandler.cs::MessageRoute",
+      "name": "MessageRoute",
+      "maxComplexity": 71,
+      "file": "modularity/common/JNPF.Common.Core/Handlers/IMHandler.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/PortalService.cs::SyncPortal",
+      "name": "SyncPortal",
+      "maxComplexity": 69,
+      "file": "modularity/visualdev/JNPF.VisualDev/PortalService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/oauth/JNPF.OAuth/OAuthService.cs::GetCurrentUser",
+      "name": "GetCurrentUser",
+      "maxComplexity": 67,
+      "file": "modularity/oauth/JNPF.OAuth/OAuthService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Core/TemplateParsingBase.cs::GetItemRule",
+      "name": "GetItemRule",
+      "maxComplexity": 65,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Core/TemplateParsingBase.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::GetDataViewQuery",
+      "name": "GetDataViewQuery",
+      "maxComplexity": 65,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs::StreamLlmResponseAsync",
+      "name": "StreamLlmResponseAsync",
+      "maxComplexity": 64,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant/AIDevelopmentPipelineService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs::ImportFirstVerify",
+      "name": "ImportFirstVerify",
+      "maxComplexity": 63,
+      "file": "modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/UsersService.cs::ImportUserData",
+      "name": "ImportUserData",
+      "maxComplexity": 62,
+      "file": "modularity/system/JNPF.Systems/Permission/UsersService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs::GetVisualDevCaCheData",
+      "name": "GetVisualDevCaCheData",
+      "maxComplexity": 61,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/OrganizeAdministratorService.cs::GetOrganizeAdministrators",
+      "name": "GetOrganizeAdministrators",
+      "maxComplexity": 61,
+      "file": "modularity/system/JNPF.Systems/Permission/OrganizeAdministratorService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/Contracts/SkeletonPayload.cs::Parse",
+      "name": "Parse",
+      "maxComplexity": 59,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/Contracts/SkeletonPayload.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common.CodeGen/DataParsing/ControlParsing.cs::GetParsDataByList",
+      "name": "GetParsDataByList",
+      "maxComplexity": 58,
+      "file": "modularity/common/JNPF.Common.CodeGen/DataParsing/ControlParsing.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs::ImportFirstVerify",
+      "name": "ImportFirstVerify",
+      "maxComplexity": 57,
+      "file": "modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/CodeGen/CodeGenWay.cs::CodeGenFrontEndEngine",
+      "name": "CodeGenFrontEndEngine",
+      "maxComplexity": 56,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/CodeGen/CodeGenWay.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/PermissionGroupService.cs::GetPermission",
+      "name": "GetPermission",
+      "maxComplexity": 54,
+      "file": "modularity/system/JNPF.Systems/Permission/PermissionGroupService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/VisualDevService.cs::MenuMergeDataAuth",
+      "name": "MenuMergeDataAuth",
+      "maxComplexity": 54,
+      "file": "modularity/visualdev/JNPF.VisualDev/VisualDevService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::GetCreateSqlByTemplate",
+      "name": "GetCreateSqlByTemplate",
+      "maxComplexity": 53,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs::GetImportPreviewData",
+      "name": "GetImportPreviewData",
+      "maxComplexity": 49,
+      "file": "modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/UsersService.cs::ExportData",
+      "name": "ExportData",
+      "maxComplexity": 48,
+      "file": "modularity/system/JNPF.Systems/Permission/UsersService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/taskscheduler/JNPF.TaskScheduler/TimeTaskService.cs::Update",
+      "name": "Update",
+      "maxComplexity": 48,
+      "file": "modularity/taskscheduler/JNPF.TaskScheduler/TimeTaskService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::GetUpdateSqlByTemplate",
+      "name": "GetUpdateSqlByTemplate",
+      "maxComplexity": 48,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs::ImportPreview",
+      "name": "ImportPreview",
+      "maxComplexity": 48,
+      "file": "modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common/Security/ExcelExportHelper.cs::ExportMemoryStream",
+      "name": "ExportMemoryStream",
+      "maxComplexity": 47,
+      "file": "modularity/common/JNPF.Common/Security/ExcelExportHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/CodeGen/CodeGenWay.cs::GetCodeGenConfigModel",
+      "name": "GetCodeGenConfigModel",
+      "maxComplexity": 47,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/CodeGen/CodeGenWay.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant.Engine/InteAssistantRun.cs::GetTargetForm",
+      "name": "GetTargetForm",
+      "maxComplexity": 47,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant.Engine/InteAssistantRun.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/PortalService.cs::GetInfoAuth",
+      "name": "GetInfoAuth",
+      "maxComplexity": 47,
+      "file": "modularity/visualdev/JNPF.VisualDev/PortalService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/Contracts/DdlPayload.cs::Parse",
+      "name": "Parse",
+      "maxComplexity": 46,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/Contracts/DdlPayload.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs::GetSystemComponentsData",
+      "name": "GetSystemComponentsData",
+      "maxComplexity": 45,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/UsersService.cs::Update",
+      "name": "Update",
+      "maxComplexity": 45,
+      "file": "modularity/system/JNPF.Systems/Permission/UsersService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Security/CodeGenUnifiedHandlerHelper.cs::LinkageChainJudgment",
+      "name": "LinkageChainJudgment",
+      "maxComplexity": 44,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Security/CodeGenUnifiedHandlerHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant/Skills/RequirementAnalysisOrchestrator.cs::ParseQuestionsFromLlm",
+      "name": "ParseQuestionsFromLlm",
+      "maxComplexity": 44,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant/Skills/RequirementAnalysisOrchestrator.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant/Skills/SkillsApiService.cs::AnswerClarificationAsync",
+      "name": "AnswerClarificationAsync",
+      "maxComplexity": 44,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant/Skills/SkillsApiService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/System/ModuleService.cs::GetPermission",
+      "name": "GetPermission",
+      "maxComplexity": 44,
+      "file": "modularity/system/JNPF.Systems/System/ModuleService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/System/DataSyncService.cs::GetDataTypeList",
+      "name": "GetDataTypeList",
+      "maxComplexity": 43,
+      "file": "modularity/system/JNPF.Systems/System/DataSyncService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/System/DictionaryDataService.cs::CheckDataAsync",
+      "name": "CheckDataAsync",
+      "maxComplexity": 43,
+      "file": "modularity/system/JNPF.Systems/System/DictionaryDataService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs::GetCreateFirstColumnsHeader",
+      "name": "GetCreateFirstColumnsHeader",
+      "maxComplexity": 43,
+      "file": "modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant/LlmGatewayService.cs::ChatAsync",
+      "name": "ChatAsync",
+      "maxComplexity": 41,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant/LlmGatewayService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant/Skills/PmSkillService.cs::ParseQuestionsFromLlm",
+      "name": "ParseQuestionsFromLlm",
+      "maxComplexity": 41,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant/Skills/PmSkillService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/UsersCurrentService.cs::DefaultOrganize",
+      "name": "DefaultOrganize",
+      "maxComplexity": 41,
+      "file": "modularity/system/JNPF.Systems/Permission/UsersCurrentService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/workflow/JNPF.WorkFlow/Manager/FlowTaskManager.cs::Recall",
+      "name": "Recall",
+      "maxComplexity": 41,
+      "file": "modularity/workflow/JNPF.WorkFlow/Manager/FlowTaskManager.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs::GetCreateFirstColumnsHeader",
+      "name": "GetCreateFirstColumnsHeader",
+      "maxComplexity": 40,
+      "file": "modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::GetListChildTable",
+      "name": "GetListChildTable",
+      "maxComplexity": 40,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "framework/JNPF/Schedule/Factories/SchedulerFactory.Exports.cs::TrySaveJob",
+      "name": "TrySaveJob",
+      "maxComplexity": 39,
+      "file": "framework/JNPF/Schedule/Factories/SchedulerFactory.Exports.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Security/BackEnd/CodeGenControlsAttributeHelper.cs::GetWhetherToConvertAllModeControlsIntoLists",
+      "name": "GetWhetherToConvertAllModeControlsIntoLists",
+      "maxComplexity": 39,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Security/BackEnd/CodeGenControlsAttributeHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/System/DataInterfaceService.cs::GetApiParameter",
+      "name": "GetApiParameter",
+      "maxComplexity": 39,
+      "file": "modularity/system/JNPF.Systems/System/DataInterfaceService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/System/DictionaryDataService.cs::ImportData",
+      "name": "ImportData",
+      "maxComplexity": 39,
+      "file": "modularity/system/JNPF.Systems/System/DictionaryDataService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "framework/JNPF/App/Extensions/ObjectExtensions.cs::ChangeType",
+      "name": "ChangeType",
+      "maxComplexity": 38,
+      "file": "framework/JNPF/App/Extensions/ObjectExtensions.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/Contracts/SystemDesignPayload.cs::Parse",
+      "name": "Parse",
+      "maxComplexity": 38,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant.Entitys/Ir/Contracts/SystemDesignPayload.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/UsersService.cs::GetOrganizeMemberList",
+      "name": "GetOrganizeMemberList",
+      "maxComplexity": 38,
+      "file": "modularity/system/JNPF.Systems/Permission/UsersService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "framework/JNPF/DynamicApiController/Conventions/DynamicApiControllerApplicationModelConvention.cs::ConfigureActionRouteAttribute",
+      "name": "ConfigureActionRouteAttribute",
+      "maxComplexity": 37,
+      "file": "framework/JNPF/DynamicApiController/Conventions/DynamicApiControllerApplicationModelConvention.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs::TemplateDownload",
+      "name": "TemplateDownload",
+      "maxComplexity": 37,
+      "file": "modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/workflow/JNPF.WorkFlow/Manager/FlowTaskUserUtil.cs::GetFlowUserId",
+      "name": "GetFlowUserId",
+      "maxComplexity": 37,
+      "file": "modularity/workflow/JNPF.WorkFlow/Manager/FlowTaskUserUtil.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs::CreateInte",
+      "name": "CreateInte",
+      "maxComplexity": 36,
+      "file": "modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs::GetTemplateDataValueByKey",
+      "name": "GetTemplateDataValueByKey",
+      "maxComplexity": 36,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/oauth/JNPF.OAuth/OAuthService.cs::SocialsLoginCallBack",
+      "name": "SocialsLoginCallBack",
+      "maxComplexity": 36,
+      "file": "modularity/oauth/JNPF.OAuth/OAuthService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/OrganizeService.cs::Update",
+      "name": "Update",
+      "maxComplexity": 36,
+      "file": "modularity/system/JNPF.Systems/Permission/OrganizeService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/RoleService.cs::Update",
+      "name": "Update",
+      "maxComplexity": 36,
+      "file": "modularity/system/JNPF.Systems/Permission/RoleService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/System/ModuleService.cs::GetUserModuleListInternal",
+      "name": "GetUserModuleListInternal",
+      "maxComplexity": 36,
+      "file": "modularity/system/JNPF.Systems/System/ModuleService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/codegen/JNPF.CodeGen/CodeGenService.cs::GenFrondEnd",
+      "name": "GenFrondEnd",
+      "maxComplexity": 35,
+      "file": "modularity/codegen/JNPF.CodeGen/CodeGenService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/AuthorizeService.cs::GetDataValues",
+      "name": "GetDataValues",
+      "maxComplexity": 35,
+      "file": "modularity/system/JNPF.Systems/Permission/AuthorizeService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/SocialsUserService.cs::GetAuthRequest",
+      "name": "GetAuthRequest",
+      "maxComplexity": 35,
+      "file": "modularity/system/JNPF.Systems/Permission/SocialsUserService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/System/ModuleService.cs::GetUserModuleList",
+      "name": "GetUserModuleList",
+      "maxComplexity": 35,
+      "file": "modularity/system/JNPF.Systems/System/ModuleService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/System/ScheduleService.cs::Update",
+      "name": "Update",
+      "maxComplexity": 35,
+      "file": "modularity/system/JNPF.Systems/System/ScheduleService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/workflow/JNPF.WorkFlow/Manager/FlowTaskManager.cs::Audit",
+      "name": "Audit",
+      "maxComplexity": 35,
+      "file": "modularity/workflow/JNPF.WorkFlow/Manager/FlowTaskManager.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/workflow/JNPF.WorkFlow/Repository/FlowTaskRepository.cs::GetBatchWaitList",
+      "name": "GetBatchWaitList",
+      "maxComplexity": 35,
+      "file": "modularity/workflow/JNPF.WorkFlow/Repository/FlowTaskRepository.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common/Security/CodeGenHelper.cs::CodeGenTemplate",
+      "name": "CodeGenTemplate",
+      "maxComplexity": 34,
+      "file": "modularity/common/JNPF.Common/Security/CodeGenHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/UserRelationService.cs::Create",
+      "name": "Create",
+      "maxComplexity": 34,
+      "file": "modularity/system/JNPF.Systems/Permission/UserRelationService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "framework/JNPF/Logging/Implantations/Monitors/LoggingMonitorAttribute.cs::MonitorAsync",
+      "name": "MonitorAsync",
+      "maxComplexity": 33,
+      "file": "framework/JNPF/Logging/Implantations/Monitors/LoggingMonitorAttribute.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/System/ScheduleService.cs::Delete",
+      "name": "Delete",
+      "maxComplexity": 33,
+      "file": "modularity/system/JNPF.Systems/System/ScheduleService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::BatchDelHaveTableData",
+      "name": "BatchDelHaveTableData",
+      "maxComplexity": 33,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/workflow/JNPF.WorkFlow/Repository/FlowTaskRepository.cs::GetWaitList",
+      "name": "GetWaitList",
+      "maxComplexity": 33,
+      "file": "modularity/workflow/JNPF.WorkFlow/Repository/FlowTaskRepository.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "framework/JNPF/RemoteRequest/Internal/HttpRequestPartMethods.cs::SendAsync",
+      "name": "SendAsync",
+      "maxComplexity": 32,
+      "file": "framework/JNPF/RemoteRequest/Internal/HttpRequestPartMethods.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/System/DataInterfaceService.cs::GetSqlParameter",
+      "name": "GetSqlParameter",
+      "maxComplexity": 32,
+      "file": "modularity/system/JNPF.Systems/System/DataInterfaceService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common/Security/CodeGenExportDataHelper.cs::GetCreateFirstColumnsHeader",
+      "name": "GetCreateFirstColumnsHeader",
+      "maxComplexity": 31,
+      "file": "modularity/common/JNPF.Common/Security/CodeGenExportDataHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs::ControlParsingLinkage",
+      "name": "ControlParsingLinkage",
+      "maxComplexity": 31,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Security/FrontEnd/CodeGenFormControlDesignHelper.cs::DefaultFormControlList",
+      "name": "DefaultFormControlList",
+      "maxComplexity": 31,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Security/FrontEnd/CodeGenFormControlDesignHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant/Ir/IrProjectionEngine.cs::ProjectEventAsync",
+      "name": "ProjectEventAsync",
+      "maxComplexity": 31,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant/Ir/IrProjectionEngine.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant/Skills/AnalystSkillService.cs::ThinkAsync",
+      "name": "ThinkAsync",
+      "maxComplexity": 31,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant/Skills/AnalystSkillService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/system/JNPF.Systems/Permission/DepartmentService.cs::Update",
+      "name": "Update",
+      "maxComplexity": 31,
+      "file": "modularity/system/JNPF.Systems/Permission/DepartmentService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::GetHaveTableInfoDetails",
+      "name": "GetHaveTableInfoDetails",
+      "maxComplexity": 31,
+      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs::GetCreateFirstColumnsHeader",
+      "name": "GetCreateFirstColumnsHeader",
+      "maxComplexity": 31,
+      "file": "modularity/visualdev/JNPF.VisualDev/VisualdevModelAppService.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/workflow/JNPF.WorkFlow/Manager/FlowTaskManager.cs::AutoAudit",
+      "name": "AutoAudit",
+      "maxComplexity": 31,
+      "file": "modularity/workflow/JNPF.WorkFlow/Manager/FlowTaskManager.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "framework/JNPF/RemoteRequest/Internal/HttpRequestPartMethods.cs::SetHttpContent",
+      "name": "SetHttpContent",
+      "maxComplexity": 30,
+      "file": "framework/JNPF/RemoteRequest/Internal/HttpRequestPartMethods.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "framework/JNPF/TimeCrontab/Crontab.Internal.cs::InternalGetNextOccurence",
+      "name": "InternalGetNextOccurence",
+      "maxComplexity": 30,
+      "file": "framework/JNPF/TimeCrontab/Crontab.Internal.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common/Security/CodeGenHelper.cs::ConvertDataType",
+      "name": "ConvertDataType",
+      "maxComplexity": 30,
+      "file": "modularity/common/JNPF.Common/Security/CodeGenHelper.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/inteAssistant/JNPF.InteAssistant/Skills/RequirementAnalysisOrchestrator.cs::MergePspecEnhancements",
+      "name": "MergePspecEnhancements",
+      "maxComplexity": 30,
+      "file": "modularity/inteAssistant/JNPF.InteAssistant/Skills/RequirementAnalysisOrchestrator.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/workflow/JNPF.WorkFlow/Manager/FlowTaskManager.cs::Change",
+      "name": "Change",
+      "maxComplexity": 30,
+      "file": "modularity/workflow/JNPF.WorkFlow/Manager/FlowTaskManager.cs",
+      "measuredBy": "CyclomaticComplexityWalker"
+    }
+  ]
+}

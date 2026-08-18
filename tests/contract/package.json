@@ -1,0 +1,16 @@
+{
+  "name": "jnpf-contract-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JNPF Studio API Pact Consumer Contract Tests",
+  "type": "module",
+  "scripts": {
+    "test": "mocha tests/contract/**/*.pact.test.js --timeout 10000",
+    "pact:verify": "pact-verifier --provider-base-url=http://localhost:5000 --pact-url=./tests/contract/pacts/jnpf-web-vue3-jnpf-api-entry.json"
+  },
+  "devDependencies": {
+    "@pact-foundation/pact": "^13.1.0",
+    "@pact-foundation/pact-cli": "^16.0.0",
+    "mocha": "^10.7.0"
+  }
+}

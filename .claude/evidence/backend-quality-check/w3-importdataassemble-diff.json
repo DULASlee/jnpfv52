@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-08-06T16:45:00Z",
+  "wave": "W3",
+  "primary": {
+    "name": "VisualDevModelDataService.ImportDataAssemble",
+    "file": "modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs",
+    "approxLines": 855,
+    "rationale": "Online-dev import path; richer DATE null-safety; COMINPUT branch; strangler target"
+  },
+  "secondary": {
+    "name": "ExportImportDataHelper.ImportDataAssemble",
+    "file": "modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs",
+    "approxLines": 813,
+    "rationale": "Codegen helper; separator default /; clears empty select to null"
+  },
+  "sharedKeysApprox": 27,
+  "onlyInPrimary": ["COMINPUT"],
+  "behavioralDiffs": [
+    "DATE: primary more null-safe; secondary gates on startTimeValue",
+    "SELECT empty: primary leave-as-is; secondary assign null",
+    "separator: secondary defaults to /",
+    "userInfo: secondary captures User at entry"
+  ],
+  "stranglerOrder": [
+    "Shared errors/cache/option mappers (this wave)",
+    "Shared DATE bound calculator (next)",
+    "Secondary delegates; primary remains online entry"
+  ],
+  "stages": {
+    "parse": "ImportFieldCacheLookup.Resolve",
+    "validate": "ImportAssembleErrors + DATE rules",
+    "map": "ImportOptionValueMapper",
+    "write": "Caller persists"
+  }
+}

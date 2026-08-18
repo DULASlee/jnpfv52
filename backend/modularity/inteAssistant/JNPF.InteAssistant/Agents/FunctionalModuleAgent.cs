@@ -31,7 +31,7 @@ public class FunctionalModuleAgent : ISubAgent, ITransient
 
     public async Task<SubAgentResult> ExecuteAsync(
         DetailedDesignContext context,
-        Dictionary<string, SubAgentResult> previousResults,
+        IReadOnlyDictionary<string, SubAgentResult> previousResults,
         CancellationToken ct = default)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();

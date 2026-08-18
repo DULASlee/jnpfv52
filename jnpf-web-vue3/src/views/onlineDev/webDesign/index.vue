@@ -4,7 +4,7 @@
       <div class="jnpf-content-wrapper-content">
         <BasicTable @register="registerTable">
           <template #tableTitle>
-            <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" @click="openAddModal()">{{ t('common.addText') }}</a-button>
+            <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" :loading="!addModalLoaded" @mouseenter="prefetchAdd" @click="openAddModal()">{{ t('common.addText') }}</a-button>
             <jnpf-upload-btn url="/api/visualdev/OnlineDev/Actions/Import" accept=".vdd" @on-success="reload" />
           </template>
           <template #bodyCell="{ column, record }">
@@ -31,38 +31,64 @@
   </div>
 </template>
 <script lang="ts" setup>
-  import { reactive, onMounted, ref } from 'vue';
+  import { reactive, onMounted, ref, onErrorCaptured } from 'vue';
   import { getVisualDevList, delVisualDev, copy, exportData } from '/@/api/onlineDev/visualDev';
   import { getFlowByFormId } from '/@/api/workFlow/formDesign';
   import { BasicTable, useTable, TableAction, BasicColumn, ActionItem } from '/@/components/Table';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
-  import { useModal } from '/@/components/Modal';
   import { usePopup } from '/@/components/Popup';
   import { useBaseStore } from '/@/store/modules/base';
-  import Form from './Form.vue';
-  import ViewForm from './ViewForm.vue';
-  import AddModal from './components/AddModal.vue';
-  import ReleaseModal from './components/ReleaseModal.vue';
-  import ShortLinkModal from './components/ShortLinkModal.vue';
-  import VersionManage from '/@/views/workFlow/flowEngine/VersionManage.vue';
-  import EngineForm from '/@/views/workFlow/flowEngine/Form.vue';
   import { downloadByUrl } from '/@/utils/file/download';
-  import { PreviewModal } from '/@/components/CommonModal';
+  import { useLazyComponent } from '/@/hooks/web/useLazyComponent';
+  import { useLazyModal } from '/@/hooks/web/useLazyModal';
+  // ── 四层防御：useLazyModal = useLazyComponent + useModal 一体化 ──
+  // Layer 1: safeOpen 加载感知队列（组件未就绪时排队，register 后自动回放）
+  // Layer 2: isLoaded + prefetch 供按钮绑定 :loading + @mouseenter
+  // Layer 3: onErrorCaptured 错误边界（见下方）
+  // Layer 4: 开发态 120s / 生产 10s；进页不挂载弹窗，仅交互时加载 chunk
+  const MODULE = 'onlineDev/webDesign';
+
+  // ── Modal 类组件：useLazyModal 一体化 ──
+  const { component: Form, register: registerForm, openModal: openFormModal,
+    isLoaded: formLoaded, prefetch: prefetchForm } =
+    useLazyModal(() => import('./Form.vue'), MODULE);
+  const { component: ViewForm, register: registerViewForm, openModal: openViewFormModal,
+    isLoaded: viewFormLoaded, prefetch: prefetchViewForm } =
+    useLazyModal(() => import('./ViewForm.vue'), MODULE);
+  const { component: AddModal, register: registerAdd, openModal: openAddModal,
+    isLoaded: addModalLoaded, prefetch: prefetchAdd } =
+    useLazyModal(() => import('./components/AddModal.vue'), MODULE);
+  const { component: ReleaseModal, register: registerReleaseModal, openModal: openReleaseModal,
+    isLoaded: releaseLoaded, prefetch: prefetchRelease } =
+    useLazyModal(() => import('./components/ReleaseModal.vue'), MODULE);
+  const { component: ShortLinkModal, register: registerShortLink, openModal: openShortLinkModal,
+    isLoaded: shortLinkLoaded, prefetch: prefetchShortLink } =
+    useLazyModal(() => import('./components/ShortLinkModal.vue'), MODULE);
+  const { component: EngineForm, register: registerEngineForm, openModal: openEngineFormModal,
+    isLoaded: engineFormLoaded, prefetch: prefetchEngineForm } =
+    useLazyModal(() => import('/@/views/workFlow/flowEngine/Form.vue'), MODULE);
+  const { component: PreviewModal, register: registerPreview, openModal: openPreviewModal,
+    isLoaded: previewLoaded, prefetch: prefetchPreview } =
+    useLazyModal(() => import('/@/components/CommonModal/src/PreviewModal.vue'), MODULE);
+
+  // VersionManage 使用 Popup（非 Modal），沿用 useLazyComponent + usePopup + load()
+  const { component: VersionManage, isLoaded: vmLoaded, load: loadVM } =
+    useLazyComponent(() => import('/@/views/workFlow/flowEngine/VersionManage.vue'), MODULE);
+  const [registerVersionManage, { openPopup: openVersionManagePopup }] = usePopup();
 
   defineOptions({ name: 'OnlineDevWebDesign' });
 
   const { createMessage } = useMessage();
   const baseStore = useBaseStore();
   const { t } = useI18n();
-  const [registerForm, { openModal: openFormModal }] = useModal();
-  const [registerViewForm, { openModal: openViewFormModal }] = useModal();
-  const [registerAdd, { openModal: openAddModal }] = useModal();
-  const [registerReleaseModal, { openModal: openReleaseModal }] = useModal();
-  const [registerShortLink, { openModal: openShortLinkModal }] = useModal();
-  const [registerEngineForm, { openModal: openEngineFormModal }] = useModal();
-  const [registerPreview, { openModal: openPreviewModal }] = useModal();
-  const [registerVersionManage, { openPopup: openVersionManagePopup }] = usePopup();
+
+  // ── 第 3 层：错误边界 — 捕获子组件异常，阻止级联崩溃 ──
+  onErrorCaptured((err, _instance, info) => {
+    console.error('[webDesign] 子组件异常已捕获，阻止级联崩溃', { err, info });
+    createMessage.error('页面组件异常，请刷新页面后重试');
+    return false; // 阻止向上冒泡到全局 errorHandler
+  });
 
   const columns: BasicColumn[] = [
     { title: '名称', dataIndex: 'fullName', width: 200 },
@@ -225,7 +251,10 @@
       openEngineFormModal(true, { id: flowId, type: 1, categoryList: enginCategoryList.value, formId: id });
     });
   }
-  function handleVersionManage(id, fullName) {
+  async function handleVersionManage(id, fullName) {
+    if (!vmLoaded.value) {
+      try { await loadVM(); } catch { createMessage.error('组件加载失败'); return; }
+    }
     openVersionManagePopup(true, { id, fullName, type: 1 });
   }
   function handleRelease(record) {
@@ -249,10 +278,13 @@
     });
   }
   async function getOptions() {
-    const res = await baseStore.getDictionaryData('webDesign');
-    categoryList.value = res as any[];
-    getForm().updateSchema({ field: 'category', componentProps: { options: res } });
-    enginCategoryList.value = (await baseStore.getDictionaryData('WorkFlowCategory')) as any[];
+    const [webDesignDict, workFlowCategory] = await Promise.all([
+      baseStore.getDictionaryData('webDesign'),
+      baseStore.getDictionaryData('WorkFlowCategory'),
+    ]);
+    categoryList.value = webDesignDict as any[];
+    getForm().updateSchema({ field: 'category', componentProps: { options: webDesignDict } });
+    enginCategoryList.value = workFlowCategory as any[];
   }
   function handleAdd(webType) {
     addOrUpdateHandle('', webType);

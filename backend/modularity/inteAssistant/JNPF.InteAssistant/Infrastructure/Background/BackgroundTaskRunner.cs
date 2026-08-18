@@ -41,10 +41,18 @@ public sealed class BackgroundTaskRunner : IBackgroundTaskRunner, IDisposable
 
         var state = new TaskState { Cts = cts, LinkedCts = linkedCts };
 
-        // 原子占位——TryAdd 保证并发安全，失败立即释放资源
+        // 同名校验：取消并替换仍在运行的任务（避免续跑/继续指令并发导致 IR 竞态 + SSE 断流）
+        if (_activeTasks.TryRemove(taskName, out var existing))
+        {
+            _logger.LogInformation("后台任务被新请求替换: {Name}", taskName);
+            try { existing.LinkedCts.Cancel(); } catch { /* 已释放 */ }
+            try { existing.LinkedCts.Dispose(); } catch { /* 已释放 */ }
+            try { existing.Cts.Dispose(); } catch { /* 已释放 */ }
+        }
+
         if (!_activeTasks.TryAdd(taskName, state))
         {
-            _logger.LogWarning("后台任务已存在: {Name}", taskName);
+            _logger.LogWarning("后台任务占位失败: {Name}", taskName);
             linkedCts.Dispose();
             cts.Dispose();
             return;

@@ -545,7 +545,6 @@
   import { useUserStore } from '/@/store/modules/user';
   import { useBaseStore } from '/@/store/modules/base';
   import { useModal } from '/@/components/Modal';
-  import { usePopup } from '/@/components/Popup';
   import { BasicLeftTree, TreeActionType } from '/@/components/Tree';
   import { BasicForm, useForm } from '/@/components/Form';
   import { BasicTable, useTable, TableAction, ActionItem, TableActionType, SorterResult } from '/@/components/Table';
@@ -553,7 +552,12 @@
   import CustomForm from './CustomForm.vue';
   import Detail from './detail/index.vue';
   import ChildTableColumn from './ChildTableColumn.vue';
-  import FlowParser from '/@/views/workFlow/components/FlowParser.vue';
+  import { useLazyPopup } from '/@/hooks/web/useLazyPopup';
+  const {
+    component: FlowParser,
+    register: registerFlowParser,
+    openPopup: openFlowParser,
+  } = useLazyPopup(() => import('/@/views/workFlow/components/FlowParser.vue'), 'workFlow/FlowParser');
   import CandidateModal from '/@/views/workFlow/components/modal/CandidateModal.vue';
   import { ExportModal, ImportModal, SuperQueryModal, SelectFlowModal } from '/@/components/CommonModal';
   import { downloadByUrl } from '/@/utils/file/download';
@@ -612,7 +616,6 @@
   const organizeStore = useOrganizeStore();
   const userStore = useUserStore();
   const baseStore = useBaseStore();
-  const [registerFlowParser, { openPopup: openFlowParser }] = usePopup();
   const [registerExportModal, { openModal: openExportModal, closeModal: closeExportModal, setModalProps: setExportModalProps }] = useModal();
   const [registerImportModal, { openModal: openImportModal }] = useModal();
   const [registerSuperQueryModal, { openModal: openSuperQuery }] = useModal();

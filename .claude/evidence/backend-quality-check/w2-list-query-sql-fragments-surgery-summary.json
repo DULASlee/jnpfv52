@@ -1,0 +1,23 @@
+{
+  "wave": "W2+",
+  "knife": "ListQuerySqlFragmentHelpers",
+  "date": "2026-08-08",
+  "status": "PASS",
+  "summary": "Deepen GetListQuerySql extract: SQL fragments (IN/empty-child/soft-delete/tenant/outer wrap/merge WHERE), FIELD_i projection remaps, permission FieldName rewrite; ToSqlString/DB checks stay in RunService.",
+  "artifacts": {
+    "helpers": [
+      "backend/modularity/visualdev/JNPF.VisualDev/Query/ListQuerySqlFragmentHelpers.cs",
+      "backend/modularity/visualdev/JNPF.VisualDev/Query/ListQuerySqlProjectionHelpers.cs"
+    ],
+    "callSites": [
+      "RunService.GetListQuerySql"
+    ],
+    "tests": "backend/tests/JNPF.Tests.VisualDev/ListQuerySqlFragmentHelpersTests.cs",
+    "prior": "ListQueryFieldAliasRewriter"
+  },
+  "verification": {
+    "ListQuerySqlFragmentHelpersTests": "12/12",
+    "VisualDevSuite": "184/184",
+    "codeReview": "PASS"
+  }
+}

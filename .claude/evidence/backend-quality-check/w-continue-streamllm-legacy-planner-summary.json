@@ -1,0 +1,13 @@
+{
+  "wave": "W-continue-StreamLlm-LEGACY-planner",
+  "date": "2026-08-07",
+  "summary": "Extract LegacyRequirementGatePlanner (prompt/clarification decisions + SSE copy); IsGatewayStreamError on StreamLlmFlowHelpers; attachment I/O stays in StreamLlmResponseAsync",
+  "tests": { "Legacy+StreamLlm filter": "see last run" },
+  "review": "PASS (0 Critical/High)",
+  "efficacy": [
+    "LEGACY gate decision tree unit-testable without DI/DB",
+    "ForceRefine > MaxRounds and explore/confirm clarification preserved",
+    "Method body still holds attachment I/O — further extract needs facade"
+  ],
+  "next": "Attachment persist/process facade OR RunService table-filter mode OR W2 FieldBindDefaultValue"
+}

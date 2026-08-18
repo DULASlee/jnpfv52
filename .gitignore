@@ -1,3 +1,10 @@
+# Windows reserved names
+nul
+
+# Codegen sandbox (NuGet packages are large and ephemeral)
+workspace/codegen-sandbox/.nuget/
+workspace/codegen-sandbox/.restore-complete
+
 # .NET / MSBuild
 .vs
 logs
@@ -25,11 +32,16 @@ docs/token.txt
 
 # Cursor / toolchain
 .cursor/logs/
+.jnpf-dev.lock
+scripts/.jnpf-session.json
+api-tests/http/http-client.env.json
 .cursor/episodic/sync-status.json
+.cursor/episodic/hook-run-log.json
 .cursor/edge-debug-profile/
 .env.toolchain
-# Claude Code — ignore all settings (contains tokens / local paths)
-.claude/settings.json
+# Claude Code settings — 区分团队共享与个人本地
+# settings.json = 团队共享 hook 注册（无密钥，入版本控制）
+# settings.local.json = 个人覆盖（含 token / 本地路径，保持忽略）
 .claude/settings.local.json
 .claude/projects/
 .claude/*.log
@@ -58,3 +70,33 @@ DB/*.BAK
 backend/.claude/
 DB/*
 DB/
+
+# Runtime storage (AI pipeline deliverables, attachments, generated artifacts)
+FileStorage/
+
+# Pipeline workspace generated output (per-pipeline id dirs, runtime)
+workspace/generated/[0-9]*/
+
+# Python bytecode cache (recursive — covers scripts/ and scripts/lib/)
+**/__pycache__/
+*.pyc
+
+# Backup files with date/version suffix (e.g. CLAUDE.md.bak.20260707)
+*.bak.*
+*.bak-*
+
+# E2E / debug runner transient state
+scripts/.e2e-state.json
+scripts/.events-*.txt
+scripts/.jnpf-*.json
+scripts/*-pid.txt
+
+# Playwright / vitest runner output
+test-output/
+test-results/
+
+# Analysis artifacts (regenerable)
+ureport2-analysis/
+
+# Serena LSP tool cache (never commit)
+jnpf-web-vue3/.serena/

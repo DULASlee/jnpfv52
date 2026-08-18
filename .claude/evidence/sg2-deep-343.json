@@ -1,0 +1,33 @@
+{
+  "pipelineId": 343,
+  "at": "2026-07-11T00:17:45.675Z",
+  "deliverables": [
+    "00-gate-report.json",
+    "00-merged-requirement.md",
+    "01-skeleton.md",
+    "02-requirement-spec.md"
+  ],
+  "dddKeywordsIn02": [
+    "聚合",
+    "领域",
+    "DDD"
+  ],
+  "headings02": [],
+  "eventTypes": [
+    "AnalysisCompleted",
+    "SaMaterializationCompleted",
+    "SkillReviewRecorded",
+    "StageConfirmed",
+    "SkillFailureRecorded",
+    "ClarificationRequested",
+    "EventSpecConfirmed",
+    "FragmentStabilized",
+    "SA_Step_Completed",
+    "SaNineViewCompiled",
+    "SkeletonCreated",
+    "ProjectCreated"
+  ],
+  "hasAnalysisCompleted": true,
+  "hasMaterialized": true,
+  "sqlSnippet": "PASS 11\r\nPASS 11\r\nPASS 11\r\n1 1 PASS\r\n1 1 PASS\r\n1 1 PASS\r\nBalanceAdjustment adjustedAt c60b888c28bd\r\nBalanceAdjustment adjustedBy c60b888c28bd\r\nBalanceAdjustment adjustmentAmount c60b888c28bd\r\nBalanceAdjustment adjustmentType c60b888c28bd\r\nBalanceAdjustment id c60b888c28bd\r\nBalanceAdjustment leaveBalanceId c60b888c28bd\r\nBalanceAdjustment reason c60b888c28bd\r\nEmployee department c60b888c28bd\r\n0"
+}

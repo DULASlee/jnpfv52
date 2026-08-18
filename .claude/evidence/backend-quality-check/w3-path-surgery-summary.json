@@ -1,0 +1,12 @@
+{
+  "wave": "W3-surgery-path",
+  "title": "Import COM/ADDRESS/USERS/TREE/CASCADER + label index",
+  "status": "awaiting-approval",
+  "tests": {
+    "fullVisualDev": 46,
+    "importPathAndAssemble": 14
+  },
+  "codeReview": "PASS after first-wins fix",
+  "date": "2026-08-07",
+  "perf": "O(1) label lookup via first-wins index"
+}

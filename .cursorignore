@@ -1,0 +1,85 @@
+# Cursor 索引排除 — 减少无关文件进入上下文与符号索引
+# 与 .gitignore 对齐，并额外排除体积大、自动生成、非编码资产
+
+# ── Node / 前端构建产物 ──
+**/node_modules/
+**/.pnpm-store/
+**/.vite/
+**/.nuxt/
+**/dist/
+**/unpackage/
+**/coverage/
+**/.turbo/
+**/.cache/
+**/stats.html
+**/stats.json
+
+# ── .NET / 后端构建产物 ──
+**/.vs/
+**/bin/
+**/obj/
+**/nupkgs/
+**/TestResults/
+**/*.user
+**/*.suo
+
+# ── 依赖与包管理器缓存 ──
+**/.npm/
+**/.yarn/
+**/.pnpm-debug.log*
+
+# ── 日志、临时、本地运行态 ──
+**/*.log
+**/*.bak
+**/.DS_Store
+**/Thumbs.db
+backend-run.*
+pc-dev.*
+ds-dev.*
+smoke-test-*.png
+h5-*.png
+
+# ── 密钥与本地配置（勿索引） ──
+**/Configurations/ConnectionStrings.json
+**/Configurations/JWT.json
+**/Configurations/EventBus.json
+**/.env.local
+**/.env.*.local
+**/.env.toolchain
+**/*.key
+**/*.pfx
+**/*.pem
+docs/token.txt
+**/token.txt
+scripts/.jnpf-session.json
+
+# ── AI 工具链会话 / 记忆（自动生成，非源码） ──
+.claude/projects/
+.claude/*.log
+.claude/hooks/_test-*
+.claude/memory/session-summaries/
+.claude/evidence/
+.cursor/logs/
+.cursor/episodic/sync-status.json
+.cursor/edge-debug-profile/
+.specstory/
+.playwright-mcp/
+.serena/memories/
+
+# ── 数据库备份与 bulk SQL（保留 Migrations/ 下增量脚本） ──
+DB/
+DB/**
+
+# ── 大体积二进制 / 媒体 / 压缩包 ──
+**/*.zip
+**/*.7z
+**/*.rar
+**/*.tar
+**/*.gz
+**/*.mp4
+**/*.mov
+**/*.iso
+**/*.dll
+**/*.exe
+**/*.pdb
+**/*.nupkg

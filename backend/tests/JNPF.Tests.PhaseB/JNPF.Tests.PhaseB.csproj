@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <RootNamespace>JNPF.Tests.PhaseB</RootNamespace>
+    <!-- xUnit 迁移：启用 GenerateProgramFile 避免与 Exe 的 Main 冲突 -->
+    <GenerateProgramFile>false</GenerateProgramFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="SqlSugarCore" Version="5.1.4.140" />
+    <!-- 2026-07 Phase B xUnit 渐进迁移：dotnet test 可发现 [Fact] 测试，dotnet run 仍可用 -->
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\framework\JNPF.Extras.DatabaseAccessor.SqlSugar\JNPF.Extras.DatabaseAccessor.SqlSugar.csproj" />
+    <ProjectReference Include="..\..\modularity\common\JNPF.Common.Core\JNPF.Common.Core.csproj" />
+    <ProjectReference Include="..\..\modularity\inteAssistant\JNPF.InteAssistant\JNPF.InteAssistant.csproj" />
+    <ProjectReference Include="..\..\framework\JNPF\JNPF.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="TemplateRenderSamples\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

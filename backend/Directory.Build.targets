@@ -1,5 +1,6 @@
 <Project>
-    <PropertyGroup>
+    <!-- 仅在显式生成文档时设置 DocumentationFile，避免本地 GenerateDocumentationFile=false 仍写出路径导致 Pack/复制冲突 -->
+    <PropertyGroup Condition="'$(GenerateDocumentationFile)' == 'true'">
         <DocumentationFile>$(OutputPath)$(AssemblyName).xml</DocumentationFile>
     </PropertyGroup>
 </Project>

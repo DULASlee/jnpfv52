@@ -1,0 +1,91 @@
+======================================================================
+  JNPF v5.2 流程强制清单
+  来源: CLAUDE.md / workflow-pipeline.md / workflow.md / engineering-laws.md
+======================================================================
+
+---------------------------------------------------------------------------
+七阶段流水线 — 强制执行
+---------------------------------------------------------------------------
+Hook: guard-workflow.mjs（GATE0-GATE6 ⛔）
+
+Phase 1  🔵 Align     → using-superpowers (auto触发)
+Phase 2  🟡 Brainstorm → brainstorming（ALL强制，含B级）
+Phase 2.5🟡 Explore    → CodeGraph调用链探索（S/A强制）
+Phase 3  🟠 Plan       → writing-plans（S/A，B级skip）
+Phase 4  🟢 Build      → executing-plans/subagent/dispatching/worktrees（4选1）
+Phase 5  🔴 Verify     → verification-before-completion + dotnet test(每次强制)
+                         + start-dev+playwright(前端变更)
+Phase 6  🟣 Review     → requesting-code-review/full-review/security-review/health-check
+                         + receiving-code-review（max 3 cycles）
+Phase 7  ⚫ Complete   → finishing-a-development-branch + pre-commit
+⚡ Debug              → systematic-debugging + data-driven-debug → 返回Phase5
+
+任务分级:
+  S级(3+文件/50+行/新模块) → 完整7Phase + 子代理
+  A级(2文件/10-50行)      → 完整7Phase
+  B级(单文件≤10行/bug)    → skip Phase3 Plan，不skip Phase2 Brainstorm
+
+⛔ 强制抬头: 每Phase输出 ╔═ 🔵 Phase N: <名称> ═╗。无抬头=流程阻塞
+⛔ guard-workflow: GATE0(sp) → GATE1(brainstorm) → GATE2.5(explore,S/A)
+   → GATE2(plan,S/A) → GATE3(build,S/A) → GATE4(verify) → GATE5(review) → GATE6(receiving)
+   任一Gate未通过 = exit 2 ⛔
+
+---------------------------------------------------------------------------
+PHASE_HALT — 熔断协议
+---------------------------------------------------------------------------
+触发条件: debug_reentry > 2（同一任务Debug→Phase5循环≥3次）
+
+进入PHASE_HALT后AI MUST:
+  1. 停止所有文件修改操作
+  2. 输出《失败复盘报告》: 原始目标/已尝试修复/当前commit hash/建议人工方向
+  3. 设置 session_flag = HALTED
+  4. 通知用户: "任务已熔断，请查看复盘报告"
+
+恢复机制: 人类手动重置debug_reentry=0并指定新修复策略
+
+---------------------------------------------------------------------------
+S1-S5 Superpowers铁律（违反=验收不通过）
+---------------------------------------------------------------------------
+S1: 编码前先头脑风暴 → 任何功能/组件/逻辑新增修改 MUST brainstorming
+S2: 声称完成前验证 → 任何"完成/已修复/已验证/通过" MUST verification-before-completion
+S3: Bug/异常强制调试 → 编译错误/运行时异常/测试失败 MUST systematic-debugging
+S4: 响应前检查技能 → 每条用户消息 MUST using-superpowers
+S5: 数据驱动调试 → 同问题≥3次/10min无进展/编译通过但行为异常 → data-driven-debug
+
+---------------------------------------------------------------------------
+Gate Function — 5步验证协议
+---------------------------------------------------------------------------
+任何状态声称前完成:
+  1. IDENTIFY → 什么命令能证明？
+  2. RUN → 执行完整命令（本次实时，非上次结果）
+  3. READ → 读完整输出，检查exit code，数失败数
+  4. VERIFY → 输出确认声称？否→如实报告；是→带证据
+  5. CLAIM → 带证据声称结果
+
+禁止的无效声称（无E1/E2/E3证据支撑→BLOCK）:
+  "API返回200" / "编译0 error" / "单元测试全绿"
+  "理论上应该可以" / "肉眼确认"无截图
+  "已验证"/"已确认"/"测试通过"无具体操作路径
+
+---------------------------------------------------------------------------
+⬛ Supreme Iron Law — E2E浏览器证据
+---------------------------------------------------------------------------
+浏览器端到端验证是唯一验收标准
+
+硬性证据要求（三项缺一不可）:
+  E1: Playwright截图 ≥1张（PNG, ≥5KB, mtime≤30min）
+  E2: 操作路径记录（打开页面→操作→观察结果）
+  E3: 实际输出确认（浏览器实际看到的UI状态）
+
+guard-finish.mjs四层检查:
+  L1: dotnet build → 编译失败=BLOCK
+  L2: dotnet test → 测试失败=BLOCK
+  L3: vue-tsc --noEmit → 类型错误=BLOCK
+  L4: E2E截图新鲜度 → 无有效截图=BLOCK
+  L0: mistake-log无今日条目 → BLOCK
+
+---------------------------------------------------------------------------
+Review Gate — 代码审查不可绕过
+---------------------------------------------------------------------------
+每次Write/Edit后累计计数器+1，≥2时MUST触发Phase6 code-reviewer子代理
+todo_write强制注入: 🔍代码审查(子代理) + 📝错题本追加（缺一=流程阻塞）

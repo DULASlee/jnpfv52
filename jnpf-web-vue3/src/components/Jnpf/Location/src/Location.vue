@@ -30,7 +30,7 @@
       <ScrollContainer ref="infiniteBody" class="around-contain" v-loading="loading && listQuery.currentPage == 1">
         <a-form-item-rest>
           <a-radio-group v-model:value="selectValue" @change="onSelectValueChange">
-            <a-radio class="around-contain-item" :value="index" v-for="(item, index) in list">
+            <a-radio class="around-contain-item" :value="index" v-for="(item, index) in list" :key="item.id || index">
               <div class="around-item-title" :title="item.name"> {{ item.name }}</div>
               <div class="around-item-sub-title" :title="item.address.length ? item.address : item.name">
                 {{ item.address.length ? item.address : item.name }}</div
@@ -49,7 +49,6 @@
   import { ref, reactive, nextTick, toRefs, watch, computed } from 'vue';
   import { Modal as AModal } from 'ant-design-vue';
   import ModalClose from '/@/components/Modal/src/components/ModalClose.vue';
-  import AMapLoader from '@amap/amap-jsapi-loader';
   import { ScrollContainer, ScrollActionType } from '/@/components/Container';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { getAroundList, getTextList } from '/@/api/basic/common';
@@ -115,7 +114,7 @@
     enableLocationScope: { type: Boolean, default: false },
     adjustmentScope: { type: Number, default: 500 },
     enableDesktopLocation: { type: Boolean, default: false },
-    locationScope: { type: Array, default: [] },
+    locationScope: { type: Array, default: () => [] },
     allowClear: { type: Boolean, default: true },
     disabled: { type: Boolean, default: false },
     detailed: { type: Boolean, default: false },
@@ -156,6 +155,8 @@
     });
   }
   async function initMap() {
+    // 懒加载高德地图 SDK：JnpfLocation 为全局注册组件，顶层 import 会把 @amap 拖进首屏（性能优化）
+    const { default: AMapLoader } = await import('@amap/amap-jsapi-loader');
     AMapLoader.load({
       key: globSetting.aMapJsKey,
       version: '2.0',

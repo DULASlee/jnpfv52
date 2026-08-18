@@ -1,0 +1,65 @@
+{
+  "pipelineId": 209,
+  "snapshots": [
+    {
+      "type": "IR2_Architecture",
+      "stability": "stable",
+      "id": "architecture:phase3-sim"
+    },
+    {
+      "type": "IR2_DDL",
+      "stability": "stable",
+      "id": "ddl:phase3-sim"
+    },
+    {
+      "type": "IR1_EventSpec",
+      "stability": "stable",
+      "id": "eventspec:BE-001"
+    },
+    {
+      "type": "IR2_FormPageIR",
+      "stability": "stable",
+      "id": "formPage:phase3-sim"
+    },
+    {
+      "type": "IR0_Skeleton",
+      "stability": "stable",
+      "id": "skeleton:SK-001"
+    },
+    {
+      "type": "IR2_SystemDesign",
+      "stability": "locked",
+      "id": "systemDesign:209"
+    }
+  ],
+  "skillRuns": [
+    {
+      "skillId": "developer-skill",
+      "status": "failed",
+      "error": "[209] 无法从 DDL/FormPageIR 解析任何列定义"
+    }
+  ],
+  "eventTypes": [
+    "ArchitectureDecisionRecorded",
+    "DDLStabilized",
+    "EventSpecConfirmed",
+    "FragmentStabilized",
+    "ProjectCreated",
+    "SkeletonCreated",
+    "StageConfirmed",
+    "SystemDesignLocked",
+    "UIDesignStabilized"
+  ],
+  "developerStatus": {
+    "PipelineId": 209,
+    "ProjectId": "209",
+    "DesignLocked": true,
+    "CodegenDraft": false,
+    "SandboxBuildPassed": false,
+    "ArchGuardPassed": false,
+    "ArchWarningCount": 0,
+    "CodegenStability": "draft",
+    "LastDeveloperRunId": null,
+    "LastDeveloperStatus": null
+  }
+}

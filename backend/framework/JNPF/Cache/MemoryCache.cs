@@ -1,14 +1,20 @@
-﻿using Microsoft.Extensions.Caching.Memory;
-using System.Reflection;
+using Microsoft.Extensions.Caching.Memory;
+using System.Collections.Concurrent;
 
 namespace JNPF.Common.Cache;
 
 /// <summary>
 /// 内存缓存.
 /// </summary>
+// placeholder-ok: Incrby/SetNx 依赖原子操作，内存缓存后端不支持（Redis 缓存实现才提供）——上游存量设计，非假实现
 public class MemoryCache : ICache, ISingleton
 {
     private readonly IMemoryCache _memoryCache;
+
+    /// <summary>
+    /// 键索引，避免反射获取所有键
+    /// </summary>
+    private readonly ConcurrentDictionary<string, byte> _keyIndex = new();
 
     /// <summary>
     /// 初始化一个<see cref="MemoryCache"/>类型的新实例.
@@ -28,6 +34,7 @@ public class MemoryCache : ICache, ISingleton
         foreach (string? k in key)
         {
             _memoryCache.Remove(k);
+            _keyIndex.TryRemove(k, out _);
         }
 
         return key.Length;
@@ -42,6 +49,7 @@ public class MemoryCache : ICache, ISingleton
         foreach (var k in key)
         {
             _memoryCache.Remove(k);
+            _keyIndex.TryRemove(k, out _);
         }
 
         return Task.FromResult((long)key.Length);
@@ -153,6 +161,7 @@ public class MemoryCache : ICache, ISingleton
         var entry = _memoryCache.CreateEntry(key);
         entry.Value = value;
         _memoryCache.Set(key, entry);
+        _keyIndex.TryAdd(key, 0);
         return true;
     }
 
@@ -167,6 +176,7 @@ public class MemoryCache : ICache, ISingleton
         var entry = _memoryCache.CreateEntry(key);
         entry.Value = value;
         _memoryCache.Set(key, entry, expire);
+        _keyIndex.TryAdd(key, 0);
         return true;
     }
 
@@ -196,21 +206,7 @@ public class MemoryCache : ICache, ISingleton
     /// </summary>
     public List<string> GetAllKeys()
     {
-        try
-        {
-            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
-            var entriesField = _memoryCache.GetType().GetField("_entries", flags);
-            if (entriesField == null) return new List<string>();
-            var entries = entriesField.GetValue(_memoryCache);
-            if (entries == null) return new List<string>();
-            var cacheItems = entries.GetType().GetProperty("Keys")?.GetValue(entries) as ICollection<object>;
-            if (cacheItems == null) return new List<string>();
-            return cacheItems.Select(u => u.ToString()).ToList();
-        }
-        catch
-        {
-            return new List<string>();
-        }
+        return _keyIndex.Keys.ToList();
     }
 
     /// <summary>

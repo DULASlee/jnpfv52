@@ -46,7 +46,12 @@
   import { usePopup } from '/@/components/Popup';
   import { useBaseStore } from '/@/store/modules/base';
   import FlowPopup from './FlowPopup.vue';
-  import FlowParser from '/@/views/workFlow/components/FlowParser.vue';
+  import { useLazyPopup } from '/@/hooks/web/useLazyPopup';
+  const {
+    component: FlowParser,
+    register: registerFlowParser,
+    openPopup: openFlowParser,
+  } = useLazyPopup(() => import('/@/views/workFlow/components/FlowParser.vue'), 'workFlow/FlowParser');
   import { useDefineSetting } from '/@/hooks/setting/useDefineSetting';
   import dayjs from 'dayjs';
   defineOptions({ name: 'WorkFlowFlowLaunch' });
@@ -56,7 +61,6 @@
   const { t } = useI18n();
   const { flowStatusList, flowUrgentList, getUrgentText } = useDefineSetting();
   const [registerFlowPopup, { openPopup: openFlowPopup }] = usePopup();
-  const [registerFlowParser, { openPopup: openFlowParser }] = usePopup();
 
   const columns: BasicColumn[] = [
     { title: '流程标题', dataIndex: 'fullName', width: 200 },

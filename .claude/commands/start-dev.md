@@ -50,12 +50,12 @@ cd jnpf-web-vue3 && pnpm run dev
 
 ### Step 5: 启动 DataV 大屏（可选，询问用户）
 
-询问用户："是否同时启动 DataV 大屏（:8100）和 UniApp 移动端（:3800）？"
+询问用户："是否同时启动 DataV 大屏（:3102）和 UniApp 移动端（:3800）？"
 
 如果用户确认：
 
 ```bash
-cd jnpf-web-datascreen && pnpm run dev    # :8100
+cd jnpf-web-datascreen && pnpm run dev    # :3102
 cd jnpf-app-vue3 && pnpm run dev          # :3800
 ```
 
@@ -68,7 +68,7 @@ cd jnpf-app-vue3 && pnpm run dev          # :3800
 |------|------|------|---------|
 | 后端 API | 5000 | ✅ Running | http://localhost:5000 |
 | PC 前端 | 3100 | ✅ Running | http://localhost:3100 |
-| DataV 大屏 | 8100 | ✅/⏸️ | http://localhost:8100/DataV/ |
+| DataV 大屏 | 3102 | ✅/⏸️ | http://localhost:3102/DataV/ |
 | UniApp H5 | 3800 | ✅/⏸️ | http://localhost:3800 |
 
 ### 默认账号

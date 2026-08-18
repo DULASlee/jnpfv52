@@ -26,6 +26,9 @@ public sealed class TenantMiddleware
         "/api/permission/",
         "/api/studio/",
         "/api/LlmGateway/",
+        "/api/message/websocket",  // WebSocket: tenant from JWT claims, no HTTP header possible
+        "/api/visualdev/",         // onlineDev module: tenant from JWT claims
+        "/api/file/",              // file/image serving
         "/swagger",
         "/.well-known",
         "/health",

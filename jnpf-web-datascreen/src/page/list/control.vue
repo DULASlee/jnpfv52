@@ -35,8 +35,13 @@
 <script>
 import { getObj } from '@/api/visual'
 import { uuid } from '@/utils/utils'
-import * as mqtt from 'mqtt/dist/mqtt.min';
 import { mqttUrl } from '@/config'
+// MQTT 客户端按需加载 (~500KB)
+let mqttModule = null;
+async function getMqtt() {
+  if (!mqttModule) mqttModule = await import('mqtt/dist/mqtt.min');
+  return mqttModule;
+}
 export default {
   data () {
     return {
@@ -67,14 +72,16 @@ export default {
       })
     },
     initControl () {
-      this.client = mqtt.connect(mqttUrl, {
+      getMqtt().then(mqtt => {
+        this.client = mqtt.connect(mqttUrl, {
         clientId: 'control_' + uuid()
       })
-      this.client.on("connect", () => {
-        this.client.subscribe(this.control_keys, () => {
-          console.log(`Subscribe to topic '${this.control_keys}'`)
+        this.client.on("connect", () => {
+          this.client.subscribe(this.control_keys, () => {
+            console.log(`Subscribe to topic '${this.control_keys}'`)
+          })
         })
-      })
+      });
     },
     setGroupId (item) {
       this.active = item.id;

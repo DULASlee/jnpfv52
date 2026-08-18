@@ -21,8 +21,10 @@ const emitter = mitt();
 
 import { isDevMode } from './utils/env';
 
+// Dev：禁止 import('ant-design-vue/es/style')——会触发 Vite 逐文件编译 500+ 个 .less（首屏 40s+）。
+// 使用预编译 CSS；生产构建仍走 vite-plugin-style-import 按需抽样式。
 if (isDevMode()) {
-  import('ant-design-vue/es/style');
+  import('ant-design-vue/dist/antd.css');
 }
 
 async function bootstrap() {

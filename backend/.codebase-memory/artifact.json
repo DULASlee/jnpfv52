@@ -1,0 +1,11 @@
+{
+    "schema_version": 2,
+    "commit": "79ba2cc75241ee8d6dd077e0b9a72a9226a88332",
+    "indexed_at": "2026-07-17T10:20:05Z",
+    "project": "jnpf-v52",
+    "nodes": 114367,
+    "edges": 194767,
+    "original_size": 106233856,
+    "compressed_size": 14332672,
+    "compression_level": 9
+}

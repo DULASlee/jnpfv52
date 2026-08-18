@@ -285,7 +285,7 @@ DB Transaction → EventOutboxMessage 写入
 | 服务 | 端口 | 技术栈 |
 |------|------|--------|
 | PC 管理后台 | :3100 | Vue3 + Vite4 + AntDV + WindiCSS |
-| 数字大屏 | :8100 | Vue3 + Vite4 + DataV + ECharts |
+| 数字大屏 | :3102 | Vue3 + Vite4 + DataV + ECharts |
 | 移动端 H5 | 代理模式 | UniApp (Vue3) |
 | 文件预览 | :30090 | kkFileView / YoZo |
 | Univer 报表 | :32000 (API) + :8200 (Static) | 独立服务 |

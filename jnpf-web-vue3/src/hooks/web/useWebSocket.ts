@@ -30,7 +30,12 @@ export function useWebSocket() {
       ws.close();
       ws = null;
     }
-    ws = new ReconnectingWebSocket(server.value);
+    ws = new ReconnectingWebSocket(server.value, [], {
+      maxRetries: 3,
+      maxReconnectionDelay: 10000,
+      minReconnectionDelay: 2000,
+      reconnectionDelayGrowFactor: 2,
+    });
 
     ws.onopen = onOpen;
     ws.onerror = onError;
@@ -42,7 +47,7 @@ export function useWebSocket() {
     }
 
     function onError(e) {
-      console.log('[WebSocket] 连接发生错误: ', e);
+      // Suppress console spam — retry is handled by ReconnectingWebSocket internally
     }
 
     function onMessage(res) {

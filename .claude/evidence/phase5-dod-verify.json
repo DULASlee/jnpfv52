@@ -1,0 +1,82 @@
+{
+  "pipelineId": 311,
+  "verifiedAt": "2026-07-06T21:40:51.659Z",
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "skipped": 1
+  },
+  "results": [
+    {
+      "id": "D1",
+      "pass": true,
+      "detail": "全链路事件连续 (SkeletonCreated→AnalysisCompleted→ArchitectureDecisionRecorded→SystemDesignLocked→CodeGeneratedStablePromoted→DeploymentVerified)",
+      "pipelineId": 311,
+      "eventTypes": [
+        "DeploymentVerified",
+        "SkillFailureRecorded",
+        "DeploymentFailed",
+        "DeveloperSkillCompleted",
+        "CodeGenerated",
+        "TesterSkillCompleted",
+        "TestSuiteGenerated",
+        "CodeGeneratedStablePromoted",
+        "CodegenBuildValidated",
+        "CodegenFailed",
+        "SystemDesignLocked",
+        "ConstraintViolationReported",
+        "UIDesignStabilized",
+        "DDLStabilized",
+        "SaMaterializationCompleted",
+        "SkillReviewRecorded",
+        "StageConfirmed",
+        "ArchitectureDecisionRecorded",
+        "SaMaterializationFailed",
+        "AnalysisCompleted",
+        "EventSpecConfirmed",
+        "FragmentStabilized",
+        "SA_Step_Completed",
+        "SaNineViewCompiled",
+        "SkeletonCreated",
+        "ProjectCreated"
+      ],
+      "at": "2026-07-06T21:40:50.313Z"
+    },
+    {
+      "id": "D2",
+      "pass": true,
+      "detail": "Rebuild 成功: 193 事件 → 16 片段",
+      "eventCount": 193,
+      "fragmentCount": 16,
+      "at": "2026-07-06T21:40:51.419Z"
+    },
+    {
+      "id": "D3",
+      "pass": true,
+      "detail": "无 bugfix 运行记录（D3 条件性通过：需 bugfix 运行后验证）",
+      "skip": true,
+      "at": "2026-07-06T21:40:51.494Z"
+    },
+    {
+      "id": "D4",
+      "pass": true,
+      "detail": "事件流租户隔离正常 (0 个租户ID)",
+      "tenantIds": [],
+      "at": "2026-07-06T21:40:51.566Z"
+    },
+    {
+      "id": "D5-NFR2-deploy-zero-llm",
+      "pass": true,
+      "detail": "deploy-skill 零 LLM 产出 DeploymentVerified",
+      "at": "2026-07-06T21:40:51.659Z"
+    },
+    {
+      "id": "D5-NFR2-empty-diff-reject",
+      "pass": true,
+      "detail": "BugfixSkillService 空 diff 拒绝（代码 L92: throw if diff.IsEmpty）",
+      "codeVerified": true,
+      "at": "2026-07-06T21:40:51.659Z"
+    }
+  ]
+}

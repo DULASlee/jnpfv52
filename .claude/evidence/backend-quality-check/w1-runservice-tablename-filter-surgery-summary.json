@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-08-07T23:05:00+08:00",
+  "wave": "W1+/W2+",
+  "knife": "list-conditional-by-tablename-filter",
+  "verdict": "PASS",
+  "summary": "RunService table-name filter extracted separately from CodeGen ConditionalByTableNameFilter; leaf RemoveAt i-- fixed; skip-leaf test uses other,other,keep arrangement",
+  "verification": {
+    "listFilterTests": 6,
+    "visualDevTotal": 115,
+    "codegenFilterRegression": 8,
+    "failed": 0
+  },
+  "codeReview": "PASS after Medium test arrangement fix",
+  "why": "Backend quality remediation: shrink god methods with characterization tests; cut layer coupling; do not merge VisualDev vs CodeGen semantic forks"
+}

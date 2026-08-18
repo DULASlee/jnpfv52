@@ -51,6 +51,18 @@ public class VisualDevListOutput
     public string? category { get; set; }
 
     /// <summary>
+    /// 创建人ID（内部传递用，不序列化到前端）.
+    /// </summary>
+    [JsonIgnore]
+    public string? creatorUserId { get; set; }
+
+    /// <summary>
+    /// 修改人ID（内部传递用，不序列化到前端）.
+    /// </summary>
+    [JsonIgnore]
+    public string? lastModifyUserId { get; set; }
+
+    /// <summary>
     /// 数据库表JSON.
     /// </summary>
     public string? tables { get; set; }

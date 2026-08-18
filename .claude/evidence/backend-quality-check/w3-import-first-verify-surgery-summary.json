@@ -1,0 +1,30 @@
+{
+  "wave": "W3+",
+  "knife": "ImportFirstVerify-in-memory",
+  "date": "2026-08-07",
+  "status": "PASS",
+  "summary": "Extract shared in-memory ImportFirstVerify (required + batch unique) from VisualDev + CodeGen; DB unique forks stay at call sites; shallow clone replaces STJ Copy to keep child List types.",
+  "artifacts": {
+    "helper": "backend/modularity/engine/JNPF.VisualDev.Engine/Import/ImportFirstVerifyHelpers.cs",
+    "callSites": [
+      "backend/modularity/visualdev/JNPF.VisualDev/VisualDevModelDataService.cs",
+      "backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs"
+    ],
+    "tests": "backend/tests/JNPF.Tests.VisualDev/ImportFirstVerifyHelpersTests.cs"
+  },
+  "verification": {
+    "commands": [
+      "dotnet test tests/JNPF.Tests.VisualDev/JNPF.Tests.VisualDev.csproj --filter FullyQualifiedName~ImportFirstVerifyHelpersTests",
+      "dotnet test tests/JNPF.Tests.VisualDev/JNPF.Tests.VisualDev.csproj --no-build",
+      "dotnet build modularity/common/JNPF.Common.CodeGen/JNPF.Common.CodeGen.csproj"
+    ],
+    "results": {
+      "ImportFirstVerifyHelpersTests": "7/7",
+      "VisualDevSuite": "131/131 (pre-extra-tests; helpers 7/7 after)",
+      "CodeGenBuild": "0 errors",
+      "codeReview": "PASS (0 Critical); added child non-type2 unique + List-type regression tests"
+    }
+  },
+  "intentionalDeviation": "Shallow Dictionary clone instead of T.Copy() (System.Text.Json) — STJ JsonElement breaks Newtonsoft ToObject on child tables.",
+  "leftAtCallSite": "DB unique lookup (VisualDev __vModel__ Split + parenthesized WHERE; CodeGen superiorVModel Split + and-join WHERE)"
+}

@@ -43,6 +43,7 @@ export async function runWithRetry<T>(
     const logRecord: ValidationLogRecord = {
       tenantId: ctx.tenantId,
       projectId: ctx.projectId,
+      pipelineId: ctx.pipelineId,
       saTableName: stepName,
       validatorName: stepName,
       retryCount: attempt - 1,

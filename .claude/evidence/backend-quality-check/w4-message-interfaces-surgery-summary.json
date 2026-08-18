@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-08-07T14:40:00+08:00",
+  "wave": "W4+",
+  "knife": "message-interfaces-inteassistant-cut",
+  "verdict": "PASS",
+  "summary": "Message.Interfaces no longer ProjectReferences InteAssistant.Entitys; SendDefinedMsg takes IntegrateTaskMessageDto; ARCH-01 exemptions = API.Entry only",
+  "changes": [
+    "JNPF.Common/Models/InteAssistant/IntegrateTaskMessageDto.cs",
+    "IMessageManager + MessageManager + WechatMiniProgramService signatures",
+    "IntegrateService maps entity Data/TemplateJson at call site",
+    "Message.Interfaces.csproj removed InteAssistant.Entitys",
+    "LayeringTests ProjectReferenceExemptions shrink"
+  ],
+  "verification": {
+    "command": "dotnet test tests/JNPF.Tests.Architecture/JNPF.Tests.Architecture.csproj --filter FullyQualifiedName~Architecture",
+    "passed": 60,
+    "failed": 0,
+    "dtoTests": 4,
+    "layeringPlusDtoFilter": 7
+  },
+  "codeReview": "PASS (no High/Medium)",
+  "remainingExemption": "backend/application/JNPF.API.Entry/JNPF.API.Entry.csproj"
+}

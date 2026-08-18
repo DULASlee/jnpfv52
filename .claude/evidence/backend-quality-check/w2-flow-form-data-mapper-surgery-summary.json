@@ -1,0 +1,19 @@
+{
+  "wave": "W2+",
+  "knife": "FlowFormDataMapper",
+  "date": "2026-08-07",
+  "status": "PASS",
+  "summary": "Extract SaveDataToDataByFId in-memory map/transfer/result/prevNode into FlowFormDataMapper; DB/HTTP persist stay at RunService.",
+  "artifacts": {
+    "helper": "backend/modularity/visualdev/JNPF.VisualDev/Transfer/FlowFormDataMapper.cs",
+    "callSite": "backend/modularity/visualdev/JNPF.VisualDev/RunService.cs#SaveDataToDataByFId",
+    "tests": "backend/tests/JNPF.Tests.VisualDev/FlowFormDataMapperTests.cs",
+    "prior": ["FlowFormMapRuleMerger", "FlowFormDataTransferRules"]
+  },
+  "verification": {
+    "FlowFormDataMapperTests": "14/14 expected after CR extras",
+    "VisualDevSuite": "162+",
+    "codeReview": "PASS (0 Critical); added special-form skip-null + prevNode tablefield tests"
+  },
+  "leftAtCallSite": "FlowFormEntity load, system-form HTTP, DbLink/SaveFlowFormData, concurrency version"
+}

@@ -1,0 +1,12 @@
+{
+  "profileId": "ag002-no-tenant-filter",
+  "description": "Q2 — AG-002 Service 缺少 ITenantFilter/TenantId 模式（Critical → 阻断 tester）",
+  "expectedRuleIds": ["AG-002"],
+  "expectedSeverity": "critical",
+  "injectFiles": [
+    {
+      "source": "Services/NoTenantProbeService.cs",
+      "target": "Services/NoTenantProbeService.cs"
+    }
+  ]
+}

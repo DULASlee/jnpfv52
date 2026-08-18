@@ -1,0 +1,111 @@
+======================================================================
+  JNPF v5.2 专家陷阱清单 — 14条（违反标准.NET直觉的框架行为）
+  来源: jnpf-expert-traps.md
+======================================================================
+
+已在架构红线(R1-R10)覆盖的陷阱标注了对应红线编号
+
+---------------------------------------------------------------------------
+Trap 1 [R1] — DynamicApiController Route Binding
+---------------------------------------------------------------------------
+你做: 重命名Service方法（GetUser→GetUserDetail）
+实际: URL从{ClassName}/{MethodName}自动生成，改名=URL变更=全前端404
+生存法则: NEVER重命名已发布的Service类或public方法。必须改→先grep所有前端api文件和workflow定义
+
+---------------------------------------------------------------------------
+Trap 2 — Mapster Adapt() Audit Field Overwrite
+---------------------------------------------------------------------------
+你做: input.Adapt<Entity>() 干净映射后直接保存
+实际: Adapt()拷贝所有同名字段（含CreateTime/CreateUserId/TenantId），更新操作时原始审计数据静默覆盖
+生存法则: 先查原始实体→再映射。NEVER做 db.Updateable(input.Adapt<T>()) 盲全量覆盖
+
+---------------------------------------------------------------------------
+Trap 3 — SqlSugar Navigation Property Serialization N+1
+---------------------------------------------------------------------------
+你做: Query列表直接返回，假设无循环=无N+1
+实际: 导航属性默认懒加载，JSON序列化器访问时触发DB查询。100条×3属性=300次查询
+生存法则: 列表查询ALWAYS用.Includes()急切加载，或用.Select()投影到DTO。NEVER返回含导航属性的裸实体列表
+
+---------------------------------------------------------------------------
+Trap 4 [R2] — Oops.Bah vs Oops.Oh
+---------------------------------------------------------------------------
+你做: 业务校验失败时throw任意异常
+实际: Oops.Bah("用户名已存在")→HTTP200+业务错误码+前端展示消息
+     Oops.Oh("用户名已存在")→HTTP500+错误日志+前端展示"Internal Server Error"
+生存法则: 用户造成的业务错误→Oops.Bah。系统内部失败→Oops.Oh。NEVER混用
+
+---------------------------------------------------------------------------
+Trap 5 [R2] — RESTfulResult Double Wrapping
+---------------------------------------------------------------------------
+你做: 手动返回new RESTfulResult<T>{code=200,data=result}
+实际: 框架自动包装一次+你手动包装一次=双层嵌套
+     前端收到{code:200,data:{code:200,data:actual_data}}解析失败
+生存法则: 直接return result或return PageResult<T>。NEVER手动创建RESTfulResult
+
+---------------------------------------------------------------------------
+Trap 6 [R1] — Async Suffix Breaks Routes
+---------------------------------------------------------------------------
+你做: 按标准C#异步命名规范→GetPageListAsync
+实际: DynamicApiController从完整方法名生成路由→/api/xxx/GetPageListAsync
+     前端绑定的是/api/xxx/GetPageList→即时404
+生存法则: IDynamicApiController接口方法NEVER有Async后缀。方法名=GetPageList
+
+---------------------------------------------------------------------------
+Trap 7 [R4] — ITenantFilter Fails in Subqueries
+---------------------------------------------------------------------------
+你做: 写子查询或JOIN时假设ITenantFilter自动激活
+实际: ITenantFilter只在根Queryable自动生效。子查询/JOIN/Union/Ado.SqlQuery不自动过滤
+     数据泄露无声无息——它只是默默返回其他租户的数据
+生存法则: 子查询和原生SQL ALWAYS手动加.Where(x=>x.TenantId==tenantId)，验证ToSql()输出
+
+---------------------------------------------------------------------------
+Trap 8 [R4] — Updateable/Deleteable Don't Auto-Filter Tenants
+---------------------------------------------------------------------------
+你做: db.Updateable(entity).ExecuteCommand()假设像Queryable一样自动租户条件
+实际: SqlSugar的ITenantFilter只对Queryable自动生效。Updateable/Deleteable的WHERE不含TenantId
+     一次更新=修改全部租户数据
+生存法则: 写操作ALWAYS显式指定:x=>x.TenantId==tenantId
+
+---------------------------------------------------------------------------
+Trap 9 [R1] — Service Class Public Methods = API Endpoints
+---------------------------------------------------------------------------
+你做: 在Service类中写public helper方法供内部使用
+实际: DynamicApiController把实现类ALL public方法映射为API端点。你的"内部helper"变成了公开API
+生存法则: 内部helper MUST声明为private或protected。NEVER暴露public方法在IDynamicApiController实现类上
+
+---------------------------------------------------------------------------
+Trap 10 — EventBus At-Least-Once Delivery
+---------------------------------------------------------------------------
+你做: 发布事件后假设handler执行恰好一次
+实际: RabbitMQ保证至少一次送达。Channel进程内模式可能重试。一个订单触发两个工作流
+生存法则: 事件处理器MUST幂等——查询目标状态或检查已处理的EventId。NEVER假设事件只触发一次
+
+---------------------------------------------------------------------------
+Trap 11 — Mapster Circular Reference Stack Overflow
+---------------------------------------------------------------------------
+你做: entity.Adapt<Dto>()用于所有映射场景
+实际: JNPF实体常见循环引用(User→Department→Users→Department...)，Mapster默认无限递归直到栈溢出
+生存法则: 复杂实体用.Select()投影到DTO，或配置Mapster MaxDepth限制递归。NEVER直接Adapt含循环引用的实体图
+
+---------------------------------------------------------------------------
+Trap 12 [R3] — .vm Templates Use Velocity Syntax
+---------------------------------------------------------------------------
+你做: 在.vm模板中用C#语法→if(x==null)或foreach(var item in list)
+实际: Apache Velocity完全不同语法。C#语法被当作纯文本→生成无效C#→编译失败
+生存法则: 修改.vm模板前ALWAYS先Read已有模板理解结构。Velocity语法:#if($entity.Name)/#foreach/$set/$entity.Name
+
+---------------------------------------------------------------------------
+Trap 13 [R4] — SqlSugar Filter Priority Override
+---------------------------------------------------------------------------
+你做: db.QueryFilter.Add()加自定义全局过滤器，假设ITenantFilter仍正常
+实际: SqlSugar按添加顺序执行多个全局过滤器。后加的OR条件/冲突的AND优先级可能让租户过滤器被绕过
+     无声无息返回其他租户数据
+生存法则: 加自定义过滤器后ALWAYS验证ToSql()输出包含TenantId条件
+
+---------------------------------------------------------------------------
+Trap 14 — SqlSugar Query Without Pagination
+---------------------------------------------------------------------------
+你做: db.Queryable<Entity>().ToListAsync()返回全表→开发环境10条数据正常
+实际: 生产环境数据增长→全表查询OOM/超时。SqlSugar和Dapper无默认分页
+生存法则: 列表端点ALWAYS使用.ToPageListAsync(currentPage,pageSize)，默认pageSize=20
+         NEVER对可能超过100条的查询用.ToListAsync()

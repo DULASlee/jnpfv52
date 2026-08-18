@@ -39,6 +39,16 @@ internal sealed class DynamicApiControllerApplicationModelConvention : IApplicat
     private const string commonTemplatePattern = @"\{(?<p>.+?)\}";
 
     /// <summary>
+    /// 编译预处理的多斜杠正则（替代内联 Regex.Replace）.
+    /// </summary>
+    private static readonly Regex _multiSlashRegex = new(@"\/{2,}", RegexOptions.Compiled);
+
+    /// <summary>
+    /// 编译预处理的通用模板正则（替代静态 Regex.IsMatch/Matches）.
+    /// </summary>
+    private static readonly Regex _commonTemplateRegex = new(commonTemplatePattern, RegexOptions.Compiled);
+
+    /// <summary>
     /// 构造函数
     /// </summary>
     /// <param name="services">服务集合</param>
@@ -47,7 +57,7 @@ internal sealed class DynamicApiControllerApplicationModelConvention : IApplicat
         _services = services;
         _dynamicApiControllerSettings = App.GetConfig<DynamicApiControllerSettingsOptions>("DynamicApiControllerSettings", true);
         LoadVerbToHttpMethodsConfigure();
-        _nameVersionRegex = new Regex(@"V(?<version>[0-9_]+$)");
+        _nameVersionRegex = new Regex(@"V(?<version>[0-9_]+$)", RegexOptions.Compiled);
     }
 
     /// <summary>
@@ -169,7 +179,7 @@ internal sealed class DynamicApiControllerApplicationModelConvention : IApplicat
     /// 强制处理了 ForceWithDefaultPrefix 的控制器
     /// </summary>
     /// <remarks>避免路由无限追加</remarks>
-    private ConcurrentBag<Type> ForceWithDefaultPrefixRouteControllerTypes { get; } = new ConcurrentBag<Type>();
+    private ConcurrentQueue<Type> ForceWithDefaultPrefixRouteControllerTypes { get; } = new ConcurrentQueue<Type>();
 
     /// <summary>
     /// 配置控制器路由特性
@@ -191,7 +201,7 @@ internal sealed class DynamicApiControllerApplicationModelConvention : IApplicat
 
             controller.Selectors[0].AttributeRouteModel = AttributeRouteModel.CombineAttributeRouteModel(new AttributeRouteModel(new RouteAttribute(isLowercaseRoute ? template?.ToLower() : template))
                 , controller.Selectors[0].AttributeRouteModel);
-            ForceWithDefaultPrefixRouteControllerTypes.Add(controller.ControllerType);
+            ForceWithDefaultPrefixRouteControllerTypes.Enqueue(controller.ControllerType);
         }
     }
 
@@ -396,7 +406,7 @@ internal sealed class DynamicApiControllerApplicationModelConvention : IApplicat
 
                     var newTemplate = $"{(selectorModel.AttributeRouteModel.Template?.StartsWith("/") == true ? "/" : null)}{(string.IsNullOrWhiteSpace(module) ? null : $"{module}/")}{selectorModel.AttributeRouteModel.Template}";
                     // 处理可能存在多斜杠问题
-                    newTemplate = Regex.Replace(newTemplate, @"\/{2,}", "/");
+                    newTemplate = _multiSlashRegex.Replace(newTemplate, "/");
                     selectorModel.AttributeRouteModel.Template = isLowercaseRoute ? newTemplate?.ToLower() : newTemplate;
 
                     continue;
@@ -449,7 +459,7 @@ internal sealed class DynamicApiControllerApplicationModelConvention : IApplicat
                 // 处理多个斜杆问题
                 template = isLowercaseRoute ? template.ToLower() : isLowerCamelCase ? template.ToLowerCamelCase() : template;
                 template = HandleRouteTemplateRepeat(template);
-                template = Regex.Replace(template, @"\/{2,}", "/");
+                template = _multiSlashRegex.Replace(template, "/");
 
                 // 生成路由
                 actionAttributeRouteModel = string.IsNullOrWhiteSpace(template) ? null : new AttributeRouteModel(new RouteAttribute(template));
@@ -893,14 +903,14 @@ internal sealed class DynamicApiControllerApplicationModelConvention : IApplicat
         foreach (var part in paths)
         {
             // 不包含 {} 模板的直接添加
-            if (!Regex.IsMatch(part, commonTemplatePattern))
+            if (!_commonTemplateRegex.IsMatch(part))
             {
                 routeParts.Add(part);
                 continue;
             }
             else
             {
-                var templates = Regex.Matches(part, commonTemplatePattern).Select(t => t.Value);
+                var templates = _commonTemplateRegex.Matches(part).Select(t => t.Value);
                 foreach (var temp in templates)
                 {
                     var t = !temp.Contains("?", StringComparison.CurrentCulture)

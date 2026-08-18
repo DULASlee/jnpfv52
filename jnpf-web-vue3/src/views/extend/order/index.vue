@@ -66,9 +66,12 @@
   import { BasicTable, useTable, TableAction, BasicColumn, ActionItem } from '/@/components/Table';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
-  import { usePopup } from '/@/components/Popup';
   import { useModal } from '/@/components/Modal';
-  import FlowParser from '/@/views/workFlow/components/FlowParser.vue';
+import { useLazyPopup } from '/@/hooks/web/useLazyPopup';
+const { component: FlowParser, register: registerFlowParser, openPopup: openFlowParser } = useLazyPopup(
+  () => import('/@/views/workFlow/components/FlowParser.vue'),
+  'workFlow/FlowParser',
+);
   import { SelectFlowModal } from '/@/components/CommonModal';
   import dayjs from 'dayjs';
 
@@ -76,7 +79,6 @@
 
   const { createMessage } = useMessage();
   const { t } = useI18n();
-  const [registerFlowParser, { openPopup: openFlowParser }] = usePopup();
   const [registerSelectFlowModal, { openModal: openSelectFlowModal }] = useModal();
   const flowTemplateId = ref('');
   const flowList = ref<any[]>([]);

@@ -1,0 +1,59 @@
+# Studio S3→S4 设计链 — REST Client 手工驱动
+#
+# 前置：S2 已完成（02 + AnalysisCompleted）
+#   node scripts/lib/jnpf-auth.mjs --json && pnpm sync:http-env
+#
+# 流程：confirm S2 → stage confirm(需求) → 等 architect → stage confirm(架构) → 等三设计 Skill
+# 断言：E2E_PIPELINE_ID=<id> pnpm test:api（Vitest，~10s）
+
+@baseUrl = {{baseUrl}}
+@token = {{token}}
+@pipelineId = {{pipelineId}}
+
+### 0. 设计编排状态
+GET {{baseUrl}}/api/studio/skills/design/{{pipelineId}}/status
+Authorization: Bearer {{token}}
+
+### 1. S2 用户确认（物化 + HITL）
+POST {{baseUrl}}/api/studio/skills/analyst/{{pipelineId}}/confirm-requirement-spec
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "autoRunDesign": false
+}
+
+### 2. 需求阶段确认 → 触发 architect-skill
+POST {{baseUrl}}/api/studio/pipeline/execute/stage/{{pipelineId}}/confirm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "approved": true,
+  "comment": "REST Client — 进入架构设计"
+}
+
+### 3. 轮询 architect 状态（完成后 Vitest 断言 03）
+GET {{baseUrl}}/api/studio/skills/{{pipelineId}}/runs
+Authorization: Bearer {{token}}
+
+### 4. 架构阶段确认 → 触发 db / ui / system-design
+POST {{baseUrl}}/api/studio/pipeline/execute/stage/{{pipelineId}}/confirm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "approved": true,
+  "comment": "REST Client — 进入详细设计"
+}
+
+### 5. 交付物列表（应有 03~06）
+GET {{baseUrl}}/api/studio/pipeline/execute/{{pipelineId}}/deliverables
+Authorization: Bearer {{token}}
+
+### 7. 补建 03（IR 已有但落盘失败时）
+POST {{baseUrl}}/api/studio/pipeline/execute/{{pipelineId}}/deliverables/rebuild?stages=S3
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}

@@ -43,7 +43,12 @@
 <script setup lang="ts">
   import { ref, computed, watch, nextTick } from 'vue';
   import { Empty } from 'ant-design-vue';
-  import * as echarts from 'echarts';
+  // 按需注册：tree 图，不再全量引入 echarts（性能优化 2026-08-10）
+  import * as echarts from 'echarts/core';
+  import { TreeChart } from 'echarts/charts';
+  import { TooltipComponent, LegendComponent } from 'echarts/components';
+  import { CanvasRenderer } from 'echarts/renderers';
+  echarts.use([TreeChart, TooltipComponent, LegendComponent, CanvasRenderer]);
 
   defineOptions({ name: 'PreviewPanel' });
   const props = defineProps({

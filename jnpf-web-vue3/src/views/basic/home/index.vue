@@ -24,8 +24,8 @@
   </div>
 </template>
 <script lang="ts" setup>
-  import { toRefs, computed, onMounted, onUnmounted, unref } from 'vue';
-  import PortalLayout from '/@/components/VisualPortal/Portal/Layout/index.vue';
+import { toRefs, computed, onMounted, onUnmounted, unref, defineAsyncComponent } from 'vue';
+const PortalLayout = defineAsyncComponent(() => import('/@/components/VisualPortal/Portal/Layout/index.vue'));
   import { ScrollContainer } from '/@/components/Container';
   import { useUserStore } from '/@/store/modules/user';
   import { useDrawer } from '/@/components/Drawer';

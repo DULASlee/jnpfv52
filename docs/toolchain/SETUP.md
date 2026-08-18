@@ -74,14 +74,25 @@ openspec list                    # 无 active change 为正常
 
 ## 6. episodic 日常
 
-```powershell
-# 手动同步（与 sessionStart/stop hook 相同）
-node scripts/episodic-sync.mjs
+**读写分工：**
 
-# MCP 检索（Agent 会话首轮）
-# project = manifest.episodic_project_id
-# query 见 .cursor/episodic/search-templates.yaml
+| 操作 | 方式 |
+|------|------|
+| **读**（跨会话回忆） | MCP `search` / `read`，project=`D--JNPF-v52` |
+| **写**（对话全文） | Cursor **stop hook** → `node scripts/episodic-sync.mjs`（桥接 Cursor jsonl → episodic index） |
+| **写**（结构化进度） | Cursor **stop hook** → `.cursor/hooks/session-archive-stop.mjs` → `session-digest` + followup 补归档 |
+
+```powershell
+# 手动同步对话全文（与 stop hook 相同）
+node scripts/episodic-sync.mjs
+node scripts/episodic-sync.mjs --stats   # 应见 D--JNPF-v52 计数
+
+# 手动测结构化归档 stop hook
+node .cursor/hooks/session-archive-stop.mjs
+# 查看 .claude/memory/session-digest/latest.json
 ```
+
+**MCP 无 write 工具是正常的**——写入由 hooks 在会话结束时自动执行，Agent 用 MCP 只负责检索。
 
 ## 7. 迁移清单
 

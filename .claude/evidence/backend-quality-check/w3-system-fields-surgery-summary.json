@@ -1,0 +1,16 @@
+{
+  "wave": "W3-system-auto-fields",
+  "date": "2026-08-07",
+  "summary": "Extract ImportSystemFieldAssembler; wire VisualDev + CodeGen ImportDataAssemble; preserve CreateUser source fork",
+  "tests": {
+    "ImportSystemField": "13/13",
+    "JNPF.Tests.VisualDev": "75/75"
+  },
+  "review": "PASS (0 Critical/High)",
+  "efficacy": [
+    "Dual-site system-field switch deduped; MissingBillRuleMessage single source",
+    "I/O (bill/position) remains at call site — pure mapping unit-tested",
+    "ImportDataAssemble method body shortened on both copies"
+  ],
+  "next": "POPUP cache assembly (GetCDataList) or W1 GetCondition sync deep-split"
+}

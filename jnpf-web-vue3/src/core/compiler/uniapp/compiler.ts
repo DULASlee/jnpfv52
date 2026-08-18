@@ -7,26 +7,17 @@
  * @jnpf-generated v5.2.0 type=compiler platform=uniapp
  */
 
-import type {
-  CompileResult,
-  CompilerConfig,
-  FormPageIR,
-  GeneratedProject,
-  FieldIR,
-} from "./types";
+import type { CompileResult, CompilerConfig, FormPageIR, GeneratedProject, FieldIR } from './types';
 
-const DEFAULT_VERSION = "5.2.0";
+const DEFAULT_VERSION = '5.2.0';
 
-export type UniPlatform = "mp-weixin" | "mp-alipay" | "mp-douyin" | "h5";
+export type UniPlatform = 'mp-weixin' | 'mp-alipay' | 'mp-douyin' | 'h5';
 
 export class UniAppCompiler {
   private config: CompilerConfig;
   private platform: UniPlatform;
 
-  constructor(
-    config: Partial<CompilerConfig> & { entity: string },
-    platform: UniPlatform = "mp-weixin",
-  ) {
+  constructor(config: Partial<CompilerConfig> & { entity: string }, platform: UniPlatform = 'mp-weixin') {
     this.config = {
       entity: config.entity,
       entityLabel: config.entityLabel ?? config.entity,
@@ -47,7 +38,7 @@ export class UniAppCompiler {
 
     // 检测复杂表达式
     for (const expr of ir.expressions ?? []) {
-      if (expr.level === "complex") {
+      if (expr.level === 'complex') {
         complexExpressions.push(`${expr.id}: ${expr.body.slice(0, 100)}`);
         warnings.push(`表达式 ${expr.id} 为复杂级别，需人工迁移`);
       }
@@ -76,12 +67,7 @@ export class UniAppCompiler {
     const E = capitalize(e);
     const v = this.config.generatorVersion;
     const p = this.platform;
-    const items = ir.fields
-      .map(
-        (f) =>
-          `  /** ${f.label} */\n  ${f.model}${f.config.required ? "" : "?"}: ${this.mapFieldToTSType(f)}`,
-      )
-      .join("\n");
+    const items = ir.fields.map(f => `  /** ${f.label} */\n  ${f.model}${f.config.required ? '' : '?'}: ${this.mapFieldToTSType(f)}`).join('\n');
 
     return `// @jnpf-generated v${v} entity=${e} platform=${p} type=types
 /* eslint-disable */
@@ -199,18 +185,11 @@ export const use${E}Store = defineStore('${e}', () => {
     const p = this.platform;
     const now = new Date().toISOString();
     const searchFields = ir.listConfig?.searchFields ?? [];
-    const displayField = ir.fields[0]?.model ?? "id";
+    const displayField = ir.fields[0]?.model ?? 'id';
 
-    const searchInputs = searchFields
-      .map(
-        (sf) =>
-          `      <wd-input v-model="searchParams.${sf.field}" placeholder="请输入${sf.label}" clearable />`,
-      )
-      .join("\n");
+    const searchInputs = searchFields.map(sf => `      <wd-input v-model="searchParams.${sf.field}" placeholder="请输入${sf.label}" clearable />`).join('\n');
 
-    const searchParamDefaults = searchFields
-      .map((sf) => `  ${sf.field}: '',`)
-      .join("\n");
+    const searchParamDefaults = searchFields.map(sf => `  ${sf.field}: '',`).join('\n');
 
     return `<!-- @jnpf-generated v${v} entity=${e} platform=${p} type=list-page -->
 <!-- generated: ${now} -->
@@ -324,17 +303,16 @@ async function handleDelete(item: Record<string, unknown>) {
     const now = new Date().toISOString();
     const label = this.config.entityLabel;
 
-    const formFields = ir.fields.map((f) => this.renderFormField(f)).join("\n");
+    const formFields = ir.fields.map(f => this.renderFormField(f)).join('\n');
 
     const defaultValues = ir.fields
-      .map((f) => {
-        const appComp = f.component?.app ?? "uni-easyinput";
-        if (appComp === "switch") return `  ${f.model}: false,`;
-        if (f.component?.jnpfKey === "JnpfInputNumber")
-          return `  ${f.model}: 0,`;
+      .map(f => {
+        const appComp = f.component?.app ?? 'uni-easyinput';
+        if (appComp === 'switch') return `  ${f.model}: false,`;
+        if (f.component?.jnpfKey === 'JnpfInputNumber') return `  ${f.model}: 0,`;
         return `  ${f.model}: '',`;
       })
-      .join("\n");
+      .join('\n');
 
     return `<!-- @jnpf-generated v${v} entity=${e} platform=${p} type=form-page -->
 <!-- generated: ${now} -->
@@ -429,12 +407,7 @@ function handleCancel() {
     const now = new Date().toISOString();
     const label = this.config.entityLabel;
 
-    const detailFields = ir.fields
-      .map(
-        (f) =>
-          `      <wd-cell title="${f.label}" :value="String(data.${f.model} ?? '')" />`,
-      )
-      .join("\n");
+    const detailFields = ir.fields.map(f => `      <wd-cell title="${f.label}" :value="String(data.${f.model} ?? '')" />`).join('\n');
 
     return `<!-- @jnpf-generated v${v} entity=${e} platform=${p} type=detail-page -->
 <!-- generated: ${now} -->
@@ -533,26 +506,26 @@ function handleEdit() {
 
   /** 渲染单个表单字段为 wd 组件 */
   private renderFormField(field: FieldIR): string {
-    const appComp = field.component?.app ?? "uni-easyinput";
-    const isRequired = field.config.required ? " required" : "";
+    const appComp = field.component?.app ?? 'uni-easyinput';
+    const isRequired = field.config.required ? ' required' : '';
     const model = field.model;
     const label = field.label;
 
     let input: string;
     switch (appComp) {
-      case "uni-data-select":
+      case 'uni-data-select':
         input = `          <wd-select-picker v-model="formData.${model}" :columns="${model}Options" placeholder="请选择${label}" />`;
         break;
-      case "uni-datetime-picker":
+      case 'uni-datetime-picker':
         input = `          <wd-datetime-picker v-model="formData.${model}" placeholder="请选择${label}" />`;
         break;
-      case "switch":
+      case 'switch':
         input = `          <wd-switch v-model="formData.${model}" active-value="1" inactive-value="0" />`;
         break;
       default: {
         // uni-easyinput 或其他默认输入
-        const isNumber = field.component?.jnpfKey === "JnpfInputNumber";
-        const typeAttr = isNumber ? ' type="number"' : "";
+        const isNumber = field.component?.jnpfKey === 'JnpfInputNumber';
+        const typeAttr = isNumber ? ' type="number"' : '';
         input = `          <wd-input v-model="formData.${model}" placeholder="请输入${label}"${typeAttr} />`;
       }
     }
@@ -562,27 +535,27 @@ function handleEdit() {
 
   /** jnpfKey → TypeScript 类型 */
   mapFieldToTSType(field: FieldIR): string {
-    const key = field.component?.jnpfKey ?? "";
+    const key = field.component?.jnpfKey ?? '';
     const multiple = field.config?.multiple;
 
     const map: Record<string, string> = {
-      JnpfInput: "string",
-      JnpfTextarea: "string",
-      JnpfInputNumber: "number",
-      JnpfSwitch: "boolean",
-      JnpfDatePicker: "string",
-      JnpfTimePicker: "string",
-      JnpfRate: "number",
-      JnpfSlider: "number",
-      JnpfSelect: multiple ? "string[]" : "string",
-      JnpfRadio: "string",
-      JnpfCheckbox: "string[]",
-      JnpfUploadImg: "string[]",
-      JnpfUploadFile: "string[]",
-      JnpfEditor: "string",
+      JnpfInput: 'string',
+      JnpfTextarea: 'string',
+      JnpfInputNumber: 'number',
+      JnpfSwitch: 'boolean',
+      JnpfDatePicker: 'string',
+      JnpfTimePicker: 'string',
+      JnpfRate: 'number',
+      JnpfSlider: 'number',
+      JnpfSelect: multiple ? 'string[]' : 'string',
+      JnpfRadio: 'string',
+      JnpfCheckbox: 'string[]',
+      JnpfUploadImg: 'string[]',
+      JnpfUploadFile: 'string[]',
+      JnpfEditor: 'string',
     };
 
-    return map[key] ?? "unknown";
+    return map[key] ?? 'unknown';
   }
 }
 

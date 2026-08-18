@@ -1,0 +1,4495 @@
+=== SA Service 全量代码审计包 ===
+> ⚠️ R12 三元组适配声明（2026-07-07 追加）：本审计包涉及的 sa-service 仅适用于 S2 agent 模式回归测试（ADR-004）；compile 主链与 C# SaMaterializer 物化不依赖 sa-service。所有数据/IR/路径 MUST 三元组 `(tenantId, projectId, pipelineId)` 完整独立。详见 `.cursor/rules/triple-key-iron-law.mdc`。
+生成时间: Sun Jun 21 03:21:32     2026
+文件数量: 44
+
+
+============================================================
+FILE: src/server.ts
+============================================================
+// sa-service/src/server.ts
+// SA Service HTTP 入口 — 接通 Pipeline Engine 的桥梁
+
+import express from 'express';
+import cors from 'cors';
+import { v4 as uuidv4 } from 'uuid';
+import { SAOrchestrator } from './orchestrator/SAOrchestrator';
+import { InMemorySADatabase } from './orchestrator/SADatabase';
+import { ILLMClient, SARequest, SAOutput, SAConfig, DEFAULT_SA_CONFIG } from './orchestrator/orchestrator-types';
+
+// ═══════════════════════════════════════════════════════
+// 1. LLM 客户端适配器（桥接后端 ILlmGatewayService）
+// ═══════════════════════════════════════════════════════
+class HttpLlmClient implements ILLMClient {
+  constructor(
+    private gatewayUrl: string,
+    private apiKey?: string,
+    private tenantId?: string,
+    private authHeader?: string,
+    private providerCode: string = 'deepseek',
+    private defaultTemperature: number = 0.3,
+    private defaultMaxTokens: number = 4096,
+  ) {}
+
+  async generate(params: {
+    systemPrompt: string;
+    context: Record<string, any>;
+    lastErrors?: string[];
+    temperature?: number;
+  }): Promise<any> {
+    const enrichedContext = { ...params.context };
+    if (params.lastErrors && params.lastErrors.length > 0) {
+      enrichedContext._lastErrors = params.lastErrors;
+    }
+
+    // 构造对齐后端 ChatCompletionRequest 的请求体
+    const body = {
+      providerCode: this.providerCode,
+      systemPrompt: params.systemPrompt,
+      messages: [
+        { role: 'user', content: JSON.stringify(enrichedContext) }
+      ],
+      temperature: params.temperature ?? this.defaultTemperature,
+      maxTokens: this.defaultMaxTokens,
+    };
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (this.apiKey) {
+      headers['Authorization'] = `Bearer ${this.apiKey}`;
+    }
+    if (this.tenantId) {
+      const headerTenant = this.tenantId === 'default' ? '1' : this.tenantId;
+      headers['X-Tenant-Id'] = headerTenant;
+    }
+    // authHeader 优先级高于 apiKey（从上游请求透传）
+    if (this.authHeader) {
+      if (this.apiKey) {
+        console.log('[HttpLlmClient] authHeader 覆盖 apiKey，使用上游鉴权信息');
+      }
+      headers['Authorization'] = this.authHeader;
+    }
+
+    const response = await fetch(this.gatewayUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`LLM Gateway 返回 ${response.status}: ${await response.text()}`);
+    }
+
+    const raw: any = await response.json();
+    // JNPF RESTfulResult 包装：{ code, data: { content, isSuccess, error } }
+    const payload = raw?.data ?? raw;
+    if (payload?.isSuccess === false || payload?.IsSuccess === false) {
+      const err = payload?.error ?? payload?.Error ?? raw?.msg ?? 'LLM Gateway 返回失败';
+      throw new Error(String(err));
+    }
+
+    const content =
+      payload?.content ??
+      payload?.Content ??
+      raw?.content ??
+      raw?.choices?.[0]?.message?.content ??
+      raw?.result ??
+      payload;
+
+    // 尝试解析 JSON（LLM 可能返回 markdown code block）
+    if (typeof content === 'string') {
+      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
+      try {
+        return JSON.parse(jsonMatch[1]!.trim());
+      } catch {
+        return content;
+      }
+    }
+    return content;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// 2. SSE 事件管理器
+// ═══════════════════════════════════════════════════════
+interface SSESession {
+  id: string;
+  res: express.Response;
+  createdAt: Date;
+}
+
+class SSEManager {
+  private sessions = new Map<string, SSESession>();
+
+  createSession(res: express.Response): string {
+    const id = uuidv4();
+    const session: SSESession = { id, res, createdAt: new Date() };
+    this.sessions.set(id, session);
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Session-Id', id);
+
+    this.send(id, 'connected', { sessionId: id });
+    return id;
+  }
+
+  send(sessionId: string, event: string, data: any): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    try {
+      session.res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    } catch {
+      this.sessions.delete(sessionId);
+    }
+  }
+
+  close(sessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      try { session.res.end(); } catch {}
+      this.sessions.delete(sessionId);
+    }
+  }
+
+  getSessionCount(): number {
+    return this.sessions.size;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// 3. Express 服务器
+// ═══════════════════════════════════════════════════════
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+
+const PORT = parseInt(process.env.SA_SERVICE_PORT || '3001', 10);
+// LLM Gateway 配置（全部从环境变量读取，无硬编码回退）
+const LLM_GATEWAY_URL = process.env.LLM_GATEWAY_URL || '';
+const LLM_API_KEY = process.env.LLM_API_KEY || '';
+const LLM_PROVIDER = process.env.LLM_PROVIDER || 'deepseek';
+const LLM_TEMPERATURE = parseFloat(process.env.LLM_TEMPERATURE || '0.3');
+const LLM_MAX_TOKENS = parseInt(process.env.LLM_MAX_TOKENS || '4096', 10);
+// DB 后端：'inmemory' | 'sqlserver'（默认 inmemory，生产需设 sqlserver）
+const DB_BACKEND = (process.env.SA_DB_BACKEND || 'inmemory').toLowerCase();
+
+const sseManager = new SSEManager();
+
+// 运行中的任务追踪
+const runningTasks = new Map<string, {
+  status: 'running' | 'completed' | 'failed';
+  result?: SAOutput;
+  error?: string;
+  startedAt: Date;
+  completedAt?: Date;
+}>();
+
+// ═══════════════════════════════════════════════════════
+// 健康检查
+// ═══════════════════════════════════════════════════════
+app.get('/api/sa/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'sa-service',
+    version: '1.0.0',
+    uptime: process.uptime(),
+    runningTasks: runningTasks.size,
+    sseSessions: sseManager.getSessionCount(),
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+// POST /api/sa/run — 执行 SA 3-Tier 流水线
+// ═══════════════════════════════════════════════════════
+app.post('/api/sa/run', async (req, res) => {
+  try {
+    const {
+      tenantId,
+      projectId,
+      requirementId,
+      requirementText,
+      userId,
+      industry,
+      sseSessionId,
+    } = req.body;
+
+    if (!requirementText || !tenantId || !projectId) {
+      return res.status(400).json({
+        error: '缺少必要参数: tenantId, projectId, requirementText',
+      });
+    }
+
+    const taskId = uuidv4();
+    runningTasks.set(taskId, { status: 'running', startedAt: new Date() });
+
+    if (sseSessionId) {
+      sseManager.send(sseSessionId, 'task-started', {
+        taskId, projectId,
+        requirementText: requirementText.substring(0, 100) + '...',
+      });
+    }
+
+    const authHeader = req.body.authHeader || '';
+    const providerCode = req.body.providerCode || req.body.provider || LLM_PROVIDER;
+    const llm = new HttpLlmClient(
+      LLM_GATEWAY_URL, LLM_API_KEY,
+      tenantId ?? 'default', authHeader,
+      providerCode, LLM_TEMPERATURE, LLM_MAX_TOKENS,
+    );
+
+    // DB 后端选择（InMemory 仅用于开发/测试，生产需设 SA_DB_BACKEND=sqlserver）
+    const db = createDatabase(DB_BACKEND);
+
+    // Validator 未注入时跳过校验（SAOrchestrator 有判空保护）
+    const validators = {
+      DFDValidator: null, BPMValidator: null, DictValidator: null,
+      LogicValidator: null, CrossEventConsistencyValidator: null,
+      ERValidator: null, STDValidator: null, UIValidator: null,
+    };
+    const orchestrator = new SAOrchestrator(llm, db, validators);
+
+    const saRequest: SARequest = {
+      tenantId,
+      projectId,
+      requirementId: requirementId || 0,
+      requirementText,
+      userId: userId || 'anonymous',
+    };
+    // 行业从请求体透传（优先级高于 SAOrchestrator 自动推断）
+    if (industry) {
+      (saRequest as any).industry = industry;
+    }
+
+    if (sseSessionId) {
+      sseManager.send(sseSessionId, 'phase-start', { phase: 'scope', name: '边界提取' });
+    }
+
+    const result = await orchestrator.runSA(saRequest);
+
+    const task = runningTasks.get(taskId)!;
+    task.status = 'completed';
+    task.result = result;
+    task.completedAt = new Date();
+
+    if (sseSessionId) {
+      sseManager.send(sseSessionId, 'task-completed', {
+        taskId,
+        duration: task.completedAt.getTime() - task.startedAt.getTime(),
+        eventCount: result.scope?.eventCount || 0,
+      });
+    }
+
+    res.json({
+      taskId,
+      status: 'completed',
+      result: {
+        scope: result.scope,
+        dfd: result.dfd,
+        bpm: result.bpm,
+        dict: result.dict,
+        er: result.er,
+        std: result.stateMachine,
+      },
+      validationStats: result.metadata?.validationStats,
+    });
+  } catch (error: any) {
+    console.error('[SA Service] runSA 失败:', error);
+    res.status(500).json({
+      error: 'SA 流水线执行失败',
+      message: error.message,
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+// GET /api/sa/events — SSE 事件流
+// ═══════════════════════════════════════════════════════
+app.get('/api/sa/events', (req, res) => {
+  const sessionId = sseManager.createSession(res);
+
+  const heartbeat = setInterval(() => {
+    sseManager.send(sessionId, 'heartbeat', { time: new Date().toISOString() });
+  }, 30000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    sseManager.close(sessionId);
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+// GET /api/sa/tasks/:taskId — 查询任务状态
+// ═══════════════════════════════════════════════════════
+app.get('/api/sa/tasks/:taskId', (req, res) => {
+  const task = runningTasks.get(req.params.taskId);
+  if (!task) {
+    return res.status(404).json({ error: '任务不存在' });
+  }
+  res.json({
+    taskId: req.params.taskId,
+    status: task.status,
+    startedAt: task.startedAt,
+    completedAt: task.completedAt,
+    duration: task.completedAt
+      ? task.completedAt.getTime() - task.startedAt.getTime()
+      : Date.now() - task.startedAt.getTime(),
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+// 启动
+// ═══════════════════════════════════════════════════════
+app.listen(PORT, () => {
+  // 启动校验
+  if (!LLM_GATEWAY_URL) {
+    console.error('[SA Service] ⚠️  LLM_GATEWAY_URL 未设置！请配置环境变量后重启。');
+  }
+  if (DB_BACKEND === 'inmemory') {
+    console.warn('[SA Service] ⚠️  使用 InMemory 数据库（数据重启即丢失）。生产环境请设置 SA_DB_BACKEND=sqlserver');
+  }
+  console.log(`[SA Service] 启动完成 → 端口:${PORT}, DB:${DB_BACKEND}, Provider:${LLM_PROVIDER}`);
+  if (LLM_GATEWAY_URL) {
+    console.log(`[SA Service] LLM Gateway → ${LLM_GATEWAY_URL}`);
+  }
+});
+
+// ── DB 工厂 ──
+import { ISADatabase } from './orchestrator/orchestrator-types';
+
+function createDatabase(backend: string): ISADatabase {
+  if (backend === 'sqlserver') {
+    // 生产环境：此处应返回 SqlServerSADatabase 实例
+    throw new Error('SA_DB_BACKEND=sqlserver 尚未实现，请提供 SqlServerSADatabase 实现或联系开发团队');
+  }
+  // 默认：InMemory（开发/测试）
+  return new InMemorySADatabase();
+}
+
+export { app };
+
+============================================================
+FILE: src/orchestrator/orchestrator-types.ts
+============================================================
+// SA SDK - 共享类型定义
+
+import { ValidationError } from '../validators/types';
+
+// =====================================================
+// 客户需求
+// =====================================================
+export interface SARequest {
+  tenantId: string;
+  projectId: number;
+  requirementId: number;
+  requirementText: string;          // 客户原始需求
+  eventId?: number;                  // 单事件模式(可选)
+  eventDescription?: string;         // 单事件描述(可选)
+  assetLevel?: 'PROJECT' | 'EVENT' | 'PROCESS';
+  userId: string;                    // 触发人
+}
+
+// =====================================================
+// SA 步骤产出(对应 9 张表)
+// =====================================================
+export interface ScopeOutput {
+  systemBoundary: { inScope: string[]; outOfScope: string[] };
+  externalEntities: Array<{ name: string; type: string; description: string }>;
+  businessEvents: Array<{
+    id: number;
+    name: string;
+    description: string;
+    complexity: 'simple' | 'medium' | 'complex';
+  }>;
+  eventCount: number;
+}
+
+export interface DFDOutput {
+  contextDiagram: any;
+  dfdLevels: any;
+  processes: Array<{ id: string; name: string; inputFlows: string[]; outputFlows: string[]; parentId?: string }>;
+  dataFlows: Array<{ name: string }>;
+  dataStores: Array<{ name: string }>;
+}
+
+export interface BPMOutput {
+  swimLanes: any[];
+  activityNodes: any[];
+  edges: any[];
+  exceptionPaths: any[];
+  dfdProcessMappings: Record<string, string>;
+}
+
+export interface DictOutput {
+  elements: Array<{
+    name: string;
+    type: string;
+    isFK?: boolean;
+    refEntity?: string;
+    isRequired?: boolean;
+  }>;
+  dataFlows: Array<{ name: string; fields: any[] }>;
+  dataStores: Array<{ name: string; fields: any[] }>;
+}
+
+export interface PSpecOutput {
+  processSpecs: Array<{
+    id: string;
+    name: string;
+    input: string[];
+    output: string[];
+    validation?: string;
+    algorithm?: string;
+  }>;
+}
+
+export interface DecisionTableOutput {
+  tables: Array<{
+    id: string;
+    conditions: Array<{ name: string; operator: string; value: any }>;
+    actions: Array<{ name: string }>;
+    rules: Array<{ conditionMask: boolean[]; actionIndex: number }>;
+  }>;
+}
+
+export interface EROutput {
+  entities: Array<{ name: string; columns: any[] }>;
+  relationships: any[];
+}
+
+export interface StateMachineOutput {
+  stateMachines: Array<{
+    entity: string;
+    states: string[];
+    transitions: Array<{ from: string; to: string; trigger: string }>;
+  }>;
+}
+
+export interface UIOutput {
+  screens: Array<{
+    id: string;
+    name: string;
+    dataFlow: string;
+    bpmNodeId: string;
+    fields: Array<{ name: string; type: string; required: boolean; controlType: string }>;
+  }>;
+}
+
+// =====================================================
+// SA 总产出
+// =====================================================
+export interface SAOutput {
+  projectId: number;
+  tenantId: string;
+  scope: ScopeOutput;
+  dfd?: DFDOutput;
+  bpm?: BPMOutput;
+  dict?: DictOutput;
+  pspec?: PSpecOutput;
+  decisionTable?: DecisionTableOutput;
+  er?: EROutput;
+  stateMachine?: StateMachineOutput;
+  ui?: UIOutput;
+  metadata: {
+    totalDuration: number;
+    totalRetries: number;
+    validationStats: { step: string; attempts: number; passed: boolean }[];
+  };
+}
+
+// =====================================================
+// SA 上下文(贯穿整个流水线)
+// =====================================================
+export interface SAContext {
+  tenantId: string;
+  projectId: number;
+  requirementId: number;
+  requirementText: string;
+  eventId?: number;
+  eventDescription?: string;
+  assetLevel: 'PROJECT' | 'EVENT' | 'PROCESS';
+
+  // 上下文注入
+  kgPatterns: KGPattern[];                // 知识图谱注入
+  domainModel: DomainModelContext;        // 领域模型注入
+  previousSteps: Record<string, any>;     // 上一步产出(供下一步使用)
+
+  // 运行时 ID（流水线执行过程中逐步填充）
+  scopeId?: number;
+  dfdId?: number;
+  bpmId?: number;
+  dictId?: number;
+  pspecId?: number;
+  decisionTableId?: number;
+  erId?: number;
+  stateMachineId?: number;
+  uiId?: number;
+
+  // 3-Tier 架构：Project 级全局字典 + 当前事件 ID
+  projectDict?: DictOutput;              // Project 级全局字典（Phase 1 产出）
+  currentEventId?: number;               // 当前正在处理的事件 ID
+
+  // 跨事件判定表注入
+  allDecisionTables?: any[];
+
+  // 重试闭环
+  lastErrors?: string[];
+
+  // 元数据
+  userId: string;
+  startTime: number;
+}
+
+export interface KGPattern {
+  id: string;
+  type: 'field_naming' | 'decision_rule' | 'state_machine' | 'process_pattern';
+  content: any;
+  score: number;
+  tags: string[];
+}
+
+export interface DomainModelContext {
+  industry: string;
+  standardFields: Array<{ name: string; type: string; description: string }>;
+  standardEntities: Array<{ name: string; description: string; commonFields: string[] }>;
+  standardProcesses: Array<{ id: string; name: string; description: string }>;
+}
+
+// =====================================================
+// LLM 客户端接口(任何 LLM 都能接入)
+// =====================================================
+export interface ILLMClient {
+  generate(params: {
+    systemPrompt: string;
+    context: Record<string, any>;
+    lastErrors?: string[];
+    temperature?: number;
+  }): Promise<any>;
+}
+
+// =====================================================
+// 数据库接口
+// =====================================================
+export interface ISADatabase {
+  // 写入
+  saveScope(scope: ScopeOutput, ctx: SAContext): Promise<{ id: number }>;
+  saveDFD(dfd: DFDOutput, ctx: SAContext, scopeId: number): Promise<{ id: number }>;
+  saveBPM(bpm: BPMOutput, ctx: SAContext, dfdId: number): Promise<{ id: number }>;
+  saveDict(dict: DictOutput, ctx: SAContext, dfdId: number, bpmId: number): Promise<{ id: number }>;
+  savePSpec(pspec: PSpecOutput, ctx: SAContext, dictId: number, bpmId: number): Promise<{ id: number }>;
+  saveDecisionTable(dt: DecisionTableOutput, ctx: SAContext, pspecId: number, dictId: number): Promise<{ id: number }>;
+  saveER(er: EROutput, ctx: SAContext, dictId: number): Promise<{ id: number }>;
+  saveStateMachine(sm: StateMachineOutput, ctx: SAContext, dictId: number, bpmId: number): Promise<{ id: number }>;
+  saveUI(ui: UIOutput, ctx: SAContext, bpmId: number, dictId: number): Promise<{ id: number }>;
+
+  // 校验日志
+  logValidation(record: ValidationLogRecord): Promise<void>;
+
+  // 读取
+  getProjectKGPatterns(projectId: number, limit?: number): Promise<KGPattern[]>;
+  getDomainModel(industry: string): Promise<DomainModelContext>;
+  getAllDecisionTablesInProject(projectId: number): Promise<any[]>;
+}
+
+export interface ValidationLogRecord {
+  tenantId: string;
+  projectId: number;
+  saTableName: string;
+  saRecordId?: number;
+  validatorName: string;
+  retryCount: number;
+  previousErrors: string[] | null;
+  isConverged: boolean;
+  validationStatus: 'PASS' | 'FAIL';
+  errors: ValidationError[];
+  durationMs: number;
+}
+
+// =====================================================
+// SA 配置
+// =====================================================
+export interface SAConfig {
+  maxRetries: number;
+  retryDelayMs: number;
+  enableDKEE: boolean;
+  enableCrossEventCheck: boolean;
+  logLevel: 'debug' | 'info' | 'warn' | 'error';
+}
+
+export const DEFAULT_SA_CONFIG: SAConfig = {
+  maxRetries: 5,
+  retryDelayMs: 1000,
+  enableDKEE: true,
+  enableCrossEventCheck: true,
+  logLevel: 'info',
+};
+
+// 重新导出 Validator 类型供 SDK 使用
+export { ValidationError } from '../validators/types';
+
+============================================================
+FILE: src/orchestrator/SAOrchestrator.ts
+============================================================
+// SAOrchestrator - SDK 主入口
+// 后端只需 await runSA(req) 即可完成完整需求分析
+
+import {
+  SARequest, SAContext, SAOutput, SAConfig, DEFAULT_SA_CONFIG,
+  ScopeOutput, DFDOutput, BPMOutput, DictOutput, PSpecOutput,
+  DecisionTableOutput, EROutput, StateMachineOutput, UIOutput,
+  ISADatabase, ILLMClient, ValidationError
+} from './orchestrator-types';
+import {
+  ScopeAgent, DFDAgent, BPMAgent, DictAgent, PSpecAgent,
+  DecisionTableAgent, ERAgent, StateMachineAgent, UIAgent
+} from '../agents';
+import { runWithRetry, RetryResult } from './RetryLoop';
+import { decideSteps, runScopeStep, classifyEvent } from './StepRouter';
+import { DKEEFacade } from '../dkee';
+import { BaseAgent } from './BaseAgent';
+
+// =====================================================
+// 注入的 Validator(从 @your-org/sa-validators 包)
+// 这里用 type-only 避免硬依赖,实际使用方注入
+// =====================================================
+export interface ValidatorBundle {
+  DFDValidator: any;
+  BPMValidator: any;
+  DictValidator: any;
+  LogicValidator: any;
+  CrossEventConsistencyValidator: any;
+  ERValidator: any;
+  STDValidator: any;
+  UIValidator: any;
+}
+
+// =====================================================
+// SAOrchestrator
+// =====================================================
+export class SAOrchestrator {
+  private agents: Map<string, any>;
+  private dkee: DKEEFacade;
+
+  constructor(
+    private llm: ILLMClient,
+    public db: ISADatabase,
+    private validators: ValidatorBundle,
+    private config: SAConfig = DEFAULT_SA_CONFIG
+  ) {
+    this.agents = new Map<string, any>([
+      ['ScopeAgent', new ScopeAgent(llm)],
+      ['DFDAgent', new DFDAgent(llm)],
+      ['BPMAgent', new BPMAgent(llm)],
+      ['DictAgent', new DictAgent(llm)],
+      ['PSpecAgent', new PSpecAgent(llm)],
+      ['DecisionTableAgent', new DecisionTableAgent(llm)],
+      ['ERAgent', new ERAgent(llm)],
+      ['StateMachineAgent', new StateMachineAgent(llm)],
+      ['UIAgent', new UIAgent(llm)],
+    ]);
+    this.dkee = new DKEEFacade();
+  }
+
+  // ============================================================
+  // 主入口:后端调用（3-Tier 架构：Project → Event → Process）
+  // ============================================================
+  async runSA(req: SARequest): Promise<SAOutput> {
+    const startTime = Date.now();
+    const validationStats: any[] = [];
+
+    console.log(`[SA] 开始需求分析: project=${req.projectId} tenant=${req.tenantId}`);
+
+    // 解析 Context(注入 KG 模式 + 领域模型)
+    const ctx = await this.resolveContext(req);
+
+    // ═══════════════════════════════════════
+    // Phase 0: 边界提取（所有级别共享）
+    // ═══════════════════════════════════════
+    const scope = await runScopeStep(this, ctx);
+    ctx.previousSteps['scope'] = scope;
+    validationStats.push({ step: 'Scope', attempts: 1, passed: true });
+
+    // ═══════════════════════════════════════
+    // Phase 1: PROJECT 级（跑一次）
+    // 产生全局 DFD / BPM / Dict / ER / STD
+    // ═══════════════════════════════════════
+    ctx.assetLevel = 'PROJECT';
+
+    const dfd = await this.runStepWithValidation<DFDOutput>('DFDAgent', 'sa_dfd', ctx,
+      async (output) => { const { id } = await this.db.saveDFD(output, ctx, ctx.scopeId!); ctx.dfdId = id; });
+    ctx.previousSteps['dfd'] = dfd;
+    validationStats.push({ step: 'DFD', attempts: 1, passed: true });
+
+    const bpm = await this.runStepWithValidation<BPMOutput>('BPMAgent', 'sa_business_process', ctx,
+      async (output) => { const { id } = await this.db.saveBPM(output, ctx, ctx.dfdId!); ctx.bpmId = id; });
+    ctx.previousSteps['bpm'] = bpm;
+    validationStats.push({ step: 'BPM', attempts: 1, passed: true });
+
+    const dict = await this.runStepWithValidation<DictOutput>('DictAgent', 'sa_data_dictionary', ctx,
+      async (output) => { const { id } = await this.db.saveDict(output, ctx, ctx.dfdId!, ctx.bpmId!); ctx.dictId = id; });
+    ctx.previousSteps['dict'] = dict;
+    ctx.projectDict = dict;  // 保存为 Project 级全局字典
+    validationStats.push({ step: 'Dict', attempts: 1, passed: true });
+
+    const er = await this.runStepWithValidation<EROutput>('ERAgent', 'sa_er', ctx,
+      async (output) => { const { id } = await this.db.saveER(output, ctx, ctx.dictId!); ctx.erId = id; });
+    ctx.previousSteps['er'] = er;
+    validationStats.push({ step: 'ER', attempts: 1, passed: true });
+
+    const stateMachine = await this.runStepWithValidation<StateMachineOutput>('StateMachineAgent', 'sa_state_machine', ctx,
+      async (output) => { const { id } = await this.db.saveStateMachine(output, ctx, ctx.dictId!, ctx.bpmId!); ctx.stateMachineId = id; });
+    ctx.previousSteps['stateMachine'] = stateMachine;
+    validationStats.push({ step: 'StateMachine', attempts: 1, passed: true });
+
+    console.log(`[SA] Project 级完成: DFD/BPM/Dict/ER/STD 已生成`);
+
+    // ═══════════════════════════════════════
+    // Phase 2 & 3: EVENT / PROCESS 级（逐事件）
+    // 单事件失败隔离：一个事件异常不阻断其他事件
+    // ═══════════════════════════════════════
+    let pspec: PSpecOutput | undefined;
+    let decisionTable: DecisionTableOutput | undefined;
+    let ui: UIOutput | undefined;
+
+    for (const event of scope.businessEvents) {
+      try {
+        const tierDecision = classifyEvent(event, ctx.projectDict);
+        ctx.assetLevel = tierDecision.assetLevel;
+        ctx.currentEventId = event.id;
+
+        console.log(`[SA] 事件 "${event.name}" → ${tierDecision.assetLevel}: ${tierDecision.reason}`);
+
+        // PROCESS 级：复杂事件深度推演
+        if (tierDecision.assetLevel === 'PROCESS') {
+          if (tierDecision.stepsToRun.includes('PSpecAgent')) {
+            pspec = await this.runStepWithValidation<PSpecOutput>('PSpecAgent', 'sa_pspec', ctx,
+              async (output) => { const { id } = await this.db.savePSpec(output, ctx, ctx.dictId!, ctx.bpmId!); ctx.pspecId = id; });
+            ctx.previousSteps['pspec'] = pspec;
+            validationStats.push({ step: 'PSpec', attempts: 1, passed: true });
+          }
+
+          if (tierDecision.stepsToRun.includes('DecisionTableAgent')) {
+            ctx.kgPatterns = await this.loadExistingDecisionTables(ctx);
+            decisionTable = await this.runStepWithValidation<DecisionTableOutput>('DecisionTableAgent', 'sa_decision_table', ctx,
+              async (output) => { const { id } = await this.db.saveDecisionTable(output, ctx, ctx.pspecId!, ctx.dictId!); ctx.decisionTableId = id; });
+            ctx.previousSteps['decisionTable'] = decisionTable;
+            validationStats.push({ step: 'DecisionTable', attempts: 1, passed: true });
+          }
+        }
+
+        // EVENT / PROCESS 级：都跑 UI
+        if (tierDecision.stepsToRun.includes('UIAgent')) {
+          ui = await this.runStepWithValidation<UIOutput>('UIAgent', 'sa_ui', ctx,
+            async (output) => { const { id } = await this.db.saveUI(output, ctx, ctx.bpmId!, ctx.dictId!); ctx.uiId = id; });
+          ctx.previousSteps['ui'] = ui;
+          validationStats.push({ step: 'UI', attempts: 1, passed: true });
+        }
+      } catch (e) {
+        console.error(`[SA] 事件 "${event.name}" (id=${event.id}) 处理失败，跳过并继续:`, e);
+        validationStats.push({ step: `Event_${event.id}`, attempts: 1, passed: false, error: (e as Error).message });
+        // 重置事件级 context 增量字段，避免污染下一个事件
+        ctx.previousSteps['pspec'] = undefined;
+        ctx.previousSteps['decisionTable'] = undefined;
+        ctx.previousSteps['ui'] = undefined;
+      }
+    }
+
+    // ═══════════════════════════════════════
+    // Phase 4: DKEE 提炼
+    // ═══════════════════════════════════════
+    if (this.config.enableDKEE) {
+      await this.dkee.extractAndScore('general');
+    }
+
+    const totalDuration = Date.now() - startTime;
+    console.log(`[SA] 完成: ${totalDuration}ms, 步骤统计:`, validationStats);
+
+    return {
+      projectId: ctx.projectId,
+      tenantId: ctx.tenantId,
+      scope,
+      dfd, bpm, dict, pspec, decisionTable, er, stateMachine, ui,
+      metadata: { totalDuration, totalRetries: 0, validationStats },
+    };
+  }
+
+  // ============================================================
+  // 内部:跑单步(带 retry + validator + DB 写入)
+  // ============================================================
+  async runStepWithValidation<T>(
+    agentName: string,
+    tableName: string,
+    ctx: SAContext,
+    saveToDb: (output: T) => Promise<void>,
+    customValidator?: (output: T) => { passed: boolean; errors: ValidationError[] }
+  ): Promise<T> {
+    const agent = this.agents.get(agentName);
+    if (!agent) throw new Error(`Agent ${agentName} not found`);
+
+    const result = await runWithRetry<T>(
+      tableName,
+      ctx,
+      this.db,
+      { maxRetries: this.config.maxRetries, retryDelayMs: this.config.retryDelayMs },
+      async () => await agent.generate(ctx),
+      (output) => customValidator ? customValidator(output) : this.runDefaultValidator(agentName, output, ctx)
+    );
+
+    await saveToDb(result.output);
+    return result.output;
+  }
+
+  // 默认 Validator 路由(根据 Agent 名选对应 Validator)
+  // 判空保护：Validator 未注入时跳过校验（允许无校验模式运行）
+  private runDefaultValidator(agentName: string, output: any, ctx: SAContext): { passed: boolean; errors: ValidationError[] } {
+    try {
+      switch (agentName) {
+        case 'DFDAgent': {
+          if (!this.validators.DFDValidator) {
+            console.warn('[Validator] DFDValidator 未注入，跳过 DFD 校验');
+            return { passed: true, errors: [] };
+          }
+          const v = new this.validators.DFDValidator(output);
+          return v.validate();
+        }
+        case 'BPMAgent': {
+          if (!this.validators.BPMValidator) {
+            console.warn('[Validator] BPMValidator 未注入，跳过 BPM 校验');
+            return { passed: true, errors: [] };
+          }
+          const dfdProcesses = ctx.previousSteps['dfd']?.processes || [];
+          const v = new this.validators.BPMValidator(output, dfdProcesses);
+          return v.validate();
+        }
+        case 'DictAgent': {
+          if (!this.validators.DictValidator) {
+            console.warn('[Validator] DictValidator 未注入，跳过 Dict 校验');
+            return { passed: true, errors: [] };
+          }
+          const dfd = ctx.previousSteps['dfd'] || { dataFlows: [], dataStores: [] };
+          const v = new this.validators.DictValidator(output, dfd);
+          return v.validate();
+        }
+        case 'PSpecAgent': {
+          if (!this.validators.LogicValidator) {
+            console.warn('[Validator] LogicValidator 未注入，跳过 PSpec 校验');
+            return { passed: true, errors: [] };
+          }
+          const dict = ctx.previousSteps['dict'];
+          if (!dict) return { passed: true, errors: [] };
+          const v = new this.validators.LogicValidator(output, dict);
+          return v.validate();
+        }
+        case 'DecisionTableAgent': {
+          if (!this.validators.CrossEventConsistencyValidator) {
+            console.warn('[Validator] CrossEventConsistencyValidator 未注入，跳过 DecisionTable 校验');
+            return { passed: true, errors: [] };
+          }
+          const allTables = ctx.allDecisionTables || [];
+          const v = new this.validators.CrossEventConsistencyValidator(output, allTables);
+          return v.validate();
+        }
+        case 'ERAgent': {
+          if (!this.validators.ERValidator) {
+            console.warn('[Validator] ERValidator 未注入，跳过 ER 校验');
+            return { passed: true, errors: [] };
+          }
+          const dict = ctx.previousSteps['dict'];
+          if (!dict) return { passed: true, errors: [] };
+          const v = new this.validators.ERValidator(output, dict);
+          return v.validate();
+        }
+        case 'StateMachineAgent': {
+          if (!this.validators.STDValidator) {
+            console.warn('[Validator] STDValidator 未注入，跳过 StateMachine 校验');
+            return { passed: true, errors: [] };
+          }
+          const dict = ctx.previousSteps['dict'];
+          const v = new this.validators.STDValidator(output, dict);
+          return v.validate();
+        }
+        case 'UIAgent': {
+          if (!this.validators.UIValidator) {
+            console.warn('[Validator] UIValidator 未注入，跳过 UI 校验');
+            return { passed: true, errors: [] };
+          }
+          const dict = ctx.previousSteps['dict'];
+          const bpm = ctx.previousSteps['bpm'];
+          if (!dict || !bpm) return { passed: true, errors: [] };
+          const v = new this.validators.UIValidator(output, dict, bpm);
+          return v.validate();
+        }
+        default:
+          return { passed: true, errors: [] };
+      }
+    } catch (e) {
+      console.error(`[Validator] ${agentName} 执行异常:`, e);
+      return { passed: false, errors: [{ code: 'VALIDATOR_EXCEPTION', message: (e as Error).message, severity: 'ERROR' }] };
+    }
+  }
+
+  // ============================================================
+  // 解析 Context(注入 KG 模式 + 领域模型)
+  // ============================================================
+  private async resolveContext(req: SARequest): Promise<SAContext> {
+    const kgPatterns = await this.db.getProjectKGPatterns(req.projectId, 5);
+    const industry = this.inferIndustry(req.requirementText);
+    const domainModel = await this.db.getDomainModel(industry);
+
+    return {
+      tenantId: req.tenantId,
+      projectId: req.projectId,
+      requirementId: req.requirementId,
+      requirementText: req.requirementText,
+      eventId: req.eventId,
+      eventDescription: req.eventDescription,
+      assetLevel: req.assetLevel || 'PROJECT',
+      kgPatterns,
+      domainModel,
+      previousSteps: {},
+      userId: req.userId,
+      startTime: Date.now(),
+    };
+  }
+
+  private async loadExistingDecisionTables(ctx: SAContext): Promise<any[]> {
+    return await this.db.getAllDecisionTablesInProject(ctx.projectId);
+  }
+
+  // ============================================================
+  // 工具:推断行业
+  // ============================================================
+  private inferIndustry(text: string): string {
+    if (/MES|制造|工单|工序|报工|加工/.test(text)) return 'manufacturing';
+    if (/电商|订单|购物|支付/.test(text)) return 'ecommerce';
+    if (/眼镜|验光|处方/.test(text)) return 'optical';
+    return 'general';
+  }
+
+  // 取 events 中最高复杂度
+  private getMaxComplexity(scope: ScopeOutput): 'simple' | 'medium' | 'complex' {
+    const order = { simple: 0, medium: 1, complex: 2 } as const;
+    let max: 'simple' | 'medium' | 'complex' = 'simple';
+    scope.businessEvents.forEach((e: { complexity: 'simple' | 'medium' | 'complex' }) => {
+      if (order[e.complexity] > order[max]) max = e.complexity;
+    });
+    return max;
+  }
+
+  // 是否有状态变化
+  private hasStateChange(scope: ScopeOutput): boolean {
+    return scope.businessEvents.some(e =>
+      /状态|报工|审批|驳回|关闭|完成/.test(e.name + e.description)
+    );
+  }
+}
+
+============================================================
+FILE: src/orchestrator/BaseAgent.ts
+============================================================
+// BaseAgent - 所有 SA Agent 的基类
+// 9 个 Agent(Scope/DFD/BPM/Dict/PSpec/DecisionTable/ER/StateMachine/UI)都继承这个
+
+import { ILLMClient, SAContext } from './orchestrator-types';
+
+export abstract class BaseAgent<TOutput> {
+  abstract readonly name: string;
+  abstract readonly tableName: string;
+  abstract readonly systemPrompt: string;
+
+  /** 各 Agent 可覆盖的温度（不同步骤可能需要不同创造性） */
+  protected temperature: number = 0.1;
+
+  constructor(protected llm: ILLMClient) {}
+
+  /**
+   * 生成 SA 步骤产出
+   * 子类可以覆盖 buildPrompt 来定制上下文
+   */
+  async generate(ctx: SAContext): Promise<TOutput> {
+    const prompt = this.buildPrompt(ctx);
+
+    const result = await this.llm.generate({
+      systemPrompt: this.systemPrompt,
+      context: prompt,
+      lastErrors: ctx.lastErrors,
+      temperature: this.temperature,  // Agent 级可覆盖温度
+    });
+
+    return result as TOutput;
+  }
+
+  /**
+   * 构造 LLM 输入(注入上一步产出 + KG/DM + 错误回灌)
+   * 子类可覆盖
+   */
+  protected buildPrompt(ctx: SAContext): Record<string, any> {
+    return {
+      requirement: ctx.requirementText,
+      eventDescription: ctx.eventDescription,
+      previousSteps: ctx.previousSteps,
+      kgPatterns: ctx.kgPatterns.map(p => ({
+        type: p.type,
+        content: p.content,
+        score: p.score,
+      })),
+      domainModel: ctx.domainModel,
+      lastErrors: ctx.lastErrors,
+    };
+  }
+}
+
+============================================================
+FILE: src/orchestrator/RetryLoop.ts
+============================================================
+// RetryLoop - "生成→验证→自修复"闭环
+// 每个 SA 步骤都用这个循环跑
+
+import { ValidationError, ISADatabase, SAContext, ValidationLogRecord } from './orchestrator-types';
+
+export interface RetryLoopConfig {
+  maxRetries: number;
+  retryDelayMs: number;
+}
+
+export interface RetryResult<T> {
+  output: T;
+  attempts: number;
+  validationPassed: boolean;
+  errors: ValidationError[];
+}
+
+/**
+ * 生成 → 验证 → 错误回灌 → 重试
+ */
+export async function runWithRetry<T>(
+  stepName: string,
+  ctx: SAContext,
+  db: ISADatabase,
+  config: RetryLoopConfig,
+  generate: () => Promise<T>,
+  validate: (output: T) => { passed: boolean; errors: ValidationError[] }
+): Promise<RetryResult<T>> {
+  let lastOutput: T;
+  let lastResult: { passed: boolean; errors: ValidationError[] } = { passed: false, errors: [] };
+
+  for (let attempt = 1; attempt <= config.maxRetries; attempt++) {
+    const startTime = Date.now();
+
+    // Step 1: LLM 生成
+    lastOutput = await generate();
+
+    // Step 2: Validator 校验
+    lastResult = validate(lastOutput);
+    const duration = Date.now() - startTime;
+
+    // Step 3: 写 sa_validation_log(含重试闭环)
+    const logRecord: ValidationLogRecord = {
+      tenantId: ctx.tenantId,
+      projectId: ctx.projectId,
+      saTableName: stepName,
+      validatorName: stepName,
+      retryCount: attempt - 1,
+      previousErrors: ctx.lastErrors || null,
+      isConverged: lastResult.passed,
+      validationStatus: lastResult.passed ? 'PASS' : 'FAIL',
+      errors: lastResult.errors,
+      durationMs: duration,
+    };
+    await db.logValidation(logRecord);
+
+    if (lastResult.passed) {
+      return {
+        output: lastOutput!,
+        attempts: attempt,
+        validationPassed: true,
+        errors: [],
+      };
+    }
+
+    // Step 4: 错误回灌到 ctx.lastErrors(下一轮 LLM 看到)
+    ctx.lastErrors = lastResult.errors.map(e => `[${e.code}] ${e.message}`);
+    console.warn(`[${stepName}] Attempt ${attempt}/${config.maxRetries} failed:`, lastResult.errors.length, 'errors');
+
+    // 等待重试延迟(避免过快打 LLM)
+    if (attempt < config.maxRetries) {
+      await sleep(config.retryDelayMs);
+    }
+  }
+
+  // 所有重试都失败
+  throw new Error(
+    `[${stepName}] 失败 ${config.maxRetries} 次仍未收敛。最后错误:\n` +
+    (lastResult?.errors || []).map(e => `  [${e.code}] ${e.message}`).join('\n')
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+============================================================
+FILE: src/orchestrator/StepRouter.ts
+============================================================
+// StepRouter - 6 问清单 + 三级分层路由
+// 根据 Step 1 提取的 events 复杂度,决定跑哪些步骤
+
+import { SAOrchestrator } from './SAOrchestrator';
+import { SAContext, ScopeOutput, DictOutput, ValidationError } from './orchestrator-types';
+
+export type EventComplexity = 'simple' | 'medium' | 'complex';
+export type AssetLevel = 'PROJECT' | 'EVENT' | 'PROCESS';
+
+export interface StepDecision {
+  runDFD: boolean;
+  runBPM: boolean;
+  runDict: boolean;
+  runPSpec: boolean;
+  runDecisionTable: boolean;
+  runER: boolean;
+  runStateMachine: boolean;
+  runUI: boolean;
+  reason: string;
+}
+
+export interface BusinessEvent {
+  id: number;
+  name: string;
+  description: string;
+  complexity: 'simple' | 'medium' | 'complex';
+}
+
+export interface TierDecision {
+  assetLevel: AssetLevel;
+  eventId: number;
+  stepsToRun: string[];
+  reason: string;
+}
+
+/**
+ * 六问清单：判断事件属于 PROJECT / EVENT / PROCESS 哪一级
+ */
+export function classifyEvent(
+  event: BusinessEvent,
+  globalDict?: DictOutput,
+): TierDecision {
+  // 问题 1: 是否涉及新实体？→ 需要 Dict/ER
+  // 问题 2: 是否涉及新数据流？→ 需要 DFD
+  // 问题 3: 是否涉及状态扭转？→ 需要 STD
+  // 问题 4: 是否涉及跨系统交互？→ 需要 BPM
+  // 问题 5: 是否涉及复杂决策逻辑？→ 需要 DecisionTable
+  // 问题 6: 是否涉及并发/事务边界？→ 需要 PSPEC
+
+  if (event.complexity === 'complex') {
+    // 复杂事件：跑完整 PROCESS 级流水线
+    return {
+      assetLevel: 'PROCESS',
+      eventId: event.id,
+      stepsToRun: ['PSpecAgent', 'DecisionTableAgent', 'StateMachineAgent', 'UIAgent'],
+      reason: `复杂事件 "${event.name}"：需深度推演（PSPEC + 判定表 + 状态机 + UI）`,
+    };
+  }
+
+  if (event.complexity === 'medium') {
+    // 中等事件：增量扩展，跑 UI + 可能的 STD
+    return {
+      assetLevel: 'EVENT',
+      eventId: event.id,
+      stepsToRun: ['StateMachineAgent', 'UIAgent'],
+      reason: `中等事件 "${event.name}"：增量扩展（状态机 + UI）`,
+    };
+  }
+
+  // 简单事件：只跑 UI，字段从 Project 级字典取
+  return {
+    assetLevel: 'EVENT',
+    eventId: event.id,
+    stepsToRun: ['UIAgent'],
+    reason: `简单事件 "${event.name}"：仅生成 UI 屏`,
+  };
+}
+
+/**
+ * 根据事件复杂度决定跑哪些步骤
+ * 这是"6 问清单"的核心逻辑
+ */
+export function decideSteps(complexity: EventComplexity, hasStateChange: boolean): StepDecision {
+  switch (complexity) {
+    case 'simple':
+      return {
+        runDFD: false,
+        runBPM: false,
+        runDict: false,
+        runPSpec: false,
+        runDecisionTable: false,
+        runER: false,
+        runStateMachine: false,
+        runUI: true,  // 即使简单也要生成 UI(可能就是个按钮)
+        reason: '简单事件:跳过 DFD/BPM/PSPEC/DT,只生成 UI',
+      };
+    case 'medium':
+      return {
+        runDFD: true,
+        runBPM: true,
+        runDict: true,
+        runPSpec: true,
+        runDecisionTable: false,  // 复杂规则才跑判定表
+        runER: true,
+        runStateMachine: hasStateChange,  // 有状态变化才跑 STD
+        runUI: true,
+        reason: '中等事件:跑 DFD/BPM/Dict/PSPEC/ER,按需跑 STD',
+      };
+    case 'complex':
+      return {
+        runDFD: true,
+        runBPM: true,
+        runDict: true,
+        runPSpec: true,
+        runDecisionTable: true,   // ★ 复杂事件必跑判定表
+        runER: true,
+        runStateMachine: true,
+        runUI: true,
+        reason: '复杂事件:跑全部 9 步',
+      };
+  }
+}
+
+/**
+ * 跑 Step 1(总是先跑,作为整个流水线的入口)
+ */
+export async function runScopeStep(orchestrator: SAOrchestrator, ctx: SAContext): Promise<ScopeOutput> {
+  return await orchestrator.runStepWithValidation<ScopeOutput>(
+    'ScopeAgent',
+    'sa_scope',
+    ctx,
+    async (output) => {
+      const { id } = await orchestrator.db.saveScope(output, ctx);
+      ctx.scopeId = id;
+    },
+    // Scope 自身没有 Validator(它是源头)
+    // 但可以做"事件复杂度分布"的合理性检查
+    (output) => {
+      const errors: ValidationError[] = [];
+      if (output.eventCount === 0) {
+        errors.push({ code: 'SCOPE_NO_EVENTS', message: 'Scope 没提取到任何业务事件', severity: 'ERROR' });
+      }
+      if (!output.systemBoundary?.inScope || output.systemBoundary.inScope.length === 0) {
+        errors.push({ code: 'SCOPE_NO_INSCOPE', message: 'Scope 没定义 In Scope', severity: 'ERROR' });
+      }
+      return { passed: errors.length === 0, errors };
+    }
+  );
+}
+
+============================================================
+FILE: src/orchestrator/SADatabase.ts
+============================================================
+// ISADatabase 实现 - in-memory mock(可直接替换为 SQL Server 实现)
+
+import {
+  ISADatabase, SAContext, ScopeOutput, DFDOutput, BPMOutput, DictOutput,
+  PSpecOutput, DecisionTableOutput, EROutput, StateMachineOutput, UIOutput,
+  ValidationLogRecord, KGPattern, DomainModelContext
+} from './orchestrator-types';
+
+// =====================================================
+// InMemorySADatabase - 内存实现(用于开发和测试)
+// 生产环境替换为 SqlServerSADatabase
+// =====================================================
+export class InMemorySADatabase implements ISADatabase {
+  private scopes = new Map<number, any>();
+  private dfds = new Map<number, any>();
+  private bpms = new Map<number, any>();
+  private dicts = new Map<number, any>();
+  private pspecs = new Map<number, any>();
+  private decisionTables = new Map<number, any>();
+  private ers = new Map<number, any>();
+  private stateMachines = new Map<number, any>();
+  private uis = new Map<number, any>();
+  private validationLogs: ValidationLogRecord[] = [];
+  private nextId = 1;
+
+  // ========================================================
+  // Save 方法
+  // ========================================================
+  async saveScope(scope: ScopeOutput, ctx: SAContext): Promise<{ id: number }> {
+    const id = this.nextId++;
+    this.scopes.set(id, { id, ...scope, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveDFD(dfd: DFDOutput, ctx: SAContext, scopeId: number): Promise<{ id: number }> {
+    if (!this.scopes.has(scopeId)) throw new Error(`强外键违规: sa_scope(${scopeId}) 不存在`);
+    const id = this.nextId++;
+    this.dfds.set(id, { id, ...dfd, scopeId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveBPM(bpm: BPMOutput, ctx: SAContext, dfdId: number): Promise<{ id: number }> {
+    if (!this.dfds.has(dfdId)) throw new Error(`强外键违规: sa_dfd(${dfdId}) 不存在`);
+    const id = this.nextId++;
+    this.bpms.set(id, { id, ...bpm, dfdId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveDict(dict: DictOutput, ctx: SAContext, dfdId: number, bpmId: number): Promise<{ id: number }> {
+    if (!this.dfds.has(dfdId)) throw new Error(`强外键违规: sa_dfd(${dfdId}) 不存在`);
+    if (!this.bpms.has(bpmId)) throw new Error(`强外键违规: sa_bpm(${bpmId}) 不存在`);
+    const id = this.nextId++;
+    this.dicts.set(id, { id, ...dict, dfdId, bpmId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async savePSpec(pspec: PSpecOutput, ctx: SAContext, dictId: number, bpmId: number): Promise<{ id: number }> {
+    if (!this.dicts.has(dictId)) throw new Error(`强外键违规: sa_dict(${dictId}) 不存在`);
+    const id = this.nextId++;
+    this.pspecs.set(id, { id, ...pspec, dictId, bpmId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveDecisionTable(dt: DecisionTableOutput, ctx: SAContext, pspecId: number, dictId: number): Promise<{ id: number }> {
+    if (!this.pspecs.has(pspecId)) throw new Error(`强外键违规: sa_pspec(${pspecId}) 不存在`);
+    const id = this.nextId++;
+    this.decisionTables.set(id, { id, ...dt, pspecId, dictId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveER(er: EROutput, ctx: SAContext, dictId: number): Promise<{ id: number }> {
+    if (!this.dicts.has(dictId)) throw new Error(`强外键违规: sa_dict(${dictId}) 不存在`);
+    const id = this.nextId++;
+    this.ers.set(id, { id, ...er, dictId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveStateMachine(sm: StateMachineOutput, ctx: SAContext, dictId: number, bpmId: number): Promise<{ id: number }> {
+    if (!this.dicts.has(dictId)) throw new Error(`强外键违规: sa_dict(${dictId}) 不存在`);
+    const id = this.nextId++;
+    this.stateMachines.set(id, { id, ...sm, dictId, bpmId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  async saveUI(ui: UIOutput, ctx: SAContext, bpmId: number, dictId: number): Promise<{ id: number }> {
+    if (!this.bpms.has(bpmId)) throw new Error(`强外键违规: sa_bpm(${bpmId}) 不存在`);
+    const id = this.nextId++;
+    this.uis.set(id, { id, ...ui, bpmId, dictId, projectId: ctx.projectId, tenantId: ctx.tenantId });
+    return { id };
+  }
+
+  // ========================================================
+  // 校验日志
+  // ========================================================
+  async logValidation(record: ValidationLogRecord): Promise<void> {
+    this.validationLogs.push(record);
+  }
+
+  // ========================================================
+  // 读取方法
+  // ========================================================
+  async getProjectKGPatterns(projectId: number, limit = 5): Promise<KGPattern[]> {
+    // Mock:返回空数组,实际从 kg_pattern 表查
+    return [];
+  }
+
+  async getDomainModel(industry: string): Promise<DomainModelContext> {
+    // Mock:返回空模型,实际从 domain_model 表查
+    return {
+      industry,
+      standardFields: [],
+      standardEntities: [],
+      standardProcesses: [],
+    };
+  }
+
+  async getAllDecisionTablesInProject(projectId: number): Promise<any[]> {
+    return Array.from(this.decisionTables.values())
+      .filter(dt => dt.projectId === projectId);
+  }
+
+  // 测试辅助
+  getValidationLogs(): ValidationLogRecord[] {
+    return this.validationLogs;
+  }
+
+  getStats() {
+    return {
+      scopes: this.scopes.size,
+      dfds: this.dfds.size,
+      bpms: this.bpms.size,
+      dicts: this.dicts.size,
+      pspecs: this.pspecs.size,
+      decisionTables: this.decisionTables.size,
+      ers: this.ers.size,
+      stateMachines: this.stateMachines.size,
+      uis: this.uis.size,
+      validationLogs: this.validationLogs.length,
+    };
+  }
+}
+
+============================================================
+FILE: src/orchestrator/index.ts
+============================================================
+// SA SDK - 主入口
+// 后端只需 3 行就能用:
+//   const orchestrator = new SAOrchestrator(llm, db, validators);
+//   const result = await orchestrator.runSA(req);
+//   console.log(result.scope, result.dfd, ...);
+
+export { SAOrchestrator, ValidatorBundle } from './SAOrchestrator';
+export { runWithRetry, RetryResult, RetryLoopConfig } from './RetryLoop';
+export { decideSteps, runScopeStep, StepDecision, EventComplexity } from './StepRouter';
+
+export { BaseAgent } from './BaseAgent';
+
+export { InMemorySADatabase } from './SADatabase';
+
+export {
+  SARequest, SAOutput, SAContext, SAConfig, DEFAULT_SA_CONFIG,
+  ILLMClient, ISADatabase, KGPattern, DomainModelContext,
+  ScopeOutput, DFDOutput, BPMOutput, DictOutput, PSpecOutput,
+  DecisionTableOutput, EROutput, StateMachineOutput, UIOutput,
+  ValidationError
+} from './orchestrator-types';
+
+============================================================
+FILE: src/agents/ScopeAgent.ts
+============================================================
+// ScopeAgent - 需求分析师：提取系统边界、外部实体、业务事件
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { ScopeOutput, SAContext, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class ScopeAgent extends BaseAgent<ScopeOutput> {
+  readonly name = 'ScopeAgent';
+  readonly tableName = 'sa_scope';
+
+  readonly systemPrompt = `你是一名资深需求分析师，负责结构化分析 (SA) 流程的第一步：范围界定。
+
+## 任务
+从客户需求文本中提取以下三类信息，输出严格符合 ScopeOutput JSON Schema 的结果：
+
+### 1. systemBoundary（系统边界）
+- inScope: 本次系统需要实现的功能模块列表
+- outOfScope: 明确不属于本期范围的需求（防止范围蔓延）
+
+### 2. externalEntities（外部实体）
+- 每个实体包含 name、type（用户/系统/设备/第三方服务）、description
+- 外部实体是与本系统交互但不受本系统控制的参与者
+
+### 3. businessEvents（业务事件）
+- 每个事件包含 id（从 1 递增）、name、description、complexity（simple/medium/complex）
+- 复杂度判定：simple = 单步骤 CRUD；medium = 多步骤但无分支；complex = 含条件分支或跨模块协调
+
+## 约束
+- 必须输出合法 JSON，不得包含注释或多余文本
+- 如果 kgPatterns 包含 field_naming 类型，遵循其命名规范
+- 如果 domainModel 提供了 standardEntities，优先复用其中的实体名称
+- 业务事件数量 eventCount 必须等于 businessEvents 数组长度`;
+
+  constructor(llm: ILLMClient) { super(llm); }
+
+  protected override buildPrompt(ctx: SAContext): Record<string, any> {
+    return {
+      requirementText: ctx.requirementText,
+      kgPatterns: ctx.kgPatterns
+        .filter(p => p.type === 'field_naming' || p.type === 'process_pattern')
+        .map(p => ({ type: p.type, content: p.content, score: p.score })),
+      domainModel: {
+        industry: ctx.domainModel.industry,
+        standardEntities: ctx.domainModel.standardEntities,
+      },
+      lastErrors: ctx.lastErrors,
+    };
+  }
+}
+
+============================================================
+FILE: src/agents/DFDAgent.ts
+============================================================
+// DFDAgent - 数据流分析师：生成数据流图 (DFD)
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { DFDOutput, SAContext, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class DFDAgent extends BaseAgent<DFDOutput> {
+  readonly name = 'DFDAgent';
+  readonly tableName = 'sa_dfd';
+
+  readonly systemPrompt = `你是一名资深数据流分析师，负责结构化分析 (SA) 的第二步：数据流图 (DFD) 设计。
+
+## 任务
+基于上一步的范围界定 (scope) 和客户需求，生成分层数据流图，输出严格符合 DFDOutput JSON Schema 的结果。
+
+### 1. contextDiagram（上下文图）
+- 顶层视图：整个系统作为一个 process，展示与外部实体之间的数据流
+- 格式：{ processName, inboundFlows: [{from, dataName}], outboundFlows: [{to, dataName}] }
+
+### 2. dfdLevels（分层分解）
+- Level 0: 主要子系统划分
+- Level 1: 各子系统内部的 process 分解
+- 格式：{ level0: [{id, name}], level1: Record<parentId, [{id, name}]> }
+
+### 3. processes（加工/处理）
+- 每个 process 含 id（P1/P2/P1.1 格式）、name、inputFlows、outputFlows
+- parentId 标识所属的上层 process（Level 1 的 process 指向 Level 0 的 process）
+- 每个 process 至少有一个 inputFlow 和一个 outputFlow
+
+### 4. dataFlows（数据流）
+- 连接 process 与 process / process 与 dataStore / process 与 external entity
+- name 采用"名词短语"格式，如"订单数据"、"审批结果"
+
+### 5. dataStores（数据存储）
+- 系统需要持久化的数据集合
+- name 采用大写蛇形，如 ORDER_DATA、USER_INFO
+
+## 约束
+- 必须输出合法 JSON
+- process 的 inputFlows/outputFlows 中的名称必须在 dataFlows 中存在
+- scope 中的每个 inScope 项至少被一个 process 覆盖
+- 遵循 KG patterns 中的命名规范（如有）`;
+
+  constructor(llm: ILLMClient) { super(llm); }
+
+  protected override buildPrompt(ctx: SAContext): Record<string, any> {
+    return {
+      requirementText: ctx.requirementText,
+      scope: ctx.previousSteps['scope'] ?? null,
+      kgPatterns: ctx.kgPatterns
+        .filter(p => p.type === 'field_naming' || p.type === 'process_pattern')
+        .map(p => ({ type: p.type, content: p.content, score: p.score })),
+      domainModel: {
+        industry: ctx.domainModel.industry,
+        standardEntities: ctx.domainModel.standardEntities,
+        standardProcesses: ctx.domainModel.standardProcesses,
+      },
+      lastErrors: ctx.lastErrors,
+    };
+  }
+}
+
+============================================================
+FILE: src/agents/BPMAgent.ts
+============================================================
+// BPMAgent - 业务流程分析师：生成业务流程图 (BPM)
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { BPMOutput, SAContext, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class BPMAgent extends BaseAgent<BPMOutput> {
+  readonly name = 'BPMAgent';
+  readonly tableName = 'sa_business_process';
+
+  readonly systemPrompt = `你是一名资深业务流程分析师，负责结构化分析 (SA) 的第三步：业务流程建模 (BPM)。
+
+## 任务
+基于上一步的 DFD 和范围界定，生成 BPMN 风格的业务流程图，输出严格符合 BPMOutput JSON Schema 的结果。
+
+### 1. swimLanes（泳道）
+- 每个泳道对应一个角色/部门/外部实体
+- 格式：{ id, name, type: 'internal' | 'external' }
+- scope.externalEntities 中 type 为 'user' 的自动成为泳道候选
+
+### 2. activityNodes（活动节点）
+- 每个节点含 id、name、type（start/end/task/gateway/subprocess）、swimLaneId
+- gateway 类型需指定 gatewayType: 'exclusive' | 'parallel' | 'inclusive'
+- start 和 end 节点各至少一个
+
+### 3. edges（连线）
+- 连接两个 activityNodes，含 id、sourceId、targetId、label（可选）
+- gateway 的出边必须有 conditionExpression（exclusive/inclusive 类型）
+
+### 4. exceptionPaths（异常路径）
+- 每个异常路径含 trigger（触发条件）、sourceNodeId、handlerNodeId、description
+- 覆盖常见异常：数据校验失败、权限不足、超时、外部系统不可用
+
+### 5. dfdProcessMappings（DFD-BPM 映射）
+- Record<bpmNodeId, dfdProcessId>，将 BPM 活动节点映射到 DFD 的 process
+- 每个 task 类型的 BPM 节点应映射到至少一个 DFD process
+
+## 约束
+- 必须输出合法 JSON
+- 所有 sourceId/targetId 必须引用已定义的 activityNodes id
+- DFD 中的每个 process 至少被一个 BPM task 映射
+- 泳道分配必须合理（外部实体不执行内部任务）`;
+
+  constructor(llm: ILLMClient) { super(llm); }
+
+  protected override buildPrompt(ctx: SAContext): Record<string, any> {
+    return {
+      requirementText: ctx.requirementText,
+      scope: ctx.previousSteps['scope'] ?? null,
+      dfd: ctx.previousSteps['dfd'] ?? null,
+      kgPatterns: ctx.kgPatterns
+        .filter(p => p.type === 'process_pattern' || p.type === 'state_machine')
+        .map(p => ({ type: p.type, content: p.content, score: p.score })),
+      lastErrors: ctx.lastErrors,
+    };
+  }
+}
+
+============================================================
+FILE: src/agents/DictAgent.ts
+============================================================
+// DictAgent - 数据字典分析师：生成字段定义、数据流、数据存储
+import { BaseAgent } from "../orchestrator/BaseAgent";
+import {
+  DictOutput,
+  SAContext,
+  ILLMClient,
+} from "../orchestrator/orchestrator-types";
+
+export class DictAgent extends BaseAgent<DictOutput> {
+  readonly name = "DictAgent";
+  readonly tableName = "sa_data_dictionary";
+
+  readonly systemPrompt = `你是一名资深数据字典分析师，负责结构化分析 (SA) 的第四步：数据字典设计。
+
+## 任务
+基于需求文本、范围界定 (scope)、数据流图 (dfd)，生成完整的数据字典，输出严格符合 DictOutput JSON Schema。
+
+### 1. elements（字段定义）
+- 每个字段含 name（小写蛇形）、type、isFK、refEntity、isRequired
+- 类型白名单：NVARCHAR、BIGINT、INT、DECIMAL、DATETIME、BOOLEAN、JSON
+- 外键字段 MUST 设置 isFK=true 并指定 refEntity
+- 主键统一命名为 id，类型 BIGINT，isRequired=true
+
+### 2. dataFlows（数据流字段明细）
+- 来源于 DFD 中的 dataFlows，每个数据流展开其包含的字段列表
+- 字段名和类型必须在 elements 中有对应定义
+
+### 3. dataStores（数据存储字段明细）
+- 来源于 DFD 中的 dataStores，每个存储展开其字段列表
+- 每个 dataStore MUST 包含审计字段：created_at(DATETIME)、created_by(NVARCHAR)、updated_at(DATETIME)、updated_by(NVARCHAR)
+- 每个 dataStore MUST 包含 tenant_id(BIGINT) 字段，用于多租户隔离
+
+## 约束
+- 必须输出合法 JSON，不得包含注释或多余文本
+- 遵循 KG patterns 中 field_naming 类型的命名规范
+- 复用 domainModel.standardFields 中已有的标准字段定义
+- 字段名长度不超过 64 字符，NVARCHAR 必须指定长度如 NVARCHAR(255)`;
+
+  constructor(llm: ILLMClient) {
+    super(llm);
+  }
+
+  protected override buildPrompt(ctx: SAContext): Record<string, any> {
+    return {
+      requirementText: ctx.requirementText,
+      scope: ctx.previousSteps["scope"] ?? null,
+      dfd: ctx.previousSteps["dfd"] ?? null,
+      kgPatterns: ctx.kgPatterns
+        .filter((p) => p.type === "field_naming")
+        .map((p) => ({ type: p.type, content: p.content, score: p.score })),
+      domainModel: {
+        industry: ctx.domainModel.industry,
+        standardFields: ctx.domainModel.standardFields,
+      },
+      lastErrors: ctx.lastErrors,
+    };
+  }
+}
+
+============================================================
+FILE: src/agents/PSpecAgent.ts
+============================================================
+// PSpecAgent - 过程规格分析师：生成 PSPEC（过程规格说明）
+import { BaseAgent } from "../orchestrator/BaseAgent";
+import {
+  PSpecOutput,
+  SAContext,
+  ILLMClient,
+} from "../orchestrator/orchestrator-types";
+
+export class PSpecAgent extends BaseAgent<PSpecOutput> {
+  readonly name = "PSpecAgent";
+  readonly tableName = "sa_pspec";
+
+  readonly systemPrompt = `你是一名资深过程规格分析师，负责结构化分析 (SA) 的第五步：过程规格说明 (PSPEC) 设计。
+
+## 任务
+基于需求文本、范围界定、数据流图、数据字典，为每个业务过程生成过程规格说明，输出严格符合 PSpecOutput JSON Schema。
+
+### 1. processSpecs（过程规格列表）
+- 每个规格含 id（与 DFD process id 对应，如 P1/P2.1）、name、input、output
+- input/output 为字段名数组，MUST 引用数据字典 (dict) 中已定义的字段名
+- 不得凭空捏造字典中不存在的字段
+
+### 2. validation（验证规则，可选）
+- 描述输入数据的校验逻辑，如"订单金额必须大于 0"
+- 格式为自然语言描述，需足够具体以便后续编码实现
+
+### 3. algorithm（算法描述，可选）
+- 描述核心业务计算逻辑，如折扣计算公式、审批路由规则
+- 复杂算法需列出步骤，简单逻辑可一句话概括
+
+## 约束
+- 必须输出合法 JSON，不得包含注释或多余文本
+- DFD 中每个 process MUST 有对应的 PSPEC 条目
+- input/output 字段名必须在 dict.elements 中存在
+- 遵循 KG patterns 中的 process_pattern 规范（如有）`;
+
+  constructor(llm: ILLMClient) {
+    super(llm);
+  }
+
+  protected override buildPrompt(ctx: SAContext): Record<string, any> {
+    return {
+      requirementText: ctx.requirementText,
+      scope: ctx.previousSteps["scope"] ?? null,
+      dfd: ctx.previousSteps["dfd"] ?? null,
+      dict: ctx.previousSteps["dict"] ?? null,
+      kgPatterns: ctx.kgPatterns.map((p) => ({
+        type: p.type,
+        content: p.content,
+        score: p.score,
+      })),
+      lastErrors: ctx.lastErrors,
+    };
+  }
+}
+
+============================================================
+FILE: src/agents/DecisionTableAgent.ts
+============================================================
+// DecisionTableAgent - 业务规则分析师：生成判定表
+import { BaseAgent } from "../orchestrator/BaseAgent";
+import {
+  DecisionTableOutput,
+  SAContext,
+  ILLMClient,
+} from "../orchestrator/orchestrator-types";
+
+export class DecisionTableAgent extends BaseAgent<DecisionTableOutput> {
+  readonly name = "DecisionTableAgent";
+  readonly tableName = "sa_decision_table";
+
+  readonly systemPrompt = `你是一名资深业务规则分析师，负责结构化分析 (SA) 的第六步：判定表 (Decision Table) 设计。
+
+## 任务
+基于需求文本、范围界定、数据字典，提取业务规则并生成判定表，输出严格符合 DecisionTableOutput JSON Schema。
+
+### 1. tables（判定表列表）
+- 每张表含 id（DT1/DT2 格式）、conditions、actions、rules
+
+### 2. conditions（条件列表）
+- 每个条件含 name（字段名，引用 dict）、operator（==/!=/>/</>=/<=/in/not_in）、value
+- 条件字段必须来自数据字典，不得凭空捏造
+
+### 3. actions（动作列表）
+- 每个动作为一个业务行为描述，如"批准订单"、"发送通知"
+- actionIndex 从 0 开始，rules 中引用
+
+### 4. rules（规则列表）
+- conditionMask 为布尔数组，长度 = conditions 数组长度，顺序一一对应
+- actionIndex 指向 actions 数组的下标
+- MUST 包含默认规则（所有条件为 false 时的兜底动作）
+
+## 约束
+- 必须输出合法 JSON，不得包含注释或多余文本
+- conditionMask 长度 MUST 等于 conditions 长度
+- actionIndex MUST 在 actions 数组范围内
+- 检查跨事件一致性：如果 ctx.allDecisionTables 中已有类似规则，保持条件和动作语义一致
+- 遵循 KG patterns 中 decision_rule 类型的规范（如有）`;
+
+  constructor(llm: ILLMClient) {
+    super(llm);
+  }
+
+  protected override buildPrompt(ctx: SAContext): Record<string, any> {
+    return {
+      requirementText: ctx.requirementText,
+      scope: ctx.previousSteps["scope"] ?? null,
+      dict: ctx.previousSteps["dict"] ?? null,
+      allDecisionTables: ctx.allDecisionTables ?? [],
+      kgPatterns: ctx.kgPatterns
+        .filter((p) => p.type === "decision_rule")
+        .map((p) => ({ type: p.type, content: p.content, score: p.score })),
+      lastErrors: ctx.lastErrors,
+    };
+  }
+}
+
+============================================================
+FILE: src/agents/ERAgent.ts
+============================================================
+// ERAgent - 数据建模分析师：生成 ER 图（实体、列、关系）
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { EROutput, SAContext, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class ERAgent extends BaseAgent<EROutput> {
+  readonly name = 'ERAgent';
+  readonly tableName = 'sa_er';
+
+  readonly systemPrompt = `你是一名资深数据建模分析师，负责结构化分析 (SA) 的第七步：ER 图设计。
+
+## 任务
+基于数据字典 (dict) 和需求文本，生成完整的 ER 模型，输出严格符合 EROutput JSON Schema。
+
+### 1. entities（实体列表）
+- 每个实体对应 dict 中的一个 dataStore，实体名使用 PascalCase
+- 每个实体必须包含 columns 数组
+- 每列含 name（小写蛇形）、type、isPK、isFK、refTable
+- 主键列：name="id", type="BIGINT", isPK=true
+- 外键列：isFK=true，refTable 必须引用另一个实体的 name（PascalCase）
+- 每个实体 MUST 包含审计列：created_at、created_by、updated_at、updated_by
+- 每个实体 MUST 包含 tenant_id 列（BIGINT），用于多租户隔离
+- 列类型白名单：BIGINT、INT、NVARCHAR、DECIMAL、DATETIME、BOOLEAN、JSON
+
+### 2. relationships（关系列表）
+- 每个关系含 from（源实体）、to（目标实体）、type（1:1/1:N/N:M）、foreignKey
+- 外键列名格式：{target_entity_snake}_id
+- N:M 关系需要隐含中间表，但此处只声明关系，不生成中间表实体
+
+## 约束
+- 必须输出合法 JSON，不得包含注释或多余文本
+- 遵循 KG patterns 中 field_naming 类型的命名规范
+- 复用 domainModel.standardEntities 中已有的标准实体定义
+- 实体名和列名不得使用中文或特殊字符`;
+
+  constructor(llm: ILLMClient) { super(llm); }
+
+  protected override buildPrompt(ctx: SAContext): Record<string, any> {
+    return {
+      requirementText: ctx.requirementText,
+      scope: ctx.previousSteps['scope'] ?? null,
+      dfd: ctx.previousSteps['dfd'] ?? null,
+      dict: ctx.previousSteps['dict'] ?? null,
+      kgPatterns: ctx.kgPatterns
+        .filter(p => p.type === 'field_naming')
+        .map(p => ({ type: p.type, content: p.content, score: p.score })),
+      domainModel: {
+        industry: ctx.domainModel.industry,
+        standardEntities: ctx.domainModel.standardEntities,
+      },
+      lastErrors: ctx.lastErrors,
+    };
+  }
+}
+
+============================================================
+FILE: src/agents/StateMachineAgent.ts
+============================================================
+// StateMachineAgent - 状态机分析师：生成实体状态机（状态、转换、触发条件）
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { StateMachineOutput, SAContext, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class StateMachineAgent extends BaseAgent<StateMachineOutput> {
+  readonly name = 'StateMachineAgent';
+  readonly tableName = 'sa_state_machine';
+
+  readonly systemPrompt = `你是一名资深状态机分析师，负责结构化分析 (SA) 的第八步：状态机设计。
+
+## 任务
+基于数据字典 (dict) 和业务流程 (bpm)，为具有状态转换的实体生成状态机模型，输出严格符合 StateMachineOutput JSON Schema。
+
+### 1. stateMachines（状态机列表）
+- 仅对具有生命周期状态的实体生成状态机（如订单、工单、审批单等）
+- 纯 CRUD 实体（无状态流转）不需要生成状态机
+
+### 2. 每个状态机包含
+- entity：实体名（PascalCase，必须与 dict 中的 dataStore 名称一致）
+- states：状态列表（字符串数组），覆盖实体完整生命周期
+  - 必须包含起始状态（如 Draft/草稿）和终态（如 Completed/已归档）
+  - 状态名使用英文 PascalCase
+- transitions：转换列表，每个转换包含
+  - from：源状态
+  - to：目标状态
+  - trigger：触发条件（业务事件或用户操作，如 Submit、Approve、Reject）
+  - trigger 描述应与 bpm 中的 activityNode 对应
+
+### 3. 状态覆盖原则
+- 正向流程：Draft → Submitted → Approved → Completed
+- 异常流程：必须包含驳回 (Rejected)、撤回 (Withdrawn)、作废 (Cancelled) 等分支
+- 每个状态至少有一条入边和一条出边（起始状态和终态除外）
+
+## 约束
+- 必须输出合法 JSON，不得包含注释或多余文本
+- 状态名不得使用中文
+- 转换不得形成死循环（A→B→A 除外，这是合法的驳回重提交）
+- bpm 中的 activityNode 是触发条件的主要来源`;
+
+  constructor(llm: ILLMClient) { super(llm); }
+
+  protected override buildPrompt(ctx: SAContext): Record<string, any> {
+    return {
+      requirementText: ctx.requirementText,
+      scope: ctx.previousSteps['scope'] ?? null,
+      dict: ctx.previousSteps['dict'] ?? null,
+      bpm: ctx.previousSteps['bpm'] ?? null,
+      kgPatterns: ctx.kgPatterns
+        .filter(p => p.type === 'state_machine')
+        .map(p => ({ type: p.type, content: p.content, score: p.score })),
+      lastErrors: ctx.lastErrors,
+    };
+  }
+}
+
+============================================================
+FILE: src/agents/UIAgent.ts
+============================================================
+// UIAgent - UI 设计分析师：生成页面原型（页面、字段、控件类型）
+import { BaseAgent } from '../orchestrator/BaseAgent';
+import { UIOutput, SAContext, ILLMClient } from '../orchestrator/orchestrator-types';
+
+export class UIAgent extends BaseAgent<UIOutput> {
+  readonly name = 'UIAgent';
+  readonly tableName = 'sa_ui';
+
+  readonly systemPrompt = `你是一名资深 UI 设计分析师，负责结构化分析 (SA) 的第九步：UI 原型设计。
+
+## 任务
+基于需求文本、数据流 (dfd)、数据字典 (dict)、业务流程 (bpm)，生成 UI 页面原型，输出严格符合 UIOutput JSON Schema。
+
+### 1. screens（页面列表）
+- 每个页面含 id（从 1 递增的字符串）、name、dataFlow、bpmNodeId、fields
+- dataFlow：关联的 DFD 数据流名称（标识页面的数据来源/去向）
+- bpmNodeId：关联的 BPM 活动节点 ID（标识页面对应的业务步骤）
+
+### 2. fields（字段列表）
+- 每个字段含 name、type、required、controlType
+- name：字段名（小写蛇形，与 dict 中的元素名一致）
+- type：数据类型（NVARCHAR、BIGINT、INT、DECIMAL、DATETIME、BOOLEAN、JSON）
+- required：是否必填（参考 dict 中的 isRequired）
+- controlType：控件类型，根据字段类型自动映射
+
+### 3. controlType 映射规则
+- NVARCHAR → Input（短文本）或 Textarea（长文本，长度 > 255）
+- BIGINT / INT / DECIMAL → NumberInput
+- DATETIME → DatePicker
+- BOOLEAN → Switch
+- JSON → Textarea
+- 外键字段 → Select（下拉选择关联实体）
+- 枚举字段 → Select（options 来自数据字典）
+- 文件/附件 → Upload
+
+### 4. 页面类型识别
+- 列表页：name 含"列表"或 List，字段为筛选条件
+- 表单页：name 含"表单"或 Form，字段为编辑字段
+- 详情页：name 含"详情"或 Detail，所有字段 required=false（只读）
+
+## 约束
+- 必须输出合法 JSON，不得包含注释或多余文本
+- 每个数据实体至少对应一个列表页和一个表单页
+- 页面 id 全局唯一
+- 外键字段的 controlType 必须是 Select，不得是 Input`;
+
+  constructor(llm: ILLMClient) { super(llm); }
+
+  protected override buildPrompt(ctx: SAContext): Record<string, any> {
+    return {
+      requirementText: ctx.requirementText,
+      scope: ctx.previousSteps['scope'] ?? null,
+      dfd: ctx.previousSteps['dfd'] ?? null,
+      dict: ctx.previousSteps['dict'] ?? null,
+      bpm: ctx.previousSteps['bpm'] ?? null,
+      kgPatterns: ctx.kgPatterns
+        .map(p => ({ type: p.type, content: p.content, score: p.score })),
+      lastErrors: ctx.lastErrors,
+    };
+  }
+}
+
+============================================================
+FILE: src/agents/index.ts
+============================================================
+// SA Agents - 9 个 Agent 的统一导出
+// 每个 Agent 继承 BaseAgent,实现 generate → LLM 调用
+
+export { ScopeAgent } from './ScopeAgent';
+export { DFDAgent } from './DFDAgent';
+export { BPMAgent } from './BPMAgent';
+export { DictAgent } from './DictAgent';
+export { PSpecAgent } from './PSpecAgent';
+export { DecisionTableAgent } from './DecisionTableAgent';
+export { ERAgent } from './ERAgent';
+export { StateMachineAgent } from './StateMachineAgent';
+export { UIAgent } from './UIAgent';
+
+============================================================
+FILE: src/dkee/PatternTypes.ts
+============================================================
+// DKEE Pattern 类型定义
+
+export type PatternType = 'field_naming' | 'decision_rule' | 'state_machine' | 'process_pattern';
+export type PatternSource = 'human-created' | 'ai-discovered' | 'self-play';
+export type IndustryType = 'manufacturing' | 'ecommerce' | 'optical' | 'general';
+
+// =====================================================
+// 源记录(SAS 表查出来的原始数据)
+// =====================================================
+export interface DictSourceRecord {
+  id: number;
+  project_id: number;
+  elements: Array<{
+    name: string;
+    type: string;
+    isFK?: boolean;
+    refEntity?: string;
+    isRequired?: boolean;
+  }>;
+  data_flows: Array<{ name: string; fields: any[] }>;
+  data_stores: Array<{ name: string; fields: any[] }>;
+  tags: any[];
+  pattern_tags: any[];
+}
+
+export interface DecisionTableSourceRecord {
+  id: number;
+  project_id: number;
+  tables: Array<{
+    id: string;
+    conditions: Array<{ name: string; operator: string; value: any }>;
+    actions: Array<{ name: string }>;
+    rules: any[];
+  }>;
+  cross_event_consistency: boolean;
+}
+
+export interface StateMachineSourceRecord {
+  id: number;
+  project_id: number;
+  state_machines: Array<{
+    entity: string;
+    states: string[];
+    transitions: Array<{ from: string; to: string; trigger: string }>;
+  }>;
+  states_in_dict: boolean;
+}
+
+// =====================================================
+// 提炼后的 Pattern
+// =====================================================
+export interface BasePattern {
+  id?: number;
+  type: PatternType;
+  industry: IndustryType;
+  source: PatternSource;
+  sourceProjects: number[];
+  sourceRecords: Array<{ saTable: string; recordId: number; version: number }>;
+  patternTags?: string[];
+  notes?: string;
+}
+
+// 1. 字段命名 Pattern
+export interface FieldNamingPattern extends BasePattern {
+  type: 'field_naming';
+  commonFields: Array<{
+    name: string;
+    type: string;
+    frequency: number;
+    isFK: boolean;
+    isRequired: boolean;
+    refEntity?: string;
+  }>;
+  fieldCount: number;
+  minOccurrenceThreshold: number;  // 至少出现几次才进 Pattern
+}
+
+// 2. 业务规则 Pattern
+export interface DecisionRulePattern extends BasePattern {
+  type: 'decision_rule';
+  ruleSet: Array<{
+    condition: string;
+    operator: string;
+    threshold: any;
+    action: string;
+    frequency: number;
+  }>;
+  hasDefaultRule: boolean;
+  ruleCount: number;
+}
+
+// 3. 状态机 Pattern
+export interface StateMachinePattern extends BasePattern {
+  type: 'state_machine';
+  entity: string;
+  standardStates: string[];
+  standardTransitions: Array<{
+    from: string;
+    to: string;
+    trigger: string;
+    frequency: number;
+  }>;
+}
+
+// 4. 流程 Pattern
+export interface ProcessPattern extends BasePattern {
+  type: 'process_pattern';
+  standardProcesses: Array<{
+    id: string;
+    name: string;
+    frequency: number;
+  }>;
+}
+
+export type AnyPattern = FieldNamingPattern | DecisionRulePattern | StateMachinePattern | ProcessPattern;
+
+// =====================================================
+// 提炼结果
+// =====================================================
+export interface ExtractionResult {
+  industry: IndustryType;
+  patternsExtracted: number;
+  patternsSaved: number;
+  patternsUpdated: number;
+  newPatterns: AnyPattern[];
+  updatedPatterns: AnyPattern[];
+  durationMs: number;
+}
+
+============================================================
+FILE: src/dkee/PatternExtractor.ts
+============================================================
+// PatternExtractor - DKEE 核心提炼逻辑
+// 4 个 Pattern 类型的提炼算法
+
+import {
+  DictSourceRecord, DecisionTableSourceRecord, StateMachineSourceRecord,
+  FieldNamingPattern, DecisionRulePattern, StateMachinePattern, ProcessPattern,
+  AnyPattern, IndustryType, ExtractionResult, PatternSource
+} from './PatternTypes';
+import { IDKEEQueries } from './PatternQueries';
+import { PatternScorer } from './PatternScorer';
+
+// =====================================================
+// 提炼阈值(至少出现 N 个项目才算 Pattern)
+// =====================================================
+const DEFAULT_FREQUENCY_THRESHOLD = 2;  // 至少 2 个项目
+
+// =====================================================
+// PatternExtractor
+// =====================================================
+export class PatternExtractor {
+  private scorer = new PatternScorer();
+
+  constructor(
+    private queries: IDKEEQueries,
+    private frequencyThreshold: number = DEFAULT_FREQUENCY_THRESHOLD
+  ) {}
+
+  // ============================================================
+  // 主入口:提炼所有 4 种 Pattern
+  // ============================================================
+  async extractAll(industry: IndustryType, source: PatternSource = 'human-created'): Promise<ExtractionResult> {
+    const startTime = Date.now();
+    const newPatterns: AnyPattern[] = [];
+    const updatedPatterns: AnyPattern[] = [];
+
+    // 1. 字段命名 Pattern
+    const dictResult = await this.extractFieldNamingPatterns(industry, source);
+    newPatterns.push(...dictResult.newPatterns);
+    updatedPatterns.push(...dictResult.updatedPatterns);
+
+    // 2. 业务规则 Pattern
+    const dtResult = await this.extractDecisionRulePatterns(industry, source);
+    newPatterns.push(...dtResult.newPatterns);
+    updatedPatterns.push(...dtResult.updatedPatterns);
+
+    // 3. 状态机 Pattern
+    const smResult = await this.extractStateMachinePatterns(industry, source);
+    newPatterns.push(...smResult.newPatterns);
+    updatedPatterns.push(...smResult.updatedPatterns);
+
+    const duration = Date.now() - startTime;
+    return {
+      industry,
+      patternsExtracted: newPatterns.length + updatedPatterns.length,
+      patternsSaved: newPatterns.length,
+      patternsUpdated: updatedPatterns.length,
+      newPatterns,
+      updatedPatterns,
+      durationMs: duration,
+    };
+  }
+
+  // ============================================================
+  // 1. 字段命名 Pattern
+  //    跨项目聚合:找出现频率 >= threshold 的字段名
+  // ============================================================
+  async extractFieldNamingPatterns(industry: IndustryType, source: PatternSource): Promise<{
+    newPatterns: FieldNamingPattern[];
+    updatedPatterns: FieldNamingPattern[];
+  }> {
+    const records = await this.queries.fetchHighQualityDictRecords(industry);
+    if (records.length === 0) return { newPatterns: [], updatedPatterns: [] };
+
+    // Step 1: 统计每个字段名在多少个项目里出现
+    const fieldStats = new Map<string, {
+      type: string;
+      count: number;
+      projects: Set<number>;
+      isFK: boolean;
+      isRequired: boolean;
+      refEntity?: string;
+    }>();
+
+    records.forEach(record => {
+      record.elements.forEach(elem => {
+        if (!fieldStats.has(elem.name)) {
+          fieldStats.set(elem.name, {
+            type: elem.type,
+            count: 0,
+            projects: new Set(),
+            isFK: elem.isFK || false,
+            isRequired: elem.isRequired || false,
+            refEntity: elem.refEntity,
+          });
+        }
+        const stat = fieldStats.get(elem.name)!;
+        stat.count++;
+        stat.projects.add(record.project_id);
+      });
+    });
+
+    // Step 2: 过滤高频字段(>= threshold 个项目)
+    const commonFields = Array.from(fieldStats.entries())
+      .filter(([_, stat]) => stat.projects.size >= this.frequencyThreshold)
+      .map(([name, stat]) => ({
+        name,
+        type: stat.type,
+        frequency: stat.projects.size,
+        isFK: stat.isFK,
+        isRequired: stat.isRequired,
+        refEntity: stat.refEntity,
+      }))
+      .sort((a, b) => b.frequency - a.frequency);
+
+    if (commonFields.length === 0) return { newPatterns: [], updatedPatterns: [] };
+
+    // Step 3: 构造 Pattern
+    const sourceProjects = Array.from(new Set(records.map(r => r.project_id)));
+    const sourceRecords = records.map(r => ({
+      saTable: 'sa_data_dictionary',
+      recordId: r.id,
+      version: 1,
+    }));
+
+    const pattern: FieldNamingPattern = {
+      type: 'field_naming',
+      industry,
+      source,
+      sourceProjects,
+      sourceRecords,
+      commonFields,
+      fieldCount: commonFields.length,
+      minOccurrenceThreshold: this.frequencyThreshold,
+      patternTags: [`${industry}-字段标准`],
+    };
+
+    // Step 4: 评分 + 保存
+    const score = this.scorer.score({
+      usageCount: sourceProjects.length,
+      successRate: 1.0,  // 初始为 1.0,使用后根据 is_success 更新
+      source,
+      crossIndustryCount: 0,
+      recencyScore: 1.0,
+    });
+
+    // 检查是否已存在
+    const existing = await this.queries.fetchExistingPatterns(industry, 'field_naming');
+    if (existing.length > 0) {
+      // 更新已有的
+      const id = existing[0].id;
+      await this.queries.updatePatternScore(id, score, sourceProjects.length, sourceProjects.length);
+      return { newPatterns: [], updatedPatterns: [pattern] };
+    }
+
+    // 新建
+    const { id } = await this.queries.savePattern(pattern, score, sourceProjects);
+    return { newPatterns: [{ ...pattern, id }], updatedPatterns: [] };
+  }
+
+  // ============================================================
+  // 2. 业务规则 Pattern
+  //    跨项目聚合:找出一致条件的判定规则
+  // ============================================================
+  async extractDecisionRulePatterns(industry: IndustryType, source: PatternSource): Promise<{
+    newPatterns: DecisionRulePattern[];
+    updatedPatterns: DecisionRulePattern[];
+  }> {
+    const records = await this.queries.fetchHighQualityDecisionTableRecords(industry);
+    if (records.length === 0) return { newPatterns: [], updatedPatterns: [] };
+
+    // Step 1: 聚合所有 (condition, operator, value, action) 元组
+    const ruleStats = new Map<string, {
+      condition: string;
+      operator: string;
+      value: any;
+      action: string;
+      count: number;
+      projects: Set<number>;
+    }>();
+
+    records.forEach(record => {
+      record.tables.forEach(table => {
+        // 把每条 rule 拆成 (条件 → 动作) 元组
+        table.rules?.forEach((rule: any, ruleIdx: number) => {
+          const action = table.actions[rule.actionIndex];
+          if (!action) return;
+          table.conditions.forEach((cond, condIdx) => {
+            if (rule.conditionMask[condIdx]) {
+              const key = `${cond.name}|${cond.operator}|${JSON.stringify(cond.value)}|${action.name}`;
+              if (!ruleStats.has(key)) {
+                ruleStats.set(key, {
+                  condition: cond.name,
+                  operator: cond.operator,
+                  value: cond.value,
+                  action: action.name,
+                  count: 0,
+                  projects: new Set(),
+                });
+              }
+              const stat = ruleStats.get(key)!;
+              stat.count++;
+              stat.projects.add(record.project_id);
+            }
+          });
+        });
+      });
+    });
+
+    // Step 2: 过滤高频规则
+    const ruleSet = Array.from(ruleStats.values())
+      .filter(stat => stat.projects.size >= this.frequencyThreshold)
+      .sort((a, b) => b.count - a.count)
+      .map(stat => ({
+        condition: stat.condition,
+        operator: stat.operator,
+        threshold: stat.value,
+        action: stat.action,
+        frequency: stat.projects.size,
+      }));
+
+    if (ruleSet.length === 0) return { newPatterns: [], updatedPatterns: [] };
+
+    // Step 3: 检查是否有兜底规则
+    const hasDefaultRule = records.some(r =>
+      r.tables.some(t => t.rules?.some((rule: any) =>
+        rule.conditionMask.every((m: boolean) => !m)  // 所有条件都为假 → 默认规则
+      ))
+    );
+
+    const sourceProjects = Array.from(new Set(records.map(r => r.project_id)));
+    const sourceRecords = records.map(r => ({
+      saTable: 'sa_decision_table',
+      recordId: r.id,
+      version: 1,
+    }));
+
+    const pattern: DecisionRulePattern = {
+      type: 'decision_rule',
+      industry,
+      source,
+      sourceProjects,
+      sourceRecords,
+      ruleSet,
+      hasDefaultRule,
+      ruleCount: ruleSet.length,
+      patternTags: [`${industry}-业务规则`],
+    };
+
+    const score = this.scorer.score({
+      usageCount: sourceProjects.length,
+      successRate: 1.0,
+      source,
+      crossIndustryCount: 0,
+      recencyScore: 1.0,
+    });
+
+    const existing = await this.queries.fetchExistingPatterns(industry, 'decision_rule');
+    if (existing.length > 0) {
+      const id = existing[0].id;
+      await this.queries.updatePatternScore(id, score, sourceProjects.length, sourceProjects.length);
+      return { newPatterns: [], updatedPatterns: [pattern] };
+    }
+
+    const { id } = await this.queries.savePattern(pattern, score, sourceProjects);
+    return { newPatterns: [{ ...pattern, id }], updatedPatterns: [] };
+  }
+
+  // ============================================================
+  // 3. 状态机 Pattern
+  // ============================================================
+  async extractStateMachinePatterns(industry: IndustryType, source: PatternSource): Promise<{
+    newPatterns: StateMachinePattern[];
+    updatedPatterns: StateMachinePattern[];
+  }> {
+    const records = await this.queries.fetchHighQualityStateMachineRecords(industry);
+    if (records.length === 0) return { newPatterns: [], updatedPatterns: [] };
+
+    // Step 1: 按 entity 分组
+    const entityStats = new Map<string, {
+      states: Set<string>;
+      transitions: Map<string, { from: string; to: string; trigger: string; frequency: number }>;
+      projects: Set<number>;
+    }>();
+
+    records.forEach(record => {
+      record.state_machines.forEach(sm => {
+        if (!entityStats.has(sm.entity)) {
+          entityStats.set(sm.entity, {
+            states: new Set(),
+            transitions: new Map(),
+            projects: new Set(),
+          });
+        }
+        const stat = entityStats.get(sm.entity)!;
+        sm.states.forEach(s => stat.states.add(s));
+        sm.transitions.forEach(t => {
+          const key = `${t.from}→${t.to}@${t.trigger}`;
+          if (!stat.transitions.has(key)) {
+            stat.transitions.set(key, { from: t.from, to: t.to, trigger: t.trigger, frequency: 0 });
+          }
+          stat.transitions.get(key)!.frequency++;
+        });
+        stat.projects.add(record.project_id);
+      });
+    });
+
+    // Step 2: 只保留跨项目的稳定状态机
+    const newPatterns: StateMachinePattern[] = [];
+
+    for (const [entity, stat] of entityStats) {
+      if (stat.projects.size < this.frequencyThreshold) continue;
+
+      const standardTransitions = Array.from(stat.transitions.values())
+        .filter(t => t.frequency >= this.frequencyThreshold)
+        .sort((a, b) => b.frequency - a.frequency);
+
+      const sourceProjects = Array.from(stat.projects);
+      const sourceRecords = records
+        .filter(r => r.state_machines.some(sm => sm.entity === entity))
+        .map(r => ({ saTable: 'sa_state_machine', recordId: r.id, version: 1 }));
+
+      const pattern: StateMachinePattern = {
+        type: 'state_machine',
+        industry,
+        source,
+        sourceProjects,
+        sourceRecords,
+        entity,
+        standardStates: Array.from(stat.states),
+        standardTransitions,
+        patternTags: [`${industry}-状态机`, entity],
+      };
+
+      const score = this.scorer.score({
+        usageCount: sourceProjects.length,
+        successRate: 1.0,
+        source,
+        crossIndustryCount: 0,
+        recencyScore: 1.0,
+      });
+
+      const existing = await this.queries.fetchExistingPatterns(industry, 'state_machine');
+      if (existing.length > 0) {
+        const id = existing[0].id;
+        await this.queries.updatePatternScore(id, score, sourceProjects.length, sourceProjects.length);
+      } else {
+        const { id } = await this.queries.savePattern(pattern, score, sourceProjects);
+        newPatterns.push({ ...pattern, id });
+      }
+    }
+
+    return { newPatterns, updatedPatterns: [] };
+  }
+
+  // ============================================================
+  // 使用 Pattern 后,根据 Validator 结果更新评分
+  // ============================================================
+  async recordUsage(patternId: number, projectId: number, isSuccess: boolean, context: string): Promise<void> {
+    await this.queries.logPatternUsage(patternId, projectId, isSuccess, context);
+  }
+}
+
+============================================================
+FILE: src/dkee/PatternQueries.ts
+============================================================
+// DKEE Pattern 查询接口 + SQL Server 实现 + 内存实现
+
+import {
+  DictSourceRecord, DecisionTableSourceRecord, StateMachineSourceRecord,
+  PatternType, AnyPattern, IndustryType
+} from './PatternTypes';
+
+// =====================================================
+// DKEE 查询接口
+// =====================================================
+export interface IDKEEQueries {
+  // 源数据查询(从 SA 表拉)
+  fetchHighQualityDictRecords(industry: IndustryType, projectId?: number): Promise<DictSourceRecord[]>;
+  fetchHighQualityDecisionTableRecords(industry: IndustryType, projectId?: number): Promise<DecisionTableSourceRecord[]>;
+  fetchHighQualityStateMachineRecords(industry: IndustryType, projectId?: number): Promise<StateMachineSourceRecord[]>;
+
+  // Pattern CRUD
+  fetchExistingPatterns(industry: IndustryType, type: PatternType): Promise<any[]>;
+  savePattern(pattern: AnyPattern, score: number, sourceProjects: number[]): Promise<{ id: number }>;
+  updatePatternScore(patternId: number, score: number, usageDelta: number, successDelta: number): Promise<void>;
+
+  // 使用日志
+  logPatternUsage(patternId: number, projectId: number, isSuccess: boolean, context: string): Promise<void>;
+}
+
+// =====================================================
+// SQL Server 实现骨架(用户需根据实际 ORM 调整)
+// =====================================================
+export class SqlServerDKEEQueries implements IDKEEQueries {
+  constructor(private connection: any) {}  // mssql.ConnectionPool
+
+  /** 转义 LIKE 通配符，防止注入绕过 */
+  private escapeLike(value: string): string {
+    return value.replace(/[%_\[\]]/g, '[$&]');
+  }
+
+  async fetchHighQualityDictRecords(industry: IndustryType, projectId?: number): Promise<DictSourceRecord[]> {
+    // SQL Server 用 tags LIKE 匹配 industry
+    const projectFilter = projectId ? 'AND d.project_id = @projectId' : '';
+    const query = `
+      SELECT d.id, d.project_id, d.elements, d.data_flows, d.data_stores, d.tags, d.pattern_tags
+      FROM sa_data_dictionary d
+      INNER JOIN sa_scope s ON s.project_id = d.project_id
+      WHERE d.validation_status = 'PASS'
+        AND d.human_confirmed = 1
+        AND d.is_pattern_source = 1
+        AND d.is_deleted = 0
+        AND d.is_current = 1
+        AND s.is_current = 1
+        AND s.tags LIKE @industryPattern
+        ${projectFilter}
+      ORDER BY d.project_id, d.id
+    `;
+    const result = await this.connection.request()
+      .input('industryPattern', `%${this.escapeLike(industry)}%`)
+      .input('projectId', projectId || 0)
+      .query(query);
+    return result.recordset;
+  }
+
+  async fetchHighQualityDecisionTableRecords(industry: IndustryType, projectId?: number): Promise<DecisionTableSourceRecord[]> {
+    const projectFilter = projectId ? 'AND d.project_id = @projectId' : '';
+    const query = `
+      SELECT d.id, d.project_id, d.tables, d.cross_event_consistency
+      FROM sa_decision_table d
+      INNER JOIN sa_scope s ON s.project_id = d.project_id
+      WHERE d.validation_status = 'PASS'
+        AND d.human_confirmed = 1
+        AND d.is_pattern_source = 1
+        AND d.cross_event_consistency = 1
+        AND d.is_deleted = 0
+        AND d.is_current = 1
+        AND s.tags LIKE @industryPattern
+        ${projectFilter}
+      ORDER BY d.project_id, d.id
+    `;
+    const result = await this.connection.request()
+      .input('industryPattern', `%${this.escapeLike(industry)}%`)
+      .input('projectId', projectId || 0)
+      .query(query);
+    return result.recordset;
+  }
+
+  async fetchHighQualityStateMachineRecords(industry: IndustryType, projectId?: number): Promise<StateMachineSourceRecord[]> {
+    const projectFilter = projectId ? 'AND d.project_id = @projectId' : '';
+    const query = `
+      SELECT d.id, d.project_id, d.state_machines, d.states_in_dict
+      FROM sa_state_machine d
+      INNER JOIN sa_scope s ON s.project_id = d.project_id
+      WHERE d.validation_status = 'PASS'
+        AND d.human_confirmed = 1
+        AND d.is_pattern_source = 1
+        AND d.states_in_dict = 1
+        AND d.is_deleted = 0
+        AND d.is_current = 1
+        AND s.tags LIKE @industryPattern
+        ${projectFilter}
+      ORDER BY d.project_id, d.id
+    `;
+    const result = await this.connection.request()
+      .input('industryPattern', `%${this.escapeLike(industry)}%`)
+      .input('projectId', projectId || 0)
+      .query(query);
+    return result.recordset;
+  }
+
+  async fetchExistingPatterns(industry: IndustryType, type: PatternType): Promise<any[]> {
+    const query = `
+      SELECT id, pattern_type, pattern_content, source_projects, score, usage_count
+      FROM kg_pattern
+      WHERE industry = @industry
+        AND pattern_type = @type
+        AND is_active = 1
+        AND deprecated_at IS NULL
+    `;
+    const result = await this.connection.request()
+      .input('industry', industry)
+      .input('type', type)
+      .query(query);
+    return result.recordset;
+  }
+
+  async savePattern(pattern: AnyPattern, score: number, sourceProjects: number[]): Promise<{ id: number }> {
+    const query = `
+      INSERT INTO kg_pattern (pattern_type, industry, pattern_content, pattern_tags, score, source_projects, source)
+      OUTPUT INSERTED.id
+      VALUES (@type, @industry, @content, @tags, @score, @projects, @source)
+    `;
+    const result = await this.connection.request()
+      .input('type', pattern.type)
+      .input('industry', pattern.industry)
+      .input('content', JSON.stringify(pattern))
+      .input('tags', JSON.stringify(pattern.patternTags || []))
+      .input('score', score)
+      .input('projects', JSON.stringify(sourceProjects))
+      .input('source', pattern.source)
+      .query(query);
+    return { id: result.recordset[0].id };
+  }
+
+  async updatePatternScore(patternId: number, score: number, usageDelta: number, successDelta: number): Promise<void> {
+    const query = `
+      UPDATE kg_pattern
+      SET score = @score,
+          usage_count = usage_count + @usageDelta,
+          success_count = success_count + @successDelta,
+          last_score_at = GETDATE()
+      WHERE id = @id
+    `;
+    await this.connection.request()
+      .input('id', patternId)
+      .input('score', score)
+      .input('usageDelta', usageDelta)
+      .input('successDelta', successDelta)
+      .query(query);
+  }
+
+  async logPatternUsage(patternId: number, projectId: number, isSuccess: boolean, context: string): Promise<void> {
+    const query = `
+      INSERT INTO kg_pattern_usage (pattern_id, project_id, is_success, context_info)
+      VALUES (@patternId, @projectId, @isSuccess, @context)
+    `;
+    await this.connection.request()
+      .input('patternId', patternId)
+      .input('projectId', projectId)
+      .input('isSuccess', isSuccess ? 1 : 0)
+      .input('context', context)
+      .query(query);
+  }
+}
+
+
+// =====================================================
+// InMemory 实现(用于测试)
+// =====================================================
+export class InMemoryDKEEQueries implements IDKEEQueries {
+  private dictRecords: DictSourceRecord[] = [];
+  private decisionTableRecords: DecisionTableSourceRecord[] = [];
+  private stateMachineRecords: StateMachineSourceRecord[] = [];
+  private patterns: any[] = [];
+  private usageLogs: any[] = [];
+  private nextPatternId = 1;
+
+  // 注入测试数据
+  injectDictRecords(records: DictSourceRecord[]): void {
+    this.dictRecords = records;
+  }
+  injectDecisionTableRecords(records: DecisionTableSourceRecord[]): void {
+    this.decisionTableRecords = records;
+  }
+  injectStateMachineRecords(records: StateMachineSourceRecord[]): void {
+    this.stateMachineRecords = records;
+  }
+
+  async fetchHighQualityDictRecords(industry: IndustryType, projectId?: number): Promise<DictSourceRecord[]> {
+    return this.dictRecords.filter(r => !projectId || r.project_id === projectId);
+  }
+
+  async fetchHighQualityDecisionTableRecords(industry: IndustryType, projectId?: number): Promise<DecisionTableSourceRecord[]> {
+    return this.decisionTableRecords.filter(r => !projectId || r.project_id === projectId);
+  }
+
+  async fetchHighQualityStateMachineRecords(industry: IndustryType, projectId?: number): Promise<StateMachineSourceRecord[]> {
+    return this.stateMachineRecords.filter(r => !projectId || r.project_id === projectId);
+  }
+
+  async fetchExistingPatterns(industry: IndustryType, type: PatternType): Promise<any[]> {
+    return this.patterns.filter(p => p.industry === industry && p.pattern_type === type);
+  }
+
+  async savePattern(pattern: AnyPattern, score: number, sourceProjects: number[]): Promise<{ id: number }> {
+    const id = this.nextPatternId++;
+    this.patterns.push({
+      id,
+      pattern_type: pattern.type,
+      industry: pattern.industry,
+      pattern_content: JSON.stringify(pattern),
+      score,
+      source_projects: JSON.stringify(sourceProjects),
+      usage_count: 0,
+      success_count: 0,
+    });
+    return { id };
+  }
+
+  async updatePatternScore(patternId: number, score: number, usageDelta: number, successDelta: number): Promise<void> {
+    const p = this.patterns.find(p => p.id === patternId);
+    if (p) {
+      p.score = score;
+      p.usage_count += usageDelta;
+      p.success_count += successDelta;
+    }
+  }
+
+  async logPatternUsage(patternId: number, projectId: number, isSuccess: boolean, context: string): Promise<void> {
+    this.usageLogs.push({ patternId, projectId, isSuccess, context, at: new Date() });
+  }
+
+  // 测试辅助
+  getAllPatterns(): any[] {
+    return this.patterns;
+  }
+  getAllUsageLogs(): any[] {
+    return this.usageLogs;
+  }
+}
+
+============================================================
+FILE: src/dkee/PatternRankingService.ts
+============================================================
+// PatternRankingService - Pattern 评分动态更新服务
+// 当一个 Pattern 被使用时,根据 Validator 结果动态更新评分
+
+import { IDKEEQueries } from './PatternQueries';
+import { PatternScorer } from './PatternScorer';
+import { AnyPattern, IndustryType, PatternType } from './PatternTypes';
+
+export class PatternRankingService {
+  private scorer = new PatternScorer();
+
+  constructor(private queries: IDKEEQueries) {}
+
+  /**
+   * 一次 SA 流水线跑完后,更新所有用过的 Pattern 的评分
+   */
+  async updateScoresAfterUsage(usageLogs: Array<{
+    patternId: number;
+    projectId: number;
+    isSuccess: boolean;
+  }>): Promise<void> {
+    // 聚合每个 pattern 的使用统计
+    const stats = new Map<number, { total: number; success: number }>();
+    usageLogs.forEach(log => {
+      if (!stats.has(log.patternId)) stats.set(log.patternId, { total: 0, success: 0 });
+      const s = stats.get(log.patternId)!;
+      s.total++;
+      if (log.isSuccess) s.success++;
+    });
+
+    // 更新每个 pattern
+    for (const [patternId, stat] of stats) {
+      const successRate = stat.success / stat.total;
+      const existing = await this.fetchPattern(patternId);
+      if (!existing) continue;
+
+      const newScore = this.scorer.score({
+        usageCount: (existing.usage_count || 0) + stat.total,
+        successRate,
+        source: existing.source,
+        crossIndustryCount: existing.cross_industry_count || 0,
+        recencyScore: this.scorer.recencyScore(new Date(existing.created_at)),
+      });
+
+      await this.queries.updatePatternScore(patternId, newScore, stat.total, stat.success);
+
+      // 半衰期过期的 pattern 标记 deprecated
+      if (newScore < 0.3) {
+        console.warn(`[DKEE] Pattern ${patternId} 评分降到 ${newScore},建议人工 review`);
+      }
+    }
+  }
+
+  /**
+   * 给 LLM context 注入时,选 Top N Pattern
+   */
+  async getTopPatternsForContext(
+    industry: IndustryType,
+    types: PatternType[],
+    topN: number = 5
+  ): Promise<AnyPattern[]> {
+    const allPatterns: any[] = [];
+    for (const type of types) {
+      const patterns = await this.queries.fetchExistingPatterns(industry, type);
+      allPatterns.push(...patterns);
+    }
+
+    // 按 score 排序
+    return allPatterns
+      .filter(p => p.score >= 0.6)  // 评分门禁
+      .sort((a, b) => b.score - a.score)
+      .slice(0, topN)
+      .map(p => JSON.parse(p.pattern_content));
+  }
+
+  private async fetchPattern(id: number): Promise<any> {
+    // 简化:实际实现用单独 query
+    return { id, usage_count: 0, source: 'human-created', cross_industry_count: 0, created_at: new Date() };
+  }
+}
+
+============================================================
+FILE: src/dkee/PatternScorer.ts
+============================================================
+// PatternScorer - DKEE 评分公式实现
+// score = w1*usage + w2*success + w3*source + w4*crossIndustry + w5*recency
+
+import { PatternSource } from './PatternTypes';
+
+export interface ScoreInput {
+  usageCount: number;
+  successRate: number;
+  source: PatternSource;
+  crossIndustryCount: number;
+  recencyScore: number;
+}
+
+export class PatternScorer {
+  // 权重(可配置)
+  private weights = {
+    usage: 0.30,
+    success: 0.25,
+    source: 0.20,
+    crossIndustry: 0.15,
+    recency: 0.10,
+  };
+
+  // 来源加权
+  private sourceWeights: Record<PatternSource, number> = {
+    'human-created': 1.0,
+    'ai-discovered': 0.8,
+    'self-play': 0.6,
+  };
+
+  score(input: ScoreInput): number {
+    const usageScore = Math.min(Math.log(1 + input.usageCount) / Math.log(11), 1.0);  // 对数增长，10 个项目 ≈ 满分
+    const successScore = input.successRate;
+    const sourceScore = this.sourceWeights[input.source] || 0.5;
+    const crossIndustryScore = Math.min(input.crossIndustryCount / 3, 1.0);  // 3 个行业 = 满分
+
+    const raw =
+      this.weights.usage * usageScore +
+      this.weights.success * successScore +
+      this.weights.source * sourceScore +
+      this.weights.crossIndustry * crossIndustryScore +
+      this.weights.recency * input.recencyScore;
+
+    return Math.round(raw * 100) / 100;  // 保留 2 位小数
+  }
+
+  recencyScore(createdAt: Date): number {
+    const daysSinceCreation = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+    // 半衰期 90 天
+    return Math.pow(0.5, daysSinceCreation / 180);
+  }
+}
+
+============================================================
+FILE: src/dkee/index.ts
+============================================================
+// DKEE - 完整导出
+// 4 个核心组件:PatternTypes / PatternQueries / PatternExtractor / PatternRankingService
+
+export {
+  PatternType, PatternSource, IndustryType,
+  BasePattern, FieldNamingPattern, DecisionRulePattern, StateMachinePattern, ProcessPattern, AnyPattern,
+  ExtractionResult,
+  DictSourceRecord, DecisionTableSourceRecord, StateMachineSourceRecord
+} from './PatternTypes';
+
+export { IDKEEQueries, SqlServerDKEEQueries, InMemoryDKEEQueries } from './PatternQueries';
+export { PatternExtractor } from './PatternExtractor';
+export { PatternScorer } from './PatternScorer';
+export { PatternRankingService } from './PatternRankingService';
+
+// =====================================================
+// DKEEFacade - 统一入口(给 SAOrchestrator 调用)
+// =====================================================
+import { ISADatabase } from '../orchestrator/orchestrator-types';
+import { IDKEEQueries, InMemoryDKEEQueries } from './PatternQueries';
+import { PatternExtractor } from './PatternExtractor';
+import { PatternRankingService } from './PatternRankingService';
+import { IndustryType, ExtractionResult } from './PatternTypes';
+
+export class DKEEFacade {
+  public queries: IDKEEQueries;
+  public extractor: PatternExtractor;
+  public ranker: PatternRankingService;
+
+  constructor(queries?: IDKEEQueries) {
+    this.queries = queries || new InMemoryDKEEQueries();
+    this.extractor = new PatternExtractor(this.queries);
+    this.ranker = new PatternRankingService(this.queries);
+  }
+
+  /**
+   * 在 SA 流水线跑完后调用
+   */
+  async extractAndScore(industry: IndustryType): Promise<ExtractionResult> {
+    return await this.extractor.extractAll(industry);
+  }
+
+  /**
+   * 给下个 SA 流水线注入 Top Pattern
+   */
+  async getTopPatternsForContext(industry: IndustryType, topN: number = 5): Promise<any[]> {
+    return await this.ranker.getTopPatternsForContext(industry, ['field_naming', 'decision_rule', 'state_machine', 'process_pattern'], topN);
+  }
+}
+
+============================================================
+FILE: src/validators/types.ts
+============================================================
+// 通用类型定义(所有 Validator 复用)
+
+export type ValidationSeverity = 'ERROR' | 'WARNING';
+
+export interface ValidationError {
+  code: string;
+  message: string;
+  severity: ValidationSeverity;
+  field?: string;
+  suggestion?: string;
+}
+
+export interface ValidationResult {
+  passed: boolean;
+  errors: ValidationError[];
+}
+
+// 类型白名单(从 EAB 来)
+export const TYPE_WHITELIST = [
+  'NVARCHAR', 'BIGINT', 'INT', 'DECIMAL', 'DATETIME', 'BOOLEAN', 'JSON'
+] as const;
+
+// 必填审计字段
+export const REQUIRED_AUDIT_FIELDS = [
+  'created_at', 'created_by', 'updated_at', 'updated_by', 'tenant_id'
+] as const;
+
+============================================================
+FILE: src/validators/builders.ts
+============================================================
+// Test Data Builders - 用于快速构造测试数据
+import {
+  DataDictionary, DataFlowDef, DataStoreDef, FieldElement
+} from './DictValidator';
+import { DFD, DFDProcess } from './DFDValidator';
+import { BPM, BPMNode } from './BPMValidator';
+import { PSpec } from './LogicValidator';
+import { DecisionTable } from './CrossEventConsistencyValidator';
+import { ER, EREntity } from './ERValidator';
+import { UI, UIScreen } from './UIValidator';
+
+// =====================================================
+// 通用: 标准审计字段 + TenantId(合法数据)
+// =====================================================
+export const AUDIT_FIELDS: FieldElement[] = [
+  { name: 'created_at', type: 'DATETIME' },
+  { name: 'created_by', type: 'NVARCHAR(50)' },
+  { name: 'updated_at', type: 'DATETIME' },
+  { name: 'updated_by', type: 'NVARCHAR(50)' },
+  { name: 'tenant_id', type: 'NVARCHAR(50)' },
+];
+
+// =====================================================
+// DictBuilder - 数据字典构造器
+// =====================================================
+export class DictBuilder {
+  private dict: DataDictionary = {
+    id: 1,
+    project_id: 1,
+    asset_level: 'EVENT',
+    event_id: 1,
+    elements: [...AUDIT_FIELDS],
+    dataFlows: [],
+    dataStores: [],
+  };
+
+  withElement(name: string, type: string, isFK = false, refEntity?: string): this {
+    this.dict.elements.push({ name, type, isFK, refEntity });
+    return this;
+  }
+
+  withDataFlow(name: string, fields: FieldElement[]): this {
+    this.dict.dataFlows.push({ name, fields });
+    return this;
+  }
+
+  withDataStore(name: string, fields: FieldElement[], withTenantId = true): this {
+    const allFields = withTenantId
+      ? [...fields, { name: 'tenant_id', type: 'NVARCHAR(50)' }]
+      : fields;
+    this.dict.dataStores.push({ name, fields: allFields });
+    return this;
+  }
+
+  withoutAuditFields(): this {
+    this.dict.elements = this.dict.elements.filter(
+      e => !['created_at', 'created_by', 'updated_at', 'updated_by', 'tenant_id'].includes(e.name)
+    );
+    return this;
+  }
+
+  withoutTenantId(): this {
+    this.dict.elements = this.dict.elements.filter(e => e.name !== 'tenant_id');
+    return this;
+  }
+
+  build(): DataDictionary {
+    return JSON.parse(JSON.stringify(this.dict));
+  }
+}
+
+// =====================================================
+// DFDBuilder - DFD 构造器
+// =====================================================
+export class DFDBuilder {
+  private dfd: DFD = {
+    id: 1,
+    dfd_levels: {
+      '0': { processes: [], flows: [] },
+      '1': { processes: [], flows: [] },
+    },
+    processes: [],
+  };
+
+  addLevel0Process(id: string, name: string, inputs: string[], outputs: string[]): this {
+    this.dfd.dfd_levels['0'].processes.push({ id, name, inputFlows: inputs, outputFlows: outputs });
+    return this;
+  }
+
+  addLevel1Process(id: string, name: string, parentId: string, inputs: string[], outputs: string[]): this {
+    this.dfd.processes.push({ id, name, parentId, inputFlows: inputs, outputFlows: outputs });
+    this.dfd.dfd_levels['1'].processes.push({ id, name, inputFlows: inputs, outputFlows: outputs });
+    return this;
+  }
+
+  addProcess(id: string, name: string, inputs: string[], outputs: string[], parentId?: string): this {
+    this.dfd.processes.push({ id, name, parentId, inputFlows: inputs, outputFlows: outputs });
+    return this;
+  }
+
+  withEmptyIO(): this {
+    // 把所有 process 的 IO 清空(用于测 DFD_NO_INPUT / DFD_NO_OUTPUT)
+    this.dfd.processes.forEach(p => {
+      p.inputFlows = [];
+      p.outputFlows = [];
+    });
+    return this;
+  }
+
+  build(): DFD {
+    return JSON.parse(JSON.stringify(this.dfd));
+  }
+}
+
+// =====================================================
+// BPMBuilder - 业务流程图构造器
+// =====================================================
+export class BPMBuilder {
+  private bpm: BPM = {
+    swim_lanes: [
+      { laneId: 'L1', role: 'worker', name: '工人' },
+      { laneId: 'L2', role: 'supervisor', name: '班组长' },
+    ],
+    activity_nodes: [],
+  };
+
+  addNode(id: string, name: string, dfdProcessId: string, type: BPMNode['type'] = 'user_action'): this {
+    this.bpm.activity_nodes.push({ id, name, laneId: 'L1', dfdProcessId, type });
+    return this;
+  }
+
+  build(): BPM {
+    return JSON.parse(JSON.stringify(this.bpm));
+  }
+}
+
+// =====================================================
+// DecisionTableBuilder - 判定表构造器
+// =====================================================
+export class DecisionTableBuilder {
+  private table: DecisionTable = {
+    id: 'DT-1',
+    project_id: 1,
+    event_id: 1,
+    conditions: [],
+    actions: [],
+  };
+
+  withCondition(name: string, value: any, operator = '>'): this {
+    this.table.conditions.push({ name, operator, value });
+    return this;
+  }
+
+  withAction(name: string): this {
+    this.table.actions.push({ name });
+    return this;
+  }
+
+  build(): DecisionTable {
+    return JSON.parse(JSON.stringify(this.table));
+  }
+}
+
+// =====================================================
+// PSpecBuilder - PSPEC 构造器
+// =====================================================
+export class PSpecBuilder {
+  private spec: PSpec = { process_specs: [] };
+
+  addProcess(id: string, name: string, inputs: string[]): this {
+    this.spec.process_specs.push({ id, name, input: inputs, output: [] });
+    return this;
+  }
+
+  build(): PSpec {
+    return JSON.parse(JSON.stringify(this.spec));
+  }
+}
+
+// =====================================================
+// ERBuilder - ER 构造器
+// =====================================================
+export class ERBuilder {
+  private er: ER = { entities: [], relationships: [] };
+
+  addEntity(name: string, columns: EREntity['columns']): this {
+    this.er.entities.push({ name, columns });
+    return this;
+  }
+
+  build(): ER {
+    return JSON.parse(JSON.stringify(this.er));
+  }
+}
+
+// =====================================================
+// UIBuilder - UI 构造器
+// =====================================================
+export class UIBuilder {
+  private ui: UI = { id: 1, screens: [] };
+
+  addScreen(id: string, name: string, dataFlow: string, bpmNodeId: string, fields: UIScreen['fields']): this {
+    this.ui.screens.push({ id, name, dataFlow, bpmNodeId, fields });
+    return this;
+  }
+
+  build(): UI {
+    return JSON.parse(JSON.stringify(this.ui));
+  }
+}
+
+============================================================
+FILE: src/validators/BPMValidator.ts
+============================================================
+// BPMValidator - 业务流程图校验器
+import { ValidationError, ValidationResult } from './types';
+
+export interface BPMNode {
+  id: string;
+  name: string;
+  laneId: string;
+  dfdProcessId: string;
+  type: 'user_action' | 'system_action' | 'decision';
+}
+
+export interface BPM {
+  swim_lanes: { laneId: string; role: string; name: string }[];
+  activity_nodes: BPMNode[];
+}
+
+export interface DFDProcessLite {
+  id: string;
+  name: string;
+}
+
+export class BPMValidator {
+  constructor(
+    private bpm: BPM,
+    private dfdProcesses: DFDProcessLite[]
+  ) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkBPMNodesInDFD());
+    errors.push(...this.checkDFDProcessesInBPM());
+    return { passed: errors.length === 0, errors };
+  }
+
+  // 校验 1:每个 BPM 节点必须绑定 DFD 过程
+  private checkBPMNodesInDFD(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const dfdProcessIds = new Set(this.dfdProcesses.map(p => p.id));
+
+    this.bpm.activity_nodes.forEach(node => {
+      if (!dfdProcessIds.has(node.dfdProcessId)) {
+        errors.push({
+          code: 'BPM_NODE_NO_DFD',
+          message: `BPM 节点 "${node.id}" 绑定的 DFD 过程 "${node.dfdProcessId}" 不存在`,
+          severity: 'ERROR',
+        });
+      }
+    });
+    return errors;
+  }
+
+  // 校验 2:每个 DFD 过程至少有一个 BPM 节点
+  private checkDFDProcessesInBPM(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const bpmProcessIds = new Set(this.bpm.activity_nodes.map(n => n.dfdProcessId));
+
+    this.dfdProcesses.forEach(p => {
+      if (!bpmProcessIds.has(p.id)) {
+        errors.push({
+          code: 'BPM_DFD_NO_NODE',
+          message: `DFD 过程 "${p.id}" 在 BPM 中无对应节点`,
+          severity: 'WARNING',
+        });
+      }
+    });
+    return errors;
+  }
+}
+
+============================================================
+FILE: src/validators/CrossEventConsistencyValidator.ts
+============================================================
+// CrossEventConsistencyValidator - 判定表跨事件一致性校验器
+import { ValidationError, ValidationResult } from './types';
+
+export interface DecisionTable {
+  id: string;
+  project_id: number;
+  event_id: number;
+  conditions: Array<{
+    name: string;
+    operator: string;
+    value: any;
+  }>;
+  actions: Array<{ name: string }>;
+}
+
+export interface ConditionWhitelist {
+  condition: string;
+  allowedValues: string[];
+}
+
+export class CrossEventConsistencyValidator {
+  constructor(
+    private currentTable: DecisionTable,
+    private allTablesInProject: DecisionTable[],
+    private stateWhitelist: ConditionWhitelist[] = []
+  ) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkConditionThresholdConsistency());
+    errors.push(...this.checkStateWhitelist());
+    errors.push(...this.checkActionConsistency());
+    return { passed: errors.length === 0, errors };
+  }
+
+  // 校验 1:同项目下相同条件名必须有相同阈值
+  private checkConditionThresholdConsistency(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const conditionMap = new Map<string, Array<{ value: any; tableId: string }>>();
+
+    this.allTablesInProject.forEach(table => {
+      table.conditions.forEach(cond => {
+        if (!conditionMap.has(cond.name)) conditionMap.set(cond.name, []);
+        conditionMap.get(cond.name)!.push({ value: cond.value, tableId: table.id });
+      });
+    });
+
+    conditionMap.forEach((occurrences, condName) => {
+      const uniqueValues = new Set(occurrences.map(o => JSON.stringify(o.value)));
+      if (uniqueValues.size > 1) {
+        errors.push({
+          code: 'CONSISTENCY_CONDITION_CONFLICT',
+          message: `条件 "${condName}" 在不同事件中阈值不一致: ` +
+                   occurrences.map(o => `${o.tableId}=${JSON.stringify(o.value)}`).join(', '),
+          severity: 'ERROR',
+          suggestion: '统一所有事件中该条件的阈值,或重命名其中一个条件',
+        });
+      }
+    });
+    return errors;
+  }
+
+  // 校验 2:状态值必须在白名单中
+  private checkStateWhitelist(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    this.currentTable.conditions.forEach(cond => {
+      const pattern = this.stateWhitelist.find(p => cond.name.startsWith(p.condition));
+      if (pattern && !pattern.allowedValues.includes(String(cond.value))) {
+        errors.push({
+          code: 'CONSISTENCY_INVALID_STATE',
+          message: `条件 "${cond.name}" 的值 "${cond.value}" 不在白名单 [${pattern.allowedValues.join(',')}] 中`,
+          severity: 'ERROR',
+        });
+      }
+    });
+    return errors;
+  }
+
+  // 校验 3:动作名一致性
+  private checkActionConsistency(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const actionWhitelist = new Set<string>();
+    // 构建白名单时排除当前表，只看其他表的动作
+    this.allTablesInProject
+      .filter(table => table !== this.currentTable)
+      .forEach(table => {
+        table.actions.forEach(a => actionWhitelist.add(a.name));
+      });
+
+    this.currentTable.actions.forEach(action => {
+      if (!actionWhitelist.has(action.name)) {
+        errors.push({
+          code: 'CONSISTENCY_NEW_ACTION',
+          message: `判定表 "${this.currentTable.id}" 引入新动作 "${action.name}"`,
+          severity: 'WARNING',
+        });
+      }
+    });
+    return errors;
+  }
+}
+
+============================================================
+FILE: src/validators/DFDValidator.ts
+============================================================
+// DFDValidator - DFD 校验器
+import { ValidationError, ValidationResult } from './types';
+
+export interface DFDProcess {
+  id: string;
+  name: string;
+  inputFlows: string[];
+  outputFlows: string[];
+  parentId?: string;
+}
+
+export interface DFD {
+  id: number;
+  dfd_levels: {
+    [key: string]: {
+      processes: DFDProcess[];
+      flows: { name: string; from: string; to: string }[];
+    };
+  };
+  processes: DFDProcess[];
+}
+
+export class DFDValidator {
+  constructor(private dfd: DFD) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkParentChildBalance());
+    errors.push(...this.checkConservation());
+    errors.push(...this.checkProcessIO());
+    return { passed: errors.length === 0, errors };
+  }
+
+  private checkParentChildBalance(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const level0 = this.dfd.dfd_levels['0']?.processes || [];
+
+    level0.forEach(parent => {
+      const childProcesses = this.dfd.processes.filter(p => p.parentId === parent.id);
+      if (childProcesses.length === 0) {
+        errors.push({
+          code: 'DFD_NOT_DECOMPOSED',
+          message: `Level 0 过程 "${parent.id}" 在 Level 1 未分解`,
+          severity: 'ERROR',
+        });
+        return;
+      }
+      const childIO = new Set<string>();
+      childProcesses.forEach(p => {
+        p.inputFlows.forEach(f => childIO.add(f));
+        p.outputFlows.forEach(f => childIO.add(f));
+      });
+      const parentIO = new Set([...parent.inputFlows, ...parent.outputFlows]);
+      parentIO.forEach(io => {
+        if (!childIO.has(io)) {
+          errors.push({
+            code: 'DFD_BALANCE_MISMATCH',
+            message: `过程 "${parent.id}" 的 IO "${io}" 在子图中找不到对应`,
+            severity: 'ERROR',
+          });
+        }
+      });
+    });
+    return errors;
+  }
+
+  private checkConservation(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    this.dfd.processes.forEach(process => {
+      process.inputFlows.forEach(flow => {
+        if (!this.findFlowProducer(flow, process.id)) {
+          errors.push({
+            code: 'DFD_BLACK_HOLE',
+            message: `过程 "${process.id}" 的输入流 "${flow}" 找不到来源(数据黑洞)`,
+            severity: 'ERROR',
+          });
+        }
+      });
+      process.outputFlows.forEach(flow => {
+        if (!this.findFlowConsumer(flow, process.id)) {
+          errors.push({
+            code: 'DFD_MIRACLE',
+            message: `过程 "${process.id}" 的输出流 "${flow}" 没有消费者(数据奇迹)`,
+            severity: 'ERROR',
+          });
+        }
+      });
+    });
+    return errors;
+  }
+
+  private checkProcessIO(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    this.dfd.processes.forEach(process => {
+      if (process.inputFlows.length === 0) {
+        errors.push({
+          code: 'DFD_NO_INPUT',
+          message: `过程 "${process.id}" 没有输入流`,
+          severity: 'ERROR',
+        });
+      }
+      if (process.outputFlows.length === 0) {
+        errors.push({
+          code: 'DFD_NO_OUTPUT',
+          message: `过程 "${process.id}" 没有输出流`,
+          severity: 'ERROR',
+        });
+      }
+    });
+    return errors;
+  }
+
+  private findFlowProducer(flow: string, excludeProcessId: string): boolean {
+    return this.dfd.processes.some(
+      p => p.id !== excludeProcessId && p.outputFlows.includes(flow)
+    );
+  }
+
+  private findFlowConsumer(flow: string, excludeProcessId: string): boolean {
+    return this.dfd.processes.some(
+      p => p.id !== excludeProcessId && p.inputFlows.includes(flow)
+    );
+  }
+}
+
+============================================================
+FILE: src/validators/DictValidator.ts
+============================================================
+// DictValidator - 数据字典校验器
+import {
+  ValidationError, ValidationResult, TYPE_WHITELIST, REQUIRED_AUDIT_FIELDS
+} from './types';
+
+export interface FieldElement {
+  name: string;
+  type: string;
+  length?: number;
+  isFK?: boolean;
+  refEntity?: string;
+  isRequired?: boolean;
+  scope?: string;
+}
+
+export interface DataFlowDef {
+  name: string;
+  fields: FieldElement[];
+}
+
+export interface DataStoreDef {
+  name: string;
+  fields: FieldElement[];
+}
+
+export interface DataDictionary {
+  id: number;
+  project_id: number;
+  asset_level: 'PROJECT' | 'EVENT' | 'PROCESS';
+  event_id?: number;
+  elements: FieldElement[];
+  dataFlows: DataFlowDef[];
+  dataStores: DataStoreDef[];
+}
+
+export interface DFD {
+  dataFlows: { name: string }[];
+  dataStores: { name: string }[];
+}
+
+export class DictValidator {
+  constructor(
+    private dict: DataDictionary,
+    private dfd: DFD
+  ) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkDFDCoherence());
+    errors.push(...this.checkFieldTypes());
+    errors.push(...this.checkFKReferences());
+    errors.push(...this.checkAuditFields());
+    errors.push(...this.checkTenantIsolation());
+    return { passed: errors.length === 0, errors };
+  }
+
+  private checkDFDCoherence(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const dictFlowNames = new Set(this.dict.dataFlows.map(f => f.name));
+    const dictStoreNames = new Set(this.dict.dataStores.map(s => s.name));
+
+    this.dfd.dataFlows.forEach(flow => {
+      if (!dictFlowNames.has(flow.name)) {
+        errors.push({
+          code: 'DICT_FLOW_MISSING',
+          message: `DFD 数据流 "${flow.name}" 在数据字典中未定义`,
+          severity: 'ERROR',
+          suggestion: `在 dict.dataFlows 中添加 "${flow.name}" 定义`,
+        });
+      }
+    });
+
+    this.dfd.dataStores.forEach(store => {
+      if (!dictStoreNames.has(store.name)) {
+        errors.push({
+          code: 'DICT_STORE_MISSING',
+          message: `DFD 数据存储 "${store.name}" 在数据字典中未定义`,
+          severity: 'ERROR',
+        });
+      }
+    });
+
+    return errors;
+  }
+
+  private checkFieldTypes(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const allFields = [
+      ...this.dict.elements,
+      ...this.dict.dataFlows.flatMap(f => f.fields),
+      ...this.dict.dataStores.flatMap(s => s.fields),
+    ];
+
+    allFields.forEach(field => {
+      const baseType = field.type.split('(')[0];
+      if (!TYPE_WHITELIST.includes(baseType as any)) {
+        errors.push({
+          code: 'DICT_INVALID_TYPE',
+          message: `字段 "${field.name}" 类型 "${field.type}" 不在白名单中`,
+          severity: 'ERROR',
+          field: field.name,
+        });
+      }
+      if (field.type.startsWith('NVARCHAR') && !field.type.includes('(')) {
+        errors.push({
+          code: 'DICT_MISSING_LENGTH',
+          message: `NVARCHAR 字段 "${field.name}" 必须指定长度`,
+          severity: 'ERROR',
+          field: field.name,
+        });
+      }
+      if (field.type.startsWith('DECIMAL') && !field.type.includes('(')) {
+        errors.push({
+          code: 'DICT_MISSING_PRECISION',
+          message: `DECIMAL 字段 "${field.name}" 必须指定精度`,
+          severity: 'ERROR',
+          field: field.name,
+        });
+      }
+    });
+
+    return errors;
+  }
+
+  private checkFKReferences(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const allFields = [
+      ...this.dict.elements,
+      ...this.dict.dataFlows.flatMap(f => f.fields),
+      ...this.dict.dataStores.flatMap(s => s.fields),
+    ];
+    const storeNames = new Set(this.dict.dataStores.map(s => s.name));
+
+    allFields.forEach(field => {
+      if (field.isFK && !field.refEntity) {
+        errors.push({
+          code: 'DICT_FK_NO_REF',
+          message: `外键字段 "${field.name}" 必须指定引用的实体`,
+          severity: 'ERROR',
+          field: field.name,
+        });
+      }
+      if (field.isFK && field.refEntity && !storeNames.has(field.refEntity)) {
+        errors.push({
+          code: 'DICT_FK_REF_INVALID',
+          message: `外键 "${field.name}" 引用 "${field.refEntity}" 在数据存储中不存在`,
+          severity: 'ERROR',
+          field: field.name,
+        });
+      }
+    });
+
+    return errors;
+  }
+
+  private checkAuditFields(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const fieldNames = new Set(this.dict.elements.map(e => e.name));
+    REQUIRED_AUDIT_FIELDS.forEach(field => {
+      if (!fieldNames.has(field)) {
+        errors.push({
+          code: 'DICT_MISSING_AUDIT',
+          message: `数据字典必须包含审计字段 "${field}"`,
+          severity: 'ERROR',
+          field,
+        });
+      }
+    });
+    return errors;
+  }
+
+  private checkTenantIsolation(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const storeWithoutTenant = this.dict.dataStores.filter(
+      store => !store.fields.some(f => f.name === 'tenant_id')
+    );
+    if (storeWithoutTenant.length > 0) {
+      errors.push({
+        code: 'DICT_MISSING_TENANT',
+        message: `数据存储 [${storeWithoutTenant.map(s => s.name).join(', ')}] 缺少 TenantId 字段(多租户隔离必需)`,
+        severity: 'ERROR',
+      });
+    }
+    return errors;
+  }
+}
+
+============================================================
+FILE: src/validators/ERValidator.ts
+============================================================
+// ERValidator - ER 图校验器
+import { ValidationError, ValidationResult } from './types';
+import { DataDictionary } from './DictValidator';
+
+export interface ERColumn {
+  name: string;
+  type: string;
+  isPK?: boolean;
+  isFK?: boolean;
+  refTable?: string;
+}
+
+export interface EREntity {
+  name: string;
+  columns: ERColumn[];
+}
+
+export interface ER {
+  entities: EREntity[];
+  relationships: any[];
+}
+
+export class ERValidator {
+  constructor(
+    private er: ER,
+    private dict: DataDictionary
+  ) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkFieldsInDict());
+    errors.push(...this.checkFKReferences());
+    return { passed: errors.length === 0, errors };
+  }
+
+  private checkFieldsInDict(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    // 收集所有字段名：elements + dataFlows[*].fields + dataStores[*].fields
+    const dictFields = new Set(this.dict.elements.map(e => e.name));
+    this.dict.dataFlows?.forEach(f => f.fields?.forEach(e => dictFields.add(e.name)));
+    this.dict.dataStores?.forEach(s => s.fields?.forEach(e => dictFields.add(e.name)));
+
+    this.er.entities.forEach(entity => {
+      entity.columns.forEach(col => {
+        if (!dictFields.has(col.name)) {
+          errors.push({
+            code: 'ER_FIELD_NOT_IN_DICT',
+            message: `实体 "${entity.name}" 字段 "${col.name}" 不在数据字典`,
+            severity: 'ERROR',
+            field: col.name,
+          });
+        }
+      });
+    });
+    return errors;
+  }
+
+  private checkFKReferences(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const entityNames = new Set(this.er.entities.map(e => e.name));
+
+    this.er.entities.forEach(entity => {
+      entity.columns.forEach(col => {
+        if (col.isFK && col.refTable && !entityNames.has(col.refTable)) {
+          errors.push({
+            code: 'ER_FK_REF_INVALID',
+            message: `实体 "${entity.name}" 外键 "${col.name}" 引用 "${col.refTable}" 不存在`,
+            severity: 'ERROR',
+            field: col.name,
+          });
+        }
+      });
+    });
+    return errors;
+  }
+}
+
+============================================================
+FILE: src/validators/LogicValidator.ts
+============================================================
+// LogicValidator - PSPEC 校验器
+import { ValidationError, ValidationResult } from './types';
+import { DataDictionary } from './DictValidator';
+
+export interface ProcessSpec {
+  id: string;
+  name: string;
+  input: string[];
+  output: string[];
+  validation?: string;
+  algorithm?: string;
+}
+
+export interface PSpec {
+  process_specs: ProcessSpec[];
+}
+
+export class LogicValidator {
+  constructor(
+    private pspec: PSpec,
+    private dict: DataDictionary
+  ) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkFieldsInDict());
+    return { passed: errors.length === 0, errors };
+  }
+
+  private checkFieldsInDict(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    // 收集所有字段名：elements + dataFlows[*].fields + dataStores[*].fields
+    const dictFieldNames = new Set(this.dict.elements.map(e => e.name));
+    this.dict.dataFlows?.forEach(f => f.fields?.forEach(e => dictFieldNames.add(e.name)));
+    this.dict.dataStores?.forEach(s => s.fields?.forEach(e => dictFieldNames.add(e.name)));
+
+    this.pspec.process_specs.forEach(spec => {
+      spec.input.forEach(f => {
+        if (!dictFieldNames.has(f)) {
+          errors.push({
+            code: 'LOGIC_FIELD_NOT_IN_DICT',
+            message: `PSPEC 过程 "${spec.id}" 输入字段 "${f}" 不在数据字典`,
+            severity: 'ERROR',
+            field: f,
+          });
+        }
+      });
+    });
+    return errors;
+  }
+}
+
+============================================================
+FILE: src/validators/STDValidator.ts
+============================================================
+// STDValidator - 状态机校验器
+import { ValidationError, ValidationResult } from './types';
+
+export interface StateTransition {
+  from: string;
+  to: string;
+  trigger: string;
+}
+
+export interface StateMachine {
+  entity: string;
+  states: string[];
+  transitions: StateTransition[];
+}
+
+export interface STD {
+  stateMachines: StateMachine[];
+}
+
+export class STDValidator {
+  constructor(
+    private std: STD,
+    private dict?: { dataStores?: Array<{ name: string }> }
+  ) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    this.std.stateMachines.forEach(sm => {
+      errors.push(...this.checkTransitionStates(sm));
+      errors.push(...this.checkDeadStates(sm));
+      errors.push(...this.checkUnreachableStates(sm));
+      errors.push(...this.checkDuplicateTransitions(sm));
+      errors.push(...this.checkEntityInDict(sm));
+    });
+    return { passed: errors.length === 0, errors };
+  }
+
+  // 校验 1: 转换中的状态必须在 states 列表中
+  private checkTransitionStates(sm: StateMachine): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const stateSet = new Set(sm.states);
+
+    sm.transitions.forEach((t, i) => {
+      if (!stateSet.has(t.from)) {
+        errors.push({
+          code: 'STD_INVALID_FROM_STATE',
+          message: `实体 "${sm.entity}" 转换[${i}] 的源状态 "${t.from}" 不在状态列表中`,
+          severity: 'ERROR',
+        });
+      }
+      if (!stateSet.has(t.to)) {
+        errors.push({
+          code: 'STD_INVALID_TO_STATE',
+          message: `实体 "${sm.entity}" 转换[${i}] 的目标状态 "${t.to}" 不在状态列表中`,
+          severity: 'ERROR',
+        });
+      }
+    });
+    return errors;
+  }
+
+  // 校验 2: 无死状态（除终态外，每个状态必须有出边）
+  private checkDeadStates(sm: StateMachine): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const statesWithOutgoing = new Set(sm.transitions.map(t => t.from));
+    // 终态：有入边但无出边的状态是合法的（如 Completed、Cancelled）
+    const statesWithIncoming = new Set(sm.transitions.map(t => t.to));
+
+    sm.states.forEach(state => {
+      if (!statesWithOutgoing.has(state) && statesWithIncoming.has(state)) {
+        // 有入边无出边 = 终态，合法但给出 WARNING
+        errors.push({
+          code: 'STD_TERMINAL_STATE',
+          message: `实体 "${sm.entity}" 状态 "${state}" 是终态（有入边无出边），请确认这是预期行为`,
+          severity: 'WARNING',
+        });
+      }
+      if (!statesWithOutgoing.has(state) && !statesWithIncoming.has(state)) {
+        // 无入边无出边 = 孤立状态
+        errors.push({
+          code: 'STD_ISOLATED_STATE',
+          message: `实体 "${sm.entity}" 状态 "${state}" 是孤立状态（无入边无出边）`,
+          severity: 'ERROR',
+        });
+      }
+    });
+    return errors;
+  }
+
+  // 校验 3: 无不可达状态（除起始态外，每个状态必须有入边）
+  private checkUnreachableStates(sm: StateMachine): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const statesWithIncoming = new Set(sm.transitions.map(t => t.to));
+    const statesWithOutgoing = new Set(sm.transitions.map(t => t.from));
+
+    sm.states.forEach(state => {
+      if (!statesWithIncoming.has(state) && statesWithOutgoing.has(state)) {
+        // 有出边无入边 = 起始态，合法
+        // 不报错
+      }
+      if (!statesWithIncoming.has(state) && !statesWithOutgoing.has(state)) {
+        // 已在 checkDeadStates 中处理
+      }
+    });
+    return errors;
+  }
+
+  // 校验 4: 无重复转换
+  private checkDuplicateTransitions(sm: StateMachine): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const seen = new Set<string>();
+
+    sm.transitions.forEach((t, i) => {
+      const key = `${t.from}→${t.to}@${t.trigger}`;
+      if (seen.has(key)) {
+        errors.push({
+          code: 'STD_DUPLICATE_TRANSITION',
+          message: `实体 "${sm.entity}" 转换[${i}] 重复: ${key}`,
+          severity: 'ERROR',
+        });
+      }
+      seen.add(key);
+    });
+    return errors;
+  }
+
+  // 校验 5: 实体名必须在字典的 dataStore 中
+  private checkEntityInDict(sm: StateMachine): ValidationError[] {
+    const errors: ValidationError[] = [];
+    if (!this.dict?.dataStores) return errors;
+
+    const storeNames = new Set(this.dict.dataStores.map(s => s.name));
+    if (!storeNames.has(sm.entity)) {
+      errors.push({
+        code: 'STD_ENTITY_NOT_IN_DICT',
+        message: `状态机实体 "${sm.entity}" 不在数据字典的 dataStore 中`,
+        severity: 'ERROR',
+      });
+    }
+    return errors;
+  }
+}
+
+============================================================
+FILE: src/validators/UIValidator.ts
+============================================================
+// UIValidator - UI 校验器
+import { ValidationError, ValidationResult } from './types';
+import { DataDictionary, FieldElement } from './DictValidator';
+
+export interface UIField {
+  name: string;
+  type: string;
+  required: boolean;
+  controlType: 'input' | 'select' | 'date' | 'number';
+}
+
+export interface UIScreen {
+  id: string;
+  name: string;
+  dataFlow: string;
+  bpmNodeId: string;
+  fields: UIField[];
+}
+
+export interface UI {
+  id: number;
+  screens: UIScreen[];
+}
+
+export interface BPMNode {
+  id: string;
+  type: 'user_action' | 'system_action' | 'decision';
+}
+
+export class UIValidator {
+  constructor(
+    private ui: UI,
+    private dict: DataDictionary,
+    private bpm: { activity_nodes: BPMNode[] }
+  ) {}
+
+  validate(): ValidationResult {
+    const errors: ValidationError[] = [];
+    errors.push(...this.checkFieldsInDict());
+    errors.push(...this.checkNoExtraFields());
+    errors.push(...this.checkTypeConsistency());
+    errors.push(...this.checkBPMMapping());
+    return { passed: errors.length === 0, errors };
+  }
+
+  private checkFieldsInDict(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const dictFieldNames = new Set(this.dict.elements.map(e => e.name));
+
+    this.ui.screens.forEach(screen => {
+      screen.fields.forEach(field => {
+        if (!dictFieldNames.has(field.name)) {
+          errors.push({
+            code: 'UI_FIELD_NOT_IN_DICT',
+            message: `UI 屏 "${screen.id}" 字段 "${field.name}" 不在数据字典中(LLM 幻觉!)`,
+            severity: 'ERROR',
+            field: field.name,
+            suggestion: `在数据字典中添加 "${field.name}" 字段定义`,
+          });
+        }
+      });
+    });
+    return errors;
+  }
+
+  private checkNoExtraFields(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const dictFieldsByFlow = new Map<string, Set<string>>();
+    this.dict.dataFlows.forEach(flow => {
+      dictFieldsByFlow.set(flow.name, new Set(flow.fields.map(f => f.name)));
+    });
+
+    this.ui.screens.forEach(screen => {
+      const allowedFields = dictFieldsByFlow.get(screen.dataFlow);
+      if (!allowedFields) {
+        errors.push({
+          code: 'UI_NO_DATA_FLOW',
+          message: `UI 屏 "${screen.id}" 绑定的数据流 "${screen.dataFlow}" 不在字典中`,
+          severity: 'ERROR',
+        });
+        return;
+      }
+      screen.fields.forEach(field => {
+        if (!allowedFields.has(field.name)) {
+          errors.push({
+            code: 'UI_FIELD_NOT_IN_FLOW',
+            message: `UI 屏 "${screen.id}" 字段 "${field.name}" 不在数据流 "${screen.dataFlow}" 的字典定义中`,
+            severity: 'ERROR',
+            field: field.name,
+          });
+        }
+      });
+    });
+    return errors;
+  }
+
+  private checkTypeConsistency(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const dictFieldMap = new Map(this.dict.elements.map(e => [e.name, e]));
+
+    this.ui.screens.forEach(screen => {
+      screen.fields.forEach(field => {
+        const dictField = dictFieldMap.get(field.name);
+        if (dictField && dictField.type !== field.type) {
+          errors.push({
+            code: 'UI_TYPE_MISMATCH',
+            message: `UI 屏 "${screen.id}" 字段 "${field.name}" 类型 "${field.type}" 与字典 "${dictField.type}" 不一致`,
+            severity: 'ERROR',
+            field: field.name,
+          });
+        }
+      });
+    });
+    return errors;
+  }
+
+  private checkBPMMapping(): ValidationError[] {
+    const errors: ValidationError[] = [];
+    const screenBPMIds = new Set(this.ui.screens.map(s => s.bpmNodeId));
+
+    this.bpm.activity_nodes
+      .filter(n => n.type === 'user_action')
+      .forEach(node => {
+        if (!screenBPMIds.has(node.id)) {
+          errors.push({
+            code: 'UI_BPM_NODE_MISSING',
+            message: `BPM 节点 "${node.id}" 没有对应的 UI 屏`,
+            severity: 'WARNING',
+          });
+        }
+      });
+    return errors;
+  }
+}
+
+============================================================
+FILE: __tests__/SAOrchestrator.test.ts
+============================================================
+// 集成测试:验证 runSA() 完整流程
+// 包含:LLM 模拟、Validator 真实跑、DB 内存跑、Retry 循环、DKEE 提炼 + 3-Tier 路由
+
+import { SAOrchestrator } from '../src/orchestrator/SAOrchestrator';
+import { InMemorySADatabase } from '../src/orchestrator/SADatabase';
+import { ILLMClient, SARequest, ValidationError } from '../src/orchestrator/orchestrator-types';
+import { classifyEvent } from '../src/orchestrator/StepRouter';
+
+// =====================================================
+// Mock LLM - 模拟"第一次出错、第二次修复"的真实 LLM 行为
+// =====================================================
+class MockLLM implements ILLMClient {
+  private dictCallCount = 0;
+
+  async generate(params: any): Promise<any> {
+    const errors = params.lastErrors || [];
+
+    // Scope 步骤
+    if (params.systemPrompt.includes('需求分析') || params.systemPrompt.includes('系统边界')) {
+      return {
+        systemBoundary: { inScope: ['MES 报工系统'], outOfScope: ['ERP'] },
+        externalEntities: [{ name: '工人', type: 'user', description: '车间工人' }],
+        businessEvents: [{ id: 1, name: '报工', description: '工人提交报工单', complexity: 'medium' }],
+        eventCount: 1,
+      };
+    }
+
+    // Dict 步骤:第一次有幻觉,第二次修正（必须在 DFD 之前检查，因为 DictAgent 的 systemPrompt 也包含"数据流图"）
+    if (params.systemPrompt.includes('数据字典') || params.systemPrompt.includes('DictAgent')) {
+      this.dictCallCount++;
+      if (this.dictCallCount === 1) {
+        return {
+          elements: [
+            { name: 'WorkOrderId', type: 'BIGINT' },
+            { name: 'ProductName', type: 'NVARCHAR(50)' },  // ❌ 幻觉
+          ],
+          dataFlows: [],
+          dataStores: [{ name: 'WorkOrder', fields: [{ name: 'Id', type: 'BIGINT' }] }],
+        };
+      }
+      // 第二次:看到错误后修正
+      return {
+        elements: [
+          { name: 'WorkOrderId', type: 'BIGINT' },
+          { name: 'Qty', type: 'DECIMAL(18,2)' },
+        ],
+        dataFlows: [],
+        dataStores: [{ name: 'WorkOrder', fields: [
+          { name: 'Id', type: 'BIGINT' },
+          { name: 'tenant_id', type: 'NVARCHAR(50)' },
+        ]}],
+      };
+    }
+
+    // 默认:BPM/PSpec/ER/UI 等
+    return {
+      swimLanes: [], activityNodes: [], edges: [], exceptionPaths: [],
+      dfdProcessMappings: { 'N1': 'P1' },
+    };
+  }
+}
+
+// =====================================================
+// Mock Validator Bundle - 真实 DictValidator 逻辑（改为 class 以匹配 new X().validate() 调用方式）
+// =====================================================
+class MockDFDValidator {
+  constructor(_output: any) {}
+  validate() { return { passed: true, errors: [] as ValidationError[] }; }
+}
+
+class MockBPMValidator {
+  constructor(_output: any, _dfd?: any) {}
+  validate() { return { passed: true, errors: [] as ValidationError[] }; }
+}
+
+class MockDictValidator {
+  private output: any;
+  private dfd: any;
+  constructor(output: any, dfd?: any) {
+    this.output = output;
+    this.dfd = dfd;
+  }
+  validate() {
+    const errors: ValidationError[] = [];
+    this.dfd?.dataStores?.forEach((s: any) => {
+      if (!this.output.dataStores?.find((ds: any) => ds.name === s.name)) {
+        errors.push({
+          code: 'DICT_STORE_MISSING',
+          message: `DFD 数据存储 "${s.name}" 在数据字典中未定义`,
+          severity: 'ERROR',
+        });
+      }
+    });
+    if (this.output.elements?.some((e: any) => e.name === 'ProductName')) {
+      errors.push({
+        code: 'DICT_INVALID_FIELD',
+        message: `字段 "ProductName" 是 LLM 幻觉,不在上下文允许的字段中`,
+        severity: 'ERROR',
+      });
+    }
+    return { passed: errors.length === 0, errors };
+  }
+}
+
+class MockPassValidator {
+  constructor(..._args: any[]) {}
+  validate() { return { passed: true, errors: [] as ValidationError[] }; }
+}
+
+const mockValidators = {
+  DFDValidator: MockDFDValidator as any,
+  BPMValidator: MockBPMValidator as any,
+  DictValidator: MockDictValidator as any,
+  LogicValidator: MockPassValidator as any,
+  CrossEventConsistencyValidator: MockPassValidator as any,
+  ERValidator: MockPassValidator as any,
+  STDValidator: MockPassValidator as any,
+  UIValidator: MockPassValidator as any,
+};
+
+// =====================================================
+// 集成测试
+// =====================================================
+describe('SAOrchestrator.runSA() 集成测试', () => {
+  it('完整跑一遍需求分析,模拟 LLM 第一次出错第二次修正', async () => {
+    const llm = new MockLLM();
+    const db = new InMemorySADatabase();
+    const orchestrator = new SAOrchestrator(llm, db, mockValidators);
+
+    const req: SARequest = {
+      tenantId: 't1',
+      projectId: 1,
+      requirementId: 1,
+      requirementText: '我们要建 MES 报工系统,机加工车间,工单报工,物料消耗',
+      userId: 'user1',
+    };
+
+    const result = await orchestrator.runSA(req);
+
+    // 验证:9 张表都写入了数据
+    const stats = db.getStats();
+    expect(stats.scopes).toBe(1);
+    expect(stats.dfds).toBe(1);
+    expect(stats.bpms).toBe(1);
+    expect(stats.dicts).toBe(1);
+    expect(stats.ers).toBe(1);
+    expect(stats.uis).toBe(1);
+
+    // 验证:validation_log 记录了 Dict 的 1 次重试
+    const logs = db.getValidationLogs();
+    const dictLogs = logs.filter(l => l.saTableName === 'sa_data_dictionary');
+    expect(dictLogs.length).toBeGreaterThanOrEqual(2);  // 第 1 次失败 + 第 2 次成功
+    const failedLog = dictLogs.find(l => l.validationStatus === 'FAIL');
+    expect(failedLog?.retryCount).toBe(0);
+    expect(failedLog?.isConverged).toBe(false);
+    const passedLog = dictLogs.find(l => l.validationStatus === 'PASS');
+    expect(passedLog?.isConverged).toBe(true);
+
+    // 验证:第 2 次的 previousErrors 包含了第 1 次的错误
+    expect(passedLog?.previousErrors).toBeTruthy();
+    expect(JSON.stringify(passedLog?.previousErrors)).toContain('ProductName');
+
+    // 验证:SAOutput 完整返回
+    expect(result.scope).toBeDefined();
+    expect(result.dict).toBeDefined();
+    expect(result.dict?.elements).toContainEqual(
+      expect.objectContaining({ name: 'WorkOrderId' })
+    );
+    // ProductName 不应出现在最终结果里
+    expect(result.dict?.elements.find((e: any) => e.name === 'ProductName')).toBeUndefined();
+  });
+
+  it('简单事件:跳过 DFD/PSPEC/DT,只跑 Scope + UI', async () => {
+    const llm: ILLMClient = {
+      async generate() {
+        // 第一次就直接返回合法简单数据
+        return {
+          systemBoundary: { inScope: ['查询'], outOfScope: [] },
+          externalEntities: [{ name: 'user', type: 'person' }],
+          businessEvents: [{
+            id: 1, name: '查工单', description: '查询', complexity: 'simple',
+          }],
+          eventCount: 1,
+        };
+      },
+    };
+    const db = new InMemorySADatabase();
+    const orchestrator = new SAOrchestrator(llm, db, mockValidators);
+
+    const req: SARequest = {
+      tenantId: 't1', projectId: 1, requirementId: 1,
+      requirementText: '简单查询', userId: 'u1',
+    };
+
+    const result = await orchestrator.runSA(req);
+
+    // 3-Tier 架构：简单事件也跑 Project 级（DFD/BPM/Dict/ER/STD）+ UI
+    const stats = db.getStats();
+    expect(stats.scopes).toBe(1);
+    expect(stats.dfds).toBe(1);    // Project 级必跑
+    expect(stats.dicts).toBe(1);   // Project 级必跑
+    expect(stats.uis).toBe(1);     // 简单事件跑 UI
+  });
+});
+
+// =====================================================
+// 3-Tier 路由专项测试
+// =====================================================
+describe('3-Tier 路由 classifyEvent()', () => {
+  it('simple 事件 → EVENT 级 + 只跑 UIAgent', () => {
+    const decision = classifyEvent(
+      { id: 1, name: '查工单', description: '查询', complexity: 'simple' },
+    );
+    expect(decision.assetLevel).toBe('EVENT');
+    expect(decision.stepsToRun).toEqual(['UIAgent']);
+    expect(decision.eventId).toBe(1);
+  });
+
+  it('medium 事件 → EVENT 级 + 跑 StateMachineAgent + UIAgent', () => {
+    const decision = classifyEvent(
+      { id: 2, name: '报工', description: '工人提交报工单', complexity: 'medium' },
+    );
+    expect(decision.assetLevel).toBe('EVENT');
+    expect(decision.stepsToRun).toContain('StateMachineAgent');
+    expect(decision.stepsToRun).toContain('UIAgent');
+  });
+
+  it('complex 事件 → PROCESS 级 + 跑 PSpec + DT + STD + UI', () => {
+    const decision = classifyEvent(
+      { id: 3, name: '倒冲', description: '复杂状态扭转', complexity: 'complex' },
+    );
+    expect(decision.assetLevel).toBe('PROCESS');
+    expect(decision.stepsToRun).toContain('PSpecAgent');
+    expect(decision.stepsToRun).toContain('DecisionTableAgent');
+    expect(decision.stepsToRun).toContain('StateMachineAgent');
+    expect(decision.stepsToRun).toContain('UIAgent');
+  });
+});
+
+describe('3-Tier 混合事件分流', () => {
+  it('3 simple + 1 complex → simple 只出 UI，complex 走 PSPEC+DT', async () => {
+    const llm: ILLMClient = {
+      async generate(params: any) {
+        if (params.systemPrompt.includes('需求分析') || params.systemPrompt.includes('系统边界')) {
+          return {
+            systemBoundary: { inScope: ['MES'], outOfScope: [] },
+            externalEntities: [{ name: '工人', type: 'user' }],
+            businessEvents: [
+              { id: 1, name: '查工单', description: '查询', complexity: 'simple' },
+              { id: 2, name: '查库存', description: '查询', complexity: 'simple' },
+              { id: 3, name: '查报表', description: '查询', complexity: 'simple' },
+              { id: 4, name: '倒冲', description: '复杂状态扭转', complexity: 'complex' },
+            ],
+            eventCount: 4,
+          };
+        }
+        // 默认返回合法数据
+        return {
+          swimLanes: [], activityNodes: [], edges: [], exceptionPaths: [],
+          dfdProcessMappings: {},
+        };
+      },
+    };
+    const db = new InMemorySADatabase();
+    const orchestrator = new SAOrchestrator(llm, db, mockValidators);
+
+    const req: SARequest = {
+      tenantId: 't1', projectId: 1, requirementId: 1,
+      requirementText: 'MES 报工系统', userId: 'u1',
+    };
+
+    const result = await orchestrator.runSA(req);
+
+    // Project 级：DFD/BPM/Dict/ER/STD 各跑一次
+    const stats = db.getStats();
+    expect(stats.scopes).toBe(1);
+    expect(stats.dfds).toBe(1);
+    expect(stats.bpms).toBe(1);
+    expect(stats.dicts).toBe(1);
+    expect(stats.ers).toBe(1);
+    expect(stats.stateMachines).toBe(1);
+
+    // UI：4 个事件各跑一次
+    expect(stats.uis).toBe(4);
+
+    // PSPEC + DecisionTable：只有 complex 事件跑
+    expect(stats.pspecs).toBe(1);
+    expect(stats.decisionTables).toBe(1);
+  });
+});
+
+============================================================
+FILE: __tests__/helpers/builders.ts
+============================================================
+// Re-export builders from src/validators/builders.ts
+// This file exists so test files can import from './helpers/builders'
+export {
+  AUDIT_FIELDS,
+  DictBuilder,
+  DFDBuilder,
+  BPMBuilder,
+  DecisionTableBuilder,
+  PSpecBuilder,
+  ERBuilder,
+  UIBuilder,
+} from '../../src/validators/builders';
+
+============================================================
+FILE: package.json
+============================================================
+{
+  "name": "sa-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "jest.config.js",
+  "scripts": {
+    "test": "jest --no-coverage",
+    "test:coverage": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.9.3",
+    "@types/uuid": "^10.0.0",
+    "eslint": "^9.39.4",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.1"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "uuid": "^14.0.0"
+  }
+}
+
+============================================================
+FILE: tsconfig.json
+============================================================
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "types": ["node", "jest"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+
+============================================================
+FILE: jest.config.js
+============================================================
+/** @type {import('jest').Config} */
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  testMatch: ['**/__tests__/**/*.test.ts'],
+  collectCoverageFrom: ['src/**/*.ts'],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
+  coverageThreshold: {
+    global: {
+      branches: 85,
+      functions: 90,
+      lines: 90,
+      statements: 90,
+    },
+  },
+  // 测试顺序:Dict → DFD → BPM → Logic → CrossEvent → ER → UI(从最底层依赖开始)
+  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
+  verbose: true,
+};
+
+=== END ===

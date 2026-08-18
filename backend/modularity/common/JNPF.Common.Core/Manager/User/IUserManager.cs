@@ -237,6 +237,14 @@ public interface IUserManager
     List<string> GetPermissionByUserId(string userId);
 
     /// <summary>
+    /// 获取用户已授权的资源ID集合（module codes / button codes），用于路由级权限匹配.
+    /// 查询 BASE_AUTHORIZE WHERE ObjectId IN (用户角色IDs + 用户ID).
+    /// </summary>
+    /// <param name="userId">用户ID</param>
+    /// <returns>已授权的 ItemId 集合</returns>
+    Task<HashSet<string>> GetAuthorizedResourceIdsAsync(string userId);
+
+    /// <summary>
     /// 获取全局租户缓存.
     /// </summary>
     /// <returns></returns>

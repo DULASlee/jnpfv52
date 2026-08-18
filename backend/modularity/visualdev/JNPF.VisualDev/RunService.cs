@@ -22,10 +22,13 @@ using JNPF.Systems.Entitys.Permission;
 using JNPF.Systems.Entitys.System;
 using JNPF.Systems.Interfaces.System;
 using JNPF.UnifyResult;
+using JNPF.VisualDev.Delete;
 using JNPF.VisualDev.Engine.Core;
 using JNPF.VisualDev.Entitys;
 using JNPF.VisualDev.Entitys.Dto.VisualDevModelData;
 using JNPF.VisualDev.Interfaces;
+using JNPF.VisualDev.Query;
+using JNPF.VisualDev.Transfer;
 using JNPF.WorkFlow.Entitys.Entity;
 using JNPF.WorkFlow.Interfaces.Repository;
 using Mapster;
@@ -170,34 +173,8 @@ public class RunService : IRunService, ITransient, IDisposable
 
         // 处理查询
         Dictionary<string, object> queryJson = string.IsNullOrEmpty(input.queryJson) ? null : input.queryJson.ToObject<Dictionary<string, object>>();
-        if (queryJson != null)
-        {
-            foreach (KeyValuePair<string, object> item in queryJson)
-            {
-                if (!templateInfo.ColumnData.searchList.Any(it => it.id.Equals(item.Key)) && !item.Key.Equals(JnpfKeyConst.JNPFKEYWORD))
-                {
-                    var vmodel = templateInfo.AllFieldsModel.Find(it => it.__vModel__.Equals(item.Key));
-                    if (templateInfo.ColumnData.searchList.Any(it => it.id.Equals(item.Key)))
-                    {
-                        vmodel.searchMultiple = templateInfo.ColumnData.searchList.Find(it => it.id.Equals(item.Key)).searchMultiple;
-                    }
-                    var searchModel = vmodel.ToObject<IndexSearchFieldModel>();
-                    searchModel.id = item.Key;
-                    templateInfo.ColumnData.searchList.Add(searchModel);
-                }
-                if (!templateInfo.AppColumnData.searchList.Any(it => it.id.Equals(item.Key)) && !item.Key.Equals(JnpfKeyConst.JNPFKEYWORD))
-                {
-                    var vmodel = templateInfo.AllFieldsModel.Find(it => it.__vModel__.Equals(item.Key));
-                    if (templateInfo.AppColumnData.searchList.Any(it => it.id.Equals(item.Key)))
-                    {
-                        vmodel.searchMultiple = templateInfo.AppColumnData.searchList.Find(it => it.id.Equals(item.Key)).searchMultiple;
-                    }
-                    var searchModel = vmodel.ToObject<IndexSearchFieldModel>();
-                    searchModel.id = item.Key;
-                    templateInfo.AppColumnData.searchList.Add(searchModel);
-                }
-            }
-        }
+        ListQueryInputHelpers.EnrichSearchListFromQuery(queryJson, templateInfo.ColumnData.searchList, templateInfo.AllFieldsModel);
+        ListQueryInputHelpers.EnrichSearchListFromQuery(queryJson, templateInfo.AppColumnData.searchList, templateInfo.AllFieldsModel);
 
         input.superQueryJson = GetSuperQueryInput(input.superQueryJson);
 
@@ -212,18 +189,11 @@ public class RunService : IRunService, ITransient, IDisposable
         templateInfo.ColumnData = _userManager.UserOrigin == "pc" ? templateInfo.ColumnData : templateInfo.AppColumnData;
         var pvalue = new List<IConditionalModel>();
         if (_userManager.User != null || _userManager.UserId.IsNotEmptyOrNull()) pvalue = await _userManager.GetCondition<Dictionary<string, object>>(primaryKey, input.menuId, udp, templateInfo.FormModel.primaryKeyPolicy.Equals(2));
-        var pvalueJson = pvalue.ToJsonString();
-        foreach (var item in templateInfo.AllTableFields)
-        {
-            if (pvalueJson.Contains(string.Format("\"FieldName\":\"{0}\",", item.Key)))
-                pvalueJson.Replace(string.Format("\"FieldName\":\"{0}\",", item.Value), string.Format("\"FieldName\":\"{0}\",", item.Key));
-        }
+        var pvalueJson = ListResultShapeHelpers.RewritePermissionFieldNames(
+            pvalue.ToJsonString(), templateInfo.AllTableFields);
         pvalue = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(pvalueJson);
         if (templateInfo.ColumnData.type.Equals(5))
-        {
             pvalue.Clear(); // 树形表格 去掉数据权限.
-            input.pageSize = 999999;
-        }
 
         // 所有查询条件
         input.dataRuleJson = _userManager.UserOrigin == "pc" ? templateInfo.DataRuleListJson.ToJsonStringOld() : templateInfo.AppDataRuleListJson.ToJsonStringOld(); // 数据过滤
@@ -238,8 +208,9 @@ public class RunService : IRunService, ITransient, IDisposable
         Dictionary<string, string>? tableFieldKeyValue = new Dictionary<string, string>(); // 联表查询 表字段名称 对应 前端字段名称 (应对oracle 查询字段长度不能超过30个)
         string? sql = GetListQuerySql(primaryKey, templateInfo, ref input, ref tableFieldKeyValue, pvalue); // 查询sql
 
-        // 未开启分页
-        if (!templateInfo.ColumnData.hasPage) input.pageSize = 999999;
+        // 树形 / 未开启分页 → 全量
+        input.pageSize = ListQueryInputHelpers.ResolveEffectivePageSize(
+            input.pageSize, templateInfo.ColumnData.hasPage, templateInfo.ColumnData.type);
 
         // 处理查询
         input.queryJson = GetQueryJson(input.queryJson, templateInfo.ColumnData, input.isInteAssisData).ToJsonStringOld();
@@ -256,7 +227,7 @@ public class RunService : IRunService, ITransient, IDisposable
         {
             var ids = realList.list.Select(x => x[primaryKey]).ToList();
             var newIds = GetPIdsByFlowIds(link, templateInfo, primaryKey, ids.ToObject<List<string>>(), true);
-            realList.list.ForEach(item => item[primaryKey] = newIds.First(x => x.Value.Equals(item[primaryKey].ToString())).Key);
+            ListQueryInputHelpers.RemapPrimaryKeysByValue(realList.list, primaryKey, newIds);
         }
 
         if (input.sidx.IsNullOrEmpty()) input.sidx = primaryKey;
@@ -264,69 +235,37 @@ public class RunService : IRunService, ITransient, IDisposable
         // 增加前端回显字段 : key_name
         var roweditId = SnowflakeIdHelper.NextId();
         if (templateInfo.ColumnData.type.Equals(4) && _userManager.UserOrigin.Equals("pc"))
-        {
-            realList.list.ForEach(items =>
-            {
-                var addItem = new Dictionary<string, object>();
-                foreach (var item in items) if (item.Key != "RowIndex") addItem.Add(item.Key + roweditId, item.Value);
-                foreach (var item in addItem) items.Add(item.Key, item.Value);
-            });
-        }
+            ListRowEditEchoHelpers.AttachSuffixCopies(realList.list, roweditId);
 
         if (realList.list.Any())
         {
             // 树形表格
             if (templateInfo.ColumnData.type.Equals(5))
-                realList.list.ForEach(item => item[templateInfo.ColumnData.parentField + "_pid"] = item[templateInfo.ColumnData.parentField]);
+                ListResultShapeHelpers.AttachTreeParentMirror(realList.list, templateInfo.ColumnData.parentField);
 
             // 数据解析
             if (templateInfo.SingleFormData.Any(x => x.__config__.templateJson != null && x.__config__.templateJson.Any()))
                 realList.list = await _formDataParsing.GetKeyData(templateInfo.SingleFormData.Where(x => x.__config__.templateJson != null && x.__config__.templateJson.Any()).ToList(), realList.list, templateInfo.ColumnData, actionType, templateInfo.WebType, primaryKey, entity.isShortLink, input.isConvertData);
-            
+
             var fieldList = templateInfo.SingleFormData.Where(x => x.__config__.templateJson == null || !x.__config__.templateJson.Any()).ToList();
 
             realList.list = await _formDataParsing.GetKeyData(fieldList, realList.list, templateInfo.ColumnData, actionType, templateInfo.WebType, primaryKey, entity.isShortLink, input.isConvertData);
 
             // 如果是无表数据并且排序字段不为空，再进行数据排序
             if (!templateInfo.IsHasTable && input.sidx.IsNotEmptyOrNull())
-            {
-                if (input.sort == "desc")
-                {
-                    realList.list = realList.list.OrderByDescending(x =>
-                    {
-                        var dic = x as IDictionary<string, object>;
-                        dic.GetOrAdd(input.sidx, () => null);
-                        return dic[input.sidx];
-                    }).ToList();
-                }
-                else
-                {
-                    realList.list = realList.list.OrderBy(x =>
-                    {
-                        var dic = x as IDictionary<string, object>;
-                        dic.GetOrAdd(input.sidx, () => null);
-                        return dic[input.sidx];
-                    }).ToList();
-                }
-            }
+                realList.list = ListResultShapeHelpers.ApplyInMemorySort(realList.list, input.sidx, input.sort);
         }
 
         if (input.dataType == "0" || input.dataType == "2")
         {
             if (string.IsNullOrEmpty(entity.Tables) || "[]".Equals(entity.Tables))
-            {
-                realList.pagination = new PageResult();
-                realList.pagination.total = realList.list.Count;
-                realList.pagination.pageSize = input.pageSize;
-                realList.pagination.currentPage = input.currentPage;
-                realList.list = realList.list.Skip(input.pageSize * (input.currentPage - 1)).Take(input.pageSize).ToList();
-            }
+                ListResultShapeHelpers.ApplyInMemoryPaging(realList, input.pageSize, input.currentPage, takePageSlice: true);
 
             // 分组表格
             if (templateInfo.ColumnData.type == 3 && _userManager.UserOrigin == "pc" && !entity.isShortLink)
             {
                 var showFieldList = templateInfo.ColumnData.columnList.FindAll(x => x.__vModel__.ToLower() != templateInfo.ColumnData.groupField.ToLower());
-                var groupShowField = showFieldList.Any(it => it.@fixed.Equals("left")) ? showFieldList.First(it => it.@fixed.Equals("left")).__vModel__ : showFieldList.First().__vModel__;
+                var groupShowField = ListResultShapeHelpers.ResolveGroupShowField(showFieldList);
                 realList.list = CodeGenHelper.GetGroupList(realList.list, templateInfo.ColumnData.groupField, groupShowField);
             }
 
@@ -337,92 +276,28 @@ public class RunService : IRunService, ITransient, IDisposable
         else
         {
             if (string.IsNullOrEmpty(entity.Tables) || "[]".Equals(entity.Tables))
-            {
-                realList.pagination = new PageResult();
-                realList.pagination.total = realList.list.Count;
-                realList.pagination.pageSize = input.pageSize;
-                realList.pagination.currentPage = input.currentPage;
-                realList.list = realList.list.ToList();
-            }
+                ListResultShapeHelpers.ApplyInMemoryPaging(realList, input.pageSize, input.currentPage, takePageSlice: false);
 
             // 分组表格
             if (templateInfo.ColumnData.type == 3 && _userManager.UserOrigin == "pc")
             {
                 var showFieldList = templateInfo.ColumnData.columnList.FindAll(x => x.__vModel__.ToLower() != templateInfo.ColumnData.groupField.ToLower());
-                var groupShowField = showFieldList.Any(it => it.@fixed.Equals("left")) ? showFieldList.First(it => it.@fixed.Equals("left")).__vModel__ : showFieldList.First().__vModel__;
+                var groupShowField = ListResultShapeHelpers.ResolveGroupShowField(showFieldList);
                 realList.list = CodeGenHelper.GetGroupList(realList.list, templateInfo.ColumnData.groupField, groupShowField);
             }
         }
 
         // 增加前端回显字段 : key_name
         if (!entity.isShortLink && templateInfo.ColumnData.type.Equals(4) && _userManager.UserOrigin.Equals("pc"))
-        {
-            var newList = new List<Dictionary<string, object>>();
-            realList.list.ForEach(items =>
-            {
-                var newItem = new Dictionary<string, object>();
-                foreach (var item in items)
-                {
-                    if (item.Key.Contains(roweditId))
-                    {
-                        if (item.Value.IsNotEmptyOrNull())
-                        {
-                            var obj = item.Value;
-                            if (obj.ToString().Contains("[[")) obj = item.Value.ToString().ToObject<List<List<object>>>();
-                            else if (obj.ToString().Contains("[")) obj = item.Value.ToString().ToObject<List<object>>();
-
-                            var value = items.FirstOrDefault(x => x.Key == item.Key.Replace(roweditId, string.Empty)).Value;
-                            if (value.IsNullOrEmpty()) obj = null;
-                            if (!newItem.ContainsKey(item.Key.Replace(roweditId, string.Empty))) newItem.Add(item.Key.Replace(roweditId, string.Empty), obj);
-                            if (!newItem.ContainsKey(item.Key.Replace(roweditId, string.Empty) + "_name")) newItem.Add(item.Key.Replace(roweditId, string.Empty) + "_name", value);
-                        }
-                        else
-                        {
-                            if (!newItem.ContainsKey(item.Key.Replace(roweditId, string.Empty))) newItem.Add(item.Key.Replace(roweditId, string.Empty), null);
-                            if (!newItem.ContainsKey(item.Key.Replace(roweditId, string.Empty) + "_name")) newItem.Add(item.Key.Replace(roweditId, string.Empty) + "_name", null);
-                        }
-                    }
-                    if (item.Key.Equals("flowState") || item.Key.Equals("flowState_name") || item.Key.Equals("flowId") || item.Key.Equals("flowId_name")) newItem.Add(item.Key, item.Value);
-                    if (item.Key.Equals("id") && !newItem.ContainsKey(item.Key)) newItem.Add(item.Key, item.Value);
-                    if (templateInfo.AllFieldsModel.Any(x => x.__vModel__.Equals(item.Key) && (x.__config__.jnpfKey.Equals(JnpfKeyConst.TIME)
-                    || x.__config__.jnpfKey.Equals(JnpfKeyConst.CREATETIME) || x.__config__.jnpfKey.Equals(JnpfKeyConst.CREATEUSER) || x.__config__.jnpfKey.Equals(JnpfKeyConst.MODIFYTIME)
-                    || x.__config__.jnpfKey.Equals(JnpfKeyConst.MODIFYUSER) || x.__config__.jnpfKey.Equals(JnpfKeyConst.CURRDEPT) || x.__config__.jnpfKey.Equals(JnpfKeyConst.CURRORGANIZE)
-                    || x.__config__.jnpfKey.Equals(JnpfKeyConst.CURRPOSITION))))
-                        newItem[item.Key] = items[item.Key];
-                }
-
-                newList.Add(newItem);
-            });
-            realList.list = newList;
-        }
+            realList.list = ListRowEditEchoHelpers.RebuildEchoRows(realList.list, roweditId, templateInfo.AllFieldsModel);
 
         // 集成助手所需流程表单已审核通过的数据
-        var processReviewCompletedDic = new List<Dictionary<string, object>>();
         if (input.isProcessReviewCompleted.Equals(1))
-        {
-            foreach (var item in realList.list)
-            {
-                if (item.ContainsKey("flowState") && item["flowState"].Equals(2))
-                    processReviewCompletedDic.Add(item);
-            }
-            realList.list = processReviewCompletedDic;
-        }
+            realList.list = ListResultShapeHelpers.FilterProcessReviewCompleted(realList.list);
 
         // 集成助手所需只有 id 的数据
-        var onlyIdDic = new List<Dictionary<string, object>>();
         if (input.isOnlyId.Equals(1))
-        {
-            foreach (var item in realList.list)
-            {
-                var idDic = new Dictionary<string, object>();
-                if (item.ContainsKey("id"))
-                {
-                    idDic["id"] = item["id"];
-                    onlyIdDic.Add(idDic);
-                }
-            }
-            realList.list = onlyIdDic;
-        }
+            realList.list = ListResultShapeHelpers.FilterOnlyId(realList.list);
 
         return realList;
     }
@@ -463,7 +338,7 @@ public class RunService : IRunService, ITransient, IDisposable
         {
             var ids = realList.list.Select(x => x[primaryKey]).ToList();
             var newIds = GetPIdsByFlowIds(link, templateInfo, primaryKey, ids.ToObject<List<string>>(), true);
-            realList.list.ForEach(item => item[primaryKey] = newIds.First(x => x.Value.Equals(item[primaryKey].ToString())).Key);
+            ListQueryInputHelpers.RemapPrimaryKeysByValue(realList.list, primaryKey, newIds);
         }
 
         if (input.sidx.IsNullOrEmpty()) input.sidx = primaryKey;
@@ -1495,167 +1370,18 @@ public class RunService : IRunService, ITransient, IDisposable
 
         if (oldFEntity.FormType.Equals(1) || newFEntity.FormType.Equals(1))
         {
-            oldTInfo.AllFieldsModel.ForEach(it =>
-            {
-                if (!it.__config__.jnpfKey.Equals(JnpfKeyConst.MODIFYTIME) && !it.__config__.jnpfKey.Equals(JnpfKeyConst.MODIFYUSER) && !it.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE))
-                    it.__config__.jnpfKey = JnpfKeyConst.COMINPUT;
-            });
-            newTInfo.AllFieldsModel.ForEach(it =>
-            {
-                if (!it.__config__.jnpfKey.Equals(JnpfKeyConst.MODIFYTIME) && !it.__config__.jnpfKey.Equals(JnpfKeyConst.MODIFYUSER) && !it.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE))
-                    it.__config__.jnpfKey = JnpfKeyConst.COMINPUT;
-            });
+            FlowFormDataMapper.CoerceSystemFormFieldsToComInput(oldTInfo.AllFieldsModel);
+            FlowFormDataMapper.CoerceSystemFormFieldsToComInput(newTInfo.AllFieldsModel);
         }
 
-        var newMapRule = new Dictionary<string, string>();
-        oldTInfo.AllFieldsModel.ForEach(item =>
-        {
-            if (newTInfo.AllFieldsModel.Any(x => x.__vModel__.Equals(item.__vModel__) && x.multiple.Equals(item.multiple))
-            && item.__vModel__.IsNotEmptyOrNull()
-            && !newMapRule.ContainsKey(item.__vModel__))
-                newMapRule.Add(item.__vModel__, item.__vModel__);
-        });
-        if (mapRule.IsNullOrEmpty()) mapRule = new List<Dictionary<string, string>>();
-        foreach (var item in newMapRule)
-        {
-            if (!mapRule.Any(x => x.Any(xx => xx.Value.Equals(item.Value)) || x.Any(xx => xx.Key.Equals(item.Key)))) mapRule.Add(new Dictionary<string, string>() { { item.Key, item.Value } });
-        }
+        mapRule = FlowFormMapRuleMerger.MergeAutoMappedFields(oldTInfo.AllFieldsModel, newTInfo.AllFieldsModel, mapRule);
+        var oldFieldsByVModel = FlowFormMapRuleMerger.IndexByVModel(oldTInfo.AllFieldsModel);
+        var newFieldsByVModel = FlowFormMapRuleMerger.IndexByVModel(newTInfo.AllFieldsModel);
+        var childTableSplitKey = FlowFormDataMapper.ResolveChildTableSplitKey(oldFEntity.EnCode, newFEntity.EnCode);
 
-        var childTableSplitKey = "tablefield";
-
-        // 三个特殊的系统表单 (请假申请、销售订单、订单示例)
-        if (oldFEntity.EnCode.Equals("leaveApply") || oldFEntity.EnCode.Equals("salesOrder") || oldFEntity.EnCode.Equals("crmOrder") ||
-            newFEntity.EnCode.Equals("leaveApply") || newFEntity.EnCode.Equals("salesOrder") || newFEntity.EnCode.Equals("crmOrder"))
-        {
-            childTableSplitKey = "-";
-        }
-
-        foreach (var items in mapRule)
-        {
-            var item = items.First();
-            var oldModel = oldTInfo.AllFieldsModel.Find(x => x.__vModel__.Equals(item.Key));
-            var newModel = newTInfo.AllFieldsModel.Find(x => x.__vModel__.Equals(item.Value));
-            if (oldModel == null || newModel == null || oldModel.__config__.jnpfKey.Equals(JnpfKeyConst.MODIFYTIME) || oldModel.__config__.jnpfKey.Equals(JnpfKeyConst.MODIFYUSER))
-            {
-                formData[item.Key] = string.Empty; // 找不到 默认赋予 空字符串
-                continue;
-            }
-            if (oldModel.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE) || newModel.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE))
-                continue;
-
-            // 子表字段 - 子表字段
-            if ((oldModel.__vModel__.ToLower().Contains(childTableSplitKey) && newModel.__vModel__.ToLower().Contains(childTableSplitKey)))
-            {
-                if (DataTransferVerify(oldModel, newModel))
-                {
-                    var oldCTable = oldModel.__vModel__.Split("-").First();
-                    var oldCField = oldModel.__vModel__.Split("-").Last();
-                    var newCTable = newModel.__vModel__.Split("-").First();
-                    var newCField = newModel.__vModel__.Split("-").Last();
-                    if (oldCField.IsNullOrWhiteSpace() || newCField.IsNullOrWhiteSpace()) continue;
-
-                    if (!formData.ContainsKey(newCTable)) formData.Add(newCTable, new List<Dictionary<string, object>>());
-                    if (formData.ContainsKey(oldCTable) && formData[oldCTable] != null && formData[oldCTable].ToString() != "[]")
-                    {
-                        var oldCTData = formData[oldCTable].ToObject<List<Dictionary<string, object>>>();
-                        var newCTData = formData.ContainsKey(newCTable) ? formData[newCTable].ToObject<List<Dictionary<string, object>>>() : new List<Dictionary<string, object>>();
-
-                        for (var i = 0; i < oldCTData.Count; i++)
-                        {
-                            if (oldCTData[i].ContainsKey(oldCField))
-                            {
-                                if (newCTData.Count > i) newCTData[i][newCField] = oldCTData[i][oldCField];
-                                else newCTData.Add(new Dictionary<string, object>() { { newCField, oldCTData[i][oldCField] } });
-                            }
-                        }
-                        formData[newCTable] = newCTData;
-                    }
-                }
-            }
-            else if (oldModel.__vModel__.ToLower().Contains(childTableSplitKey) || newModel.__vModel__.ToLower().Contains(childTableSplitKey))
-            {
-                if (DataTransferVerify(oldModel, newModel))
-                {
-                    // 子表字段 - 非子表字段
-                    // 传递规则：默认选用上节点的第一条子表数据赋值到下节点的非子表字段内
-                    if (oldModel.__vModel__.ToLower().Contains(childTableSplitKey) && !newModel.__vModel__.ToLower().Contains(childTableSplitKey))
-                    {
-                        var childTable = oldModel.__vModel__.Split("-").First();
-                        var childField = oldModel.__vModel__.Split("-").Last();
-                        var childTableData = formData[childTable].ToObject<List<Dictionary<string, object>>>();
-                        if (childTableData.Any() && childTableData.Any(x => x.ContainsKey(childField)))
-                        {
-                            if (formData.ContainsKey(oldModel.__vModel__)) formData[oldModel.__vModel__] = childTableData.First()[childField];
-                            else formData.Add(oldModel.__vModel__, childTableData.First()[childField]);
-                        }
-                    }
-
-                    // 非子表字段 - 子表字段
-                    // 传递规则：下节点子表新增一行将上节点字段赋值进去
-                    if (!oldModel.__vModel__.ToLower().Contains(childTableSplitKey) && newModel.__vModel__.ToLower().Contains(childTableSplitKey))
-                    {
-                        var childKey = newModel.__vModel__.Split("-");
-                        var childTableKey = childKey.First();
-
-                        var childFieldKey = childKey.Last();
-                        if (formData.ContainsKey(oldModel.__vModel__))
-                        {
-                            var childFieldValue = formData[oldModel.__vModel__];
-
-                            if (!formData.ContainsKey(childTableKey)) formData.Add(childTableKey, new List<Dictionary<string, object>>());
-
-                            var childItems = formData[childTableKey].ToObject<List<Dictionary<string, object>>>();
-                            if (!childItems.Any())
-                            {
-                                childItems.Add(new Dictionary<string, object>() { { childFieldKey, childFieldValue } });
-                            }
-                            else
-                            {
-                                if (childItems.Any(x => x.ContainsKey(childFieldKey))) childItems.First()[childFieldKey] = childFieldValue;
-                                else childItems.First().Add(childFieldKey, childFieldValue);
-                            }
-
-                            formData[childTableKey] = childItems;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // 三个特殊的系统表单，不做验证规则
-                if (!childTableSplitKey.Equals("-") && !DataTransferVerify(oldModel, newModel)) formData[oldModel.__vModel__] = null;
-            }
-        }
-
-        var res = new Dictionary<string, object>();
-        foreach (var dicItems in mapRule)
-        {
-            var dicItem = dicItems.First();
-            if (formData.ContainsKey(dicItem.Key) && dicItem.Value.IsNotEmptyOrNull())
-            {
-                var itemValue = formData.First(x => x.Key.Equals(dicItem.Key)).Value;
-                if (!res.ContainsKey(dicItem.Value)) res.Add(dicItem.Value, itemValue);
-            }
-            if (dicItem.Value.ToLower().Contains(childTableSplitKey))
-            {
-                var cTableKey = dicItem.Value.Split("-").First();
-                var itemValue = formData.First(x => x.Key.Equals(cTableKey));
-                if (!res.ContainsKey(cTableKey)) res.Add(itemValue.Key, itemValue.Value);
-            }
-        }
-
-        if (mapRule.Any(x => x.ContainsKey("@prevNodeFormId")))
-        {
-            var key = mapRule.Find(x => x.ContainsKey("@prevNodeFormId")).First().Value;
-            if (key.ToLower().Contains("tablefield"))
-            {
-                var ctKey = key.Split('-');
-                var ctValues = res[ctKey.FirstOrDefault()].ToObject<List<Dictionary<string, object>>>();
-                ctValues.ForEach(item => item[ctKey.LastOrDefault()] = formData["id"]);
-                res[ctKey.FirstOrDefault()] = ctValues;
-            }
-            res[mapRule.Find(x => x.ContainsKey("@prevNodeFormId")).First().Value] = formData["id"];
-        }
+        FlowFormDataMapper.ApplyMapRules(formData, mapRule, oldFieldsByVModel, newFieldsByVModel, childTableSplitKey);
+        var res = FlowFormDataMapper.BuildResult(formData, mapRule, childTableSplitKey);
+        FlowFormDataMapper.ApplyPrevNodeFormId(res, formData, mapRule);
 
         if (isSubFlow) return res;
 
@@ -1911,6 +1637,11 @@ public class RunService : IRunService, ITransient, IDisposable
     public async Task BatchDelHaveTableData(List<string>? ids, VisualDevEntity templateEntity, VisualDevModelDataBatchDelInput? visualdevModelDataBatchDeForm = null)
     {
         var idList = ids.Copy();
+        // Null DTO = internal callers (tree-delete / App) — do not hydrate or fire InteAssistant.
+        // When DTO is present, honor its flags (DTO default isInteAssis=true).
+        var deleteRule = visualdevModelDataBatchDeForm?.deleteRule ?? 1;
+        var isInteAssis = visualdevModelDataBatchDeForm?.isInteAssis == true;
+
         if (templateEntity.EnableFlow == 1)
         {
             var fList = await _visualDevRepository.AsSugarClient().Queryable<FlowTaskEntity>().Where(f => ids.Contains(f.Id) && f.Status != 4 && f.Status != 7).ToListAsync();
@@ -1928,82 +1659,50 @@ public class RunService : IRunService, ITransient, IDisposable
             var resIds = GetPIdsByFlowIds(link, templateInfo, mainPrimary, ids);
             ids = resIds.Select(x => x.Value).ToList();
 
-            // 集成助手所需数据
+            // Only hydrate per-row payloads when integration assistant will consume them (was always N round-trips).
             var allData = new List<object>();
-            foreach (var id in ids)
+            if (isInteAssis)
             {
-                var data = await GetHaveTableInfo(id, templateEntity, true);
-                allData.Add(new { id = id, data = data.ToObject<Dictionary<string, object>>() });
+                foreach (var id in ids)
+                {
+                    var data = await GetHaveTableInfo(id, templateEntity, true);
+                    allData.Add(new { id = id, data = data.ToObject<Dictionary<string, object>>() });
+                }
             }
 
             if (templateInfo.FormModel.logicalDelete)
             {
-                if (visualdevModelDataBatchDeForm.deleteRule.Equals(0))
-                    await _databaseService.ExecuteSql(link, string.Format("update {0} set f_delete_mark=1,f_delete_user_id='{1}',f_delete_time='{2}' where {3} not in ('{4}')", templateInfo.MainTableName, _userManager.UserId, DateTime.Now, mainPrimary, string.Join("','", ids))); // 删除标识
-                else
-                    await _databaseService.ExecuteSql(link, string.Format("update {0} set f_delete_mark=1,f_delete_user_id='{1}',f_delete_time='{2}' where {3} in ('{4}')", templateInfo.MainTableName, _userManager.UserId, DateTime.Now, mainPrimary, string.Join("','", ids))); // 删除标识
-
+                var logicalSql = BatchDeleteSqlPlanner.BuildLogicalDeleteSql(
+                    templateInfo.MainTableName,
+                    mainPrimary,
+                    _userManager.UserId,
+                    DateTime.Now,
+                    ids,
+                    deleteRule);
+                await _databaseService.ExecuteSql(link, logicalSql);
                 if (templateEntity.EnableFlow == 1)
-                {
-                    ids = resIds.Select(x => x.Key).ToList();
-                    foreach (var it in ids)
-                    {
-                        FlowTaskEntity? entity = _flowTaskRepository.GetTaskFirstOrDefault(it);
-                        if (entity != null && entity.ParentId.Equals("0"))
-                        {
-                            if (!entity.ParentId.Equals("0")) throw Oops.Oh(ErrorCode.WF0003, entity.FullName);
-                            _flowTaskRepository.DeleteTaskNoAwait(entity);
-                        }
-                    }
-                }
+                    DeleteRootFlowTasks(resIds.Select(x => x.Key));
             }
             else
             {
-                List<string>? allDelSql = new List<string>(); // 拼接语句
+                var childTables = templateInfo.AllTable
+                    .Where(x => x.typeId.Equals("0"))
+                    .Select(x => (x.table, x.tableField))
+                    .ToList();
+                var allDelSql = BatchDeleteSqlPlanner.BuildHardDeleteSql(
+                    templateInfo.MainTable.table,
+                    mainPrimary,
+                    childTables,
+                    ids,
+                    deleteRule);
 
-                if (visualdevModelDataBatchDeForm.deleteRule.Equals(0))
-                    allDelSql.Add(string.Format("delete from {0} where {1} not in ('{2}');", templateInfo.MainTable.table, mainPrimary, string.Join("','", ids))); // 主表数据
-                else
-                    allDelSql.Add(string.Format("delete from {0} where {1} in ('{2}');", templateInfo.MainTable.table, mainPrimary, string.Join("','", ids))); // 主表数据
+                foreach (string? item in allDelSql) await _databaseService.ExecuteSql(link, item);
 
-                if (templateInfo.AllTable.Any(x => x.typeId.Equals("0")))
-                {
-                    templateInfo.AllTable.Where(x => x.typeId.Equals("0")).ToList()
-                        .ForEach(item =>
-                        {
-                            if (visualdevModelDataBatchDeForm.deleteRule.Equals(0))
-                                allDelSql.Add(string.Format("delete from {0} where {1} not in ('{2}');", item.table, item.tableField, string.Join("','", ids)));
-                            else
-                                allDelSql.Add(string.Format("delete from {0} where {1} in ('{2}');", item.table, item.tableField, string.Join("','", ids)));
-                        });
-                }
-
-                try
-                {
-                    foreach (string? item in allDelSql) await _databaseService.ExecuteSql(link, item); // 删除有表数据
-
-                    if (templateEntity.EnableFlow == 1)
-                    {
-                        ids = resIds.Select(x => x.Key).ToList();
-                        foreach (var it in ids)
-                        {
-                            FlowTaskEntity? entity = _flowTaskRepository.GetTaskFirstOrDefault(it);
-                            if (entity != null && entity.ParentId.Equals("0"))
-                            {
-                                if (!entity.ParentId.Equals("0")) throw Oops.Oh(ErrorCode.WF0003, entity.FullName);
-                                _flowTaskRepository.DeleteTaskNoAwait(entity);
-                            }
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    throw;
-                }
+                if (templateEntity.EnableFlow == 1)
+                    DeleteRootFlowTasks(resIds.Select(x => x.Key));
             }
 
-            // 添加集成助手`事件触发`批量删除事件
-            if (visualdevModelDataBatchDeForm.isInteAssis)
+            if (isInteAssis)
             {
                 await _eventPublisher.PublishAsync(new InteEventSource("Inte:CreateInte", _userManager.UserId, _userManager.TenantId, new InteAssiEventModel
                 {
@@ -2015,19 +1714,27 @@ public class RunService : IRunService, ITransient, IDisposable
         }
         else
         {
-            var deleteSql = new List<string>();
-            foreach (var item in templateInfo.AllTable)
-            {
-                var tableSql = string.Format("delete from {0}", item.table);
-                deleteSql.Add(tableSql);
-            }
+            var deleteSql = BatchDeleteSqlPlanner.BuildClearAllTablesSql(templateInfo.AllTable.Select(x => x.table));
 
             _db.BeginTran();
-            foreach (var item in deleteSql) await _databaseService.ExecuteSql(link, item); // 执行修改Sql
+            foreach (var item in deleteSql) await _databaseService.ExecuteSql(link, item);
             _db.CommitTran();
         }
 
         if (templateEntity.EnableFlow == 1 && ids.Count < 1 && !idList.Count.Equals(ids.Count)) throw Oops.Oh(ErrorCode.D1417);
+    }
+
+    private void DeleteRootFlowTasks(IEnumerable<string> flowTaskIds)
+    {
+        foreach (var it in flowTaskIds)
+        {
+            FlowTaskEntity? entity = _flowTaskRepository.GetTaskFirstOrDefault(it);
+            if (entity != null && entity.ParentId.Equals("0"))
+            {
+                if (!entity.ParentId.Equals("0")) throw Oops.Oh(ErrorCode.WF0003, entity.FullName);
+                _flowTaskRepository.DeleteTaskNoAwait(entity);
+            }
+        }
     }
 
     /// <summary>
@@ -2047,41 +1754,9 @@ public class RunService : IRunService, ITransient, IDisposable
 
         // 修改时 把 创建用户 和 创建时间 去掉.
         if (!IsCreate)
-        {
-            fieldsModelList.ForEach(item =>
-            {
-                switch (item.__config__.jnpfKey)
-                {
-                    case JnpfKeyConst.CREATETIME:
-                    case JnpfKeyConst.CREATEUSER:
-                        allDataMap.Remove(item.__vModel__);
-                        break;
-                    case JnpfKeyConst.CURRPOSITION:
-                    case JnpfKeyConst.CURRORGANIZE:
-                        if (systemControlList == null) allDataMap.Remove(item.__vModel__);
-                        break;
-                    case JnpfKeyConst.TABLE:
-                        var fList = item.__config__.children.Where(x => x.__config__.jnpfKey.Equals(JnpfKeyConst.CREATETIME)
-                        || x.__config__.jnpfKey.Equals(JnpfKeyConst.CREATEUSER)
-                        || x.__config__.jnpfKey.Equals(JnpfKeyConst.CURRPOSITION)
-                        || x.__config__.jnpfKey.Equals(JnpfKeyConst.CURRORGANIZE)).ToList();
-                        fList.ForEach(child =>
-                        {
-                            if (allDataMap.ContainsKey(item.__vModel__))
-                            {
-                                var cDataMap = allDataMap[item.__vModel__].ToObject<List<Dictionary<string, object>>>();
-                                cDataMap.ForEach(x => x.Remove(child.__vModel__));
-                                allDataMap[item.__vModel__] = cDataMap;
-                            }
-                        });
-                        break;
-                }
-            });
-        }
+            SystemFieldGenerateHelpers.StripSystemFieldsOnUpdate(fieldsModelList, allDataMap, systemControlList);
 
-        var create = IsCreate;
-        if (systemControlList.IsNotEmptyOrNull())
-            create = true;
+        var create = IsCreate || SystemFieldGenerateHelpers.ForceCreateSemantics(systemControlList);
 
         foreach (var model in fieldsModelList)
         {
@@ -2108,11 +1783,10 @@ public class RunService : IRunService, ITransient, IDisposable
                                     switch (childFieldsModel.__config__.jnpfKey)
                                     {
                                         case JnpfKeyConst.BILLRULE:
-                                            if (IsCreate || (!IsCreate && !childmap.ContainsKey("id")) || childmap[item.Key].IsNullOrEmpty())
+                                            if (SystemFieldGenerateHelpers.ShouldGenerateChildBillRule(IsCreate, childmap, item.Key))
                                             {
                                                 string billNumber = await _billRuleService.GetBillNumber(childFieldsModel.__config__.rule);
-                                                if (!"单据规则不存在".Equals(billNumber)) newChildData[item.Key] = billNumber;
-                                                else newChildData[item.Key] = string.Empty;
+                                                SystemFieldGenerateHelpers.ApplyBillNumber(newChildData, item.Key, billNumber);
                                             }
                                             else
                                             {
@@ -2121,30 +1795,28 @@ public class RunService : IRunService, ITransient, IDisposable
 
                                             break;
                                         case JnpfKeyConst.CREATEUSER:
-                                            if (IsCreate) newChildData[item.Key] = userInfo.Id;
+                                            SystemFieldGenerateHelpers.ApplyCreateUser(newChildData, item.Key, userInfo.Id, IsCreate);
                                             break;
                                         case JnpfKeyConst.MODIFYUSER:
-                                            if (!IsCreate) newChildData[item.Key] = userInfo.Id;
+                                            SystemFieldGenerateHelpers.ApplyModifyUser(newChildData, item.Key, userInfo.Id, IsCreate);
                                             break;
                                         case JnpfKeyConst.CREATETIME:
-                                            if (IsCreate) newChildData[item.Key] = string.Format("{0:yyyy-MM-dd HH:mm:ss}", DateTime.Now);
+                                            SystemFieldGenerateHelpers.ApplyCreateTime(newChildData, item.Key, DateTime.Now, IsCreate);
                                             break;
                                         case JnpfKeyConst.MODIFYTIME:
-                                            if (!IsCreate) newChildData[item.Key] = string.Format("{0:yyyy-MM-dd HH:mm:ss}", DateTime.Now);
+                                            SystemFieldGenerateHelpers.ApplyModifyTime(newChildData, item.Key, DateTime.Now, IsCreate);
                                             break;
                                         case JnpfKeyConst.CURRPOSITION:
                                             if (IsCreate)
                                             {
-                                                if (allDataMap.ContainsKey("Jnpf_FlowDelegate_CurrPosition")) // 流程委托 需要指定所属岗位
-                                                {
-                                                    allDataMap[model.__vModel__] = allDataMap["Jnpf_FlowDelegate_CurrPosition"];
-                                                }
-                                                else
+                                                if (!SystemFieldGenerateHelpers.TryTakeFlowDelegate(
+                                                        allDataMap,
+                                                        SystemFieldGenerateHelpers.FlowDelegateCurrPosition,
+                                                        model.__vModel__))
                                                 {
                                                     string? pid = await _visualDevRepository.AsSugarClient().Queryable<UserEntity, PositionEntity>((a, b) => new JoinQueryInfos(JoinType.Left, b.Id == a.PositionId))
                                                         .Where((a, b) => a.Id == userInfo.Id && a.DeleteMark == null).Select((a, b) => a.PositionId).FirstAsync();
-                                                    if (pid.IsNotEmptyOrNull()) newChildData[item.Key] = pid;
-                                                    else newChildData[item.Key] = string.Empty;
+                                                    SystemFieldGenerateHelpers.ApplyPositionId(newChildData, item.Key, pid);
                                                 }
                                             }
 
@@ -2152,11 +1824,10 @@ public class RunService : IRunService, ITransient, IDisposable
                                         case JnpfKeyConst.CURRORGANIZE:
                                             if (IsCreate)
                                             {
-                                                if (allDataMap.ContainsKey("Jnpf_FlowDelegate_CurrOrganize")) // 流程委托 需要指定所属组织
-                                                {
-                                                    allDataMap[model.__vModel__] = allDataMap["Jnpf_FlowDelegate_CurrOrganize"];
-                                                }
-                                                else
+                                                if (!SystemFieldGenerateHelpers.TryTakeFlowDelegate(
+                                                        allDataMap,
+                                                        SystemFieldGenerateHelpers.FlowDelegateCurrOrganize,
+                                                        model.__vModel__))
                                                 {
                                                     if (userInfo.OrganizeId != null)
                                                     {
@@ -2164,7 +1835,7 @@ public class RunService : IRunService, ITransient, IDisposable
                                                             .Where(it => it.Id.Equals(userInfo.OrganizeId))
                                                             .Select(it => it.OrganizeIdTree)
                                                             .FirstAsync();
-                                                        newChildData[item.Key] = organizeTree.Split(",").ToJsonString();
+                                                        newChildData[item.Key] = SystemFieldGenerateHelpers.OrganizeTreeToJson(organizeTree);
                                                     }
                                                     else
                                                     {
@@ -2175,8 +1846,10 @@ public class RunService : IRunService, ITransient, IDisposable
 
                                             break;
                                         case JnpfKeyConst.UPLOADFZ: // 文件上传
-                                            if (!childmap.ContainsKey(item.Key) || childmap[item.Key].IsNullOrEmpty()) newChildData[item.Key] = new string[] { };
-                                            else newChildData[item.Key] = childmap[item.Key];
+                                            if (!childmap.ContainsKey(item.Key) || childmap[item.Key].IsNullOrEmpty())
+                                                newChildData[item.Key] = Array.Empty<string>();
+                                            else
+                                                newChildData[item.Key] = childmap[item.Key];
                                             break;
                                         default:
                                             newChildData[item.Key] = childmap[item.Key];
@@ -2192,7 +1865,8 @@ public class RunService : IRunService, ITransient, IDisposable
                 }
                 else
                 {
-                    if (systemControlList.IsNotEmptyOrNull() && systemControlList.Contains(model.__vModel__))
+                    if (SystemFieldGenerateHelpers.ForceCreateSemantics(systemControlList)
+                        && systemControlList!.Contains(model.__vModel__))
                     {
                         allDataMap.Remove(model.__vModel__);
                     }
@@ -2204,39 +1878,32 @@ public class RunService : IRunService, ITransient, IDisposable
                                 if (IsCreate)
                                 {
                                     string billNumber = await _billRuleService.GetBillNumber(model.__config__.rule);
-                                    if (!"单据规则不存在".Equals(billNumber)) allDataMap[model.__vModel__] = billNumber;
-                                    else allDataMap[model.__vModel__] = string.Empty;
+                                    SystemFieldGenerateHelpers.ApplyBillNumber(allDataMap, model.__vModel__, billNumber);
                                 }
                                 break;
                             case JnpfKeyConst.CREATEUSER:
-                                if (IsCreate)
-                                    allDataMap[model.__vModel__] = userInfo.Id;
+                                SystemFieldGenerateHelpers.ApplyCreateUser(allDataMap, model.__vModel__, userInfo.Id, IsCreate);
                                 break;
                             case JnpfKeyConst.CREATETIME:
-                                if (IsCreate)
-                                    allDataMap[model.__vModel__] = string.Format("{0:yyyy-MM-dd HH:mm:ss}", DateTime.Now);
+                                SystemFieldGenerateHelpers.ApplyCreateTime(allDataMap, model.__vModel__, DateTime.Now, IsCreate);
                                 break;
                             case JnpfKeyConst.MODIFYUSER:
-                                if (!IsCreate)
-                                    allDataMap[model.__vModel__] = userInfo.Id;
+                                SystemFieldGenerateHelpers.ApplyModifyUser(allDataMap, model.__vModel__, userInfo.Id, IsCreate);
                                 break;
                             case JnpfKeyConst.MODIFYTIME:
-                                if (!IsCreate)
-                                    allDataMap[model.__vModel__] = string.Format("{0:yyyy-MM-dd HH:mm:ss}", DateTime.Now);
+                                SystemFieldGenerateHelpers.ApplyModifyTime(allDataMap, model.__vModel__, DateTime.Now, IsCreate);
                                 break;
                             case JnpfKeyConst.CURRPOSITION:
                                 if (create)
                                 {
-                                    if (allDataMap.ContainsKey("Jnpf_FlowDelegate_CurrPosition")) // 流程委托 需要指定所属岗位
-                                    {
-                                        allDataMap[model.__vModel__] = allDataMap["Jnpf_FlowDelegate_CurrPosition"];
-                                    }
-                                    else
+                                    if (!SystemFieldGenerateHelpers.TryTakeFlowDelegate(
+                                            allDataMap,
+                                            SystemFieldGenerateHelpers.FlowDelegateCurrPosition,
+                                            model.__vModel__))
                                     {
                                         string? pid = await _visualDevRepository.AsSugarClient().Queryable<UserEntity, PositionEntity>((a, b) => new JoinQueryInfos(JoinType.Left, b.Id == a.PositionId))
                                             .Where((a, b) => a.Id == userInfo.Id && a.DeleteMark == null).Select((a, b) => a.PositionId).FirstAsync();
-                                        if (pid.IsNotEmptyOrNull()) allDataMap[model.__vModel__] = pid;
-                                        else allDataMap[model.__vModel__] = string.Empty;
+                                        SystemFieldGenerateHelpers.ApplyPositionId(allDataMap, model.__vModel__, pid);
                                     }
                                 }
 
@@ -2244,11 +1911,10 @@ public class RunService : IRunService, ITransient, IDisposable
                             case JnpfKeyConst.CURRORGANIZE:
                                 if (create)
                                 {
-                                    if (allDataMap.ContainsKey("Jnpf_FlowDelegate_CurrOrganize")) // 流程委托 需要指定所属组织
-                                    {
-                                        allDataMap[model.__vModel__] = allDataMap["Jnpf_FlowDelegate_CurrOrganize"];
-                                    }
-                                    else
+                                    if (!SystemFieldGenerateHelpers.TryTakeFlowDelegate(
+                                            allDataMap,
+                                            SystemFieldGenerateHelpers.FlowDelegateCurrOrganize,
+                                            model.__vModel__))
                                     {
                                         if (model.showLevel.Equals("last"))
                                         {
@@ -2258,10 +1924,7 @@ public class RunService : IRunService, ITransient, IDisposable
                                                     .Where(it => it.Id.Equals(userInfo.OrganizeId) && it.Category.Equals("department"))
                                                     .Select(it => it.OrganizeIdTree)
                                                     .FirstAsync();
-                                                if (organizeTree.IsNotEmptyOrNull())
-                                                    allDataMap[model.__vModel__] = organizeTree.Split(",").ToJsonString();
-                                                else
-                                                    allDataMap[model.__vModel__] = string.Empty;
+                                                allDataMap[model.__vModel__] = SystemFieldGenerateHelpers.OrganizeTreeToJsonOrEmpty(organizeTree);
                                             }
                                             else
                                             {
@@ -2276,7 +1939,7 @@ public class RunService : IRunService, ITransient, IDisposable
                                                     .Where(it => it.Id.Equals(userInfo.OrganizeId))
                                                     .Select(it => it.OrganizeIdTree)
                                                     .FirstAsync();
-                                                allDataMap[model.__vModel__] = organizeTree.Split(",").ToJsonString();
+                                                allDataMap[model.__vModel__] = SystemFieldGenerateHelpers.OrganizeTreeToJson(organizeTree);
                                             }
                                             else
                                             {
@@ -2288,7 +1951,7 @@ public class RunService : IRunService, ITransient, IDisposable
 
                                 break;
                             case JnpfKeyConst.UPLOADFZ: // 文件上传
-                                if (!allDataMap.ContainsKey(model.__vModel__) || allDataMap[model.__vModel__].IsNullOrEmpty()) allDataMap[model.__vModel__] = new string[] { };
+                                SystemFieldGenerateHelpers.EnsureUploadDefault(allDataMap, model.__vModel__);
                                 break;
                         }
                     }
@@ -2331,200 +1994,15 @@ public class RunService : IRunService, ITransient, IDisposable
     /// </summary>
     public void FieldBindDefaultValue(ref List<Dictionary<string, object>> dicFieldsModelList, string defaultUserId, string defaultDepId, List<string> defaultPosIds, List<string> defaultRoleIds, List<string> defaultGroupIds, List<UserRelationEntity> userRelationList)
     {
-        foreach (var item in dicFieldsModelList)
-        {
-            var obj = item["__config__"].ToObject<Dictionary<string, object>>();
-
-            if (obj.ContainsKey("jnpfKey") && (obj["jnpfKey"].Equals(JnpfKeyConst.USERSELECT) || obj["jnpfKey"].Equals(JnpfKeyConst.DEPSELECT) || obj["jnpfKey"].Equals(JnpfKeyConst.POSSELECT) || obj["jnpfKey"].Equals(JnpfKeyConst.ROLESELECT) || obj["jnpfKey"].Equals(JnpfKeyConst.GROUPSELECT) || obj["jnpfKey"].Equals(JnpfKeyConst.USERSSELECT)) && obj["defaultCurrent"].Equals(true))
-            {
-                switch (obj["jnpfKey"])
-                {
-                    case JnpfKeyConst.USERSSELECT:
-                    case JnpfKeyConst.USERSELECT:
-                        if (item.ContainsKey("selectType") && item["selectType"].Equals("custom"))
-                        {
-                            var ableDepIds = item["ableDepIds"].ToObject<List<string>>();
-                            if (ableDepIds == null) ableDepIds = new List<string>();
-                            var ablePosIds = item["ablePosIds"].ToObject<List<string>>();
-                            if (ablePosIds == null) ablePosIds = new List<string>();
-                            var ableUserIds = item["ableUserIds"].ToObject<List<string>>();
-                            if (ableUserIds == null) ableUserIds = new List<string>();
-                            var ableRoleIds = item["ableRoleIds"].ToObject<List<string>>();
-                            if (ableRoleIds == null) ableRoleIds = new List<string>();
-                            var ableGroupIds = item["ableGroupIds"].ToObject<List<string>>();
-                            if (ableGroupIds == null) ableGroupIds = new List<string>();
-                            var userIdList = userRelationList.Where(x => ableUserIds.Contains(x.UserId) || ableDepIds.Contains(x.ObjectId)
-                                || ablePosIds.Contains(x.ObjectId) || ableRoleIds.Contains(x.ObjectId) || ableGroupIds.Contains(x.ObjectId)).Select(x => x.UserId).ToList();
-                            if (!userIdList.Contains(defaultUserId))
-                            {
-                                obj["defaultValue"] = null;
-                                break;
-                            }
-                        }
-                        if (item.ContainsKey("multiple") && item["multiple"].Equals(true))
-                        {
-                            if (obj["jnpfKey"].Equals(JnpfKeyConst.USERSELECT))
-                            {
-                                obj["defaultValue"] = new List<string>() { defaultUserId };
-                            }
-                            else
-                            {
-                                obj["defaultValue"] = new List<string>() { string.Format("{0}--user", defaultUserId) };
-                            }
-                        }
-                        else
-                        {
-                            obj["defaultValue"] = defaultUserId;
-                        }
-                        break;
-                    case JnpfKeyConst.DEPSELECT:
-                        if (item.ContainsKey("selectType") && item["selectType"].Equals("custom"))
-                        {
-                            var defValue = item["ableDepIds"].ToObject<List<string>>();
-                            if (!defValue.Contains(defaultDepId))
-                            {
-                                obj["defaultValue"] = null;
-                                break;
-                            }
-                        }
-                        if (item.ContainsKey("multiple") && item["multiple"].Equals(true)) obj["defaultValue"] = new List<string>() { defaultDepId };
-                        else obj["defaultValue"] = defaultDepId;
-                        break;
-                    case JnpfKeyConst.POSSELECT:
-                        var defaultPosId = defaultPosIds.FirstOrDefault();
-                        if (item.ContainsKey("selectType") && item["selectType"].Equals("custom"))
-                        {
-                            var defValue = item["ablePosIds"].ToObject<List<string>>();
-                            if (!defValue.Contains(defaultPosId))
-                            {
-                                obj["defaultValue"] = null;
-                                break;
-                            }
-                        }
-                        if (item.ContainsKey("multiple") && item["multiple"].Equals(true))
-                        {
-                            obj["defaultValue"] = defaultPosIds;
-                        }
-                        else
-                        {
-                            if (defaultPosIds.Contains(_userManager.User.PositionId))
-                            {
-                                obj["defaultValue"] = _userManager.User.PositionId;
-                            }
-                            else
-                            {
-                                obj["defaultValue"] = defaultPosId;
-                            }
-                        }
-                        break;
-                    case JnpfKeyConst.ROLESELECT:
-                        var defaultRoleId = defaultRoleIds.FirstOrDefault();
-                        if (item.ContainsKey("selectType") && item["selectType"].Equals("custom"))
-                        {
-                            var defValue = item["ableRoleIds"].ToObject<List<string>>();
-                            if (!defValue.Contains(defaultRoleId))
-                            {
-                                obj["defaultValue"] = null;
-                                break;
-                            }
-                        }
-                        if (item.ContainsKey("multiple") && item["multiple"].Equals(true)) obj["defaultValue"] = defaultRoleIds;
-                        else obj["defaultValue"] = defaultRoleId;
-                        break;
-                    case JnpfKeyConst.GROUPSELECT:
-                        var defaultGroupId = defaultGroupIds.FirstOrDefault();
-                        if (item.ContainsKey("selectType") && item["selectType"].Equals("custom"))
-                        {
-                            var defValue = item["ableGroupIds"].ToObject<List<string>>();
-                            if (!defValue.Contains(defaultGroupId))
-                            {
-                                obj["defaultValue"] = null;
-                                break;
-                            }
-                        }
-                        if (item.ContainsKey("multiple") && item["multiple"].Equals(true)) obj["defaultValue"] = defaultGroupIds;
-                        else obj["defaultValue"] = defaultGroupId;
-                        break;
-                }
-            }
-
-            // 子表控件
-            if (obj.ContainsKey("jnpfKey") && obj["jnpfKey"].Equals(JnpfKeyConst.TABLE))
-            {
-                var cList = obj["children"].ToObject<List<Dictionary<string, object>>>();
-                foreach (var child in cList)
-                {
-                    var cObj = child["__config__"].ToObject<Dictionary<string, object>>();
-                    if (cObj.ContainsKey("jnpfKey") && (cObj["jnpfKey"].Equals(JnpfKeyConst.USERSELECT) || cObj["jnpfKey"].Equals(JnpfKeyConst.DEPSELECT) || cObj["jnpfKey"].Equals(JnpfKeyConst.POSSELECT) || cObj["jnpfKey"].Equals(JnpfKeyConst.ROLESELECT) || cObj["jnpfKey"].Equals(JnpfKeyConst.GROUPSELECT) || cObj["jnpfKey"].Equals(JnpfKeyConst.USERSSELECT)) && cObj["defaultCurrent"].Equals(true))
-                    {
-                        switch (cObj["jnpfKey"])
-                        {
-                            case JnpfKeyConst.USERSSELECT:
-                            case JnpfKeyConst.USERSELECT:
-                                if (item.ContainsKey("multiple") && item["multiple"].Equals(true))
-                                {
-                                    if (cObj["jnpfKey"].Equals(JnpfKeyConst.USERSELECT))
-                                    {
-                                        cObj["defaultValue"] = new List<string>() { defaultUserId };
-                                    }
-                                    else
-                                    {
-                                        cObj["defaultValue"] = new List<string>() { string.Format("{0}--user", defaultUserId) };
-                                    }
-                                }
-                                else
-                                {
-                                    cObj["defaultValue"] = defaultUserId;
-                                }
-                                break;
-                            case JnpfKeyConst.DEPSELECT:
-                                if (item.ContainsKey("multiple") && item["multiple"].Equals(true)) cObj["defaultValue"] = new List<string>() { defaultDepId };
-                                else cObj["defaultValue"] = defaultDepId;
-                                break;
-                            case JnpfKeyConst.POSSELECT:
-                                if (item.ContainsKey("multiple") && item["multiple"].Equals(true))
-                                {
-                                    cObj["defaultValue"] = defaultPosIds;
-                                }
-                                else
-                                {
-                                    if (defaultPosIds.Contains(_userManager.User.PositionId))
-                                    {
-                                        cObj["defaultValue"] = _userManager.User.PositionId;
-                                    }
-                                    else
-                                    {
-                                        cObj["defaultValue"] = defaultPosIds.FirstOrDefault();
-                                    }
-                                }
-                                break;
-                            case JnpfKeyConst.ROLESELECT:
-                                if (item.ContainsKey("multiple") && item["multiple"].Equals(true)) cObj["defaultValue"] = defaultRoleIds;
-                                else cObj["defaultValue"] = defaultRoleIds.FirstOrDefault();
-                                break;
-                            case JnpfKeyConst.GROUPSELECT:
-                                if (item.ContainsKey("multiple") && item["multiple"].Equals(true)) cObj["defaultValue"] = defaultGroupIds;
-                                else cObj["defaultValue"] = defaultGroupIds.FirstOrDefault();
-                                break;
-                        }
-                    }
-
-                    child["__config__"] = cObj;
-                }
-
-                obj["children"] = cList;
-            }
-
-            // 递归布局控件
-            if (obj.ContainsKey("children"))
-            {
-                var fmList = obj["children"].ToObject<List<Dictionary<string, object>>>();
-                FieldBindDefaultValue(ref fmList, defaultUserId, defaultDepId, defaultPosIds, defaultRoleIds, defaultGroupIds, userRelationList);
-                obj["children"] = fmList;
-            }
-
-            item["__config__"] = obj;
-        }
+        FieldBindDefaultValueHelpers.Bind(
+            ref dicFieldsModelList,
+            defaultUserId,
+            defaultDepId,
+            defaultPosIds,
+            defaultRoleIds,
+            defaultGroupIds,
+            userRelationList,
+            _userManager.User.PositionId);
     }
 
     /// <summary>
@@ -2709,242 +2187,7 @@ public class RunService : IRunService, ITransient, IDisposable
     /// </summary>
     /// <param name="superQueryJson">查询条件json.</param>
     private string GetSuperQueryInput(string superQueryJson)
-    {
-        Dictionary<string, object> result = new Dictionary<string, object>();
-        Dictionary<string, object>? dic = string.IsNullOrEmpty(superQueryJson) ? null : superQueryJson.ToObject<Dictionary<string, object>>();
-
-        if (dic != null)
-        {
-            var matchLogic = dic.FirstOrDefault().Value;
-            var whereType = matchLogic.ToString().ToUpper().Equals("AND") ? WhereType.And : WhereType.Or;
-            var queryList = new List<Dictionary<string, object>>();
-
-            foreach (var dicItem in dic.LastOrDefault().Value.ToObject<List<Dictionary<string, object>>>())
-            {
-                var subMatchLogic = dicItem.FirstOrDefault().Value;
-                var subWhereType = subMatchLogic.ToString().ToUpper().Equals("AND") ? WhereType.And : WhereType.Or;
-
-                var firstItem = true;
-                var between = new List<string>();
-                foreach (var item in dicItem.LastOrDefault().Value.ToObject<List<Dictionary<string, object>>>())
-                {
-                    var query = new Dictionary<string, object>();
-                    query.Add("whereType", subWhereType);
-                    query.Add("jnpfKey", item["jnpfKey"]);
-                    query.Add("field", item["field"].ToString());
-                    if (firstItem)
-                    {
-                        query.Add("where", whereType);
-                        firstItem = false;
-                    }
-                    if (item.ContainsKey("fieldValue") && item["fieldValue"].IsNotEmptyOrNull())
-                    {
-                        item["fieldValue"] = item["fieldValue"].ToString().Replace("\r\n", string.Empty).Replace(" ", string.Empty);
-                    }
-                    else
-                    {
-                        if (item["jnpfKey"].Equals(JnpfKeyConst.CALCULATE) || item["jnpfKey"].Equals(JnpfKeyConst.NUMINPUT) || item["jnpfKey"].Equals(JnpfKeyConst.RATE) || item["jnpfKey"].Equals(JnpfKeyConst.SLIDER))
-                        {
-                            item["fieldValue"] = null;
-                        }
-                        else
-                        {
-                            item["fieldValue"] = string.Empty;
-                        }
-                    }
-                    if (item["fieldValue"].IsNotEmptyOrNull())
-                    {
-                        if (item["symbol"].Equals("between"))
-                            between = item["fieldValue"].ToString().ToObject<List<string>>();
-                        switch (item["jnpfKey"])
-                        {
-                            case JnpfKeyConst.DATE:
-                            case JnpfKeyConst.CREATETIME:
-                            case JnpfKeyConst.MODIFYTIME:
-                                if (item["symbol"].Equals("between"))
-                                {
-                                    var startTime = between.First().TimeStampToDateTime();
-                                    var endTime = between.Last().TimeStampToDateTime();
-                                    between[0] = startTime.ToString();
-                                    between[1] = endTime.ToString();
-                                }
-                                else
-                                {
-                                    item["fieldValue"] = item["fieldValue"].ToString().TimeStampToDateTime().ToString();
-                                }
-                                query["CSharpTypeName"] = "datetime";
-                                break;
-                            case JnpfKeyConst.TIME:
-                                if (!item["symbol"].Equals("between"))
-                                {
-                                    item["fieldValue"] = string.Format("{0:" + item["format"] + "}", Convert.ToDateTime(item["fieldValue"]));
-                                }
-                                break;
-                            case JnpfKeyConst.RATE:
-                            case JnpfKeyConst.SLIDER:
-                                query["CSharpTypeName"] = "decimal";
-                                break;
-                        }
-                    }
-
-                    query.Add("fieldValue", item["fieldValue"]);
-
-                    if ((!item.ContainsKey("fieldValue") || item.ContainsKey("fieldValue").Equals("[]")) && item["symbol"].Equals("=="))
-                    {
-                        if (item["jnpfKey"].Equals(JnpfKeyConst.CALCULATE) || item["jnpfKey"].Equals(JnpfKeyConst.NUMINPUT)) query.Add("ConditionalType", ConditionalType.EqualNull);
-                        else query.Add("ConditionalType", ConditionalType.IsNullOrEmpty);
-                        queryList.Add(query);
-                        continue;
-                    }
-
-                    if ((!item.ContainsKey("fieldValue") || item.ContainsKey("fieldValue").Equals("[]") || item["fieldValue"].IsNullOrEmpty()) && item["symbol"].Equals("<>"))
-                    {
-                        query.Add("ConditionalType", ConditionalType.IsNot);
-                        queryList.Add(query);
-                        continue;
-                    }
-
-                    switch (item["symbol"])
-                    {
-                        case ">=":
-                            query.Add("ConditionalType", ConditionalType.GreaterThanOrEqual);
-                            break;
-                        case ">":
-                            query.Add("ConditionalType", ConditionalType.GreaterThan);
-                            break;
-                        case "==":
-                            query.Add("ConditionalType", ConditionalType.Equal);
-                            break;
-                        case "<=":
-                            query.Add("ConditionalType", ConditionalType.LessThanOrEqual);
-                            break;
-                        case "<":
-                            query.Add("ConditionalType", ConditionalType.LessThan);
-                            break;
-                        case "like":
-                            query.Add("ConditionalType", item["fieldValue"].IsNotEmptyOrNull() ? ConditionalType.Like : ((item["jnpfKey"].Equals(JnpfKeyConst.CALCULATE) || item["jnpfKey"].Equals(JnpfKeyConst.NUMINPUT)) ? ConditionalType.EqualNull : ConditionalType.IsNullOrEmpty));
-                            if (query["fieldValue"] != null && query["fieldValue"].ToString().Contains("["))
-                                query["fieldValue"] = query["fieldValue"].ToString().Replace("[", string.Empty).Replace("]", string.Empty);
-                            break;
-                        case "<>":
-                            query.Add("ConditionalType", ConditionalType.NoEqual);
-                            break;
-                        case "notLike":
-                            query.Add("ConditionalType", ConditionalType.NoLike);
-                            if (query["fieldValue"] != null && query["fieldValue"].ToString().Contains("["))
-                                query["fieldValue"] = query["fieldValue"].ToString().Replace("[", string.Empty).Replace("]", string.Empty);
-                            break;
-                        case "in":
-                        case "notIn":
-                            if (query["fieldValue"] != null && query["fieldValue"].ToString().Contains("["))
-                            {
-                                var isListValue = false;
-                                if (item["jnpfKey"].Equals(JnpfKeyConst.CHECKBOX) || item["jnpfKey"].Equals(JnpfKeyConst.CASCADER) || item["jnpfKey"].Equals(JnpfKeyConst.ADDRESS))
-                                    isListValue = true;
-                                if (item["jnpfKey"].Equals(JnpfKeyConst.COMSELECT)) isListValue = false;
-                                var ids = new List<string>();
-                                if (query["fieldValue"].ToString().Replace("\r\n", "").Replace(" ", "").Contains("[["))
-                                {
-                                    if (item["jnpfKey"].Equals(JnpfKeyConst.COMSELECT) || item["jnpfKey"].Equals(JnpfKeyConst.CURRORGANIZE))
-                                    {
-                                        ids = query["fieldValue"].ToString().ToObject<List<List<string>>>().Select(x => x.Last() + "\"]").ToList();
-                                    }
-                                    else
-                                    {
-                                        ids = query["fieldValue"].ToString().ToObject<List<List<string>>>().Select(x => x.Last()).ToList();
-                                    }
-                                }
-                                else
-                                {
-                                    if (item["jnpfKey"].Equals(JnpfKeyConst.COMSELECT) || item["jnpfKey"].Equals(JnpfKeyConst.CURRORGANIZE))
-                                    {
-                                        ids = query["fieldValue"].ToString().ToObject<List<string>>().Select(x => x + "\"]").ToList();
-                                    }
-                                    else
-                                    {
-                                        ids = query["fieldValue"].ToString().ToObject<List<string>>();
-                                    }
-                                }
-
-                                for (var i = 0; i < ids.Count; i++)
-                                {
-                                    var it = ids[i];
-                                    var conditionWhereType = WhereType.And;
-                                    if (item["symbol"].Equals("in")) conditionWhereType = i.Equals(0) && subWhereType.Equals(WhereType.And) ? WhereType.And : WhereType.Or;
-                                    else conditionWhereType = i.Equals(0) && subWhereType.Equals(WhereType.Or) ? WhereType.Or : WhereType.And;
-
-                                    var newQuery = new Dictionary<string, object>();
-                                    newQuery.Add("whereType", conditionWhereType);
-                                    newQuery.Add("jnpfKey", item["jnpfKey"]);
-                                    newQuery.Add("field", item["field"].ToString());
-                                    newQuery.Add("fieldValue", isListValue ? it.ToJsonString() : it);
-                                    newQuery.Add("ConditionalType", item["symbol"].Equals("in") ? (item["jnpfKey"].Equals(JnpfKeyConst.TREESELECT) ? ConditionalType.Equal : ConditionalType.Like) : (item["jnpfKey"].Equals(JnpfKeyConst.TREESELECT) ? ConditionalType.NoEqual : ConditionalType.NoLike));
-                                    if (query.ContainsKey("where") && i.Equals(0))
-                                        newQuery.Add("where", query["where"]);
-
-                                    queryList.Add(newQuery);
-                                }
-
-                                if (item["symbol"].Equals("notIn"))
-                                {
-                                    var nullQuery = new Dictionary<string, object>();
-                                    nullQuery.Add("whereType", WhereType.And);
-                                    nullQuery.Add("jnpfKey", item["jnpfKey"]);
-                                    nullQuery.Add("field", item["field"].ToString());
-                                    nullQuery.Add("fieldValue", null);
-                                    nullQuery.Add("ConditionalType", ConditionalType.IsNot);
-                                    queryList.Add(nullQuery);
-
-                                    var emptyQuery = new Dictionary<string, object>();
-                                    emptyQuery.Add("whereType", WhereType.And);
-                                    emptyQuery.Add("jnpfKey", item["jnpfKey"]);
-                                    emptyQuery.Add("field", item["field"].ToString());
-                                    emptyQuery.Add("fieldValue", string.Empty);
-                                    emptyQuery.Add("ConditionalType", ConditionalType.IsNot);
-                                    queryList.Add(emptyQuery);
-                                }
-
-                                continue;
-                            }
-                            query.Add("ConditionalType", item["symbol"].Equals("in") ? ConditionalType.In : ConditionalType.NotIn);
-                            break;
-                        case "null":
-                            if (item["jnpfKey"].Equals(JnpfKeyConst.CALCULATE) || item["jnpfKey"].Equals(JnpfKeyConst.NUMINPUT) || item["jnpfKey"].Equals(JnpfKeyConst.RATE) || item["jnpfKey"].Equals(JnpfKeyConst.SLIDER))
-                                query.Add("ConditionalType", ConditionalType.EqualNull);
-                            else
-                                query.Add("ConditionalType", ConditionalType.IsNullOrEmpty);
-                            break;
-                        case "notNull":
-                            query.Add("ConditionalType", ConditionalType.IsNot);
-                            if (query["fieldValue"].IsNullOrEmpty()) query["fieldValue"] = null;
-                            break;
-                        case "between":
-                            query.Add("ConditionalType", ConditionalType.GreaterThanOrEqual);
-                            query["fieldValue"] = between[0];
-                            queryList.Add(query);
-                            var queryAnd = new Dictionary<string, object>();
-                            queryAnd.Add("whereType", WhereType.And);
-                            queryAnd.Add("jnpfKey", item["jnpfKey"]);
-                            queryAnd.Add("field", item["field"].ToString());
-                            queryAnd.Add("ConditionalType", ConditionalType.LessThanOrEqual);
-                            queryAnd.Add("fieldValue", between[1]);
-                            if (query.ContainsKey("CSharpTypeName"))
-                                queryAnd.Add("CSharpTypeName", query["CSharpTypeName"]);
-                            queryList.Add(queryAnd);
-                            continue;
-                    }
-
-                    queryList.Add(query);
-                }
-            }
-
-            return queryList.ToJsonStringOld();
-        }
-        else
-        {
-            return string.Empty;
-        }
-    }
+        => ListSuperQueryInputRewriter.Rewrite(superQueryJson);
 
     /// <summary>
     /// 数据唯一 验证.
@@ -3070,32 +2313,18 @@ public class RunService : IRunService, ITransient, IDisposable
             foreach (var item in templateInfo.AllTableFields)
             {
                 if (input.dataRuleJson.IsNotEmptyOrNull() && input.dataRuleJson.Contains(string.Format("\"{0}\"", item.Key)))
-                    input.dataRuleJson = input.dataRuleJson.Replace(string.Format("\"{0}\"", item.Key), string.Format("\"{0}\"", item.Value));
+                    input.dataRuleJson = ListQueryFieldAliasRewriter.ReplaceQuotedKey(input.dataRuleJson, item.Key, item.Value);
 
                 if (queryJson.Contains(string.Format("\"{0}\"", item.Key)))
                 {
-                    queryJson = queryJson.Replace(string.Format("\"{0}\"", item.Key), string.Format("\"{0}\"", item.Value));
+                    queryJson = ListQueryFieldAliasRewriter.ReplaceQuotedKey(queryJson, item.Key, item.Value);
                     var vmodel = templateInfo.ColumnData.searchList.FirstOrDefault(x => x != null && x.id != null && x.id.Equals(item.Key));
-                    if (vmodel != null)
-                    {
-                        vmodel.__vModel__ = item.Value;
-                        vmodel.prop = item.Value;
-                        vmodel.id = item.Value;
-                        fields.Add(item.Value);
-                    }
-
                     var appVModel = templateInfo.AppColumnData.searchList.FirstOrDefault(x => x != null && x.id != null && x.id.Equals(item.Key));
-                    if (appVModel != null)
-                    {
-                        appVModel.__vModel__ = item.Value;
-                        appVModel.prop = item.Value;
-                        appVModel.id = item.Value;
-                        fields.Add(item.Value);
-                    }
+                    ListQuerySqlProjectionHelpers.RemapSearchListFieldAliases(vmodel, appVModel, item.Value, fields);
                 }
 
                 if (superQueryJson.IsNotEmptyOrNull() && superQueryJson.Contains(string.Format("\"{0}\"", item.Key)))
-                    superQueryJson = superQueryJson.Replace(string.Format("\"{0}\"", item.Key), string.Format("\"{0}\"", item.Value));
+                    superQueryJson = ListQueryFieldAliasRewriter.ReplaceQuotedKey(superQueryJson, item.Key, item.Value);
             }
 
             var dataRuleQuerDic = new List<IConditionalModel>();
@@ -3105,7 +2334,7 @@ public class RunService : IRunService, ITransient, IDisposable
             var superQuerDic = new List<ConditionalCollections>();
             var superCond = superQueryJson.IsNullOrEmpty() ? null : GetSuperQueryJson(superQueryJson, templateInfo);
             if (superCond != null) superQuerDic = superCond.ToObject<List<ConditionalCollections>>();
-            var sqlStr = "select {0} from {1} ";
+            var sqlStr = ListQuerySqlFragmentHelpers.SelectFromTemplate;
 
             // 查询
             var querySqlList = new List<string>();
@@ -3136,8 +2365,9 @@ public class RunService : IRunService, ITransient, IDisposable
                             if (itemWhere.Contains("WHERE"))
                             {
                                 var fieldName = model.FieldName.Split(".").FirstOrDefault();
+                                SqlGuard.ValidateIdentifier(fieldName, "表名");
                                 var idField = templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField;
-                                var itemSql = string.Format(sqlStr, idField.IsNullOrEmpty() ? primaryKey : idField, fieldName);
+                                var itemSql = ListQuerySqlFragmentHelpers.BuildSelectFrom(idField, primaryKey, fieldName);
                                 itemSql = string.Format("{0} where {1}", itemSql, itemWhere.Split("WHERE").Last());
                                 var conditionSql = string.Format("({0} in ({1}))", primaryKey, itemSql);
 
@@ -3157,6 +2387,7 @@ public class RunService : IRunService, ITransient, IDisposable
                     else
                     {
                         var fieldName = item.Key.Split(".").FirstOrDefault();
+                        SqlGuard.ValidateIdentifier(fieldName, "表名");
                         var table = templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First();
                         // 去除多余的f_inte_assistant条件
                         if (table.typeId.Equals("1") && !isInteAssistant && where.Count > 1 && where.Last().ToJsonString().Contains("f_inte_assistant"))
@@ -3164,7 +2395,7 @@ public class RunService : IRunService, ITransient, IDisposable
                         else
                             where.RemoveAt(where.Count - 1);
 
-                        var itemSql = string.Format(sqlStr, table.tableField.IsNullOrEmpty() ? primaryKey : table.tableField, fieldName);
+                        var itemSql = ListQuerySqlFragmentHelpers.BuildSelectFrom(table.tableField, primaryKey, fieldName);
 
                         _sqlSugarClient = _databaseService.ChangeDataBase(templateInfo.DbLink);
                         var itemWhere = _sqlSugarClient.SqlQueryable<object>("@")
@@ -3177,13 +2408,11 @@ public class RunService : IRunService, ITransient, IDisposable
                             {
                                 var oldSql = querySqlList.Find(it => it.Contains(itemSql.TrimEnd(')')));
                                 querySqlList.Remove(oldSql);
-                                var newSql = string.Format("{0}WHERE{1}and{2}", oldSql.Split("WHERE").FirstOrDefault(), itemWhere.Split("WHERE").LastOrDefault(), oldSql.Split("WHERE").LastOrDefault());
-                                querySqlList.Add(newSql);
+                                querySqlList.Add(ListQuerySqlFragmentHelpers.MergeWhereIntoExistingInSubquery(oldSql, itemWhere));
                             }
                             else
                             {
-                                itemSql = string.Format("{0}WHERE{1}{2}", itemSql.Split("WHERE").FirstOrDefault(), itemWhere.Split("WHERE").LastOrDefault(), itemSql.Split("WHERE").LastOrDefault());
-                                querySqlList.Add(itemSql);
+            querySqlList.Add(ListQuerySqlFragmentHelpers.InjectWhereIntoExistingSubquery(itemSql, itemWhere));
                             }
                         }
                     }
@@ -3207,6 +2436,7 @@ public class RunService : IRunService, ITransient, IDisposable
                         if (subItem.Value.IsNotEmptyOrNull())
                         {
                             var fieldName = subItem.Value.FieldName.Split(".").FirstOrDefault();
+                            SqlGuard.ValidateIdentifier(fieldName, "表名");
                             var idField = templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField;
                             var itemSql = string.Format(sqlStr, idField.IsNullOrEmpty() ? primaryKey : idField, fieldName);
 
@@ -3230,9 +2460,16 @@ public class RunService : IRunService, ITransient, IDisposable
                                 itemSql = splitWhere + itemWhere.Split("WHERE").Last();
 
                                 // 子表字段为空 查询 处理.
-                                if (templateInfo.ChildTableFields.Any(x => x.Value.Contains(fieldName + ".")) && (subItem.ToJsonStringOld().Contains("\"ConditionalType\":11") || subItem.ToJsonStringOld().Contains("\"ConditionalType\":14")))
+                                var subJson = subItem.ToJsonStringOld();
+                                if (templateInfo.ChildTableFields.Any(x => x.Value.Contains(fieldName + "."))
+                                    && ListQuerySqlFragmentHelpers.IsEmptyOrNullConditionalTypeJson(subJson))
                                 {
-                                    groupDataSql = string.Format(groupDataSql + groupDataSqlCondition + " ({0} in ({1}) OR {0} NOT IN ( SELECT {2} FROM {3} ))", primaryKey, itemSql, templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField, fieldName);
+                                    groupDataSql = groupDataSql + groupDataSqlCondition
+                                        + ListQuerySqlFragmentHelpers.BuildChildTableEmptyOrMatch(
+                                            primaryKey,
+                                            itemSql,
+                                            templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField,
+                                            fieldName);
                                 }
                                 else
                                 {
@@ -3244,12 +2481,14 @@ public class RunService : IRunService, ITransient, IDisposable
                                         }
                                         else
                                         {
-                                            groupDataSql = string.Format(groupDataSql + groupDataSqlCondition + " ({0} in ({1}))", primaryKey, itemSql);
+                                            groupDataSql = groupDataSql + groupDataSqlCondition
+                                                + ListQuerySqlFragmentHelpers.BuildPrimaryInSubquery(primaryKey, itemSql);
                                         }
                                     }
                                     else
                                     {
-                                        groupDataSql = string.Format(groupDataSql + groupDataSqlCondition + " ({0} in ({1}))", primaryKey, itemSql);
+                                        groupDataSql = groupDataSql + groupDataSqlCondition
+                                            + ListQuerySqlFragmentHelpers.BuildPrimaryInSubquery(primaryKey, itemSql);
                                     }
                                 }
 
@@ -3287,6 +2526,7 @@ public class RunService : IRunService, ITransient, IDisposable
                         {
                             var field = ((ConditionalTree)subItem.Value).ConditionalList.FirstOrDefault();
                             var fieldName = ((ConditionalModel)field.Value).FieldName.Split(".").FirstOrDefault();
+                            SqlGuard.ValidateIdentifier(fieldName, "表名");
                             var idField = templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField;
                             var itemSql = string.Format(sqlStr, idField.IsNullOrEmpty() ? primaryKey : idField, fieldName);
 
@@ -3310,13 +2550,21 @@ public class RunService : IRunService, ITransient, IDisposable
                                 itemSql = splitWhere + itemWhere.Split("WHERE").Last();
 
                                 // 子表字段为空 查询 处理.
-                                if (templateInfo.ChildTableFields.Any(x => x.Value.Contains(fieldName + ".")) && (subItem.ToJsonStringOld().Contains("\"ConditionalType\":11") || subItem.ToJsonStringOld().Contains("\"ConditionalType\":14")))
+                                var subJson = subItem.ToJsonStringOld();
+                                if (templateInfo.ChildTableFields.Any(x => x.Value.Contains(fieldName + "."))
+                                    && ListQuerySqlFragmentHelpers.IsEmptyOrNullConditionalTypeJson(subJson))
                                 {
-                                    groupDataSql = string.Format(groupDataSql + groupDataSqlCondition + " ({0} in ({1}) OR {0} NOT IN ( SELECT {2} FROM {3} ))", primaryKey, itemSql, templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField, fieldName);
+                                    groupDataSql = groupDataSql + groupDataSqlCondition
+                                        + ListQuerySqlFragmentHelpers.BuildChildTableEmptyOrMatch(
+                                            primaryKey,
+                                            itemSql,
+                                            templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField,
+                                            fieldName);
                                 }
                                 else
                                 {
-                                    groupDataSql = string.Format(groupDataSql + groupDataSqlCondition + " ({0} in ({1}))", primaryKey, itemSql);
+                                    groupDataSql = groupDataSql + groupDataSqlCondition
+                                        + ListQuerySqlFragmentHelpers.BuildPrimaryInSubquery(primaryKey, itemSql);
                                 }
 
                                 if (groupDataValue.ConditionalList.LastOrDefault().Equals(subItem))
@@ -3370,6 +2618,7 @@ public class RunService : IRunService, ITransient, IDisposable
                                 foreach (var condition in ((ConditionalTree)groupCondition.Value).ConditionalList)
                                 {
                                     var fieldName = ((ConditionalModel)condition.Value).FieldName.Split(".").FirstOrDefault();
+                                    SqlGuard.ValidateIdentifier(fieldName, "表名");
                                     var idField = templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField;
                                     var itemSql = string.Format(sqlStr, idField.IsNullOrEmpty() ? primaryKey : idField, fieldName);
                                     var where = new List<IConditionalModel> { new ConditionalTree() { ConditionalList = new List<KeyValuePair<WhereType, IConditionalModel>> { condition } } };
@@ -3387,9 +2636,16 @@ public class RunService : IRunService, ITransient, IDisposable
                                         itemSql = splitWhere + itemWhere.Split("WHERE").Last();
 
                                         // 子表字段为空 查询 处理.
-                                        if (templateInfo.ChildTableFields.Any(x => x.Value.Contains(fieldName + ".")) && (condition.ToJsonStringOld().Contains("\"ConditionalType\":11") || condition.ToJsonStringOld().Contains("\"ConditionalType\":14")))
+                                        var condJson = condition.ToJsonStringOld();
+                                        if (templateInfo.ChildTableFields.Any(x => x.Value.Contains(fieldName + "."))
+                                            && ListQuerySqlFragmentHelpers.IsEmptyOrNullConditionalTypeJson(condJson))
                                         {
-                                            groupConditionSql = string.Format(groupConditionSql + conditionWhere + " ({0} in ({1}) OR {0} NOT IN ( SELECT {2} FROM {3} ))", primaryKey, itemSql, templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField, fieldName);
+                                            groupConditionSql = groupConditionSql + conditionWhere
+                                                + ListQuerySqlFragmentHelpers.BuildChildTableEmptyOrMatch(
+                                                    primaryKey,
+                                                    itemSql,
+                                                    templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField,
+                                                    fieldName);
                                         }
                                         else
                                         {
@@ -3401,12 +2657,14 @@ public class RunService : IRunService, ITransient, IDisposable
                                                 }
                                                 else
                                                 {
-                                                    groupConditionSql = string.Format(groupConditionSql + conditionWhere + " ({0} in ({1}))", primaryKey, itemSql);
+                                                    groupConditionSql = groupConditionSql + conditionWhere
+                                                        + ListQuerySqlFragmentHelpers.BuildPrimaryInSubquery(primaryKey, itemSql);
                                                 }
                                             }
                                             else
                                             {
-                                                groupConditionSql = string.Format(groupConditionSql + conditionWhere + " ({0} in ({1}))", primaryKey, itemSql);
+                                                groupConditionSql = groupConditionSql + conditionWhere
+                                                    + ListQuerySqlFragmentHelpers.BuildPrimaryInSubquery(primaryKey, itemSql);
                                             }
                                         }
                                     }
@@ -3434,14 +2692,17 @@ public class RunService : IRunService, ITransient, IDisposable
             }
 
             if (templateInfo.FormModel.logicalDelete && _databaseService.IsAnyColumn(templateInfo.DbLink, templateInfo.MainTableName, "f_delete_mark"))
-                querySqlList.Add(string.Format(" ( {0} in ({1}) ) ", primaryKey, string.Format(" select {0} from {1} where f_delete_mark is null ", primaryKey, templateInfo.MainTableName))); // 处理软删除
+                querySqlList.Add(ListQuerySqlFragmentHelpers.BuildSoftDeleteInSubquery(primaryKey, templateInfo.MainTableName)); // 处理软删除
 
             // 多租户字段隔离
             if (_tenant.MultiTenancy)
             {
                 var tenantCache = _cacheManager.Get<List<GlobalTenantCacheModel>>(CommonConst.GLOBALTENANT).Find(it => it.TenantId.Equals(templateInfo.DbLink.Id));
                 if (tenantCache.IsNotEmptyOrNull() && tenantCache.type.Equals(1) && _databaseService.IsAnyColumn(templateInfo.DbLink, templateInfo.MainTableName, "f_tenant_id"))
-                    querySqlList.Add(string.Format(" ( {0} in ({1}) ) ", primaryKey, string.Format(" select {0} from {1} where f_tenant_id='{2}'", primaryKey, templateInfo.MainTableName, tenantCache.connectionConfig.IsolationField)));
+                    querySqlList.Add(ListQuerySqlFragmentHelpers.BuildTenantIsolationInSubquery(
+                        primaryKey,
+                        templateInfo.MainTableName,
+                        tenantCache.connectionConfig.IsolationField));
             }
 
             // 是否只展示流程数据
@@ -3450,7 +2711,8 @@ public class RunService : IRunService, ITransient, IDisposable
             //else
             //    querySqlList.Add(string.Format(" {0} in ({1}) ", primaryKey, string.Format(" select {0} from {1} where f_flow_id is null or f_flow_id = '' ", primaryKey, templateInfo.MainTableName)));
 
-            if (!querySqlList.Any()) querySqlList.Add(string.Format(" ( {0} in ({1}) ) ", primaryKey, string.Format(sqlStr, primaryKey, templateInfo.MainTableName)));
+            if (!querySqlList.Any())
+                querySqlList.Add(ListQuerySqlFragmentHelpers.BuildUnfilteredPrimaryInSubquery(primaryKey, templateInfo.MainTableName));
 
             var ctFields = templateInfo.ChildTableFields;
             templateInfo.ChildTableFields = new Dictionary<string, string>();
@@ -3460,16 +2722,13 @@ public class RunService : IRunService, ITransient, IDisposable
             input.superQueryJson = string.Empty;
             templateInfo.ChildTableFields = ctFields;
 
-            sql = string.Format("select * from ({0}) mt where {1} {2} {3} {4}", strSql, string.Join(" and ", querySqlList), superQuerySqlCondition, dataRuleSqlCondition, dataPermissionsSqlCondition);
+            sql = ListQuerySqlFragmentHelpers.WrapOuterListQuery(
+                strSql, querySqlList, superQuerySqlCondition, dataRuleSqlCondition, dataPermissionsSqlCondition);
         }
         else if (!templateInfo.AuxiliaryTableFieldsModelList.Any())
         {
-            fields.Add(primaryKey); // 主键
-            fields.Add("f_inte_assistant"); // 集成助手数据标识
-            if (templateInfo.WebType.Equals(3)) fields.Add("f_flow_id");
-            tableFieldKeyValue.Add(primaryKey.ToUpper(), primaryKey);
-            tableFieldKeyValue.Add("f_flow_id".ToUpper(), "f_flow_id");
-            tableFieldKeyValue.Add("f_inte_assistant".ToUpper(), "f_inte_assistant");
+            ListQuerySqlProjectionHelpers.SeedSystemProjectionFields(
+                fields, tableFieldKeyValue, primaryKey, templateInfo.WebType.Equals(3), mainTablePrefix: null);
 
             var inputJson = input.queryJson?.ToObject<Dictionary<string, object>>();
             for (int i = 0; i < templateInfo.MainTableFieldsModelList.Count; i++)
@@ -3485,21 +2744,13 @@ public class RunService : IRunService, ITransient, IDisposable
                     fields.Add(templateInfo.MainTableFieldsModelList[i].__config__.tableName + "." + vmodel + " FIELD_" + i); // TableName.Field_0
                     tableFieldKeyValue.Add("FIELD_" + i, templateInfo.MainTableFieldsModelList[i].__vModel__);
 
-                    // 查询字段替换
-                    if (inputJson != null && inputJson.Count > 0 && inputJson.ContainsKey(templateInfo.MainTableFieldsModelList[i].__vModel__))
-                        input.queryJson = input.queryJson.Replace("\"" + templateInfo.MainTableFieldsModelList[i].__vModel__ + "\":", "\"FIELD_" + i + "\":");
-                    if (input.superQueryJson.IsNotEmptyOrNull())
-                        input.superQueryJson = input.superQueryJson.Replace(string.Format("\"field\":\"{0}\"", templateInfo.MainTableFieldsModelList[i].__vModel__), string.Format("\"field\":\"{0}\"", "FIELD_" + i));
-                    if (input.dataRuleJson.IsNotEmptyOrNull())
-                        input.dataRuleJson = input.dataRuleJson.Replace(string.Format("\"FieldName\":\"{0}\"", templateInfo.MainTableFieldsModelList[i].__vModel__), string.Format("\"FieldName\":\"{0}\"", "FIELD_" + i));
-
-                    templateInfo.ColumnData.searchList.Where(x => x.__vModel__ == templateInfo.MainTableFieldsModelList[i].__vModel__).ToList().ForEach(item =>
-                    {
-                        item.__vModel__ = item.__vModel__.Replace(templateInfo.MainTableFieldsModelList[i].__vModel__, "FIELD_" + i);
-                    });
-
-                    // 排序字段替换
-                    if (input.sidx.IsNotEmptyOrNull()) input.sidx = input.sidx.Replace(templateInfo.MainTableFieldsModelList[i].__vModel__, "FIELD_" + i);
+                    ListQuerySqlProjectionHelpers.RemapQueryInputsToFieldAlias(
+                        input,
+                        inputJson,
+                        templateInfo.ColumnData.searchList,
+                        templateInfo.MainTableFieldsModelList[i].__vModel__,
+                        "FIELD_" + i,
+                        remapSearchId: false);
                 }
             }
 			
@@ -3525,11 +2776,10 @@ public class RunService : IRunService, ITransient, IDisposable
             if (dataPermissions != null && dataPermissions.Any())
             {
                 // 替换数据权限字段 别名
-                var pvalue = dataPermissions.ToJsonStringOld();
-                foreach (var item in tableFieldKeyValue)
-                {
-                    pvalue = pvalue.Replace(string.Format("\"FieldName\":\"{0}\",", templateInfo.MainTableName + "." + item.Value), string.Format("\"FieldName\":\"{0}\",", item.Key));
-                }
+                var pvalue = ListQuerySqlFragmentHelpers.RewriteMainTablePermissionFieldNames(
+                    dataPermissions.ToJsonStringOld(),
+                    tableFieldKeyValue,
+                    templateInfo.MainTableName);
 
                 List<IConditionalModel>? newPvalue = new List<IConditionalModel>();
                 if (pvalue.IsNotEmptyOrNull()) newPvalue = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(pvalue);
@@ -3543,12 +2793,12 @@ public class RunService : IRunService, ITransient, IDisposable
             #region 所有主、副表 字段名 和 处理查询、排序字段
 
             // 所有主、副表 字段名
-            fields.Add(templateInfo.MainTableName + "." + primaryKey);
-            fields.Add(templateInfo.MainTableName + ".f_inte_assistant"); // 集成助手数据标识
-            if (templateInfo.WebType.Equals(3)) fields.Add(templateInfo.MainTableName + ".f_flow_id");
-            tableFieldKeyValue.Add(primaryKey.ToUpper(), primaryKey);
-            tableFieldKeyValue.Add("f_flow_id".ToUpper(), "f_flow_id");
-            tableFieldKeyValue.Add("f_inte_assistant".ToUpper(), "f_inte_assistant");
+            ListQuerySqlProjectionHelpers.SeedSystemProjectionFields(
+                fields,
+                tableFieldKeyValue,
+                primaryKey,
+                templateInfo.WebType.Equals(3),
+                mainTablePrefix: templateInfo.MainTableName);
             Dictionary<string, object>? inputJson = input.queryJson?.ToObject<Dictionary<string, object>>();
             for (int i = 0; i < templateInfo.SingleFormData.Count; i++)
             {
@@ -3570,22 +2820,13 @@ public class RunService : IRunService, ITransient, IDisposable
                     fields.Add(currField.__config__.tableName + "." + vmodel + " FIELD_" + i); // TableName.Field_0
                     tableFieldKeyValue.Add("FIELD_" + i, currField.__vModel__);
 
-                    // 查询字段替换
-                    if (inputJson != null && inputJson.Count > 0 && inputJson.ContainsKey(currField.__vModel__))
-                        input.queryJson = input.queryJson.Replace("\"" + currField.__vModel__ + "\":", "\"FIELD_" + i + "\":");
-                    if (input.superQueryJson.IsNotEmptyOrNull())
-                        input.superQueryJson = input.superQueryJson.Replace(string.Format("\"field\":\"{0}\"", currField.__vModel__), string.Format("\"field\":\"{0}\"", "FIELD_" + i));
-                    if (input.dataRuleJson.IsNotEmptyOrNull())
-                        input.dataRuleJson = input.dataRuleJson.Replace(string.Format("\"FieldName\":\"{0}\"", currField.__vModel__), string.Format("\"FieldName\":\"{0}\"", "FIELD_" + i));
-
-                    templateInfo.ColumnData.searchList.Where(x => x.__vModel__ == currField.__vModel__).ToList().ForEach(item =>
-                    {
-                        item.id = item.id.Replace(currField.__vModel__, "FIELD_" + i);
-                        item.__vModel__ = item.__vModel__.Replace(currField.__vModel__, "FIELD_" + i);
-                    });
-
-                    // 排序字段替换
-                    if (input.sidx.IsNotEmptyOrNull()) input.sidx = input.sidx.Replace(currField.__vModel__, "FIELD_" + i);
+                    ListQuerySqlProjectionHelpers.RemapQueryInputsToFieldAlias(
+                        input,
+                        inputJson,
+                        templateInfo.ColumnData.searchList,
+                        currField.__vModel__,
+                        "FIELD_" + i,
+                        remapSearchId: true);
                 }
             }
 
@@ -3593,13 +2834,11 @@ public class RunService : IRunService, ITransient, IDisposable
 
             #region 关联字段
 
-            List<string>? relationKey = new List<string>();
             List<string>? auxiliaryFieldList = templateInfo.AuxiliaryTableFieldsModelList.Select(x => x.__config__.tableName).Distinct().ToList();
-            auxiliaryFieldList.ForEach(tName =>
-            {
-                var tableField = templateInfo.AllTable.Find(tf => tf.table == tName);
-                relationKey.Add(templateInfo.MainTableName + "." + tableField.relationField + "=" + tName + "." + tableField.tableField);
-            });
+            List<string>? relationKey = ListQuerySqlProjectionHelpers.BuildAuxiliaryJoinPredicates(
+                auxiliaryFieldList,
+                templateInfo.AllTable,
+                templateInfo.MainTableName);
             //modify by harry  同时检查主表与子表的软删除
             //if (templateInfo.FormModel.logicalDelete && _databaseService.IsAnyColumn(templateInfo.DbLink, templateInfo.MainTableName, "f_delete_mark"))
             //    relationKey.Add(templateInfo.MainTableName + ".f_delete_mark is null "); // 处理软删除
@@ -3639,21 +2878,11 @@ public class RunService : IRunService, ITransient, IDisposable
             if (dataPermissions != null && dataPermissions.Any())
             {
                 // 替换数据权限字段 别名
-                var pvalue = dataPermissions.ToJsonStringOld();
-                foreach (var item in tableFieldKeyValue)
-                {
-                    string? newValue = item.Value;
-                    if (templateInfo.AllTableFields.ContainsKey(item.Value)) newValue = templateInfo.AllTableFields[item.Value];
-                    if (pvalue.Contains(newValue))
-                    {
-                        pvalue = pvalue.Replace(string.Format("\"FieldName\":\"{0}\",", newValue), string.Format("\"FieldName\":\"{0}\",", item.Key));
-                    }
-                    else
-                    {
-                        if (newValue.Contains(templateInfo.MainTableName)) newValue = newValue.Replace(templateInfo.MainTableName + ".", string.Empty);
-                        if (pvalue.Contains(newValue)) pvalue = pvalue.Replace(string.Format("\"FieldName\":\"{0}\",", newValue), string.Format("\"FieldName\":\"{0}\",", item.Key));
-                    }
-                }
+                var pvalue = ListQuerySqlFragmentHelpers.RewriteJoinedPermissionFieldNames(
+                    dataPermissions.ToJsonStringOld(),
+                    tableFieldKeyValue,
+                    templateInfo.AllTableFields,
+                    templateInfo.MainTableName);
 
                 List<IConditionalModel>? newPvalue = new List<IConditionalModel>();
                 if (pvalue.IsNotEmptyOrNull()) newPvalue = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(pvalue);
@@ -3665,48 +2894,7 @@ public class RunService : IRunService, ITransient, IDisposable
         return sql;
     }
     private List<IConditionalModel> GetIConditionalModelListByTableName(List<IConditionalModel> cList, string tableName)
-    {
-        for (int i = 0; i < cList.Count; i++)
-        {
-            if (cList[i] is ConditionalTree)
-            {
-                var newItem = (ConditionalTree)cList[i];
-                for (int j = 0; j < newItem.ConditionalList.Count; j++)
-                {
-                    var value = GetIConditionalModelListByTableName(new List<IConditionalModel>() { newItem.ConditionalList[j].Value }, tableName);
-                    if (value != null && value.Any())
-                    {
-                        if (newItem.ConditionalList[j].Equals(newItem.ConditionalList.FirstOrDefault()))
-                            newItem.ConditionalList[j] = new KeyValuePair<WhereType, IConditionalModel>(WhereType.Null, value.First());
-                        else
-                            newItem.ConditionalList[j] = new KeyValuePair<WhereType, IConditionalModel>(newItem.ConditionalList[j].Key, value.First());
-                    }
-                    else
-                    {
-                        newItem.ConditionalList.RemoveAt(j);
-                        j--;
-                    }
-                }
-
-                if (newItem.ConditionalList.Any())
-                {
-                    cList[i] = newItem;
-                }
-                else
-                {
-                    cList.RemoveAt(i);
-                    i--;
-                }
-            }
-            else if (cList[i] is ConditionalModel)
-            {
-                var newItem = (ConditionalModel)cList[i];
-                if (!newItem.FieldName.Contains(tableName)) cList.RemoveAt(i);
-            }
-        }
-
-        return cList;
-    }
+        => ListConditionalByTableNameFilter.Filter(cList, tableName);
 
     /// <summary>
     /// 组装单条信息查询sql.
@@ -4396,37 +3584,10 @@ public class RunService : IRunService, ITransient, IDisposable
         List<IConditionalModel> dataPermissions,
         int? isConvertData = null)
     {
-        var ids = new List<object>();
-        result.list.ForEach(item => ids.Add(item[primaryKey]));
-
-        var childTableList = new Dictionary<string, List<string>>();
-
-        templateInfo.AllFieldsModel.Where(x => x.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE)).ToList().ForEach(ctitem =>
-        {
-            templateInfo.AllFieldsModel.Where(x => x.__vModel__.Contains(ctitem.__vModel__ + "-")).ToList().ForEach(item =>
-            {
-                var value = item.__vModel__.Split("-").Last();
-                if (value.IsNotEmptyOrNull())
-                {
-                    if (childTableList.ContainsKey(ctitem.__config__.tableName)) childTableList[ctitem.__config__.tableName].Add(value);
-                    else childTableList.Add(ctitem.__config__.tableName, new List<string>() { value });
-                }
-            });
-        });
-
-        var relationField = new Dictionary<string, string>();
-        templateInfo.ChildTableFieldsModelList.ForEach(item =>
-        {
-            var tableField = templateInfo.AllTable.Find(tf => tf.table == item.__config__.tableName)?.tableField;
-            if (!relationField.ContainsKey(item.__config__.tableName)) relationField.Add(item.__config__.tableName, tableField);
-        });
-
-        var dataRuleJson = dataRuleList.ToJsonStringOld();
-        foreach (var item in templateInfo.AllTableFields)
-        {
-            if (dataRuleJson.IsNotEmptyOrNull() && dataRuleJson.Contains(string.Format("\"{0}\"", item.Key)))
-                dataRuleJson = dataRuleJson.Replace(string.Format("\"{0}\"", item.Key), string.Format("\"{0}\"", item.Value));
-        }
+        var ids = ListChildTableHelpers.CollectParentIds(result.list, primaryKey);
+        var childTableList = ListChildTableHelpers.BuildChildTableSelectColumns(templateInfo.AllFieldsModel);
+        var relationField = ListChildTableHelpers.BuildRelationFields(templateInfo.ChildTableFieldsModelList, templateInfo.AllTable);
+        var dataRuleJson = ListChildTableHelpers.RewriteQuotedMapKeys(dataRuleList.ToJsonStringOld(), templateInfo.AllTableFields);
 
         // 捞取 所有子表查询条件 <tableName , where>
         var childTableQuery = new Dictionary<string, List<IConditionalModel>>();
@@ -4445,16 +3606,7 @@ public class RunService : IRunService, ITransient, IDisposable
             var conList = query.Where(x => x.ConditionalList.Any(xx => xx.Value.FieldName.Equals(item.Key))).ToList();
             if (conList.Any())
             {
-                foreach (var it in conList)
-                {
-                    it.ConditionalList.ForEach(x =>
-                    {
-                        if (templateInfo.ChildTableFields.ContainsKey(x.Value.FieldName))
-                        {
-                            x.Value.FieldName = templateInfo.ChildTableFields[x.Value.FieldName];
-                        }
-                    });
-                }
+                ListChildTableHelpers.RewriteChildFieldNames(conList, templateInfo.ChildTableFields);
 
                 if (!childTableQuery.ContainsKey(tableName)) childTableQuery.Add(tableName, new List<IConditionalModel>());
                 childTableQuery[tableName].AddRange(conList);
@@ -4462,35 +3614,23 @@ public class RunService : IRunService, ITransient, IDisposable
         }
 
         // 处理高级查询值名称
-        foreach (ConditionalCollections item in superQuerList)
-        {
-            foreach (var sitem in item.ConditionalList)
-            {
-                if (templateInfo.ChildTableFields.ContainsKey(sitem.Value.FieldName))
-                    sitem.Value.FieldName = templateInfo.ChildTableFields[sitem.Value.FieldName];
-            }
-        }
+        ListChildTableHelpers.RewriteChildFieldNames(superQuerList.Cast<ConditionalCollections>(), templateInfo.ChildTableFields);
 
         foreach (var item in childTableList)
         {
-            item.Value.Add(relationField[item.Key]);
-            var sql = string.Format("select {0} from {1} where {2} in('{3}')", string.Join(",", item.Value), item.Key, relationField[item.Key], string.Join("','", ids));
+            var sql = ListChildTableHelpers.BuildChildTableInSql(item.Value, item.Key, relationField[item.Key], ids);
             if (childTableQuery.ContainsKey(item.Key)) // 子表查询条件
             {
                 var itemWhere = _visualDevRepository.AsSugarClient().SqlQueryable<dynamic>("@").Where(childTableQuery[item.Key]).ToSqlString();
-                if (itemWhere.Contains("WHERE")) sql = string.Format(" {0} and {1} ", sql, itemWhere.Split("WHERE").Last());
+                sql = ListChildTableHelpers.AppendAndWhereFragment(sql, itemWhere);
             }
 
             // 拼接高级查询
             var superQueryConList = new List<IConditionalModel>();
             if (superQuerList != null && superQuerList.Any())
             {
-                var sList = new List<object>();
                 var allSuperQuery = superQuerList.ToJsonStringOld().ToObject<List<object>>();
-                allSuperQuery.ForEach(it =>
-                {
-                    if (it.ToJsonString().Contains(item.Key + ".")) sList.Add(it);
-                });
+                var sList = ListChildTableHelpers.FilterObjectsContainingTablePrefix(allSuperQuery, item.Key);
                 if (sList.Any())
                 {
                     superQueryConList = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(sList.ToJsonString());
@@ -4504,12 +3644,8 @@ public class RunService : IRunService, ITransient, IDisposable
             var dataPermissionsList = new List<IConditionalModel>();
             if (dataPermissions != null && dataPermissions.Any())
             {
-                var pList = new List<object>();
                 var allPersissions = dataPermissions.ToObject<List<object>>();
-                allPersissions.ForEach(it =>
-                {
-                    if (it.ToJsonString().Contains(item.Key + ".")) pList.Add(it);
-                });
+                var pList = ListChildTableHelpers.FilterObjectsContainingTablePrefix(allPersissions, item.Key);
                 if (pList.Any())
                 {
                     dataPermissionsList = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(pList.ToJsonString());
@@ -4523,12 +3659,8 @@ public class RunService : IRunService, ITransient, IDisposable
             var dataRuleConditionalList = new List<IConditionalModel>();
             if (dataRule != null && dataRule.Any())
             {
-                var pList = new List<object>();
                 var allPersissions = dataRule.ToJsonStringOld().ToObject<List<object>>();
-                allPersissions.ForEach(it =>
-                {
-                    if (it.ToJsonString().Contains(item.Key + ".")) pList.Add(it);
-                });
+                var pList = ListChildTableHelpers.FilterObjectsContainingTablePrefix(allPersissions, item.Key);
                 if (pList.Any())
                 {
                     dataRuleConditionalList = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(pList.ToJsonString());
@@ -4547,7 +3679,7 @@ public class RunService : IRunService, ITransient, IDisposable
             {
                 foreach (var it in result.list)
                 {
-                    var rows = dt.Where(x => x[relationField[item.Key]].ToString().Equals(it[primaryKey].ToString())).ToList();
+                    var rows = ListChildTableHelpers.MatchRowsByRelation(dt, relationField[item.Key], it[primaryKey]);
                     foreach (var row in rows) row["JnpfKeyConst_MainData"] = it.ToJsonString();
                     var childTableModel = templateInfo.ChildTableFieldsModelList.First(x => x.__vModel__.Equals(vModel));
 
@@ -4556,14 +3688,7 @@ public class RunService : IRunService, ITransient, IDisposable
                         datas = await _formDataParsing.GetKeyData(childTableModel.__config__.children.Where(x => x.__config__.templateJson != null && x.__config__.templateJson.Any()).ToList(), rows, templateInfo.ColumnData, "List", templateInfo.WebType, primaryKey, templateInfo.visualDevEntity.isShortLink, isConvertData);
                     datas = await _formDataParsing.GetKeyData(childTableModel.__config__.children.Where(x => x.__config__.templateJson == null || !x.__config__.templateJson.Any()).ToList(), rows, templateInfo.ColumnData, "List", templateInfo.WebType, primaryKey, templateInfo.visualDevEntity.isShortLink, isConvertData);
 
-                    var newDatas = new List<Dictionary<string, object>>();
-                    foreach (var data in datas)
-                    {
-                        var newData = data.Copy();
-                        newData.Remove("JnpfKeyConst_MainData");
-                        newData.Remove(relationField[item.Key]);
-                        newDatas.Add(newData);
-                    }
+                    var newDatas = ListChildTableHelpers.StripChildRowMeta(datas, relationField[item.Key]);
                     it.Add(vModel, newDatas);
                 }
             }
@@ -4737,99 +3862,7 @@ public class RunService : IRunService, ITransient, IDisposable
     /// <param name="newModel">新控件模型.</param>
     /// <returns>true 可以传递, false 不可以</returns>
     private bool DataTransferVerify(FieldsModel oldModel, FieldsModel newModel)
-    {
-        switch (oldModel.__config__.jnpfKey)
-        {
-            case JnpfKeyConst.COMINPUT:
-            case JnpfKeyConst.TEXTAREA:
-            case JnpfKeyConst.RADIO:
-            case JnpfKeyConst.EDITOR:
-                if (!(newModel.__config__.jnpfKey.Equals(JnpfKeyConst.COMINPUT) ||
-                    newModel.__config__.jnpfKey.Equals(JnpfKeyConst.TEXTAREA) ||
-                    newModel.__config__.jnpfKey.Equals(JnpfKeyConst.RADIO) ||
-                    (newModel.__config__.jnpfKey.Equals(JnpfKeyConst.SELECT) && !newModel.multiple) ||
-                    newModel.__config__.jnpfKey.Equals(JnpfKeyConst.EDITOR)))
-                    return false;
-                break;
-            case JnpfKeyConst.CHECKBOX:
-                if (!((newModel.__config__.jnpfKey.Equals(JnpfKeyConst.POPUPTABLESELECT) && newModel.multiple) ||
-                    (newModel.__config__.jnpfKey.Equals(JnpfKeyConst.SELECT) && newModel.multiple) ||
-                    (newModel.__config__.jnpfKey.Equals(JnpfKeyConst.TREESELECT) && newModel.multiple) ||
-                    newModel.__config__.jnpfKey.Equals(JnpfKeyConst.CHECKBOX) ||
-                    newModel.__config__.jnpfKey.Equals(JnpfKeyConst.CASCADER)))
-                    return false;
-                break;
-            case JnpfKeyConst.NUMINPUT:
-            case JnpfKeyConst.DATE:
-            case JnpfKeyConst.TIME:
-            case JnpfKeyConst.UPLOADFZ:
-            case JnpfKeyConst.UPLOADIMG:
-            case JnpfKeyConst.COLORPICKER:
-            case JnpfKeyConst.RATE:
-            case JnpfKeyConst.SLIDER:
-                if (!(oldModel.__config__.jnpfKey.Equals(newModel.__config__.jnpfKey)))
-                    return false;
-                break;
-            case JnpfKeyConst.COMSELECT:
-            case JnpfKeyConst.DEPSELECT:
-            case JnpfKeyConst.POSSELECT:
-            case JnpfKeyConst.USERSELECT:
-            case JnpfKeyConst.ROLESELECT:
-            case JnpfKeyConst.GROUPSELECT:
-            case JnpfKeyConst.ADDRESS:
-                if (!(oldModel.__config__.jnpfKey.Equals(newModel.__config__.jnpfKey) && oldModel.multiple.Equals(newModel.multiple)))
-                    return false;
-                break;
-            case JnpfKeyConst.TREESELECT:
-                if (oldModel.multiple)
-                {
-                    if (!((newModel.__config__.jnpfKey.Equals(JnpfKeyConst.POPUPTABLESELECT) && newModel.multiple) ||
-                        (newModel.__config__.jnpfKey.Equals(JnpfKeyConst.SELECT) && newModel.multiple) ||
-                        (newModel.__config__.jnpfKey.Equals(JnpfKeyConst.TREESELECT) && newModel.multiple) ||
-                        newModel.__config__.jnpfKey.Equals(JnpfKeyConst.CASCADER)))
-                        return false;
-                }
-                else
-                {
-                    if (!(newModel.__config__.jnpfKey.Equals(JnpfKeyConst.COMINPUT) ||
-                        newModel.__config__.jnpfKey.Equals(JnpfKeyConst.TEXTAREA) ||
-                        newModel.__config__.jnpfKey.Equals(JnpfKeyConst.RADIO) ||
-                        (newModel.__config__.jnpfKey.Equals(JnpfKeyConst.SELECT) && !newModel.multiple) ||
-                        (newModel.__config__.jnpfKey.Equals(JnpfKeyConst.TREESELECT) && !newModel.multiple) ||
-                        newModel.__config__.jnpfKey.Equals(JnpfKeyConst.EDITOR)))
-                        return false;
-                }
-
-                break;
-            case JnpfKeyConst.POPUPTABLESELECT:
-                if (oldModel.multiple)
-                {
-                    if (!((newModel.__config__.jnpfKey.Equals(JnpfKeyConst.POPUPTABLESELECT) && newModel.multiple) ||
-                        (newModel.__config__.jnpfKey.Equals(JnpfKeyConst.SELECT) && newModel.multiple) ||
-                        (newModel.__config__.jnpfKey.Equals(JnpfKeyConst.TREESELECT) && newModel.multiple) ||
-                        newModel.__config__.jnpfKey.Equals(JnpfKeyConst.CASCADER)))
-                        return false;
-                }
-                else
-                {
-                    if (!((newModel.__config__.jnpfKey.Equals(JnpfKeyConst.POPUPTABLESELECT) && !newModel.multiple) ||
-                        (newModel.__config__.jnpfKey.Equals(JnpfKeyConst.RELATIONFORM)) ||
-                        (newModel.__config__.jnpfKey.Equals(JnpfKeyConst.POPUPSELECT))))
-                        return false;
-                }
-
-                break;
-            case JnpfKeyConst.POPUPSELECT:
-            case JnpfKeyConst.RELATIONFORM:
-                if (!((newModel.__config__.jnpfKey.Equals(JnpfKeyConst.RELATIONFORM)) ||
-                    (newModel.__config__.jnpfKey.Equals(JnpfKeyConst.POPUPSELECT)) ||
-                    (newModel.__config__.jnpfKey.Equals(JnpfKeyConst.POPUPTABLESELECT) && !newModel.multiple)))
-                    return false;
-                break;
-        }
-
-        return true;
-    }
+        => FlowFormDataTransferRules.CanTransfer(oldModel, newModel);
 
     /// <summary>
     /// 处理数据视图.

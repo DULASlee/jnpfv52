@@ -1,0 +1,28 @@
+{
+  "wave": "W-codegen",
+  "knife": "TemplatesDataAggregationHelpers",
+  "date": "2026-08-08",
+  "status": "PASS",
+  "summary": "Extract TemplatesDataAggregation pure shaping: column JSON patches, useDataPermission OR+WebType gate, unified-form gate, generation-model judgment, main backend path switch, sub/secondary split, child/auxiliary relation DTO shaping, child PK injection. DB/view-engine/file IO stay in CodeGenService. Removed private JudgmentGenerationModel twin.",
+  "artifacts": {
+    "helper": "backend/modularity/codegen/JNPF.CodeGen/Helpers/TemplatesDataAggregationHelpers.cs",
+    "callSites": [
+      "CodeGenService.TemplatesDataAggregation"
+    ],
+    "tests": "backend/tests/JNPF.Tests.CodeGen/TemplatesDataAggregationHelpersTests.cs",
+    "sln": "backend/zx_lowcode_netcore.sln (+ JNPF.Tests.CodeGen)",
+    "removed": "CodeGenService.JudgmentGenerationModel private twin; duplicated path switches / relation object initializers"
+  },
+  "verification": {
+    "TemplatesDataAggregationHelpersTests": "27/27",
+    "command": "dotnet test tests/JNPF.Tests.CodeGen/JNPF.Tests.CodeGen.csproj --filter FullyQualifiedName~TemplatesDataAggregationHelpersTests",
+    "hotspotDoc": "docs/architecture/v52/design-quality-hotspot-top20.md TemplatesDataAggregation row -> partial (W-codegen TemplatesDataAggregationHelpers)",
+    "codeReview": "PASS",
+    "notes": [
+      "Behavior fidelity: ResolveUseDataPermission keeps four-branch OR then WebType=1 force false",
+      "ResolveMainBackendPaths returns null on WebType=2+TableType=4+Type=3 empty break (leave prior lists)",
+      "JudgeGenerationModel MainBelt→PrimarySecondary upgrade when TABLE control count short",
+      "No public API rename"
+    ]
+  }
+}

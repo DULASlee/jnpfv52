@@ -1,0 +1,18 @@
+{
+  "wave": "W2+",
+  "knife": "ListQueryInputHelpers",
+  "date": "2026-08-07",
+  "status": "PASS",
+  "summary": "Extract GetListResult search-list enrich, effective page size, flow primary remap; removed unused ListQuerySearchFieldEnricher twin.",
+  "artifacts": {
+    "helper": "backend/modularity/visualdev/JNPF.VisualDev/Query/ListQueryInputHelpers.cs",
+    "callSites": ["RunService.GetListResult", "RunService.GetRelationFormList"],
+    "tests": "backend/tests/JNPF.Tests.VisualDev/ListQueryInputHelpersTests.cs",
+    "prior": "ListResultShapeHelpers / ListRowEditEchoHelpers"
+  },
+  "verification": {
+    "ListQueryInputHelpersTests": "8/8",
+    "VisualDevSuite": "178 (before Dictionary test + twin delete)",
+    "codeReview": "PASS; deleted unwired twin Enricher"
+  }
+}

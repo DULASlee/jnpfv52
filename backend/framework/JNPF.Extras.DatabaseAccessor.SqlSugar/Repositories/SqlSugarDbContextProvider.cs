@@ -34,8 +34,10 @@ public class SqlSugarDbContextProvider : ISqlSugarDbContextProvider
         var context = ResolveTenantConnection();
 
         // 第二步：应用租户字段隔离查询过滤器
+        // r4-safe: 超管跨租户管理，豁免 ITenantFilter（方案 A，详见 AdminBypassGuard）
         if (_tenantContext.IsMultiTenant && !_tenantContext.IsDefaultTenant()
-            && _tenantContext.IsolationType == 1)
+            && _tenantContext.IsolationType == 1
+            && !AdminBypassGuard.IsAdministrator())
         {
             var fieldValue = _tenantContext.IsolationFieldValue;
             if (!string.IsNullOrEmpty(fieldValue))
@@ -116,8 +118,23 @@ public class SqlSugarDbContextProvider : ISqlSugarDbContextProvider
         try
         {
             var cache = App.GetService<ICacheManager>();
-            var tenantCacheList = cache?.Get<List<GlobalTenantCacheModel>>("jnpf:global:tenant");
-            return tenantCacheList?.FirstOrDefault(t => t.TenantId == tenantId);
+            if (cache == null) return null;
+
+            // 首选：按租户 Key 直接获取（O(1)），避免全量反序列化 + O(n) 线性搜索
+            var perTenantKey = $"jnpf:global:tenant:{tenantId}";
+            var tenantCache = cache.Get<GlobalTenantCacheModel>(perTenantKey);
+            if (tenantCache != null) return tenantCache;
+
+            // 回退：从全量列表中查找（兼容未填充按租户 Key 的旧缓存数据）
+            var tenantCacheList = cache.Get<List<GlobalTenantCacheModel>>("jnpf:global:tenant");
+            tenantCache = tenantCacheList?.FirstOrDefault(t => t.TenantId == tenantId);
+            if (tenantCache != null)
+            {
+                // 回填按租户 Key，后续请求直接命中 O(1)
+                cache.Set(perTenantKey, tenantCache);
+            }
+
+            return tenantCache;
         }
         catch
         {

@@ -9,7 +9,6 @@ using JNPF.Extras.CollectiveOAuth.Models;
 using JNPF.Extras.CollectiveOAuth.Utils;
 using JNPF.Extras.Thirdparty.WeChat;
 using JNPF.Extras.Thirdparty.WeChat.Internal;
-using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.Logging.Attributes;
 using JNPF.Message.Entitys.Entity;
 using JNPF.Systems.Entitys.Permission;
@@ -78,7 +77,7 @@ public class WechatMiniProgramService : IDynamicApiController, ITransient
     }
 
     [NonAction]
-    public async Task SendMessage(MessageTemplateEntity templateEntity, IntegrateTaskEntity? taskEntity, MessageAccountEntity accountEntity, UserEntity user)
+    public async Task SendMessage(MessageTemplateEntity templateEntity, IntegrateTaskMessageDto? taskEntity, MessageAccountEntity accountEntity, UserEntity user)
     {
         if (string.IsNullOrEmpty( user.OpenId))
         {

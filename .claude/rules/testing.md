@@ -16,7 +16,7 @@ NO TASK IS COMPLETE WITHOUT RUNNING THE ACTUAL TEST COMMAND
 
 ```
 ✅ 测试自检清单：
-- [ ] IDENTIFY — 确定验证命令（dotnet build / vue-tsc --noEmit / playwright）
+- [ ] IDENTIFY — 确定验证命令（dotnet build / pnpm type-check / playwright）
 - [ ] RUN — 执行完整命令（本次、实时，不是上次结果）
 - [ ] READ — 读完整输出，检查 exit code，数失败数
 - [ ] VERIFY — 输出是否确认了声称？否 → 如实报告实际状态
@@ -74,11 +74,26 @@ NO TASK IS COMPLETE WITHOUT RUNNING THE ACTUAL TEST COMMAND
 | 项目 | 日常验证（快速） | 发布前验证（完整） | 何时触发 |
 |---|---|---|---|
 | 后端（JNPF.API.Entry） | `dotnet build` | `dotnet build -c Release` | 修改 .cs 文件后 |
-| 前端（jnpf-web-vue3） | `vue-tsc --noEmit` | `pnpm run build` | 修改 .vue/.ts 文件后 |
+| 前端（jnpf-web-vue3） | `pnpm type-check`（Studio；legacy 用 `type-check:full`） | `pnpm run build` | 修改 .vue/.ts 文件后 |
+| **后端 API / Skill / IR** | **`pnpm test:api`（首选 ~10s）** + `jnpf-api.mjs`；mjs 分步仅 watch/evidence | `dotnet test --filter *E2E*` | 修改 inteAssistant/Studio API 后 |
 | DataV（jnpf-web-datascreen） | `vue-tsc --noEmit` | `pnpm run build` | 仅当被修改时 |
 | UniApp（jnpf-app-vue3） | `vue-tsc --noEmit` | `pnpm run build` | 仅当被修改时 |
 
+**API 验证主路径（禁止手点浏览器登录）：**
+
+```powershell
+node scripts/lib/jnpf-auth.mjs --json
+E2E_PIPELINE_ID=311 pnpm test:api              # ① 快断言（日常默认）
+pnpm sync:http-env                               # ② 探针（按需）
+node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser
+node scripts/phase-sup-s2-e2e.mjs verify         # ③ evidence/长链（按需）
+```
+
+详见 `.cursor/rules/testing-toolchain.mdc` · `openspec/specs/studio-e2e-toolchain/spec.md` · `api-tests/README.md`
+
 **日常开发用快速验证（type-check / build），发布前跑完整 build。**
+
+**前端类型检查细则：** `.cursor/rules/frontend-typecheck.mdc` — 禁止 `npx vue-tsc --noEmit` 裸跑全量 src。
 
 **不验证的项目（与 R5 一致）：**
 - OA（禁用）

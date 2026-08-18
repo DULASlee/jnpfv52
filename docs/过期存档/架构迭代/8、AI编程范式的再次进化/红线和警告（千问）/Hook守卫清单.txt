@@ -1,0 +1,135 @@
+======================================================================
+  JNPF v5.2 Hook 守卫清单 — 全部 L0/L1 拦截规则
+  来源: .claude/hooks/*.mjs / CLAUDE.md Hooks表
+======================================================================
+
+exit 2 = 硬阻断（L0，AI无法绕过）  |  exit 1 = 警告（L1，AI可忽略）
+
+---------------------------------------------------------------------------
+PreToolUse(Write|Edit|MultiEdit) — 写入前守卫（6个）
+---------------------------------------------------------------------------
+
+guard-write.mjs [L0]
+  三层守卫:
+    L1: 密钥/凭证文件拦截（.env .pem .key .pfx）
+    L2: 空文件拦截（禁止清空源文件内容）
+    L3: 安全扫描（硬编码密钥/eval/命令注入/SQL拼接）
+
+guard-oa-module.mjs [L0] — R5 模块边界
+  拦截路径: **/JNPF.OA.*/**  |  **/JNPF.IoT.*/**  |  **/JNPF.MES./**
+  拦截内容: OA模块写入 / IoT/MES新建
+
+guard-sql-injection.mjs [L0] — R7 SQL注入
+  拦截模式:
+    CRITICAL(exit2): $"DROP/DELETE/SELECT/INSERT/UPDATE" + 字符串插值
+    CRITICAL(exit2): string.Format() + SQL关键字
+    CRITICAL(exit2): Ado.SqlQuery/Ado.ExecuteCommand + $"
+    HIGH(exit1): 未参数化原始SQL（无$）
+
+guard-auth.mjs [L0] — R8 API权限
+  拦截: 含 IDynamicApiController 但无 [SecurityDefine]/[AllowAnonymous]/[Authorize] 的.cs
+
+guard-tenant-filter.mjs [L0] — R4 多租户
+  拦截: DisableGlobalFilter / Updateable无Where / Deleteable无Where / 原生SQL无WHERE
+
+guard-frontend-leak.mjs [L0] — R6 前端内存泄漏
+  拦截:
+    - setTimeout/setInterval 返回值未保存到变量
+    - 无 clearTimeout/clearInterval 清理
+    - EventSource 无 MAX_RETRIES 上限
+    - onerror 中直接同步调用 connect()
+
+---------------------------------------------------------------------------
+PreToolUse(Bash) — 命令守卫（1个）
+---------------------------------------------------------------------------
+
+guard-bash.mjs [L0]
+  拦截:
+    - rm -rf /（及变体）
+    - DROP DATABASE / DROP TABLE
+    - git push --force / git reset --hard
+    - curl | bash 管道执行
+
+---------------------------------------------------------------------------
+PreToolUse(Skill) — 技能限速（1个）
+---------------------------------------------------------------------------
+
+guard-skill-load.mjs [L0]
+  限速: 15s窗口内最多6次Skill调用，同一Skill最小间隔2s
+  超限: exit 2 阻断
+
+---------------------------------------------------------------------------
+PreToolUse(Write|Edit) — 工作流守卫（1个）
+---------------------------------------------------------------------------
+
+guard-workflow.mjs [L0]
+  强制阶段顺序:
+    GATE0: workflow-state.json 无 sp → exit 2
+    GATE1: brainstorming 未完成 → exit 2
+    GATE2.5: codegraph-explore 未完成(S/A) → exit 2
+    GATE2: writing-plans 未完成(S/A) → exit 2
+    GATE3: executing-plans/subagent/dispatching/worktrees 全未完成(S/A) → exit 2
+    GATE4: verification 未完成(≥4edits) → exit 2
+    GATE5: code-review 未完成(≥5edits) → exit 2
+    GATE6: receiving-code-review 未完成(≥6edits) → exit 2
+  豁免: .claude/ 路径下的文件写入不触发检查
+
+---------------------------------------------------------------------------
+PostToolUse(Write|Edit|MultiEdit) — 写入后钩子（2个）
+---------------------------------------------------------------------------
+
+smart-post-hook.mjs
+  - 追踪脏文件数量
+  - 脏文件≤3时自动 eslint --fix
+  - 脏文件过多时警告
+
+format-and-lint.mjs [ORPHAN — 已被smart-post-hook替代]
+  - Prettier + ESLint 自动格式化
+
+---------------------------------------------------------------------------
+SessionStart — 会话开始（1个活跃）
+---------------------------------------------------------------------------
+
+session-scheduler.mjs
+  - 60s防抖（防重复SessionStart）
+  - 30min TTL（session resume事件）
+  - 轻量错题本摘要注入
+
+superpowers-check.mjs [ORPHAN — 已迁移至session-scheduler]
+load-mistakes.mjs [ORPHAN — 已迁移至session-scheduler]
+
+---------------------------------------------------------------------------
+Stop — 会话结束（2个活跃）
+---------------------------------------------------------------------------
+
+guard-finish.mjs [L0] — Supreme Iron Law
+  L1: dotnet build（后端变更时）
+  L2: dotnet test（后端变更+测试项目时）
+  L3: vue-tsc --noEmit（前端变更时）
+  L4: E2E截图新鲜度验证（实质性前端变更时）
+  80s超时自毁 → BLOCK
+  mistake-log无今日条目 → BLOCK
+
+collect-summary.mjs
+  - 会话变更摘要（7类分类: 新建/修改/删除/规则/hook/mcp/配置）
+
+verify-mistake-log.mjs [ORPHAN — 被guard-finish内联替代]
+post-build-verify.mjs [ORPHAN — 功能未完成]
+skill-reminder.mjs [ORPHAN — 未注册]
+
+---------------------------------------------------------------------------
+共享库
+---------------------------------------------------------------------------
+hook-lib.mjs
+  - getProjectRoot(): 项目根目录解析
+  - readStdin(ms): 异步stdin读取（带超时）
+  - shouldSkipSessionInit(): 会话防抖
+  - checkSkillLoadRate(): 技能限速
+  - readJson()/writeJson(): JSON状态文件管理
+
+---------------------------------------------------------------------------
+Git Hook
+---------------------------------------------------------------------------
+codegraph-auto-sync.sh (.git/hooks/post-commit)
+  - 每次提交后自动 codegraph sync（仅.cs变更时）
+  - 30s锁文件防抖

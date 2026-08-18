@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-08-08T15:19:31.3885211+00:00",
+  "repoRoot": "D:\\JNPF-v52",
+  "count": 1,
+  "hits": [
+    "backend/application/JNPF.API.Entry/JNPF.API.Entry.csproj"
+  ],
+  "exemptions": [
+    "backend/application/JNPF.API.Entry/JNPF.API.Entry.csproj"
+  ],
+  "commonCoreCleared": true
+}

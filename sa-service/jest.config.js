@@ -3,6 +3,10 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   testMatch: ['**/__tests__/**/*.test.ts'],
+  // uuid v14+ 是纯 ESM；用 __mocks__/uuid.js 提供 CJS 兼容 shim
+  moduleNameMapper: {
+    '^uuid$': '<rootDir>/__mocks__/uuid.js',
+  },
   collectCoverageFrom: ['src/**/*.ts'],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],

@@ -6,9 +6,51 @@ import { unref, nextTick, watch, computed, ref } from 'vue';
 import { useDebounceFn } from '@vueuse/core';
 import { useEventListener } from '/@/hooks/event/useEventListener';
 import { useBreakpoint } from '/@/hooks/event/useBreakpoint';
-import * as echarts from 'echarts';
+// 性能优化（2026-08-10）：按需注册 echarts 图表/组件，替代全量引入。
+// 全量包 ~1MB，按需后仅打包实际用到的图表（line/bar/pie/gauge/funnel/scatter/radar/parallel/graph/candlestick）。
+import * as echarts from 'echarts/core';
+import { CanvasRenderer } from 'echarts/renderers';
+import { LineChart, BarChart, PieChart, GaugeChart, FunnelChart, ScatterChart, RadarChart, ParallelChart, GraphChart, CandlestickChart } from 'echarts/charts';
+import {
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  TitleComponent,
+  DataZoomComponent,
+  ToolboxComponent,
+  MarkLineComponent,
+  MarkPointComponent,
+  RadarComponent,
+  ParallelComponent,
+  DatasetComponent,
+} from 'echarts/components';
 import { useRootSetting } from '/@/hooks/setting/useRootSetting';
 import { useMenuSetting } from '/@/hooks/setting/useMenuSetting';
+
+echarts.use([
+  CanvasRenderer,
+  LineChart,
+  BarChart,
+  PieChart,
+  GaugeChart,
+  FunnelChart,
+  ScatterChart,
+  RadarChart,
+  ParallelChart,
+  GraphChart,
+  CandlestickChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  TitleComponent,
+  DataZoomComponent,
+  ToolboxComponent,
+  MarkLineComponent,
+  MarkPointComponent,
+  RadarComponent,
+  ParallelComponent,
+  DatasetComponent,
+]);
 
 export function useECharts(elRef: Ref<HTMLDivElement>, theme: 'light' | 'dark' | 'default' = 'default') {
   const { getDarkMode: getSysDarkMode } = useRootSetting();

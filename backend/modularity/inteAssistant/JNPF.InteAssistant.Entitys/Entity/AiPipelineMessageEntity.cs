@@ -20,6 +20,28 @@ public class AiPipelineMessageEntity : TenantCLDSEntityBase
     public string PipelineId { get; set; }
 
     /// <summary>
+    /// 项目 ID(FK → ai_projects.F_Id)
+    /// 三元组:tenantId + projectId + pipelineId,NOT NULL
+    /// </summary>
+    [SugarColumn(ColumnName = "F_PROJECT_ID")]
+    public string ProjectId { get; set; } = "";
+
+    /// <summary>
+    /// 会话 ID(支持"开发任务对话冻结/恢复")。
+    /// 同一 pipelineId 下可有多个 session(每次恢复生成新 session)。
+    /// NULL 表示属于初始会话。
+    /// </summary>
+    [SugarColumn(ColumnName = "F_SESSION_ID", IsNullable = true)]
+    public string? SessionId { get; set; }
+
+    /// <summary>
+    /// 该消息是否属于已冻结会话(冻结时刻及之后的消息置 1)。
+    /// 恢复后新写入的消息为 0,从而实现"冻结点"边界。
+    /// </summary>
+    [SugarColumn(ColumnName = "F_IS_FROZEN")]
+    public bool IsFrozen { get; set; } = false;
+
+    /// <summary>
     /// 角色
     /// user / assistant / system / tool
     /// </summary>

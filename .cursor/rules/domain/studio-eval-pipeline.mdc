@@ -1,0 +1,77 @@
+---
+description: Studio Eval Pipeline（阶段七）。改 Eval/LlmJudge/SkillReview/SkillQuality/MemoryRetention 时必读。
+globs:
+  - backend/modularity/inteAssistant/**/Studio/Eval*
+  - backend/modularity/inteAssistant/**/Studio/LlmJudge*
+  - backend/modularity/inteAssistant/**/Studio/SkillReview*
+  - backend/modularity/inteAssistant/**/Studio/SkillQuality*
+  - backend/modularity/inteAssistant/**/Studio/MemoryRetention*
+  - backend/modularity/inteAssistant/**/Studio/JudgeCalibration*
+  - backend/modularity/inteAssistant/**/Job/EvalCalibration*
+alwaysApply: false
+---
+
+# Studio Eval Pipeline：四层评估 + Judge 校准（阶段七）
+
+> **知识库：** `openspec/specs/studio-eval-pipeline/spec.md`  
+> **开发计划：** `docs/AI原生开发/1、多用户多任务并行/15、全链条第七阶段开发计划.md`  
+> **验证：** `scripts/phase7-eval-verify.mjs`（23/23）
+
+## 四层 Eval Pipeline（2026-07-08 落地）
+
+| 层 | 实现 | LLM | 说明 |
+|----|------|-----|------|
+| L1 组件 | `EvalPipelineRunner.RunLayer1ComponentAsync` | 否 | IR 产出 fragment JSON Schema 校验 |
+| L2 轨迹 | `EvalPipelineRunner.RunLayer2TrajectoryAsync` | 否 | 冗余 LLM 检测（≤500 分页读 events） |
+| L3 任务 | `EvalPipelineRunner.RunLayer3TaskAsync` | 否 | DoD 完成率（run 状态 + eventCount） |
+| L4 业务 | `LlmJudgeService.JudgeAsync` | 是 fast | Judge pass/fail 二元（跨家族 mimo） |
+
+**fail-fast：** L1 不过 → 跳过 L2/L3/L4（六条生命线#2 边界）
+
+## Judge 校准（Cohen's kappa）
+
+- **跨家族 Judge**：生成走 deepseek，Judge 走 mimo（fast tier），避免自偏好偏差（+10-25% 虚高）
+- **pass/fail 二元**：非 1-5 分制，Score≥60 → PASS（强制暴露真实分歧）
+- **经 Guard**：`eval-judge` policy maxCalls=1 fast，经 `SkillLlmBudgetGuard.AcquireAsync`
+- **月度校准**：`EvalCalibrationJob`（cron `0 0 2 1 * ?`）跑 kappa，join Judge verdict × 人工 verdict
+- **kappa<0.6 → untrusted**：L4 降级为 advisory（不 gating）；样本<10 → insufficient_samples
+
+## 人工抽检（P7-E03）
+
+- `SkillReviewApiService` 双写：`BASE_AI_SKILL_REVIEW` 表（结构化 score/verdict/reviewer）+ `SkillReviewRecorded` IR 事件（审计回放）
+- 多人独立评分 → `InterRaterStats`（标准差>15 → IsDisputed 争议样本）
+- 二元口径与 Judge 对齐（Score≥60 → PASS）
+
+## 质量榜 + 记忆遗忘（P7-E04）
+
+- `SkillQualityBoardService` SQL 聚合 `ai_skill_runs`，grade A/B/C/D（↔ green/yellow/red/fuse）
+- `MemoryRetentionService.CollectFailureTracesAsync` 失败 run 回写 GoldenSet auto_seed（生产 trace→eval 闭环）
+- **边界：不删 IR events**（只裁剪 Prompt 上下文）
+
+## 验收
+
+```powershell
+# ① DoD 代码路径检查（23 项）
+node scripts/phase7-eval-verify.mjs
+
+# ② 后端编译
+dotnet build modularity/inteAssistant/JNPF.InteAssistant/JNPF.InteAssistant.csproj
+```
+
+## 禁止
+
+- ❌ L1-L3 使用 LLM（仅 L4 Judge 允许）
+- ❌ Judge 绕过 `SkillLlmBudgetGuard`
+- ❌ Judge 与生成同家族（必须 mimo vs deepseek）
+- ❌ Judge 输出 1-5 分制（必须 pass/fail 二元）
+- ❌ 记忆遗忘删除 `ai_ir_events`
+- ❌ Eval/review/质量榜查询不带 `TenantId`（R12 三元组）
+
+## 关键代码
+
+- `Studio/EvalPipelineRunner.cs` · `Studio/EvalPipelineDtos.cs`
+- `Studio/LlmJudgeService.cs` · `Studio/JudgeCalibrationService.cs`
+- `Studio/SkillReviewApiService.cs` · `Studio/SkillQualityBoardService.cs`
+- `Studio/MemoryRetentionService.cs` · `Studio/EvalService.cs`
+- `Job/EvalCalibrationJob.cs`
+- 迁移：`Migrations/20260708_Phase7_Eval_Pipeline.sql` · `Migrations/20260708_Phase7_Skill_Reviews.sql`

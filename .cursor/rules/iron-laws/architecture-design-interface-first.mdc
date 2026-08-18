@@ -1,0 +1,91 @@
+---
+description: ADF 三先行全文 — 架构/模式/契约模板与豁免。S/A 任务或 adfPhase 锁定时拉取。
+alwaysApply: false
+---
+
+# ADF 三先行铁律（Architecture → Design pattern → Interface → Impl）
+
+> **完整条款：** `.claude/rules/architecture-design-interface-first.md`  
+> **模板：** `.cursor/templates/adf-*.md` · 任务启动：`.cursor/templates/task-kickoff.md`  
+> **不另立宪法：** P0 复用 Business First；P4 复用实现完整性节点审批；P1 复用 architect-mode 多方案。
+
+## 强制顺序（S/A 级）
+
+```
+P0 业务锚定（Q1–Q3）
+ → P1 架构先行（STOP，等「继续/通过」）
+ → P2 设计模式先行（STOP，等「继续/通过」）
+ → P3 接口契约先行（STOP，等「继续/通过」）
+ → P4 实现（仍按节点审批逐步推进）
+```
+
+**未经当前阶段用户明确「继续/通过/下一步」，禁止进入下一阶段，禁止写业务实现代码。**
+
+## 任务分级触发
+
+| 级别 | 条件 | ADF |
+|---|---|---|
+| **S/A** | 新功能、跨模块、接口/数据层、≥3 文件、架构决策 | **必须**走 P0–P3 |
+| **B** | 单文件 ≤10 行 bugfix / 文案 / 注释 / 补既有行为单测 | 可豁免，**必须**声明 |
+
+豁免格式（禁止默不作声跳过）：
+
+```
+ADF 豁免：B级 — <一句话理由>
+```
+
+不适用豁免：新 Skill、改 Gate/Validator、改 IR 契约、跨前后端、改 CR 保护方法。
+
+## P1 架构先行（必须产出后 STOP）
+
+对照模板 `.cursor/templates/adf-architecture.md`：
+
+1. **层边界** — Gate / Skill / IR / API(`IDynamicApiController`) / Vue / sa-* 投影落点
+2. **数据归属 / 唯一源** — Write Model vs 投影；字段是否走 `ai_entity_field`
+3. **三元组** — `(tenantId, projectId, pipelineId)` 是否贯穿
+4. **≥2 方案 + 不做/复用 + 每方案 failure_boundary**
+5. **禁改清单 / 禁引依赖**
+6. **红线预检** R1–R12 相关项
+
+禁止：在 P1 写 `.cs`/`.vue` 实现体。
+
+## P2 设计模式先行（必须产出后 STOP）
+
+对照模板 `.cursor/templates/adf-patterns.md`：
+
+- 选定 **1–2** 个主模式
+- **映射到本仓抽象**：`SkillHarness` / `IBaseSkill` / Gate / Orchestrator / IR Event / `IDynamicApiController` 等
+- 写清 **为何不用** 至少 1 个替代模式
+- 扩展点与反模式（禁止第二字段源、编排器代问、Controller 直访仓储等）
+
+禁止：堆 GoF 名词却无本仓映射。
+
+## P3 接口契约先行（必须产出后 STOP）
+
+对照模板 `.cursor/templates/adf-contracts.md`：
+
+- 公共签名 / DTO / 事件名 / fragmentId / API 语义
+- 错误契约：`Oops.Bah`（业务）vs `Oops.Oh`（系统）
+- 影响范围（破哪些调用方）
+- **不写方法体**（默认不提交空壳文件）
+
+## P4 实现
+
+仅 P1–P3 均获「继续」后：按 `executing-plans`；每功能节点仍交实现完整性四件套，等用户审批。
+
+## 与现有铁律
+
+| 铁律 | 关系 |
+|---|---|
+| Business First | = P0 |
+| 实现完整性节点审批 | = P4 内逐步验收 |
+| architect-mode | P1 产出格式对齐其多方案+失效边界 |
+| writing-plans | S/A 施工包必须含 §架构 / §模式 / §契约 |
+| 零占位符 | 实现阶段硬拦（hooks + pre-commit） |
+
+## 禁止
+
+- ❌ S/A 任务直接写实现再补架构文档
+- ❌ P3 未批就写方法体 / 用占位符过编译
+- ❌ 用「先打通再重构」跳过 P1–P3
+- ❌ 默示跳过 ADF（无豁免声明）

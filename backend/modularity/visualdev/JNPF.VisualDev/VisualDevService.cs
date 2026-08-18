@@ -1,5 +1,6 @@
 ﻿using JNPF.Common.Const;
 using JNPF.Common.Core.Manager;
+using JNPF.Common.Manager;
 using JNPF.Extensions;
 using JNPF.Common.Enums;
 using JNPF.Common.Extension;
@@ -18,8 +19,10 @@ using JNPF.Systems.Entitys.System;
 using JNPF.VisualDev.Engine;
 using JNPF.VisualDev.Engine.Core;
 using JNPF.VisualDev.Entitys;
+using JNPF.VisualDev.Release;
 using JNPF.VisualDev.Entitys.Dto.VisualDev;
 using JNPF.VisualDev.Entitys.Dto.VisualDevModelData;
+using JNPF.VisualDev.Query;
 using JNPF.VisualDev.Interfaces;
 using JNPF.WorkFlow.Entitys.Entity;
 using Mapster;
@@ -67,6 +70,11 @@ public class VisualDevService : IVisualDevService, IDynamicApiController, ITrans
     private readonly TenantOptions _tenant;
 
     /// <summary>
+    /// 缓存管理.
+    /// </summary>
+    private readonly ICacheManager _cacheManager;
+
+    /// <summary>
     /// 初始化一个<see cref="VisualDevService"/>类型的新实例.
     /// </summary>
     public VisualDevService(
@@ -75,7 +83,8 @@ public class VisualDevService : IVisualDevService, IDynamicApiController, ITrans
         IUserManager userManager,
         IOptions<TenantOptions> tenantOptions,
         RunService runService,
-        ISqlSugarClient context)
+        ISqlSugarClient context,
+        ICacheManager cacheManager)
     {
         _visualDevRepository = visualDevRepository;
         _userManager = userManager;
@@ -83,6 +92,7 @@ public class VisualDevService : IVisualDevService, IDynamicApiController, ITrans
         _tenant = tenantOptions.Value;
         _changeDataBase = changeDataBase;
         _db = context.AsTenant();
+        _cacheManager = cacheManager;
     }
 
     #region Get
@@ -121,15 +131,25 @@ public class VisualDevService : IVisualDevService, IDynamicApiController, ITrans
     [HttpGet("")]
     public async Task<dynamic> GetList([FromQuery] VisualDevListQueryInput input)
     {
-        var systemList = await _visualDevRepository.AsSugarClient().Queryable<SystemEntity>().Where(it => it.DeleteMark == null).ToListAsync();
+        // ── 引用表缓存加载（5 分钟 TTL，避免每次分页请求都全表扫描） ──
+        // 注意：SqlSugar ISqlSugarClient 非线程安全，禁止并发查询（Task.Run / Task.WhenAll）。
+        var tenantId = _userManager.TenantId ?? "default";
+        var refClient = _visualDevRepository.AsSugarClient();
+        var dict = await GetOrSetCacheAsync($"VisualDev_RefDict_{tenantId}",
+            () => refClient.Queryable<DictionaryDataEntity>().Where(d => d.DeleteMark == null).ToListAsync());
+        var users = await GetOrSetCacheAsync($"VisualDev_RefUsers_{tenantId}",
+            () => refClient.Queryable<UserEntity>().Where(u => u.DeleteMark == null).ToListAsync());
+        var systems = await GetOrSetCacheAsync($"VisualDev_RefSystems_{tenantId}",
+            () => refClient.Queryable<SystemEntity>().Where(s => s.DeleteMark == null).ToListAsync());
+        var modules = await GetOrSetCacheAsync($"VisualDev_RefModules_{tenantId}",
+            () => refClient.Queryable<ModuleEntity>().Where(m => m.DeleteMark == null).ToListAsync());
 
+        // ── 主查询：分页列表（不含子查询，单次 SQL 完成） ──
         SqlSugarPagedList<VisualDevListOutput>? data = await _visualDevRepository.AsSugarClient().Queryable<VisualDevEntity>()
             .WhereIF(!string.IsNullOrEmpty(input.keyword), a => a.FullName.Contains(input.keyword) || a.EnCode.Contains(input.keyword))
             .WhereIF(!string.IsNullOrEmpty(input.category), a => a.Category == input.category)
-            //modify by xudi 查询历史版本
-            .WhereIF(!string.IsNullOrEmpty(input.parentId), a => a.ParentId == input.parentId && a.DeleteMark!= null && a.Type == input.type)
+            .WhereIF(!string.IsNullOrEmpty(input.parentId), a => a.ParentId == input.parentId && a.DeleteMark != null && a.Type == input.type)
             .WhereIF(string.IsNullOrEmpty(input.parentId), a => a.DeleteMark == null && a.Type == input.type)
-			//end
             .WhereIF(input.isRelease.IsNotEmptyOrNull(), a => a.State == input.isRelease)
             .WhereIF(input.webType.Equals(1), a => a.EnableFlow.Equals(0) && !a.WebType.Equals(4))
             .WhereIF(input.webType.Equals(2), a => a.EnableFlow.Equals(1))
@@ -156,32 +176,72 @@ public class VisualDevService : IVisualDevService, IDynamicApiController, ITrans
                 parentId = a.Category,
                 isRelease = a.State,
                 enableFlow = a.EnableFlow,
-                category = SqlFunc.Subqueryable<DictionaryDataEntity>().Where(d => d.Id == a.Category).Select(d => d.FullName),
-                creatorUser = SqlFunc.Subqueryable<UserEntity>().Where(u => u.Id == a.CreatorUserId).Select(u => SqlFunc.MergeString(u.RealName, "/", u.Account)),
-                lastModifyUser = SqlFunc.Subqueryable<UserEntity>().Where(u => u.Id == a.LastModifyUserId).Select(u => SqlFunc.MergeString(u.RealName, "/", u.Account)),
+                creatorUserId = a.CreatorUserId,
+                lastModifyUserId = a.LastModifyUserId,
                 platformRelease = a.PlatformRelease
             }).ToPagedListAsync(input.currentPage, input.pageSize);
 
-        var moduleList = await _visualDevRepository.AsSugarClient().Queryable<ModuleEntity>().Where(it => it.DeleteMark == null).ToListAsync();
-        var pcModuleList = moduleList.Where(it => it.Category.Equals("Web")).ToList();
-        var appModuleList = moduleList.Where(it => it.Category.Equals("App")).ToList();
+        // ── 内存拼接引用数据（O(1) 字典查找替代 O(n) 子查询） ──
+
+        // 构建字典/用户查找映射
+        var dictMap = dict.ToDictionary(d => d.Id, d => d.FullName);
+        var userMap = users.ToDictionary(u => u.Id, u => $"{u.RealName}/{u.Account}");
+
+        // 构建 module→路径名 查找（一次性递归预计算）
+        var sysDict = systems.ToDictionary(s => s.Id, s => s.FullName);
+        var modDict = modules.ToDictionary(m => m.Id);
+        var modPathCache = new Dictionary<string, string>();
+        string BuildModulePath(ModuleEntity m)
+        {
+            if (modPathCache.TryGetValue(m.Id, out var cached)) return cached;
+            if (m.ParentId == "-1")
+            {
+                var sysName = sysDict.TryGetValue(m.SystemId ?? string.Empty, out var sn) ? sn : string.Empty;
+                var path = string.IsNullOrEmpty(sysName) ? m.FullName : $"{sysName}/{m.FullName}";
+                modPathCache[m.Id] = path;
+                return path;
+            }
+            if (modDict.TryGetValue(m.ParentId ?? string.Empty, out var parent))
+            {
+                var parentPath = BuildModulePath(parent);
+                var path = $"{parentPath}/{m.FullName}";
+                modPathCache[m.Id] = path;
+                return path;
+            }
+            modPathCache[m.Id] = m.FullName;
+            return m.FullName;
+        }
+        // 预计算所有模块路径
+        foreach (var mod in modules)
+            BuildModulePath(mod);
+
+        // 构建 module→visualDevIds 倒排索引（O(模块 JSON 字节数) 替代 O(模块数 × 行数) 的 Contains 扫描）
+        var pcModules = modules.Where(m => m.Category == "Web").ToList();
+        var appModules = modules.Where(m => m.Category == "App").ToList();
+        string? ResolveModulePath(string moduleId) =>
+            modPathCache.TryGetValue(moduleId, out var cachedPath) ? cachedPath : null;
+
+        var dataList = data.list.ToList();
+        var pcRefMap = VisualDevListRefIndex.BuildRefIndex(pcModules, dataList, ResolveModulePath);
+        var appRefMap = VisualDevListRefIndex.BuildRefIndex(appModules, dataList, ResolveModulePath);
+
+        // ── 填充每一行的引用数据 ──
         foreach (var item in data.list)
         {
-            var pcList = new List<string>();
-            foreach (var module in pcModuleList.Where(it => it.PropertyJson.Contains(item.id)))
-            {
-                GetReleaseName(pcList, pcModuleList, systemList, module, string.Empty);
-            }
-            item.pcReleaseName = string.Join("；", pcList);
-            if (item.pcReleaseName.IsNotEmptyOrNull()) item.pcIsRelease = 1;
+            item.category = dictMap.TryGetValue(item.parentId ?? string.Empty, out var cat) ? cat : string.Empty;
+            item.creatorUser = userMap.TryGetValue(item.creatorUserId ?? string.Empty, out var cu) ? cu : string.Empty;
+            item.lastModifyUser = userMap.TryGetValue(item.lastModifyUserId ?? string.Empty, out var lu) ? lu : string.Empty;
 
-            var appList = new List<string>();
-            foreach (var module in appModuleList.Where(it => it.PropertyJson.Contains(item.id)))
+            if (pcRefMap.TryGetValue(item.id, out var pcPaths) && pcPaths.Count > 0)
             {
-                GetReleaseName(appList, appModuleList, systemList, module, string.Empty);
+                item.pcReleaseName = string.Join("；", pcPaths);
+                item.pcIsRelease = 1;
             }
-            item.appReleaseName = string.Join("；", appList);
-            if (item.appReleaseName.IsNotEmptyOrNull()) item.appIsRelease = 1;
+            if (appRefMap.TryGetValue(item.id, out var appPaths) && appPaths.Count > 0)
+            {
+                item.appReleaseName = string.Join("；", appPaths);
+                item.appIsRelease = 1;
+            }
         }
 
         return PageResult<VisualDevListOutput>.SqlSugarPageResult(data);
@@ -670,66 +730,26 @@ public class VisualDevService : IVisualDevService, IDynamicApiController, ITrans
         var sysIdList = await _visualDevRepository.AsSugarClient().Queryable<SystemEntity>().Where(it => it.DeleteMark == null).Select(it => it.Id).ToListAsync();
         var moduleList = await _visualDevRepository.AsSugarClient().Queryable<ModuleEntity>().Where(it => it.DeleteMark == null && sysIdList.Contains(it.SystemId)).ToListAsync();
 
-        var release = new Dictionary<string, List<Dictionary<string, string>>>();
         var allModuleList = moduleList.Where(it => it.PropertyJson.Contains(id)).ToList();
         if (input.pc == 1)
         {
             if (!input.pcModuleParentId.Any() && !await _visualDevRepository.AsSugarClient().Queryable<ModuleEntity>().AnyAsync(it => it.DeleteMark == null && sysIdList.Contains(it.SystemId) && it.Category.Equals("Web") && it.PropertyJson.Contains(id)))
                 throw Oops.Oh(ErrorCode.D4017);
-
-            // 添加已经存在的菜单
-            var dic = new List<Dictionary<string, string>>();
-            foreach (var item in allModuleList.Where(it => it.Category.Equals("Web")).ToList())
-            {
-                dic.Add(new Dictionary<string, string> { { item.SystemId, item.ParentId } });
-            }
-
-            // 新发布的菜单
-            foreach (var item in input.pcModuleParentId)
-            {
-                if (sysIdList.Contains(item))
-                {
-                    dic.Add(new Dictionary<string, string> { { item, "-1" } });
-                }
-                else
-                {
-                    var module = moduleList.Find(it => it.Id.Equals(item));
-                    if (module.IsNullOrEmpty()) throw Oops.Oh(ErrorCode.D4021);
-                    dic.Add(new Dictionary<string, string> { { module.SystemId, module.Id } });
-                }
-            }
-
-            release.Add("Web", dic);
         }
         if (input.app == 1)
         {
             if (!input.appModuleParentId.Any() && !await _visualDevRepository.AsSugarClient().Queryable<ModuleEntity>().AnyAsync(it => it.DeleteMark == null && sysIdList.Contains(it.SystemId) && it.Category.Equals("App") && it.PropertyJson.Contains(id)))
                 throw Oops.Oh(ErrorCode.D4017);
-
-            // 添加已经存在的菜单
-            var dic = new List<Dictionary<string, string>>();
-            foreach (var item in allModuleList.Where(it => it.Category.Equals("App")).ToList())
-            {
-                dic.Add(new Dictionary<string, string> { { item.SystemId, item.ParentId } });
-            }
-
-            // 新发布的菜单
-            foreach (var item in input.appModuleParentId)
-            {
-                if (sysIdList.Contains(item))
-                {
-                    dic.Add(new Dictionary<string, string> { { item, "-1" } });
-                }
-                else
-                {
-                    var module = moduleList.Find(it => it.Id.Equals(item));
-                    if (module.IsNullOrEmpty()) throw Oops.Oh(ErrorCode.D4021);
-                    dic.Add(new Dictionary<string, string> { { module.SystemId, module.Id } });
-                }
-            }
-
-            release.Add("App", dic);
         }
+
+        var release = FuncToMenuReleasePlanner.BuildReleaseTargets(
+            publishPc: input.pc == 1,
+            publishApp: input.app == 1,
+            pcModuleParentIds: input.pcModuleParentId,
+            appModuleParentIds: input.appModuleParentId,
+            sysIdList: sysIdList,
+            modulesLinkedToFeature: allModuleList,
+            allModules: moduleList);
 
         // 无表转有表
         if (!tInfo.IsHasTable && !entity.WebType.Equals(4))
@@ -2303,31 +2323,33 @@ public class VisualDevService : IVisualDevService, IDynamicApiController, ITrans
     }
 
     /// <summary>
-    /// 递归获取发布菜单名称.
+    /// 缓存优先读取（5 分钟 TTL），避免每次分页请求都全表扫描引用表。
+    /// 并发首查串行化（缓存击穿防护），避免重复全表扫描（SqlSugar 非线程安全）。
     /// </summary>
-    private void GetReleaseName(List<string> list, List<ModuleEntity> moduleList, List<SystemEntity> systemList, ModuleEntity module, string? url)
-    {
-        if (url.IsNullOrEmpty()) url = module.FullName;
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _refCacheGates = new();
 
-        if (module.ParentId.Equals("-1"))
+    private async Task<List<T>> GetOrSetCacheAsync<T>(string key, Func<Task<List<T>>> factory, int ttlMinutes = 5)
+    {
+        var cached = _cacheManager.Get<List<T>>(key);
+        if (cached != null) return cached;
+
+        var gate = _refCacheGates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync();
+        try
         {
-            var sys = systemList.Find(it => it.Id.Equals(module.SystemId));
-            if (sys.IsNotEmptyOrNull())
-            {
-                url = string.Format("{0}/{1}", sys.FullName, url);
-                list.Add(url);
-            }
+            cached = _cacheManager.Get<List<T>>(key);
+            if (cached != null) return cached;
+
+            var result = await factory();
+            _cacheManager.Set(key, result, TimeSpan.FromMinutes(ttlMinutes));
+            return result;
         }
-        else
+        finally
         {
-            var mod = moduleList.Find(it => it.Id.Equals(module.ParentId));
-            if (mod.IsNotEmptyOrNull())
-            {
-                url = string.Format("{0}/{1}", mod.FullName, url);
-                GetReleaseName(list, moduleList, systemList, mod, url);
-            }
+            gate.Release();
         }
     }
 
+    /// <summary>
     #endregion
 }

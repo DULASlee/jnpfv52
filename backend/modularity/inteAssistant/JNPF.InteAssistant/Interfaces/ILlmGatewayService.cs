@@ -54,4 +54,31 @@ public interface ILlmGatewayService
     /// <param name="providerCode">Provider 代码</param>
     /// <returns>Provider 信息</returns>
     Task<ProviderInfo> GetProviderInfoAsync(string providerCode);
+
+    /// <summary>
+    /// 27 号 §7.2：按任务类型解析超时（毫秒）。
+    /// 读取 AI:TimeoutMs:{skillId} 配置，无匹配回退 AI:TimeoutMs:Default（默认 60_000）。
+    /// </summary>
+    /// <param name="skillId">Skill 标识</param>
+    /// <returns>超时毫秒数</returns>
+    int ResolveTimeoutMs(string skillId);
+
+    /// <summary>
+    /// 27 号 §7.3：按任务（skillId）路由 Provider。
+    /// 读取 AI:ProviderRouting 配置表，将不同 Skill 路由到不同 Provider（如 PM→deepseek，门控→mimo）。
+    /// 无匹配项时回退默认 Provider。
+    /// </summary>
+    /// <param name="skillId">Skill 标识（如 "pm-skill"、"analyst-skill"）</param>
+    /// <returns>Provider 代码</returns>
+    string ResolveProvider(string skillId);
+
+    /// <summary>
+    /// Tree-of-Thought 多路候选生成（施工包 21 §3.5）：
+    /// 同一 prompt 按温度梯度并行发 N 路 ChatAsync，每路独立审计入 BASE_AI_CALL_LOG。
+    /// 只生成候选不做裁决；全部分支失败时 IsSuccess=false，禁止降级编造内容。
+    /// </summary>
+    /// <param name="request">ToT 请求（分支数、温度梯度）</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>候选集合</returns>
+    Task<TreeSearchResult> TreeSearchAsync(TreeSearchRequest request, CancellationToken ct = default);
 }

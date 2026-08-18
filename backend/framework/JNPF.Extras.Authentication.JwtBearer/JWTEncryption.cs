@@ -362,7 +362,14 @@ public class JWTEncryption
             return jwtSettings;
         }
 
-        return FrameworkApp.GetMethod("GetOptions").MakeGenericMethod(typeof(JWTSettingsOptions)).Invoke(null, new object[] { null }) as JWTSettingsOptions ?? SetDefaultJwtSettings(new JWTSettingsOptions());
+        var getJwtSettingsMethod = _cachedGetJwtSettingsMethod;
+        if (getJwtSettingsMethod == null)
+        {
+            getJwtSettingsMethod = FrameworkApp.GetMethod("GetOptions").MakeGenericMethod(typeof(JWTSettingsOptions));
+            _cachedGetJwtSettingsMethod = getJwtSettingsMethod;
+        }
+
+        return getJwtSettingsMethod.Invoke(null, new object[] { null }) as JWTSettingsOptions ?? SetDefaultJwtSettings(new JWTSettingsOptions());
     }
 
     /// <summary>
@@ -472,8 +479,25 @@ public class JWTEncryption
     /// <returns></returns>
     private static HttpContext GetCurrentHttpContext()
     {
-        return FrameworkApp.GetProperty("HttpContext").GetValue(null) as HttpContext;
+        var httpContextProperty = _cachedHttpContextProperty;
+        if (httpContextProperty == null)
+        {
+            httpContextProperty = FrameworkApp.GetProperty("HttpContext");
+            _cachedHttpContextProperty = httpContextProperty;
+        }
+
+        return httpContextProperty.GetValue(null) as HttpContext;
     }
+
+    /// <summary>
+    /// GetJwtSettings 的 MethodInfo 缓存（避免每次 JWT 操作反射）
+    /// </summary>
+    private static MethodInfo _cachedGetJwtSettingsMethod;
+
+    /// <summary>
+    /// HttpContext 的 PropertyInfo 缓存（避免每次 JWT 操作反射）
+    /// </summary>
+    private static PropertyInfo _cachedHttpContextProperty;
 
     /// <summary>
     /// 日期类型的 Claim 类型

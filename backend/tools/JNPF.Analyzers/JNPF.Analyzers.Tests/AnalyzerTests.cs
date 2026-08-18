@@ -158,6 +158,84 @@ class TestClass {
         Assert.Contains(diagnostics, d => d.Id == "JNPF004");
     }
 
+    // ── JNPF007: 废止模块类定义检测 ──────────────────────────
+
+    [Fact]
+    public void JNPF007_ProhibitedClass_ScannerValidator_Detected()
+    {
+        var code = @"
+public class ScannerValidator { }
+";
+        var diagnostics = GetDiagnostics(code, new RequirementAnalysisGuardAnalyzer());
+        Assert.Contains(diagnostics, d => d.Id == "JNPF007");
+    }
+
+    [Fact]
+    public void JNPF007_ProhibitedClass_EventDependencyBuilder_Detected()
+    {
+        var code = @"
+namespace Foo {
+    public class EventDependencyBuilder { }
+}
+";
+        var diagnostics = GetDiagnostics(code, new RequirementAnalysisGuardAnalyzer());
+        Assert.Contains(diagnostics, d => d.Id == "JNPF007");
+    }
+
+    [Fact]
+    public void JNPF007_LegalClassName_NotDetected()
+    {
+        var code = @"
+public class LightStructureValidator { }
+";
+        var diagnostics = GetDiagnostics(code, new RequirementAnalysisGuardAnalyzer());
+        Assert.DoesNotContain(diagnostics, d => d.Id == "JNPF007");
+    }
+
+    // ── JNPF008: 普通 SINGLE 题型赋值检测 ────────────────────
+
+    [Fact]
+    public void JNPF008_PlainSingleAssignment_Detected()
+    {
+        var code = @"
+class Foo {
+    void M() {
+        var q = new { QuestionFormat = ""SINGLE"" };
+    }
+}
+";
+        var diagnostics = GetDiagnostics(code, new RequirementAnalysisGuardAnalyzer());
+        Assert.Contains(diagnostics, d => d.Id == "JNPF008");
+    }
+
+    [Fact]
+    public void JNPF008_MultiAssignment_NotDetected()
+    {
+        var code = @"
+class Foo {
+    void M() {
+        var q = new { QuestionFormat = ""MULTI"" };
+    }
+}
+";
+        var diagnostics = GetDiagnostics(code, new RequirementAnalysisGuardAnalyzer());
+        Assert.DoesNotContain(diagnostics, d => d.Id == "JNPF008");
+    }
+
+    [Fact]
+    public void JNPF008_MatrixSingle_NotDetected()
+    {
+        var code = @"
+class Foo {
+    void M() {
+        var q = new { QuestionFormat = ""MATRIX_SINGLE"" };
+    }
+}
+";
+        var diagnostics = GetDiagnostics(code, new RequirementAnalysisGuardAnalyzer());
+        Assert.DoesNotContain(diagnostics, d => d.Id == "JNPF008");
+    }
+
     private static ImmutableArray<Diagnostic> GetDiagnostics(string code, DiagnosticAnalyzer analyzer)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(code);

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using JNPF.Common.Const;
+using JNPF.Common.Core.Manager.User.Conditions;
 using JNPF.Common.Enums;
 using JNPF.Common.Extension;
 using JNPF.Common.Manager;
@@ -293,7 +294,14 @@ public class UserManager : IUserManager, IScoped
     /// </summary>
     public string UserOrigin
     {
-        get => _httpContext?.Request.Headers["jnpf-origin"] ?? "pc";
+        get
+        {
+            // Headers[key] 返回 StringValues（struct），key 不存在时为 StringValues.Empty（非 null），
+            // 故 "?? \"pc\"" 不会触发；StringValues.Empty 隐式转 string 得 null，会导致 .Equals NRE。
+            // 必须显式 IsNullOrEmpty 判断（修 admin CurrentUser NRE，2026-07-08）。
+            var origin = _httpContext?.Request.Headers["jnpf-origin"].ToString();
+            return string.IsNullOrEmpty(origin) ? "pc" : origin;
+        }
     }
 
     /// <summary>
@@ -539,46 +547,24 @@ public class UserManager : IUserManager, IScoped
     public async Task<List<IConditionalModel>> GetConditionAsync<T>(string moduleId, string primaryKey = "f_id", bool isDataPermissions = true, string tableNumber = "")
         where T : new()
     {
-        var conModels = new List<IConditionalModel>();
-        if (IsAdministrator) return conModels;
+        var fieldName = string.Format("{0}{1}", tableNumber, primaryKey);
+        if (IsAdministrator) return DataPermissionShortCircuits.Admin();
         var dataScope = DataScope.Select(x => x.organizeId).ToList();
-        if (_repository.AsSugarClient().Queryable<ModuleEntity>().Any(x => dataScope.Contains(x.SystemId) && x.Id.Equals(moduleId))) return conModels; // 分级管理全部放开
+        if (_repository.AsSugarClient().Queryable<ModuleEntity>().Any(x => dataScope.Contains(x.SystemId) && x.Id.Equals(moduleId))) return DataPermissionShortCircuits.Admin(); // 分级管理全部放开
         var roles = PermissionGroup;
         var roleAuthorizeList = _repository.AsSugarClient().Queryable<AuthorizeEntity>()
             .Where(x => roles.Contains(x.ObjectId) && x.ItemType == "resource").Select(a => new { a.ItemId, a.ObjectId }).ToList();
         if (!isDataPermissions)
-        {
-            conModels.Add(new ConditionalCollections()
-            {
-                ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>()
-                    {
-                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel() { FieldName = string.Format("{0}{1}", tableNumber, primaryKey), ConditionalType = ConditionalType.NoEqual, FieldValue = "0", FieldValueConvertFunc = it => SqlSugar.UtilMethods.ChangeType2(it, typeof(string)) })
-                    }
-            });
-            return conModels;
-        }
-        else if (roleAuthorizeList.Count == 0 && isDataPermissions)
-        {
-            conModels.Add(new ConditionalCollections()
-            {
-                ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>()
-                    {
-                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel() { FieldName = string.Format("{0}{1}", tableNumber, primaryKey), ConditionalType = ConditionalType.Equal, FieldValue = "0", FieldValueConvertFunc = it => SqlSugar.UtilMethods.ChangeType2(it, typeof(string)) })
-                    }
-            });
-            return conModels;
-        }
+            return DataPermissionShortCircuits.AllowAll(fieldName);
+        if (roleAuthorizeList.Count == 0 && isDataPermissions)
+            return DataPermissionShortCircuits.DenyAll(fieldName);
 
+        var conModels = new List<IConditionalModel>();
         var resourceList = _repository.AsSugarClient().Queryable<ModuleDataAuthorizeSchemeEntity>().In(it => it.Id, roleAuthorizeList.Select(x => x.ItemId).ToList()).Where(it => it.ModuleId == moduleId && it.DeleteMark == null).ToList();
 
         if (resourceList.Any(x => x.AllData == 1 || "jnpf_alldata".Equals(x.EnCode)))
         {
-            conModels.Add(new ConditionalCollections()
-            {
-                ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>() {
-                            new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel() { FieldName = string.Format("{0}{1}", tableNumber, primaryKey), ConditionalType = ConditionalType.NoEqual, FieldValue = "0", FieldValueConvertFunc = it => SqlSugar.UtilMethods.ChangeType2(it, typeof(string)) })
-                        }
-            });
+            conModels.AddRange(DataPermissionShortCircuits.AllowAll(fieldName));
         }
         else
         {
@@ -607,101 +593,59 @@ public class UserManager : IUserManager, IScoped
                             switch (itemValue)
                             {
                                 case "@userId": // 当前用户
-                                    {
-                                        switch (conditionItem.Logic)
-                                        {
-                                            case "and":
-                                                conditionalList.Add(new { Key = isCurrentRole ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = UserId, ConditionalType = (int)cmodel.ConditionalType } });
-
-                                                break;
-                                            case "or":
-                                                conditionalList.Add(new { Key = (int)WhereType.Or, Value = new { FieldName = itemField, FieldValue = UserId, ConditionalType = (int)cmodel.ConditionalType } });
-
-                                                break;
-                                        }
-                                    }
-
+                                    AppendTokenStrategy(
+                                        ConditionStrategyRegistry.UserId,
+                                        conditionalList,
+                                        ref isCurrentRole,
+                                        itemField,
+                                        itemMethod,
+                                        cmodel.ConditionalType,
+                                        conditionItem.Logic,
+                                        new[] { UserId });
                                     break;
                                 case "@userAraSubordinates": // 当前用户集下属
                                     {
-                                        var ids = new List<string>() { UserId };
+                                        var ids = new List<string> { UserId };
                                         ids.AddRange(Subordinates);
-                                        for (int i = 0; i < ids.Count; i++)
-                                        {
-                                            if (i == 0)
-                                            {
-                                                switch (conditionItem.Logic)
-                                                {
-                                                    case "and":
-                                                        conditionalList.Add(new { Key = isCurrentRole ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-
-                                                        break;
-                                                    case "or":
-                                                        conditionalList.Add(new { Key = (int)WhereType.Or, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-
-                                                        break;
-                                                }
-                                            }
-                                            else
-                                            {
-                                                if (itemMethod.Equals(QueryType.NotEqual) || itemMethod.Equals(QueryType.NotIncluded))
-                                                    conditionalList.Add(new { Key = isCurrentRole ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-                                                else
-                                                    conditionalList.Add(new { Key = (int)WhereType.Or, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-                                            }
-                                            isCurrentRole = false;
-                                        }
+                                        AppendTokenStrategy(
+                                            ConditionStrategyRegistry.UserAndSubordinates,
+                                            conditionalList,
+                                            ref isCurrentRole,
+                                            itemField,
+                                            itemMethod,
+                                            cmodel.ConditionalType,
+                                            conditionItem.Logic,
+                                            ids);
                                     }
 
                                     break;
                                 case "@organizeId": // 当前组织
+                                    if (!string.IsNullOrEmpty(User.OrganizeId))
                                     {
-                                        if (!string.IsNullOrEmpty(User.OrganizeId))
-                                        {
-                                            switch (conditionItem.Logic)
-                                            {
-                                                case "and":
-                                                    conditionalList.Add(new { Key = isCurrentRole ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = User.OrganizeId, ConditionalType = (int)cmodel.ConditionalType } });
-                                                    break;
-                                                case "or":
-                                                    conditionalList.Add(new { Key = (int)WhereType.Or, Value = new { FieldName = itemField, FieldValue = User.OrganizeId, ConditionalType = (int)cmodel.ConditionalType } });
-                                                    break;
-                                            }
-                                        }
+                                        AppendTokenStrategy(
+                                            ConditionStrategyRegistry.OrganizeId,
+                                            conditionalList,
+                                            ref isCurrentRole,
+                                            itemField,
+                                            itemMethod,
+                                            cmodel.ConditionalType,
+                                            conditionItem.Logic,
+                                            new[] { User.OrganizeId });
                                     }
 
                                     break;
                                 case "@organizationAndSuborganization": // 当前组织及子组织
+                                    if (!string.IsNullOrEmpty(User.OrganizeId))
                                     {
-                                        if (!string.IsNullOrEmpty(User.OrganizeId))
-                                        {
-                                            var ids = CurrentOrganizationAndSubOrganizations;
-                                            for (int i = 0; i < ids.Count; i++)
-                                            {
-                                                if (i == 0)
-                                                {
-                                                    switch (conditionItem.Logic)
-                                                    {
-                                                        case "and":
-                                                            conditionalList.Add(new { Key = isCurrentRole ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-
-                                                            break;
-                                                        case "or":
-                                                            conditionalList.Add(new { Key = (int)WhereType.Or, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-
-                                                            break;
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    if (itemMethod.Equals(QueryType.NotEqual) || itemMethod.Equals(QueryType.NotIncluded))
-                                                        conditionalList.Add(new { Key = isCurrentRole ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-                                                    else
-                                                        conditionalList.Add(new { Key = (int)WhereType.Or, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-                                                }
-                                                isCurrentRole = false;
-                                            }
-                                        }
+                                        AppendTokenStrategy(
+                                            ConditionStrategyRegistry.OrganizationAndSub,
+                                            conditionalList,
+                                            ref isCurrentRole,
+                                            itemField,
+                                            itemMethod,
+                                            cmodel.ConditionalType,
+                                            conditionItem.Logic,
+                                            CurrentOrganizationAndSubOrganizations);
                                     }
 
                                     break;
@@ -835,15 +779,7 @@ public class UserManager : IUserManager, IScoped
         }
 
         if (resourceList.Count == 0 || !Roles.Any())
-        {
-            conModels.Add(new ConditionalCollections()
-            {
-                ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>()
-                    {
-                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel() { FieldName = string.Format("{0}{1}", tableNumber, primaryKey), ConditionalType = ConditionalType.Equal, FieldValue = "0", FieldValueConvertFunc = it => SqlSugar.UtilMethods.ChangeType2(it, typeof(string)) })
-                    }
-            });
-        }
+            conModels.AddRange(DataPermissionShortCircuits.DenyAll(fieldName));
 
         return conModels;
     }
@@ -859,46 +795,23 @@ public class UserManager : IUserManager, IScoped
     public async Task<List<IConditionalModel>> GetDataConditionAsync<T>(string moduleId, string primaryKey, bool isDataPermissions = true)
         where T : new()
     {
-        var conModels = new List<IConditionalModel>();
-        if (IsAdministrator) return conModels;
+        if (IsAdministrator) return DataPermissionShortCircuits.Admin();
         var dataScope = DataScope.Select(x => x.organizeId).ToList();
-        if (_repository.AsSugarClient().Queryable<ModuleEntity>().Any(x => dataScope.Contains(x.SystemId) && x.Id.Equals(moduleId))) return conModels; // 分级管理全部放开
+        if (_repository.AsSugarClient().Queryable<ModuleEntity>().Any(x => dataScope.Contains(x.SystemId) && x.Id.Equals(moduleId))) return DataPermissionShortCircuits.Admin(); // 分级管理全部放开
         var roles = PermissionGroup;
         var roleAuthorizeList = _repository.AsSugarClient().Queryable<AuthorizeEntity>()
             .Where(x => roles.Contains(x.ObjectId) && x.ItemType == "resource").Select(a => new { a.ItemId, a.ObjectId }).ToList();
         if (!isDataPermissions)
-        {
-            conModels.Add(new ConditionalCollections()
-            {
-                ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>()
-                    {
-                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel() { FieldName = primaryKey, ConditionalType = ConditionalType.NoEqual, FieldValue = "0", FieldValueConvertFunc = it => SqlSugar.UtilMethods.ChangeType2(it, typeof(string)) })
-                    }
-            });
-            return conModels;
-        }
-        else if (roleAuthorizeList.Count == 0 && isDataPermissions)
-        {
-            conModels.Add(new ConditionalCollections()
-            {
-                ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>()
-                    {
-                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel() { FieldName = primaryKey, ConditionalType = ConditionalType.Equal, FieldValue = "0", FieldValueConvertFunc = it => SqlSugar.UtilMethods.ChangeType2(it, typeof(string)) })
-                    }
-            });
-            return conModels;
-        }
+            return DataPermissionShortCircuits.AllowAll(primaryKey);
+        if (roleAuthorizeList.Count == 0 && isDataPermissions)
+            return DataPermissionShortCircuits.DenyAll(primaryKey);
 
+        var conModels = new List<IConditionalModel>();
         var resourceList = _repository.AsSugarClient().Queryable<ModuleDataAuthorizeSchemeEntity>().In(it => it.Id, roleAuthorizeList).Where(it => it.ModuleId == moduleId && it.DeleteMark == null).ToList();
 
         if (resourceList.Any(x => x.AllData == 1 || x.EnCode.Equals("jnpf_alldata")))
         {
-            conModels.Add(new ConditionalCollections()
-            {
-                ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>() {
-                            new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel() { FieldName = primaryKey, ConditionalType = ConditionalType.NoEqual, FieldValue = "0", FieldValueConvertFunc = it => SqlSugar.UtilMethods.ChangeType2(it, typeof(string)) })
-                        }
-            });
+            conModels.AddRange(DataPermissionShortCircuits.AllowAll(primaryKey));
         }
         else
         {
@@ -927,101 +840,59 @@ public class UserManager : IUserManager, IScoped
                             switch (itemValue)
                             {
                                 case "@userId": // 当前用户
-                                    {
-                                        switch (conditionItem.Logic)
-                                        {
-                                            case "and":
-                                                conditionalList.Add(new { Key = isCurrentRole ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = UserId, ConditionalType = (int)cmodel.ConditionalType } });
-
-                                                break;
-                                            case "or":
-                                                conditionalList.Add(new { Key = (int)WhereType.Or, Value = new { FieldName = itemField, FieldValue = UserId, ConditionalType = (int)cmodel.ConditionalType } });
-
-                                                break;
-                                        }
-                                    }
-
+                                    AppendTokenStrategy(
+                                        ConditionStrategyRegistry.UserId,
+                                        conditionalList,
+                                        ref isCurrentRole,
+                                        itemField,
+                                        itemMethod,
+                                        cmodel.ConditionalType,
+                                        conditionItem.Logic,
+                                        new[] { UserId });
                                     break;
                                 case "@userAraSubordinates": // 当前用户集下属
                                     {
-                                        var ids = new List<string>() { UserId };
+                                        var ids = new List<string> { UserId };
                                         ids.AddRange(Subordinates);
-                                        for (int i = 0; i < ids.Count; i++)
-                                        {
-                                            if (i == 0)
-                                            {
-                                                switch (conditionItem.Logic)
-                                                {
-                                                    case "and":
-                                                        conditionalList.Add(new { Key = isCurrentRole ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-
-                                                        break;
-                                                    case "or":
-                                                        conditionalList.Add(new { Key = (int)WhereType.Or, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-
-                                                        break;
-                                                }
-                                            }
-                                            else
-                                            {
-                                                if (itemMethod.Equals(QueryType.NotEqual) || itemMethod.Equals(QueryType.NotIncluded))
-                                                    conditionalList.Add(new { Key = isCurrentRole ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-                                                else
-                                                    conditionalList.Add(new { Key = (int)WhereType.Or, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-                                            }
-                                            isCurrentRole = false;
-                                        }
+                                        AppendTokenStrategy(
+                                            ConditionStrategyRegistry.UserAndSubordinates,
+                                            conditionalList,
+                                            ref isCurrentRole,
+                                            itemField,
+                                            itemMethod,
+                                            cmodel.ConditionalType,
+                                            conditionItem.Logic,
+                                            ids);
                                     }
 
                                     break;
                                 case "@organizeId": // 当前组织
+                                    if (!string.IsNullOrEmpty(User.OrganizeId))
                                     {
-                                        if (!string.IsNullOrEmpty(User.OrganizeId))
-                                        {
-                                            switch (conditionItem.Logic)
-                                            {
-                                                case "and":
-                                                    conditionalList.Add(new { Key = isCurrentRole ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = User.OrganizeId, ConditionalType = (int)cmodel.ConditionalType } });
-                                                    break;
-                                                case "or":
-                                                    conditionalList.Add(new { Key = (int)WhereType.Or, Value = new { FieldName = itemField, FieldValue = User.OrganizeId, ConditionalType = (int)cmodel.ConditionalType } });
-                                                    break;
-                                            }
-                                        }
+                                        AppendTokenStrategy(
+                                            ConditionStrategyRegistry.OrganizeId,
+                                            conditionalList,
+                                            ref isCurrentRole,
+                                            itemField,
+                                            itemMethod,
+                                            cmodel.ConditionalType,
+                                            conditionItem.Logic,
+                                            new[] { User.OrganizeId });
                                     }
 
                                     break;
                                 case "@organizationAndSuborganization": // 当前组织及子组织
+                                    if (!string.IsNullOrEmpty(User.OrganizeId))
                                     {
-                                        if (!string.IsNullOrEmpty(User.OrganizeId))
-                                        {
-                                            var ids = CurrentOrganizationAndSubOrganizations;
-                                            for (int i = 0; i < ids.Count; i++)
-                                            {
-                                                if (i == 0)
-                                                {
-                                                    switch (conditionItem.Logic)
-                                                    {
-                                                        case "and":
-                                                            conditionalList.Add(new { Key = isCurrentRole ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-
-                                                            break;
-                                                        case "or":
-                                                            conditionalList.Add(new { Key = (int)WhereType.Or, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-
-                                                            break;
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    if (itemMethod.Equals(QueryType.NotEqual) || itemMethod.Equals(QueryType.NotIncluded))
-                                                        conditionalList.Add(new { Key = isCurrentRole ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-                                                    else
-                                                        conditionalList.Add(new { Key = (int)WhereType.Or, Value = new { FieldName = itemField, FieldValue = ids[i], ConditionalType = (int)cmodel.ConditionalType } });
-                                                }
-                                                isCurrentRole = false;
-                                            }
-                                        }
+                                        AppendTokenStrategy(
+                                            ConditionStrategyRegistry.OrganizationAndSub,
+                                            conditionalList,
+                                            ref isCurrentRole,
+                                            itemField,
+                                            itemMethod,
+                                            cmodel.ConditionalType,
+                                            conditionItem.Logic,
+                                            CurrentOrganizationAndSubOrganizations);
                                     }
 
                                     break;
@@ -1155,15 +1026,7 @@ public class UserManager : IUserManager, IScoped
         }
 
         if (resourceList.Count == 0)
-        {
-            conModels.Add(new ConditionalCollections()
-            {
-                ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>()
-                    {
-                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel() { FieldName = primaryKey, ConditionalType = ConditionalType.Equal, FieldValue = "0", FieldValueConvertFunc = it => SqlSugar.UtilMethods.ChangeType2(it, typeof(string)) })
-                    }
-            });
-        }
+            conModels.AddRange(DataPermissionShortCircuits.DenyAll(primaryKey));
 
         return conModels;
     }
@@ -1197,7 +1060,8 @@ public class UserManager : IUserManager, IScoped
 
         var condList = await GetCondition<object>(primaryKey, moduleId, isDataPermissions, primaryKeyPolicy.Equals(2));
 
-        var minTable = GetIConditionalModelListByTableName(JsonConvert.DeserializeObject<List<IConditionalModel>>(JsonConvert.SerializeObject(condList)), null);
+        var minTable = ConditionalByTableNameFilter.Filter(
+            JsonConvert.DeserializeObject<List<IConditionalModel>>(JsonConvert.SerializeObject(condList)), null);
 
         if (minTable.Any())
         {
@@ -1211,7 +1075,8 @@ public class UserManager : IUserManager, IScoped
 
         foreach (var tName in allTableName.Distinct().ToList())
         {
-            var tNameConditional = GetIConditionalModelListByTableName(JsonConvert.DeserializeObject<List<IConditionalModel>>(JsonConvert.SerializeObject(condList)), tName);
+            var tNameConditional = ConditionalByTableNameFilter.Filter(
+                JsonConvert.DeserializeObject<List<IConditionalModel>>(JsonConvert.SerializeObject(condList)), tName);
 
             if (tNameConditional.Any())
             {
@@ -1225,75 +1090,6 @@ public class UserManager : IUserManager, IScoped
         }
 
         return codeGenConditional;
-    }
-    private List<IConditionalModel> GetIConditionalModelListByTableName(List<IConditionalModel> cList, string tableName)
-    {
-        for (int i = 0; i < cList.Count; i++)
-        {
-            if (cList[i] is ConditionalTree)
-            {
-                var newItem = (ConditionalTree)cList[i];
-                for (int j = 0; j < newItem.ConditionalList.Count; j++)
-                {
-                    var value = GetIConditionalModelListByTableName(new List<IConditionalModel>() { newItem.ConditionalList[j].Value }, tableName);
-                    if (value != null && value.Any())
-                    {
-                        if (newItem.ConditionalList[j].Equals(newItem.ConditionalList.FirstOrDefault()))
-                            newItem.ConditionalList[j] = new KeyValuePair<WhereType, IConditionalModel>(newItem.ConditionalList[j].Key, value.First());
-                        else
-                            newItem.ConditionalList[j] = new KeyValuePair<WhereType, IConditionalModel>(newItem.ConditionalList[j].Key, value.First());
-                    }
-                    else
-                    {
-                        newItem.ConditionalList.RemoveAt(j);
-                        j--;
-                    }
-                }
-
-                if (newItem.ConditionalList.Any())
-                {
-                    cList[i] = newItem;
-                }
-                else
-                {
-                    cList.RemoveAt(i);
-                    i--;
-                }
-            }
-            else if (cList[i] is ConditionalCollections)
-            {
-                var newItemList = (ConditionalCollections)cList[i];
-
-                for (int j = 0; j < newItemList.ConditionalList.Count; j++)
-                {
-                    if ((tableName.IsNullOrEmpty() && newItemList.ConditionalList[j].Value.FieldName.Contains(".")) || tableName.IsNotEmptyOrNull() && !newItemList.ConditionalList[j].Value.FieldName.Contains(tableName + "."))
-                    {
-                        newItemList.ConditionalList.RemoveAt(j);
-                    }
-                    else
-                    {
-                        newItemList.ConditionalList[j].Value.FieldName = newItemList.ConditionalList[j].Value.FieldName.Split(".").Last();
-                    }
-                }
-                if (newItemList.ConditionalList.Any()) cList[i] = newItemList;
-                else cList.RemoveAt(i);
-            }
-            else if (cList[i] is ConditionalModel)
-            {
-                var newItem = (ConditionalModel)cList[i];
-                if ((tableName.IsNullOrEmpty() && newItem.FieldName.Contains(".")) || tableName.IsNotEmptyOrNull() && !newItem.FieldName.Contains(tableName + "."))
-                {
-                    cList.RemoveAt(i);
-                }
-                else
-                {
-                    newItem.FieldName = newItem.FieldName.Split(".").Last();
-                    cList[i] = newItem;
-                }
-            }
-        }
-
-        return cList;
     }
 
     /// <summary>
@@ -1651,52 +1447,25 @@ public class UserManager : IUserManager, IScoped
     public async Task<List<IConditionalModel>> GetCondition<T>(string primaryKey, string moduleId, bool isDataPermissions, bool primaryKeyPolicy)
         where T : new()
     {
-        var primaryWhere = new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel() { FieldName = primaryKey, ConditionalType = ConditionalType.NoEqual, FieldValue = "0", FieldValueConvertFunc = it => SqlSugar.UtilMethods.ChangeType2(it, typeof(string)) });
-        if (primaryKeyPolicy) primaryWhere = new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel() { FieldName = primaryKey, ConditionalType = ConditionalType.NoEqual, FieldValue = "0", FieldValueConvertFunc = it => SqlSugar.UtilMethods.ChangeType2(it, typeof(int)) });
-
         var conModels = new List<IConditionalModel>();
-        if (IsAdministrator) return conModels; // 管理员全部放开
+        if (IsAdministrator) return DataPermissionShortCircuits.Admin(); // 管理员全部放开
         var dataScope = DataScope.Select(x => x.organizeId).ToList();
-        if (_repository.AsSugarClient().Queryable<ModuleEntity>().Any(x => dataScope.Contains(x.SystemId) && x.Id.Equals(moduleId))) return conModels; // 分级管理全部放开
+        if (_repository.AsSugarClient().Queryable<ModuleEntity>().Any(x => dataScope.Contains(x.SystemId) && x.Id.Equals(moduleId))) return DataPermissionShortCircuits.Admin(); // 分级管理全部放开
 
         var roles = PermissionGroup;
         var roleAuthorizeList = _repository.AsSugarClient().Queryable<AuthorizeEntity>()
             .Where(x => roles.Contains(x.ObjectId) && x.ItemType == "resource").Select(a => new { a.ItemId, a.ObjectId }).ToList();
 
         if (!isDataPermissions)
-        {
-            conModels.Add(new ConditionalCollections()
-            {
-                ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>()
-                {
-                    primaryWhere
-                }
-            });
-            return conModels;
-        }
-        else if (roleAuthorizeList.Count == 0 && isDataPermissions)
-        {
-            primaryWhere.Value.ConditionalType = ConditionalType.Equal;
-            conModels.Add(new ConditionalCollections()
-            {
-                ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>()
-                {
-                    primaryWhere
-                }
-            });
-            return conModels;
-        }
+            return DataPermissionShortCircuits.AllowAll(primaryKey, primaryKeyPolicy);
+        if (roleAuthorizeList.Count == 0 && isDataPermissions)
+            return DataPermissionShortCircuits.DenyAll(primaryKey, primaryKeyPolicy);
 
         var resourceList = _repository.AsSugarClient().Queryable<ModuleDataAuthorizeSchemeEntity>().In(it => it.Id, roleAuthorizeList.Select(x => x.ItemId).ToList()).Where(it => it.ModuleId == moduleId && it.DeleteMark == null).ToList();
 
         if (resourceList.Any(x => x.AllData == 1 || x.EnCode.Equals("jnpf_alldata")))
         {
-            conModels.Add(new ConditionalCollections()
-            {
-                ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>() {
-                    primaryWhere
-                }
-            });
+            conModels.AddRange(DataPermissionShortCircuits.AllowAll(primaryKey, primaryKeyPolicy));
         }
         else
         {
@@ -1807,90 +1576,16 @@ public class UserManager : IUserManager, IScoped
                                 }
                             }
 
-                            switch (itemMethod)
+                            if (GetConditionQueryClauseAppender.Append(
+                                    conditionalList,
+                                    itemMethod,
+                                    itemField,
+                                    itemValue,
+                                    between,
+                                    fieldItem.Type,
+                                    conditionItem.Logic))
                             {
-                                case QueryType.Equal:
-                                    conditionalList.Add(new { Key = conditionItem.Logic.Equals("or") ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = itemValue, ConditionalType = ConditionalType.Equal } });
-                                    break;
-                                case QueryType.NotEqual:
-                                    conditionalList.Add(new { Key = conditionItem.Logic.Equals("or") ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = itemValue, ConditionalType = ConditionalType.NoEqual } });
-                                    break;
-                                case QueryType.Included:
-                                    conditionalList.Add(new { Key = conditionItem.Logic.Equals("or") ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = itemValue, ConditionalType = ConditionalType.Like } });
-                                    break;
-                                case QueryType.NotIncluded:
-                                    conditionalList.Add(new { Key = conditionItem.Logic.Equals("or") ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = itemValue, ConditionalType = ConditionalType.NoLike } });
-                                    break;
-                                case QueryType.GreaterThan:
-                                    conditionalList.Add(new { Key = conditionItem.Logic.Equals("or") ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = itemValue, ConditionalType = ConditionalType.GreaterThan } });
-                                    break;
-                                case QueryType.GreaterThanOrEqual:
-                                    conditionalList.Add(new { Key = conditionItem.Logic.Equals("or") ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = itemValue, ConditionalType = ConditionalType.GreaterThanOrEqual } });
-                                    break;
-                                case QueryType.LessThan:
-                                    conditionalList.Add(new { Key = conditionItem.Logic.Equals("or") ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = itemValue, ConditionalType = ConditionalType.LessThan } });
-                                    break;
-                                case QueryType.LessThanOrEqual:
-                                    conditionalList.Add(new { Key = conditionItem.Logic.Equals("or") ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = itemValue, ConditionalType = ConditionalType.LessThanOrEqual } });
-                                    break;
-                                case QueryType.Between:
-                                    if (between.IsNotEmptyOrNull())
-                                    {
-                                        conditionalList.Add(new { Key = conditionItem.Logic.Equals("or") ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = between[0], ConditionalType = ConditionalType.GreaterThanOrEqual } });
-                                        conditionalList.Add(new { Key = (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = between[1], ConditionalType = ConditionalType.LessThanOrEqual } });
-                                        continue;
-                                    }
-                                    break;
-                                case QueryType.Null:
-                                    if (fieldItem.Type.Equals("double") || fieldItem.Type.Equals("int") || fieldItem.Type.Equals("bigint"))
-                                        conditionalList.Add(new { Key = conditionItem.Logic.Equals("or") ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = itemValue, ConditionalType = ConditionalType.EqualNull } });
-                                    else
-                                        conditionalList.Add(new { Key = conditionItem.Logic.Equals("or") ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = itemValue, ConditionalType = ConditionalType.IsNullOrEmpty } });
-                                    break;
-                                case QueryType.NotNull:
-                                    conditionalList.Add(new { Key = conditionItem.Logic.Equals("or") ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = itemValue, ConditionalType = ConditionalType.IsNot } });
-                                    break;
-                                case QueryType.In:
-                                case QueryType.NotIn:
-                                    if (itemValue != null && itemValue.ToString().Contains('['))
-                                    {
-                                        var ids = new List<string>();
-                                        foreach (var valueList in itemValue.ToString().ToObject<List<string>>())
-                                        {
-                                            if (valueList.Contains('['))
-                                            {
-                                                var value = valueList.ToObject<List<string>>();
-                                                ids.AddRange(value);
-                                            }
-                                            else
-                                            {
-                                                ids.Add(valueList);
-                                            }
-                                        }
-
-                                        for (var i = 0; i < ids.Count; i++)
-                                        {
-                                            var it = ids[i];
-                                            var conditionWhereType = WhereType.And;
-                                            if (itemMethod.Equals(QueryType.In)) conditionWhereType = i.Equals(0) && conditionItem.Logic.Equals("and") ? WhereType.And : WhereType.Or;
-                                            else conditionWhereType = i.Equals(0) && conditionItem.Logic.Equals("or") ? WhereType.Or : WhereType.And;
-
-                                            conditionalList.Add(new { Key = (int)conditionWhereType, Value = new { FieldName = itemField, FieldValue = it, ConditionalType = itemMethod.Equals(QueryType.In) ? ConditionalType.Like : ConditionalType.NoLike } });
-                                        }
-
-                                        if (itemMethod.Equals(QueryType.NotIn))
-                                        {
-                                            conditionalList.Add(new { Key = (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = "null", ConditionalType = ConditionalType.IsNot } });
-                                            conditionalList.Add(new { Key = (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = string.Empty, ConditionalType = ConditionalType.IsNot } });
-                                        }
-
-                                        continue;
-                                    }
-                                    else
-                                    {
-                                        conditionalList.Add(new { Key = conditionItem.Logic.Equals("or") ? (int)WhereType.Or : (int)WhereType.And, Value = new { FieldName = itemField, FieldValue = itemValue, ConditionalType = ConditionalType.Equal } });
-                                    }
-                                    break;
+                                continue;
                             }
                         }
 
@@ -1916,16 +1611,7 @@ public class UserManager : IUserManager, IScoped
         }
 
         if (resourceList.Count == 0)
-        {
-            primaryWhere.Value.ConditionalType = ConditionalType.Equal;
-            conModels.Add(new ConditionalCollections()
-            {
-                ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>()
-                    {
-                        primaryWhere
-                    }
-            });
-        }
+            conModels.AddRange(DataPermissionShortCircuits.DenyAll(primaryKey, primaryKeyPolicy));
 
         return conModels;
     }
@@ -2036,6 +1722,37 @@ public class UserManager : IUserManager, IScoped
     /// 获取条件模型.
     /// </summary>
     /// <returns></returns>
+    /// <summary>
+    /// Dispatch registered field-value tokens via <see cref="ConditionStrategyRegistry"/>.
+    /// </summary>
+    private static void AppendTokenStrategy(
+        string token,
+        List<object> conditionalList,
+        ref bool isCurrentRole,
+        string itemField,
+        QueryType itemMethod,
+        ConditionalType conditionalType,
+        string logic,
+        IReadOnlyList<string> ids)
+    {
+        if (ids == null || ids.Count == 0)
+            return;
+        if (!ConditionStrategyRegistry.TryGet(token, out var strategy))
+            return;
+
+        var ctx = new ConditionStrategyContext
+        {
+            ItemField = itemField,
+            ItemMethod = itemMethod,
+            ConditionalType = conditionalType,
+            Logic = logic,
+            IsCurrentRole = isCurrentRole,
+            Ids = ids,
+        };
+        strategy.Append(conditionalList, ctx);
+        isCurrentRole = ctx.IsCurrentRole;
+    }
+
     private ConditionalModel GetConditionalModel(QueryType expressType, string fieldName, string fieldValue, string dataType = "string")
     {
         switch (expressType)
@@ -2253,6 +1970,28 @@ public class UserManager : IUserManager, IScoped
         var querList = LinqExpression.Or<PermissionGroupEntity>();
         objIdList.ForEach(item => querList = querList.Or(x => x.PermissionMember.Contains(item)));
         return _repository.AsSugarClient().Queryable<PermissionGroupEntity>().Where(x => x.DeleteMark == null && x.EnabledMark.Equals(1)).Where(querList).Select(x => x.Id).ToList();
+    }
+
+    /// <summary>
+    /// 获取用户已授权的资源ID集合，用于路由级权限匹配.
+    /// 查询 BASE_AUTHORIZE WHERE ObjectId IN (用户角色IDs + 用户ID).
+    /// </summary>
+    public async Task<HashSet<string>> GetAuthorizedResourceIdsAsync(string userId)
+    {
+        var objectIds = new List<string>(PermissionGroup ?? new List<string>()) { userId };
+        objectIds = objectIds.Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+
+        if (objectIds.Count == 0)
+            return new HashSet<string>();
+
+        var itemIds = await _repository.AsSugarClient()
+            .Queryable<AuthorizeEntity>()
+            .Where(a => objectIds.Contains(a.ObjectId)
+                && (a.ItemType == "module" || a.ItemType == "button" || a.ItemType == "system"))
+            .Select(a => a.ItemId)
+            .ToListAsync();
+
+        return new HashSet<string>(itemIds.Where(id => !string.IsNullOrEmpty(id)));
     }
 
     /// <summary>

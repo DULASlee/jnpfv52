@@ -132,7 +132,8 @@ import codeEdit from '@/page/components/code-edit.vue'
 import AvueEchartVue from "@/echart/packages/vue/index.vue";
 import AvueEchartCommon from "@/echart/packages/common/index.vue";
 import AvueEchartHtml from '@/echart/packages/html/index.vue';
-import MonacoEditor from "@/page/components/monaco-editor";
+import { defineAsyncComponent } from 'vue';
+const MonacoEditor = defineAsyncComponent(() => import('@/page/components/monaco-editor'));
 import { dataURLtoFile } from '@/utils/utils'
 import { uploadImg } from "@/api/visual";
 import { getList, getObj, addObj, delObj, updateObj } from "@/api/components";

@@ -228,6 +228,8 @@ public class PipelineValidationJob : ITransient
         var entity = new IrVersionEntity
         {
             PipelineId = pipelineId,
+            // 三元组血缘:ProjectId 兜底为 pipelineId
+            ProjectId = pipelineId,
             Version = latestVersion + 1,
             TriggeredBy = triggeredBy,
             ChangeSummary = summary,

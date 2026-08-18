@@ -37,7 +37,7 @@ public class CacheManager : ICacheManager, IScoped
     {
         List<string> cacheItems = _cache.GetAllKeys();
         if (cacheItems == null) return new List<string>();
-        return cacheItems.Where(u => !u.ToString().StartsWith("mini-profiler")).Select(u => u).ToList();
+        return cacheItems.Where(u => !u.ToString().StartsWith("mini-profiler")).ToList();
     }
 
     /// <summary>

@@ -1,0 +1,12 @@
+{
+  "profileId": "ag001-ddl-controller-ref",
+  "description": "Q2 — AG-001 DDL/代码层错误引用 Controller（Critical → 阻断 tester）",
+  "expectedRuleIds": ["AG-001"],
+  "expectedSeverity": "critical",
+  "injectFiles": [
+    {
+      "source": "Entitys/ViolationProbe.cs",
+      "target": "Entitys/ViolationProbe.cs"
+    }
+  ]
+}

@@ -15,7 +15,7 @@ public interface IDocumentMerger
     /// <returns>合并后的文档</returns>
     Task<MergedDocument> MergeAsync(
         string projectName,
-        Dictionary<string, SubAgentResult> subAgentResults,
+        IReadOnlyDictionary<string, SubAgentResult> subAgentResults,
         CancellationToken ct = default);
 }
 

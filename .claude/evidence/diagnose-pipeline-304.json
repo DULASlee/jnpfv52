@@ -1,0 +1,61 @@
+{
+  "pipelineId": 304,
+  "at": "2026-07-05T21:07:51.511Z",
+  "saServiceUp": true,
+  "skillRuns": [
+    {
+      "skillId": "pm-skill",
+      "status": "completed",
+      "error": "",
+      "startedAt": 1783255452407,
+      "completedAt": 1783255495473
+    }
+  ],
+  "deliverableFiles": [
+    "step1-leave-requirement-extracted.txt",
+    "00-gate-report.json",
+    "00-merged-requirement.md",
+    "01-skeleton.md"
+  ],
+  "eventSpecCount": 0,
+  "skeletonStable": true,
+  "recentEvents": [
+    {
+      "type": "SkillReviewRecorded",
+      "skillId": "pm-skill",
+      "saStep": null,
+      "at": 1783255497107,
+      "preview": "{\"runId\":\"hitl-skeleton-304\",\"verdict\":\"approved\",\"detail\":{\"fragmentId\":\"skeleton:SK-304\",\"source\":\"confirm-skeleton\",\""
+    },
+    {
+      "type": "FragmentStabilized",
+      "skillId": "pm-skill",
+      "saStep": null,
+      "at": 1783255497073,
+      "preview": "{\"fragmentId\":\"skeleton:SK-304\",\"stabilityState\":\"stable\",\"confirmedBy\":\"user-hitl\"}"
+    },
+    {
+      "type": "StageConfirmed",
+      "skillId": "pm-skill",
+      "saStep": null,
+      "at": 1783255497063,
+      "preview": "{\"fragmentId\":\"skeleton:SK-304\",\"stage\":\"IR-0\",\"confirmedBy\":\"user-hitl\"}"
+    },
+    {
+      "type": "SkeletonCreated",
+      "skillId": "pm-skill",
+      "saStep": null,
+      "at": 1783255495380,
+      "preview": "{\"skeletonId\":\"SK-304\",\"businessEvents\":[{\"eventId\":\"E001\",\"eventName\":\"\\u5458\\u5DE5\\u63D0\\u4EA4\\u8BF7\\u5047\\u7533\\u8BF7"
+    },
+    {
+      "type": "ProjectCreated",
+      "skillId": null,
+      "saStep": null,
+      "at": 1783255433447,
+      "preview": "{\"projectId\":\"304\",\"projectName\":\"SUP-S2-1783284233089\"}"
+    }
+  ],
+  "failureEvents": [],
+  "hasAnalysisCompleted": false
+}

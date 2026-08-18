@@ -1,5 +1,6 @@
 using JNPF.Extras.DatabaseAccessor.SqlSugar.Models;
 using JNPF.Extras.DatabaseAccessor.SqlSugar.TenantContext;
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -15,6 +16,11 @@ public partial class SqlSugarRepository<TEntity> : SimpleClient<TEntity>, ISqlSu
     where TEntity : class, new()
 {
     private readonly ITenantContext? _tenantContext;
+
+    /// <summary>
+    /// TenantId PropertyInfo 缓存，避免每个实体写操作都反射查找
+    /// </summary>
+    private static readonly ConcurrentDictionary<Type, PropertyInfo?> _tenantIdPropertyCache = new();
 
     /// <summary>
     /// 构造函数
@@ -213,8 +219,8 @@ public partial class SqlSugarRepository<TEntity> : SimpleClient<TEntity>, ISqlSu
     /// </summary>
     private static bool HasTenantId(TEntity entity)
     {
-        var prop = typeof(TEntity).GetProperty("TenantId",
-            BindingFlags.Public | BindingFlags.Instance);
+        var prop = _tenantIdPropertyCache.GetOrAdd(typeof(TEntity), t =>
+            t.GetProperty("TenantId", BindingFlags.Public | BindingFlags.Instance));
         if (prop == null || prop.PropertyType != typeof(string))
             return false;
         var value = prop.GetValue(entity) as string;
@@ -226,8 +232,8 @@ public partial class SqlSugarRepository<TEntity> : SimpleClient<TEntity>, ISqlSu
     /// </summary>
     private static void SetTenantId(TEntity entity, string tenantId)
     {
-        var prop = typeof(TEntity).GetProperty("TenantId",
-            BindingFlags.Public | BindingFlags.Instance);
+        var prop = _tenantIdPropertyCache.GetOrAdd(typeof(TEntity), t =>
+            t.GetProperty("TenantId", BindingFlags.Public | BindingFlags.Instance));
         if (prop != null && prop.CanWrite && prop.PropertyType == typeof(string))
         {
             prop.SetValue(entity, tenantId);

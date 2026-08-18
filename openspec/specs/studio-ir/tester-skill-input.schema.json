@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.jnpf.ai/ir/v1/tester-skill-input",
+  "title": "TesterSkillInput",
+  "description": "tester-skill 确定性推导输入契约（阶段四 Q1）。由 TesterSkillService 从 IR 快照组装，非用户手填。",
+  "type": "object",
+  "required": [
+    "projectId",
+    "tenantId",
+    "runId",
+    "eventSpec",
+    "derivedAt"
+  ],
+  "properties": {
+    "projectId": { "type": "string" },
+    "tenantId": { "type": "string" },
+    "runId": { "type": "string" },
+    "derivedAt": { "type": "string", "format": "date-time" },
+    "eventSpec": { "$ref": "#/$defs/eventSpecInput" },
+    "systemDesign": { "$ref": "#/$defs/systemDesignInput" },
+    "formPageIr": { "$ref": "#/$defs/formPageIrInput" },
+    "archGuardWarnings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/archWarning" },
+      "description": "ArchGuard warning 级违规，写入 TestSuite metadata，不阻断推导"
+    },
+    "derivationMode": {
+      "type": "string",
+      "enum": ["field-only", "field-and-state-machine"],
+      "description": "无 stateMachines 时必须为 field-only（DoD D4 降级 ≥3 场景）"
+    }
+  },
+  "$defs": {
+    "eventSpecInput": {
+      "type": "object",
+      "description": "来源：IR 快照 IR1_EventSpec（stable）",
+      "required": ["fragmentId", "confirmedFields"],
+      "properties": {
+        "fragmentId": { "type": "string" },
+        "eventName": { "type": "string" },
+        "confirmedFields": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/confirmedField" }
+        },
+        "businessRules": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/businessRule" }
+        }
+      }
+    },
+    "confirmedField": {
+      "type": "object",
+      "required": ["name", "type", "required"],
+      "properties": {
+        "name": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["string", "int", "long", "decimal", "bool", "date", "datetime"]
+        },
+        "required": { "type": "boolean" },
+        "minLength": { "type": "integer", "minimum": 0 },
+        "maxLength": { "type": "integer" },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "pattern": { "type": "string", "description": "正则；测试用例生成非法值时取反" }
+      }
+    },
+    "businessRule": {
+      "type": "object",
+      "required": ["ruleId", "description", "source"],
+      "properties": {
+        "ruleId": { "type": "string" },
+        "description": { "type": "string" },
+        "source": {
+          "type": "string",
+          "enum": ["seed-data", "inferred"],
+          "description": "seed-data → 确定性断言；inferred → tester-skill LLM fast（maxCalls=2）"
+        },
+        "assertionKind": {
+          "type": "string",
+          "enum": ["equals", "not-null", "range", "custom-expression"],
+          "description": "seed-data 必填；inferred 可省略"
+        },
+        "expectedValue": {}
+      }
+    },
+    "systemDesignInput": {
+      "type": "object",
+      "description": "来源：IR2_SystemDesign（locked）payload 扩展",
+      "properties": {
+        "fragmentId": { "type": "string" },
+        "stateMachines": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/stateMachine" },
+          "description": "缺省或空数组 → derivationMode=field-only"
+        }
+      }
+    },
+    "stateMachine": {
+      "type": "object",
+      "required": ["machineId", "entityRef", "statusField", "states", "transitions"],
+      "properties": {
+        "machineId": { "type": "string", "examples": ["LeaveApprovalFlow"] },
+        "entityRef": {
+          "type": "string",
+          "description": "对应 Entity 类名或表名",
+          "examples": ["LeaveRequest"]
+        },
+        "statusField": {
+          "type": "string",
+          "description": "状态列属性名（C# PascalCase）",
+          "examples": ["Status"]
+        },
+        "states": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/stateNode" }
+        },
+        "transitions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/transitionEdge" }
+        }
+      }
+    },
+    "stateNode": {
+      "type": "object",
+      "required": ["stateId", "label"],
+      "properties": {
+        "stateId": { "type": "string", "examples": ["draft", "pending", "approved", "rejected"] },
+        "label": { "type": "string" },
+        "isTerminal": { "type": "boolean", "default": false }
+      }
+    },
+    "transitionEdge": {
+      "type": "object",
+      "required": ["from", "to", "event"],
+      "properties": {
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "event": {
+          "type": "string",
+          "description": "触发事件名，对齐 IR1 businessEvents",
+          "examples": ["Submit", "Approve", "Reject"]
+        },
+        "guard": {
+          "type": "string",
+          "description": "可选守卫表达式（JSONPath 或简单字段比较）；空=无条件"
+        }
+      }
+    },
+    "formPageIrInput": {
+      "type": "object",
+      "description": "来源：IR2_FormPageIR（stable）；字段标签→测试描述",
+      "properties": {
+        "fragmentId": { "type": "string" },
+        "pageName": { "type": "string" },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["fieldId", "label", "component"],
+            "properties": {
+              "fieldId": { "type": "string" },
+              "label": { "type": "string" },
+              "component": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "archWarning": {
+      "type": "object",
+      "required": ["ruleId", "message"],
+      "properties": {
+        "ruleId": { "type": "string" },
+        "message": { "type": "string" },
+        "filePath": { "type": "string" }
+      }
+    },
+    "testCaseDerivationRules": {
+      "type": "object",
+      "description": "确定性推导规则表（TesterSkillService 内置，非 payload 字段）",
+      "properties": {
+        "fieldRules": {
+          "type": "array",
+          "const": [
+            { "rule": "F-REQ", "when": "confirmedField.required=true", "emit": ["valid-all-required", "invalid-missing-{name}"] },
+            { "rule": "F-TYPE", "when": "confirmedField.type set", "emit": ["valid-boundary-{type}", "invalid-wrong-type-{name}"] },
+            { "rule": "F-PATTERN", "when": "confirmedField.pattern set", "emit": ["valid-match", "invalid-violate-pattern"] }
+          ]
+        },
+        "stateMachineRules": {
+          "type": "array",
+          "const": [
+            { "rule": "SM-EDGE", "when": "each transition (from,to,event)", "emit": ["happy-path-{from}-{event}-{to}", "illegal-{from}-direct-{to}-skip"] },
+            { "rule": "SM-TERMINAL", "when": "state.isTerminal=true", "emit": ["no-outbound-from-{stateId}"] },
+            { "rule": "SM-GUARD", "when": "transition.guard non-empty", "emit": ["guard-satisfied", "guard-violated"] }
+          ],
+          "description": "每条转移边至少 2 用例：合法转移 + 非法跳跃"
+        },
+        "minimumCounts": {
+          "type": "object",
+          "properties": {
+            "fieldOnlyMode": { "const": 3 },
+            "fieldAndStateMachineMode": { "const": 5 }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "systemDesign": {
+            "properties": {
+              "stateMachines": { "minItems": 1 }
+            },
+            "required": ["stateMachines"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "derivationMode": { "const": "field-and-state-machine" }
+        }
+      },
+      "else": {
+        "properties": {
+          "derivationMode": { "const": "field-only" }
+        }
+      }
+    }
+  ]
+}

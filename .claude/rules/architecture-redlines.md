@@ -6,6 +6,25 @@
 
 ---
 
+## B0 — Business First（业务优先 · 宪法级）
+
+**规则：** 一切的架构设计、功能实现、测试、性能优化，都必须围绕**具体业务功能**和**客户操作**为目标。一切不以业务功能为目标的工作 = **瞎折腾**。
+
+**理由：** 基础设施、模具、契约测试、性能优化若不能映射到「用户操作路径 + 可感知业务产物」，对用户价值为零，且消耗评审与维护成本。
+
+**开工 Gate（Mandatory）：**
+1. 用户做什么操作？（页面/API/按钮/下载）
+2. 完成后用户拿到什么？（说明书、附件、门控结果…）
+3. 哪条业务 E2E 验收？（`jnpf-api.mjs` / 领域脚本 / Playwright 用户路径）
+
+**后果：** 无业务锚定的 PR/阶段声称 → code-reviewer **BLOCK**；Infrastructure-only 须标注「基建债」，**不得替代**业务验收。
+
+**执行层：** 宪法级（凌驾 R1–R10）| **完整条款：** `.cursor/rules/business-first-iron-law.mdc` · `.claude/rules/business-first-iron-law.md`
+
+**AI 原生链业务锚点：** S0 门控+附件 → S1 `01-skeleton.md` → S2 `02-requirement-spec.md` + confirm 后 **sa_* 九表（C# 物化）** → 19 号计划 · 详 **R11** / ADR-004
+
+---
+
 ## 执行层级（AI 能否绕过）
 
 | 层级 | 机制 | 说明 |
@@ -198,6 +217,60 @@
 
 ---
 
+### R11 — S2 Compile 主链与九表物化边界（Studio Analyst）
+
+**规则：**
+
+1. **生产主链默认 compile** — `SaPipeline.json` → `S2Mode: "compile"`；Analyst 九视图 MUST 经 **`SaNineViewCompiler`**，NEVER 把 sa-service LLM 九步作为默认主链。
+2. **S2 期间禁止写 `sa_*`** — 九表 ONLY 在用户 `confirm-requirement-spec` 之后，由 **`SaMaterializer`（C#）** 物化；NEVER 在 compile/analyst 运行期间同步落库。
+3. **物化禁止走 sa-service 写主库** — sa-service 仅 **agent 模式** LLM 九步回归与 Vitest；compile + confirm 物化 **不依赖** `:3001`。
+4. **职责分离** — Skills（PM + Analyst）= 语义/双审/02 文档；Compiler = 确定性九视图；Materializer = 持久化。
+
+**理由：** 原 agent 主链 ~9min 且 S2 与用户确认脱节；sa-service 写 JNPF 主库曾致连库失败与脏数据。
+
+**后果：** 违反 → 主链性能回退、九表脏写、Dev Loop 强依赖 sa-service、物化与用户确认脱节。
+
+**执行层：** L2 | **Hook：** 无 | **知识库：** ADR-004 · `openspec/specs/studio-s2-compile/spec.md` · `.cursor/rules/studio-s2-compile.mdc`
+
+**业务验收：** pipeline 311 · `phase-sup-s2-e2e verify` · `pnpm test:api`
+
+---
+
+### R12 — Triple-Key（三元组铁律 · 多用户多项目多对话的存在前提）⚠️ 架构骨架级
+
+**规则：** AI 原生开发一切数据实体、IR 事件、文件路径、Skill 上下文 MUST 同时携带三元组 `(tenantId, projectId, pipelineId)`，三者完整、独立、可分离。
+
+**完整条款：** `.cursor/rules/triple-key-iron-law.mdc` · `.claude/rules/triple-key-iron-law.md`（宪法级，永远生效）
+
+**关键不变量：**
+1. **DB Schema** — `ai_ir_fragment_snapshots` 唯一索引 MUST 含 `(F_ProjectId, F_PIPELINE_ID, F_FragmentId)`，缺 PipelineId 即撞键。
+2. **IR 投影查询** — `IrProjectionEngine` 所有 WHERE MUST 含三元组 + FragmentId，缺一即覆盖。
+3. **Studio 路径** — `StudioWorkspaceHelper.GetPipelinePath(tenantId, projectId, pipelineId)` MUST 四层；老路径 `{tenantId}/{pipelineId}/` 仅作历史自锚定数据兼容。
+4. **Skill API 入口** — `ResolveProjectAsync` MUST 返回 `pipeline.ProjectId`（非 pipelineId）。
+5. **SkillContext** — `ProjectId` 与 `PipelineId` 来自不同源，语义不可混淆。
+6. **F_CREATOR_USER_ID** — 创建 pipeline MUST 写入，否则同租户用户互看 = 越权。
+7. **Fork / Freeze / Resume API** — MUST 标准化提供（`POST /fork` / `POST /freeze` / `POST /resume`），禁止手改 DB 替代。
+
+**理由：** Schema 设计已支持三元组（`AiPipelineEntity.F_PROJECT_ID` + `F_WORK_MODE` + `F_SOURCE_PIPELINE_ID` + `F_FROZEN` + `F_CHECKPOINT`），但运行时全部退化：所有 pipeline 自锚定 projectId=pipelineId，0 条 bugfix/enhancement，0 条 frozen，F_CREATOR_USER_ID 全空。"多用户多项目多对话 + 冻结拉起 + 二次开发"形同虚设。
+
+**后果（生产事故级）：**
+- IR 投影缺 PipelineId → bugfix 时新 pipeline 覆盖源 pipeline 数据 / 撞唯一键
+- Studio 路径缺 projectId 层 → fork 出的 pipeline 看不到源 pipeline 的 generated/，无法继承代码
+- `ResolveProjectAsync` 返 pipelineId → Skill 写错 IR ProjectId，血缘断裂
+- 缺 F_CREATOR_USER_ID → 同租户用户越权互看 pipeline
+
+**执行层：** L2 | **Hook：** 无（code-reviewer 子代理在 Step 6 检测三元组完整性）
+**关联文件：** `AiPipelineEntity.cs` · `IrProjectionEngine.cs` · `IrEventStoreService.cs` · `StudioWorkspaceHelper.cs` · `SkillsApiService.cs / DeploySkillsApiService.cs` · `SkillContext / SkillExecutionScope`
+
+**业务验收：**
+```powershell
+node scripts/diagnose-triple-key.mjs           # DB 三元组健康检查
+node scripts/phase5-fullchain-e2e.mjs --from-step fork --pipeline-id <new>
+node scripts/test-freeze-resume.mjs
+```
+
+---
+
 ## Hook 覆盖矩阵
 
 | 红线 | Hook | 拦截内容 | 测试覆盖 |
@@ -207,7 +280,7 @@
 | R6 | `guard-frontend-leak.mjs` | setTimeout无clear / EventSource无retry / onerror直连 | 4 用例 |
 | R7 | `guard-sql-injection.mjs` | $"SQL" / string.Format(SQL) / Ado+$ | 3 用例 |
 | R8 | `guard-auth.mjs` | IDynamicApiController 无权限属性 | 3 用例 |
-| R1-R3,R9,R10 | — | L2 约定，无 hook | code-reviewer 子代理检测 |
+| R1-R3,R9-R12 | — | L2 约定，无 hook | code-reviewer 子代理检测 |
 | 安全扫描 | `guard-write.mjs` | 密钥文件 / 空文件 / 硬编码密钥 / eval / 命令注入 / SQL拼接(.cs) | 6 用例 |
 
 ---

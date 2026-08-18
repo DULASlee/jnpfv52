@@ -1,0 +1,43 @@
+{
+  "date": "2026-08-06",
+  "endedAt": "2026-08-06T12:39:58.028Z",
+  "hookEvent": "stop",
+  "conversationId": "4ea6c159-9f34-4df9-af9a-ab4378e89c78",
+  "changedFiles": [
+    ".claude/evidence/frontend-ct/cab3-component-meta.json",
+    ".claude/evidence/frontend-ct/cab3-unused-vue-sample.json",
+    ".claude/evidence/frontend-ct/cab4-fuite-runbook.json",
+    ".claude/memory/mistake-log.md",
+    ".claude/memory/session-digest/latest.json",
+    ".cursor/CURRENT-FOCUS.md",
+    ".claude/evidence/frontend-ct/cab3-component-meta-summary.json",
+    ".claude/evidence/frontend-ct/cab3-unused-vue-full.json",
+    ".claude/evidence/frontend-ct/cab4-fuite-stdout.txt",
+    ".claude/evidence/frontend-ct/cab4-fuite.json",
+    ".claude/evidence/frontend-ct/d8-axe-login.json",
+    ".claude/memory/session-digest/2026-08-06-20260806122716.json",
+    ".claude/memory/session-digest/2026-08-06-20260806122811.json",
+    ".claude/memory/session-digest/2026-08-06-20260806123432.json",
+    ".claude/memory/session-summaries/2026-08-06-代码变更-AUTO.md",
+    "jnpf-web-vue3/.serena/.gitignore",
+    "jnpf-web-vue3/.serena/project.yml"
+  ],
+  "codeFilesChanged": 4,
+  "archiveStatus": "complete",
+  "archiveChecks": {
+    "mistakeOk": true,
+    "focusOk": true,
+    "registryOk": true,
+    "complete": true
+  },
+  "topic": "代码变更",
+  "metaOnly": false,
+  "autoSummaryPath": "D:\\JNPF-v52\\.claude\\memory\\session-summaries\\2026-08-06-代码变更-AUTO.md",
+  "machineArchival": {
+    "applied": true,
+    "sessionId": "4ea6c159-9f34-4df9-af9a-ab4378e89c78",
+    "mistakeId": "M080",
+    "focusPath": ".cursor/CURRENT-FOCUS.md",
+    "registryPath": "docs/progress-registry.yaml"
+  }
+}

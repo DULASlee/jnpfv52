@@ -6,9 +6,11 @@ import createVitePlugins from './vite/plugins'
 export default ({ mode, command }) => {
   const env = loadEnv(mode, process.cwd())
   const { VITE_APP_BASE, VITE_APP_ENV, VITE_PROXY } = env
+  const isBuild = command === 'build'
+  const isLib = VITE_APP_ENV === 'lib'
   return defineConfig({
     ...(() => {
-      if (VITE_APP_ENV == 'lib') {
+      if (isLib) {
         return libConfig
       }
       return {}
@@ -24,7 +26,48 @@ export default ({ mode, command }) => {
         "utils": resolve(__dirname, "./src/utils"),
       }
     },
-    plugins: createVitePlugins(env, command === 'build'),
+    ...((isBuild && !isLib) ? {
+      build: {
+        target: 'es2015',
+        // esbuild 压缩 — Vite 4 默认 terser，对大屏项目内存友好
+        minify: 'esbuild',
+        sourcemap: false,
+        chunkSizeWarningLimit: 500,
+        rollupOptions: {
+          output: {
+            chunkFileNames: 'static/js/[name]-[hash].js',
+            entryFileNames: 'static/js/[name]-[hash].js',
+            assetFileNames: 'static/[ext]/[name]-[hash].[ext]',
+            manualChunks: (id) => {
+              if (id.includes('node_modules')) {
+                // element-plus (重型 UI 库 ~1MB)
+                if (id.includes('/element-plus/') || id.includes('/@element-plus/')) {
+                  return 'vendor-element';
+                }
+                // monaco-editor (代码编辑器 ~5MB — 最大的单个依赖)
+                if (id.includes('/monaco-editor/')) {
+                  return 'vendor-monaco';
+                }
+                // DataV 可视化组件
+                if (id.includes('/@kjgl77/datav-vue3/') || id.includes('/echarts/') || id.includes('/zrender/')) {
+                  return 'vendor-datav';
+                }
+                // AVUE 低代码框架
+                if (id.includes('/@smallwei/avue/')) {
+                  return 'vendor-avue';
+                }
+                // Vue 生态
+                if (id.includes('/vue/') || id.includes('/vue-router/') || id.includes('/vue-i18n/') || id.includes('/pinia/')) {
+                  return 'vendor-vue';
+                }
+                return 'vendor-common';
+              }
+            },
+          },
+        },
+      },
+    } : {}),
+    plugins: createVitePlugins(env, isBuild),
     define: {
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
     },
@@ -35,12 +78,37 @@ export default ({ mode, command }) => {
       strictPort: true,
       proxy: {
         "/dev": {
-          target: VITE_PROXY,//代理接口
+          target: VITE_PROXY,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/dev/, ""),
         },
       },
-      open: true, //vite项目启动时自动打开浏览器
+      open: true,
+      // 演示/日常：预构建重型依赖 + 预转换页面图（列表/设计器/运行时），
+      // 避免首次打开大屏白屏数分钟（性能优化 2026-08-10）
+      warmup: {
+        clientFiles: ['./index.html', './src/main.js', './src/App.vue', './src/page/login.vue', './src/page/index.vue', './src/page/build.vue', './src/page/view.vue'],
+      },
+    },
+    optimizeDeps: {
+      include: [
+        'vue',
+        'vue-router',
+        'vue-i18n',
+        'element-plus',
+        'element-plus/dist/locale/zh-cn.mjs',
+        '@element-plus/icons-vue',
+        '@smallwei/avue',
+        '@kjgl77/datav-vue3',
+        'axios',
+        'dayjs',
+        'mqtt',
+        'highlight.js',
+        'vue-json-viewer',
+        'vuedraggable',
+      ],
+      // monaco 按需进编辑页再加载，不挡大屏首页
+      exclude: ['monaco-editor'],
     },
   })
 }

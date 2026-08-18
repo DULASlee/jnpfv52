@@ -1,0 +1,30 @@
+{
+  "date": "2026-08-06",
+  "endedAt": "2026-08-06T12:28:11.787Z",
+  "hookEvent": "stop",
+  "conversationId": "4ea6c159-9f34-4df9-af9a-ab4378e89c78",
+  "changedFiles": [
+    ".claude/memory/session-digest/latest.json",
+    ".claude/memory/session-digest/2026-08-06-20260806122716.json",
+    "jnpf-web-vue3/.serena/.gitignore",
+    "jnpf-web-vue3/.serena/project.yml"
+  ],
+  "codeFilesChanged": 2,
+  "archiveStatus": "complete",
+  "archiveChecks": {
+    "mistakeOk": true,
+    "focusOk": true,
+    "registryOk": true,
+    "complete": true
+  },
+  "topic": "代码变更",
+  "metaOnly": false,
+  "autoSummaryPath": "D:\\JNPF-v52\\.claude\\memory\\session-summaries\\2026-08-06-代码变更-AUTO.md",
+  "machineArchival": {
+    "applied": true,
+    "sessionId": "4ea6c159-9f34-4df9-af9a-ab4378e89c78",
+    "mistakeId": "M078",
+    "focusPath": ".cursor/CURRENT-FOCUS.md",
+    "registryPath": "docs/progress-registry.yaml"
+  }
+}

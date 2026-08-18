@@ -104,7 +104,7 @@ cd jnpf-web-vue3 && pnpm dev
 
 - **PC Admin**: http://localhost:3100
 - **API Swagger**: http://localhost:5000/swagger
-- **Data Screen**: http://localhost:8100
+- **Data Screen**: http://localhost:3102/DataV/
 
 ## Configuration
 

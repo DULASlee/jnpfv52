@@ -6,10 +6,10 @@ v5.2 单一仓库：后端 + PC / 大屏 / 移动端前端 + 文档与 SQL 初�
 
 ```
 JNPF-v52/
-├── backend/                 # .NET 6 API（application / framework / modularity / infrastructure）
+├── backend/                 # .NET 8 API（application / framework / modularity / infrastructure）
 │   └── web/                 # SQL 初始化脚本（已纳入 Git）
 ├── jnpf-web-vue3/           # PC 前端 → http://localhost:3100
-├── jnpf-web-datascreen/     # 大屏前端 → http://localhost:8100/DataV/
+├── jnpf-web-datascreen/     # 大屏前端 → http://localhost:3102/DataV/
 ├── jnpf-app-vue3/           # UniApp 移动端（H5 发行 + proxy）
 ├── docs/                    # 演示手册、架构文档
 ├── scripts/                 # 工具链验证等脚本
@@ -139,7 +139,7 @@ python scripts/proxy_server.py
 |------|------|------|
 | PC 前端 | http://localhost:3100/ | 须为 Vite 占用 3100，勿与其他进程冲突 |
 | 后端 API 文档 | http://localhost:5000/newapi | 冷启动约 60–90s |
-| 大屏 | http://localhost:8100/DataV/ | 须先在 PC 端登录，从菜单带 token 进入 |
+| 大屏 | http://localhost:3102/DataV/ | 须先在 PC 端登录，从菜单带 token 进入 |
 | 移动端 | http://localhost:3800/ | 经 `proxy_server.py` 转发 API |
 
 默认账号：**admin / 123456**（以库中种子数据为准）。

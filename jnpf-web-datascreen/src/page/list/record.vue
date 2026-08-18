@@ -167,14 +167,21 @@
 
 <script>
 import db from '@/page/components/db.vue'
-import * as mqtt from 'mqtt/dist/mqtt.min';
 import { addParam } from '@/echart/util';
 import { getFunction, funEval } from '@/utils/utils'
-import MonacoEditor from '@/page/components/monaco-editor'
 import { getList, getObj, addObj, delObj, updateObj } from '@/api/record'
 import { getList as getDbList, dynamicSql } from "@/api/db";
 import { dicOption } from '@/option/config'
 import crypto from '@/utils/crypto'
+import { defineAsyncComponent } from 'vue';
+// Monaco 编辑器按需加载 (~5MB, 仅在编辑代码时使用)
+const MonacoEditor = defineAsyncComponent(() => import('@/page/components/monaco-editor'));
+// MQTT 客户端按需加载 (~500KB, 仅在 dataset type=6 时使用)
+let mqttModule = null;
+async function getMqtt() {
+  if (!mqttModule) mqttModule = await import('mqtt/dist/mqtt.min');
+  return mqttModule;
+}
 dicOption.dataType.splice(4, 1)
 const dataType = dicOption.dataType
 export default {
@@ -374,19 +381,21 @@ export default {
         let url = this.form.mqttUrl
         let dataMqttConfig = JSON.parse(this.form.mqttConfig)
         dataMqttConfig.clientId = 'mqttjs_' + new Date().getTime()
-        this.mqClient = mqtt.connect(url, dataMqttConfig)
+        getMqtt().then(mqtt => {
+          this.mqClient = mqtt.connect(url, dataMqttConfig)
         this.mqClient.on('connect', () => {
           this.mqClient.subscribe(dataMqttConfig.topic.name, { qos: dataMqttConfig.topic.qos || 0 }, (error, res) => {
             console.log('Subscribe to topics res', res, error)
           })
         })
-        this.mqClient.on('message', (topic, message) => {
-          let defaultTopic = dataMqttConfig.topic
-          if (topic === defaultTopic.name) {
-            let data = JSON.parse(message)
-            this.result = formatter(data)
-          }
-        })
+          this.mqClient.on('message', (topic, message) => {
+            let defaultTopic = dataMqttConfig.topic
+            if (topic === defaultTopic.name) {
+              let data = JSON.parse(message)
+              this.result = formatter(data)
+            }
+          })
+        });
       }
     },
     handleImport(file, fileLis) {

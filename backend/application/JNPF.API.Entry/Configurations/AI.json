@@ -26,8 +26,36 @@
                 "ApiFormat": "ollama"
             }
         },
-        "DefaultProvider": "mimo",
-        "FallbackProvider": "deepseek",
+        "DefaultProvider": "deepseek",
+        "FallbackProvider": "mimo",
+
+        "CircuitBreaker": {
+            "FailureThreshold": 5,
+            "WindowSeconds": 60,
+            "CooldownMs": 300000
+        },
+
+        "EnforceTokenLimit": true,
+        "TokenLimit": 200000,
+
+        "MaxConcurrentLlmCalls": 3,
+
+        "ProviderRouting": {
+            "pm-skill": "deepseek",
+            "analyst-skill": "deepseek",
+            "requirement-gate": "deepseek",
+            "pspec-enhance": "deepseek",
+            "confirm": "deepseek"
+        },
+
+        "TimeoutMs": {
+            "Default": 90000,
+            "requirement-gate": 90000,
+            "pm-skill": 120000,
+            "pspec-enhance": 90000,
+            "confirm": 60000
+        },
+
         "Pipeline": {
             "ReviewThresholds": {
                 "maxRejectCount": 3,
@@ -46,6 +74,35 @@
                 "enableIrCheck": true,
                 "enableTypeCheck": true
             }
+        },
+        "SkillRun": {
+            "TimeoutMinutes": 15
         }
+    },
+
+    "LlmGateway": {
+        "Providers": [
+            {
+                "Name": "deepseek",
+                "Model": "deepseek-v4-pro",
+                "Level": 0,
+                "MaxRetries": 3,
+                "TimeoutSeconds": 80
+            },
+            {
+                "Name": "mimo",
+                "Model": "mimo-v2.5-pro",
+                "Level": 1,
+                "MaxRetries": 3,
+                "TimeoutSeconds": 60
+            },
+            {
+                "Name": "openai",
+                "Model": "gpt-4o",
+                "Level": 2,
+                "MaxRetries": 2,
+                "TimeoutSeconds": 100
+            }
+        ]
     }
 }

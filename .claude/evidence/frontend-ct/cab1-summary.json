@@ -1,0 +1,15 @@
+{
+  "cabinet": 1,
+  "generatedAt": "2026-08-06T14:10:04.352Z",
+  "fullScan": true,
+  "depcruise": {
+    "violations": 1124,
+    "errors": 854,
+    "warnings": 270,
+    "modules": 1418,
+    "dependencies": 4965
+  },
+  "knip": {
+    "unusedFiles": 592
+  }
+}

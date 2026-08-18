@@ -6,8 +6,11 @@
 <script lang="ts" setup>
   import { onMounted, computed, unref, watch } from 'vue';
   import { useRoute } from 'vue-router';
-  import { usePopup } from '/@/components/Popup';
-  import FlowParser from '/@/views/workFlow/components/FlowParser.vue';
+import { useLazyPopup } from '/@/hooks/web/useLazyPopup';
+const { component: FlowParser, register: registerFlowParser, openPopup: openFlowParser } = useLazyPopup(
+  () => import('/@/views/workFlow/components/FlowParser.vue'),
+  'workFlow/FlowParser',
+);
   import { decodeByBase64 } from '/@/utils/cipher';
   import { checkInfo } from '/@/api/workFlow/flowBefore';
   import { useTabs } from '/@/hooks/web/useTabs';
@@ -16,7 +19,6 @@
 
   const route = useRoute();
   const { closeCurrent } = useTabs();
-  const [registerFlowParser, { openPopup: openFlowParser }] = usePopup();
 
   const getConfig = computed(() => route.query.config);
 

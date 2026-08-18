@@ -8,7 +8,7 @@
               <template #title>
                 <span>执行队列</span>
               </template>
-              <i class="icon-ym icon-ym-generator-slider cursor-pointer text-18px" @click="openDrawer(true)"></i>
+              <i class="icon-ym icon-ym-generator-slider cursor-pointer text-18px" @click="handleOpenQueue()"></i>
             </a-tooltip>
           </template>
           <template #tableTitle>
@@ -18,7 +18,9 @@
                   <a-menu-item :key="item.id" v-for="item in typeList">{{ item.fullName }}</a-menu-item>
                 </a-menu>
               </template>
-              <a-button type="primary" preIcon="icon-ym icon-ym-btn-add">{{ t('common.addText') }}<DownOutlined /></a-button>
+              <a-button type="primary" preIcon="icon-ym icon-ym-btn-add" :loading="!formLoaded" @mouseenter="prefetchForm"
+                >{{ t('common.addText') }}<DownOutlined
+              /></a-button>
             </a-dropdown>
             <jnpf-upload-btn url="/api/visualdev/Integrate/Actions/Import" accept=".bi" @on-success="reload" />
           </template>
@@ -43,28 +45,47 @@
   </div>
 </template>
 <script lang="ts" setup>
+  import { onErrorCaptured } from 'vue';
   import { getIntegrateList, delIntegrate, copy, exportData, updateState } from '/@/api/onlineDev/integrate';
   import { BasicTable, useTable, TableAction, BasicColumn, ActionItem } from '/@/components/Table';
   import { useMessage } from '/@/hooks/web/useMessage';
   import { useI18n } from '/@/hooks/web/useI18n';
-  import { useModal } from '/@/components/Modal';
   import { usePopup } from '/@/components/Popup/src/usePopup';
-  import { IntegrateProcess } from '/@/components/IntegrateProcess';
   import { downloadByUrl } from '/@/utils/file/download';
   import { DownOutlined } from '@ant-design/icons-vue';
   import { useDrawer } from '/@/components/Drawer';
-  import Form from './Form.vue';
-  import ExecutionQueue from './components/ExecutionQueue.vue';
-  import Log from './components/Log.vue';
+  import { useLazyModal } from '/@/hooks/web/useLazyModal';
+  import { useLazyComponent } from '/@/hooks/web/useLazyComponent';
+  const MODULE = 'onlineDev/integrate';
+  const {
+    component: Form,
+    register: registerForm,
+    openModal: openFormModal,
+    isLoaded: formLoaded,
+    prefetch: prefetchForm,
+  } = useLazyModal(() => import('./Form.vue'), MODULE);
+  const {
+    component: IntegrateProcess,
+    register: registerIntegrateProcess,
+    openModal: openIntegrateProcess,
+  } = useLazyModal(() => import('/@/components/IntegrateProcess/src/index.vue'), MODULE);
+
+  // Drawer / Popup：延迟挂载 + 打开前 load
+  const { component: ExecutionQueue, load: loadQueue } = useLazyComponent(() => import('./components/ExecutionQueue.vue'), MODULE);
+  const { component: Log, load: loadLog } = useLazyComponent(() => import('./components/Log.vue'), MODULE);
+  const [registerDrawer, { openDrawer }] = useDrawer();
+  const [registerLogPopup, { openPopup: openLogPopup }] = usePopup();
 
   defineOptions({ name: 'OnlineDevIntegrate' });
 
   const { createMessage } = useMessage();
   const { t } = useI18n();
-  const [registerForm, { openModal: openFormModal }] = useModal();
-  const [registerIntegrateProcess, { openModal: openIntegrateProcess }] = useModal();
-  const [registerDrawer, { openDrawer }] = useDrawer();
-  const [registerLogPopup, { openPopup: openLogPopup }] = usePopup();
+
+  onErrorCaptured((err, _instance, info) => {
+    console.error('[integrate] 子组件异常已捕获', { err, info });
+    createMessage.error('页面组件异常，请刷新页面后重试');
+    return false;
+  });
 
   const columns: BasicColumn[] = [
     { title: '名称', dataIndex: 'fullName', width: 200 },
@@ -181,7 +202,7 @@
   function handleAdd({ key }) {
     addOrUpdateHandle('', key);
   }
-  function addOrUpdateHandle(id = '', type) {
+  function addOrUpdateHandle(id = '', type?) {
     openFormModal(true, { id, type });
   }
   function handleDelete(id) {
@@ -204,7 +225,13 @@
       downloadByUrl({ url: res.data.url });
     });
   }
-  function handleLog(id, fullName) {
+  async function handleLog(id, fullName) {
+    try {
+      await loadLog();
+    } catch {
+      createMessage.error('组件加载失败');
+      return;
+    }
     openLogPopup(true, { id, fullName });
   }
   function handleRelease(id) {
@@ -216,4 +243,14 @@
   function updateNodes(id) {
     handleDesign(id);
   }
+  async function handleOpenQueue() {
+    try {
+      await loadQueue();
+    } catch {
+      createMessage.error('组件加载失败');
+      return;
+    }
+    openDrawer(true);
+  }
+
 </script>

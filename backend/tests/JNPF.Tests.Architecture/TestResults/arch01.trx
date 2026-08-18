@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="7212c8ea-f523-4cca-a2f1-81d2db275694" name="admin@CODESOFT 2026-08-06 22:51:48" runUser="codesoft\admin" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-06T22:51:48.2264981+08:00" queuing="2026-08-06T22:51:48.2264987+08:00" start="2026-08-06T22:51:47.2066858+08:00" finish="2026-08-06T22:51:48.2329296+08:00" />
+  <TestSettings name="default" id="97e9c3be-be8d-4006-8244-dede59d9a761">
+    <Deployment runDeploymentRoot="admin_CODESOFT_2026-08-06_22_51_48" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="6c6bdaca-e211-4143-9169-2d777628c631" testId="be085fc2-52dc-202a-7899-54db4e6a8e3d" testName="JNPF.Tests.Architecture.LayeringTests.ARCH01_CommonCore_ShouldNot_DependOn_InteAssistant" computerName="CODESOFT" duration="00:00:00.1327501" startTime="2026-08-06T22:51:48.0496122+08:00" endTime="2026-08-06T22:51:48.0496127+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6c6bdaca-e211-4143-9169-2d777628c631">
+      <Output>
+        <StdOut>Wrote D:\JNPF-v52\.claude\evidence\backend-quality-check\arch01-common-core.json&#xD;
+INVENTORY FAIL (expected until Contracts): Common.Core → InteAssistant*&#xD;
+ - JNPF.EventHandler.IntegreateEventSubscriber</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="dbdfc412-d2ce-44d0-bc72-c4b670476ce6" testId="bc9d06d4-8bf1-dd3a-8f7d-dcbcb08fc9e5" testName="JNPF.Tests.Architecture.LayeringTests.ARCH01_ProjectReference_Scan_Writes_Evidence" computerName="CODESOFT" duration="00:00:00.1612310" startTime="2026-08-06T22:51:47.9176936+08:00" endTime="2026-08-06T22:51:47.9177127+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="dbdfc412-d2ce-44d0-bc72-c4b670476ce6">
+      <Output>
+        <StdOut>Wrote D:\JNPF-v52\.claude\evidence\backend-quality-check\arch01-project-references.json count=3</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="548c90cd-1fec-45be-883e-3db8d92c0a85" testId="43a5cac2-5e9d-04df-ba21-7a2c3dcdbe81" testName="JNPF.Tests.Architecture.LayeringTests.ARCH01_JNPF_Framework_ShouldNot_DependOn_InteAssistant" computerName="CODESOFT" duration="00:00:00.0930490" startTime="2026-08-06T22:51:48.1427317+08:00" endTime="2026-08-06T22:51:48.1427319+08:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="548c90cd-1fec-45be-883e-3db8d92c0a85">
+      <Output>
+        <StdOut>Wrote D:\JNPF-v52\.claude\evidence\backend-quality-check\arch01-jnpf-framework.json</StdOut>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="JNPF.Tests.Architecture.LayeringTests.ARCH01_CommonCore_ShouldNot_DependOn_InteAssistant" storage="d:\jnpf-v52\backend\tests\jnpf.tests.architecture\bin\debug\net8.0\jnpf.tests.architecture.dll" id="be085fc2-52dc-202a-7899-54db4e6a8e3d">
+      <Execution id="6c6bdaca-e211-4143-9169-2d777628c631" />
+      <TestMethod codeBase="D:\JNPF-v52\backend\tests\JNPF.Tests.Architecture\bin\Debug\net8.0\JNPF.Tests.Architecture.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="JNPF.Tests.Architecture.LayeringTests" name="ARCH01_CommonCore_ShouldNot_DependOn_InteAssistant" />
+    </UnitTest>
+    <UnitTest name="JNPF.Tests.Architecture.LayeringTests.ARCH01_JNPF_Framework_ShouldNot_DependOn_InteAssistant" storage="d:\jnpf-v52\backend\tests\jnpf.tests.architecture\bin\debug\net8.0\jnpf.tests.architecture.dll" id="43a5cac2-5e9d-04df-ba21-7a2c3dcdbe81">
+      <Execution id="548c90cd-1fec-45be-883e-3db8d92c0a85" />
+      <TestMethod codeBase="D:\JNPF-v52\backend\tests\JNPF.Tests.Architecture\bin\Debug\net8.0\JNPF.Tests.Architecture.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="JNPF.Tests.Architecture.LayeringTests" name="ARCH01_JNPF_Framework_ShouldNot_DependOn_InteAssistant" />
+    </UnitTest>
+    <UnitTest name="JNPF.Tests.Architecture.LayeringTests.ARCH01_ProjectReference_Scan_Writes_Evidence" storage="d:\jnpf-v52\backend\tests\jnpf.tests.architecture\bin\debug\net8.0\jnpf.tests.architecture.dll" id="bc9d06d4-8bf1-dd3a-8f7d-dcbcb08fc9e5">
+      <Execution id="dbdfc412-d2ce-44d0-bc72-c4b670476ce6" />
+      <TestMethod codeBase="D:\JNPF-v52\backend\tests\JNPF.Tests.Architecture\bin\Debug\net8.0\JNPF.Tests.Architecture.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="JNPF.Tests.Architecture.LayeringTests" name="ARCH01_ProjectReference_Scan_Writes_Evidence" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="be085fc2-52dc-202a-7899-54db4e6a8e3d" executionId="6c6bdaca-e211-4143-9169-2d777628c631" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bc9d06d4-8bf1-dd3a-8f7d-dcbcb08fc9e5" executionId="dbdfc412-d2ce-44d0-bc72-c4b670476ce6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="43a5cac2-5e9d-04df-ba21-7a2c3dcdbe81" executionId="548c90cd-1fec-45be-883e-3db8d92c0a85" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="列表中未列出的结果" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="所有已加载的结果" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="3" executed="3" passed="3" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 8.0.29)&#xD;
+[xUnit.net 00:00:00.11]   Discovering: JNPF.Tests.Architecture&#xD;
+[xUnit.net 00:00:00.15]   Discovered:  JNPF.Tests.Architecture&#xD;
+[xUnit.net 00:00:00.15]   Starting:    JNPF.Tests.Architecture&#xD;
+[xUnit.net 00:00:00.58]   Finished:    JNPF.Tests.Architecture&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

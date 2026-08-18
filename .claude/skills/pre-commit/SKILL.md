@@ -42,9 +42,10 @@ git diff --name-only | grep -E "\.vue$|\.ts$|\.tsx$|\.js$"
 
 如果有前端变更：
 ```bash
-cd jnpf-web-vue3 && npx vue-tsc --noEmit
+cd jnpf-web-vue3 && pnpm type-check
+# 若改了 workflow/onlineDev/FormGenerator 等 legacy：pnpm type-check:full
 ```
-预期：无输出（0 errors）
+预期：无输出（0 errors）。禁止 `npx vue-tsc --noEmit`（全量 OOM）。见 `.cursor/rules/frontend-typecheck.mdc`。
 
 **任何编译失败 → 停止，报告错误，不继续提交。**
 

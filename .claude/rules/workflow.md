@@ -14,12 +14,23 @@
 
 **B 级绝不跳过 Brainstorm（S1 铁律）和 Verify（Law 2）。**
 
+## ADF 三先行（S/A 编码前门控）
+
+规则：`.claude/rules/architecture-design-interface-first.md` · 模板：`.cursor/templates/adf-*.md`
+
+```
+P0 Q1–Q3 → P1 架构 →「继续」→ P2 模式 →「继续」→ P3 契约 →「继续」→ P4 实现
+```
+
+B 级须声明：`ADF 豁免：B级 — …`
+
 ## 强制声明 — 开始任何任务前，输出：
 
 ```
 🔄 Workflow 启动
 - 任务分级：S / A / B
 - 理由：[为什么是这个级别]
+- ADF：P1–P3 待批 / 已批 / 豁免（B级 — …）
 ```
 
 ---
@@ -58,6 +69,8 @@
 ---
 
 ## Phase 5 Verify — Supreme Iron Law（E2E 证据）
+
+**子 agent dispatch：** 后端/API/Skill/IR 验证 → `subagent_type: jnpf-tester`（Dev Loop：dotnet build / jnpf-api.mjs / pnpm test:api，返回 fugu/test-report-v1 JSON）。前端 UI 变更仍用 playwright 技能产出 E1 截图。`verdict: FAIL` 且 suggested_fix 不明确 → dispatch `jnpf-debugger`。
 
 - **⬛ 浏览器端到端操作是唯一验收标准**
 - 使用 `playwright` 技能打开浏览器
@@ -112,11 +125,11 @@
 ```
 收到任务
   │
-  ├─ 简单？(B级) → Phase 1→2→4→5→6→7 (skip Phase 3 Plan)
+  ├─ 简单？(B级) → Phase 1→2→(2.5推荐)→4→5→6→7 (skip Phase 3 Plan)
   │
-  ├─ 标准？(A级) → Phase 1→2→3→4→5→6→7
+  ├─ 标准？(A级) → Phase 1→2→2.5→3→4→5→6→7
   │
-  └─ 复杂？(S级) → Phase 1→2→3→4(subagent)→5(test-runner)→6(code-reviewer)→7
+  └─ 复杂？(S级) → Phase 1→2→2.5→3→4(subagent)→5(test-runner)→6(code-reviewer)→7
 ```
 
 > 手动触发完整审查：SP `requesting-code-review`
@@ -127,8 +140,10 @@
 
 | 阶段 | 规则文件 |
 |---|---|
-| Phase 1-2 | `architecture-redlines.md`, `jnpf-expert-traps.md` |
+| Phase 1-2 | `architecture-redlines.md`, `jnpf-expert-traps.md`, `low-code-principles.md` |
+| Phase 2.5 | `codegraph-exploration.md`（调用链探索强制规则） |
 | Phase 4 | `sql-safety.md`, `frontend-memory-leak.md` |
 | Phase 5 | `testing.md`, `engineering-laws.md` |
 | Phase 6 | `review-workflow.md`, `architecture-redlines.md` |
 | Debug | `debugging.md`, `engineering-laws.md` |
+| 全阶段 | `assertion-discipline.md`（论断标签 + 置信度 + 反谄媚 + RULES I BROKE） |

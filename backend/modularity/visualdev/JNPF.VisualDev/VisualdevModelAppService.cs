@@ -262,7 +262,7 @@ public class VisualdevModelAppService : IDynamicApiController, ITransient
     {
         VisualDevEntity? templateEntity = await _visualDevService.GetInfoById(modelId, true);
         if (!string.IsNullOrEmpty(templateEntity.Tables) && !"[]".Equals(templateEntity.Tables))
-            await _runService.BatchDelHaveTableData(input.ids, templateEntity);
+            await _runService.BatchDelHaveTableData(input.ids, templateEntity, input);
     }
 
     /// <summary>

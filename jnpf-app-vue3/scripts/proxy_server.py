@@ -48,10 +48,13 @@ class ProxyHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path in self.STUB_PATHS:
             return self._stub_response()
-        if self.path.startswith("/api/"):
-            return self._proxy()
+        # WebSocket upgrade must be checked BEFORE /api/ HTTP proxy
+        if self.path.startswith("/api/message/websocket") and self.headers.get("Upgrade", "").lower() == "websocket":
+            return self._ws_proxy()
         if self.path.startswith("/websocket"):
             return self._ws_proxy()
+        if self.path.startswith("/api/"):
+            return self._proxy()
         # SPA fallback: if the path doesn't map to a real file, serve index.html
         path = self.translate_path(self.path)
         if not os.path.exists(path) or (os.path.isdir(path) and not os.path.exists(os.path.join(path, "index.html"))):
@@ -124,9 +127,13 @@ class ProxyHandler(SimpleHTTPRequestHandler):
             return
 
         # Rewrite path: /websocket/Bearer{token} -> /api/message/websocket/{token}
-        backend_path = self.path.replace("/websocket/Bearer", "/api/message/websocket/", 1)
-        if backend_path == self.path:
-            backend_path = self.path.replace("/websocket/", "/api/message/websocket/", 1)
+        # If path already starts with /api/message/websocket, use as-is
+        if self.path.startswith("/api/message/websocket"):
+            backend_path = self.path
+        else:
+            backend_path = self.path.replace("/websocket/Bearer", "/api/message/websocket/", 1)
+            if backend_path == self.path:
+                backend_path = self.path.replace("/websocket/", "/api/message/websocket/", 1)
 
         # Perform WebSocket handshake with backend
         try:

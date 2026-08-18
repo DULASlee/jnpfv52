@@ -1,0 +1,184 @@
+{
+  "$schema": "fugu/rules-v1",
+  "id": "architecture-redlines",
+  "version": "V3.0",
+  "description": "JNPF v5.2 架构铁律 — 机器可消费版本。状态机 Q1 验证、Reviewer D1 检查使用。",
+  "rules": [
+    {
+      "id": "R1",
+      "name": "API Generation",
+      "level": "L2",
+      "category": "architecture",
+      "description": "Service实现IDynamicApiController自动映射API，NEVER手写Controller",
+      "consequence": "手写Controller→重复路由注册/绕过RESTfulResult包装/API文档缺失",
+      "hook_file": null,
+      "hook_level": null,
+      "test_cases": ["test-controller-creation"],
+      "related_traps": ["Trap-1", "Trap-6", "Trap-9"],
+      "auto_verify": false,
+      "reviewer_check": "D1"
+    },
+    {
+      "id": "R2",
+      "name": "Unified Response",
+      "level": "L2",
+      "category": "architecture",
+      "description": "RESTfulResult<T>自动包装。业务异常用Oops.Bah()，系统异常用Oops.Oh()。NEVER手动new RESTfulResult<T>()或throw raw Exception",
+      "consequence": "手动包装→双层嵌套/用户看到Internal Server Error",
+      "hook_file": null,
+      "hook_level": null,
+      "test_cases": [],
+      "related_traps": ["Trap-4", "Trap-5"],
+      "auto_verify": false,
+      "reviewer_check": "D1"
+    },
+    {
+      "id": "R3",
+      "name": "Codegen Boundary",
+      "level": "L2",
+      "category": "architecture",
+      "description": "生成代码有bug→修.vm模板源码。NEVER直接改模板输出目录下的.cs/.vue文件",
+      "consequence": "改输出文件→下次生成被覆盖→bug回归",
+      "hook_file": null,
+      "hook_level": null,
+      "test_cases": [],
+      "related_traps": ["Trap-12"],
+      "auto_verify": false,
+      "reviewer_check": "D1"
+    },
+    {
+      "id": "R4",
+      "name": "Multi-Tenant Isolation",
+      "level": "L0",
+      "category": "security",
+      "description": "新SqlSugar查询MUST确保租户过滤生效。漏过滤=跨租户数据泄漏",
+      "consequence": "查询不带TenantId→租户A看到租户B的数据→数据安全事故",
+      "hook_file": "guard-write.mjs:L5",
+      "hook_level": "BLOCK",
+      "test_cases": [
+        "test-tenant-filter-disable",
+        "test-updateable-no-where",
+        "test-raw-sql-no-where"
+      ],
+      "related_traps": ["Trap-7", "Trap-8", "Trap-13"],
+      "auto_verify": true,
+      "reviewer_check": "D1",
+      "requirements": [
+        "Queryable<T>()自动附加ITenantFilter",
+        "Ado.SqlQuery/SqlQueryable/原生SQL MUST手动加WHERE TenantId=@tid",
+        "Updateable<T>/Deleteable<T> MUST .Where(...)限定租户范围",
+        "NEVER DisableGlobalFilter(TenantFilter)除非r4-safe豁免"
+      ]
+    },
+    {
+      "id": "R5",
+      "name": "Module Boundary",
+      "level": "L0",
+      "category": "architecture",
+      "description": "OA模块已禁用。IoT/MES模块不存在。NEVER写入或scaffold",
+      "consequence": "修改禁用模块→引入未测试代码路径→不可预期行为",
+      "hook_file": "guard-write.mjs:L4",
+      "hook_level": "BLOCK",
+      "test_cases": [
+        "test-oa-module-blocked",
+        "test-iot-scaffold-blocked",
+        "test-mes-scaffold-blocked"
+      ],
+      "related_traps": [],
+      "auto_verify": true,
+      "reviewer_check": "D1",
+      "disabled_modules": ["JNPF.OA.API.Entry"],
+      "nonexistent_modules": ["JNPF.IoT.*", "JNPF.MES.*"]
+    },
+    {
+      "id": "R6",
+      "name": "Frontend Memory Safety",
+      "level": "L0",
+      "category": "frontend",
+      "description": "setTimeout/setInterval/EventSource/WebSocket MUST遵循6条铁律",
+      "consequence": "组件销毁后定时器/SSE持续运行→内存泄漏→浏览器卡死",
+      "hook_file": "guard-write.mjs:L8",
+      "hook_level": "BLOCK",
+      "test_cases": [
+        "test-settimeout-no-clear",
+        "test-eventsource-no-retry",
+        "test-onerror-direct-reconnect"
+      ],
+      "related_traps": [],
+      "auto_verify": false,
+      "reviewer_check": "D1",
+      "sub_rules_file": "frontend-memory-leak.md"
+    },
+    {
+      "id": "R7",
+      "name": "SQL Injection Defense",
+      "level": "L0",
+      "category": "security",
+      "description": "动态SQL MUST参数化。NEVER字符串拼接用户输入到SQL",
+      "consequence": "SQL注入→数据泄露/删除/权限提升",
+      "hook_file": "guard-write.mjs:L6",
+      "hook_level": "BLOCK",
+      "test_cases": [
+        "test-sql-interpolation",
+        "test-string-format-sql",
+        "test-ado-injection"
+      ],
+      "related_traps": [],
+      "auto_verify": true,
+      "reviewer_check": "D1",
+      "blocked_patterns": [
+        "$\"DROP TABLE...\"",
+        "$\"DELETE FROM...\"",
+        "$\"SELECT/INSERT/UPDATE...\" + 字符串插值",
+        "string.Format() + SQL关键字",
+        "Ado.SqlQuery/Ado.ExecuteCommand + $\""
+      ]
+    },
+    {
+      "id": "R8",
+      "name": "API Permission Declaration",
+      "level": "L0",
+      "category": "security",
+      "description": "新API(IDynamicApiController实现类)MUST声明权限属性",
+      "consequence": "无权限声明→未认证访问→越权",
+      "hook_file": "guard-write.mjs:L7",
+      "hook_level": "BLOCK",
+      "test_cases": [
+        "test-idynamicapicontroller-no-auth",
+        "test-idynamicapicontroller-with-allowanonymous"
+      ],
+      "related_traps": [],
+      "auto_verify": true,
+      "reviewer_check": "D1",
+      "allowed_attributes": ["[AllowAnonymous]", "[SecurityDefine]", "[Authorize]"]
+    },
+    {
+      "id": "R9",
+      "name": "Architect Fidelity",
+      "level": "L2",
+      "category": "process",
+      "description": "编码前MUST输出需求提取清单；编码后逐条标注实现状态",
+      "consequence": "偏离/未实现无事前审批→流程违规",
+      "hook_file": null,
+      "hook_level": null,
+      "test_cases": [],
+      "related_traps": [],
+      "auto_verify": false,
+      "reviewer_check": "D1"
+    },
+    {
+      "id": "R10",
+      "name": "Bug Discovery Protocol",
+      "level": "L2",
+      "category": "process",
+      "description": "发现BUG MUST执行结构化上报，NEVER沉默跳过",
+      "consequence": "发现bug沉默跳过→技术债务累积→生产事故",
+      "hook_file": null,
+      "hook_level": null,
+      "test_cases": [],
+      "related_traps": [],
+      "auto_verify": false,
+      "reviewer_check": "D1"
+    }
+  ]
+}

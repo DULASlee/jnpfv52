@@ -1,0 +1,22 @@
+#!/bin/sh
+# 1) 零占位符硬失败  2) 节点审批态四大支柱 claim
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+cd "$ROOT" || exit 0
+
+node .claude/hooks/placeholder-scan.mjs --staged
+status=$?
+if [ "$status" -ne 0 ]; then
+  echo ""
+  echo "pre-commit: 拒绝提交含占位符/假实现的业务源码。"
+  exit 1
+fi
+
+node .claude/hooks/pillar-claim-check.mjs
+pstatus=$?
+if [ "$pstatus" -ne 0 ]; then
+  echo ""
+  echo "pre-commit: 节点审批态下四大支柱 claim 无效。"
+  exit 1
+fi
+
+exit 0

@@ -1,7 +1,7 @@
 // 集成测试:验证 runSA() 完整流程
 // 包含:LLM 模拟、Validator 真实跑、DB 内存跑、Retry 循环、DKEE 提炼 + 3-Tier 路由
 
-import { SAOrchestrator } from '../src/orchestrator/SAOrchestrator';
+import { SAOrchestrator, buildScopeFromSkeleton } from '../src/orchestrator/SAOrchestrator';
 import { InMemorySADatabase } from '../src/orchestrator/SADatabase';
 import { ILLMClient, SARequest, ValidationError } from '../src/orchestrator/orchestrator-types';
 import { classifyEvent } from '../src/orchestrator/StepRouter';
@@ -130,6 +130,7 @@ describe('SAOrchestrator.runSA() 集成测试', () => {
     const req: SARequest = {
       tenantId: 't1',
       projectId: 1,
+      pipelineId: 1,
       requirementId: 1,
       requirementText: '我们要建 MES 报工系统,机加工车间,工单报工,物料消耗',
       userId: 'user1',
@@ -188,7 +189,7 @@ describe('SAOrchestrator.runSA() 集成测试', () => {
     const orchestrator = new SAOrchestrator(llm, db, mockValidators);
 
     const req: SARequest = {
-      tenantId: 't1', projectId: 1, requirementId: 1,
+      tenantId: 't1', projectId: 1, pipelineId: 1, requirementId: 1,
       requirementText: '简单查询', userId: 'u1',
     };
 
@@ -254,7 +255,27 @@ describe('3-Tier 混合事件分流', () => {
             eventCount: 4,
           };
         }
-        // 默认返回合法数据
+        // PSpec 步骤（processSpec）
+        if (params.systemPrompt.includes('伪代码') || params.systemPrompt.includes('PSpecAgent')
+            || params.systemPrompt.includes('业务逻辑规格')) {
+          return {
+            processId: 'PROC-倒冲',
+            description: '倒冲业务逻辑',
+            triggers: ['工单关闭'],
+            steps: [{ seq: 1, action: '计算倒冲数量', actor: '系统' }],
+            exceptionHandlers: [],
+          };
+        }
+        // DecisionTable 步骤
+        if (params.systemPrompt.includes('判定表') || params.systemPrompt.includes('DecisionTable')) {
+          return {
+            tableId: 'DT-倒冲',
+            conditions: [{ name: '数量是否异常', values: ['是', '否'] }],
+            actions: [{ name: '触发预警', values: ['是', '否'] }],
+            rules: [{ conditions: { '数量是否异常': '是' }, actions: { '触发预警': '是' } }],
+          };
+        }
+        // 其他步骤（DFD/BPM/Dict/ER/STD/UI）默认返回合法占位
         return {
           swimLanes: [], activityNodes: [], edges: [], exceptionPaths: [],
           dfdProcessMappings: {},
@@ -265,7 +286,7 @@ describe('3-Tier 混合事件分流', () => {
     const orchestrator = new SAOrchestrator(llm, db, mockValidators);
 
     const req: SARequest = {
-      tenantId: 't1', projectId: 1, requirementId: 1,
+      tenantId: 't1', projectId: 1, pipelineId: 1, requirementId: 1,
       requirementText: 'MES 报工系统', userId: 'u1',
     };
 
@@ -286,5 +307,53 @@ describe('3-Tier 混合事件分流', () => {
     // PSPEC + DecisionTable：只有 complex 事件跑
     expect(stats.pspecs).toBe(1);
     expect(stats.decisionTables).toBe(1);
+  });
+
+  it('PM 骨架 skeletonBusinessEvents 驱动 Scope，eventId 保留 IR 格式', async () => {
+    const llm = new MockLLM();
+    const db = new InMemorySADatabase();
+    const orchestrator = new SAOrchestrator(llm, db, mockValidators);
+
+    const req: SARequest = {
+      tenantId: 't1',
+      projectId: 99,
+      pipelineId: 99,
+      requirementId: 1,
+      requirementText: '请假管理系统',
+      userId: 'u1',
+      skeletonBusinessEvents: [
+        { eventId: 'BE-001', eventName: '提交请假', complexityHint: 'simple' },
+        { eventId: 'BE-002', eventName: '审批请假', complexityHint: 'medium' },
+      ],
+    };
+
+    const result = await orchestrator.runSA(req);
+
+    expect(result.scope.eventCount).toBe(2);
+    expect(result.scope.businessEvents[0].irEventId).toBe('BE-001');
+    expect(result.eventResults[0].eventId).toBe('BE-001');
+    expect(result.eventResults[1].eventId).toBe('BE-002');
+    expect(typeof result.eventResults[0].eventId).toBe('string');
+  });
+});
+
+// =====================================================
+// D 组：parseEventIdNum 统一解析
+// =====================================================
+describe('SAOrchestrator.parseEventIdNum（D 组统一解析）', () => {
+  it('BE-001 → 1', () => {
+    expect(SAOrchestrator.parseEventIdNum('BE-001')).toBe(1);
+  });
+  it('BE-002 → 2', () => {
+    expect(SAOrchestrator.parseEventIdNum('BE-002')).toBe(2);
+  });
+  it('EV-010 → 10', () => {
+    expect(SAOrchestrator.parseEventIdNum('EV-010')).toBe(10);
+  });
+  it('无数字字符串 → 0', () => {
+    expect(SAOrchestrator.parseEventIdNum('xyz')).toBe(0);
+  });
+  it('空字符串 → 0', () => {
+    expect(SAOrchestrator.parseEventIdNum('')).toBe(0);
   });
 });

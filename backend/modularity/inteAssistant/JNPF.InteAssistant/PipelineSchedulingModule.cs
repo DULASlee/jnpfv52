@@ -18,6 +18,11 @@ public class PipelineSchedulingModule : JnpfModule
 {
     public override void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
+        services.AddHttpClient("SaService", client =>
+        {
+            client.Timeout = TimeSpan.FromMinutes(5);
+        });
+
         // SignalR（提供 IHubContext<PipelineHub>，供 Quartz/Hangfire 任务推送实时事件）
         services.AddSignalR();
 
@@ -49,6 +54,30 @@ public class PipelineSchedulingModule : JnpfModule
                 .ForJob(staleJobKey)
                 .WithIdentity("StaleMonitorTrigger", "Pipeline")
                 .WithCronSchedule("0 0 * * * ?", x => x
+                    .WithMisfireHandlingInstructionFireAndProceed()));
+
+            // P6-W01 SkillRunRecoveryJob — 每 5 分钟扫超时 running skill runs → mark failed
+            var recoveryJobKey = new JobKey("SkillRunRecoveryJob", "Pipeline");
+            q.AddJob<Job.SkillRunRecoveryJob>(opts => opts
+                .WithIdentity(recoveryJobKey)
+                .StoreDurably());
+
+            q.AddTrigger(opts => opts
+                .ForJob(recoveryJobKey)
+                .WithIdentity("SkillRunRecoveryTrigger", "Pipeline")
+                .WithCronSchedule("0 */5 * * * ?", x => x
+                    .WithMisfireHandlingInstructionFireAndProceed()));
+
+            // P7-E02 EvalCalibrationJob — 每月 1 日 02:00 执行 Judge Cohen's kappa 校准
+            var calibJobKey = new JobKey("EvalCalibrationJob", "Eval");
+            q.AddJob<Job.EvalCalibrationJob>(opts => opts
+                .WithIdentity(calibJobKey)
+                .StoreDurably());
+
+            q.AddTrigger(opts => opts
+                .ForJob(calibJobKey)
+                .WithIdentity("EvalCalibrationTrigger", "Eval")
+                .WithCronSchedule("0 0 2 1 * ?", x => x
                     .WithMisfireHandlingInstructionFireAndProceed()));
         });
 

@@ -32,7 +32,7 @@
 | 后端 API | `http://localhost:30000` | 迁移/部署实际端口 |
 | 主 WEB | `http://localhost:3100` | `jnpf-web-vue3` |
 | 前端 dev 代理 | `/dev` → `:30000` | `vite.config.ts` `server.proxy` |
-| 数字大屏 | `http://localhost:8100/DataV/` | VisualData 独立前端 |
+| 数字大屏 | `http://localhost:3102/DataV/` | VisualData 独立前端 |
 | UniApp H5 | `http://localhost:3800` | 移动端 |
 | 报表服务 | `:32000` | 前端 proxy `/reportDev` |
 | launchSettings | `:5000` | **仅本地调试**[^launch-port] |

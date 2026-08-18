@@ -2,10 +2,11 @@
 /**
  * Stop Hook — 冒烟测试 + E2E 证据验证 (JNPF v5.2 Supreme Iron Law)
  *
- * 三层检测（任一层失败 = BLOCK 会话退出）：
+ * 四层检测（任一层失败 = BLOCK 会话退出）：
  *   L1: dotnet build（后端变更时）            → 编译失败 = BLOCK
- *   L2: vue-tsc --noEmit（前端变更时）       → 类型错误 = BLOCK
- *   L3: E2E 证据新鲜度验证（实质性前端变更时）→ 无有效截图 = BLOCK
+ *   L2: dotnet test（后端变更+测试项目时）     → 测试失败 = BLOCK
+ *   L3: vue-tsc --noEmit（前端变更时）       → 类型错误 = BLOCK
+ *   L4: E2E 证据新鲜度验证（实质性前端变更时）→ 无有效截图 = BLOCK
  *
  * 80s 超时自毁 → BLOCK（超时不是验证通过，宁可不退出也不放过未验证变更）
  * 用户手动打断 → approve
@@ -16,6 +17,7 @@
 
 import { execSync } from 'child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
+import { requiresPillarClaim, loadAndValidateClaim, CLAIM_REL } from './pillar-claim-lib.mjs';
 
 // ─── 项目根目录解析（cwd 可能在子目录）─────────────────────────
 function getProjectRoot() {
@@ -40,18 +42,10 @@ function rootPath(rel) { return `${ROOT}/${rel}`; }
 // ─── Supreme Iron Law 证据有效性阈值 ─────────────────────────────
 const EVIDENCE_MAX_AGE_MIN = 30;
 const EVIDENCE_MIN_SIZE_BYTES = 5000;
+const SESSION_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4h — 提升到全局作用域，L0/L4 共用
 
-// ─── 读取 stdin ──────────────────────────────────────────────────
-let input = {};
-try {
-  const chunks = [];
-  for await (const chunk of process.stdin) chunks.push(chunk);
-  const raw = Buffer.concat(chunks).toString('utf-8');
-  if (raw.trim()) input = JSON.parse(raw);
-} catch { input = {}; }
-
-// ─── 80s 超时自毁 — 超时 = BLOCK（宁可不退出，也不放过）────────
-setTimeout(() => {
+// ─── 80s 超时自毁 — 必须在 stdin 读取之前注册 ───────────────────
+const KILL_TIMER = setTimeout(() => {
   console.log(JSON.stringify({
     decision: 'block',
     reason: 'Guard 超时（80s）—— 构建或检查未在限时内完成。\n'
@@ -60,13 +54,33 @@ setTimeout(() => {
       + '  2. cd jnpf-web-vue3 && npx vue-tsc --noEmit\n'
       + '  3. 确认前端截图证据存在于 .claude/evidence/',
   }));
-  process.exit(0);
+  process.exit(1); // 非零退出 = 异常终止
 }, 80000);
+
+// ─── 安全退出：确保清理定时器 ──────────────────────────────────────
+function safeExit(code = 0) {
+  clearTimeout(KILL_TIMER);
+  process.exit(code);
+}
+
+// ─── 读取 stdin（5s 防挂起，超时则空 input 继续）────────────────
+let input = {};
+try {
+  const raw = await Promise.race([
+    (async () => {
+      const chunks = [];
+      for await (const chunk of process.stdin) chunks.push(chunk);
+      return Buffer.concat(chunks).toString('utf-8');
+    })(),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('stdin timeout')), 5000)),
+  ]);
+  if (raw.trim()) input = JSON.parse(raw);
+} catch { input = {}; }
 
 // 用户手动打断 → 直接放行
 if (input.stop_reason === 'user_interrupt') {
   console.log(JSON.stringify({ decision: 'approve', reason: '用户手动打断' }));
-  process.exit(0);
+  safeExit(0);
 }
 
 console.error('🛑 Stop hook: 冒烟测试 + E2E 证据检查...');
@@ -74,6 +88,28 @@ console.error('🛑 Stop hook: 冒烟测试 + E2E 证据检查...');
 let hasError = false;
 const errorDetails = [];
 const checks = [];
+
+// ═══════════════════════════════════════════════════════════════════
+// L0-PILLAR: 四大支柱 claim（节点审批态硬门）
+// ═══════════════════════════════════════════════════════════════════
+{
+  if (requiresPillarClaim(ROOT)) {
+    const result = loadAndValidateClaim(ROOT);
+    if (!result.ok) {
+      hasError = true;
+      errorDetails.push('⛔ 四大支柱 claim 无效/缺失 — 禁止在节点审批态结束会话并声称完成。');
+      for (const e of result.errors) errorDetails.push(`   · ${e}`);
+      errorDetails.push(`   填写 ${CLAIM_REL}（模板 .cursor/templates/four-pillars-checkpoint.md）`);
+      errorDetails.push('   校验: node .claude/hooks/pillar-claim-check.mjs --force');
+      checks.push('L0-PILLAR: ❌ pillar claim');
+    } else {
+      console.error(`  ✅ 四大支柱 claim 有效 (node=${result.claim.node})`);
+      checks.push('L0-PILLAR: ✅ pillar claim');
+    }
+  } else {
+    checks.push('L0-PILLAR: ⏭️ 非节点审批态');
+  }
+}
 
 // ─── 变更检测（合并 committed + unstaged + staged）─────────────
 let allFiles = '';
@@ -113,7 +149,6 @@ try {
   //   Tier 2: .ts/.js → 仅在 UI 目录下（views/components/hooks/layouts 等）
   //   Tier 3: 测试/配置/API/工具/类型 → 永不触发
   //   时效性: 文件 mtime > 4h 前 → 存量变更，不触发（避免为旧工作树改动浪费时间）
-  const SESSION_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 小时
   const now = Date.now();
 
   const isSubstantiveFrontend = (f) => {
@@ -175,7 +210,7 @@ try {
   });
 
   if (codeLines.length > 0) {
-    console.error('▸ [0/3] 错题本验证...');
+    console.error('▸ [0/4] 错题本验证...');
     const mistakeLogPath = rootPath('.claude/memory/mistake-log.md');
     if (existsSync(mistakeLogPath)) {
       const content = readFileSync(mistakeLogPath, 'utf-8');
@@ -195,6 +230,60 @@ try {
       errorDetails.push('⛔ 错题本验证失败: .claude/memory/mistake-log.md 不存在。');
       checks.push('L0: ❌ mistake-log.md missing');
     }
+    // Phase 7 + Debug: 从 workflow-state.json 读取所有 Stop-time SP 标记
+    const wfPath = rootPath('.claude/workflow-state.json');
+    if (existsSync(wfPath)) {
+      try {
+        const wf = JSON.parse(readFileSync(wfPath, 'utf8'));
+        const sp = wf.sp || {};
+
+        // finishing-a-development-branch: Phase 7 强制
+        if (!sp['finishing-a-development-branch']) {
+          hasError = true;
+          errorDetails.push('⛔ Phase 7: Skill("superpowers:finishing-a-development-branch") 未调用。');
+          checks.push('L0: ❌ finishing-a-development-branch');
+        } else { checks.push('L0: ✅ finishing-a-development-branch'); }
+
+        // pre-commit: Phase 7 提交前检查
+        if (!sp['pre-commit']) {
+          hasError = true;
+          errorDetails.push('⛔ Phase 7: Skill("pre-commit") 未调用。');
+          checks.push('L0: ❌ pre-commit');
+        } else { checks.push('L0: ✅ pre-commit'); }
+
+        // start-dev + playwright: Phase 5 环境前置 (有前端实质性变更时强制)
+        if (hasSubstantiveFrontend) {
+          if (!sp['start-dev']) {
+            hasError = true;
+            errorDetails.push('⛔ Phase 5: 有前端变更但 Skill("start-dev") 未调用。E2E验证必须启动开发环境。');
+            checks.push('L0: ❌ start-dev');
+          } else { checks.push('L0: ✅ start-dev'); }
+          if (!sp['playwright']) {
+            hasError = true;
+            errorDetails.push('⛔ Phase 5: 有前端变更但 Skill("playwright") 未调用。Supreme Iron Law 要求 E1 浏览器截图。');
+            checks.push('L0: ❌ playwright');
+          } else { checks.push('L0: ✅ playwright'); }
+        }
+
+        // systematic-debugging + data-driven-debug: 有错题本今日条目 → 强制
+        const mlPath = rootPath('.claude/memory/mistake-log.md');
+        const hasML = existsSync(mlPath);
+        const datePrefix = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getDate()).padStart(2,'0')}`;
+        const mlHasToday = hasML && readFileSync(mlPath,'utf8').includes(`## ${datePrefix}`);
+        if (mlHasToday) {
+          if (!sp['systematic-debugging']) {
+            hasError = true;
+            errorDetails.push('⛔ Debug: 错题本有今日条目但 Skill("superpowers:systematic-debugging") 未调用。');
+            checks.push('L0: ❌ systematic-debugging');
+          } else { checks.push('L0: ✅ systematic-debugging'); }
+          if (!sp['data-driven-debug']) {
+            hasError = true;
+            errorDetails.push('⛔ Debug: 错题本有今日条目但 Skill("data-driven-debug") 未调用。3次修复无效/10min无进展时必须。');
+            checks.push('L0: ❌ data-driven-debug');
+          } else { checks.push('L0: ✅ data-driven-debug'); }
+        }
+      } catch { checks.push('L0: ⚠️ workflow-state read error'); }
+    } else { checks.push('L0: ⚠️ workflow-state.json missing'); }
   } else {
     checks.push('L0: ⏭️ no code changes (skip mistake-log check)');
   }
@@ -249,15 +338,47 @@ if (hasBackendChanges) {
     }
   }
 } else {
-  console.error('▸ [1/3] 无后端变更，跳过');
+  console.error('▸ [1/4] 无后端变更，跳过');
   checks.push('L1: ⏭️ no backend changes');
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// L2: vue-tsc --noEmit（前端变更时）
+// L2: dotnet test（后端变更 + 测试项目存在时）
+// ═══════════════════════════════════════════════════════════════════
+if (hasBackendChanges) {
+  const testProj = rootPath('backend/tests/JNPF.Tests.Gate/JNPF.Tests.Gate.csproj');
+  if (existsSync(testProj)) {
+    console.error('▸ [2/4] 后端测试执行...');
+    try {
+      execSync(`dotnet test "${testProj}" --nologo --verbosity quiet`, {
+        stdio: ['ignore', 'pipe', 'pipe'], timeout: 120000,
+      });
+      console.error('  ✅ 测试通过');
+      checks.push('L2: ✅ tests passed');
+    } catch (e) {
+      const out = (e.stdout?.toString() || '') + (e.stderr?.toString() || '');
+      const failedMatch = out.match(/Failed:\s*(\d+)/);
+      if (failedMatch && parseInt(failedMatch[1]) > 0) {
+        hasError = true;
+        errorDetails.push(`⛔ 测试失败: ${failedMatch[1]} 个用例失败。MUST 修复后重试。`);
+        checks.push(`L2: ❌ ${failedMatch[1]} tests failed`);
+      } else {
+        console.error(`  ⚠️ 测试异常: ${(e.message || '').slice(0, 200)}`);
+        checks.push('L2: ⚠️ test error (skipped)');
+      }
+    }
+  } else {
+    checks.push('L2: ⏭️ no test project');
+  }
+} else {
+  checks.push('L2: ⏭️ no backend changes');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// L3: vue-tsc --noEmit（前端变更时）
 // ═══════════════════════════════════════════════════════════════════
 if (hasFrontendChanges && existsSync(rootPath('jnpf-web-vue3/package.json'))) {
-  console.error('▸ [2/3] 前端类型检查...');
+  console.error('▸ [3/4] 前端类型检查...');
   try {
     execSync('npx vue-tsc --noEmit', {
       cwd: rootPath('jnpf-web-vue3'),
@@ -265,7 +386,7 @@ if (hasFrontendChanges && existsSync(rootPath('jnpf-web-vue3/package.json'))) {
       timeout: 120000,
     });
     console.error('  ✅ vue-tsc 通过');
-    checks.push('L2: ✅ type check passed');
+    checks.push('L3: ✅ type check passed');
   } catch (e) {
     const out = (e.stdout?.toString() || '') + (e.stderr?.toString() || '');
     const errorCount = (out.match(/error TS\d+/g) || []).length;
@@ -274,23 +395,23 @@ if (hasFrontendChanges && existsSync(rootPath('jnpf-web-vue3/package.json'))) {
       const detail = `前端类型检查失败 (${errorCount} TS errors)`;
       errorDetails.push(detail);
       console.error(`  ❌ ${errorCount} 个类型错误`);
-      checks.push(`L2: ❌ ${errorCount} type errors`);
+      checks.push(`L3: ❌ ${errorCount} type errors`);
     } else {
       // 非 TS 错误（如 OOM、超时）
       console.error(`  ⚠️ vue-tsc 异常: ${(e.message || '').slice(0, 200)}`);
-      checks.push('L2: ⚠️ vue-tsc error (non-TS, skipped)');
+      checks.push('L3: ⚠️ vue-tsc error (non-TS, skipped)');
     }
   }
 } else {
-  console.error('▸ [2/3] 无前端变更，跳过');
-  checks.push('L2: ⏭️ no frontend changes');
+  console.error('▸ [3/4] 无前端变更，跳过');
+  checks.push('L3: ⏭️ no frontend changes');
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// L3: E2E 证据新鲜度验证（实质性前端变更时）
+// L4: E2E 证据新鲜度验证（实质性前端变更时）
 // ═══════════════════════════════════════════════════════════════════
 if (hasSubstantiveFrontend) {
-  console.error('▸ [3/3] E2E 验证证据检查（Supreme Iron Law）...');
+  console.error('▸ [4/4] E2E 验证证据检查（Supreme Iron Law）...');
 
   try {
     const evidenceDir = rootPath('.claude/evidence');
@@ -300,7 +421,7 @@ if (hasSubstantiveFrontend) {
         + '前端实质性变更 MUST 使用 playwright 技能产出截图至该目录。';
       errorDetails.push(detail);
       console.error('  ❌ .claude/evidence/ 目录缺失');
-      checks.push('L3: ❌ evidence dir missing');
+      checks.push('L4: ❌ evidence dir missing');
     } else {
       const files = readdirSync(evidenceDir);
       const screenshots = files.filter(f => /\.(png|jpg|jpeg)$/i.test(f));
@@ -311,7 +432,7 @@ if (hasSubstantiveFrontend) {
           + '前端实质性变更 MUST 使用 playwright 技能打开浏览器并截图。';
         errorDetails.push(detail);
         console.error('  ❌ 无截图证据');
-        checks.push('L3: ❌ no screenshots');
+        checks.push('L4: ❌ no screenshots');
       } else {
         const now = Date.now();
         const valid = [];
@@ -345,20 +466,20 @@ if (hasSubstantiveFrontend) {
             + `MUST 使用 playwright 技能在本次会话内重新产出截图（新鲜度 ≤ ${EVIDENCE_MAX_AGE_MIN} 分钟，≥ ${EVIDENCE_MIN_SIZE_BYTES / 1024}KB）。`;
           errorDetails.push(detail);
           console.error(`  ❌ ${invalidReasons.length} 张截图全部无效`);
-          checks.push(`L3: ❌ ${invalidReasons.length} invalid screenshots`);
+          checks.push(`L4: ❌ ${invalidReasons.length} invalid screenshots`);
         } else {
           console.error(`  ✅ ${valid.length} 张有效截图: ${valid.join(', ')}`);
-          checks.push(`L3: ✅ ${valid.length} valid screenshots`);
+          checks.push(`L4: ✅ ${valid.length} valid screenshots`);
         }
       }
     }
   } catch (e) {
     console.error(`  ⚠️ E2E 证据检查异常: ${e.message}`);
-    checks.push('L3: ⚠️ check error (skipped)');
+    checks.push('L4: ⚠️ check error (skipped)');
   }
 } else {
   console.error('▸ [3/3] 无前端实质性变更，跳过 E2E 证据检查');
-  checks.push('L3: ⏭️ no substantive frontend changes');
+  checks.push('L4: ⏭️ no substantive frontend changes');
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -380,4 +501,4 @@ if (hasError) {
   }));
 }
 
-process.exit(0);
+safeExit(0);

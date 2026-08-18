@@ -322,7 +322,7 @@ pnpm run dev  # → localhost:3100
 
 # 前端 DataV
 cd d:\JNPF-v52\jnpf-web-datascreen
-pnpm run dev  # → localhost:8100
+pnpm run dev  # → localhost:3102
 
 # 测试
 dotnet test tools/JNPF.Analyzers/JNPF.Analyzers.Tests/

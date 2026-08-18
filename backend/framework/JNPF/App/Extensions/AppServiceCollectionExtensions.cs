@@ -274,7 +274,7 @@ public static class AppServiceCollectionExtensions
         {
 
             var startup = Activator.CreateInstance(type) as AppStartup;
-            App.AppStartups.Add(startup);
+            App.AppStartups.Enqueue(startup);
 
             // 获取所有符合依赖注入格式的方法，如返回值void，且第一个参数是 IServiceCollection 类型
             var serviceMethods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance)

@@ -1,0 +1,22 @@
+{
+  "perf": {
+    "saveMap": "O(n*m) Any/Find -> HashSet/(vModel,multiple) compat set + field index",
+    "batchDel": "Skip GetHaveTableInfo N-roundtrips unless isInteAssis==true; App BatchDelete now passes DTO"
+  },
+  "wave": "W2-surgery",
+  "status": "awaiting-approval",
+  "smoke": "API down — jnpf-api fetch failed",
+  "date": "2026-08-07",
+  "codeReview": "PASS after Critical#1 transfer-rule split",
+  "extracts": [
+    "BatchDeleteSqlPlanner",
+    "FlowFormMapRuleMerger",
+    "FlowFormDataTransferRules",
+    "DeleteRootFlowTasks"
+  ],
+  "title": "SaveData/BatchDel real cut (not anesthesia)",
+  "tests": {
+    "surgeryFilterPassed": 14,
+    "fullVisualDevPassed": 25
+  }
+}

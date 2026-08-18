@@ -1,4 +1,5 @@
-﻿using JNPF.ClayObject;
+﻿using JNPF.Bridges;
+using JNPF.ClayObject;
 using JNPF.Common.Configuration;
 using JNPF.Common.Const;
 using JNPF.Common.Core.Manager;
@@ -10,7 +11,6 @@ using JNPF.Common.Security;
 using JNPF.DependencyInjection;
 using JNPF.Engine.Entity.Model.Integrate;
 using JNPF.EventBus;
-using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.JsonSerialization;
 using JNPF.RemoteRequest.Extensions;
 using JNPF.Schedule;
@@ -58,6 +58,11 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
     private readonly ITenantManager _tenantManager;
 
     /// <summary>
+    /// InteAssistant bridge (no compile-time InteAssistant.Entitys reference).
+    /// </summary>
+    private readonly IInteAssistantBridge _inteAssistantBridge;
+
+    /// <summary>
     /// 构造函数.
     /// </summary>
     public IntegreateEventSubscriber(
@@ -66,7 +71,8 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
         IServer server,
         IJobManager jobManager,
         ITenantManager tenantManager,
-        ISchedulerFactory schedulerFactory)
+        ISchedulerFactory schedulerFactory,
+        IInteAssistantBridge inteAssistantBridge)
     {
         _sqlSugarClient = sqlSugarClient;
         _cacheManager = cacheManager;
@@ -74,6 +80,7 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
         _jobManager = jobManager;
         _schedulerFactory = schedulerFactory;
         _tenantManager = tenantManager;
+        _inteAssistantBridge = inteAssistantBridge;
     }
 
     /// <summary>
@@ -95,27 +102,16 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
             await _tenantManager.ChangTenant(db, inte.TenantId);
         }
 
-        // 集成助手表单ID一致 且 未删除 且 状态启用 且 触发事件作为 一致的数据
-        List<IntegrateEntity>? inteAssiEntity = new List<IntegrateEntity>();
-        switch (inte.Model.TriggerType)
-        {
-            case 4:
-                inteAssiEntity = await db.Queryable<IntegrateEntity>().Where(it => it.Type.Equals(1) && it.FormId.Equals(inte.Model.ModelId) && it.DeleteMark == null && it.EnabledMark.Equals(1) && it.TriggerType.Equals(1)).ToListAsync();
-                break;
-            case 5:
-                inteAssiEntity = await db.Queryable<IntegrateEntity>().Where(it => it.Type.Equals(1) && it.FormId.Equals(inte.Model.ModelId) && it.DeleteMark == null && it.EnabledMark.Equals(1) && it.TriggerType.Equals(3)).ToListAsync();
-                break;
-            default:
-                inteAssiEntity = await db.Queryable<IntegrateEntity>().Where(it => it.Type.Equals(1) && it.FormId.Equals(inte.Model.ModelId) && it.DeleteMark == null && it.EnabledMark.Equals(1) && it.TriggerType.Equals(inte.Model.TriggerType)).ToListAsync();
-                break;
-        }
+        // 集成助手表单ID一致 且 未删除 且 状态启用 且 触发事件作为 一致的数据（经桥，无 Entitys 引用）
+        var inteAssiEntity = await _inteAssistantBridge.ListEnabledFormEventIntegrationsAsync(
+            db, inte.Model.ModelId, inte.Model.TriggerType);
 
         // 有集成助手记录
         switch (inteAssiEntity.Count > 0)
         {
             case true:
                 var triggerType = string.Empty;
-                List<IntegrateQueueEntity> inteQueueList = new List<IntegrateQueueEntity>();
+                var inteQueueList = new List<InteAssistantQueueCreateDto>();
                 RESTfulResult<object> result = new RESTfulResult<object>();
 
                 switch (inte.Model.TriggerType)
@@ -141,7 +137,8 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
                         ids.ForEach(id =>
                         {
                             var data = new InteAssiDataModel { DataId = inte.Model.DataId, Data = inte.Model.Data }.ToJsonString();
-                            inteAssiEntity.ForEach(item => inteQueueList.Add(GetAddIntegrateQueueEntity(item.FullName, item.Id, 0, inte.Model.Data, inte.UserId)));
+                            inteAssiEntity.ToList().ForEach(item => inteQueueList.Add(
+                                _inteAssistantBridge.CreateQueueItem(item.FullName, item.Id, 0, inte.Model.Data, inte.UserId)));
                         });
                         break;
                     case 3:
@@ -177,7 +174,7 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
                                         switch (idList.Count > 0)
                                         {
                                             case true:
-                                                inteQueueList.Add(GetAddIntegrateQueueEntity(item.FullName, item.Id, 0, data, inte.UserId));
+                                                inteQueueList.Add(_inteAssistantBridge.CreateQueueItem(item.FullName, item.Id, 0, data, inte.UserId));
                                                 break;
                                         }
 
@@ -187,7 +184,7 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
                                     }
                                     else
                                     {
-                                        inteQueueList.Add(GetAddIntegrateQueueEntity(item.FullName, item.Id, 0, data, inte.UserId));
+                                        inteQueueList.Add(_inteAssistantBridge.CreateQueueItem(item.FullName, item.Id, 0, data, inte.UserId));
                                     }
                                 }
                             }
@@ -223,12 +220,12 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
                                         result = (await path.SetJsonSerialization<NewtonsoftJsonSerializerProvider>().SetContentType("application/json").SetHeaders(dicHerader).SetBody(parameter).PostAsStringAsync()).ToObject<RESTfulResult<object>>();
                                         if (result.data.ToJsonString().Contains(inte.Model.DataId))
                                         {
-                                            inteQueueList.Add(GetAddIntegrateQueueEntity(item.FullName, item.Id, 0, data, inte.UserId));
+                                            inteQueueList.Add(_inteAssistantBridge.CreateQueueItem(item.FullName, item.Id, 0, data, inte.UserId));
                                         }
                                     }
                                     else
                                     {
-                                        inteQueueList.Add(GetAddIntegrateQueueEntity(item.FullName, item.Id, 0, data, inte.UserId));
+                                        inteQueueList.Add(_inteAssistantBridge.CreateQueueItem(item.FullName, item.Id, 0, data, inte.UserId));
                                     }
                                 }
                             }
@@ -236,7 +233,7 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
                         break;
                 }
 
-                var result1 = await db.Insertable(inteQueueList).ExecuteCommandAsync();
+                var result1 = await _inteAssistantBridge.InsertQueueAsync(db, inteQueueList);
 
                 // 添加队列的数量与实际添加的数量一致
                 if (result1 == inteQueueList.Count)
@@ -276,31 +273,6 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
 
                 break;
         }
-    }
-
-    /// <summary>
-    /// 获取新增集成助手队列信息.
-    /// </summary>
-    /// <param name="fullName"></param>
-    /// <param name="integrateId"></param>
-    /// <param name="state"></param>
-    /// <param name="description"></param>
-    /// <param name="userId"></param>
-    /// <returns></returns>
-    public IntegrateQueueEntity GetAddIntegrateQueueEntity(string fullName, string integrateId, int state, string description, string userId)
-    {
-        return new IntegrateQueueEntity()
-        {
-            Id = SnowflakeIdHelper.NextId(),
-            FullName = fullName,
-            IntegrateId = integrateId,
-            ExecutionTime = null,
-            State = state,
-            Description = description,
-            CreatorTime = DateTime.Now,
-            CreatorUserId = userId,
-            EnabledMark = 1,
-        };
     }
 
     /// <summary>

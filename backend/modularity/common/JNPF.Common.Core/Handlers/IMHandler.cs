@@ -17,6 +17,7 @@ using JNPF.Message.Entitys.Enums;
 using JNPF.Message.Entitys.Model.IM;
 using JNPF.RemoteRequest.Extensions;
 using JNPF.Systems.Entitys.Permission;
+using JNPF.Common.Core.Diagnostics;
 using JNPF.WebSockets;
 using Mapster;
 using SqlSugar;
@@ -32,8 +33,9 @@ public class IMHandler : WebSocketHandler
 {
     /// <summary>
     /// SqlSugarClient客户端.
+    /// 注意：去掉了 static — ISqlSugarClient 本身已注册为 Singleton，直接注入即可。
     /// </summary>
-    private static ISqlSugarClient? _sqlSugarClient;
+    private ISqlSugarClient? _sqlSugarClient;
 
     /// <summary>
     /// 缓存管理.
@@ -75,9 +77,10 @@ public class IMHandler : WebSocketHandler
     /// <returns></returns>
     public override async Task ReceiveAsync(WebSocketClient client, WebSocketReceiveResult result, string receivedMessage)
     {
+        MessageInput? message = null;
         try
         {
-            MessageInput? message = receivedMessage.ToObject<MessageInput>();
+            message = receivedMessage.ToObject<MessageInput>();
             var claims = JWTEncryption.ReadJwtToken(message.token.Replace("Bearer ", string.Empty).Replace("bearer ", string.Empty))?.Claims;
             client.UserId = claims.FirstOrDefault(e => e.Type == ClaimConst.CLAINMUSERID)?.Value;
             client.Account = claims.FirstOrDefault(e => e.Type == ClaimConst.CLAINMACCOUNT)?.Value;
@@ -94,8 +97,10 @@ public class IMHandler : WebSocketHandler
             message.sendClientId = client.ConnectionId;
             await MessageRoute(message);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            DiagnosticsLog.Error("IM", message?.method.ToString() ?? "unknown", ex,
+                new { message?.toUserId, message?.sendClientId });
         }
     }
 
@@ -106,6 +111,13 @@ public class IMHandler : WebSocketHandler
     private async Task MessageRoute(MessageInput message)
     {
         WebSocketClient client = WebSocketConnectionManager.GetSocketById(message.sendClientId);
+        if (client == null)
+        {
+            var err = $"[IMHandler] GetSocketById({message.sendClientId}) returned null";
+            Console.WriteLine(err);
+            try { File.AppendAllText("D:/JNPF-v52/backend/.claude/imhandler-error.log", err + "\n---\n"); } catch {}
+            return;
+        }
         if (string.IsNullOrEmpty(client.UserId))
         {
             await SendMessageAsync(client.ConnectionId, new { method = "logout" }.ToJsonString());
@@ -113,13 +125,14 @@ public class IMHandler : WebSocketHandler
         }
 
         var tenant = await GetGlobalTenantCache(client.TenantId);
-        if (tenant == null)
+        // 多租户模式下才强制要求 tenant 存在；单租户/tenantId="0" 时默认 SameTime
+        if (tenant == null && KeyVariable.MultiTenancy)
         {
             await SendMessageAsync(client.ConnectionId, new { method = "logout", msg = "此账号已在其他地方登录" }.ToJsonString());
             return;
         }
 
-        client.SingleLogin = (LoginMethod)tenant.SingleLogin;
+        client.SingleLogin = tenant != null ? (LoginMethod)tenant.SingleLogin : LoginMethod.SameTime;
 
         if (KeyVariable.MultiTenancy)
         {
@@ -284,7 +297,11 @@ public class IMHandler : WebSocketHandler
                     object messageContent = message.messageContent;
                     string fileName = string.Empty;
 
-                    var toUserEntity = await _sqlSugarClient.Queryable<UserEntity>().FirstAsync(it => it.Id == toUserId);
+                    // Select only needed columns to avoid F_ENABLED_MARK issue on missing column
+                    var toUserEntity = await _sqlSugarClient.Queryable<UserEntity>()
+                        .Where(it => it.Id == toUserId)
+                        .Select(it => new { it.Account, it.HeadIcon, it.RealName })
+                        .FirstAsync();
 
                     // 将发送消息对象信息补全
                     var toAccount = toUserEntity.Account;

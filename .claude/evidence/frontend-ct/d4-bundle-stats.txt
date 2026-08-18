@@ -1,0 +1,43 @@
+D4 Bundle 构成分析 (dist 实际文件大小, 2026-08-06)
+源: vite build --mode production 产物 dist/
+============================================================
+
+【总体积】
+  dist 总产物: 36M
+  JS 总(parsed): 14.81 MB / 700 文件
+  CSS 总: 1.16 MB
+
+【Top25 最大 JS chunk (parsed bytes)】
+      7985 KB   55.21%  vendor-common-634b552f.js
+      1529 KB   10.57%  index-416ad06d.js
+      1011 KB    6.99%  vendor-echarts-0853b75c.js
+       752 KB    5.20%  vendor-antd-383bb4a7.js
+       206 KB    1.42%  FormGenerator.vue_vue_type_script_setup_true_lang-e1814d14.js
+       153 KB    1.06%  Main.vue_vue_type_style_index_0_lang-e1ea8a13.js
+       144 KB    0.99%  vendor-vue-0a5bbc88.js
+       140 KB    0.97%  index-a6b89f96.js
+       104 KB    0.72%  vendor-icons-a1cbb44f.js
+        97 KB    0.67%  BasicColumnDesign.vue_vue_type_style_index_0_lang-9a31278a.js
+        85 KB    0.59%  index-942ef1f8.js
+        77 KB    0.53%  index-6adb3db5.js
+        65 KB    0.45%  AiChatPanel-ed1df619.js
+        52 KB    0.36%  useTable-dd5ac24e.js
+        51 KB    0.35%  index-c66e6f4e.js
+        49 KB    0.34%  workbench-5da7d791.js
+        48 KB    0.33%  index.vue_vue_type_script_setup_true_lang-6b93ec1a.js
+        47 KB    0.33%  vendor-utils-6cee4d99.js
+        44 KB    0.30%  componentMap-f182fa99.js
+        37 KB    0.25%  index-0d3f0c48.js
+        33 KB    0.23%  componentMap-051c1379.js
+        31 KB    0.22%  printStyle-f71d742f.js
+        28 KB    0.20%  index-b1f9eea8.js
+        27 KB    0.19%  Form.vue_vue_type_script_setup_true_lang-89bd001f.js
+        26 KB    0.18%  index-7bfec0d6.js
+
+【vendor 块聚合 (手动分包)】
+  vendor-common: 7.8 MB
+  vendor-echarts: 1.0 MB
+  vendor-antd: 0.7 MB
+  vendor-vue: 0.1 MB
+  vendor-icons: 0.1 MB
+  vendor-utils: 0.0 MB

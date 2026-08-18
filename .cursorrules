@@ -1,0 +1,33 @@
+# JNPF v5.2 — Cursor 短缓存（非 alwaysApply 权威）
+
+> **Agent 常驻规则唯一入口：** `.cursor/rules/00-constitution.mdc`  
+> **规则分层：** `.cursor/rules/README.md`（`iron-laws/` · `domain/` · `frontend/` · `toolchain/` · `docs/`）  
+> 本文件仅作 IDE 短缓存，**禁止**再往这里堆长铁律。
+
+## 身份 / 端口
+
+| 组件 | 路径 | 端口 |
+|------|------|------|
+| API | `backend/application/JNPF.API.Entry` | :5000 |
+| PC | `jnpf-web-vue3/` | :3100 |
+| 大屏 | `jnpf-web-datascreen/` | :3102 |
+| 移动 | `jnpf-app-vue3/` | :3800 |
+| SA | `sa-service/` | :3001 |
+
+启动：`powershell -ExecutionPolicy Bypass -File D:\JNPF-v52\start-dev.ps1`（已开一套会 BLOCK；停：`-CleanupOnly`；重开：`-Force`）  
+账号：`admin` / `123456` · 文档：`http://localhost:5000/newapi`
+
+## 红线一行（细节进 mdc / CLAUDE.md）
+
+禁手写 Controller · Oops.Bah/Oh · 多租户过滤 · SQL 参数化 · OA 独立入口 · SSE 必清理 · 三元组完整 · ADF/四支柱硬门见 `00-constitution.mdc`
+
+## 常用命令
+
+```
+dotnet build   # backend/
+pnpm type-check   # jnpf-web-vue3/
+E2E_PIPELINE_ID=311 pnpm test:api
+node scripts/lib/jnpf-auth.mjs --json
+```
+
+包管理：前端 pnpm 8 · 后端 NuGet（`backend/nuget.config`）

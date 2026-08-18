@@ -20,6 +20,12 @@ public class IrEditPatchEntity : TenantCLDSEntityBase
     public long PipelineId { get; set; }
 
     /// <summary>
+    /// 项目 ID(FK → ai_projects.F_Id)。三元组补全,NOT NULL DEFAULT ''
+    /// </summary>
+    [SugarColumn(ColumnName = "F_PROJECT_ID")]
+    public string ProjectId { get; set; } = "";
+
+    /// <summary>
     /// 关联IR版本ID
     /// </summary>
     [SugarColumn(ColumnName = "F_VERSION_ID")]

@@ -1,0 +1,64 @@
+{
+  "sampleId": "leave-extended",
+  "description": "扩展请假 — 日期区间 + 类型 + 乐观锁字段",
+  "templateProfileId": "1-SingleTable",
+  "defaults": {
+    "projectId": "sample-leave-extended",
+    "tenantId": "000000",
+    "nameSpace": "OaLeave",
+    "className": "LeaveRequest",
+    "busName": "请假申请（扩展）",
+    "tableName": "OA_LEAVE_REQUEST_EXT",
+    "webType": 2,
+    "type": 1,
+    "enableFlow": false,
+    "isTenantColumn": true,
+    "primaryKeyPolicy": 1,
+    "concurrencyLock": true
+  },
+  "fragments": [
+    {
+      "fragmentId": "skeleton:leave-ext",
+      "fragmentType": "IR0_Skeleton",
+      "stabilityState": "stable",
+      "payload": {
+        "entityDrafts": [
+          { "entityName": "LeaveRequest", "tableName": "OA_LEAVE_REQUEST_EXT" }
+        ]
+      }
+    },
+    {
+      "fragmentId": "architecture:leave-ext",
+      "fragmentType": "IR2_Architecture",
+      "stabilityState": "stable",
+      "payload": {
+        "modules": [{ "name": "OaLeave", "layer": "application" }]
+      }
+    },
+    {
+      "fragmentId": "ddl:leave-ext",
+      "fragmentType": "IR2_DDL",
+      "stabilityState": "stable",
+      "payload": {
+        "tableNames": ["OA_LEAVE_REQUEST_EXT"],
+        "ddl": "CREATE TABLE [dbo].[OA_LEAVE_REQUEST_EXT] (\n  [F_Id] NVARCHAR(50) NOT NULL PRIMARY KEY,\n  [F_TenantId] NVARCHAR(50) NOT NULL,\n  [F_LeaveType] NVARCHAR(50) NOT NULL,\n  [F_StartDate] DATETIME2(7) NOT NULL,\n  [F_EndDate] DATETIME2(7) NOT NULL,\n  [F_Days] INT NOT NULL,\n  [F_Reason] NVARCHAR(500) NULL,\n  [F_Status] NVARCHAR(20) NOT NULL,\n  [F_VERSION] BIGINT NOT NULL DEFAULT 0\n);",
+        "stabilityState": "stable"
+      }
+    },
+    {
+      "fragmentId": "formPage:leave-ext",
+      "fragmentType": "IR2_FormPageIR",
+      "stabilityState": "stable",
+      "payload": {
+        "fields": [
+          { "fieldId": "leaveType", "label": "请假类型", "component": "Select" },
+          { "fieldId": "startDate", "label": "开始日期", "component": "DatePicker" },
+          { "fieldId": "endDate", "label": "结束日期", "component": "DatePicker" },
+          { "fieldId": "days", "label": "请假天数", "component": "InputNumber" },
+          { "fieldId": "reason", "label": "事由", "component": "Textarea" }
+        ],
+        "stabilityState": "stable"
+      }
+    }
+  ]
+}

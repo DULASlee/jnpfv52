@@ -25,7 +25,7 @@ public interface ISubAgent
     /// <returns>Agent 执行结果</returns>
     Task<SubAgentResult> ExecuteAsync(
         DetailedDesignContext context,
-        Dictionary<string, SubAgentResult> previousResults,
+        IReadOnlyDictionary<string, SubAgentResult> previousResults,
         CancellationToken ct = default);
 }
 
@@ -63,7 +63,7 @@ public record DetailedDesignResult
 {
     public bool IsSuccess { get; init; }
     public string? Error { get; init; }
-    public Dictionary<string, SubAgentResult> SubAgentResults { get; init; } = new();
+    public IReadOnlyDictionary<string, SubAgentResult> SubAgentResults { get; init; } = new Dictionary<string, SubAgentResult>();
     public MergedDocument? MergedDocument { get; init; }
     public string? DocumentUrl { get; init; }
 }

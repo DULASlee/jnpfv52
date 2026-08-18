@@ -5,6 +5,7 @@ using JNPF.Common.Core.Manager;
 using JNPF.Common.Dtos.Message;
 using JNPF.Common.Enums;
 using JNPF.Common.Extension;
+using JNPF.Common.Models.InteAssistant;
 using JNPF.Common.Options;
 using JNPF.Common.Security;
 using JNPF.DependencyInjection;
@@ -14,7 +15,6 @@ using JNPF.Extras.Thirdparty.Sms;
 using JNPF.Extras.Thirdparty.WeChat;
 using JNPF.FriendlyException;
 using Microsoft.Extensions.Logging;
-using JNPF.InteAssistant.Entitys.Entity;
 using JNPF.Message.Entitys;
 using JNPF.Message.Entitys.Entity;
 using JNPF.Message.Interfaces;
@@ -99,7 +99,7 @@ public class MessageManager : IMessageManager, ITransient
     /// <param name="bodyDic">跳转页面参数,参数格式 key:用户id，value:跳转json.</param>
     /// <param name="taskEntity"></param>
     /// <returns></returns>
-    public async Task<string> SendDefinedMsg(MessageSendModel messageSendModel, Dictionary<string, object> bodyDic, IntegrateTaskEntity? taskEntity = null)
+    public async Task<string> SendDefinedMsg(MessageSendModel messageSendModel, Dictionary<string, object> bodyDic, IntegrateTaskMessageDto? taskEntity = null)
     {
         var errorList = new List<string>();
         var messageTemplateEntity = await _repository.AsSugarClient().Queryable<MessageTemplateEntity>().FirstAsync(x => x.Id == messageSendModel.templateId && x.DeleteMark == null);

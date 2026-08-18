@@ -156,6 +156,8 @@ NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
 
 > 调试完成后 MUST 返回主流水线 Phase 5 (Verify)，**严禁直接从 Debug Path 跳至 Phase 7 (Complete)**。
 
+**子 agent dispatch：** Debug Path 诊断 → `subagent_type: jnpf-debugger`（数据驱动：visual-debug / probe / DiagnosticsLog / mistake-rag / netcoredbg-mcp，返回 debug report）。debug report 由主 Claude 持久化到 `workspace/debug_report.md`，修复交还 Coder。
+
 满足以下所有条件即视为调试完成：
 
 1. **修复已验证** — 修复代码通过对应测试（`dotnet build` + 类型检查），E2E Case 通过（如有前端改动）

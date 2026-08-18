@@ -31,6 +31,11 @@ public class SensitiveDetectionProvider : ISensitiveDetectionProvider
     private const string DISTRIBUTED_KEY = "SENSITIVE:WORDS";
 
     /// <summary>
+    /// 敏感词分隔符（缓存避免每次分配数组）.
+    /// </summary>
+    private static readonly string[] _separators = new[] { "\r\n", "|" };
+
+    /// <summary>
     /// 返回所有脱敏词汇
     /// </summary>
     /// <returns></returns>
@@ -38,7 +43,7 @@ public class SensitiveDetectionProvider : ISensitiveDetectionProvider
     {
         // 读取缓存数据
         var wordsCached = await _distributedCache.GetStringAsync(DISTRIBUTED_KEY);
-        if (wordsCached != null) return wordsCached.Split(new[] { "\r\n", "|" }, StringSplitOptions.RemoveEmptyEntries).Select(u => u.Trim());
+        if (wordsCached != null) return wordsCached.Split(_separators, StringSplitOptions.RemoveEmptyEntries).Select(u => u.Trim());
 
         var entryAssembly = Reflect.GetEntryAssembly();
 
@@ -62,7 +67,7 @@ public class SensitiveDetectionProvider : ISensitiveDetectionProvider
         await _distributedCache.SetStringAsync(DISTRIBUTED_KEY, content);
 
         // 取换行符分割字符串
-        var words = content.Split(new[] { "\r\n", "|" }, StringSplitOptions.RemoveEmptyEntries)
+        var words = content.Split(_separators, StringSplitOptions.RemoveEmptyEntries)
                                           .Select(u => u.Trim())
                                           .Distinct();
 
@@ -147,19 +152,23 @@ public class SensitiveDetectionProvider : ISensitiveDetectionProvider
             tempStringBuilder.Clear();
             tempStringBuilder.Append(stringBuilder);
 
+            // 一次性物化字符串，用 IndexOf(string, int) 替代内循环重复 ToString()
+            var haystack = tempStringBuilder.ToString();
+            var startIndex = 0;
+
             // 查询查找至结尾
-            while (tempStringBuilder.ToString().IndexOf(sensitiveWord) > -1)
+            while ((findIndex = haystack.IndexOf(sensitiveWord, startIndex)) > -1)
             {
                 if (foundSets.ContainsKey(sensitiveWord) == false)
                 {
                     foundSets.Add(sensitiveWord, new List<int>());
                 }
 
-                findIndex = tempStringBuilder.ToString().IndexOf(sensitiveWord);
-                foundSets[sensitiveWord].Add(findIndex);
+                // 存储相对于当前搜索起始位置的偏移量（保持与 GetSensitiveWordIndex 的兼容性）
+                foundSets[sensitiveWord].Add(findIndex - startIndex);
 
-                // 删除从零开始，长度为 findIndex + sensitiveWord.Length 的字符串
-                tempStringBuilder.Remove(0, findIndex + sensitiveWord.Length);
+                // 移动搜索起始位置至当前匹配之后
+                startIndex = findIndex + sensitiveWord.Length;
             }
         }
 

@@ -1,0 +1,94 @@
+======================================================================
+  JNPF v5.2 前端红线清单
+  来源: frontend-memory-leak.md / jnpf-frontend-rules.md / guard-frontend-leak.mjs
+======================================================================
+
+---------------------------------------------------------------------------
+R6 — 前端内存安全（6条铁律）
+---------------------------------------------------------------------------
+执行层: L0（Hook硬阻断） | Hook: guard-frontend-leak.mjs
+
+铁律1: setTimeout/setInterval的返回值MUST保存到变量
+  禁止: setTimeout(() => {...}, 5000)
+  必须: let myTimer = setTimeout(...)
+
+铁律2: onUnmounted MUST清理所有定时器
+  必须: onUnmounted(() => { clearTimeout(myTimer); clearInterval(myInterval); })
+
+铁律3: EventSource/WebSocket重连MUST有上限
+  必须: const MAX_RETRIES = 5; let retryCount = 0;
+  禁止: 无限重连，组件卸载后setTimeout仍触发connect()
+
+铁律4: onerror中NEVER直接调用connect()
+  必须: 经setTimeout + 重连计数器
+  原因: 直接调connect() → 后端不可达时瞬间error → CPU占满busy loop
+
+铁律5: EventSource URL MUST与axios共享apiUrl前缀（开发环境/dev）
+  禁止: new EventSource(`/api/studio/pipeline/execute/${id}/events`)
+  必须: buildEventSourceUrl(`/api/studio/pipeline/execute/${id}/events`)
+
+铁律6: EventSource MUST通过?token=传递JWT
+  buildEventSourceUrl()已自动附加
+  时序: 先connectSSE()，再POST /execute
+
+Hook拦截内容（guard-frontend-leak.mjs）:
+  - setTimeout/setInterval未保存到变量
+  - 无clearTimeout/clearInterval清理
+  - EventSource无MAX_RETRIES上限
+  - onerror中直接同步调用connect()
+
+---------------------------------------------------------------------------
+Component Selection（组件选择决策表）
+---------------------------------------------------------------------------
+来源: jnpf-frontend-rules.md
+
+必须遵循:
+  - 标准CRUD → jnpf-content-wrapper + BasicTable（禁止a-card包裹列表）
+  - 表单分区 → a-divider或BasicForm GroupTitle（禁止a-card分区）
+  - 弹窗表单 → BasicPopup/BasicModal + BasicForm(FormSchema)
+  - 表格 → BasicTable（禁止裸a-table）
+  - 表单 → BasicForm(schema-driven)或手写a-form（禁止BasicForm无schema）
+  - 样式 → common.less已有class + WindiCSS（禁止发明class名）
+  - 字典 → baseStore.getDictionaryData + jnpf-select:options（禁止硬编码选项）
+  - 自定义组件 → jnpf-*全局组件优先（禁止重复造轮子）
+  - 路由 → 后端菜单动态注入（禁止前端静态路由）
+
+---------------------------------------------------------------------------
+代码质量红线
+---------------------------------------------------------------------------
+来源: jnpf-frontend-rules.md / frontend-universal.md
+
+禁止:
+  - console.log在生产代码中
+  - 内联样式（除动态值）
+  - !important（修复特异性而非强制覆盖）
+  - 任何类型（TypeScript any）
+  - index作为key（列表可重排序时）
+  - 直接修改props
+  - localStorage/sessionStorage存储敏感数据
+
+必须:
+  - 处理loading/empty/error三种状态
+  - 图片懒加载 + 合适尺寸
+  - 语义化HTML（button/nav/main，非div堆砌）
+  - 键盘导航 + aria-label（图标按钮）
+  - 模态框/popup的焦点管理
+  - 搜索输入300ms防抖
+  - 大组件/路由懒加载
+
+---------------------------------------------------------------------------
+技术栈锁定
+---------------------------------------------------------------------------
+  - UI框架: Ant Design Vue (a-前缀)
+  - 样式: Less + WindiCSS（禁止SCSS）
+  - Vue3: <script setup> + Composition API
+  - <style lang="less" scoped>
+  - 单文件最大300行
+  - 路径别名: /@/ → src/
+
+---------------------------------------------------------------------------
+SSE / EventSource 开发环境铁律
+---------------------------------------------------------------------------
+禁止: new EventSource('/api/...')
+必须: buildEventSourceUrl('/api/...') from /@/utils/http/sseUrl
+时机: 先connectSSE()，再POST /execute

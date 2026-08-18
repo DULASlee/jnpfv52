@@ -1,53 +1,64 @@
 import { Input, DatePicker } from 'ant-design-vue';
+import { defineAsyncComponent } from 'vue';
 
 // jnpf 组件
 import { BasicCaption } from '/@/components/Basic';
-import { JnpfAlert } from '/@/components/Jnpf/Alert';
-import { JnpfAreaSelect } from '/@/components/Jnpf/AreaSelect';
-import { JnpfAutoComplete } from '/@/components/Jnpf/AutoComplete';
-import { JnpfButton } from '/@/components/Jnpf/Button';
-import { JnpfCron } from '/@/components/Jnpf/Cron';
-import { JnpfCascader } from '/@/components/Jnpf/Cascader';
-import { JnpfCheckbox, JnpfCheckboxSingle } from '/@/components/Jnpf/Checkbox';
-import { JnpfColorPicker } from '/@/components/Jnpf/ColorPicker';
-import { JnpfDatePicker, JnpfDateRange, JnpfTimePicker, JnpfTimeRange } from '/@/components/Jnpf/DatePicker';
-import { JnpfDivider } from '/@/components/Jnpf/Divider';
-import { JnpfIconPicker } from '/@/components/Jnpf/IconPicker';
-import { JnpfInput, JnpfTextarea } from '/@/components/Jnpf/Input';
-import { JnpfInputNumber } from '/@/components/Jnpf/InputNumber';
-import { JnpfLink } from '/@/components/Jnpf/Link';
-import { JnpfOpenData } from '/@/components/Jnpf/OpenData';
-import {
-  JnpfOrganizeSelect,
-  JnpfDepSelect,
-  JnpfPosSelect,
-  JnpfGroupSelect,
-  JnpfRoleSelect,
-  JnpfUserSelect,
-  JnpfUsersSelect,
-} from '/@/components/Jnpf/Organize';
-import { JnpfQrcode } from '/@/components/Jnpf/Qrcode';
-import { JnpfBarcode } from '/@/components/Jnpf/Barcode';
-import { JnpfRadio } from '/@/components/Jnpf/Radio';
-import { JnpfSelect } from '/@/components/Jnpf/Select';
-import { JnpfRate } from '/@/components/Jnpf/Rate';
-import { JnpfSlider } from '/@/components/Jnpf/Slider';
-import { JnpfSign } from '/@/components/Jnpf/Sign';
-import { JnpfSignature } from '/@/components/Jnpf/Signature';
-import { JnpfSwitch } from '/@/components/Jnpf/Switch';
-import { JnpfText } from '/@/components/Jnpf/Text';
-import { JnpfTreeSelect } from '/@/components/Jnpf/TreeSelect';
-import { JnpfUploadFile, JnpfUploadImg, JnpfUploadImgSingle } from '/@/components/Jnpf/Upload';
-import { Tinymce } from '/@/components/Tinymce/index';
-import { JnpfRelationForm } from '/@/components/Jnpf/RelationForm';
-import { JnpfRelationFormAttr } from '/@/components/Jnpf/RelationFormAttr';
-import { JnpfPopupSelect, JnpfPopupTableSelect } from '/@/components/Jnpf/PopupSelect';
-import { JnpfPopupAttr } from '/@/components/Jnpf/PopupAttr';
-import { JnpfNumberRange } from '/@/components/Jnpf/NumberRange';
-import { JnpfCalculate } from '/@/components/Jnpf/Calculate';
-import { JnpfInputTable } from '/@/components/Jnpf/InputTable';
-import { JnpfLocation } from '/@/components/Jnpf/Location';
-import { JnpfIframe } from '/@/components/Jnpf/Iframe';
+
+// 性能优化（2026-08-09）：本桶被 FormItem/BasicForm 等入口模块引用。
+// 所有 Jnpf 表单控件改为懒加载，避免把 80 个控件及其依赖静态拖进每个页面。
+const lazy = (loader: () => Promise<Record<string, any>>, name: string) => defineAsyncComponent(() => loader().then(m => m[name]));
+
+const JnpfAlert = lazy(() => import('/@/components/Jnpf/Alert'), 'JnpfAlert');
+const JnpfAreaSelect = lazy(() => import('/@/components/Jnpf/AreaSelect'), 'JnpfAreaSelect');
+const JnpfAutoComplete = lazy(() => import('/@/components/Jnpf/AutoComplete'), 'JnpfAutoComplete');
+const JnpfButton = lazy(() => import('/@/components/Jnpf/Button'), 'JnpfButton');
+const JnpfCron = lazy(() => import('/@/components/Jnpf/Cron'), 'JnpfCron');
+const JnpfCascader = lazy(() => import('/@/components/Jnpf/Cascader'), 'JnpfCascader');
+const JnpfColorPicker = lazy(() => import('/@/components/Jnpf/ColorPicker'), 'JnpfColorPicker');
+const JnpfCheckbox = lazy(() => import('/@/components/Jnpf/Checkbox'), 'JnpfCheckbox');
+const JnpfCheckboxSingle = lazy(() => import('/@/components/Jnpf/Checkbox'), 'JnpfCheckboxSingle');
+const JnpfDatePicker = lazy(() => import('/@/components/Jnpf/DatePicker'), 'JnpfDatePicker');
+const JnpfDateRange = lazy(() => import('/@/components/Jnpf/DatePicker'), 'JnpfDateRange');
+const JnpfTimePicker = lazy(() => import('/@/components/Jnpf/DatePicker'), 'JnpfTimePicker');
+const JnpfTimeRange = lazy(() => import('/@/components/Jnpf/DatePicker'), 'JnpfTimeRange');
+const JnpfDivider = lazy(() => import('/@/components/Jnpf/Divider'), 'JnpfDivider');
+const JnpfIconPicker = lazy(() => import('/@/components/Jnpf/IconPicker'), 'JnpfIconPicker');
+const JnpfInput = lazy(() => import('/@/components/Jnpf/Input'), 'JnpfInput');
+const JnpfTextarea = lazy(() => import('/@/components/Jnpf/Input'), 'JnpfTextarea');
+const JnpfInputNumber = lazy(() => import('/@/components/Jnpf/InputNumber'), 'JnpfInputNumber');
+const JnpfLink = lazy(() => import('/@/components/Jnpf/Link'), 'JnpfLink');
+const JnpfOpenData = lazy(() => import('/@/components/Jnpf/OpenData'), 'JnpfOpenData');
+const JnpfOrganizeSelect = lazy(() => import('/@/components/Jnpf/Organize'), 'JnpfOrganizeSelect');
+const JnpfDepSelect = lazy(() => import('/@/components/Jnpf/Organize'), 'JnpfDepSelect');
+const JnpfPosSelect = lazy(() => import('/@/components/Jnpf/Organize'), 'JnpfPosSelect');
+const JnpfGroupSelect = lazy(() => import('/@/components/Jnpf/Organize'), 'JnpfGroupSelect');
+const JnpfRoleSelect = lazy(() => import('/@/components/Jnpf/Organize'), 'JnpfRoleSelect');
+const JnpfUserSelect = lazy(() => import('/@/components/Jnpf/Organize'), 'JnpfUserSelect');
+const JnpfUsersSelect = lazy(() => import('/@/components/Jnpf/Organize'), 'JnpfUsersSelect');
+const JnpfQrcode = lazy(() => import('/@/components/Jnpf/Qrcode'), 'JnpfQrcode');
+const JnpfBarcode = lazy(() => import('/@/components/Jnpf/Barcode'), 'JnpfBarcode');
+const JnpfRadio = lazy(() => import('/@/components/Jnpf/Radio'), 'JnpfRadio');
+const JnpfRate = lazy(() => import('/@/components/Jnpf/Rate'), 'JnpfRate');
+const JnpfSelect = lazy(() => import('/@/components/Jnpf/Select'), 'JnpfSelect');
+const JnpfSlider = lazy(() => import('/@/components/Jnpf/Slider'), 'JnpfSlider');
+const JnpfSign = lazy(() => import('/@/components/Jnpf/Sign'), 'JnpfSign');
+const JnpfSignature = lazy(() => import('/@/components/Jnpf/Signature'), 'JnpfSignature');
+const JnpfSwitch = lazy(() => import('/@/components/Jnpf/Switch'), 'JnpfSwitch');
+const JnpfText = lazy(() => import('/@/components/Jnpf/Text'), 'JnpfText');
+const JnpfTreeSelect = lazy(() => import('/@/components/Jnpf/TreeSelect'), 'JnpfTreeSelect');
+const JnpfUploadFile = lazy(() => import('/@/components/Jnpf/Upload'), 'JnpfUploadFile');
+const JnpfUploadImg = lazy(() => import('/@/components/Jnpf/Upload'), 'JnpfUploadImg');
+const JnpfUploadImgSingle = lazy(() => import('/@/components/Jnpf/Upload'), 'JnpfUploadImgSingle');
+const JnpfRelationForm = lazy(() => import('/@/components/Jnpf/RelationForm'), 'JnpfRelationForm');
+const JnpfRelationFormAttr = lazy(() => import('/@/components/Jnpf/RelationFormAttr'), 'JnpfRelationFormAttr');
+const JnpfPopupSelect = lazy(() => import('/@/components/Jnpf/PopupSelect'), 'JnpfPopupSelect');
+const JnpfPopupTableSelect = lazy(() => import('/@/components/Jnpf/PopupSelect'), 'JnpfPopupTableSelect');
+const JnpfPopupAttr = lazy(() => import('/@/components/Jnpf/PopupAttr'), 'JnpfPopupAttr');
+const JnpfNumberRange = lazy(() => import('/@/components/Jnpf/NumberRange'), 'JnpfNumberRange');
+const JnpfCalculate = lazy(() => import('/@/components/Jnpf/Calculate'), 'JnpfCalculate');
+const JnpfInputTable = lazy(() => import('/@/components/Jnpf/InputTable'), 'JnpfInputTable');
+const JnpfLocation = lazy(() => import('/@/components/Jnpf/Location'), 'JnpfLocation');
+const JnpfIframe = lazy(() => import('/@/components/Jnpf/Iframe'), 'JnpfIframe');
 
 const JnpfInputPassword = Input.Password;
 JnpfInputPassword.name = 'JnpfInputPassword';
@@ -55,7 +66,8 @@ const JnpfInputGroup = Input.Group;
 JnpfInputGroup.name = 'JnpfInputGroup';
 const JnpfInputSearch = Input.Search;
 JnpfInputSearch.name = 'JnpfInputSearch';
-const JnpfEditor = Tinymce;
+// 懒加载：富文本编辑器不进入口静态链
+const JnpfEditor = defineAsyncComponent(() => import('/@/components/Tinymce/index').then(m => m.Tinymce));
 JnpfEditor.name = 'JnpfEditor';
 const JnpfGroupTitle = BasicCaption;
 JnpfGroupTitle.name = 'JnpfGroupTitle';

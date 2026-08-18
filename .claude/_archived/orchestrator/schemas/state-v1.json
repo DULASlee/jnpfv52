@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fugu/state-v1",
+  "title": "JNPF V3.0 统一任务状态",
+  "description": "替代V1.0的4个碎片化状态文件（workflow-state.json / build-verify-flag.json / session-init-lock.json / skill-load-state.json），统一为单一信源。",
+  "type": "object",
+  "required": ["task_id", "task_level", "current_phase"],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "pattern": "^TASK-\\d{8}-\\d{3}$",
+      "description": "统一任务ID，格式 TASK-YYYYMMDD-NNN"
+    },
+    "task_level": {
+      "type": "string",
+      "enum": ["S", "A", "B", "C"],
+      "description": "任务复杂度级别"
+    },
+    "current_phase": {
+      "type": "string",
+      "enum": ["align", "brainstorm", "explore", "decompose", "plan", "build", "verify", "review", "review_fix", "report", "end", "halted"],
+      "description": "当前阶段"
+    },
+    "current_subtask_id": {
+      "type": ["string", "null"],
+      "description": "当前执行中的子任务ID（并发模式）"
+    },
+    "retry_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3,
+      "description": "当前阶段重试次数"
+    },
+    "error_context": {
+      "description": "失败时携带的上下文，供下一轮LLM调用参考"
+    },
+    "phases_completed": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "已完成的阶段列表"
+    },
+    "quality_gates": {
+      "type": "object",
+      "description": "各质量门结果 {Q1: {passed, timestamp}, Q2: ...}",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "passed": { "type": "boolean" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "findings": { "type": "array" }
+        }
+      }
+    },
+    "security_scans": {
+      "type": "object",
+      "description": "安全扫描结果 {build: {passed, findings}, review_fix: ...}"
+    },
+    "reviewer_metrics": {
+      "type": "object",
+      "properties": {
+        "block_count": { "type": "integer" },
+        "warn_count": { "type": "integer" },
+        "new_patterns_found": { "type": "integer" },
+        "hook_improvements_suggested": { "type": "integer" }
+      }
+    },
+    "evolution": {
+      "type": "object",
+      "properties": {
+        "anomalies_recorded": { "type": "integer" },
+        "coder_reminders_updated": { "type": "integer" },
+        "rule_change_draft": { "type": "string" },
+        "human_review_required": { "type": "boolean" }
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}

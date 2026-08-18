@@ -13,6 +13,10 @@ public sealed class ColumnIsolationStrategy : ITenantIsolationStrategy
         if (string.IsNullOrEmpty(context.IsolationFieldValue))
             return;
 
+        // r4-safe: 超管跨租户管理，豁免 ITenantFilter（方案 A，详见 AdminBypassGuard）
+        if (AdminBypassGuard.IsAdministrator())
+            return;
+
         var fieldValue = context.IsolationFieldValue;
         db.QueryFilter.AddTableFilter<ITenantFilter>(it => it.TenantId == fieldValue);
     }

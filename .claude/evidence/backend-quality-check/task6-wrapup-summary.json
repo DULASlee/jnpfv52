@@ -1,0 +1,31 @@
+{
+  "wave": "Task6",
+  "title": "backend quality remediation wrap-up / quarterly regen",
+  "cmCcGt29": 41,
+  "cmProject": "jnpf-v52",
+  "cmNote": "same severe count as 2026-08-06 freeze; graph not reindexed for extract body CC",
+  "baseline": {
+    "path": "backend/tools/JNPF.Analyzers/complexity-baseline.json",
+    "entries": 119,
+    "duplicates": 0,
+    "policy": "monotonic-non-shrink (no entries removed this wave)"
+  },
+  "docsUpdated": [
+    "docs/architecture/v52/design-quality-hotspot-top20.md",
+    "docs/architecture/v52/design-quality-baseline-gates.md",
+    "AGENTS.md",
+    "CLAUDE.md"
+  ],
+  "gates": {
+    "architecture": "8/8 pass",
+    "complexityAnalyzerTests": "5/5 pass",
+    "ciBuildCommonCore": "0 errors"
+  },
+  "pnpmTestApi": {
+    "result": "fail",
+    "note": "Studio S5 timeouts on pipeline 311 (pre-existing / env); not attributed to W0-W4 extract/bridge"
+  },
+  "status": "approved",
+  "date": "2026-08-07",
+  "approvedAt": "2026-08-07"
+}

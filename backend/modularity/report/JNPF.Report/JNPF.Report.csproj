@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\common\JNPF.Common.Core\JNPF.Common.Core.csproj" />
+    <ProjectReference Include="..\JNPF.Report.Entitys\JNPF.Report.Entitys.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,19 @@
+{
+  "McpTools": {
+    "GatewayBaseUrl": "http://localhost:5000",
+    "Tools": {
+      "kg.search-seeds": {
+        "Transport": "inproc",
+        "Description": "领域种子检索（IDomainSeedService）"
+      },
+      "kg.score-candidate": {
+        "Transport": "inproc",
+        "Description": "候选评分（IDomainSeedService）"
+      },
+      "ioi.validate": {
+        "Transport": "inproc",
+        "Description": "EventSpec IOI 不变量校验"
+      }
+    }
+  }
+}

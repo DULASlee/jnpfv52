@@ -1,0 +1,10 @@
+{
+  "perf": "system echo jnpfKey Any→HashSet",
+  "wave": "W2-surgery-rowedit-echo",
+  "title": "GetListResult row-edit echo extract + system field HashSet",
+  "status": "awaiting-approval",
+  "date": "2026-08-07",
+  "tests": {
+    "rowEditEcho": 5
+  }
+}

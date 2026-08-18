@@ -21,7 +21,7 @@ if (query != '') {
     window.$glob.params[pair[0]] = pair[1]
   })
 }
-axios.defaults.timeout = 100000;
+axios.defaults.timeout = 30000;
 //返回其他状态吗
 axios.defaults.validateStatus = function (status) {
   return status >= 200 && status <= 500; // 默认的
@@ -71,7 +71,9 @@ axios.interceptors.request.use(config => {
     config.data = form
   }
   const token = getToken();
-  config.headers['Authorization'] = config.headers['Authorization'] ? config.headers['Authorization'] : token
+  if (!config.headers['Authorization'] && token) {
+    config.headers['Authorization'] = 'Bearer ' + token;
+  }
   return config
 }, error => {
   return Promise.reject(error)

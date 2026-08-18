@@ -99,7 +99,12 @@
   import { ref, computed, watch, nextTick } from 'vue';
   import { Empty, message } from 'ant-design-vue';
   import { AuditOutlined, CheckOutlined } from '@ant-design/icons-vue';
-  import * as echarts from 'echarts';
+  // 按需注册：tree / graph 图，不再全量引入 echarts（性能优化 2026-08-10）
+  import * as echarts from 'echarts/core';
+  import { TreeChart, GraphChart } from 'echarts/charts';
+  import { TooltipComponent, LegendComponent } from 'echarts/components';
+  import { CanvasRenderer } from 'echarts/renderers';
+  echarts.use([TreeChart, GraphChart, TooltipComponent, LegendComponent, CanvasRenderer]);
   import { testChat } from '/@/api/founder/pipeline';
 
   defineOptions({ name: 'ArchitectReview' });

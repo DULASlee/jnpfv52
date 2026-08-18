@@ -123,9 +123,38 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     [LogPolicy(LogPolicy.IgnoreResponse)]
     public async Task<IActionResult> GetImg(string type, string fileName)
     {
-        string? filePath = Path.Combine(GetPathByType(type), fileName.Replace("@", "."));
-        return await _fileManager.DownloadFileByType(filePath, fileName);
+        var resolvedName = fileName.Replace("@", ".");
+        var dir = GetPathByType(type);
+        var filePath = Path.Combine(dir, resolvedName);
+
+        // 本地存储：缺文件时头像回退 001.png / 内置占位图，避免 FileNotFound → FriendlyException ERR 刷屏
+        if (KeyVariable.FileStoreType == OSSProviderType.Invalid && !global::System.IO.File.Exists(filePath))
+        {
+            if (string.Equals(type, "userAvatar", StringComparison.OrdinalIgnoreCase))
+            {
+                var fallback = Path.Combine(dir, "001.png");
+                if (global::System.IO.File.Exists(fallback))
+                {
+                    filePath = fallback;
+                    resolvedName = "001.png";
+                }
+                else
+                {
+                    return new FileContentResult(DefaultUserAvatarPng, "image/png") { FileDownloadName = "001.png" };
+                }
+            }
+            else
+            {
+                return new NotFoundResult();
+            }
+        }
+
+        return await _fileManager.DownloadFileByType(filePath, resolvedName);
     }
+
+    /// <summary>1×1 透明 PNG，仅作本地缺省头像占位（FileStorage/UserAvatar 未初始化时）。</summary>
+    private static readonly byte[] DefaultUserAvatarPng = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
 
     /// <summary>
     /// 生成大屏图片链接.

@@ -1,6 +1,34 @@
 {
   "mcpServers": {
+    "codegraph": {
+      "type": "stdio",
+      "command": "codegraph",
+      "args": [
+        "serve",
+        "--mcp",
+        "--no-watch"
+      ],
+      "description": "代码智能知识图谱 — callers/callees/impact/explore/node。索引 33,094 符号 + 78,558 关系边。编码前 MUST 用 explore 探索上下文。"
+    },
+    "tool-search": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "D:/JNPF-v52/.claude/mcp/tool-search.mjs"
+      ],
+      "description": "🔍 工具搜索引擎 — 描述意图 → 推荐最佳工具 + 置信度 + 理由。覆盖 CodeGraph MCP + 全部内置工具。不确定用什么工具时先调此工具。核心价值：防止 AI 用 Grep 查调用链、用 Read 盲目扫文件。"
+    },
+    "netcoredbg": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "D:/JNPF-v52/scripts/netcoredbg-mcp-wrapper.py"
+      ],
+      "description": ".NET 运行时调试 — 43 MCP 工具：断点/变量/单步/call stack。自动 attach 到 JNPF.API.Entry 进程。数据驱动调试核心工具。"
+    },
     "serena": {
+      "disabled": true,
+      "comment": "⚠️ 此配置已废弃。Claude Code 从 PATH 自动发现 serena.exe（C:\\Users\\admin\\.local\\bin\\serena.exe），绕过 mcp.json。实际参数为 --project <cwd> --context ide。如需控制：将 serena 移出 PATH 或改用 JetBrains 后端。",
       "command": "serena",
       "args": [
         "start-mcp-server",

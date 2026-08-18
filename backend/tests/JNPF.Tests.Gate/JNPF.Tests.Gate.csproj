@@ -1,12 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
+    <PackageReference Include="xunit" Version="2.7.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.7" />
+    <PackageReference Include="Moq" Version="4.20.70" />
     <PackageReference Include="SqlSugarCore" Version="5.1.4.140" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0" />
   </ItemGroup>
@@ -14,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\infrastructure\JNPF.Extras.EventBus.Outbox\JNPF.Extras.EventBus.Outbox.csproj" />
     <ProjectReference Include="..\..\modularity\common\JNPF.Common.Core\JNPF.Common.Core.csproj" />
+    <ProjectReference Include="..\..\modularity\inteAssistant\JNPF.InteAssistant\JNPF.InteAssistant.csproj" />
     <ProjectReference Include="..\..\framework\JNPF\JNPF.csproj" />
     <ProjectReference Include="..\..\application\JNPF.API.Entry\JNPF.API.Entry.csproj" />
   </ItemGroup>

@@ -122,3 +122,4 @@
 - NEVER 不分析根因就随机改动
 - NEVER 跳过边界情况（null、并发、错误路径）
 - 三行相似代码 > 过早抽象
+- **硬失败：** `guard-write` L11 · Cursor `guard-placeholder` · `.githooks/pre-commit` 拦截 `TODO: implement` / `NotImplementedException` 等；例外 `// placeholder-ok: <理由>`

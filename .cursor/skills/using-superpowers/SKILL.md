@@ -60,6 +60,7 @@ Superpowers 插件大版本更新后：
 | `test-driven-development` | 先写失败测试再实现 |
 | `systematic-debugging` | 复现→假设→验证→修复 |
 | `verification-before-completion` | 完成前构建/功能验证 |
+| **`jnpf-api-cli`** | **无浏览器登录 + API 自动测试闭环**（Dev Loop 主路径） |
 | `requesting-code-review` | 发起代码审查 |
 | `receiving-code-review` | 处理审查意见 |
 | `code-reviewer` | 审查子代理规范 |

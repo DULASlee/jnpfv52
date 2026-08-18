@@ -1,5 +1,4 @@
 import CardHeader from '../../Portal/CardHeader/index.vue';
-import * as echarts from 'echarts';
 import { getDataInterfaceRes } from '/@/api/systemData/dataInterface';
 import { reactive, toRefs, watch, Ref, inject, nextTick } from 'vue';
 import { chartData as defaultChartData } from '../helper/dataMap';

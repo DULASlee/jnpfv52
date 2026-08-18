@@ -1,4 +1,5 @@
 ﻿using JNPF.Common.Const;
+using JNPF.Common.Core.Diagnostics;
 using JNPF.Common.Net;
 using JNPF.Common.Security;
 using JNPF.EventBus;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using SqlSugar;
 using System.Diagnostics;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace JNPF.Common.Core.Filter;
 
@@ -72,6 +74,20 @@ public class RequestActionFilter : IAsyncActionFilter
         {
             await next();
             return;
+        }
+
+        // ── agent-probe 诊断探针钩子 ──
+        var diagHeader = context.HttpContext.Request.Headers["X-Diagnostics"].FirstOrDefault();
+        DiagnosticsProbe? probe = null;
+        if (!string.IsNullOrEmpty(diagHeader))
+        {
+            try { probe = JsonSerializer.Deserialize<DiagnosticsProbe>(diagHeader); } catch { }
+            if (probe != null)
+            {
+                DiagnosticsLog.Log(probe.Category, "request_begin",
+                    new { method = context.HttpContext.Request.Method, path = context.HttpContext.Request.Path.ToString() },
+                    probe.Level);
+            }
         }
 
         Stopwatch sw = new Stopwatch();

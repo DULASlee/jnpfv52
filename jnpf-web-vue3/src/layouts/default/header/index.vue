@@ -1,5 +1,5 @@
 <template>
-  <Header :class="getHeaderClass">
+  <AppHeader :class="getHeaderClass">
     <!-- left start -->
     <div :class="`${prefixCls}-left`">
       <!-- logo -->
@@ -43,7 +43,7 @@
 
       <AppLocalePicker v-if="getShowLocalePicker" :showText="false" :class="`${prefixCls}-action__item`" />
 
-      <UserDropDown :theme="getHeaderTheme" />
+      <UserDropDown :theme="getHeaderTheme" @switch-system="openSystemTriggerDrawer(true, { list: getUserInfo.systemIds })" />
 
       <SettingDrawer v-if="getShowSetting" :class="`${prefixCls}-action__item`" />
       <ChatDrawer @register="registerChatDrawer" @toggle-twinkle="toggleTwinkle" />
@@ -51,7 +51,7 @@
       <MessageDrawer @register="registerMessageDrawer" @read-msg="readMsg" />
       <ResetPwdForm @register="registerForm" />
     </div>
-  </Header>
+  </AppHeader>
 </template>
 <script lang="ts">
   import { defineComponent, unref, computed, reactive, toRefs, onMounted } from 'vue';
@@ -71,7 +71,7 @@
   import { MenuModeEnum, MenuSplitTyeEnum } from '/@/enums/menuEnum';
   import { SettingButtonPositionEnum } from '/@/enums/appEnum';
 
-  import { UserDropDown, LayoutBreadcrumb, FullScreen, Notify, ErrorAction } from './components';
+  import { UserDropDown, FullScreen, Notify, ErrorAction } from './components';
   import { useAppInject } from '/@/hooks/web/useAppInject';
   import { useDesign } from '/@/hooks/web/useDesign';
 
@@ -80,13 +80,9 @@
   import { useI18n } from '/@/hooks/web/useI18n';
 
   import { useDrawer } from '/@/components/Drawer';
-  import ChatDrawer from './components/chat/ChatDrawer.vue';
-  import SystemTriggerDrawer from './components/SystemTriggerDrawer.vue';
-  import MessageDrawer from './components/MessageDrawer.vue';
   import { useWebSocket } from '/@/hooks/web/useWebSocket';
 
   import { useModal } from '/@/components/Modal';
-  import ResetPwdForm from './components/ResetPwdForm.vue';
   import { getSysConfig } from '/@/api/system/sysConfig';
   import { updatePasswordMessage } from '/@/api/basic/user';
   import { useUserStore } from '/@/store/modules/user';
@@ -100,10 +96,9 @@
   export default defineComponent({
     name: 'LayoutHeader',
     components: {
-      Header: Layout.Header,
+      AppHeader: Layout.Header,
       AppLogo,
       LayoutTrigger,
-      LayoutBreadcrumb,
       LayoutMenu,
       UserDropDown,
       AppLocalePicker,
@@ -114,11 +109,13 @@
       SettingDrawer: createAsyncComponent(() => import('/@/layouts/default/setting/index.vue'), {
         loading: true,
       }),
-      ChatDrawer,
-      SystemTriggerDrawer,
-      MessageDrawer,
+      // 抽屉/弹窗按需加载：聊天(含 emoji/WebSocket)、站内消息、系统切换、改密
+      // 均为低频交互，静态引入会把它们的模块图带进每个页面（性能优化）
+      ChatDrawer: createAsyncComponent(() => import('./components/chat/ChatDrawer.vue'), { loading: true }),
+      SystemTriggerDrawer: createAsyncComponent(() => import('./components/SystemTriggerDrawer.vue'), { loading: true }),
+      MessageDrawer: createAsyncComponent(() => import('./components/MessageDrawer.vue'), { loading: true }),
       MessageOutlined,
-      ResetPwdForm,
+      ResetPwdForm: createAsyncComponent(() => import('./components/ResetPwdForm.vue'), { loading: true }),
     },
     props: {
       fixed: propTypes.bool,

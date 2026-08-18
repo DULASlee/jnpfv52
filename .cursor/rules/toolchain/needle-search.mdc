@@ -1,0 +1,67 @@
+---
+description: 针式搜索铁律 — 先窄后宽、并行≤3、禁拖网。搜索卡顿或想全仓 Grep/Explore 时拉取。
+alwaysApply: false
+---
+
+# 针式搜索铁律（Needle Search — 永久遵循）
+
+> **一句核心：针式问题用针，不用拖网。**  
+> **Claude 镜像：** `.claude/rules/needle-search.md`  
+> **关联：** `toolchain-division.mdc`（Serena/Grep 职责）· `AGENTS.md` §Code Search
+
+本仓为大型 monorepo。广域搜索、堆并行、整文件灌入是会话卡死的主因。**任何文件定位 / 符号查找 MUST 遵守本规则。**
+
+---
+
+## 决策树（强制）
+
+| 你知道什么 | ✅ 正确动作 | ❌ 禁止 |
+|---|---|---|
+| 已知路径 / 模块文件名 | 直接 `Read`（大文件带 `offset`/`limit`） | 先全仓 `Glob`/`Grep` |
+| 只知关键词、不知路径 | **一次**精准 `Grep`（必须带 `path` 和/或 `glob`） | 无 path/glob 的全仓扫 |
+| C# 类/方法/接口名 | **Serena** `find_symbol` / `find_referencing_symbols` | Shell `find`/`dir /s`；广域 Grep 扫符号 |
+| 只知文件名模式 | **窄** `Glob`（如 `**/PmSkill*.cs`、`**/QualityScore*.cs`） | `**/*`、`**/*.cs` 等拖网 |
+| 「这个文件在哪」单点问题 | 窄 Glob 或一次 Grep | 派 `explore` / `Task` 子 Agent |
+
+---
+
+## 六条硬约束
+
+1. **先窄后宽** — 先限定 `backend/modularity/inteAssistant/`、`jnpf-web-vue3/src/views/studio/`、`docs/AI原生开发/` 等已知模块；仍找不到再略微放宽。禁止第一步全仓扫。
+2. **工具选型** — C# 符号 → Serena；文本关键词 → Grep；文件名 → 窄 Glob；已知路径 → Read。
+3. **禁止 Shell 全仓搜索** — 不得用 `find`、`dir /s`、`Get-ChildItem -Recurse`、无路径限制的 `rg` 做文件发现。
+4. **禁止为找文件派 explore** — `Task`/`explore` 仅用于真正需要多模块架构梳理的宽问题；单文件/单符号定位禁止派子 Agent。
+5. **并行上限** — 同轮最多 **2–3** 个独立、**窄范围**查询。禁止同轮堆 8+ 个广域 `Glob`/`Grep`/`Read`/`GetMcpTools`。
+6. **大文件局部读** — 先 Grep 定位行号，再 `Read` 带 `offset`/`limit`；禁止把数百行无关内容整文件灌进上下文。
+
+---
+
+## 卡住信号（>15s）
+
+单次工具调用 **>15 秒无结果** 或被用户中断：
+
+1. **立即停止**盲加重试 / 加并行。
+2. 改更窄条件：加 `path`、收紧 `glob`、换 Serena、直接读已知路径。
+3. 若 MCP（Serena / episodic / GetMcpTools）卡住 → 跳过该 MCP，改用窄 Grep/`Read`，不阻塞主任务。
+
+---
+
+## 与现有规则的关系
+
+| 规则 | 关系 |
+|---|---|
+| `toolchain-division` | 定工具职责；本规则定**怎么搜才不卡死** |
+| `knowledge-base` | 编码前查阅顺序仍有效；查阅时也必须针式，禁止拖网 |
+| `AGENTS.md` Code Search | 与本规则一致；冲突时以本规则的并行/卡住条款为准 |
+
+---
+
+## 禁止清单（NEVER）
+
+- ❌ 无 `path`/`glob` 的全仓 Grep 作为第一步
+- ❌ `Glob **/*` 或等价拖网
+- ❌ Shell 递归列目录找文件
+- ❌ 为「找一个文件」派 explore 子 Agent
+- ❌ 同轮 8+ 广域工具并行
+- ❌ 大文件无 offset/limit 整读
+- ❌ 工具超时后原参数重试（必须先收窄）

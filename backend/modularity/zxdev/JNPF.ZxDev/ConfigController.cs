@@ -277,6 +277,7 @@ public class ConfigController : IDynamicApiController, ITransient
 
                 string description = table.TableName.Split('-')[0].Trim();
                 string tableName = table.TableName.Split('-')[1].Trim();
+                SqlGuard.ValidateIdentifier(tableName, "表名");
 
                 try
                 {

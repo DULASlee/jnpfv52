@@ -7,12 +7,13 @@ namespace JNPF.Templates;
 /// 模板静态类
 /// </summary>
 [SuppressSniffer]
-public static class TP
+public static partial class TP
 {
     /// <summary>
-    /// 模板正则表达式对象
+    /// 模板正则表达式（编译期生成，零启动分配）
     /// </summary>
-    private static readonly Lazy<Regex> _lazyRegex = new(() => new(@"^##(?<prop>.*)?##[:：]?\s*(?<content>[\s\S]*)"));
+    [GeneratedRegex(@"^##(?<prop>.*)?##[:：]?\s*(?<content>[\s\S]*)")]
+    private static partial Regex TemplateRegex();
 
     /// <summary>
     /// 生成规范日志模板
@@ -38,9 +39,9 @@ public static class TP
         // 添加项
         if (items != null && items.Length > 0)
         {
-            var propMaxLength = items.Where(u => _lazyRegex.Value.IsMatch(u))
+            var propMaxLength = items.Where(u => TemplateRegex().IsMatch(u))
                 .DefaultIfEmpty(string.Empty)
-                .Max(u => _lazyRegex.Value.Match(u).Groups["prop"].Value.Length);
+                .Max(u => TemplateRegex().Match(u).Groups["prop"].Value.Length);
 
             // 控制项名称对齐空白占位数
             propMaxLength += (propMaxLength >= 5 ? 10 : 5);
@@ -51,9 +52,9 @@ public static class TP
                 var item = items[i];
 
                 // 判断是否匹配 ##xxx##
-                if (_lazyRegex.Value.IsMatch(item))
+                if (TemplateRegex().IsMatch(item))
                 {
-                    var match = _lazyRegex.Value.Match(item);
+                    var match = TemplateRegex().Match(item);
                     var prop = match.Groups["prop"].Value;
                     var content = match.Groups["content"].Value;
 

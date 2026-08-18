@@ -1,0 +1,22 @@
+---
+description: episodic-memory 已停用自动索引（2026-08-08）。仅当用户明确要求「搜旧对话」时手动使用。
+alwaysApply: false
+---
+
+# episodic-memory（休眠模式）
+
+自 2026-08-08 起，本项目已停用 episodic-memory 自动同步：
+
+- ❌ 不再有 sessionStart / stop / sessionEnd 自动 sync（`.cursor/hooks.json` 已移除对应入口）
+- ❌ 不再有 Cursor MCP server（`~/.cursor/mcp.json` 已移除）
+- ❌ Claude Code 插件已禁用（`~/.claude/settings.json` `enabledPlugins=false`）
+
+跨会话记忆改由 **Claude Code 原生 Auto Memory**（`~/.claude/projects/D--JNPF-v52/memory/`）
++ 本项目结构化归档（CURRENT-FOCUS / progress-registry / mistake-log / session-digest）承担。
+
+手动恢复（仅当你需要检索旧对话原文时）：
+
+1. 命令行直接搜（无需启用插件）：
+   `node C:/Users/admin/.claude/plugins/cache/superpowers-marketplace/episodic-memory/1.4.1/cli/episodic-memory.js search --project D--JNPF-v52 "<query>"`
+2. 查看/同步索引增量：
+   `node scripts/episodic-sync.mjs --stats`（查看）· `node scripts/episodic-sync.mjs`（前台同步）

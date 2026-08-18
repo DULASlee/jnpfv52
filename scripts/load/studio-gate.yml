@@ -1,0 +1,94 @@
+# JNPF Studio API — artillery 负载测试配置
+#
+# 比 k6 更适合 HTTP API 的声明式负载测试。
+# 运行:
+#   npx artillery@latest run scripts/load/studio-gate.yml
+#   npx artillery@latest run --output .claude/evidence/artillery-report.json scripts/load/studio-gate.yml
+#   npx artillery@latest report .claude/evidence/artillery-report.json
+
+config:
+  target: "http://localhost:5000"
+  phases:
+    - name: warmup
+      duration: 10
+      arrivalRate: 1
+      rampTo: 3
+    - name: load
+      duration: 30
+      arrivalRate: 3
+      rampTo: 10
+    - name: cooldown
+      duration: 10
+      arrivalRate: 1
+
+  processor: "./studio-gate-processor.js"
+  variables:
+    pipelineId: "311"
+
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+
+scenarios:
+  # ── 冒烟：认证存活 ──
+  - name: "CurrentUser smoke"
+    weight: 3
+    flow:
+      - get:
+          url: "/api/oauth/CurrentUser"
+          headers:
+            jnpf-origin: "pc"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: code
+
+  # ── 核心：交付物列表 ──
+  - name: "Deliverables list"
+    weight: 3
+    flow:
+      - get:
+          url: "/api/studio/pipeline/execute/{{ pipelineId }}/deliverables"
+          headers:
+            jnpf-origin: "pc"
+          expect:
+            - statusCode: 200
+            - contentType: json
+            - hasProperty: data
+
+  # ── 核心：IR 事件 ──
+  - name: "IR events"
+    weight: 2
+    flow:
+      - get:
+          url: "/api/studio/pipeline/execute/{{ pipelineId }}/events"
+          headers:
+            jnpf-origin: "pc"
+          expect:
+            - statusCode: 200
+
+  # ── 核心：SA Gate（低频，仅压力测试时启用） ──
+  - name: "SA Gate trigger (low freq)"
+    weight: 1
+    flow:
+      - post:
+          url: "/api/studio/pipeline/execute/{{ pipelineId }}/gate"
+          headers:
+            Content-Type: "application/json"
+            jnpf-origin: "pc"
+          json:
+            requirement: "artillery 负载测试：请假系统自动生成"
+          expect:
+            - statusCode: 200
+            - contentType: json
+
+  # ── MCP Tools 冒烟 ──
+  - name: "MCP tools list"
+    weight: 1
+    flow:
+      - get:
+          url: "/api/studio/mcp/tools"
+          headers:
+            jnpf-origin: "pc"
+          expect:
+            - statusCode: 200

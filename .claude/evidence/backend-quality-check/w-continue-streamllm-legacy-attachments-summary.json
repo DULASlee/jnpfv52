@@ -1,0 +1,14 @@
+{
+  "wave": "W-continue-StreamLlm-LEGACY-attachments",
+  "date": "2026-08-07",
+  "summary": "Extract LegacyGateAttachmentHelpers; wire LEGACY persist/cache/error/image-cache lookup",
+  "tests": { "Legacy+StreamLlm+Attachment filter": "48/48" },
+  "review": "PASS after UrlAlreadyExists empty-URL fix",
+  "efficacy": [
+    "URL dedupe / cache-hit / error truncate / pending entity unit-tested",
+    "ProcessStatus magic numbers centralized",
+    "HTTP/DB/processor still in StreamLlmResponseAsync"
+  ],
+  "next": "FieldBindDefaultValue extract (W2) or attachment download loop facade"
+}
+

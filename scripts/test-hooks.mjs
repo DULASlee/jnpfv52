@@ -12,9 +12,12 @@
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const hooksDir = join(__dirname, '..', '.claude', 'hooks');
+const repoRoot = join(__dirname, '..');
+const workflowStatePath = join(repoRoot, '.claude', 'workflow-state.json');
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -75,8 +78,8 @@ console.log('='.repeat(60));
 console.log('JNPF Hook 合规测试');
 console.log('='.repeat(60));
 
-// ─── R5 模块边界 (guard-write.mjs L4) ────────────────────────
-console.log('\n[R5 模块边界 — guard-write.mjs L4]');
+// ─── guard-write.mjs (R5) ────────────────────────────────
+console.log('\n[guard-write.mjs — R5 模块边界]');
 
 test(
   'R5-A: 写入 OA 禁用模块应 BLOCK',
@@ -110,8 +113,8 @@ test(
   'system 是合法模块'
 );
 
-// ─── R8 权限声明 (guard-write.mjs L7) ─────────────────────────
-console.log('\n[R8 权限声明 — guard-write.mjs L7]');
+// ─── guard-write.mjs (R8) ─────────────────────────────────────
+console.log('\n[guard-write.mjs — R8 权限声明]');
 
 test(
   'R8-A: IDynamicApiController 无权限属性应 BLOCK',
@@ -141,8 +144,8 @@ test(
   'MultiEdit 新增 IDynamicApiController 缺权限声明'
 );
 
-// ─── R7 SQL 注入 (guard-write.mjs L6) ──────────────────────────
-console.log('\n[R7 SQL 注入 — guard-write.mjs L6]');
+// ─── guard-write.mjs (R7) ────────────────────────────
+console.log('\n[guard-write.mjs — R7 SQL 注入]');
 
 test(
   'R7-A: DROP TABLE 字符串插值应 BLOCK',
@@ -172,8 +175,8 @@ test(
   'MultiEdit DROP via string interpolation'
 );
 
-// ─── R4 多租户 (guard-write.mjs L5) ──────────────────────────
-console.log('\n[R4 多租户 — guard-write.mjs L5]');
+// ─── guard-write.mjs (R4) ────────────────────────────
+console.log('\n[guard-write.mjs — R4 多租户]');
 
 test(
   'R4-A: DisableGlobalFilter(Tenant) 应 BLOCK',
@@ -221,8 +224,8 @@ test(
   'MultiEdit Updateable 无 Where = 跨租户修改'
 );
 
-// ─── R6 前端泄漏 (guard-write.mjs L8) ──────────────────────────
-console.log('\n[R6 前端泄漏 — guard-write.mjs L8]');
+// ─── guard-write.mjs (R6) ────────────────────────────
+console.log('\n[guard-write.mjs — R6 前端泄漏]');
 
 test(
   'R6-A: setInterval 无 clear 应 BLOCK',
@@ -314,6 +317,70 @@ test(
   'MultiEdit 写入 .env = L1 阻断'
 );
 
+// ─── guard-write.mjs (L10 需求分析子链铁律) ──────────────────
+console.log('\n[guard-write.mjs — L10 需求分析子链铁律]');
+
+test(
+  'L10a-A: 新增 .mjs 脚本（非 hooks）应 BLOCK',
+  'guard-write.mjs',
+  writePayload('scripts/new-e2e-test.mjs', 'import { } from "node:assert";'),
+  2,
+  '禁令一：禁止新增 mjs 脚本（除 hooks 目录）'
+);
+
+test(
+  'L10a-B: 新增 .claude/hooks/*.mjs 应放行',
+  'guard-write.mjs',
+  writePayload('.claude/hooks/new-guard.mjs', '#!/usr/bin/env node\n// hook infra'),
+  0,
+  'hooks 目录是基础设施，允许 mjs'
+);
+
+test(
+  'L10b-A: 复活 ScannerValidator 应 BLOCK',
+  'guard-write.mjs',
+  writePayload('backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/Foo.cs',
+    'public class ScannerValidator { }'),
+  2,
+  '禁令七：ScannerValidator 已废止（25 §0.2）'
+);
+
+test(
+  'L10b-B: 新建 sa_ddd 表应 BLOCK',
+  'guard-write.mjs',
+  writePayload('backend/modularity/inteAssistant/Migrations/foo.sql',
+    'CREATE TABLE sa_ddd_context (F_Id NVARCHAR(50));'),
+  2,
+  '禁令七：sa_ddd_* 表已废止（25 决策5/红线5）'
+);
+
+test(
+  'L10b-C: cascadeUpdate 调用应 BLOCK',
+  'guard-write.mjs',
+  writePayload('backend/modularity/inteAssistant/JNPF.InteAssistant/Sa/Foo.cs',
+    'cascadeUpdate(affectedSteps);'),
+  2,
+  '禁令七：cascadeUpdate 已废止（25 决策7）'
+);
+
+test(
+  'L10d-A: 编排器 _llm.ChatAsync 出题应 BLOCK',
+  'guard-write.mjs',
+  writePayload('backend/modularity/inteAssistant/JNPF.InteAssistant/Skills/RequirementAnalysisOrchestrator.cs',
+    'var resp = await _llm.ChatAsync(new { prompt = "generate clarification question" });'),
+  2,
+  '禁令一/七：编排器禁止直连 LLM 出题（25 红线9）'
+);
+
+test(
+  'L10-safe: cr-safe 豁免标记应放行废止模块',
+  'guard-write.mjs',
+  writePayload('backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/Foo.cs',
+    'public class ScannerValidator { } // cr-safe: 临时调试历史模块对照'),
+  0,
+  'cr-safe 豁免（需配合 CR 审批留痕）'
+);
+
 // ─── guard-bash.mjs (危险命令) ───────────────────────────────
 console.log('\n[guard-bash.mjs — 危险命令拦截]');
 
@@ -344,6 +411,131 @@ test(
   0,
   '安全命令'
 );
+
+// ─── guard-write.mjs (L11 零占位符) ─────────────────────────
+console.log('\n[guard-write.mjs — L11 零占位符]');
+
+test(
+  'L11-A: TODO implement 应 BLOCK',
+  'guard-write.mjs',
+  writePayload(
+    'backend/modularity/inteAssistant/JNPF.InteAssistant/Skills/FooSkillService.cs',
+    'public void Run() {\n  // TODO: implement this\n}\n'
+  ),
+  2,
+  '业务源码含 TODO implement'
+);
+
+test(
+  'L11-B: NotImplementedException 应 BLOCK',
+  'guard-write.mjs',
+  writePayload(
+    'backend/modularity/inteAssistant/JNPF.InteAssistant/Gates/FooGate.cs',
+    'public void X() { throw new NotImplementedException(); }\n'
+  ),
+  2,
+  '业务源码抛 NotImplementedException'
+);
+
+test(
+  'L11-C: placeholder-ok 豁免应放行',
+  'guard-write.mjs',
+  writePayload(
+    'backend/modularity/inteAssistant/JNPF.InteAssistant/Skills/FooSkillService.cs',
+    '// placeholder-ok: scaffold for codegen demo only\npublic void Run() { throw new NotImplementedException(); }\n'
+  ),
+  0,
+  '含 placeholder-ok 豁免'
+);
+
+test(
+  'L11-D: 正常实现应放行',
+  'guard-write.mjs',
+  writePayload(
+    'backend/modularity/inteAssistant/JNPF.InteAssistant/Skills/FooSkillService.cs',
+    'public int Add(int a, int b) => a + b;\n'
+  ),
+  0,
+  '无占位符'
+);
+
+test(
+  'L11-E: docs 路径不扫描',
+  'guard-write.mjs',
+  writePayload(
+    'docs/example.md',
+    '// TODO: implement this\n'
+  ),
+  0,
+  '文档不在扫描范围'
+);
+
+// ─── guard-write.mjs (L12 ADF 写入锁) ─────────────────────────
+console.log('\n[guard-write.mjs — L12 ADF 写入锁]');
+
+const workflowStateBackup = existsSync(workflowStatePath)
+  ? readFileSync(workflowStatePath, 'utf8')
+  : null;
+
+function withAdfPhase(phase, fn) {
+  const base = workflowStateBackup ? JSON.parse(workflowStateBackup) : {};
+  writeFileSync(
+    workflowStatePath,
+    JSON.stringify({ ...base, adfGateEnabled: true, adfPhase: phase, currentSg: null }, null, 2),
+  );
+  try { fn(); } finally {
+    if (workflowStateBackup != null) writeFileSync(workflowStatePath, workflowStateBackup);
+  }
+}
+
+withAdfPhase('P1', () => {
+  test(
+    'L12-A: adfPhase=P1 写业务 .cs 应 BLOCK',
+    'guard-write.mjs',
+    writePayload(
+      'backend/modularity/inteAssistant/JNPF.InteAssistant/Skills/FooSkillService.cs',
+      'public int Add(int a, int b) => a + b;\n'
+    ),
+    2,
+    'P1 锁定业务源码'
+  );
+});
+
+withAdfPhase('P1', () => {
+  test(
+    'L12-B: adfPhase=P1 写 docs 应放行',
+    'guard-write.mjs',
+    writePayload('docs/adf-note.md', '# architecture draft\n'),
+    0,
+    '锁定期允许文档'
+  );
+});
+
+withAdfPhase('P4', () => {
+  test(
+    'L12-C: adfPhase=P4 写业务 .cs 应放行',
+    'guard-write.mjs',
+    writePayload(
+      'backend/modularity/inteAssistant/JNPF.InteAssistant/Skills/FooSkillService.cs',
+      'public int Add(int a, int b) => a + b;\n'
+    ),
+    0,
+    'P4 已批准实现'
+  );
+});
+
+withAdfPhase(null, () => {
+  test(
+    'L12-D: adfPhase=null 日常应放行',
+    'guard-write.mjs',
+    writePayload(
+      'backend/modularity/inteAssistant/JNPF.InteAssistant/Skills/FooSkillService.cs',
+      'public int Add(int a, int b) => a + b;\n'
+    ),
+    0,
+    '日常不锁'
+  );
+});
 
 // ─── 汇总 ────────────────────────────────────────────────────
 console.log('\n' + '='.repeat(60));

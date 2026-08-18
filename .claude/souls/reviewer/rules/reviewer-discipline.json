@@ -1,0 +1,111 @@
+{
+  "$schema": "fugu/rules-v1",
+  "id": "reviewer-discipline",
+  "version": "V3.0",
+  "description": "Reviewer 纪律 — 机器可消费版本。Q5 质量门消费。",
+  "dimensions": [
+    {
+      "id": "D1",
+      "name": "架构合规",
+      "checks": ["R1-R10"],
+      "auto_verify": "Hook L0 已拦截",
+      "reviewer_action": "复核 Hook 漏检",
+      "default_confidence": "HIGH"
+    },
+    {
+      "id": "D2",
+      "name": "工程铁律",
+      "checks": [
+        "TODO/FIXME/HACK 残留",
+        "空 catch 吞异常",
+        "未验证假设",
+        "硬编码密钥"
+      ],
+      "auto_verify": "grep 扫描",
+      "reviewer_action": "判断是否故意",
+      "default_confidence": "MED"
+    },
+    {
+      "id": "D3",
+      "name": "专家陷阱",
+      "checks": ["Trap 1-14"],
+      "auto_verify": "部分可工具验证",
+      "reviewer_action": "深度检查",
+      "default_confidence": "LOW-MED"
+    },
+    {
+      "id": "D4",
+      "name": "代码质量",
+      "checks": [
+        "方法长度 > 50 行",
+        "重复代码",
+        "命名不规范",
+        "魔法数字 ≥ 3 位"
+      ],
+      "auto_verify": "工具可部分覆盖",
+      "reviewer_action": "判断是否合理",
+      "default_confidence": "MED"
+    },
+    {
+      "id": "D5",
+      "name": "测试覆盖",
+      "checks": [
+        "新增代码是否有测试",
+        "测试是否通过",
+        "覆盖率是否达标"
+      ],
+      "auto_verify": "文件存在性 + 测试执行",
+      "reviewer_action": "判断测试质量",
+      "default_confidence": "HIGH"
+    }
+  ],
+  "levels": [
+    {
+      "level": "BLOCK",
+      "description": "必须修复，阻塞流程",
+      "confidence_weight": { "HIGH": 3, "MED": 2, "LOW": 1 },
+      "examples": [
+        "Hook L0 漏检的架构红线违规",
+        "可导致生产事故的代码(如SQL注入绕过)",
+        "严重性能问题(如无分页全表查询)"
+      ]
+    },
+    {
+      "level": "WARN",
+      "description": "建议修复，不阻塞",
+      "confidence_weight": { "HIGH": 1, "MED": 0.5, "LOW": 0.2 },
+      "examples": [
+        "方法 > 50 行",
+        "边界条件未处理",
+        "测试覆盖不足"
+      ]
+    },
+    {
+      "level": "NOTE",
+      "description": "信息提示，仅记录",
+      "confidence_weight": { "HIGH": 0, "MED": 0, "LOW": 0 },
+      "examples": [
+        "代码风格偏好",
+        "可优化的实现方式",
+        "文档缺失"
+      ]
+    }
+  ],
+  "q5_quality_gate": {
+    "block_threshold": 0,
+    "warn_threshold": 5,
+    "note_threshold": 999,
+    "weighted_formula": {
+      "block": "sum(confidence_weight[level=BLOCK][finding.confidence])",
+      "warn": "sum(confidence_weight[level=WARN][finding.confidence])"
+    },
+    "pass_condition": "weighted_block == 0 AND weighted_warn < warn_threshold AND guard_coverage_verified == true"
+  },
+  "auto_verify_tools": [
+    { "name": "grep-audit", "command": "grep -rn 'TODO|FIXME|catch.*{}'", "purpose": "扫描TODO/吞异常" },
+    { "name": "mapster-check", "command": "检查Adapt调用前后是否有.Ignore", "purpose": "验证审计字段覆盖" },
+    { "name": "pagination-check", "command": "grep -rn 'ToListAsync|ToPageListAsync'", "purpose": "验证列表分页" },
+    { "name": "async-suffix-check", "command": "grep -rn 'Async\\s*('", "purpose": "验证无Async后缀" },
+    { "name": "tenant-filter-verify", "command": "grep -rn 'SqlQuery|SqlQueryable'", "purpose": "验证TenantId过滤" }
+  ]
+}

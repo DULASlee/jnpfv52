@@ -20,6 +20,12 @@ public class IrVersionEntity : TenantCLDSEntityBase
     public string PipelineId { get; set; }
 
     /// <summary>
+    /// 项目 ID(FK → ai_projects.F_Id)。三元组补全,NOT NULL DEFAULT ''
+    /// </summary>
+    [SugarColumn(ColumnName = "F_PROJECT_ID")]
+    public string ProjectId { get; set; } = "";
+
+    /// <summary>
     /// 版本号（递增）
     /// </summary>
     [SugarColumn(ColumnName = "F_VERSION")]

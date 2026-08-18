@@ -1,0 +1,65 @@
+---
+description: Studio S2 compile 主链与 C# 九表物化（ADR-004）。改 Analyst/SaNine*/SaMaterializer 时必读。
+globs:
+  - backend/modularity/inteAssistant/**/Sa/**
+  - backend/modularity/inteAssistant/**/Skills/Analyst*
+  - backend/modularity/inteAssistant/**/Skills/SkillsApiService.cs
+  - openspec/specs/studio-s2-compile/**
+alwaysApply: false
+---
+
+# Studio S2：compile 主链 + C# 物化（ADR-004）
+
+> **知识库：** `openspec/specs/studio-s2-compile/spec.md`  
+> **ADR：** `openspec/adr/ADR-004-s2-compile-csharp-materialize.md`  
+> **架构详述：** `docs/architecture/studio-s2-compile-materialize.md`  
+> **五步计划：** `docs/AI原生开发/1、多用户多任务并行/22、Skills全链路装配审计与五步推进计划.md` §3.3 · 第 1 步 ✅ pipeline **311**
+
+## 2026-07-06 架构变更（两大决策）
+
+1. **主链路径调整** — SA 九步 **Agent 从生产主链分离**；默认 `S2Mode=compile`，Analyst 走 **`SaNineViewCompiler`**（纯 C# 解析器/投影），Skills 只做语义与双审。
+2. **持久化归属调整** — **`sa_*` 九表物化从 sa-service 迁至 C#**；用户 `confirm-requirement-spec` 后由 **`SaMaterializer`** 直连 JNPF 主库，IR 写 `SaMaterializationCompleted` / `SaMaterializationFailed`。
+
+## 双模式
+
+| 模式 | 配置 | 九步来源 | S2 写 `sa_*` | 需要 sa-service |
+|------|------|----------|--------------|-----------------|
+| **compile（默认）** | `SaPipeline.json` → `"S2Mode": "compile"` | `SaNineViewCompiler` | **禁止** | **否** |
+| **agent（回归）** | `"S2Mode": "agent"` | sa-service LLM 九步 | legacy（禁止主链） | 是 |
+
+## 主链路（compile）
+
+```
+PM + Analyst Skills → SaNineViewCompiler → 02 + SaNineViewCompiled
+→ AnalysisCompleted → 用户 confirm-requirement-spec
+→ SaMaterializationService → SaMaterializer → sa_* 九表
+```
+
+## 业务验收（第 1 步）
+
+```powershell
+# ① 日常默认（~10s，已有 pipeline）
+E2E_PIPELINE_ID=311 pnpm test:api
+
+# ② 阶段 evidence / 长链（按需）
+node scripts/phase-sup-s2-e2e.mjs verify --pipeline-id 311
+
+# ③ 九表 SQL
+# sa-nine-tables-audit.sql @PipelineId = 311
+```
+
+**禁止**日常仅跑 ② 而跳过 ①。详见 `openspec/specs/studio-e2e-toolchain/spec.md`。
+
+## 禁止
+
+- ❌ compile 主链要求 sa-service :3001 常驻
+- ❌ S2 期间（confirm 前）写 `sa_*` 九表
+- ❌ sa-service 写 JNPF 主库做物化（曾致 SQLEXPRESS 500）
+- ❌ 恢复 `AnalystSkillService` 默认走 `RunProjectAsync` 全 LLM 九步作为主链
+- ❌ 仅用 `dotnet build` 声称 S2 完成
+
+## 关键代码
+
+- `Sa/SaPipelineOptions.cs` · `Sa/SaNineViewCompiler.cs`
+- `Sa/SaMaterializer.cs` · `Sa/SaMaterializationService.cs`
+- `Skills/AnalystSkillService.cs` · `Skills/SkillsApiService.ConfirmRequirementSpecAsync`

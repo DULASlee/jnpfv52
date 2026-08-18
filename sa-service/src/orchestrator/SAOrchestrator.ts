@@ -5,8 +5,25 @@ import {
   SARequest, SAContext, SAOutput, SAConfig, DEFAULT_SA_CONFIG,
   ScopeOutput, DFDOutput, BPMOutput, DictOutput, PSpecOutput,
   DecisionTableOutput, EROutput, StateMachineOutput, UIOutput,
+  SAEventResult, SkeletonBusinessEvent,
   ISADatabase, ILLMClient, ValidationError
 } from './orchestrator-types';
+
+/** 简单信号量：控制并发事件数，防止同时打爆 LLM 限速 */
+class Semaphore {
+  private available: number;
+  private queue: Array<() => void> = [];
+  constructor(max: number) { this.available = max; }
+  acquire(): Promise<void> {
+    if (this.available > 0) { this.available--; return Promise.resolve(); }
+    return new Promise(resolve => this.queue.push(() => { this.available--; resolve(); }));
+  }
+  release(): void {
+    this.available++;
+    const next = this.queue.shift();
+    if (next) next();
+  }
+}
 import {
   ScopeAgent, DFDAgent, BPMAgent, DictAgent, PSpecAgent,
   DecisionTableAgent, ERAgent, StateMachineAgent, UIAgent
@@ -14,7 +31,7 @@ import {
 import { runWithRetry, RetryResult } from './RetryLoop';
 import { decideSteps, runScopeStep, classifyEvent } from './StepRouter';
 import { DKEEFacade } from '../dkee';
-import { BaseAgent } from './BaseAgent';
+import { logStep } from '../lib/structuredLogger';
 
 // =====================================================
 // 注入的 Validator(从 @your-org/sa-validators 包)
@@ -58,6 +75,91 @@ export class SAOrchestrator {
     this.dkee = new DKEEFacade();
   }
 
+  /** 统一解析 eventId（如 'BE-001'）为数字（1）；无数字则 0。D 组：消除 runSingleStep eventId/currentEventId 解析不一致。 */
+  public static parseEventIdNum(eventId: string): number {
+    const m = eventId.match(/\d+/);
+    return m ? Number(m[0]) : 0;
+  }
+
+  // ============================================================
+  // 单步执行（C# Analyst Skill 逐步驱动）
+  // ============================================================
+  async runSingleStep(params: {
+    tenantId: string;
+    projectId: string;
+    pipelineId: number;
+    eventId: string;
+    agentName: string;
+    irStepName: string;
+    requirementText: string;
+    skeleton?: any;
+    previousSteps?: Record<string, any>;
+    runId?: string;
+  }): Promise<any> {
+    const start = Date.now();
+    const eventNum = SAOrchestrator.parseEventIdNum(params.eventId);
+    const ctx: SAContext = {
+      tenantId: params.tenantId,
+      projectId: Number(params.projectId) || 0,
+      pipelineId: params.pipelineId,
+      requirementId: 0,
+      requirementText: params.requirementText,
+      eventId: eventNum,
+      eventDescription: params.eventId,
+      assetLevel: 'EVENT',
+      kgPatterns: [],
+      domainModel: await this.db.getDomainModel('general'),
+      previousSteps: { ...(params.previousSteps || {}), skeleton: params.skeleton },
+      userId: 'analyst-skill',
+      startTime: start,
+      currentEventId: eventNum,
+    };
+
+    const tableMap: Record<string, string> = {
+      ScopeAgent: 'sa_scope',
+      DFDAgent: 'sa_dfd',
+      BPMAgent: 'sa_business_process',
+      DictAgent: 'sa_data_dictionary',
+      PSpecAgent: 'sa_pspec',
+      DecisionTableAgent: 'sa_decision_table',
+      ERAgent: 'sa_er',
+      StateMachineAgent: 'sa_state_machine',
+      UIAgent: 'sa_ui',
+    };
+
+    const agentName = params.agentName;
+    const tableName = tableMap[agentName] || 'sa_step';
+
+    if (agentName === 'ScopeAgent') {
+      return await runScopeStep(this, ctx);
+    }
+
+    const agent = this.agents.get(agentName);
+    if (!agent) throw new Error(`Agent ${agentName} not found`);
+
+    const output = await runWithRetry<any>(
+      tableName,
+      ctx,
+      this.db,
+      { maxRetries: this.config.maxRetries, retryDelayMs: this.config.retryDelayMs },
+      async () => await agent.generate(ctx),
+      (out) => this.runDefaultValidator(agentName, out, ctx),
+    );
+
+    logStep({
+      level: 'info',
+      runId: params.runId,
+      tenantId: params.tenantId,
+      projectId: params.projectId,
+      eventId: params.eventId,
+      stepName: params.irStepName,
+      elapsedMs: Date.now() - start,
+      message: `${agentName} step completed`,
+    });
+
+    return output.output;
+  }
+
   // ============================================================
   // 主入口:后端调用（3-Tier 架构：Project → Event → Process）
   // ============================================================
@@ -65,17 +167,32 @@ export class SAOrchestrator {
     const startTime = Date.now();
     const validationStats: any[] = [];
 
-    console.log(`[SA] 开始需求分析: project=${req.projectId} tenant=${req.tenantId}`);
+    logStep({
+      level: 'info',
+      runId: req.runId,
+      tenantId: req.tenantId,
+      projectId: String(req.projectId),
+      message: 'SA run started',
+    });
 
     // 解析 Context(注入 KG 模式 + 领域模型)
     const ctx = await this.resolveContext(req);
 
     // ═══════════════════════════════════════
-    // Phase 0: 边界提取（所有级别共享）
+    // Phase 0: 边界提取（PM 骨架已确认则跳过 ScopeAgent 重切）
     // ═══════════════════════════════════════
-    const scope = await runScopeStep(this, ctx);
-    ctx.previousSteps['scope'] = scope;
-    validationStats.push({ step: 'Scope', attempts: 1, passed: true });
+    let scope: ScopeOutput;
+    if (req.skeletonBusinessEvents?.length) {
+      scope = buildScopeFromSkeleton(req.skeletonBusinessEvents, req.requirementText);
+      const { id } = await this.db.saveScope(scope, ctx);
+      ctx.scopeId = id;
+      ctx.previousSteps['scope'] = scope;
+      validationStats.push({ step: 'Scope(skeleton)', attempts: 1, passed: true });
+    } else {
+      scope = await runScopeStep(this, ctx);
+      ctx.previousSteps['scope'] = scope;
+      validationStats.push({ step: 'Scope', attempts: 1, passed: true });
+    }
 
     // ═══════════════════════════════════════
     // Phase 1: PROJECT 级（跑一次）
@@ -109,58 +226,141 @@ export class SAOrchestrator {
     ctx.previousSteps['stateMachine'] = stateMachine;
     validationStats.push({ step: 'StateMachine', attempts: 1, passed: true });
 
-    console.log(`[SA] Project 级完成: DFD/BPM/Dict/ER/STD 已生成`);
+    logStep({
+      level: 'info',
+      runId: req.runId,
+      tenantId: req.tenantId,
+      projectId: String(req.projectId),
+      message: 'SA project-level steps completed',
+    });
 
     // ═══════════════════════════════════════
-    // Phase 2 & 3: EVENT / PROCESS 级（逐事件）
-    // 单事件失败隔离：一个事件异常不阻断其他事件
+    // Phase 2 & 3: EVENT / PROCESS 级（并行）
+    // 玛维斯算法：每个事件按 classifyEvent(complexity) 裁剪步骤；
+    // 同一事件内 PSpec ∥ DecisionTable；所有事件 Promise.all 并发。
+    // 单事件失败隔离，不阻断其他事件。
     // ═══════════════════════════════════════
-    let pspec: PSpecOutput | undefined;
-    let decisionTable: DecisionTableOutput | undefined;
-    let ui: UIOutput | undefined;
+    const MAX_CONCURRENT_EVENTS = 5;
+    const semaphore = new Semaphore(MAX_CONCURRENT_EVENTS);
+    const eventResultMap = new Map<string, SAEventResult>();
 
-    for (const event of scope.businessEvents) {
+    const eventKey = (e: ScopeOutput['businessEvents'][number]) =>
+      e.irEventId ?? String(e.id);
+
+    // PROJECT 级步骤：所有事件共享（只读引用，安全并发访问）
+    const projectSteps: Record<string, any> = {
+      DomainModel: scope,
+      AggregateDesign: ctx.previousSteps['dfd'],
+      EventCatalog: ctx.previousSteps['bpm'],
+      CommandQuery: ctx.previousSteps['dict'],
+      DataModel: ctx.previousSteps['er'],
+      UISpec: ctx.previousSteps['stateMachine'],
+    };
+
+    await Promise.all(scope.businessEvents.map(async (event) => {
+      await semaphore.acquire();
       try {
         const tierDecision = classifyEvent(event, ctx.projectDict);
-        ctx.assetLevel = tierDecision.assetLevel;
-        ctx.currentEventId = event.id;
 
-        console.log(`[SA] 事件 "${event.name}" → ${tierDecision.assetLevel}: ${tierDecision.reason}`);
+        logStep({
+          level: 'info',
+          runId: req.runId,
+          tenantId: req.tenantId,
+          projectId: String(req.projectId),
+          eventId: String(event.id),
+          message: `Event "${event.name}" [${event.complexity}] → ${tierDecision.assetLevel}: ${tierDecision.reason}`,
+        });
 
-        // PROCESS 级：复杂事件深度推演
-        if (tierDecision.assetLevel === 'PROCESS') {
-          if (tierDecision.stepsToRun.includes('PSpecAgent')) {
-            pspec = await this.runStepWithValidation<PSpecOutput>('PSpecAgent', 'sa_pspec', ctx,
-              async (output) => { const { id } = await this.db.savePSpec(output, ctx, ctx.dictId!, ctx.bpmId!); ctx.pspecId = id; });
-            ctx.previousSteps['pspec'] = pspec;
-            validationStats.push({ step: 'PSpec', attempts: 1, passed: true });
+        // 每个事件独立 context，避免共享 mutable 状态
+        const eventCtx: SAContext = {
+          ...ctx,
+          previousSteps: { ...ctx.previousSteps },
+          currentEventId: event.id,
+          assetLevel: tierDecision.assetLevel,
+          pspecId: undefined,
+          decisionTableId: undefined,
+          uiId: undefined,
+          lastErrors: undefined,
+        };
+
+        const eventSteps: Record<string, any> = { ...projectSteps };
+
+        try {
+          // PROCESS 级：PSpec ∥ DecisionTable（两者互不依赖）
+          if (tierDecision.assetLevel === 'PROCESS') {
+            const existingDTs = await this.loadExistingDecisionTables(eventCtx);
+
+            const [pspec, decisionTable] = await Promise.all([
+              tierDecision.stepsToRun.includes('PSpecAgent')
+                ? this.runStepWithValidation<PSpecOutput>(
+                    'PSpecAgent', 'sa_pspec', eventCtx,
+                    async (out) => { await this.db.savePSpec(out, eventCtx, ctx.dictId ?? 0, ctx.bpmId ?? 0); })
+                : Promise.resolve(undefined),
+              tierDecision.stepsToRun.includes('DecisionTableAgent')
+                ? this.runStepWithValidation<DecisionTableOutput>(
+                    'DecisionTableAgent', 'sa_decision_table',
+                    { ...eventCtx, allDecisionTables: existingDTs },
+                    async (out) => { await this.db.saveDecisionTable(out, eventCtx, 0, ctx.dictId ?? 0); })
+                : Promise.resolve(undefined),
+            ]);
+
+            if (pspec) {
+              eventCtx.previousSteps['pspec'] = pspec;
+              eventSteps['IntegrationPoints'] = pspec;
+              validationStats.push({ step: `PSpec[${event.id}]`, attempts: 1, passed: true });
+            }
+            if (decisionTable) {
+              eventCtx.previousSteps['decisionTable'] = decisionTable;
+              eventSteps['WorkflowSpec'] = decisionTable;
+              validationStats.push({ step: `DecisionTable[${event.id}]`, attempts: 1, passed: true });
+            }
           }
 
-          if (tierDecision.stepsToRun.includes('DecisionTableAgent')) {
-            ctx.kgPatterns = await this.loadExistingDecisionTables(ctx);
-            decisionTable = await this.runStepWithValidation<DecisionTableOutput>('DecisionTableAgent', 'sa_decision_table', ctx,
-              async (output) => { const { id } = await this.db.saveDecisionTable(output, ctx, ctx.pspecId!, ctx.dictId!); ctx.decisionTableId = id; });
-            ctx.previousSteps['decisionTable'] = decisionTable;
-            validationStats.push({ step: 'DecisionTable', attempts: 1, passed: true });
+          // EVENT / PROCESS 级：UI
+          if (tierDecision.stepsToRun.includes('UIAgent')) {
+            const ui = await this.runStepWithValidation<UIOutput>(
+              'UIAgent', 'sa_ui', eventCtx,
+              async (out) => { await this.db.saveUI(out, eventCtx, ctx.bpmId ?? 0, ctx.dictId ?? 0); });
+            eventSteps['DeliveryChecklist'] = ui;
+            validationStats.push({ step: `UI[${event.id}]`, attempts: 1, passed: true });
           }
-        }
 
-        // EVENT / PROCESS 级：都跑 UI
-        if (tierDecision.stepsToRun.includes('UIAgent')) {
-          ui = await this.runStepWithValidation<UIOutput>('UIAgent', 'sa_ui', ctx,
-            async (output) => { const { id } = await this.db.saveUI(output, ctx, ctx.bpmId!, ctx.dictId!); ctx.uiId = id; });
-          ctx.previousSteps['ui'] = ui;
-          validationStats.push({ step: 'UI', attempts: 1, passed: true });
+          eventResultMap.set(eventKey(event), {
+            eventId: eventKey(event),
+            eventName: event.name,
+            complexity: event.complexity,
+            steps: eventSteps,
+          });
+        } catch (e) {
+          logStep({
+            level: 'error',
+            runId: req.runId,
+            tenantId: req.tenantId,
+            projectId: String(req.projectId),
+          eventId: eventKey(event),
+          message: `Event "${event.name}" failed: ${(e as Error).message}`,
+          });
+          validationStats.push({ step: `Event_${eventKey(event)}`, attempts: 1, passed: false, error: (e as Error).message });
+          eventResultMap.set(eventKey(event), {
+            eventId: eventKey(event),
+            eventName: event.name,
+            complexity: event.complexity,
+            steps: eventSteps,
+            error: (e as Error).message,
+          });
         }
-      } catch (e) {
-        console.error(`[SA] 事件 "${event.name}" (id=${event.id}) 处理失败，跳过并继续:`, e);
-        validationStats.push({ step: `Event_${event.id}`, attempts: 1, passed: false, error: (e as Error).message });
-        // 重置事件级 context 增量字段，避免污染下一个事件
-        ctx.previousSteps['pspec'] = undefined;
-        ctx.previousSteps['decisionTable'] = undefined;
-        ctx.previousSteps['ui'] = undefined;
+      } finally {
+        semaphore.release();
       }
-    }
+    }));
+
+    // 保持原始 businessEvent 顺序
+    const eventResults: SAEventResult[] = scope.businessEvents.map(e =>
+      eventResultMap.get(eventKey(e)) ?? {
+        eventId: eventKey(e), eventName: e.name, complexity: e.complexity,
+        steps: { ...projectSteps }, error: 'event not processed',
+      }
+    );
 
     // ═══════════════════════════════════════
     // Phase 4: DKEE 提炼
@@ -170,13 +370,22 @@ export class SAOrchestrator {
     }
 
     const totalDuration = Date.now() - startTime;
-    console.log(`[SA] 完成: ${totalDuration}ms, 步骤统计:`, validationStats);
+    logStep({
+      level: 'info',
+      runId: req.runId,
+      tenantId: req.tenantId,
+      projectId: String(req.projectId),
+      elapsedMs: totalDuration,
+      message: 'SA run completed',
+      extra: { validationStats },
+    });
 
     return {
       projectId: ctx.projectId,
       tenantId: ctx.tenantId,
       scope,
-      dfd, bpm, dict, pspec, decisionTable, er, stateMachine, ui,
+      dfd, bpm, dict, er, stateMachine,
+      eventResults,
       metadata: { totalDuration, totalRetries: 0, validationStats },
     };
   }
@@ -217,7 +426,9 @@ export class SAOrchestrator {
             console.warn('[Validator] DFDValidator 未注入，跳过 DFD 校验');
             return { passed: true, errors: [] };
           }
-          const v = new this.validators.DFDValidator(output);
+          // C1 adapter: Agent 产出 dfdLevels(camel) → Validator 期望 dfd_levels(snake)
+          const adapted = { ...output, dfd_levels: output.dfdLevels };
+          const v = new this.validators.DFDValidator(adapted);
           return v.validate();
         }
         case 'BPMAgent': {
@@ -226,7 +437,13 @@ export class SAOrchestrator {
             return { passed: true, errors: [] };
           }
           const dfdProcesses = ctx.previousSteps['dfd']?.processes || [];
-          const v = new this.validators.BPMValidator(output, dfdProcesses);
+          // C1 adapter: Agent 产出 activityNodes/swimLanes(camel) → Validator 期望 activity_nodes/swim_lanes(snake)
+          const adapted = {
+            ...output,
+            activity_nodes: output.activityNodes,
+            swim_lanes: output.swimLanes,
+          };
+          const v = new this.validators.BPMValidator(adapted, dfdProcesses);
           return v.validate();
         }
         case 'DictAgent': {
@@ -245,7 +462,9 @@ export class SAOrchestrator {
           }
           const dict = ctx.previousSteps['dict'];
           if (!dict) return { passed: true, errors: [] };
-          const v = new this.validators.LogicValidator(output, dict);
+          // C1 adapter: Agent 产出 processSpecs(camel) → Validator 期望 process_specs(snake)
+          const adapted = { ...output, process_specs: output.processSpecs };
+          const v = new this.validators.LogicValidator(adapted, dict);
           return v.validate();
         }
         case 'DecisionTableAgent': {
@@ -307,6 +526,7 @@ export class SAOrchestrator {
     return {
       tenantId: req.tenantId,
       projectId: req.projectId,
+      pipelineId: req.pipelineId ?? req.projectId,
       requirementId: req.requirementId,
       requirementText: req.requirementText,
       eventId: req.eventId,
@@ -350,4 +570,27 @@ export class SAOrchestrator {
       /状态|报工|审批|驳回|关闭|完成/.test(e.name + e.description)
     );
   }
+}
+
+/** PM 已确认骨架 → 跳过 ScopeAgent LLM 重切，保留 IR eventId（BE-001 等） */
+export function buildScopeFromSkeleton(
+  skeletonEvents: SkeletonBusinessEvent[],
+  requirementText: string,
+): ScopeOutput {
+  const inScope = skeletonEvents.map(e => e.eventName).filter(Boolean);
+  if (inScope.length === 0 && requirementText) {
+    inScope.push(requirementText.slice(0, 80));
+  }
+  return {
+    systemBoundary: { inScope, outOfScope: [] },
+    externalEntities: [],
+    businessEvents: skeletonEvents.map((e, idx) => ({
+      id: idx + 1,
+      irEventId: e.eventId,
+      name: e.eventName,
+      description: e.description ?? e.eventName,
+      complexity: (e.complexityHint ?? 'simple') as 'simple' | 'medium' | 'complex',
+    })),
+    eventCount: skeletonEvents.length,
+  };
 }

@@ -7,17 +7,31 @@
         <CodeAnalysisRuleSet>$(MSBuildThisFileDirectory)dotnet.ruleset</CodeAnalysisRuleSet>
         <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
         <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- 本地默认不生成 XML 文档：避免 ProjectReference 并行复制 *.xml 触发 MSB3030/NU5026 -->
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
         <NoDefaultExcludes>true</NoDefaultExcludes>
     </PropertyGroup>
 
-    <!-- 本地开发关闭第三方分析器，CI 通过 CI_BUILD=true 开启 -->
+    <!-- CI / Release 门禁：生成 API 文档 + StyleCop/Roslynator（见 CI_BUILD 门控） -->
+    <PropertyGroup Condition="'$(CI_BUILD)' == 'true'">
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <!-- 本地：IDE 可分析，但 CLI/MSBuild 构建不跑分析器（实测约省 28s / 65%） -->
     <PropertyGroup Condition="'$(CI_BUILD)' != 'true'">
-        <EnableNETAnalyzers>true</EnableNETAnalyzers>
-        <AnalysisLevel>latest-recommended</AnalysisLevel>
+        <EnableNETAnalyzers>false</EnableNETAnalyzers>
+        <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+        <AnalysisLevel>none</AnalysisLevel>
         <RunRoslynator>false</RunRoslynator>
         <StyleCopEnabled>false</StyleCopEnabled>
-        <NoWarn>$(NoWarn);CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625</NoWarn>
+        <NoWarn>$(NoWarn);CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8625;NETSDK1187</NoWarn>
+    </PropertyGroup>
+
+    <!-- CI：开启 .NET 分析器（Roslynator/StyleCop/JNPF.Analyzers 见下方 ItemGroup） -->
+    <PropertyGroup Condition="'$(CI_BUILD)' == 'true'">
+        <EnableNETAnalyzers>true</EnableNETAnalyzers>
+        <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+        <AnalysisLevel>latest-recommended</AnalysisLevel>
     </PropertyGroup>
 
     <ItemGroup>
@@ -31,21 +45,25 @@
         </PackageReference>
         <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Link="Properties\stylecop.json" />
         <AdditionalFiles Include="$(MSBuildThisFileDirectory).editorconfig" Link="Properties\.editorconfig" />
+        <!-- W0 ComplexityAnalyzer baseline (JNPF009); consumed when CI_BUILD enables analyzers -->
+        <AdditionalFiles Include="$(MSBuildThisFileDirectory)tools\JNPF.Analyzers\complexity-baseline.json"
+                         Link="Properties\complexity-baseline.json"
+                         Condition="Exists('$(MSBuildThisFileDirectory)tools\JNPF.Analyzers\complexity-baseline.json')" />
     </ItemGroup>
 
-    <!-- JNPF 自定义分析器 — 排除自身项目和测试项目 -->
-    <ItemGroup Condition="'$(MSBuildProjectName)' != 'JNPF.Analyzers' And '$(MSBuildProjectName)' != 'JNPF.Analyzers.Tests'">
+    <!-- JNPF 自定义分析器 — 仅 CI 启用（与 Roslynator/StyleCop 一致），排除自身项目和测试项目 -->
+    <ItemGroup Condition="'$(CI_BUILD)' == 'true' And '$(MSBuildProjectName)' != 'JNPF.Analyzers' And '$(MSBuildProjectName)' != 'JNPF.Analyzers.Tests'">
         <ProjectReference Include="$(MSBuildThisFileDirectory)tools\JNPF.Analyzers\JNPF.Analyzers\JNPF.Analyzers.csproj"
                           ReferenceOutputAssembly="false"
                           OutputItemType="Analyzer" />
     </ItemGroup>
 
 
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+	<PropertyGroup Condition="'$(CI_BUILD)' == 'true' And '$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
 		<DocumentationFile>bin\Debug\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
 	</PropertyGroup>
 
-	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+	<PropertyGroup Condition="'$(CI_BUILD)' == 'true' And '$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
 		<DocumentationFile>bin\Release\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
 	</PropertyGroup>
 </Project>

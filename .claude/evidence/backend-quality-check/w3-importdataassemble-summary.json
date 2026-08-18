@@ -1,0 +1,34 @@
+{
+  "wave": "W3",
+  "title": "ImportDataAssemble dual-impl extract (mapping stage)",
+  "primary": "VisualDevModelDataService.ImportDataAssemble",
+  "secondary": "ExportImportDataHelper.ImportDataAssemble",
+  "shared": [
+    "JNPF.VisualDev.Engine/Import/ImportAssembleErrors.cs",
+    "JNPF.VisualDev.Engine/Import/ImportFieldCacheLookup.cs",
+    "JNPF.VisualDev.Engine/Import/ImportOptionValueMapper.cs"
+  ],
+  "wired": {
+    "selectLike": "CHECKBOX/SWITCH/SELECT/RADIO → MapSelectLike (clearWhenEmpty false=VisualDev, true=CodeGen)",
+    "orgPath": "DEP/POS/GROUP/ROLE/USER → MapOrgPathSelect + IsAllOrCustomSelectType gate",
+    "semanticDiffPreserved": "CodeGen empty/skipped org → null; VisualDev leaves row untouched when empty"
+  },
+  "deferred": [
+    "DATE boundary shared extract",
+    "USERSSELECT / TREESELECT deep extract",
+    "full Excel import E2E",
+    "CC drop for whole ImportDataAssemble methods"
+  ],
+  "diffEvidence": ".claude/evidence/backend-quality-check/w3-importdataassemble-diff.json",
+  "tests": {
+    "command": "dotnet test backend/tests/JNPF.Tests.VisualDev/JNPF.Tests.VisualDev.csproj",
+    "passed": 15,
+    "importHelpers": 7
+  },
+  "build": {
+    "VisualDev": "ok",
+    "CodeGen": "ok"
+  },
+  "status": "awaiting-approval",
+  "date": "2026-08-07"
+}
