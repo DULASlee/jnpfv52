@@ -1,0 +1,252 @@
+[
+  {
+    "Type": "ConditionalByTableNameFilter",
+    "DomainCount": 1,
+    "Domains": "visualdev"
+  },
+  {
+    "Type": "ConditionClauseAppender",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "ConditionStrategyContext",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "ConditionStrategyRegistry",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "DataBaseManager",
+    "DomainCount": 4,
+    "Domains": "system,zxdev,workflow,codegen"
+  },
+  {
+    "Type": "DataPermissionShortCircuits",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "DataPermissionWhereSnapshot",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "DbJobPersistence",
+    "DomainCount": 1,
+    "Domains": "application"
+  },
+  {
+    "Type": "DiagnosticsLog",
+    "DomainCount": 1,
+    "Domains": "application"
+  },
+  {
+    "Type": "DiagnosticsProbe",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "DynamicJobCompiler",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "EventBusOptions",
+    "DomainCount": 1,
+    "Domains": "application"
+  },
+  {
+    "Type": "EventBusType",
+    "DomainCount": 1,
+    "Domains": "application"
+  },
+  {
+    "Type": "FileManager",
+    "DomainCount": 6,
+    "Domains": "extend,inteAssistant,system,workflow,visualdev,visualdata"
+  },
+  {
+    "Type": "GetConditionQueryClauseAppender",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "IConditionStrategy",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "IDataBaseManager",
+    "DomainCount": 6,
+    "Domains": "engine,system,zxdev,workflow,codegen,visualdev"
+  },
+  {
+    "Type": "IFileManager",
+    "DomainCount": 6,
+    "Domains": "extend,inteAssistant,system,workflow,visualdev,visualdata"
+  },
+  {
+    "Type": "IInteAssistantBridge",
+    "DomainCount": 2,
+    "Domains": "inteAssistant,application"
+  },
+  {
+    "Type": "IJobManager",
+    "DomainCount": 3,
+    "Domains": "inteAssistant,taskscheduler,workflow"
+  },
+  {
+    "Type": "IMHandler",
+    "DomainCount": 4,
+    "Domains": "application,taskscheduler,system,message"
+  },
+  {
+    "Type": "InteAssistantDefinitionDto",
+    "DomainCount": 1,
+    "Domains": "inteAssistant"
+  },
+  {
+    "Type": "InteAssistantQueueCreateDto",
+    "DomainCount": 1,
+    "Domains": "inteAssistant"
+  },
+  {
+    "Type": "InteAssistantTriggerTypes",
+    "DomainCount": 1,
+    "Domains": "inteAssistant"
+  },
+  {
+    "Type": "InteAssistantWayEventSource",
+    "DomainCount": 1,
+    "Domains": "inteAssistant"
+  },
+  {
+    "Type": "InteEventSource",
+    "DomainCount": 1,
+    "Domains": "visualdev"
+  },
+  {
+    "Type": "IntegreateEventSubscriber",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "ITenantManager",
+    "DomainCount": 6,
+    "Domains": "inteAssistant,taskscheduler,system,message,visualdev,oauth"
+  },
+  {
+    "Type": "IUserManager",
+    "DomainCount": 14,
+    "Domains": "extend,app,engine,inteAssistant,application,taskscheduler,system,zxdev,message,workflow,codegen,visualdev,oauth,visualdata"
+  },
+  {
+    "Type": "JNPFHttpJob",
+    "DomainCount": 2,
+    "Domains": "taskscheduler,workflow"
+  },
+  {
+    "Type": "JNPFHttpJobMessage",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "JobDetailModel",
+    "DomainCount": 2,
+    "Domains": "taskscheduler,workflow"
+  },
+  {
+    "Type": "JobManager",
+    "DomainCount": 3,
+    "Domains": "inteAssistant,taskscheduler,workflow"
+  },
+  {
+    "Type": "LogEventIds",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "LogEventSource",
+    "DomainCount": 1,
+    "Domains": "oauth"
+  },
+  {
+    "Type": "LogEventSubscriber",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "LogExceptionHandler",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "Mapper",
+    "DomainCount": 9,
+    "Domains": "extend,engine,inteAssistant,taskscheduler,system,message,workflow,codegen,visualdev"
+  },
+  {
+    "Type": "PollyRetryHandlerExecutor",
+    "DomainCount": 1,
+    "Domains": "application"
+  },
+  {
+    "Type": "RabbitMQEventSourceStorer",
+    "DomainCount": 1,
+    "Domains": "application"
+  },
+  {
+    "Type": "RequestActionFilter",
+    "DomainCount": 1,
+    "Domains": "application"
+  },
+  {
+    "Type": "RetryEventHandlerExecutor",
+    "DomainCount": 1,
+    "Domains": "application"
+  },
+  {
+    "Type": "TenantManager",
+    "DomainCount": 6,
+    "Domains": "inteAssistant,taskscheduler,system,message,visualdev,oauth"
+  },
+  {
+    "Type": "TenantPropagationExecutor",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "TenantPropagationJobExecutor",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "TenantResolver",
+    "DomainCount": 2,
+    "Domains": "inteAssistant,oauth"
+  },
+  {
+    "Type": "TokenConditionStrategy",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "UserEventSource",
+    "DomainCount": 1,
+    "Domains": "oauth"
+  },
+  {
+    "Type": "UserEventSubscriber",
+    "DomainCount": 0,
+    "Domains": ""
+  },
+  {
+    "Type": "UserManager",
+    "DomainCount": 13,
+    "Domains": "extend,app,engine,inteAssistant,application,taskscheduler,system,zxdev,message,workflow,codegen,visualdev,oauth"
+  }
+]

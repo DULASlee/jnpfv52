@@ -1,0 +1,596 @@
+鐢熸垚鍚姩鏃堕棿涓?2026/8/20 18:25:11銆?
+     1>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥濆湪鑺傜偣 1 涓?Restore 涓洰鏍?銆?
+     1>_GetAllRestoreProjectPathItems:
+         姝ｅ湪纭畾瑕佽繕鍘熺殑椤圭洰鈥?
+       Restore:
+         X.509 璇佷功閾鹃獙璇佸皢浣跨敤 .NET 閫夋嫨鐨勯粯璁や俊浠诲瓨鍌ㄨ繘琛屼唬鐮佺鍚嶃€?
+         X.509 璇佷功閾鹃獙璇佸皢浣跨敤 .NET 閫夋嫨鐨勯粯璁や俊浠诲瓨鍌ㄨ繘琛屾椂闂存埑銆?
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\message\JNPF.Message.Interfaces\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\system\JNPF.Systems.Entitys\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\app\JNPF.Apps.Entitys\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\framework\JNPF.Extras.ObjectMapper.Mapster\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\engine\JNPF.VisualDev.Engine\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\message\JNPF.Message.Entitys\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\framework\JNPF.Extras.DependencyModel.CodeAnalysis\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\infrastructure\JNPF.Extras.Thirdparty\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\visualdev\JNPF.VisualDev.Interfaces\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\system\JNPF.Systems.Interfaces\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\framework\JNPF.Extras.DatabaseAccessor.SqlSugar\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow.Entitys\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\common\JNPF.Common.Core\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\engine\JNPF.Engine.Entity\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\system\JNPF.Systems\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\infrastructure\JNPF.Extras.CollectiveOAuth\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\framework\JNPF.Extras.Authentication.JwtBearer\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\framework\JNPF\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow.Interfaces\obj\project.assets.json
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow.Interfaces\JNPF.WorkFlow.Interfaces.csproj (鐢ㄦ椂 63 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\system\JNPF.Systems.Entitys\JNPF.Systems.Entitys.csproj (鐢ㄦ椂 63 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\framework\JNPF.Extras.DependencyModel.CodeAnalysis\JNPF.Extras.DependencyModel.CodeAnalysis.csproj (鐢ㄦ椂 62 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\system\JNPF.Systems.Interfaces\JNPF.Systems.Interfaces.csproj (鐢ㄦ椂 63 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\framework\JNPF\JNPF.csproj (鐢ㄦ椂 62 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\framework\JNPF.Extras.DatabaseAccessor.SqlSugar\JNPF.Extras.DatabaseAccessor.SqlSugar.csproj (鐢ㄦ椂 62 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\common\JNPF.Common.Core\JNPF.Common.Core.csproj (鐢ㄦ椂 63 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\framework\JNPF.Extras.Authentication.JwtBearer\JNPF.Extras.Authentication.JwtBearer.csproj (鐢ㄦ椂 62 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\app\JNPF.Apps.Entitys\JNPF.Apps.Entitys.csproj (鐢ㄦ椂 62 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\engine\JNPF.VisualDev.Engine\JNPF.VisualDev.Engine.csproj (鐢ㄦ椂 63 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\infrastructure\JNPF.Extras.CollectiveOAuth\JNPF.Extras.CollectiveOAuth.csproj (鐢ㄦ椂 62 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\infrastructure\JNPF.Extras.Thirdparty\JNPF.Extras.Thirdparty.csproj (鐢ㄦ椂 63 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\system\JNPF.Systems\JNPF.Systems.csproj (鐢ㄦ椂 63 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow.Entitys\JNPF.WorkFlow.Entitys.csproj (鐢ㄦ椂 62 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\message\JNPF.Message.Entitys\JNPF.Message.Entitys.csproj (鐢ㄦ椂 62 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\framework\JNPF.Extras.ObjectMapper.Mapster\JNPF.Extras.ObjectMapper.Mapster.csproj (鐢ㄦ椂 62 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\message\JNPF.Message.Interfaces\JNPF.Message.Interfaces.csproj (鐢ㄦ椂 62 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\engine\JNPF.Engine.Entity\JNPF.Engine.Entity.csproj (鐢ㄦ椂 62 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\visualdev\JNPF.VisualDev.Interfaces\JNPF.VisualDev.Interfaces.csproj (鐢ㄦ椂 63 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj (鐢ㄦ椂 63 姣)銆?
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\infrastructure\JNPF.Extras.EventBus.RabbitMQ\obj\project.assets.json
+         宸茶繕鍘?d:\JNPF-v52\backend\infrastructure\JNPF.Extras.EventBus.RabbitMQ\JNPF.Extras.EventBus.RabbitMQ.csproj (鐢ㄦ椂 2 姣)銆?
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\common\JNPF.Common\obj\project.assets.json
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\common\JNPF.Common\JNPF.Common.csproj (鐢ㄦ椂 13 姣)銆?
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\taskscheduler\JNPF.TaskScheduler.Interfaces\obj\project.assets.json
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\taskscheduler\JNPF.TaskScheduler.Interfaces\JNPF.TaskScheduler.Interfaces.csproj (鐢ㄦ椂 13 姣)銆?
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\taskscheduler\JNPF.TaskScheduler.Entitys\obj\project.assets.json
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\taskscheduler\JNPF.TaskScheduler.Entitys\JNPF.TaskScheduler.Entitys.csproj (鐢ㄦ椂 14 姣)銆?
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\visualdev\JNPF.VisualDev.Entitys\obj\project.assets.json
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\infrastructure\JNPF.Extras.WebSockets\obj\project.assets.json
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\visualdev\JNPF.VisualDev.Entitys\JNPF.VisualDev.Entitys.csproj (鐢ㄦ椂 14 姣)銆?
+         宸茶繕鍘?d:\JNPF-v52\backend\infrastructure\JNPF.Extras.WebSockets\JNPF.Extras.WebSockets.csproj (鐢ㄦ椂 14 姣)銆?
+         璧勪骇鏂囦欢鏈敼鍙樸€傝烦杩囪祫浜ф枃浠跺啓鍏ャ€傝矾寰? d:\JNPF-v52\backend\modularity\oauth\JNPF.OAuth\obj\project.assets.json
+         宸茶繕鍘?d:\JNPF-v52\backend\modularity\oauth\JNPF.OAuth\JNPF.OAuth.csproj (鐢ㄦ椂 15 姣)銆?
+         
+         浣跨敤鐨?NuGet 閰嶇疆鏂囦欢:
+             d:\JNPF-v52\backend\NuGet.Config
+             C:\Users\admin\AppData\Roaming\NuGet\NuGet.Config
+             C:\Program Files (x86)\NuGet\Config\Microsoft.VisualStudio.FallbackLocation.config
+             C:\Program Files (x86)\NuGet\Config\Microsoft.VisualStudio.Offline.config
+         
+         浣跨敤鐨勬簮:
+             https://repo.huaweicloud.com/repository/nuget/v3/index.json
+             https://api.nuget.org/v3/index.json
+             C:\Program Files\dotnet\library-packs
+         鎵€鏈夐」鐩潎鏄渶鏂扮殑锛屾棤娉曡繕鍘熴€?
+     1>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?Restore 涓洰鏍?鐨勬搷浣溿€?
+   1:7>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥濆湪鑺傜偣 10 涓?VSTest 涓洰鏍?銆?
+     1>BuildProject:
+         宸插紑濮嬬敓鎴愶紝璇风瓑寰?..
+   1:7>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:7)姝ｅ湪鑺傜偣 10 涓婄敓鎴愨€渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8) (榛樿鐩爣)銆?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 4 涓婄敓鎴愨€渄:\JNPF-v52\backend\framework\JNPF.Extras.ObjectMapper.Mapster\JNPF.Extras.ObjectMapper.Mapster.csproj鈥?17:6) (榛樿鐩爣)銆?
+    17>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _GenerateSourceLinkFile:
+         Source Link 鏂囦欢 "obj\Debug\net8.0\JNPF.Extras.ObjectMapper.Mapster.sourcelink.json" 鏄渶鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.Extras.ObjectMapper.Mapster -> d:\JNPF-v52\backend\framework\JNPF.Extras.ObjectMapper.Mapster\bin\Debug\net8.0\JNPF.Extras.ObjectMapper.Mapster.dll
+    17>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\framework\JNPF.Extras.ObjectMapper.Mapster\JNPF.Extras.ObjectMapper.Mapster.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 10 涓婄敓鎴愨€渄:\JNPF-v52\backend\infrastructure\JNPF.Extras.EventBus.RabbitMQ\JNPF.Extras.EventBus.RabbitMQ.csproj鈥?18:6) (榛樿鐩爣)銆?
+    18>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _GenerateSourceLinkFile:
+         Source Link 鏂囦欢 "obj\Debug\net8.0\JNPF.Extras.EventBus.RabbitMQ.sourcelink.json" 鏄渶鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Extras.EventBus.RabbitMQ.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.Extras.EventBus.RabbitMQ -> d:\JNPF-v52\backend\infrastructure\JNPF.Extras.EventBus.RabbitMQ\bin\Debug\net8.0\JNPF.Extras.EventBus.RabbitMQ.dll
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 3 涓婄敓鎴愨€渄:\JNPF-v52\backend\framework\JNPF.Extras.Authentication.JwtBearer\JNPF.Extras.Authentication.JwtBearer.csproj鈥?5:8) (榛樿鐩爣)銆?
+     5>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    18>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\infrastructure\JNPF.Extras.EventBus.RabbitMQ\JNPF.Extras.EventBus.RabbitMQ.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+     5>CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 8 涓婄敓鎴愨€渄:\JNPF-v52\backend\framework\JNPF.Extras.DependencyModel.CodeAnalysis\JNPF.Extras.DependencyModel.CodeAnalysis.csproj鈥?22:6) (榛樿鐩爣)銆?
+    22>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+     5>_GenerateSourceLinkFile:
+         Source Link 鏂囦欢 "obj\Debug\net8.0\JNPF.Extras.Authentication.JwtBearer.sourcelink.json" 鏄渶鏂扮殑銆?
+    22>CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+     5>CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.Extras.Authentication.JwtBearer -> d:\JNPF-v52\backend\framework\JNPF.Extras.Authentication.JwtBearer\bin\Debug\net8.0\JNPF.Extras.Authentication.JwtBearer.dll
+    22>_GenerateSourceLinkFile:
+         Source Link 鏂囦欢 "obj\Debug\net8.0\JNPF.Extras.DependencyModel.CodeAnalysis.sourcelink.json" 鏄渶鏂扮殑銆?
+     5>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\framework\JNPF.Extras.Authentication.JwtBearer\JNPF.Extras.Authentication.JwtBearer.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+    22>CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.Extras.DependencyModel.CodeAnalysis -> d:\JNPF-v52\backend\framework\JNPF.Extras.DependencyModel.CodeAnalysis\bin\Debug\net8.0\JNPF.Extras.DependencyModel.CodeAnalysis.dll
+    22>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\framework\JNPF.Extras.DependencyModel.CodeAnalysis\JNPF.Extras.DependencyModel.CodeAnalysis.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 11 涓婄敓鎴愨€渄:\JNPF-v52\backend\framework\JNPF\JNPF.csproj鈥?21:6) (榛樿鐩爣)銆?
+    21>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _GenerateSourceLinkFile:
+         Source Link 鏂囦欢 "obj\Debug\net8.0\JNPF.sourcelink.json" 鏄渶鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF -> d:\JNPF-v52\backend\framework\JNPF\bin\Debug\net8.0\JNPF.dll
+    21>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\framework\JNPF\JNPF.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 9 涓婄敓鎴愨€渄:\JNPF-v52\backend\framework\JNPF.Extras.DatabaseAccessor.SqlSugar\JNPF.Extras.DatabaseAccessor.SqlSugar.csproj鈥?19:7) (榛樿鐩爣)銆?
+    19>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _GenerateSourceLinkFile:
+         Source Link 鏂囦欢 "obj\Debug\net8.0\JNPF.Extras.DatabaseAccessor.SqlSugar.sourcelink.json" 鏄渶鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.Extras.DatabaseAccessor.SqlSugar -> d:\JNPF-v52\backend\framework\JNPF.Extras.DatabaseAccessor.SqlSugar\bin\Debug\net8.0\JNPF.Extras.DatabaseAccessor.SqlSugar.dll
+    19>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\framework\JNPF.Extras.DatabaseAccessor.SqlSugar\JNPF.Extras.DatabaseAccessor.SqlSugar.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 2 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\common\JNPF.Common\JNPF.Common.csproj鈥?4:15) (榛樿鐩爣)銆?
+     4>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Common.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.Common -> d:\JNPF-v52\backend\modularity\common\JNPF.Common\bin\Debug\net8.0\JNPF.Common.dll
+     4>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\common\JNPF.Common\JNPF.Common.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 1 涓婄敓鎴愨€渄:\JNPF-v52\backend\infrastructure\JNPF.Extras.Thirdparty\JNPF.Extras.Thirdparty.csproj鈥?27:6) (榛樿鐩爣)銆?
+    27>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Extras.Thirdparty.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.Extras.Thirdparty -> d:\JNPF-v52\backend\infrastructure\JNPF.Extras.Thirdparty\bin\Debug\net8.0\JNPF.Extras.Thirdparty.dll
+    27>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\infrastructure\JNPF.Extras.Thirdparty\JNPF.Extras.Thirdparty.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 12 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\engine\JNPF.VisualDev.Engine\JNPF.VisualDev.Engine.csproj鈥?8:7) (榛樿鐩爣)銆?
+   8:7>椤圭洰鈥渄:\JNPF-v52\backend\modularity\engine\JNPF.VisualDev.Engine\JNPF.VisualDev.Engine.csproj鈥?8:7)姝ｅ湪鑺傜偣 5 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow.Entitys\JNPF.WorkFlow.Entitys.csproj鈥?15:12) (榛樿鐩爣)銆?
+    15>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.WorkFlow.Entitys.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.WorkFlow.Entitys -> d:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow.Entitys\bin\Debug\net8.0\JNPF.WorkFlow.Entitys.dll
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 17 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\taskscheduler\JNPF.TaskScheduler.Entitys\JNPF.TaskScheduler.Entitys.csproj鈥?16:7) (榛樿鐩爣)銆?
+    16>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    15>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow.Entitys\JNPF.WorkFlow.Entitys.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+    16>CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.TaskScheduler.Entitys.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.TaskScheduler.Entitys -> d:\JNPF-v52\backend\modularity\taskscheduler\JNPF.TaskScheduler.Entitys\bin\Debug\net8.0\JNPF.TaskScheduler.Entitys.dll
+    16>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\taskscheduler\JNPF.TaskScheduler.Entitys\JNPF.TaskScheduler.Entitys.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 5 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\common\JNPF.Common.Core\JNPF.Common.Core.csproj鈥?12:7) (榛樿鐩爣)銆?
+  12:7>椤圭洰鈥渄:\JNPF-v52\backend\modularity\common\JNPF.Common.Core\JNPF.Common.Core.csproj鈥?12:7)姝ｅ湪鑺傜偣 4 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\visualdev\JNPF.VisualDev.Entitys\JNPF.VisualDev.Entitys.csproj鈥?26:13) (榛樿鐩爣)銆?
+    26>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.VisualDev.Entitys.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 16 涓婄敓鎴愨€渄:\JNPF-v52\backend\infrastructure\JNPF.Extras.WebSockets\JNPF.Extras.WebSockets.csproj鈥?25:6) (榛樿鐩爣)銆?
+    25>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    26>_CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    25>CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    26>CopyFilesToOutputDirectory:
+         JNPF.VisualDev.Entitys -> d:\JNPF-v52\backend\modularity\visualdev\JNPF.VisualDev.Entitys\bin\Debug\net8.0\JNPF.VisualDev.Entitys.dll
+    26>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\visualdev\JNPF.VisualDev.Entitys\JNPF.VisualDev.Entitys.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+    25>CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Extras.WebSockets.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 6 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\engine\JNPF.Engine.Entity\JNPF.Engine.Entity.csproj鈥?23:7) (榛樿鐩爣)銆?
+    23>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Engine.Entity.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 7 涓婄敓鎴愨€渄:\JNPF-v52\backend\infrastructure\JNPF.Extras.CollectiveOAuth\JNPF.Extras.CollectiveOAuth.csproj鈥?3:7) (榛樿鐩爣)銆?
+     3>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Extras.CollectiveOAuth.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 12 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\app\JNPF.Apps.Entitys\JNPF.Apps.Entitys.csproj鈥?20:6) (榛樿鐩爣)銆?
+    20>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    23>_CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    20>CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    25>_CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    20>_TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Apps.Entitys.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+    25>GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+     3>_CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    25>CopyFilesToOutputDirectory:
+         JNPF.Extras.WebSockets -> d:\JNPF-v52\backend\infrastructure\JNPF.Extras.WebSockets\bin\Debug\net8.0\JNPF.Extras.WebSockets.dll
+    20>_CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    23>GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    20>GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    23>CopyFilesToOutputDirectory:
+         JNPF.Engine.Entity -> d:\JNPF-v52\backend\modularity\engine\JNPF.Engine.Entity\bin\Debug\net8.0\JNPF.Engine.Entity.dll
+    20>CopyFilesToOutputDirectory:
+         JNPF.Apps.Entitys -> d:\JNPF-v52\backend\modularity\app\JNPF.Apps.Entitys\bin\Debug\net8.0\JNPF.Apps.Entitys.dll
+    25>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\infrastructure\JNPF.Extras.WebSockets\JNPF.Extras.WebSockets.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+    23>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\engine\JNPF.Engine.Entity\JNPF.Engine.Entity.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+    20>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\app\JNPF.Apps.Entitys\JNPF.Apps.Entitys.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+     3>CopyFilesToOutputDirectory:
+         JNPF.Extras.CollectiveOAuth -> d:\JNPF-v52\backend\infrastructure\JNPF.Extras.CollectiveOAuth\bin\Debug\net8.0\JNPF.Extras.CollectiveOAuth.dll
+     3>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\infrastructure\JNPF.Extras.CollectiveOAuth\JNPF.Extras.CollectiveOAuth.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 18 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\message\JNPF.Message.Entitys\JNPF.Message.Entitys.csproj鈥?13:7) (榛樿鐩爣)銆?
+    13>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Message.Entitys.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 13 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\system\JNPF.Systems\JNPF.Systems.csproj鈥?2:6) (榛樿鐩爣)銆?
+   2:6>椤圭洰鈥渄:\JNPF-v52\backend\modularity\system\JNPF.Systems\JNPF.Systems.csproj鈥?2:6)姝ｅ湪鑺傜偣 10 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\taskscheduler\JNPF.TaskScheduler.Interfaces\JNPF.TaskScheduler.Interfaces.csproj鈥?9:7) (榛樿鐩爣)銆?
+     9>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    13>CopyFilesToOutputDirectory:
+         JNPF.Message.Entitys -> d:\JNPF-v52\backend\modularity\message\JNPF.Message.Entitys\bin\Debug\net8.0\JNPF.Message.Entitys.dll
+     9>_TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.TaskScheduler.Interfaces.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    13>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\message\JNPF.Message.Entitys\JNPF.Message.Entitys.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+     9>GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.TaskScheduler.Interfaces -> d:\JNPF-v52\backend\modularity\taskscheduler\JNPF.TaskScheduler.Interfaces\bin\Debug\net8.0\JNPF.TaskScheduler.Interfaces.dll
+     9>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\taskscheduler\JNPF.TaskScheduler.Interfaces\JNPF.TaskScheduler.Interfaces.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 15 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\system\JNPF.Systems.Entitys\JNPF.Systems.Entitys.csproj鈥?24:9) (榛樿鐩爣)銆?
+    24>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Systems.Entitys.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 20 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\message\JNPF.Message.Interfaces\JNPF.Message.Interfaces.csproj鈥?7:7) (榛樿鐩爣)銆?
+     7>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Message.Interfaces.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+    24>CopyFilesToOutputDirectory:
+         JNPF.Systems.Entitys -> d:\JNPF-v52\backend\modularity\system\JNPF.Systems.Entitys\bin\Debug\net8.0\JNPF.Systems.Entitys.dll
+     7>_CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    24>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\system\JNPF.Systems.Entitys\JNPF.Systems.Entitys.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+     7>GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.Message.Interfaces -> d:\JNPF-v52\backend\modularity\message\JNPF.Message.Interfaces\bin\Debug\net8.0\JNPF.Message.Interfaces.dll
+     7>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\message\JNPF.Message.Interfaces\JNPF.Message.Interfaces.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+   2:6>椤圭洰鈥渄:\JNPF-v52\backend\modularity\system\JNPF.Systems\JNPF.Systems.csproj鈥?2:6)姝ｅ湪鑺傜偣 6 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\visualdev\JNPF.VisualDev.Interfaces\JNPF.VisualDev.Interfaces.csproj鈥?14:8) (榛樿鐩爣)銆?
+    14>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.VisualDev.Interfaces.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+    12>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Common.Core.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+    14>_CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    12>_CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    14>GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+    12>GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.Common.Core -> d:\JNPF-v52\backend\modularity\common\JNPF.Common.Core\bin\Debug\net8.0\JNPF.Common.Core.dll
+    14>CopyFilesToOutputDirectory:
+         JNPF.VisualDev.Interfaces -> d:\JNPF-v52\backend\modularity\visualdev\JNPF.VisualDev.Interfaces\bin\Debug\net8.0\JNPF.VisualDev.Interfaces.dll
+    14>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\visualdev\JNPF.VisualDev.Interfaces\JNPF.VisualDev.Interfaces.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+   2:6>椤圭洰鈥渄:\JNPF-v52\backend\modularity\system\JNPF.Systems\JNPF.Systems.csproj鈥?2:6)姝ｅ湪鑺傜偣 13 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow.Interfaces\JNPF.WorkFlow.Interfaces.csproj鈥?11:7) (榛樿鐩爣)銆?
+    11>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.WorkFlow.Interfaces.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+    12>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\common\JNPF.Common.Core\JNPF.Common.Core.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+    11>_CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.WorkFlow.Interfaces -> d:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow.Interfaces\bin\Debug\net8.0\JNPF.WorkFlow.Interfaces.dll
+    11>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow.Interfaces\JNPF.WorkFlow.Interfaces.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 19 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\system\JNPF.Systems.Interfaces\JNPF.Systems.Interfaces.csproj鈥?10:8) (榛樿鐩爣)銆?
+    10>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Systems.Interfaces.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.Systems.Interfaces -> d:\JNPF-v52\backend\modularity\system\JNPF.Systems.Interfaces\bin\Debug\net8.0\JNPF.Systems.Interfaces.dll
+    10>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\system\JNPF.Systems.Interfaces\JNPF.Systems.Interfaces.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+     8>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.VisualDev.Engine.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.VisualDev.Engine -> d:\JNPF-v52\backend\modularity\engine\JNPF.VisualDev.Engine\bin\Debug\net8.0\JNPF.VisualDev.Engine.dll
+     8>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\engine\JNPF.VisualDev.Engine\JNPF.VisualDev.Engine.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+   1:8>椤圭洰鈥渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?1:8)姝ｅ湪鑺傜偣 14 涓婄敓鎴愨€渄:\JNPF-v52\backend\modularity\oauth\JNPF.OAuth\JNPF.OAuth.csproj鈥?6:6) (榛樿鐩爣)銆?
+     6>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.OAuth.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.OAuth -> d:\JNPF-v52\backend\modularity\oauth\JNPF.OAuth\bin\Debug\net8.0\JNPF.OAuth.dll
+     6>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\oauth\JNPF.OAuth\JNPF.OAuth.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+     2>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Systems.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.Systems -> d:\JNPF-v52\backend\modularity\system\JNPF.Systems\bin\Debug\net8.0\JNPF.Systems.dll
+     2>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\modularity\system\JNPF.Systems\JNPF.Systems.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+     1>GenerateTargetFrameworkMonikerAttribute:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateTargetFrameworkMonikerAttribute鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreGenerateAssemblyInfo:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreGenerateAssemblyInfo鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CoreCompile:
+       姝ｅ湪璺宠繃鐩爣鈥淐oreCompile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       _TouchLastBuildWithSkipAnalyzers:
+         姝ｅ湪瀵光€渙bj\Debug\net8.0\JNPF.Tests.Systems.csproj.BuildWithSkipAnalyzers鈥濇墽琛?Touch 浠诲姟銆?
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       姝ｅ湪璺宠繃鐩爣鈥淿CopyOutOfDateSourceItemsToOutputDirectory鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildDependencyFile:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildDependencyFile鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       GenerateBuildRuntimeConfigurationFiles:
+       姝ｅ湪璺宠繃鐩爣鈥淕enerateBuildRuntimeConfigurationFiles鈥濓紝鍥犱负鎵€鏈夎緭鍑烘枃浠剁浉瀵逛簬杈撳叆鏂囦欢鑰岃█閮芥槸鏈€鏂扮殑銆?
+       CopyFilesToOutputDirectory:
+         JNPF.Tests.Systems -> d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\bin\Debug\net8.0\JNPF.Tests.Systems.dll
+     1>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+     1>BuildProject:
+         瀹屾垚鐨勭敓鎴愩€?
+         
+d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\bin\Debug\net8.0\JNPF.Tests.Systems.dll (.NETCoreApp,Version=v8.0)鐨勬祴璇曡繍琛?
+鎬诲叡 1 涓祴璇曟枃浠朵笌鎸囧畾妯″紡鐩稿尮閰嶃€?
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.7+8f2703126a (64-bit .NET 8.0.30)
+[xUnit.net 00:00:00.10]   Discovering: JNPF.Tests.Systems
+[xUnit.net 00:00:00.18]   Discovered:  JNPF.Tests.Systems
+[xUnit.net 00:00:00.18]   Starting:    JNPF.Tests.Systems
+[xUnit.net 00:00:00.27]     JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(methodName: "Update", verbAttrTypeName: "HttpPutAttribute", template: "{id}") [FAIL]
+[xUnit.net 00:00:00.28]       鏂规硶 Update 搴旀伆濂藉瓨鍦ㄤ簬 1 涓?[Route("api/permission/[controller]")] 鍔ㄦ€?API 绫讳笂锛屽疄闄?5 澶勶紙閲嶅鎴栦涪澶卞潎涓鸿矾鐢卞绾︾牬鍧忥級
+[xUnit.net 00:00:00.28]       Stack Trace:
+[xUnit.net 00:00:00.28]         d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs(66,0): at JNPF.Tests.Systems.UsersMutationQueryContractTests.ResolveAction(String methodName)
+[xUnit.net 00:00:00.28]         d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs(73,0): at JNPF.Tests.Systems.UsersMutationQueryContractTests.AssertEndpointContract(String methodName, String verbAttrTypeName, String template)
+[xUnit.net 00:00:00.28]         d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs(92,0): at JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(String methodName, String verbAttrTypeName, String template)
+[xUnit.net 00:00:00.28]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+[xUnit.net 00:00:00.28]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.28]     JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(methodName: "Create", verbAttrTypeName: "HttpPostAttribute", template: "") [FAIL]
+[xUnit.net 00:00:00.28]       鏂规硶 Create 搴旀伆濂藉瓨鍦ㄤ簬 1 涓?[Route("api/permission/[controller]")] 鍔ㄦ€?API 绫讳笂锛屽疄闄?5 澶勶紙閲嶅鎴栦涪澶卞潎涓鸿矾鐢卞绾︾牬鍧忥級
+[xUnit.net 00:00:00.28]       Stack Trace:
+[xUnit.net 00:00:00.28]         d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs(66,0): at JNPF.Tests.Systems.UsersMutationQueryContractTests.ResolveAction(String methodName)
+[xUnit.net 00:00:00.28]         d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs(73,0): at JNPF.Tests.Systems.UsersMutationQueryContractTests.AssertEndpointContract(String methodName, String verbAttrTypeName, String template)
+[xUnit.net 00:00:00.28]         d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs(92,0): at JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(String methodName, String verbAttrTypeName, String template)
+[xUnit.net 00:00:00.28]            at InvokeStub_UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(Object, Span`1)
+[xUnit.net 00:00:00.28]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.28]     JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(methodName: "Delete", verbAttrTypeName: "HttpDeleteAttribute", template: "{id}") [FAIL]
+[xUnit.net 00:00:00.29]       鏂规硶 Delete 搴旀伆濂藉瓨鍦ㄤ簬 1 涓?[Route("api/permission/[controller]")] 鍔ㄦ€?API 绫讳笂锛屽疄闄?5 澶勶紙閲嶅鎴栦涪澶卞潎涓鸿矾鐢卞绾︾牬鍧忥級
+[xUnit.net 00:00:00.29]       Stack Trace:
+[xUnit.net 00:00:00.29]         d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs(66,0): at JNPF.Tests.Systems.UsersMutationQueryContractTests.ResolveAction(String methodName)
+[xUnit.net 00:00:00.29]         d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs(73,0): at JNPF.Tests.Systems.UsersMutationQueryContractTests.AssertEndpointContract(String methodName, String verbAttrTypeName, String template)
+[xUnit.net 00:00:00.29]         d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs(92,0): at JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(String methodName, String verbAttrTypeName, String template)
+[xUnit.net 00:00:00.29]            at InvokeStub_UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(Object, Span`1)
+[xUnit.net 00:00:00.29]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.29]     JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(methodName: "UpdateState", verbAttrTypeName: "HttpPutAttribute", template: "{id}/Actions/State") [FAIL]
+[xUnit.net 00:00:00.29]       鏂规硶 UpdateState 搴旀伆濂藉瓨鍦ㄤ簬 1 涓?[Route("api/permission/[controller]")] 鍔ㄦ€?API 绫讳笂锛屽疄闄?4 澶勶紙閲嶅鎴栦涪澶卞潎涓鸿矾鐢卞绾︾牬鍧忥級
+[xUnit.net 00:00:00.29]       Stack Trace:
+[xUnit.net 00:00:00.29]         d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs(66,0): at JNPF.Tests.Systems.UsersMutationQueryContractTests.ResolveAction(String methodName)
+[xUnit.net 00:00:00.29]         d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs(73,0): at JNPF.Tests.Systems.UsersMutationQueryContractTests.AssertEndpointContract(String methodName, String verbAttrTypeName, String template)
+[xUnit.net 00:00:00.29]         d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs(92,0): at JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(String methodName, String verbAttrTypeName, String template)
+[xUnit.net 00:00:00.29]            at InvokeStub_UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(Object, Span`1)
+[xUnit.net 00:00:00.29]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.29]   Finished:    JNPF.Tests.Systems
+  澶辫触 JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(methodName: "Update", verbAttrTypeName: "HttpPutAttribute", template: "{id}") [37 ms]
+  閿欒娑堟伅:
+   鏂规硶 Update 搴旀伆濂藉瓨鍦ㄤ簬 1 涓?[Route("api/permission/[controller]")] 鍔ㄦ€?API 绫讳笂锛屽疄闄?5 澶勶紙閲嶅鎴栦涪澶卞潎涓鸿矾鐢卞绾︾牬鍧忥級
+  鍫嗘爤璺熻釜:
+     at JNPF.Tests.Systems.UsersMutationQueryContractTests.ResolveAction(String methodName) in d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs:line 66
+   at JNPF.Tests.Systems.UsersMutationQueryContractTests.AssertEndpointContract(String methodName, String verbAttrTypeName, String template) in d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs:line 73
+   at JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(String methodName, String verbAttrTypeName, String template) in d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs:line 92
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  澶辫触 JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(methodName: "Create", verbAttrTypeName: "HttpPostAttribute", template: "") [1 ms]
+  閿欒娑堟伅:
+   鏂规硶 Create 搴旀伆濂藉瓨鍦ㄤ簬 1 涓?[Route("api/permission/[controller]")] 鍔ㄦ€?API 绫讳笂锛屽疄闄?5 澶勶紙閲嶅鎴栦涪澶卞潎涓鸿矾鐢卞绾︾牬鍧忥級
+  鍫嗘爤璺熻釜:
+     at JNPF.Tests.Systems.UsersMutationQueryContractTests.ResolveAction(String methodName) in d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs:line 66
+   at JNPF.Tests.Systems.UsersMutationQueryContractTests.AssertEndpointContract(String methodName, String verbAttrTypeName, String template) in d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs:line 73
+   at JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(String methodName, String verbAttrTypeName, String template) in d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs:line 92
+   at InvokeStub_UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  宸查€氳繃 JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(methodName: "Unlock", verbAttrTypeName: "HttpPutAttribute", template: "{id}/Actions/Unlock") [5 ms]
+  澶辫触 JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(methodName: "Delete", verbAttrTypeName: "HttpDeleteAttribute", template: "{id}") [1 ms]
+  閿欒娑堟伅:
+   鏂规硶 Delete 搴旀伆濂藉瓨鍦ㄤ簬 1 涓?[Route("api/permission/[controller]")] 鍔ㄦ€?API 绫讳笂锛屽疄闄?5 澶勶紙閲嶅鎴栦涪澶卞潎涓鸿矾鐢卞绾︾牬鍧忥級
+  鍫嗘爤璺熻釜:
+     at JNPF.Tests.Systems.UsersMutationQueryContractTests.ResolveAction(String methodName) in d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs:line 66
+   at JNPF.Tests.Systems.UsersMutationQueryContractTests.AssertEndpointContract(String methodName, String verbAttrTypeName, String template) in d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs:line 73
+   at JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(String methodName, String verbAttrTypeName, String template) in d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs:line 92
+   at InvokeStub_UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  宸查€氳繃 JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(methodName: "ResetPassword", verbAttrTypeName: "HttpPostAttribute", template: "{id}/Actions/ResetPassword") [1 ms]
+  澶辫触 JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(methodName: "UpdateState", verbAttrTypeName: "HttpPutAttribute", template: "{id}/Actions/State") [1 ms]
+  閿欒娑堟伅:
+   鏂规硶 UpdateState 搴旀伆濂藉瓨鍦ㄤ簬 1 涓?[Route("api/permission/[controller]")] 鍔ㄦ€?API 绫讳笂锛屽疄闄?4 澶勶紙閲嶅鎴栦涪澶卞潎涓鸿矾鐢卞绾︾牬鍧忥級
+  鍫嗘爤璺熻釜:
+     at JNPF.Tests.Systems.UsersMutationQueryContractTests.ResolveAction(String methodName) in d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs:line 66
+   at JNPF.Tests.Systems.UsersMutationQueryContractTests.AssertEndpointContract(String methodName, String verbAttrTypeName, String template) in d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs:line 73
+   at JNPF.Tests.Systems.UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(String methodName, String verbAttrTypeName, String template) in d:\JNPF-v52\backend\tests\JNPF.Tests.Systems\UsersMutationQueryContractTests.cs:line 92
+   at InvokeStub_UsersMutationQueryContractTests.MutationEndpoint_KeepsVerbAndRouteTemplate(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+
+娴嬭瘯杩愯澶辫触銆?
+娴嬭瘯鎬绘暟: 6
+     閫氳繃鏁? 2
+     澶辫触鏁? 4
+鎬绘椂闂? 0.9499 绉?
+       _VSTestConsole:
+         MSB4181: 鈥淰STestTask鈥濅换鍔¤繑鍥炰簡 false锛屼絾鏈褰曢敊璇€?
+     1>宸插畬鎴愮敓鎴愰」鐩€渄:\JNPF-v52\backend\tests\JNPF.Tests.Systems\JNPF.Tests.Systems.csproj鈥?VSTest 涓洰鏍?鐨勬搷浣?- 澶辫触銆?
+
+鐢熸垚澶辫触銆?
+    0 涓鍛?
+    0 涓敊璇?
+
+宸茬敤鏃堕棿 00:00:10.43

@@ -19,7 +19,6 @@ public class LogEventSubscriber : IEventSubscriber, ISingleton, IHostedService
 {
     private readonly ISqlSugarClient _sqlSugarClient;
     private readonly ITenantManager _tenantManager;
-    private readonly IUserManager _userManager;
     private readonly ILogger<LogEventSubscriber> _logger;
 
     private readonly Channel<LogEventSource> _channel;
@@ -32,15 +31,14 @@ public class LogEventSubscriber : IEventSubscriber, ISingleton, IHostedService
 
     /// <summary>
     /// 构造函数.
+    /// 战役 0.1.2：移除死注入 IUserManager（从未使用，且 Singleton 消费 Scoped 违规）.
     /// </summary>
     public LogEventSubscriber(
         ISqlSugarClient sqlSugarClient,
-        IUserManager userManager,
         ITenantManager tenantManager,
         ILogger<LogEventSubscriber> logger)
     {
         _sqlSugarClient = sqlSugarClient;
-        _userManager = userManager;
         _tenantManager = tenantManager;
         _logger = logger;
 

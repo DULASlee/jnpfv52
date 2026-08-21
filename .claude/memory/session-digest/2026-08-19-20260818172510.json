@@ -1,19 +1,15 @@
 {
   "date": "2026-08-19",
-  "endedAt": "2026-08-18T17:25:42.269Z",
-  "hookEvent": "sessionEnd",
+  "endedAt": "2026-08-18T17:25:10.640Z",
+  "hookEvent": "stop",
   "conversationId": "96ccb227-889f-4776-98eb-7b236431434d",
   "changedFiles": [
     ".claude/memory/mistake-log.md",
     ".claude/memory/session-digest/latest.json",
-    ".cursor/CURRENT-FOCUS.md",
     ".gitignore",
-    "docs/progress-registry.yaml",
-    ".claude/memory/session-digest/2026-08-19-20260818171058.json",
-    ".claude/memory/session-digest/2026-08-19-20260818172510.json",
-    ".claude/memory/session-summaries/2026-08-19-代码变更-AUTO.md"
+    ".claude/memory/session-digest/2026-08-19-20260818171058.json"
   ],
-  "codeFilesChanged": 3,
+  "codeFilesChanged": 2,
   "archiveStatus": "complete",
   "archiveChecks": {
     "mistakeOk": true,
@@ -27,7 +23,7 @@
   "machineArchival": {
     "applied": true,
     "sessionId": "96ccb227-889f-4776-98eb-7b236431434d",
-    "mistakeId": "M177",
+    "mistakeId": "M176",
     "focusPath": ".cursor/CURRENT-FOCUS.md",
     "registryPath": "docs/progress-registry.yaml"
   }

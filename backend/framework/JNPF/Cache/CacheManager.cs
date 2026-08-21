@@ -5,8 +5,11 @@ namespace JNPF.Common.Manager;
 
 /// <summary>
 /// 缓存管理.
+/// Singleton（战役 0.1.2 DI 违规修复）：零可变状态，仅持有 IOptions + 命名单例 ICache，
+/// 纯转发委托；原 IScoped 导致 IMHandler/InteAssistantWayEventSubscriber 等 Singleton
+/// 消费方 Captive Dependency 违规（ValidateScopes 实证）.
 /// </summary>
-public class CacheManager : ICacheManager, IScoped
+public class CacheManager : ICacheManager, ISingleton
 {
     /// <summary>
     /// 缓存配置.

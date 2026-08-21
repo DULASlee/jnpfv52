@@ -279,10 +279,10 @@
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {
-      "symbol": "modularity/system/JNPF.Systems/Permission/UsersService.cs::ImportUserData",
+      "symbol": "modularity/system/JNPF.Systems/Permission/UsersImportExportService.cs::ImportUserData",
       "name": "ImportUserData",
       "maxComplexity": 62,
-      "file": "modularity/system/JNPF.Systems/Permission/UsersService.cs",
+      "file": "modularity/system/JNPF.Systems/Permission/UsersImportExportService.cs",
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {
@@ -356,10 +356,10 @@
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {
-      "symbol": "modularity/system/JNPF.Systems/Permission/UsersService.cs::ExportData",
+      "symbol": "modularity/system/JNPF.Systems/Permission/UsersImportExportService.cs::ExportData",
       "name": "ExportData",
       "maxComplexity": 48,
-      "file": "modularity/system/JNPF.Systems/Permission/UsersService.cs",
+      "file": "modularity/system/JNPF.Systems/Permission/UsersImportExportService.cs",
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {
@@ -426,10 +426,10 @@
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {
-      "symbol": "modularity/system/JNPF.Systems/Permission/UsersService.cs::Update",
+      "symbol": "modularity/system/JNPF.Systems/Permission/UsersMutationService.cs::Update",
       "name": "Update",
       "maxComplexity": 45,
-      "file": "modularity/system/JNPF.Systems/Permission/UsersService.cs",
+      "file": "modularity/system/JNPF.Systems/Permission/UsersMutationService.cs",
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {
@@ -566,10 +566,10 @@
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {
-      "symbol": "modularity/system/JNPF.Systems/Permission/UsersService.cs::GetOrganizeMemberList",
+      "symbol": "modularity/system/JNPF.Systems/Permission/UsersQueryService.cs::GetOrganizeMemberList",
       "name": "GetOrganizeMemberList",
       "maxComplexity": 38,
-      "file": "modularity/system/JNPF.Systems/Permission/UsersService.cs",
+      "file": "modularity/system/JNPF.Systems/Permission/UsersQueryService.cs",
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {

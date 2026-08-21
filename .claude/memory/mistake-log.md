@@ -1437,6 +1437,31 @@
 - **变更**：`.claude/memory/session-digest/latest.json`, `.cursor/hooks.json`, `.cursor/hooks/archive-banner-stop.mjs`, `.cursor/hooks/episodic-session-start.mjs`, `.cursor/hooks/session-archive-lib.mjs`, `.cursor/hooks/session-end.mjs`, `backend/application/JNPF.API.Entry/Program.cs`, `backend/modularity/codegen/JNPF.CodeGen/CodeGenService.cs`, `backend/modularity/common/JNPF.Common.CodeGen/ExportImport/ExportImportDataHelper.cs`, `backend/modularity/common/JNPF.Common.Core/EventBus/IntegreateEventSubscriber.cs`, `backend/modularity/common/JNPF.Common.Core/Manager/User/UserManager.cs`, `backend/modularity/engine/JNPF.VisualDev.Engine/Core/FormDataParsing.cs` …
 - **hook-auto-archive**: fed47cdd-c1bf-40bb-95c9-1fbe1e254553
 - **日期**：2026-08-08 | **关键词**：`latest.json, hooks.json, archive-banner-stop.mjs, episodic-session-start.mjs +207`
+
+## 2026-08-19
+
+| 日期 | 类别 | 症状 | 根因 | 修复 | 关键词 |
+|------|------|------|------|------|--------|
+| 2026-08-19 | 代码变更 | hook 自动：代码变更（3 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-19-20260818171058.json, 2026-08-19-20260818172510.json |
+| 2026-08-19 | 代码变更 | hook 自动：代码变更（2 文件） | 见 session-digest | 见 AUTO summary / digest | latest.json, 2026-08-19-20260818171058.json |
+
+### M176 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 2 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-19-20260818171058.json`
+- **hook-auto-archive**: 96ccb227-889f-4776-98eb-7b236431434d
+- **日期**：2026-08-19 | **关键词**：`latest.json, 2026-08-19-20260818171058.json`
+
+### M177 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 3 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-19-20260818171058.json`, `.claude/memory/session-digest/2026-08-19-20260818172510.json`
+- **hook-auto-archive**: 96ccb227-889f-4776-98eb-7b236431434d
+- **日期**：2026-08-19 | **关键词**：`latest.json, 2026-08-19-20260818171058.json, 2026-08-19-20260818172510.json`
 ## 一、方法论（最贵——每条都导致 ≥1 小时浪费）
 
 ### M035 | 未钉死业务功能就开发/验收：用纠偏项冒充四大支柱①（方向性错误）

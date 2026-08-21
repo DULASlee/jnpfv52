@@ -18,6 +18,7 @@ using JNPF.Systems.Entitys.Permission;
 using JNPF.UnifyResult;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.DependencyInjection;
 using SqlSugar;
 
 namespace JNPF.EventHandler;
@@ -48,9 +49,10 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
     private readonly ISchedulerFactory _schedulerFactory;
 
     /// <summary>
-    /// 调度管理.
+    /// 作用域工厂（战役 0.1.2：替代构造注入 Scoped IJobManager，
+    /// 消除 Singleton 订阅者 Captive Dependency 违规）.
     /// </summary>
-    private readonly IJobManager _jobManager;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
 
     /// <summary>
     /// 租户管理.
@@ -69,7 +71,7 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
         ISqlSugarClient sqlSugarClient,
         ICacheManager cacheManager,
         IServer server,
-        IJobManager jobManager,
+        IServiceScopeFactory serviceScopeFactory,
         ITenantManager tenantManager,
         ISchedulerFactory schedulerFactory,
         IInteAssistantBridge inteAssistantBridge)
@@ -77,7 +79,7 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
         _sqlSugarClient = sqlSugarClient;
         _cacheManager = cacheManager;
         _server = server;
-        _jobManager = jobManager;
+        _serviceScopeFactory = serviceScopeFactory;
         _schedulerFactory = schedulerFactory;
         _tenantManager = tenantManager;
         _inteAssistantBridge = inteAssistantBridge;
@@ -253,7 +255,10 @@ public class IntegreateEventSubscriber : IEventSubscriber, ISingleton
                     // 集成助手-执行队列 触发器只有在用户创建定时触发或者触发`事件触发`后创建
                     if (!scheduler.ContainsTrigger(triggerId))
                     {
-                        TriggerBuilder? triggerBuilder = _jobManager.ObtainTriggerBuilder(new JobTriggerModel
+                        // scope 内解析 Scoped IJobManager 并取 TriggerBuilder（值不带出 scope 依赖链）
+                        using var jobScope = _serviceScopeFactory.CreateScope();
+                        var jobManager = jobScope.ServiceProvider.GetRequiredService<IJobManager>();
+                        TriggerBuilder? triggerBuilder = jobManager.ObtainTriggerBuilder(new JobTriggerModel
                         {
                             TriggreId = triggerId,
                             Description = string.Format("租户`{0}`集成助手-执行队列调度器", inte.TenantId),

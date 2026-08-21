@@ -30,6 +30,19 @@ public class WebComponent : IWebComponent
         SerilogBootstrap.Configure(builder.Configuration);
         builder.Host.UseSerilog();
 
+        // DI Scope 诊断开关（战役 0.1.1）：环境变量 JNPF_VALIDATE_DI=1 时开启
+        // ValidateScopes + ValidateOnBuild，启动即暴露 Captive Dependency 违规清单。
+        // 默认关闭，生产无影响；清单采集完毕后保留为长期 CI 门控候选。
+        if (Environment.GetEnvironmentVariable("JNPF_VALIDATE_DI") == "1")
+        {
+            builder.Host.UseDefaultServiceProvider((context, options) =>
+            {
+                options.ValidateScopes = true;
+                options.ValidateOnBuild = true;
+            });
+            Log.Warning("[DI-Diagnostics] ValidateScopes + ValidateOnBuild ENABLED via JNPF_VALIDATE_DI=1");
+        }
+
         // 捕获未观察的 Task 异常，防止静默丢失
         TaskScheduler.UnobservedTaskException += (sender, e) =>
         {

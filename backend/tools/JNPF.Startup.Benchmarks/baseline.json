@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "frozenAt": "2026-08-19",
+  "source": "docs/architecture/performance-baseline.md",
+  "note": "战役0 基准（v2 增逐模块计时，任务0-5）。门控阈值：DI 描述符数增幅 >10% 失败；冷启动中位数 >3500ms 告警。",
+  "thresholds": {
+    "diDescriptorGrowthPct": 10,
+    "coldStartMedianMsWarn": 3500
+  },
+  "process": {
+    "config": "Debug",
+    "environment": "Production",
+    "rounds": 5,
+    "coldStartMedianMs": 2719,
+    "firstRequestMedianMs": 571,
+    "dynamicApiFirstMedianMs": 80,
+    "swaggerFirstMedianMs": 7,
+    "workingSetMb": 502
+  },
+  "inproc": {
+    "assemblyCount": 49,
+    "effectiveTypeCount": 1645,
+    "appStaticInitMs": 41,
+    "addAppMs": 159,
+    "moduleRegistrationMs": 138,
+    "addInjectMs": 10,
+    "descriptorCount": 956,
+    "descriptorKnownGap": "DatabaseModule 未注册（缺 IWebHostEnvironment），真实值约 +30~50",
+    "lifetime": { "Transient": 496, "Singleton": 425, "Scoped": 35 },
+    "moduleCount": 14,
+    "perModuleMs": {
+      "ObservabilityModule": 45,
+      "PipelineSchedulingModule": 42,
+      "AuthenticationModule": 17,
+      "JsonSettingsModule": 14,
+      "HealthCheckModule": 10,
+      "WeixinModule": 7,
+      "ValidationModule": 5,
+      "LegacyModule": 0,
+      "DiffLogPublishModule": 0,
+      "EventBusModule": 0,
+      "ForwardedHeadersModule": 0,
+      "RateLimitingModule": 0,
+      "SandboxModule": 0,
+      "DatabaseModule": "FAIL(缺 IWebHostEnvironment，见 F2)"
+    }
+  },
+  "findings": [
+    "F1: zxdev 存在显式 Controller（ZxSystemController/ConfigController），待合规审查",
+    "F2: DatabaseModule 依赖 InternalApp 隐式静态状态（战役2证据）",
+    "F3: Development Scope 校验报 54+ 处 Singleton 消费 Scoped 存量违规"
+  ]
+}

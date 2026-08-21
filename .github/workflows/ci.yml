@@ -203,6 +203,20 @@ jobs:
           echo ".env.example exists and is valid"
 
   # ---------------------------------------------------------------------------
+  # Module Dependency Gate (阶段0 任务0-6：新增跨模块违规阻断合并)
+  # ---------------------------------------------------------------------------
+  arch-dependency-gate:
+    name: Module Dependency Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run dependency scan gate (pwsh preinstalled on ubuntu-latest)
+        run: pwsh -File scripts/arch-module-dependency-scan.ps1 -Gate
+
+  # ---------------------------------------------------------------------------
   # Promptfoo LLM Quality Regression (requires sa-service)
   # ---------------------------------------------------------------------------
   promptfoo-eval:

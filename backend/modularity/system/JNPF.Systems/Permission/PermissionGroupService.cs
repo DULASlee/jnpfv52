@@ -44,9 +44,9 @@ public class PermissionGroupService : IUserGroupService, IDynamicApiController, 
     private readonly IUserManager _userManager;
 
     /// <summary>
-    /// 用户信息.
+    /// 用户信息查询（CR-20260819-01 阶段 3：GetSelectedList 已迁至 UsersQueryService）.
     /// </summary>
-    private readonly UsersService _usersService;
+    private readonly UsersQueryService _usersService;
 
     /// <summary>
     /// IM中心处理程序.
@@ -63,7 +63,7 @@ public class PermissionGroupService : IUserGroupService, IDynamicApiController, 
     /// </summary>
     public PermissionGroupService(
         ISqlSugarRepository<PermissionGroupEntity> repository,
-        UsersService usersService,
+        UsersQueryService usersService,
         ICacheManager cacheManager,
         IUserManager userManager,
         IMHandler imHandler)

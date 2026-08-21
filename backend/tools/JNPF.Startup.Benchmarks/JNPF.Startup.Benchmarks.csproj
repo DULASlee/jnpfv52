@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<IsPackable>false</IsPackable>
+		<!-- 基准工具不参与 CI 分析门控 -->
+		<RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+		<EnableNETAnalyzers>false</EnableNETAnalyzers>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\application\JNPF.API.Entry\JNPF.API.Entry.csproj" />
+	</ItemGroup>
+
+</Project>

@@ -17,6 +17,7 @@ using JNPF.Systems.Entitys.System;
 using JNPF.VisualDev.Entitys.Dto.VisualDevModelData;
 using Mapster;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SqlSugar;
 using System.Data;
@@ -37,9 +38,10 @@ public class DataBaseManager : IDataBaseManager, ITransient
     private static SqlSugarScope? _sqlSugarClient;
 
     /// <summary>
-    /// 用户管理器.
+    /// 作用域工厂（战役 0.1.2：替代构造注入 Scoped IUserManager，消除 Singleton
+    /// 消费链 Captive Dependency 违规；用法对齐 DbJobPersistence 标准模式）.
     /// </summary>
-    private readonly IUserManager _userManager;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
 
     /// <summary>
     /// 缓存管理.
@@ -57,17 +59,29 @@ public class DataBaseManager : IDataBaseManager, ITransient
     private readonly DbConnectionConfig defaultConnectionConfig;
 
     /// <summary>
+    /// 按需解析当前请求的 UserManager 并提取所需值（scope 内完成读取，
+    /// BizSystemId 内部访问仓储，不可把实例带出 scope；
+    /// 后台/无 HttpContext 场景返回 null，与原构造注入在 Singleton 链下拿到空上下文的行为等价）.
+    /// </summary>
+    private T? ResolveUserManagerValue<T>(Func<IUserManager, T> selector) where T : class
+    {
+        using var scope = _serviceScopeFactory.CreateScope();
+        var userManager = scope.ServiceProvider.GetService<IUserManager>();
+        return userManager == null ? null : selector(userManager);
+    }
+
+    /// <summary>
     /// 构造函数.
     /// </summary>
     public DataBaseManager(
         IOptions<SqlSugar.ConnectionStringsOptions> connectionOptions,
-        IUserManager userManager,
+        IServiceScopeFactory serviceScopeFactory,
         IOptions<TenantOptions> tenantOptions,
         ISqlSugarClient context,
         ICacheManager cacheManager)
     {
         _sqlSugarClient = (SqlSugarScope)context;
-        _userManager = userManager;
+        _serviceScopeFactory = serviceScopeFactory;
         _tenant = tenantOptions.Value;
         _cacheManager = cacheManager;
         defaultConnectionConfig = connectionOptions.Value.DefaultConnectionConfig;
@@ -191,10 +205,11 @@ public class DataBaseManager : IDataBaseManager, ITransient
 
         //add by harry 
         //string systemId = null;
-        if (_tenant.MultiSystem &&  _userManager.BizSystemId.IsNotEmptyOrNull()) //tenant.MultiSystem
+        var bizSystemId = ResolveUserManagerValue(u => u.BizSystemId);
+        if (_tenant.MultiSystem && bizSystemId.IsNotEmptyOrNull()) //tenant.MultiSystem
         {
             string systemConst = "ZxSystemId";
-            string systemId = _userManager.BizSystemId;
+            string systemId = bizSystemId;
             _sqlSugarClient.QueryFilter.AddTableFilter<IZxSystemFilter>(it => it.ZxSystemId == systemId);
             _sqlSugarClient.QueryFilter.Clear<IZxSystemFilter>(); //首次移除时出现异常，故前面先添加一个
             _sqlSugarClient.QueryFilter.AddTableFilter<IZxSystemFilter>(it => it.ZxSystemId == systemId);
@@ -1290,9 +1305,10 @@ public class DataBaseManager : IDataBaseManager, ITransient
     {
         if (KeyVariable.MultiTenancy)
         {
-            if (_userManager.TenantId.IsNotEmptyOrNull())
+            var userTenantId = ResolveUserManagerValue(u => u.TenantId);
+            if (userTenantId.IsNotEmptyOrNull())
             {
-                _sqlSugarClient.ChangeDatabase(_userManager.TenantId);
+                _sqlSugarClient.ChangeDatabase(userTenantId);
             }
             else
             {
