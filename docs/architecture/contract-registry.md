@@ -16,3 +16,4 @@
 | 契约 ID | 版本 | 提供方模块 | 载体文件 | SHA256 | 状态 | 物化任务 |
 |---------|------|-----------|---------|--------|------|---------|
 | C-M11-Options | @v1 | M11 特性开关基建 | `backend/framework/JNPF/Options/RuntimeFoundationOptions.cs` | `93ed61bf769569d714c6f9998d04bf51556583a78477a1ed5d3ba3873dc0cade` | 生效（单测×2 绿） | Task 11.1（2026-08-24） |
+| C-RS-IRunService | @v0 | M1 安全网（反向提取） | `backend/modularity/visualdev/JNPF.VisualDev.Interfaces/IRunService.cs` | `42a63738dbd48a513fdddaa265bbbc0bc046ad261816046df7f9272bf66fcc77` | 生效（契约测试 3/3 绿）；⚠实测 **18** 成员（规格原载 17）；WorkFlow 实测消费 **5**（原载 7）；全仓消费并集 **15**；瘦身目标待用户裁决 | Task 1.2（2026-08-24） |
