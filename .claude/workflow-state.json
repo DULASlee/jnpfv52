@@ -24,5 +24,11 @@
     "SaNineViewCompiler.CompileWorkflowSpec"
   ],
   "cr-approved-scope": "CR-20260717-01: 降级/兜底硬禁令 + PM-Skill 路径硬门控 + 种子知识关联筛选（docs/AI原生开发/1、多用户多任务并行/33、...开发计划.md 全部 6 阶段）。用户口头批准 '立即执行修复计划'。",
-  "note": "S/A：设 adfPhase=P0（或 currentSg）锁业务源码 → P1/P2/P3 文档经「继续」→ adfPhase=P4 才可写 .cs/.vue。B级：adfPhase=exempt。节点验收：awaitingNodeApproval + pillar-claim-current.json。"
+  "note": "S/A：设 adfPhase=P0（或 currentSg）锁业务源码 → P1/P2/P3 文档经「继续」→ adfPhase=P4 才可写 .cs/.vue。B级：adfPhase=exempt。节点验收：awaitingNodeApproval + pillar-claim-current.json。",
+  "sp": {
+    "finishing-a-development-branch": true,
+    "pre-commit": true,
+    "systematic-debugging": true,
+    "data-driven-debug": true
+  }
 }

@@ -23,7 +23,13 @@
 
 ---
 
-## 2026-07-18
+## 2026-08-23
+
+| 日期 | 类别 | 症状 | 根因 | 修复 | 关键词 |
+|------|------|------|------|------|--------|
+| 2026-08-23 | 工具链 | DeepSeek 桌面版（.NET 8+WebView2）昨天能启动、今天双击启动不了：进程活着、无窗口、无端口监听、无崩溃转储 | 应用无单实例互斥，且所有实例共享安装目录 WebView2 用户数据目录 `DeepSeek.exe.WebView2`；8/19 一个陈旧 msedgewebview2 浏览器进程死锁占住 `EBWebView\Default\LOCK`，后续实例在 WebView2 初始化无限等待，窗口永不弹出；反复双击累积 9 个僵尸实例 | 编译 .NET 单实例启动器（`Local\DeepSeekDesktopSingleInstance` 互斥串行化 + 健康检测[主窗口 或 监听 3080] + 杀僵尸及孤儿 WebView2 自愈），开始菜单 DeepSeek.lnk 重定向到启动器；实测单实例/自愈/端口全绿，根因方案沉淀 memory `deepseek-desktop-launcher` | `WebView2`, `Default\LOCK`, `单实例互斥`, `DeepSeekLauncher`, `僵尸进程` |
+
+
 
 | 日期 | 类别 | 症状 | 根因 | 修复 | 关键词 |
 |------|------|------|------|------|--------|
