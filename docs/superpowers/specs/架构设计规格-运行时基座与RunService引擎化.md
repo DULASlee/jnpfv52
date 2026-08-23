@@ -60,7 +60,7 @@
 // M2：IRuntimeDataStore 8 成员（Dialect/ExecuteScalarAsync/ExecuteCommandAsync/SqlQueryAsync/
 //     GetDataTableAsync/AnyAsync/RunInTransactionAsync/ResolveDbLink）；实现 ITransient+IDisposable（4.4.2）
 // M4/5/6：RunDataEngine / RunListQueryService / RunDataViewService（ITransient，签名不变）；
-//     M6 额外：瘦身后 IRunService 7 成员（WorkFlow 消费面）
+//     M6 额外：瘦身后 IRunService 15 成员（全仓消费面并集，2026-08-24 裁决 A：18→15）
 // M7：LogQueryService（IDynamicApiController，入参 startTime/endTime/level/traceId/keyword/tenantId/page/pageSize）
 // M8：Task<bool> IOutboxLock.TryAcquireAsync(string instanceId, CancellationToken)；Task ReleaseAsync(...)
 // M9：static ResiliencePipeline<HttpResponseMessage> OutboundResiliencePipelineFactory.Create()
@@ -68,7 +68,7 @@
 // M11：IOptions<RuntimeFoundationOptions>（四 bool）
 ```
 
-契约清单（ID@版本，hash 于物化任务生成登记）：C-RS-IRunService@v0（存量 17 成员，S5 破坏性变更升 @v1）· C-M3-RunSqlCompiler@v1 · C-M2-IRuntimeDataStore@v1 · C-M4/5/6 引擎签名@v1（纯移动，存量反向提取）· C-M11-Options@v1 · C-M7-LogQueryApi@v1 · C-M8-IOutboxLock@v1 · C-M9-Pipeline@v1 · C-M10-IExceptionBoundary@v1。
+契约清单（ID@版本，hash 于物化任务生成登记）：C-RS-IRunService@v0（存量 18 成员，2026-08-24 实测修订；S5 破坏性变更 18→15 升 @v1）· C-M3-RunSqlCompiler@v1 · C-M2-IRuntimeDataStore@v1 · C-M4/5/6 引擎签名@v1（纯移动，存量反向提取）· C-M11-Options@v1 · C-M7-LogQueryApi@v1 · C-M8-IOutboxLock@v1 · C-M9-Pipeline@v1 · C-M10-IExceptionBoundary@v1。
 
 **本次设计明确排除**（提取自 1.1）：全局幂等键中间件、RFC 9457 ProblemDetails 全量统一、告警规则 as-code、日志采集端点与看板、LLM/MCP 之外三处出站调用的韧性、SysLog/Outbox 表加列。
 
@@ -208,7 +208,7 @@ NFR 与硬约束的冲突已记入上方硬约束张力点（成本/部署能力
 
 - **背景**：模板 10.1 要求字段级唯一源=契约库（摘要管认知、契约管编译）；但本平台契约是进程内 C# 接口（非 HTTP），OpenAPI/Protobuf 不适配。
 - **备选方案**：A OpenAPI/JSON Schema——代价：与进程内接口不适配，属凭空造载体；B C# 接口源码+契约测试（机器可验证）+契约台账（ID@版本+SHA256+路径）——代价：hash 维护需任务内显式登记；C 不设契约库仅靠摘要——代价：违反 10.1 铁律，下游凭摘要生成集成代码无防护。
-- **决定**：选 B。推理链：**事实**——RunServiceContractTests/架构测试已是机器可验证形态（commit `c485a122` 既有模式）；**判断**——契约测试即本项目现成的「编译防护」，台账补上版本与 hash 追溯；**结论**——契约台账 `docs/architecture/contract-registry.md`；存量契约由现状代码反向提取初版（Task 1.2/2.2 等物化任务逐条确认后生效）；破坏性变更升主版本+双轨过渡（IRunService 17→7 即 v0→v1，契约测试重录为过渡载体）；所有权=提供方模块，消费方只引用。
+- **决定**：选 B。推理链：**事实**——RunServiceContractTests/架构测试已是机器可验证形态（commit `c485a122` 既有模式）；**判断**——契约测试即本项目现成的「编译防护」，台账补上版本与 hash 追溯；**结论**——契约台账 `docs/architecture/contract-registry.md`；存量契约由现状代码反向提取初版（Task 1.2/2.2 等物化任务逐条确认后生效）；破坏性变更升主版本+双轨过渡（IRunService 18→15 即 v0→v1，契约测试重录为过渡载体）；所有权=提供方模块，消费方只引用。
 - **失效条件**：平台引入 IDL/代码生成流（如对外 HTTP API 契约化）→ 契约台账迁移至对应载体。
 
 ### 决策元数据与复审（模板 10.5；各条失效条件的检查时机汇总，2.1 回溯时回填本表并重评已否决方案）
@@ -267,7 +267,7 @@ flowchart LR
 | M2 数据访问抽象 | 运行时 DB 副作用唯一漏斗 | `IRuntimeDataStore`（8 成员）+ `RuntimeDbLink` | ← RunService → M4/M5/M6；未来韧性/审计装饰器挂靠点 |
 | M4 执行层 | 二十个数据执行方法纯移动 | `RunDataEngine`（ITransient） | ← M3/M2 → RunService 门面 |
 | M5 列表层 | 五个列表查询方法纯移动 | `RunListQueryService`（ITransient） | ← M3/M2 → RunService 门面 |
-| M6 视图层收尾 | 视图四方法移动 + IRunService 17→7 + 门面缩壳 | `RunDataViewService`（ITransient）+ 瘦身后的 `IRunService` | ← M3/M2 → 三委托方 |
+| M6 视图层收尾 | 视图四方法移动 + IRunService 18→15 + 门面缩壳 | `RunDataViewService`（ITransient）+ 瘦身后的 `IRunService` | ← M3/M2 → 三委托方 |
 | M7 可查询日志 | 全级别文件 sink + 请求日志 + PII 脱敏 + 查询 API | Serilog 装载配置 + `LogQueryService`（IDynamicApiController） | ← M11（开关） |
 | M8 Outbox 可靠性 | 卡死回收 Sweeper + DB 单行互斥锁 | `OutboxSweeperService`（BackgroundService）+ `IOutboxLock` | ← M11（开关） |
 | M9 出站韧性 | LLM/MCP 出站 Polly v8 管道 | `OutboundResiliencePipelineFactory.Create()` | ← M11（开关） |
@@ -285,7 +285,7 @@ flowchart LR
 - M3 输出 `RunSqlCompiler` 七方法签名 == M4/M5/M6 调用入参（签名逐字不变，纯移动保证）；
 - M2 输出 `IRuntimeDataStore`（A+C 子规格 §4 定稿）== M4/M5/M6 构造注入类型；
 - M11 输出 `IOptions<RuntimeFoundationOptions>` == M7/M8/M9/M10 注册处读取类型；
-- M6 输出瘦身 `IRunService`（7 成员）== 三委托方（VisualDevModelDataService/VisualDevService/VisualdevShortLinkService）消费面，由契约测试守护。
+- M6 输出瘦身 `IRunService`（15 成员）== 全仓消费面并集（三委托方+VisualdevModelAppService+WorkFlow+反射双通道，2026-08-24 实测取证），由契约测试守护。
 
 **发布单元与集成策略（模板 10.5）**：单一发布单元=JNPF.API.Entry 主入口（特性与重构同进程集成，无独立部署单元）；集成顺序=先契约后实现——C-RS@v0 台账 S0 反向提取（Task 1.2）、C-M2@v1 S2 物化（Task 2.2）先于消费方开工，M4/M5/M6 基于已物化契约开发；接口验证策略=契约测试+架构测试充当机器可验证的契约防护（无独立 mock 层，纯移动阶段旧实现即对照物）；双轨无共享接口（文件面零交集），无接口冲突仲裁需求；重构轨契约变更通知=契约测试红灯即通知。
 
@@ -396,7 +396,7 @@ public class RuntimeFoundationOptions
 
 #### 4.2.2 数据模型与状态
 
-三类证据资产（均文件/测试代码形态，无 DB）：① 路由快照文本（`JNPF.Startup.Benchmarks --mode routes --filter "api/visualdev"` 输出 `[ROUTE]` 行+`[METRIC]` 行，来源：`backend/tools/JNPF.Startup.Benchmarks/Program.cs`，commit `c485a122`）；② RunServiceContractTests：IRunService 17 成员签名冻结+WorkFlow 消费的 7 方法 nameof 守护；③ VisualDevRouteOwnerTests：三委托方（OnlineDev/Base/ShortLink）Name/Route 契约。无状态。
+三类证据资产（均文件/测试代码形态，无 DB）：① 路由快照文本（`JNPF.Startup.Benchmarks --mode routes --filter "api/visualdev"` 输出 `[ROUTE]` 行+`[METRIC]` 行，来源：`backend/tools/JNPF.Startup.Benchmarks/Program.cs`，commit `c485a122`）；② RunServiceContractTests：IRunService 18 成员签名冻结（2026-08-24 实测，原载 17 修订）+WorkFlow 消费的 5 方法（原载 7 修订）与全仓消费面 15 成员 nameof 守护；③ VisualDevRouteOwnerTests：三委托方（OnlineDev/Base/ShortLink）Name/Route 契约。无状态。
 
 #### 4.2.3 并发与竞态 / 4.2.5 性能特征
 
@@ -610,12 +610,12 @@ public class RunDataEngine : ITransient
 #### 4.6.1/4.7.1 业务上下文（差异点）
 
 - **M5 列表层**：五个列表查询方法（GetListResult CC85/GetRelationFormList/GetHaveTableInfo/GetHaveTableInfoDetails/GetListChildTable，来源：A+C 子规格 §3.2）。成功标准=列表行为不变（既有 List*Helpers 测试全绿）。⚠ 最大单体（GetListResult CC85）逐块移动不可压缩——探索型工作量登记入实施计划。
-- **M6 视图层收尾**：视图四方法移动 + 收尾三动作：① Common.CodeGen 注入点切换（ExportImportDataHelper 改注引擎组件，**CR 门禁先行，未批禁触**，来源：需求分析铁律禁令六 + v5.2 审查修订#11 文件面补登）；② IRunService 17→7 瘦身（WorkFlow 消费的 7 方法保留，其余经门面内引擎直调）；③ 门面缩壳（行数统计基线证据先行，目标 <400 行，来源：v5.2 审查补充项）。
+- **M6 视图层收尾**：视图四方法移动 + 收尾三动作：① Common.CodeGen 注入点切换（ExportImportDataHelper 改注引擎组件，**CR 门禁先行，未批禁触**，来源：需求分析铁律禁令六 + v5.2 审查修订#11 文件面补登）；② IRunService 18→15 瘦身（全仓消费面并集 15 成员保留，2026-08-24 裁决 A；仅退出零外部消费的 3 方法——CreateHaveTableSql/UpdateHaveTableSql/GenerateFeilds，保留为门面公开方法供内部调用）；③ 门面缩壳（行数统计基线证据先行，目标 <400 行，来源：v5.2 审查补充项）。
 - 共同业务规则：BR-1 纯移动；BR-2 门面只做委托转发不新增逻辑；BR-3（M6）终审拆分——重构终审仅依赖重构轨，特性终审独立（来源：v5.2 审查修订#4，回应 ADR-1 铁律）。
 
 #### 4.6.2~4.6.6/4.7.2~4.7.6（压缩：与 M4 同构处从略，只列差异）
 
-- 数据模型：无新增；M6 额外变更=IRunService 接口面（17→7）——属对外契约变更，由 4.2 契约测试在 S5 切换后重录（切换前后各一份快照对比，确认只有预期的 10 个成员退出）。
+- 数据模型：无新增；M6 额外变更=IRunService 接口面（18→15）——属对外契约变更，由 4.2 契约测试在 S5 切换后重录（切换前后各一份快照对比，确认只有预期的 3 个成员退出）。
 - 错误处理：同 M4（保持迁移前）。
 - 可观测：同 M4；M6 终审六门禁产物（快照/测试/基线/冒烟/白名单/Helpers）即观测证据。
 - 性能：同 M4（热路径不变）。
@@ -626,7 +626,7 @@ public class RunDataEngine : ITransient
 ```csharp
 public class RunListQueryService : ITransient { /* 5 方法，签名不变 */ }
 public class RunDataViewService : ITransient { /* 4 方法，签名不变 */ }
-// M6 收尾：IRunService 7 成员（WorkFlow 消费面，nameof 守护，来源：4.2 契约测试）
+// M6 收尾：IRunService 15 成员（全仓消费面并集，含 WorkFlow 5 方法，nameof 守护，来源：4.2 契约测试）
 ```
 
 #### 4.6.8/4.7.8 落地影响（差异点）
@@ -637,9 +637,9 @@ public class RunDataViewService : ITransient { /* 4 方法，签名不变 */ }
 #### 4.6.9/4.7.9 自检 / 4.6.10/4.7.10 摘要（压缩）
 
 - M5 自检：1 成立（无参数）；2 删除=5 方法声明，调用点改委托无矛盾；3 BR 全覆盖；4 前置来源：同 M4（上游契约+既有调用上下文）；5 补偿闭环：无状态转移，语义不变。
-- M6 自检：1 成立（缩壳行数目标以基线证据为前提，非拍脑袋指标）；2 删除=10 个 IRunService 成员——引用核查=三委托方契约测试+WorkFlow 消费面守护，确认无消费方引用被删成员（验收前置断言）；3 BR 全覆盖（BR-3→终审拆分设计）；4 前置来源：瘦身前置=Task 6.5 切换完成（依赖链声明），契约升版依据=5.7 兼容性规则；5 补偿闭环：接口切换回滚=独立 revert（4.7.8 验收③），与双轨过渡终态一致。
+- M6 自检：1 成立（缩壳行数目标以基线证据为前提，非拍脑袋指标）；2 删除=3 个零外部消费的 IRunService 成员（CreateHaveTableSql/UpdateHaveTableSql/GenerateFeilds，2026-08-24 裁决 A）——引用核查=全仓消费面 15 成员契约测试守护，确认无消费方引用被删成员（验收前置断言）；3 BR 全覆盖（BR-3→终审拆分设计）；4 前置来源：瘦身前置=Task 6.5 切换完成（依赖链声明），契约升版依据=5.7 兼容性规则；5 补偿闭环：接口切换回滚=独立 revert（4.7.8 验收③），与双轨过渡终态一致。
 - M5 摘要：对外=5 方法签名不变；契约引用=消费 C-M3/C-M2；依赖=同 M4；约束=纯移动；不处理=执行/视图。
-- M6 摘要：对外=4 方法+瘦身后的 IRunService（7 成员）；契约引用=提供 C-RS-IRunService 破坏性升级 v0→v1（S5 一次切换，契约测试重录为双轨过渡载体，见 5.7）；依赖=同 M4；关键约束=接口切换仅 S5 终审一次；不处理=特性终审（归 4.11）。
+- M6 摘要：对外=4 方法+瘦身后的 IRunService（15 成员，2026-08-24 裁决 A）；契约引用=提供 C-RS-IRunService 破坏性升级 v0→v1（S5 一次切换，契约测试重录为双轨过渡载体，见 5.7）；依赖=同 M4；关键约束=接口切换仅 S5 终审一次；不处理=特性终审（归 4.11）。
 
 ---
 
@@ -916,7 +916,7 @@ public class SysLogExceptionBoundary : IExceptionBoundary { /* Json 字段内结
 - **唯一源方向与物化次序（模板 10.5）**：设计期字段与约束决策记录在各模块 4.N.2/4.N.7；模块 4.N.9 自检通过后、4.N.10 输出前，把字段级决策**物化**为契约定义（实施计划物化任务：1.2/2.2/3.2/7.3/8.1/9.1/10.1/11.1/6.4，其中 6.4 承载 C-RS-IRunService v0→v1 升级重录）；**4.N.10 是摘要不是物化源**；物化产出 ID@版本+hash 后 4.N.10 方可引用。存量契约由现状代码反向提取初版（C-RS-IRunService@v0 等），提取结果附可信度评估：强类型接口代码=高可信（契约测试全绿=确认载体）；本期无低可信条目。
 - **层级界定（模板 10.5）**：方法签名级信息（方法名/参数/顶层类型）属认知层，本文档与 4.N.10 承载；字段级约束明细属编译层，唯一源为契约定义；正文记录选型决策及理由，不复制明细全表。
 - **引用格式**：契约 ID@版本+SHA256+路径；下游编写/生成前必须校验 hash，不一致即阻断；禁止凭摘要生成集成代码。
-- **兼容性**：契约演进默认仅增量（新增可选成员）；破坏性变更升主版本+双轨过渡——本期唯一破坏性变更=IRunService 17→7（v0→v1），过渡载体=契约测试切换前后双快照对比+ S5 一次性切换（见 4.7.8 验收②）。
+- **兼容性**：契约演进默认仅增量（新增可选成员）；破坏性变更升主版本+双轨过渡——本期唯一破坏性变更=IRunService 18→15（v0→v1，2026-08-24 裁决 A：实测消费面并集 15，原 17→7 设计前提不成立），过渡载体=契约测试切换前后双快照对比+ S5 一次性切换（见 4.7.8 验收②）。
 - **所有权**：契约由提供方模块拥有维护（C-M2 归 M2、C-M11 归 M11 等），消费方只引用，禁止双头编写。
 - **T2 降级协议（模板 10.5）**：本文档运行模式为 T1（工具完备，见文档头 P0 声明），T2 降级不适用；若未来在无工具环境引用本设计，按模板 5.7 T2 协议以结构化契约块承载，禁止虚构 hash。
 
@@ -974,4 +974,4 @@ SLO 持续破线升级为风险事件（标注 SLO 关联）；缓解若可能�
 
 ---
 
-**§0 回填记录**：跨模块接口契约段已从占位更新为汇编结果+契约清单（见 §0）；10.1 升级时回填全局基线速览一行；10.5 升级时回填局部约束索引+待确认项编号列表+基线速览补 5.7/5.8 投影；累计回填 3 次（< 模块数 1/3，分解稳定）。
+**§0 回填记录**：跨模块接口契约段已从占位更新为汇编结果+契约清单（见 §0）；10.1 升级时回填全局基线速览一行；10.5 升级时回填局部约束索引+待确认项编号列表+基线速览补 5.7/5.8 投影；2026-08-24 施工实测回填：IRunService 存量 18 成员（原 17）、WorkFlow 消费 5（原 7）、瘦身目标裁决 A：18→15（仅退出零外部消费 3 方法）；累计回填 4 次（< 模块数 1/3，分解稳定）。

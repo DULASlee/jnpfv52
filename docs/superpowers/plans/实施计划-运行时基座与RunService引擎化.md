@@ -42,35 +42,35 @@
 
 **Files:** ➕ `RuntimeFoundationOptions.cs`（落位先闭环假设 A-1：grep 既有 Options 类归属，10 分钟内）｜ ✏️ `backend/application/JNPF.API.Entry/Configurations/App.json`（新增 `RuntimeFoundation` 节，四布尔位全 false）｜ ✏️ Program.cs 特性注册段（Options 绑定）｜ ➕ 单测×2 ｜ ➕ `f0-log-baseline.txt`（顺带采集当前日志量级，供 Task 7.2 磁盘对照）
 
-- [ ] Step 1：grep 既有 Options 类归属目录，闭环 A-1，记录结论
-- [ ] Step 2：写失败测试（缺配置→默认全 false；显式配置→正确绑定）
-- [ ] Step 3：落 Options 类+配置节+绑定，测试转绿；C-M11-Options@v1 物化入台账
-- [ ] Step 4：开关全 false 启动，采路由快照并与基线比对零 diff（开关零侵入证明）
-- [ ] Step 5：采集 `f0-log-baseline.txt`；提交
+- [x] Step 1：grep 既有 Options 类归属目录，闭环 A-1，记录结论（✅落位 `framework/JNPF/Options/`：EventBus.Outbox 仅引 framework、InteAssistant 仅引 Common.Core，此为共同可达最下层）
+- [x] Step 2：写失败测试（缺配置→默认全 false；显式配置→正确绑定）（✅）
+- [x] Step 3：落 Options 类+配置节+绑定（RuntimeFoundationModule），测试转绿 2/2；C-M11-Options@v1 物化入台账（✅）
+- [x] Step 4：开关全 false 启动，采路由快照并与基线比对零 diff（开关零侵入证明，✅ DIFF=0）
+- [x] Step 5：采集 `f0-log-baseline.txt`（✅ 峰值日 2.72MB）；提交（✅）
 
 ### Task 1.1：路由快照基线（2h）｜依赖：无
 
 **Files:** ➕ `backend/tools/JNPF.Startup.Benchmarks/` 输出落盘 `s0-routes-visualdev-baseline.txt`（存档位置随仓约定：`.claude/evidence/cr-20260820-01/` 或 docs 约定目录，开工时定一处并全程一致）
 
-- [ ] Step 1：运行路由快照命令，落盘基线
-- [ ] Step 2：核对 `[METRIC] route_total/route_matched`，确认 `api/visualdev` 面全覆盖
-- [ ] Step 3：提交（基线未落盘前禁止动 RunService）
+- [x] Step 1：运行路由快照命令，落盘基线（✅ 1077 路由/107 匹配，存档 `.claude/evidence/runservice-engine-refactor/`）
+- [x] Step 2：核对 `[METRIC] route_total/route_matched`，确认 `api/visualdev` 面全覆盖（✅）
+- [x] Step 3：提交（基线未落盘前禁止动 RunService）（✅）
 
 ### Task 1.2：IRunService 契约测试（3h）｜依赖：无
 
-**Files:** ➕ `backend/tests/JNPF.Tests.VisualDev/RunServiceContractTests.cs`（反射+属性名字符串匹配，零 MVC 类型依赖；17 成员签名冻结 + WorkFlow 消费 7 方法 nameof 守护）➕ `docs/architecture/contract-registry.md`（契约台账，规格 5.7）
+**Files:** ➕ `backend/tests/JNPF.Tests.VisualDev/RunServiceContractTests.cs`（反射+属性名字符串匹配，零 MVC 类型依赖；18 成员签名冻结【2026-08-24 实测，原载 17 修订，裁决 A】+ WorkFlow 消费 5 方法与全仓消费面 15 成员 nameof 守护）➕ `docs/architecture/contract-registry.md`（契约台账，规格 5.7）
 
-- [ ] Step 1：写契约测试（17 成员签名反射断言；7 方法 nameof 常量守护）
-- [ ] Step 2：运行全绿（契约测试全绿=存量契约逐条确认载体）
-- [ ] Step 3：建契约台账，反向提取登记 C-RS-IRunService@v0（17 成员：ID@版本+SHA256+路径）
-- [ ] Step 4：提交
+- [x] Step 1：写契约测试（18 成员签名反射断言；5+15 成员 nameof 常量守护）（✅）
+- [x] Step 2：运行全绿（契约测试全绿=存量契约逐条确认载体，✅ 3/3）
+- [x] Step 3：建契约台账，反向提取登记 C-RS-IRunService@v0（18 成员：ID@版本+SHA256+路径，✅）
+- [x] Step 4：提交（✅）
 
 ### Task 1.3：委托方归属测试（2h）｜依赖：无
 
 **Files:** ➕ `backend/tests/JNPF.Tests.VisualDev/VisualDevRouteOwnerTests.cs`（三委托方 OnlineDev/Base/ShortLink 的 Name/Route 契约）
 
-- [ ] Step 1：写三委托方归属断言
-- [ ] Step 2：运行全绿；提交
+- [x] Step 1：写三委托方归属断言（✅ Base/OnlineDev/ShortLink Name+Order+Tag+Route+IDynamicApiController）
+- [x] Step 2：运行全绿（✅ 9/9）；提交（✅）
 
 **S0 节点审批**：提交四任务证据 + 基线文件 + A-1 闭环记录，等待批准进入 S1。
 
@@ -329,10 +329,10 @@
 
 ### Task 6.4：IRunService 瘦身与门面缩壳（4h）｜依赖：6.5
 
-**Files:** ✏️ `IRunService.cs`（17→7）✏️ `RunService.cs`（缩壳）✏️ 架构测试（移除 RunService 豁免位，恢复白名单断言）
+**Files:** ✏️ `IRunService.cs`（18→15，裁决 A：仅退出零外部消费的 CreateHaveTableSql/UpdateHaveTableSql/GenerateFeilds，保留为门面公开方法）✏️ `RunService.cs`（缩壳）✏️ 架构测试（移除 RunService 豁免位，恢复白名单断言）
 
 - [ ] Step 1：行数统计基线证据先行（缩壳前实测行数落盘），目标 <400 行
-- [ ] Step 2：接口切换（仅保留 WorkFlow 消费 7 方法；切换前后契约快照对比，确认只有预期 10 成员退出）；契约台账 C-RS-IRunService 升主版本 v0→v1（破坏性变更双轨过渡，规格 5.7）
+- [ ] Step 2：接口切换（保留全仓消费面并集 15 成员；仅退出零外部消费 3 方法，退出成员保留为门面公开方法供内部调用；切换前后契约快照对比，确认只有预期 3 成员退出）；契约台账 C-RS-IRunService 升主版本 v0→v1（破坏性变更双轨过渡，规格 5.7）
 - [ ] Step 3：门面缩壳至委托转发；构建 0 错误+全测试绿+快照零 diff；提交
 
 ### Task 10.3：F4 门禁与特性终审冒烟（2h）｜依赖：10.2 + 6.4
