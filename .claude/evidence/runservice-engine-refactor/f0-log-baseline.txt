@@ -1,0 +1,52 @@
+f0-log-baseline (A-4/A-2 disk amplification reference) - Task 11.1 Step 5 - 2026-08-24
+source: backend/application/JNPF.API.Entry/logs (Logging:File:LogDir=logs)
+current sinks: error/warning only (SerilogBootstrap), JsonFormatter renderMessage
+
+per-day volumes (bytes):
+error-20260620_002.json	35076
+error-20260621.json	91279
+error-20260622.json	2801
+error-20260623.json	9149
+error-20260704.json	261557
+error-20260705_001.json	561465
+error-20260705.json	7184
+error-20260706.json	795360
+error-20260707_001.json	458465
+error-20260707.json	62309
+error-20260708.json	405481
+error-20260709.json	684471
+error-20260710.json	622488
+error-20260711.json	3149991
+error-20260712.json	467462
+error-20260713.json	566327
+error-20260714.json	144005
+error-20260715.json	197975
+error-20260716.json	569863
+error-20260717.json	461722
+error-20260718.json	1065134
+error-20260719.json	300882
+error-20260806.json	169205
+error-20260807.json	351803
+error-20260808_001.json	3536
+error-20260808.json	5150
+error-20260809.json	446234
+error-20260810.json	602326
+error-20260819.json	100389
+error-20260820.json	1410231
+warning-20260717.json	544695
+warning-20260718.json	1346912
+warning-20260719.json	322767
+warning-20260731.json	363
+warning-20260806_001.json	161102
+warning-20260806.json	17847
+warning-20260807.json	408243
+warning-20260808_001.json	5714
+warning-20260808.json	5876
+warning-20260809.json	464121
+warning-20260810_001.json	1452
+warning-20260810.json	634283
+warning-20260819.json	104822
+warning-20260820.json	1446242
+
+peak day 2026-08-20 (error+warning): 2856473 bytes (~2.72 MB)
+note: full-level (M7 app sink) adds info/debug + request logs; amplification factor to be measured in Task 7.2 against this baseline

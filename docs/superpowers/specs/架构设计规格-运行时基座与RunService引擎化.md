@@ -882,7 +882,7 @@ public class SysLogExceptionBoundary : IExceptionBoundary { /* Json 字段内结
 
 | 编号 | 责任人 | 验证状态 | 证据位置 | 假设内容 | 验证方式与时间节点 | 失效时备选 |
 |------|--------|---------|---------|---------|------------------|------------|
-| A-1 | 施工执行者 | 待验证 | 待登记（grep 结论） | RuntimeFoundationOptions 落位目录按仓库现行 Options 类归属惯例 | 开工 10 分钟内 grep 既有 Options 类归属；M11 首任务前 | 按调用方最近原则落 Common.Core，登记例外 |
+| A-1 | 施工执行者 | ✅已闭环（2026-08-24） | Task 11.1 Step 1 grep 结论：业务 Options 惯例=`modularity/{module}/Options/`+`IConfigurableOptions`+`AddConfigurableOptions`；但 InteAssistant 仅引用 Common.Core、EventBus.Outbox 仅引用 framework/JNPF，故落位共同可达最下层 `framework/JNPF/Options/`（ConnectionStringsOptions 同目录先例） | RuntimeFoundationOptions 落位目录按仓库现行 Options 类归属惯例 | 开工 10 分钟内 grep 既有 Options 类归属；M11 首任务前 | 按调用方最近原则落 Common.Core，登记例外 |
 | A-2 | 用户（拍板） | 待验证 | 待登记（裁决记录） | M7 查询 API 管理员无租户上下文时的放行规则（放行全部/仅限本人租户/拒绝） | M7 实现前拍板（安全项）；未拍板不开工 Task 7.3 | 默认最严：拒绝无租户上下文查询，逐租户指定代查 |
 | A-3 | 施工执行者 | 待验证 | 待登记（`f2-outbox-schema-check.txt`） | Outbox 表现行建表机制（CodeFirst/脚本/手工）可同源承载锁表 | 定位 Outbox 表初始化代码；M8 首任务前 | 无机制→锁表 SQL 脚本随仓+部署清单登记，不假设自动建表 |
 | A-4 | 施工执行者 | 待验证 | 待登记（`f0-log-baseline.txt`） | 容量估算成立：全级别日志磁盘放大倍数在可接受范围（1.1 NFR 容量维估算联动） | Task 11.1 采集基线，Task 7.2 对照 | 超标→调滚动分片参数或限级别（保留 info 以上） |

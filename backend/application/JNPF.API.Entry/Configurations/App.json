@@ -175,5 +175,12 @@
     "DoMainPc": "http://localhost:3000", // 前端PC外网能访问的地址(域名), 回调的时候拼接接口地址用
     "DoMainApp": "http://localhost:8081", // 前端App外网能访问的地址(域名), 回调的时候拼接接口地址用
     "AppPushUrl": "https://8e84eea8-6922-4033-8e86-67ad7442e692.bspapp.com/unipush"
+  },
+  //================== 运行时基座特性开关（M11，默认全 false=行为与现状一致） ==============================
+  "RuntimeFoundation": {
+    "ExceptionBoundary": false,
+    "OutboxSweeper": false,
+    "OutboundResilience": false,
+    "QueryableLogging": false
   }
 }
