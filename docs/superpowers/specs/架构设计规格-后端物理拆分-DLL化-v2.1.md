@@ -1,6 +1,7 @@
-# 架构设计规格 — 后端物理拆分与包化（DLL/NuGet）v2.0
+# 架构设计规格 — 后端物理拆分与包化（DLL/NuGet）v2.1
 
 > **文档性质：** v1.0 的评审升级版。v1.0（`架构设计规格-后端物理拆分-DLL化.md`）覆盖面止于 framework/JNPF 的 9 个零依赖区；v2.0 依据 **2026-08-24 全后端 73 工程引用边实测扫描**，将分析面扩至全后端，给出完整的发包能力判定与「框架源码退出日常编译图」的施工主线。
+> **v2.1 修订（2026-08-24 评审落地）：** 采纳外部工程评审 7 项 P0 修正——依赖图基线与禁边门禁、编译后 Public API 快照、Source/Package 双模式机制（`JNPF_PACK` 正式语义）、显式 `dotnet pack`、Package Mode 零 ProjectReference 门禁、洁净室验证协议（含破坏性命令护栏）、包间依赖图 nuspec 核验；证据门禁由五件套升格**七件套**。修正对照见 §8。
 > **证据基线：** 本文档所有依赖论断均来自当日 `csproj` 全量扫描（边清单见 §3.3），非名义分层推断。差异对照见 §7。
 
 ---
@@ -13,8 +14,8 @@
 | **终态** | 单仓 + 本地 NuGet 源：**14+3 个工程打成版本化包（3.5.0）**，业务侧仅消费包；框架源码退出 `zx_lowcode_netcore.sln` 日常编译图 |
 | **切包线** | `JNPF.Common`（业务真地基）划入包域；`JNPF.Common.Core` 及以上留源码域（判据见 §2.2） |
 | **价值兑现点** | P2 全量切换完成后：日常构建不再编译任何框架源码，构建时间下降（目标值 S0 实测基线后登记） |
-| **主线** | S0 核验基线 → P1 B1/B2 拆分（管线试炼）→ P2 内核上包+全量切换 → P3 按收益扩展 → P4 解环路线图（纯分析） |
-| **零改动承诺** | 框架源码零行为变更（纯移动+csproj 引用切换）；业务 `.cs` 文件零改动；仅 **6 个业务侧 csproj** 需要切包编辑（§5 P2） |
+| **主线** | S0 核验基线 → P1 B1/B2 拆分（管线试炼）→ P2 内核上包+全量切换 → G5 终审 → P3 收益扩展（**明令置后于 G5**）→ P4 解环路线图（纯分析） |
+| **零改动承诺** | 框架源码零行为变更（纯移动+csproj 引用切换）；业务 `.cs` 文件零改动；csproj 变更 = **6 个业务工程切包编辑 + 双模式条件接线**（§5 P2）；消费切换走 Source/Package 双模式（§5 P2 步骤 0），Source Mode 为默认态 |
 
 ---
 
@@ -93,7 +94,18 @@ T8  验证            8 测试工程（直引内核/Common.Core/域工程）+ Be
 
 **切包线划在 T2 与 T3 之间**：线以下的依赖闭包完整（不触及任何领域工程）、变更频率低（框架/地基稳定）、消费面广（被全部上游共享）。线以上三者皆反。
 
-### 1.5 编译图前后对比（P2 完成时）
+### 1.5 隔离层级术语（v2.1）——「独立」一词的精确含义
+
+| 层次 | 要求 | 本战役目标 |
+|---|---|---|
+| Physical Isolation | 源码迁出 `framework/JNPF` 巨无霸 csproj | ✅ P1 |
+| Build Isolation | 独立 `.csproj`，可单独 build | ✅ P1 |
+| Package Isolation | 独立 `.nupkg`，nuspec 声明明确依赖图 | ✅ P2 |
+| **Runtime Isolation** | 不加载该组件时宿主不因缺 DLL 启动失败 | ❌ **明令非目标**（追求它会迫使纯移动重构升级为架构重构） |
+
+**术语更正（评审采纳）：** 全文「3 个独立 DLL」应理解为「3 个**可独立构建/发布的组件**」——B1/B2 拆出物运行时仍随 JNPF 包同装（`JNPF.dll` 依赖它们），依赖并未完全隔离，隔离的是构建/发布/上下文边界。
+
+### 1.6 编译图前后对比（P2 完成时）
 
 | | 切换前 | 切换后 |
 |---|---|---|
@@ -152,8 +164,23 @@ W3（依赖 W2）: WebSockets, Thirdparty, CollectiveOAuth
 ### 2.4 版本策略
 
 - 包域统一 **3.5.0**（自 3.4.7 升），后续包域内变更统一升版；
+- **中央版本属性（v2.1）：** 17 个包的版本与全部消费引用统一读共享属性 `$(JNPFVersion)`（定义于 framework `Directory.Build.props`），**禁止任何 csproj 硬编码 `Version="3.5.0"` 字面量**——防止 `JNPF→Utils 3.5.0 / 业务→Utils 3.5.1` 式版本漂移。完整 CPM（`Directory.Packages.props`）迁移会波及 73 工程全部第三方引用，列 P3 可选项；
 - `backend/Directory.Build.props` 的 3.6.0 是**业务侧版本域**，维持独立——两版本域已事实上并存（3.4.7 vs 3.6.0），强行统一徒增耦合；
 - 本地源：`nuget.config` 追加 `framework/nupkgs`（v1.0 D5 决策沿用，写法 S0 核验）。
+
+### 2.5 发包契约（v2.1 新增）——每个包的元数据规范
+
+| 字段 | 规则 |
+|---|---|
+| PackageId | = 工程名（如 `JNPF.Extensions.Utils`） |
+| AssemblyName | = PackageId（`JNPF.Extensions.Utils.dll`） |
+| **Root Namespace** | **≠ PackageId，保持迁移前原命名空间不变**（D2 冻结）——包名/程序集名改变而命名空间不变，是本战役的显式设计，防止后人误以为必须 `using JNPF.Extensions.Utils` |
+| Version | `$(JNPFVersion)`（§2.4 中央属性） |
+| Authors / Description / Repository / License | 统一在 framework `Directory.Build.props` 定义一次，17 包继承 |
+| TargetFramework / Nullable | 与现状 JNPF.csproj 一致（S0 Task 0.2 核验 LangVersion/Nullable 后登记） |
+| Symbol package | `.snupkg`（现有 3.4.7 已产 snupkg，管线沿用） |
+| SourceLink | P3 可选项（收益 = 调试符号溯源，非本战役阻断项） |
+| dependencies | 按 §3.1 包间 DAG 生成，S4/P2 验收逐包核验 nuspec 实际依赖声明与 DAG 一致 |
 
 ---
 
@@ -172,6 +199,18 @@ RabbitMQ / Dapper / Serilog ──→ （零包域依赖）
 ```
 
 **无环验证口径（终审必查）：** 上述包间图为 DAG；JNPF 内核的**程序集内部**三组成环（FriendlyException↔UnifyResult、DataValidation↔DynamicApiController、App↔ConfigurableOptions）不影响包间图，留待 P4。
+
+**禁边清单（v2.1 机器门禁，第七类证据的判定规则）：** 依赖图快照中以下边一旦出现即 FAIL——
+
+```
+JNPF.Abstractions        → JNPF（B2 反咬内核）
+JNPF.Extensions.*        → JNPF（B1 反咬内核）
+任何包域成员              → 任何源码域工程（框架依赖业务）
+任何包域成员              → API.Entry / OA.Entry
+包间任何环路
+```
+
+A-2 疑点（`JNPF.Common.Cache` 命名空间来源）的溯源结论直接并入本清单（若证实内核区引用业务命名空间，该边即首个被门禁捕获的整改对象）。基线文件：`dependency-baseline.txt`（S0-8 产出）→ `dependency-after-P1.txt` → `dependency-after-P2.txt`，逐段 diff 只允许出现「新增包域合法边」。
 
 ### 3.2 源码域 → 包域的消费边（P2 切换面，完整清单）
 
@@ -253,23 +292,49 @@ RabbitMQ / Dapper / Serilog ──→ （零包域依赖）
 
 - S0-5：`framework/JNPF.sln` 内容核验（框架开发态解决方案是否可用，缺工程则补齐）；
 - S0-6：**混合引用尖刺测试（spike）**——两个临时工程模拟「同一身份经 ProjectReference 与 PackageReference 双路到达」，实测 NuGet 行为（NU1107/身份冲突与否），结论写入本规格 §6 风险表，决定 P2 切换的原子化粒度；
-- S0-7：构建时间基线 ×3 取中位落盘（`dotnet build zx.sln` 与 `dotnet build framework/JNPF.sln` 各测）。
+- S0-7：构建时间基线 ×3 取中位落盘（`dotnet build zx.sln` 与 `dotnet build framework/JNPF.sln` 各测）；
+- S0-8（v2.1）：**依赖图基线**——脚本化生成全后端 ProjectReference 边快照 `dependency-baseline.txt`（含包域/源码域归属标注），并预载 §3.1 禁边清单为可执行校验；此后每阶段产出 `dependency-after-{阶段}.txt` diff 比对，禁边零命中 + 无环为第七类证据；
+- S0-9（v2.1）：**编译后 Public API 快照工具选型尖刺**——PublicApiGenerator（NuGet）vs 自研 Roslyn 扫描器二选一（评估口径：record/enum/interface/delegate/嵌套 internal 类误报率、接入成本），定选后为迁移区生成 `{包名}.publicapi.txt` 基线；grep 清单（v1.0 命令）降级为快扫层，不再作为冻结终证；
+- S0-10（v2.1）：**文件哈希守恒协议定义**——迁移前后逐文件 SHA256 对照脚本（`旧集合 − 迁移集 = 0`、`迁移集 − 新集合 = 0`、`内容哈希变化数 = 0`），替代 git rename heuristic 作为第五类证据的实现；同时定义「旧路径不存在」检查（`test ! -d framework/JNPF/{迁出区}` 逐区断言）。
 
 ### P1 B1/B2 拆分（v1.0 原案，~10h）
 
-Task 1.1 Cryptography / Task 1.2 Utils / Task 2.1 Abstractions，五件套证据门禁，契约台账 `C-SPLIT-{区}@v1`。**产出 3 DLL 即 W2 波次包成员。**
+Task 1.1 Cryptography / Task 1.2 Utils / Task 2.1 Abstractions，**七件套证据门禁**（§6.1），契约台账 `C-SPLIT-{区}@v1`。**产出 3 个可独立构建/发布的组件即 W2 波次包成员。**
+
+**聚合边界声明（v2.1）：** `JNPF.Abstractions`（五区聚合）与 `JNPF.Extensions.Utils`（三工具聚合）是**第一阶段的聚合边界，不代表最终职责边界**——VirtualFileServer/Configuration 含实现性质，后续再治理仅允许通过独立战役（先职责拆分设计、再物理迁移），本战役禁止顺手细拆。Utils 三件（TimeCrontab/DistributedIDGenerator/LinqBuilder）互相零依赖（v1.0 扫描已证），若未来消费方高度分散再评估拆包。
 
 ### P2 内核上包 + 全量切换（价值兑现点）
 
-1. W1 打包 7 包（JNPF 内核 + JwtBearer/Mapster/Dapper/Serilog/CodeAnalysis/RabbitMQ）→ W2 打包 7 项（SqlSugar/Xunit/EventBus.Outbox/JNPF.Common + P1 三 DLL）→ W3 打包 3 包（WebSockets/Thirdparty/CollectiveOAuth）；
-2. 按 §3.2 清单原子切换消费边（业务 6 工程 + 测试 7 工程，单提交完成，S0-6 结论定粒度）；
-3. 框架 14+3 工程从 `zx_lowcode_netcore.sln` 摘除，日常编译图瘦身至 51 工程；
-4. 验收：构建时间对比基线落盘 + 路由快照零 diff + `jnpf-api.mjs CurrentUser` 200 + `E2E_PIPELINE_ID=311 pnpm test:api` 绿 + 全量 `dotnet test` 绿。
+**步骤 0（v2.1）：双模式接线落地。** 为包域全部对内引用建立条件 ItemGroup——
 
-### P3 按收益扩展（可选段）
+```xml
+<ItemGroup Condition="'$(JNPF_PACK)' != 'true'">
+    <ProjectReference Include="..\JNPF.Abstractions\JNPF.Abstractions.csproj" />
+</ItemGroup>
+<ItemGroup Condition="'$(JNPF_PACK)' == 'true'">
+    <PackageReference Include="JNPF.Abstractions" Version="$(JNPFVersion)" />
+</ItemGroup>
+```
 
+- `JNPF_PACK=false`（默认）= **Source Mode**：ProjectReference，本地开发/调试/CI 快速迭代态；
+- `JNPF_PACK=true` = **Package Mode**：PackageReference，发布/消费验证态；
+- 框架开发态日常用 Source Mode；Package Mode 是 P2 验收与每次发版的**必过验证态**，不是一次性动作。
+
+**步骤 1：显式打包（禁止 build 隐含 pack）。** 每波次自底向上 `dotnet pack -c Release`（下游包的 nuspec 依赖要求上游包先入本地源）：W1 7 包（内核 + JwtBearer/Mapster/Dapper/Serilog/CodeAnalysis/RabbitMQ）→ W2 7 项（SqlSugar/Xunit/EventBus.Outbox/JNPF.Common + P1 三组件）→ W3 3 包（WebSockets/Thirdparty/CollectiveOAuth）；逐包核验 nuspec 依赖与 §3.1 DAG 一致。
+
+**步骤 2：原子切换消费边。** 按 §3.2 清单（业务 6 工程 + 测试 7 工程）切 PackageReference，S0-6 结论定粒度；**门禁：Package Mode 下 `grep -R "ProjectReference.*JNPF\." {包域目标}` 对包域成员零命中**（`dotnet sln remove` 只是隐藏，不构成切换证据）。
+
+**步骤 3：sln 摘除。** 框架 14+3 工程从 `zx_lowcode_netcore.sln` 摘除（`framework/JNPF.sln` 为框架开发态载体）。
+
+**步骤 4：洁净室验收（协议见 §6.5）。** 清缓存 → restore → build → test → 启动 → 路由快照，全程 Package Mode；加上构建时间对比基线落盘 + `jnpf-api.mjs CurrentUser` 200 + `E2E_PIPELINE_ID=311 pnpm test:api` 绿 + 全量 `dotnet test` 绿。
+
+### P3 收益扩展（**明令置后于 G5 终审**，v2.1 措辞升级）
+
+以下各项在 G5（依赖无环核验 + 契约台账核对 + 时间收益报告 + 洁净室复验）通过前**禁止开工**：
+
+- v1.0 B3 四包（Caching/RemoteRequest/WebAssets/BackgroundJobs）——**Caching 明令第一轮不做**（A-2 若证实反向依赖，则非纯移动问题，须独立设计）；P2 后内核源码已退出编译图，B3 剩余价值仅 AI 上下文粒度，收益实测再议；
 - JNPF.Common 目录归属裁决（迁 framework/ 与否）；
-- v1.0 B3 四包（Caching/RemoteRequest/WebAssets/BackgroundJobs）按实测收益逐个裁决——P2 后内核源码已退出编译图，B3 的剩余价值仅剩 AI 上下文粒度，优先级自然下调。
+- 完整 CPM（`Directory.Packages.props`）迁移、SourceLink。
 
 ### P4 解环路线图（纯分析，不施工）
 
@@ -279,16 +344,26 @@ Task 1.1 Cryptography / Task 1.2 Utils / Task 2.1 Abstractions，五件套证据
 
 ## 6. 横切关注点
 
-### 6.1 证据门禁（五件套沿用 + v2.0 扩展）
+### 6.1 证据门禁（**七件套**，v2.1 升格）
 
-P1 沿用 v1.0 五件套；**P2 追加第六件：切换前后行为等价三证**——路由快照零 diff + CurrentUser 冒烟 + test:api 绿（包引用与源码引用产出必须行为一致）。
+| # | 证据 | 实现口径 |
+|---|---|---|
+| 1 | Build = 0 error | `dotnet build`（backend 全解决方案；P2 加 Package Mode 复跑） |
+| 2 | Test = 全绿 | `dotnet test` 全量 |
+| 3 | Route Snapshot = 0 diff | Benchmarks 路由快照 vs 基线 |
+| 4 | **Public API = 0 diff（编译后）** | `{包}.publicapi.txt`（S0-9 选型工具产出的程序集级快照，覆盖 record/enum/delegate/嵌套 internal 误报）；grep 清单仅作快扫 |
+| 5 | **文件守恒 = SHA256 对照** | S0-10 协议：新旧集合差集为 0 + 内容哈希变化为 0 + 旧路径不存在断言；git rename 检测仅作辅助 |
+| 6 | **依赖图 = 禁边零命中 + 无环** | `dependency-after-{阶段}.txt` vs §3.1 禁边清单（S0-8 基线机制） |
+| 7 | **Package Mode 行为等价** | 洁净室协议（§6.5）全链通过：clean→restore→build→test→启动→路由快照零 diff + CurrentUser 200 + test:api 绿 |
+
+P1 使用 1-6；P2/发版使用全部七件。
 
 ### 6.2 回滚轴
 
 | 阶段 | 回滚方式 |
 |---|---|
 | P1 | 批次级 `git revert`（v1.0 沿用） |
-| P2 切换 | 单提交 `git revert` 恢复全部 ProjectReference（切换面小，原子可逆） |
+| P2 切换 | 单提交 `git revert` 恢复全部 ProjectReference（切换面小，原子可逆）；**双模式接线使 Source Mode 成为天然回退态**——消费侧切回 `JNPF_PACK=false` 即回源码消费，无需改文件 |
 | P2 运行期异常 | nuget.config 移除本地源 + revert = 完整退回源码消费态 |
 
 ### 6.3 多轨隔离（与 RunService 战役）
@@ -301,12 +376,35 @@ P1 沿用 v1.0 五件套；**P2 追加第六件：切换前后行为等价三证
 |---|---|---|---|
 | 混合引用双身份冲突（包+源同身份） | 中 | 高 | S0-6 尖刺测试先行定论；P2 原子切换设计兜底 |
 | GlobalUsings/隐式依赖致 P1 编译失败 | 中 | 低 | v1.0 预扫描 + 仅增 using 豁免（沿用） |
+| 隐式耦合绕过 csproj 扫描（InternalsVisibleTo/反射/程序集扫描/生成代码/MSBuild target） | 中 | 高 | 七件套第 6 件依赖图门禁 + 七件套第 3 件路由快照兜底（运行时行为等价）；S0 疑点溯源扩项排查 IVT 声明 |
+| 双模式条件接线笔误（两 ItemGroup 同时生效/均未生效） | 中 | 中 | 步骤 0 落地后即以 Source/Package 两态各跑一次 build+test 作为接线自证 |
+| 洁净室命令误伤 gitignored 运行资产（连接串等） | 低 | 高 | §6.5 护栏：范围限定 + 备份恢复 + 前置清单确认 |
 | 打包遗漏非 .cs 资产（嵌入资源/本地化） | 中 | 中 | S0 Task 0.2 资产清点扩展至包域 14 工程 |
 | 框架开发态重打包遗忘导致"改了不生效" | 中 | 低 | ADR 已知代价；P2 验收含"框架变更→重打包→生效"演练用例 |
 | 与 RunService 战役窗口冲突 | 中 | 中 | §6.3 错窗规则 |
-| 版本漂移（包 3.5.0 与业务 3.6.0 混淆） | 低 | 低 | §2.4 双版本域文档化 + S0 登记基线 |
+| 版本漂移（包 3.5.0 与业务 3.6.0 混淆） | 低 | 低 | §2.4 中央 `$(JNPFVersion)` 属性 + 双版本域文档化 |
 
-### 6.5 SLO（业务口径）
+### 6.5 洁净室验证协议（v2.1 新增，含破坏性命令护栏）
+
+**目的：** 证明系统真能从 NuGet 包恢复，而非偷偷依赖本地 ProjectReference / 旧 bin/obj / NuGet 缓存残留。
+
+**⚠ 护栏（先于一切命令）：**
+
+1. `git clean -xfd` 是破坏性命令，且 **`ConnectionStrings.json` 是 gitignored 运行必需资产**——全仓 clean 会删除它并打爆运行时。**禁止全仓 clean**；仅允许对 `framework/` 树与指定工程的 `bin/obj` 做范围清理；
+2. 清理前生成「将被删除文件清单」人工过目，连接串等运行资产先行备份、验收后恢复；
+3. NuGet 缓存清理**只清 JNPF\* 包**（`%userprofile%\.nuget\packages\jnpf*` 定向删除），不做 `dotnet nuget locals all --clear` 全清（全清逼着重下全部第三方包，慢且无信息增益）；
+4. 本协议命令受 `guard-bash` 拦截管辖，执行前须用户批准。
+
+**Package Mode 洁净室序列（P2/发版必过）：**
+
+```
+① 备份运行资产（连接串等）→ ② 范围清理 bin/obj + 定向清 JNPF* nuget 缓存
+→ ③ JNPF_PACK=true dotnet restore → ④ build → ⑤ test
+→ ⑥ 启动（路由快照采集）→ ⑦ 路由快照 vs 基线 = 0 diff
+→ ⑧ jnpf-api.mjs CurrentUser = 200 → ⑨ 恢复运行资产，落盘 evidence
+```
+
+### 6.6 SLO（业务口径）
 
 - P2 完成：`dotnet build zx.sln` 时间较 S0 基线下降（目标值以 S0-7 实测登记，不预编数字）；"AI 修改框架代码"可见上下文 = 单工程（P1 兑现）+ 包消费视角（P2 兑现）。
 - P4 产出：三份解环分析，无施工承诺。
@@ -324,3 +422,24 @@ P1 沿用 v1.0 五件套；**P2 追加第六件：切换前后行为等价三证
 | 基础设施反向依赖 | 未发现 | W3 波次处理 | 偏离二实锤 |
 | 内核解环 | 排除（远期） | P4 路线图（分析产物） | 沿用 + 结构化 |
 | 其余（纯移动纪律/五件套/多轨隔离/本地源） | — | 全部沿用 | v1.0 决策仍成立 |
+
+---
+
+## 8. v2.1 评审修正记录（2026-08-24 外部工程评审落地对照）
+
+| 评审编号 | 要求 | 落点 | 备注 |
+|---|---|---|---|
+| P0-1 | 依赖图基线 + 方向门禁 | S0-8 + §3.1 禁边清单 + 七件套第 6 件 | A-2 溯源结论并入禁边 |
+| P0-2 | Public API 升级编译后快照 | S0-9 + §2.5 + 七件套第 4 件 | grep 降级为快扫层 |
+| P0-3 | Source/Package 双模式正式语义 | §5 P2 步骤 0 | `JNPF_PACK` 条件 ItemGroup；Source Mode 默认 |
+| P0-4 | 显式 `dotnet pack` | §5 P2 步骤 1 | 自底向上波次顺序 + nuspec 与 DAG 核验 |
+| P0-5 | Package Mode 下 ProjectReference=0 | §5 P2 步骤 2 门禁 | grep 零命中为切换证据 |
+| P0-6 | 洁净室验证 | §6.5 协议 | **含护栏**：禁全仓 clean（ConnectionStrings.json gitignored）、NuGet 缓存定向清 JNPF*、guard-bash 管辖 |
+| P0-7 | 包间依赖图写死 | §3.1 + §2.5 dependencies 行 | nuspec 逐包核验 |
+| 附加 | 中央版本管理 | §2.4 `$(JNPFVersion)` 属性 | 完整 CPM 列 P3（避免波及 73 工程第三方引用的范围蔓延） |
+| 附加 | S3/Caching 移出主线 | §5 P3 明令置后于 G5 | v2.0 已降级，v2.1 措辞升格为禁令 |
+| 附加 | 隔离四层术语 / 「独立 DLL」表述 | §1.5 | Runtime Isolation 明令非目标 |
+| 附加 | Abstractions/Utils 聚合边界声明 | §5 P1 | 禁止本战役顺手细拆 |
+| 附加 | 文件守恒 SHA256 升级 + 旧路径不存在门禁 | S0-10 + 七件套第 5 件 | 替代 git rename heuristic |
+| 附加 | 发包契约（PackageId/AssemblyName/Namespace…） | §2.5 | 命名空间冻结与包名解耦显式化 |
+| 既有覆盖说明 | 「S4 缺 ProjectReference→PackageReference 切换」「43 工程切换面」针对 v1.0 S4 设计 | v2.0 §3.2 已以实测切换面（6 业务 + 7 测试 csproj）+ S0-6 混合引用尖刺覆盖 | 非本次新增 |
