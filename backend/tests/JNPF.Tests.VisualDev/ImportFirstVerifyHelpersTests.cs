@@ -180,4 +180,144 @@ public class ImportFirstVerifyHelpersTests
         Assert.IsType<List<Dictionary<string, object>>>(rows[0]["tableField111"]);
         Assert.Equal(string.Empty, rows[0][ImportAssembleErrors.ErrorKey]);
     }
+
+    // ==================== D1.4 S1 特征用例（规格 §2.4 不变量 I1-I6 缺口补齐） ====================
+    // 金标准纪律：本批用例在当前实现上全绿后才允许拆分；拆分后逐条等价。
+
+    [Fact]
+    public void D1_I1_TripleDuplicate_AppendsExactlyNMinusOneMessagesPerRow()
+    {
+        // I1（Q8 保真）：3 重复 → 每行追加精确 N-1=2 条同文错误（for i=1 循环，非去重语义）
+        var fields = new List<FieldsModel> { Field("code", "编码", unique: true) };
+        var rows = ImportFirstVerifyHelpers.SeedWithEmptyErrors(
+            new List<Dictionary<string, object>>
+            {
+                new() { ["code"] = "A" },
+                new() { ["code"] = "A" },
+                new() { ["code"] = "A" },
+            });
+
+        ImportFirstVerifyHelpers.ValidateBatchUnique(
+            rows, fields, childTableVModels: new List<string>(), dataType: "1");
+
+        foreach (var row in rows)
+            Assert.Equal(",编码: 值不能重复,编码: 值不能重复", row[ImportAssembleErrors.ErrorKey]);
+    }
+
+    [Fact]
+    public void D1_I5_ContainsValuePrefilter_ValueOnlyElsewhere_NoDuplicate()
+    {
+        // I5（Q9 实测修正保真）：ContainsValue 仅为候选粗筛，重复判定以内层键值相等为准 —
+        // 他行无 code 键但含同值（note=A）→ 不入重复集，不报错（锁定粗筛非错误来源）
+        var fields = new List<FieldsModel> { Field("code", "编码", unique: true) };
+        var rows = ImportFirstVerifyHelpers.SeedWithEmptyErrors(
+            new List<Dictionary<string, object>>
+            {
+                new() { ["code"] = "A" },
+                new() { ["note"] = "A" },
+            });
+
+        ImportFirstVerifyHelpers.ValidateBatchUnique(
+            rows, fields, childTableVModels: new List<string>(), dataType: "1");
+
+        Assert.Equal(string.Empty, rows[0][ImportAssembleErrors.ErrorKey]);
+        Assert.Equal(string.Empty, rows[1][ImportAssembleErrors.ErrorKey]);
+    }
+
+    [Fact]
+    public void D1_I6_NullValues_SkipDuplicateCheck()
+    {
+        // I6：双空值守卫 — null 值不参与重复判定（两行同 null 不报错）
+        var fields = new List<FieldsModel> { Field("code", "编码", unique: true) };
+        var rows = ImportFirstVerifyHelpers.SeedWithEmptyErrors(
+            new List<Dictionary<string, object>>
+            {
+                new() { ["code"] = null! },
+                new() { ["code"] = null! },
+            });
+
+        ImportFirstVerifyHelpers.ValidateBatchUnique(
+            rows, fields, childTableVModels: new List<string>(), dataType: "1");
+
+        Assert.Equal(string.Empty, rows[0][ImportAssembleErrors.ErrorKey]);
+        Assert.Equal(string.Empty, rows[1][ImportAssembleErrors.ErrorKey]);
+    }
+
+    [Fact]
+    public void D1_NoUniqueFields_RowsUntouched()
+    {
+        // 无唯一字段配置 → 整体早退，错误串保持 Seed 形态（调用方依赖零触碰）
+        var fields = new List<FieldsModel> { Field("code", "编码") };
+        var rows = ImportFirstVerifyHelpers.SeedWithEmptyErrors(
+            new List<Dictionary<string, object>>
+            {
+                new() { ["code"] = "A" },
+                new() { ["code"] = "A" },
+            });
+
+        ImportFirstVerifyHelpers.ValidateBatchUnique(
+            rows, fields, childTableVModels: new List<string>(), dataType: "1");
+
+        Assert.Equal(string.Empty, rows[0][ImportAssembleErrors.ErrorKey]);
+        Assert.Equal(string.Empty, rows[1][ImportAssembleErrors.ErrorKey]);
+    }
+
+    [Fact]
+    public void D1_I4_ChildNonType2_NullChildValue_Skipped()
+    {
+        // I4+I6 子表：错误模式下 null 子值不参与唯一判定（与主字段守卫对称）
+        var fields = new List<FieldsModel>
+        {
+            Field("tableField111", "明细", jnpfKey: JnpfKeyConst.TABLE),
+            Field("tableField111-f_code", "子编码", unique: true),
+        };
+        var rows = ImportFirstVerifyHelpers.SeedWithEmptyErrors(
+            new List<Dictionary<string, object>>
+            {
+                new()
+                {
+                    ["tableField111"] = new List<Dictionary<string, object>>
+                    {
+                        new() { ["f_code"] = null! },
+                        new() { ["f_code"] = null! },
+                    },
+                },
+            });
+
+        ImportFirstVerifyHelpers.ValidateBatchUnique(
+            rows, fields, childTableVModels: new List<string> { "tableField111" }, dataType: "1");
+
+        Assert.Equal(string.Empty, rows[0][ImportAssembleErrors.ErrorKey]);
+    }
+
+    [Fact]
+    public void D1_I3_DataType2_NoDuplicates_ReplacesListWithSameContent()
+    {
+        // I3："2" 模式无重复时仍整体替换子表列表（内容不变，替换行为保真锁定）
+        var fields = new List<FieldsModel>
+        {
+            Field("tableField111", "明细", jnpfKey: JnpfKeyConst.TABLE),
+            Field("tableField111-f_code", "子编码", unique: true),
+        };
+        var rows = ImportFirstVerifyHelpers.SeedWithEmptyErrors(
+            new List<Dictionary<string, object>>
+            {
+                new()
+                {
+                    ["tableField111"] = new List<Dictionary<string, object>>
+                    {
+                        new() { ["f_code"] = "1", ["f_name"] = "a" },
+                        new() { ["f_code"] = "2", ["f_name"] = "b" },
+                    },
+                },
+            });
+
+        ImportFirstVerifyHelpers.ValidateBatchUnique(
+            rows, fields, childTableVModels: new List<string> { "tableField111" }, dataType: "2");
+
+        var child = Assert.IsType<List<Dictionary<string, object>>>(rows[0]["tableField111"]);
+        Assert.Equal(2, child.Count);
+        Assert.Equal("a", child[0]["f_name"]);
+        Assert.Equal("b", child[1]["f_name"]);
+    }
 }

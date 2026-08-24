@@ -1,6 +1,7 @@
 using System.Reflection;
 using JNPF.Engine.Entity.Model;
 using JNPF.Systems.Entitys.Permission;
+using JNPF.VisualDev.Engine.Import;
 using JNPF.VisualDev.Query;
 using JNPF.VisualDev.Transfer;
 using Xunit;
@@ -59,6 +60,24 @@ public class D1SignatureContractTests
             typeof(List<Dictionary<string, string>>),
             typeof(IReadOnlyDictionary<string, FieldsModel>),
             typeof(IReadOnlyDictionary<string, FieldsModel>),
+            typeof(string),
+        }, types);
+    }
+
+    [Fact]
+    public void ValidateBatchUnique_Signature_Unchanged()
+    {
+        var m = typeof(ImportFirstVerifyHelpers).GetMethod(
+            "ValidateBatchUnique", BindingFlags.Public | BindingFlags.Static);
+
+        Assert.NotNull(m);
+        Assert.Equal(typeof(void), m!.ReturnType);
+        var types = m.GetParameters().Select(p => p.ParameterType).ToArray();
+        Assert.Equal(new[]
+        {
+            typeof(List<Dictionary<string, object>>),
+            typeof(List<FieldsModel>),
+            typeof(List<string>),
             typeof(string),
         }, types);
     }
