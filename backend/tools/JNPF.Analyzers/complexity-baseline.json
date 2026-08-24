@@ -837,14 +837,6 @@
       "maxComplexity": 30,
       "file": "modularity/workflow/JNPF.WorkFlow/Manager/FlowTaskManager.cs",
       "measuredBy": "CyclomaticComplexityWalker"
-    },
-    {
-      "symbol": "modularity/common/JNPF.Common.Core/Manager/User/Conditions/GetConditionQueryClauseAppender.cs::Append",
-      "name": "Append",
-      "maxComplexity": 31,
-      "file": "modularity/common/JNPF.Common.Core/Manager/User/Conditions/GetConditionQueryClauseAppender.cs",
-      "measuredBy": "CyclomaticComplexityWalker",
-      "note": "历史存量，非 Task 3.4 引入（归因 commit 456e2d6b）；2026-08-24 裁决登记冻结：只许下降不许上升；待拆分重构（Tech-Debt: CC31-Append-Refactor）"
     }
   ]
 }

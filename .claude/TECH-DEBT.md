@@ -25,7 +25,7 @@
 
 ### 4. Tech-Debt: CC31-Append-Refactor
 - **现状**：5 个历史存量方法超圈复杂度阈值 30，均归因 commit 456e2d6b，2026-08-24 Task 3.4 期间裁决登记基线冻结（只许下降不许上升）：
-  - `GetConditionQueryClauseAppender.Append`（CC31）
+  - `GetConditionQueryClauseAppender.Append`（CC31→已拆分销账，2026-08-24 战役 D1 D1.5：门面+子方法全部 <30，基线条目已移除，无豁免通过 CI；多租户数据权限链路专属验证：Common 全量 51/51 + 架构测试 + 路由 zero-diff）
   - `ImportFirstVerifyHelpers.ValidateBatchUnique`（CC35→已拆分销账，2026-08-24 战役 D1 D1.4：门面+子方法全部 <30，基线条目已移除，无豁免通过 CI）
   - `ListSuperQueryInputRewriter.Rewrite`（CC84→已拆分销账，2026-08-24 战役 D1 D1.1：门面+子方法全部 <30，基线条目已移除，无豁免通过 CI）
   - `FieldBindDefaultValueHelpers.Bind`（CC82→已拆分销账，2026-08-24 战役 D1 D1.2：门面+子方法全部 <30，基线条目已移除，无豁免通过 CI）

@@ -1,4 +1,6 @@
 using System.Reflection;
+using JNPF.Common.Core.Manager.User.Conditions;
+using JNPF.Common.Enums;
 using JNPF.Engine.Entity.Model;
 using JNPF.Systems.Entitys.Permission;
 using JNPF.VisualDev.Engine.Import;
@@ -78,6 +80,27 @@ public class D1SignatureContractTests
             typeof(List<Dictionary<string, object>>),
             typeof(List<FieldsModel>),
             typeof(List<string>),
+            typeof(string),
+        }, types);
+    }
+
+    [Fact]
+    public void Append_Signature_Unchanged()
+    {
+        var m = typeof(GetConditionQueryClauseAppender).GetMethod(
+            "Append", BindingFlags.Public | BindingFlags.Static);
+
+        Assert.NotNull(m);
+        Assert.Equal(typeof(bool), m!.ReturnType);
+        var types = m.GetParameters().Select(p => p.ParameterType).ToArray();
+        Assert.Equal(new[]
+        {
+            typeof(List<object>),
+            typeof(QueryType),
+            typeof(string),
+            typeof(object),
+            typeof(List<string>),
+            typeof(string),
             typeof(string),
         }, types);
     }
