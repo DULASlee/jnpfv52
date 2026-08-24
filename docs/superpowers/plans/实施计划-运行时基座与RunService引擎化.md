@@ -124,8 +124,8 @@
 
 ### Task 3.6：S1 门禁（1h）｜依赖：3.1-3.5
 
-- [ ] Step 1：路由快照零 diff + 契约测试全绿 + 特征单测全绿 + CI 构建绿
-- [ ] Step 2：落盘 `s1-routes.txt`；提交门禁证据
+- [x] Step 1：路由快照零 diff + 契约测试全绿 + 特征单测全绿 + CI 构建绿（✅ 2026-08-24 @HEAD b4529577：路由 1077/107 与 s0 基线 DIFF_EXIT=0；VisualDev 218/218；特征 8/8；`/p:CI_BUILD=true` ExitCode=0 零错误）
+- [x] Step 2：落盘 `s1-routes.txt`；提交门禁证据（✅ `s1-routes.txt` + `s1-gate-evidence.md`，S1 gate 独立提交）
 
 **S1 节点审批**：等待批准进入 S2。
 
