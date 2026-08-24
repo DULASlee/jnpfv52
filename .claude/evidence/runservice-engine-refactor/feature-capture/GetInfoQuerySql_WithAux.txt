@@ -1,0 +1,1 @@
+select T_MAIN.f_id,T_MAIN.f_name FIELD0,T_MAIN.f_status FIELD1 from T_MAIN,T_AUX where  T_MAIN.f_id='ID123'  and  T_MAIN.F_MAIN_ID=T_AUX.F_AUX_MAIN_ID |{"FIELD0":"main_jnpf_f_name","FIELD1":"main_jnpf_f_status"}

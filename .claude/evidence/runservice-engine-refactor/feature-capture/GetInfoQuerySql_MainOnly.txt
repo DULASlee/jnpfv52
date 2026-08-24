@@ -1,0 +1,1 @@
+select f_id,main_jnpf_f_name,main_jnpf_f_status,main_jnpf_f_date from T_MAIN where f_id='ID123'

@@ -1,0 +1,1 @@
+[{"whereType":0,"jnpfKey":"input","field":"f_name","where":0,"fieldValue":"alice","ConditionalType":0}]

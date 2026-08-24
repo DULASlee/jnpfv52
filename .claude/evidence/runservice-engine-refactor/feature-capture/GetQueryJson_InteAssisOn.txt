@@ -1,0 +1,1 @@
+[{"ConditionalList":[{"Key":0,"Value":{"FieldName":"f_inte_assistant","FieldValue":"1","CSharpTypeName":null,"CustomConditionalFunc":null,"CustomParameterValue":null,"ConditionalType":0}}]}]

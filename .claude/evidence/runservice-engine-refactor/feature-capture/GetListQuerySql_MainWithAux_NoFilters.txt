@@ -1,0 +1,1 @@
+select T_MAIN.f_id,T_MAIN.f_inte_assistant,T_MAIN.f_name FIELD_0,T_AUX.f_extra FIELD_1 from T_MAIN,T_AUX where T_MAIN.F_MAIN_ID=T_AUX.F_AUX_MAIN_ID
