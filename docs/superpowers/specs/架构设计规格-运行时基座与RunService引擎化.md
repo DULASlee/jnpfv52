@@ -449,7 +449,7 @@ gate 输出即观测：每阶段门禁产物落盘 `s{N}-routes.txt` 存档（�
 
 #### 4.3.2 数据模型与状态
 
-无数据结构新增、无状态（ISingleton 注册但纯函数，线程安全由无状态保证）。七方法签名逐字不变（来源：A+C 子规格 §3 清单：GetListQuerySql/GetInfoQuerySql/GetQueryJson/GetSuperQueryJson/GetSuperQueryInput/GetIConditionalModelListByTableName/GetVisualDevModelDataConfig）。
+无数据结构新增、无状态（ISingleton 注册但纯函数，线程安全由无状态保证）。七方法签名语义一致（参数/返回形态不变；**裁决 C（2026-08-24，严格口径）：SqlSugar 条件模型类型替换为平台自有类型，见 4.3.8 验收①；原载「逐字不变」口径废止**。方法清单（来源：A+C 子规格 §3）：GetListQuerySql/GetInfoQuerySql/GetQueryJson/GetSuperQueryJson/GetSuperQueryInput/GetIConditionalModelListByTableName/GetVisualDevModelDataConfig）。
 
 #### 4.3.3 并发与竞态 / 4.3.5 性能特征 / 4.3.4 错误处理与降级
 
@@ -476,7 +476,7 @@ public class RunSqlCompiler : ISingleton
 #### 4.3.8 落地影响
 
 - 修改项：➕ `Runtime/RunSqlCompiler.cs` ｜ ✏️ `RunService.cs`（七方法移出，调用点改 `_compiler.X`，IRunService 成员保留委托转发）｜ ✏️ `complexity-baseline.json`（超标条目归属改 RunSqlCompiler）｜ ➕ 特征单测（**特征捕获**：迁移前用真实输入抓取输出快照作为期望值，禁止手写猜测，来源：Evidence Over Assumption 纪律）。
-- 验收标准：① grep RunSqlCompiler 零 SqlSugar 类型引用 → 失败回滚：revert 剥离步骤；② 特征单测全绿 → 失败回滚：逐方法比对迁移前后方法体；③ 路由快照零 diff → 失败回滚：阶段级 git revert。
+- 验收标准：① grep RunSqlCompiler 零 SqlSugar 类型引用（**裁决 C 严格口径：含条件模型 DTO 类型，平台自有类型替代；特征捕获前置到剥离前**） → 失败回滚：revert 剥离步骤；② 特征单测全绿 → 失败回滚：逐方法比对迁移前后方法体；③ 路由快照零 diff → 失败回滚：阶段级 git revert。
 
 #### 4.3.9 设计自检（5 问）
 

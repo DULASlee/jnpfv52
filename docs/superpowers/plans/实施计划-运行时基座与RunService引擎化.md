@@ -93,13 +93,18 @@
 - [x] Step 2：构建 0 错误（✅ 全解决方案）
 - [x] Step 3：路由快照与基线零 diff；C-M3-RunSqlCompiler@v1 物化入台账（SHA256 登记）；提交（✅ 1077/107 与基线逐行零 diff；存量测试 204/204 绿；快照 `s1-task32-routes.txt`）
 
-### Task 3.3：DB 依赖参数化剥离（4h）｜依赖：3.2
+### Task 3.3：DB 依赖参数化剥离（4h+，裁决 C 严格口径增量拆解）｜依赖：3.2
 
-**Files:** ✏️ `Runtime/RunSqlCompiler.cs`（方法内 DB 读取调用改参数传入）｜ ✏️ `RunService.cs`（调用侧供数）
+> **裁决 C（2026-08-24，用户拍板严格口径）**：验收①「零 SqlSugar 类型引用」含条件模型 DTO 类型；
+> 规格 4.3.2 签名口径修订为「语义一致（SqlSugar 类型→平台自有类型）」。
+> 施工方案三增量：设计事实源 `.claude/evidence/runservice-engine-refactor/ruling-c-task33-strict-zero-sqlsugar.md`。
 
-- [ ] Step 1：逐方法识别内部 DB 读取，改为方法参数；调用侧传入
-- [ ] Step 2：grep RunSqlCompiler 零 SqlSugar 类型引用（验收断言）
-- [ ] Step 3：构建 0 错误+快照零 diff；提交
+**Files:** ✏️ `Runtime/RunSqlCompiler.cs` ｜ ➕ `Runtime/CompileConditionalModels.cs` ➕ `Runtime/CompileConditionalConverter.cs` ➕ `Runtime/RunSqlCompileGateway.cs`（替换并删除 `RunSqlCompileContext.cs`）｜ ✏️ `RunService.cs`（调用侧供数+入口转换）
+
+- [x] Inc-1：平台条件模型类型+双向转换器+JSON 往返等价单测（零行为变更，先行提交）（✅ 6/6 绿：字节等价/双向转换/嵌套结构/Utilities 回解析/JsonIgnore 对齐；实测修正：FieldValueConvertFunc=Func<string,object>+[JsonIgnore]）
+- [ ] Inc-2：特征捕获前置（3.5 提拉）——剥离前对当前实现捕获代表性输入输出快照为期望值（禁止手写猜测）
+- [ ] Inc-3：参数化剥离——gateway 委托供数；变异语义逐处核对（dataRuleList 跨迭代就地删减等）；删除过渡载体；构建 0 错+快照零 diff；提交
+- [ ] 验收：①grep `RunSqlCompiler.cs` 零 SqlSugar（含 using）②特征单测全绿 ③存量测试全绿 ④C-M3 台账重录（过渡注记移除）
 
 ### Task 3.4：JNPF009 基线随迁（2h）｜依赖：3.3
 
