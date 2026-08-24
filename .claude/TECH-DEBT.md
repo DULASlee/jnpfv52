@@ -23,21 +23,23 @@
 - **方案**：升级为 YAML frontmatter 或 JSON 结构化解析
 - **优先级**：低（当前格式已冻结，短期无变化风险）
 
-### 4. Tech-Debt: CC31-Append-Refactor
-- **现状**：5 个历史存量方法超圈复杂度阈值 30，均归因 commit 456e2d6b，2026-08-24 Task 3.4 期间裁决登记基线冻结（只许下降不许上升）：
-  - `GetConditionQueryClauseAppender.Append`（CC31→已拆分销账，2026-08-24 战役 D1 D1.5：门面+子方法全部 <30，基线条目已移除，无豁免通过 CI；多租户数据权限链路专属验证：Common 全量 51/51 + 架构测试 + 路由 zero-diff）
-  - `ImportFirstVerifyHelpers.ValidateBatchUnique`（CC35→已拆分销账，2026-08-24 战役 D1 D1.4：门面+子方法全部 <30，基线条目已移除，无豁免通过 CI）
-  - `ListSuperQueryInputRewriter.Rewrite`（CC84→已拆分销账，2026-08-24 战役 D1 D1.1：门面+子方法全部 <30，基线条目已移除，无豁免通过 CI）
-  - `FieldBindDefaultValueHelpers.Bind`（CC82→已拆分销账，2026-08-24 战役 D1 D1.2：门面+子方法全部 <30，基线条目已移除，无豁免通过 CI）
-  - `FlowFormDataMapper.ApplyMapRules`（CC37→已拆分销账，2026-08-24 战役 D1 D1.3：门面+子方法全部 <30，基线条目已移除，无豁免通过 CI）
-- **处置**：`complexity-baseline.json` 登记冻结值（每条含归因注记）；方法级 TODO 注释；CI（`dotnet build /p:CI_BUILD=true`）拦截任何上升
-- **拆分重构（已立项，防遗忘硬绑定）**：设计规格 `docs/superpowers/specs/架构设计规格-复杂度基线技术债拆分重构.md` + 实施计划 `docs/superpowers/plans/实施计划-复杂度基线技术债拆分重构.md`（战役 D1，三波次：P0=Rewrite CC84→≤10 / Bind CC82→≤12，P1=ApplyMapRules / ValidateBatchUnique，P2=Append；目标：全部降到 30 以下并从基线销账）
-- **启动节点**：运行时基座战役 Task 3.6 S1 门禁通过后，每波次独立节点审批
-- **责任人**：待认领（后续战役承接）
-
 ---
 
 ## 已解决
+
+### ✅ 5 个 CC>30 历史存量方法拆分销账（战役 D1，2026-08-24/25 完成）
+- **问题**：5 个历史存量方法超圈复杂度阈值 30，均归因 commit `456e2d6b`，2026-08-24 Task 3.4 期间裁决登记基线冻结（只许下降不许上升）
+- **解决**：战役 D1 三波次逐方法拆分重构（规格 `docs/superpowers/specs/架构设计规格-复杂度基线技术债拆分重构.md` · 计划 `docs/superpowers/plans/实施计划-复杂度基线技术债拆分重构.md`），D1 战役登记的 5 个基线条目全部移除（台账现存 `456e2d6b` 初始 119 条历史存量条目，非本战役范围），`/p:CI_BUILD=true` 无豁免 0 错实证，D1 Final Review 见 `.claude/evidence/d1-complexity-debt/D1-Final-Review.md`：
+
+| 方法 | 前 CC | 拆分结构 | 销账提交 |
+|------|------|---------|---------|
+| `ListSuperQueryInputRewriter.Rewrite` | 84 | 门面+符号直映表+7 专项发射器 | `e84e96dd` |
+| `FieldBindDefaultValueHelpers.Bind` | 82 | 门面+值对象+5 解析器+子表递归 | `be3d372e` |
+| `FlowFormDataMapper.ApplyMapRules` | 37 | 门面+守卫器+3 形态发射器 | `c24c6253` |
+| `ImportFirstVerifyHelpers.ValidateBatchUnique` | 35 | 门面+主字段/子表 4 子方法+错误串接器 | `717929ff` |
+| `GetConditionQueryClauseAppender.Append` | 31 | 门面+直映表+3 特判器 | `bae2bf36` |
+
+- **关闭条件**：全部销账提交可独立 revert；行为等价由 5 组特征金标准（32/19/25/13/33）+ 全套件锁定；怪异行为（Q1-Q11）保真不修（另立行为变更战役）；**子方法 ≤14 原始 DoD 5 处超限（EmitSymbolClause 17/EmitExpandedInNotInClauses 17/TryBindMainSelector 15/ResolveUserDefault 16/BindTableChildren 24）经人工批准接受为偏差，登记为后续结构优化债务（规格 §9.1/9.3）**
 
 ### ✅ 规则文件双重存在
 - **问题**：`assertion-discipline.md`/`engineering-laws.md`/`workflow.md` 在 `rules/` 和 `souls/_shared/` 双重存在
