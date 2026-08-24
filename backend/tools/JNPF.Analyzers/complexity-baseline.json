@@ -69,10 +69,10 @@
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {
-      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::GetListQuerySql",
+      "symbol": "modularity/visualdev/JNPF.VisualDev/Runtime/RunSqlCompiler.cs::GetListQuerySql",
       "name": "GetListQuerySql",
       "maxComplexity": 140,
-      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "file": "modularity/visualdev/JNPF.VisualDev/Runtime/RunSqlCompiler.cs",
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {
@@ -167,10 +167,10 @@
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {
-      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::GetSuperQueryInput",
+      "symbol": "modularity/visualdev/JNPF.VisualDev/Runtime/RunSqlCompiler.cs::GetSuperQueryInput",
       "name": "GetSuperQueryInput",
       "maxComplexity": 84,
-      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "file": "modularity/visualdev/JNPF.VisualDev/Runtime/RunSqlCompiler.cs",
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {
@@ -223,10 +223,10 @@
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {
-      "symbol": "modularity/visualdev/JNPF.VisualDev/RunService.cs::GetQueryJson",
+      "symbol": "modularity/visualdev/JNPF.VisualDev/Runtime/RunSqlCompiler.cs::GetQueryJson",
       "name": "GetQueryJson",
       "maxComplexity": 72,
-      "file": "modularity/visualdev/JNPF.VisualDev/RunService.cs",
+      "file": "modularity/visualdev/JNPF.VisualDev/Runtime/RunSqlCompiler.cs",
       "measuredBy": "CyclomaticComplexityWalker"
     },
     {
@@ -837,6 +837,46 @@
       "maxComplexity": 30,
       "file": "modularity/workflow/JNPF.WorkFlow/Manager/FlowTaskManager.cs",
       "measuredBy": "CyclomaticComplexityWalker"
+    },
+    {
+      "symbol": "modularity/common/JNPF.Common.Core/Manager/User/Conditions/GetConditionQueryClauseAppender.cs::Append",
+      "name": "Append",
+      "maxComplexity": 31,
+      "file": "modularity/common/JNPF.Common.Core/Manager/User/Conditions/GetConditionQueryClauseAppender.cs",
+      "measuredBy": "CyclomaticComplexityWalker",
+      "note": "历史存量，非 Task 3.4 引入（归因 commit 456e2d6b）；2026-08-24 裁决登记冻结：只许下降不许上升；待拆分重构（Tech-Debt: CC31-Append-Refactor）"
+    },
+    {
+      "symbol": "modularity/engine/JNPF.VisualDev.Engine/Import/ImportFirstVerifyHelpers.cs::ValidateBatchUnique",
+      "name": "ValidateBatchUnique",
+      "maxComplexity": 35,
+      "file": "modularity/engine/JNPF.VisualDev.Engine/Import/ImportFirstVerifyHelpers.cs",
+      "measuredBy": "CyclomaticComplexityWalker",
+      "note": "历史存量，非 Task 3.4 引入（归因 commit 456e2d6b）；2026-08-24 裁决登记冻结：只许下降不许上升；待拆分重构（随 CC31-Append-Refactor 同批处置）"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/Query/ListSuperQueryInputRewriter.cs::Rewrite",
+      "name": "Rewrite",
+      "maxComplexity": 84,
+      "file": "modularity/visualdev/JNPF.VisualDev/Query/ListSuperQueryInputRewriter.cs",
+      "measuredBy": "CyclomaticComplexityWalker",
+      "note": "历史存量（456e2d6b 自 RunSqlCompiler.GetSuperQueryInput 平移），非 Task 3.4 引入；2026-08-24 裁决登记冻结：只许下降不许上升（Tech-Debt: CC31-Append-Refactor 同批）"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/Query/FieldBindDefaultValueHelpers.cs::Bind",
+      "name": "Bind",
+      "maxComplexity": 82,
+      "file": "modularity/visualdev/JNPF.VisualDev/Query/FieldBindDefaultValueHelpers.cs",
+      "measuredBy": "CyclomaticComplexityWalker",
+      "note": "历史存量（456e2d6b 自 RunSqlCompiler.FieldBindDefaultValue 平移），非 Task 3.4 引入；2026-08-24 裁决登记冻结：只许下降不许上升（Tech-Debt: CC31-Append-Refactor 同批）"
+    },
+    {
+      "symbol": "modularity/visualdev/JNPF.VisualDev/Transfer/FlowFormDataMapper.cs::ApplyMapRules",
+      "name": "ApplyMapRules",
+      "maxComplexity": 37,
+      "file": "modularity/visualdev/JNPF.VisualDev/Transfer/FlowFormDataMapper.cs",
+      "measuredBy": "CyclomaticComplexityWalker",
+      "note": "历史存量（456e2d6b 自 RunSqlCompiler 数据迁移逻辑平移），非 Task 3.4 引入；2026-08-24 裁决登记冻结：只许下降不许上升（Tech-Debt: CC31-Append-Refactor 同批）"
     }
   ]
 }

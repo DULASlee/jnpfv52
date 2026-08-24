@@ -23,6 +23,18 @@
 - **方案**：升级为 YAML frontmatter 或 JSON 结构化解析
 - **优先级**：低（当前格式已冻结，短期无变化风险）
 
+### 4. Tech-Debt: CC31-Append-Refactor
+- **现状**：5 个历史存量方法超圈复杂度阈值 30，均归因 commit 456e2d6b，2026-08-24 Task 3.4 期间裁决登记基线冻结（只许下降不许上升）：
+  - `GetConditionQueryClauseAppender.Append`（CC31）
+  - `ImportFirstVerifyHelpers.ValidateBatchUnique`（CC35）
+  - `ListSuperQueryInputRewriter.Rewrite`（CC84，自 RunSqlCompiler.GetSuperQueryInput 平移）
+  - `FieldBindDefaultValueHelpers.Bind`（CC82，自 RunSqlCompiler.FieldBindDefaultValue 平移）
+  - `FlowFormDataMapper.ApplyMapRules`（CC37，自 RunSqlCompiler 数据迁移逻辑平移）
+- **处置**：`complexity-baseline.json` 登记冻结值（每条含归因注记）；方法级 TODO 注释；CI（`dotnet build /p:CI_BUILD=true`）拦截任何上升
+- **拆分重构（已立项，防遗忘硬绑定）**：设计规格 `docs/superpowers/specs/架构设计规格-复杂度基线技术债拆分重构.md` + 实施计划 `docs/superpowers/plans/实施计划-复杂度基线技术债拆分重构.md`（战役 D1，三波次：P0=Rewrite CC84→≤10 / Bind CC82→≤12，P1=ApplyMapRules / ValidateBatchUnique，P2=Append；目标：全部降到 30 以下并从基线销账）
+- **启动节点**：运行时基座战役 Task 3.6 S1 门禁通过后，每波次独立节点审批
+- **责任人**：待认领（后续战役承接）
+
 ---
 
 ## 已解决

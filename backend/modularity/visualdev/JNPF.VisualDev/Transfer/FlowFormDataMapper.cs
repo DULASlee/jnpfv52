@@ -52,6 +52,7 @@ public static class FlowFormDataMapper
     /// <summary>
     /// Apply mapRule transfers onto <paramref name="formData"/> (mutates in place).
     /// </summary>
+    // TODO: CC37 超标，基线锁定于 Task 3.4（maxComplexity=37，只许下降），待拆分重构（Tech-Debt: CC31-Append-Refactor 同批，归因 456e2d6b）
     public static void ApplyMapRules(
         Dictionary<string, object> formData,
         List<Dictionary<string, string>> mapRule,

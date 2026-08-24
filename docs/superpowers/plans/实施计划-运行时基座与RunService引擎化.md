@@ -118,9 +118,9 @@
 
 **Files:** ➕ `backend/tests/JNPF.Tests.VisualDev/RunSqlCompilerFeatureTests.cs`
 
-- [ ] Step 1：**特征捕获**——以真实/代表性输入在迁移后实现上抓取输出快照作为期望值（禁止手写猜测，Evidence Over Assumption）
-- [ ] Step 2：落成单测运行全绿
-- [ ] Step 3：提交
+- [x] Step 1：**特征捕获**——以真实/代表性输入在迁移后实现上抓取输出快照作为期望值（禁止手写猜测，Evidence Over Assumption）（✅ 由 Task 3.3 Inc-2 提拉完成，26d3f784：8 张快照实测捕获落盘 `.claude/evidence/runservice-engine-refactor/feature-capture/`，覆盖七方法中五纯路径：GetQueryJson 11 控件分支+InteAssis/GetSuperQueryJson 双组/GetInfoQuerySql 主表+主副表/GetListQuerySql 主表+主副表/GetSuperQueryInput；DB 依赖分支残余风险已登记，由路由快照+存量测试守护）
+- [x] Step 2：落成单测运行全绿（✅ `RunSqlCompilerFeatureTests` 8/8 + VisualDev 套件 218/218，2026-08-24 当前 HEAD 复验）
+- [x] Step 3：提交（✅ 随 26d3f784；本条勾选回填随后续提交）
 
 ### Task 3.6：S1 门禁（1h）｜依赖：3.1-3.5
 

@@ -92,6 +92,7 @@ public static class ImportFirstVerifyHelpers
     /// <summary>
     /// Batch unique check (main + child). dataType "2" keeps last child row per unique key (legacy).
     /// </summary>
+    // TODO: CC35 超标，基线锁定于 Task 3.4（maxComplexity=35，只许下降），待拆分重构（Tech-Debt: CC31-Append-Refactor 同批，归因 456e2d6b）
     public static void ValidateBatchUnique(
         List<Dictionary<string, object>> resList,
         List<FieldsModel> allFieldsModel,

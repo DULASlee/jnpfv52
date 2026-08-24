@@ -12,6 +12,7 @@ namespace JNPF.VisualDev.Query;
 /// </summary>
 public static class ListSuperQueryInputRewriter
 {
+    // TODO: CC84 超标，基线锁定于 Task 3.4（maxComplexity=84，只许下降），待拆分重构（Tech-Debt: CC31-Append-Refactor 同批，归因 456e2d6b）
     public static string Rewrite(string? superQueryJson)
     {
         Dictionary<string, object>? dic = string.IsNullOrEmpty(superQueryJson)

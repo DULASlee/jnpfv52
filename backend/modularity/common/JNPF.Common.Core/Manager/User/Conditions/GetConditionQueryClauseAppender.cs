@@ -11,6 +11,7 @@ namespace JNPF.Common.Core.Manager.User.Conditions;
 /// </summary>
 public static class GetConditionQueryClauseAppender
 {
+    // TODO: CC31 超标，基线锁定于 Task 3.4（maxComplexity=31，只许下降），待拆分重构（Tech-Debt: CC31-Append-Refactor，归因 456e2d6b）
     public static bool Append(
         List<object> conditionalList,
         QueryType itemMethod,
