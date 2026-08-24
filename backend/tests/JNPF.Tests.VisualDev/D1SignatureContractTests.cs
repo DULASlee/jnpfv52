@@ -1,6 +1,8 @@
 using System.Reflection;
+using JNPF.Engine.Entity.Model;
 using JNPF.Systems.Entitys.Permission;
 using JNPF.VisualDev.Query;
+using JNPF.VisualDev.Transfer;
 using Xunit;
 
 namespace JNPF.Tests.VisualDev;
@@ -39,6 +41,25 @@ public class D1SignatureContractTests
             typeof(string), typeof(string),
             typeof(List<string>), typeof(List<string>), typeof(List<string>),
             typeof(List<UserRelationEntity>), typeof(string),
+        }, types);
+    }
+
+    [Fact]
+    public void ApplyMapRules_Signature_Unchanged()
+    {
+        var m = typeof(FlowFormDataMapper).GetMethod(
+            "ApplyMapRules", BindingFlags.Public | BindingFlags.Static);
+
+        Assert.NotNull(m);
+        Assert.Equal(typeof(void), m!.ReturnType);
+        var types = m.GetParameters().Select(p => p.ParameterType).ToArray();
+        Assert.Equal(new[]
+        {
+            typeof(Dictionary<string, object>),
+            typeof(List<Dictionary<string, string>>),
+            typeof(IReadOnlyDictionary<string, FieldsModel>),
+            typeof(IReadOnlyDictionary<string, FieldsModel>),
+            typeof(string),
         }, types);
     }
 }

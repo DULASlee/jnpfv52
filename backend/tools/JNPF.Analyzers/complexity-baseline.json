@@ -853,14 +853,6 @@
       "file": "modularity/engine/JNPF.VisualDev.Engine/Import/ImportFirstVerifyHelpers.cs",
       "measuredBy": "CyclomaticComplexityWalker",
       "note": "历史存量，非 Task 3.4 引入（归因 commit 456e2d6b）；2026-08-24 裁决登记冻结：只许下降不许上升；待拆分重构（随 CC31-Append-Refactor 同批处置）"
-    },
-    {
-      "symbol": "modularity/visualdev/JNPF.VisualDev/Transfer/FlowFormDataMapper.cs::ApplyMapRules",
-      "name": "ApplyMapRules",
-      "maxComplexity": 37,
-      "file": "modularity/visualdev/JNPF.VisualDev/Transfer/FlowFormDataMapper.cs",
-      "measuredBy": "CyclomaticComplexityWalker",
-      "note": "历史存量（456e2d6b 自 RunSqlCompiler 数据迁移逻辑平移），非 Task 3.4 引入；2026-08-24 裁决登记冻结：只许下降不许上升（Tech-Debt: CC31-Append-Refactor 同批）"
     }
   ]
 }

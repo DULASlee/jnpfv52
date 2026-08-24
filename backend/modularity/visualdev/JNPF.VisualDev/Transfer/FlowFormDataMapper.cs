@@ -51,8 +51,9 @@ public static class FlowFormDataMapper
 
     /// <summary>
     /// Apply mapRule transfers onto <paramref name="formData"/> (mutates in place).
+    /// D1 拆分（战役 D1 · 规格 §2.3）：纯结构重构，行为不变量 I1-I6 由
+    /// FlowFormDataMapperTests 25 用例全分支锁定（含 Q7 `-` 豁免保真，注释以 I 编号标注）。
     /// </summary>
-    // TODO: CC37 超标，基线锁定于 Task 3.4（maxComplexity=37，只许下降），待拆分重构（Tech-Debt: CC31-Append-Refactor 同批，归因 456e2d6b）
     public static void ApplyMapRules(
         Dictionary<string, object> formData,
         List<Dictionary<string, string>> mapRule,
@@ -65,95 +66,151 @@ public static class FlowFormDataMapper
             var item = items.First();
             oldFieldsByVModel.TryGetValue(item.Key, out var oldModel);
             newFieldsByVModel.TryGetValue(item.Value, out var newModel);
-            if (oldModel == null || newModel == null
-                || oldModel.__config__.jnpfKey.Equals(JnpfKeyConst.MODIFYTIME)
-                || oldModel.__config__.jnpfKey.Equals(JnpfKeyConst.MODIFYUSER))
-            {
-                formData[item.Key] = string.Empty;
-                continue;
-            }
-            if (oldModel.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE) || newModel.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE))
+
+            if (SkipOrNeutralize(formData, item.Key, oldModel, newModel))
                 continue;
 
-            if (oldModel.__vModel__.ToLower().Contains(childTableSplitKey) && newModel.__vModel__.ToLower().Contains(childTableSplitKey))
+            // I6：子表判定 = vModel 小写包含分隔键
+            var oldIsChild = oldModel.__vModel__.ToLower().Contains(childTableSplitKey);
+            var newIsChild = newModel.__vModel__.ToLower().Contains(childTableSplitKey);
+
+            if (oldIsChild && newIsChild)
+                ApplyChildToChild(formData, oldModel, newModel);
+            else if (oldIsChild || newIsChild)
+                ApplyChildMainCross(formData, oldModel, newModel, childTableSplitKey);
+            else
+                ApplyMainToMainFallback(formData, oldModel, newModel, childTableSplitKey);
+        }
+    }
+
+    /// <summary>
+    /// I1 守卫：模型缺失 → 置空串；旧控件 MODIFYTIME/MODIFYUSER → 置空串；任一侧 TABLE → 跳过（不置空）.
+    /// 返回 true = 本条规则处理完毕（调用方 continue）.
+    /// </summary>
+    private static bool SkipOrNeutralize(
+        Dictionary<string, object> formData,
+        string oldKey,
+        FieldsModel? oldModel,
+        FieldsModel? newModel)
+    {
+        if (oldModel == null || newModel == null
+            || oldModel.__config__.jnpfKey.Equals(JnpfKeyConst.MODIFYTIME)
+            || oldModel.__config__.jnpfKey.Equals(JnpfKeyConst.MODIFYUSER))
+        {
+            formData[oldKey] = string.Empty;
+            return true;
+        }
+
+        if (oldModel.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE) || newModel.__config__.jnpfKey.Equals(JnpfKeyConst.TABLE))
+            return true;
+
+        return false;
+    }
+
+    /// <summary>
+    /// I2 双端均子表：CanTransfer 通过才搬；按行序配对，新表行数不足则补新行；字段段空则整条跳过.
+    /// </summary>
+    private static void ApplyChildToChild(
+        Dictionary<string, object> formData,
+        FieldsModel oldModel,
+        FieldsModel newModel)
+    {
+        if (!FlowFormDataTransferRules.CanTransfer(oldModel, newModel))
+            return;
+
+        var oldCTable = oldModel.__vModel__.Split("-").First();
+        var oldCField = oldModel.__vModel__.Split("-").Last();
+        var newCTable = newModel.__vModel__.Split("-").First();
+        var newCField = newModel.__vModel__.Split("-").Last();
+        if (oldCField.IsNullOrWhiteSpace() || newCField.IsNullOrWhiteSpace()) return;
+
+        if (!formData.ContainsKey(newCTable)) formData.Add(newCTable, new List<Dictionary<string, object>>());
+        if (formData.ContainsKey(oldCTable) && formData[oldCTable] != null && formData[oldCTable].ToString() != "[]")
+        {
+            var oldCTData = formData[oldCTable].ToObject<List<Dictionary<string, object>>>();
+            var newCTData = formData.ContainsKey(newCTable)
+                ? formData[newCTable].ToObject<List<Dictionary<string, object>>>()
+                : new List<Dictionary<string, object>>();
+
+            for (var i = 0; i < oldCTData.Count; i++)
             {
-                if (FlowFormDataTransferRules.CanTransfer(oldModel, newModel))
+                if (oldCTData[i].ContainsKey(oldCField))
                 {
-                    var oldCTable = oldModel.__vModel__.Split("-").First();
-                    var oldCField = oldModel.__vModel__.Split("-").Last();
-                    var newCTable = newModel.__vModel__.Split("-").First();
-                    var newCField = newModel.__vModel__.Split("-").Last();
-                    if (oldCField.IsNullOrWhiteSpace() || newCField.IsNullOrWhiteSpace()) continue;
-
-                    if (!formData.ContainsKey(newCTable)) formData.Add(newCTable, new List<Dictionary<string, object>>());
-                    if (formData.ContainsKey(oldCTable) && formData[oldCTable] != null && formData[oldCTable].ToString() != "[]")
-                    {
-                        var oldCTData = formData[oldCTable].ToObject<List<Dictionary<string, object>>>();
-                        var newCTData = formData.ContainsKey(newCTable)
-                            ? formData[newCTable].ToObject<List<Dictionary<string, object>>>()
-                            : new List<Dictionary<string, object>>();
-
-                        for (var i = 0; i < oldCTData.Count; i++)
-                        {
-                            if (oldCTData[i].ContainsKey(oldCField))
-                            {
-                                if (newCTData.Count > i) newCTData[i][newCField] = oldCTData[i][oldCField];
-                                else newCTData.Add(new Dictionary<string, object>() { { newCField, oldCTData[i][oldCField] } });
-                            }
-                        }
-                        formData[newCTable] = newCTData;
-                    }
+                    if (newCTData.Count > i) newCTData[i][newCField] = oldCTData[i][oldCField];
+                    else newCTData.Add(new Dictionary<string, object>() { { newCField, oldCTData[i][oldCField] } });
                 }
             }
-            else if (oldModel.__vModel__.ToLower().Contains(childTableSplitKey) || newModel.__vModel__.ToLower().Contains(childTableSplitKey))
+            formData[newCTable] = newCTData;
+        }
+    }
+
+    /// <summary>
+    /// I3+I4 单端子表双向：子→主取首行值写入旧 vModel 键；主→子写新子表首行（空表补行/首行有键则覆盖否则新增）.
+    /// </summary>
+    private static void ApplyChildMainCross(
+        Dictionary<string, object> formData,
+        FieldsModel oldModel,
+        FieldsModel newModel,
+        string childTableSplitKey)
+    {
+        if (!FlowFormDataTransferRules.CanTransfer(oldModel, newModel))
+            return;
+
+        var oldIsChild = oldModel.__vModel__.ToLower().Contains(childTableSplitKey);
+        var newIsChild = newModel.__vModel__.ToLower().Contains(childTableSplitKey);
+
+        if (oldIsChild && !newIsChild)
+        {
+            // I3 子→主：取旧子表首行字段值写入 formData[旧vModel]
+            var childTable = oldModel.__vModel__.Split("-").First();
+            var childField = oldModel.__vModel__.Split("-").Last();
+            var childTableData = formData[childTable].ToObject<List<Dictionary<string, object>>>();
+            if (childTableData.Any() && childTableData.Any(x => x.ContainsKey(childField)))
             {
-                if (FlowFormDataTransferRules.CanTransfer(oldModel, newModel))
-                {
-                    if (oldModel.__vModel__.ToLower().Contains(childTableSplitKey) && !newModel.__vModel__.ToLower().Contains(childTableSplitKey))
-                    {
-                        var childTable = oldModel.__vModel__.Split("-").First();
-                        var childField = oldModel.__vModel__.Split("-").Last();
-                        var childTableData = formData[childTable].ToObject<List<Dictionary<string, object>>>();
-                        if (childTableData.Any() && childTableData.Any(x => x.ContainsKey(childField)))
-                        {
-                            if (formData.ContainsKey(oldModel.__vModel__)) formData[oldModel.__vModel__] = childTableData.First()[childField];
-                            else formData.Add(oldModel.__vModel__, childTableData.First()[childField]);
-                        }
-                    }
+                if (formData.ContainsKey(oldModel.__vModel__)) formData[oldModel.__vModel__] = childTableData.First()[childField];
+                else formData.Add(oldModel.__vModel__, childTableData.First()[childField]);
+            }
+        }
 
-                    if (!oldModel.__vModel__.ToLower().Contains(childTableSplitKey) && newModel.__vModel__.ToLower().Contains(childTableSplitKey))
-                    {
-                        var childKey = newModel.__vModel__.Split("-");
-                        var childTableKey = childKey.First();
-                        var childFieldKey = childKey.Last();
-                        if (formData.ContainsKey(oldModel.__vModel__))
-                        {
-                            var childFieldValue = formData[oldModel.__vModel__];
+        if (!oldIsChild && newIsChild)
+        {
+            // I4 主→子：旧值写入新子表首行（空表补行；首行有该键则覆盖否则新增）
+            if (!formData.ContainsKey(oldModel.__vModel__))
+                return;
 
-                            if (!formData.ContainsKey(childTableKey)) formData.Add(childTableKey, new List<Dictionary<string, object>>());
+            var childKey = newModel.__vModel__.Split("-");
+            var childTableKey = childKey.First();
+            var childFieldKey = childKey.Last();
+            var childFieldValue = formData[oldModel.__vModel__];
 
-                            var childItems = formData[childTableKey].ToObject<List<Dictionary<string, object>>>();
-                            if (!childItems.Any())
-                            {
-                                childItems.Add(new Dictionary<string, object>() { { childFieldKey, childFieldValue } });
-                            }
-                            else
-                            {
-                                if (childItems.Any(x => x.ContainsKey(childFieldKey))) childItems.First()[childFieldKey] = childFieldValue;
-                                else childItems.First().Add(childFieldKey, childFieldValue);
-                            }
+            if (!formData.ContainsKey(childTableKey)) formData.Add(childTableKey, new List<Dictionary<string, object>>());
 
-                            formData[childTableKey] = childItems;
-                        }
-                    }
-                }
+            var childItems = formData[childTableKey].ToObject<List<Dictionary<string, object>>>();
+            if (!childItems.Any())
+            {
+                childItems.Add(new Dictionary<string, object>() { { childFieldKey, childFieldValue } });
             }
             else
             {
-                if (!childTableSplitKey.Equals("-") && !FlowFormDataTransferRules.CanTransfer(oldModel, newModel))
-                    formData[oldModel.__vModel__] = null;
+                if (childItems.Any(x => x.ContainsKey(childFieldKey))) childItems.First()[childFieldKey] = childFieldValue;
+                else childItems.First().Add(childFieldKey, childFieldValue);
             }
+
+            formData[childTableKey] = childItems;
         }
+    }
+
+    /// <summary>
+    /// I5（Q7 怪异，保真）：双端主字段且 CanTransfer 失败 → 置 null；splitKey="-" 时豁免（不置空）.
+    /// </summary>
+    private static void ApplyMainToMainFallback(
+        Dictionary<string, object> formData,
+        FieldsModel oldModel,
+        FieldsModel newModel,
+        string childTableSplitKey)
+    {
+        if (!childTableSplitKey.Equals("-") && !FlowFormDataTransferRules.CanTransfer(oldModel, newModel))
+            formData[oldModel.__vModel__] = null;
     }
 
     /// <summary>
