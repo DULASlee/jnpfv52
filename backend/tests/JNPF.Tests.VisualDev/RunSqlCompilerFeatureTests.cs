@@ -50,12 +50,9 @@ public class RunSqlCompilerFeatureTests
     private static readonly RunSqlCompiler Compiler = new();
 
     /// <summary>
-    /// 纯路径上下文：多租户关闭；其余成员在覆盖分支内不被触达.
+    /// 纯路径网关：覆盖分支不触达任何供数成员（多租户默认 false）.
     /// </summary>
-    private static RunSqlCompileContext PureContext() => new()
-    {
-        Tenant = new TenantOptions { MultiTenancy = false },
-    };
+    private static RunSqlCompileGateway PureGateway() => new();
 
     private static FieldsModel Field(string vModel, string tableName, string jnpfKey) => new()
     {
@@ -145,7 +142,7 @@ public class RunSqlCompilerFeatureTests
             }
             """;
 
-        var result = Compiler.GetQueryJson(PureContext(), queryJson, columnDesign);
+        var result = Compiler.GetQueryJson(PureGateway(), queryJson, columnDesign);
 
         AssertSnapshot("GetQueryJson_MainBranches", result.ToJsonStringOld());
     }
@@ -155,7 +152,7 @@ public class RunSqlCompilerFeatureTests
     {
         var columnDesign = new ColumnDesignModel { searchList = new List<IndexSearchFieldModel>() };
 
-        var result = Compiler.GetQueryJson(PureContext(), string.Empty, columnDesign, 1);
+        var result = Compiler.GetQueryJson(PureGateway(), string.Empty, columnDesign, 1);
 
         AssertSnapshot("GetQueryJson_InteAssisOn", result.ToJsonStringOld());
     }
@@ -201,7 +198,7 @@ public class RunSqlCompilerFeatureTests
         var input = new VisualDevModelListQueryInput { queryJson = string.Empty, superQueryJson = string.Empty, dataRuleJson = string.Empty };
         var tableFieldKeyValue = new Dictionary<string, string>();
 
-        var sql = Compiler.GetListQuerySql(PureContext(), "f_id", tInfo, ref input, ref tableFieldKeyValue, new List<IConditionalModel>());
+        var sql = Compiler.GetListQuerySql(PureGateway(), "f_id", tInfo, ref input, ref tableFieldKeyValue, new List<ICompileConditionalModel>());
 
         AssertSnapshot("GetListQuerySql_MainOnly_NoFilters", sql);
     }
@@ -224,7 +221,7 @@ public class RunSqlCompilerFeatureTests
         var input = new VisualDevModelListQueryInput { queryJson = string.Empty, superQueryJson = string.Empty, dataRuleJson = string.Empty };
         var tableFieldKeyValue = new Dictionary<string, string>();
 
-        var sql = Compiler.GetListQuerySql(PureContext(), "f_id", tInfo, ref input, ref tableFieldKeyValue, new List<IConditionalModel>());
+        var sql = Compiler.GetListQuerySql(PureGateway(), "f_id", tInfo, ref input, ref tableFieldKeyValue, new List<ICompileConditionalModel>());
 
         AssertSnapshot("GetListQuerySql_MainWithAux_NoFilters", sql);
     }

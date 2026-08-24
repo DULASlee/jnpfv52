@@ -103,8 +103,8 @@
 
 - [x] Inc-1：平台条件模型类型+双向转换器+JSON 往返等价单测（零行为变更，先行提交）（✅ 6/6 绿：字节等价/双向转换/嵌套结构/Utilities 回解析/JsonIgnore 对齐；实测修正：FieldValueConvertFunc=Func<string,object>+[JsonIgnore]）
 - [x] Inc-2：特征捕获前置（3.5 提拉）——剥离前对当前实现捕获代表性输入输出快照为期望值（禁止手写猜测）（✅ 8/8 基线落盘 `.claude/evidence/runservice-engine-refactor/feature-capture/`；覆盖纯路径：GetQueryJson 11 控件分支/GetSuperQueryJson 双组/GetInfoQuerySql 双分支/GetListQuerySql 主表+主副表/GetSuperQueryInput；DB 分支残余风险已登记）
-- [ ] Inc-3：参数化剥离——gateway 委托供数；变异语义逐处核对（dataRuleList 跨迭代就地删减等）；删除过渡载体；构建 0 错+快照零 diff；提交
-- [ ] 验收：①grep `RunSqlCompiler.cs` 零 SqlSugar（含 using）②特征单测全绿 ③存量测试全绿 ④C-M3 台账重录（过渡注记移除）
+- [x] Inc-3：参数化剥离——gateway 委托供数；变异语义逐处核对（dataRuleList 跨迭代就地删减等）；删除过渡载体；构建 0 错+快照零 diff；提交（✅ RunSqlCompileGateway 十成员供数；平台条件模型全链切换；实测修正：PS -replace 大小写误伤已修复；RunService 2875→~2917 行（网关供数侧）；快照 `s1-task33-routes.txt`）
+- [x] 验收：①grep `RunSqlCompiler.cs` 零 SqlSugar（含 using）②特征单测全绿 ③存量测试全绿 ④C-M3 台账重录（过渡注记移除）（✅ ①零命中 ② 8/8 逐字一致 ③ 218/218 ④ `778cfee5…` 重录）
 
 ### Task 3.4：JNPF009 基线随迁（2h）｜依赖：3.3
 

@@ -3,6 +3,7 @@ using JNPF.Common.Extension;
 using JNPF.Common.Security;
 using JNPF.Engine.Entity.Model;
 using JNPF.Extensions;
+using JNPF.VisualDev.Runtime;
 using SqlSugar;
 
 namespace JNPF.VisualDev.Query;
@@ -98,6 +99,27 @@ public static class ListChildTableHelpers
     /// </summary>
     public static void RewriteChildFieldNames(
         IEnumerable<ConditionalCollections> collections,
+        IReadOnlyDictionary<string, string> childTableFields)
+    {
+        if (collections == null || childTableFields == null || childTableFields.Count == 0)
+            return;
+
+        foreach (var item in collections)
+        {
+            if (item?.ConditionalList == null) continue;
+            foreach (var sitem in item.ConditionalList)
+            {
+                if (sitem.Value != null && childTableFields.ContainsKey(sitem.Value.FieldName))
+                    sitem.Value.FieldName = childTableFields[sitem.Value.FieldName];
+            }
+        }
+    }
+
+    /// <summary>
+    /// 平台条件模型重载（裁决 C：编译层边界平台类型；逻辑与 SqlSugar 版逐句一致）.
+    /// </summary>
+    public static void RewriteChildFieldNames(
+        IEnumerable<CompileConditionalCollections> collections,
         IReadOnlyDictionary<string, string> childTableFields)
     {
         if (collections == null || childTableFields == null || childTableFields.Count == 0)

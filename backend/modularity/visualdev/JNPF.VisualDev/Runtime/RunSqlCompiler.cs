@@ -1,20 +1,14 @@
-using JNPF.Common.Enums;
 using JNPF.Common.Extension;
 using JNPF.Common.Const;
-using JNPF.Common.Core.Manager;
-using JNPF.Common.Manager;
 using JNPF.Common.Models.VisualDev;
 using JNPF.Common.Security;
 using JNPF.DependencyInjection;
 using JNPF.Engine.Entity.Model;
 using JNPF.Extensions;
-using JNPF.Systems.Entitys.Permission;
-using JNPF.Systems.Entitys.System;
 using JNPF.VisualDev.Engine.Core;
 using JNPF.VisualDev.Entitys;
 using JNPF.VisualDev.Entitys.Dto.VisualDevModelData;
 using JNPF.VisualDev.Query;
-using SqlSugar;
 
 namespace JNPF.VisualDev.Runtime;
 
@@ -22,8 +16,7 @@ namespace JNPF.VisualDev.Runtime;
 /// M3 编译层 — SQL 编译引擎组件（规格 4.3，契约 C-M3-RunSqlCompiler@v1）.
 /// 职责：将模型配置编译为 SQL/Json/条件模型.
 /// 纪律：构造零 DI 依赖（白名单守护）；SQL 执行不归本组件（留调用方侧，经 IRuntimeDataStore 漏斗）.
-/// 施工状态：Task 3.2 裁决 A 过渡形态 — DB/用户/缓存/租户依赖经 <see cref="RunSqlCompileContext"/>
-/// 由调用方供入（无字段驻留）；Task 3.3 参数化剥离后该载体移除（grep 零 SqlSugar 验收）.
+/// 施工状态：Task 3.3 裁决 C 完成形态 — 零 ORM 直连引用；DB 读取/SQL 渲染经 <see cref="RunSqlCompileGateway"/> 由调用方供数.
 /// 方法体来源：RunService 逐字迁移（机械适配三类，见裁决记录）.
 /// </summary>
 public class RunSqlCompiler : ISingleton
@@ -36,26 +29,16 @@ public class RunSqlCompiler : ISingleton
     /// <param name="tableJson">关联表单.</param>
     /// <param name="formType">表单类型（1：系统表单 2：自定义表单）.</param>
     /// <returns></returns>
-    public string GetVisualDevModelDataConfig(RunSqlCompileContext ctx, string propertyJson, string tableJson, int formType)
+    public string GetVisualDevModelDataConfig(RunSqlCompileGateway gateway, string propertyJson, string tableJson, int formType)
     {
         var tInfo = new TemplateParsingBase(propertyJson, tableJson, formType);
         if (tInfo.AllFieldsModel.Any(x => (x.__config__.defaultCurrent) && (x.__config__.jnpfKey.Equals(JnpfKeyConst.USERSELECT) || x.__config__.jnpfKey.Equals(JnpfKeyConst.DEPSELECT) || x.__config__.jnpfKey.Equals(JnpfKeyConst.POSSELECT) || x.__config__.jnpfKey.Equals(JnpfKeyConst.ROLESELECT) || x.__config__.jnpfKey.Equals(JnpfKeyConst.GROUPSELECT))))
         {
-            var userId = ctx.UserManager.UserId;
-            var depId = ctx.VisualDevRepository.AsSugarClient().Queryable<UserEntity, OrganizeEntity>((a, b) => new JoinQueryInfos(JoinType.Left, b.Id == a.OrganizeId))
-                .Where((a, b) => a.Id.Equals(ctx.UserManager.UserId) && b.Category.Equals("department")).Select((a, b) => a.OrganizeId).First();
-            var posIds = ctx.VisualDevRepository.AsSugarClient().Queryable<PositionEntity, UserRelationEntity>((a, b) => new JoinQueryInfos(JoinType.Left, a.Id == b.ObjectId && b.ObjectType.Equals("Position")))
-                .Where((a, b) => b.UserId.Equals(ctx.UserManager.UserId) && a.OrganizeId.Equals(ctx.UserManager.User.OrganizeId)).Select(a => a.Id).ToList();
-            var roleIds = ctx.VisualDevRepository.AsSugarClient().Queryable<UserRelationEntity>()
-                .Where(it => it.UserId.Equals(ctx.UserManager.UserId) && it.ObjectType.Equals("Role")).Select(it => it.ObjectId).ToList();
-            var groupIds = ctx.VisualDevRepository.AsSugarClient().Queryable<UserRelationEntity>()
-                .Where(it => it.UserId.Equals(ctx.UserManager.UserId) && it.ObjectType.Equals("Group")).Select(it => it.ObjectId).ToList();
-
-            var allUserRelationList = ctx.VisualDevRepository.AsSugarClient().Queryable<UserRelationEntity>().Select(x => new UserRelationEntity() { UserId = x.UserId, ObjectId = x.ObjectId }).ToList();
+            var d = gateway.UserSelectDefaults();
 
             var configData = propertyJson.ToObject<Dictionary<string, object>>();
             var columnList = configData["fields"].ToObject<List<Dictionary<string, object>>>();
-            FieldBindDefaultValueHelpers.Bind(ref columnList, userId, depId, posIds, roleIds, groupIds, allUserRelationList, ctx.UserManager.User.PositionId);
+            FieldBindDefaultValueHelpers.Bind(ref columnList, d.UserId, d.DepId, d.PosIds, d.RoleIds, d.GroupIds, d.AllUserRelationList, d.PositionId);
             configData["fields"] = columnList;
             propertyJson = configData.ToJsonString();
         }
@@ -80,7 +63,7 @@ public class RunSqlCompiler : ISingleton
     /// <param name="dataPermissions">数据权限.</param>
     /// <param name="showColumnList">是否只查询显示列.</param>
     /// <returns></returns>
-    public string GetListQuerySql(RunSqlCompileContext ctx, string primaryKey, TemplateParsingBase templateInfo, ref VisualDevModelListQueryInput input, ref Dictionary<string, string> tableFieldKeyValue, List<IConditionalModel> dataPermissions, bool showColumnList = false)
+    public string GetListQuerySql(RunSqlCompileGateway gateway, string primaryKey, TemplateParsingBase templateInfo, ref VisualDevModelListQueryInput input, ref Dictionary<string, string> tableFieldKeyValue, List<ICompileConditionalModel> dataPermissions, bool showColumnList = false)
     {
         List<string> fields = new List<string>();
 
@@ -108,13 +91,13 @@ public class RunSqlCompiler : ISingleton
                     superQueryJson = ListQueryFieldAliasRewriter.ReplaceQuotedKey(superQueryJson, item.Key, item.Value);
             }
 
-            var dataRuleQuerDic = new List<IConditionalModel>();
-            if (input.dataRuleJson.IsNotEmptyOrNull()) dataRuleQuerDic = ctx.VisualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(input.dataRuleJson);
+            var dataRuleQuerDic = new List<ICompileConditionalModel>();
+            if (input.dataRuleJson.IsNotEmptyOrNull()) dataRuleQuerDic = gateway.JsonToConditions(input.dataRuleJson);
             var querDic = queryJson.IsNullOrEmpty() ? null : queryJson.ToObject<Dictionary<string, object>>();
 
-            var superQuerDic = new List<ConditionalCollections>();
+            var superQuerDic = new List<CompileConditionalCollections>();
             var superCond = superQueryJson.IsNullOrEmpty() ? null : GetSuperQueryJson(superQueryJson, templateInfo);
-            if (superCond != null) superQuerDic = superCond.ToObject<List<ConditionalCollections>>();
+            if (superCond != null) superQuerDic = superCond.ToObject<List<CompileConditionalCollections>>();
             var sqlStr = ListQuerySqlFragmentHelpers.SelectFromTemplate;
 
             // 查询
@@ -126,22 +109,19 @@ public class RunSqlCompiler : ISingleton
                 {
                     var dic = new Dictionary<string, object>();
                     dic.Add(item.Key, item.Value);
-                    var where = GetQueryJson(ctx, dic.ToJsonString(), ctx.UserManager.UserOrigin == "pc" ? templateInfo.ColumnData : templateInfo.AppColumnData);
+                    var where = GetQueryJson(gateway, dic.ToJsonString(), gateway.UserOrigin == "pc" ? templateInfo.ColumnData : templateInfo.AppColumnData);
 
                     if (item.Key.Equals(JnpfKeyConst.JNPFKEYWORD))
                     {
                         var keywordSql = string.Empty;
-                        foreach (var con in where[0].ToObject<ConditionalCollections>().ConditionalList)
+                        foreach (var con in where[0].ToObject<CompileConditionalCollections>().ConditionalList)
                         {
                             var model = con.Value;
                             if (templateInfo.AllTableFields.ContainsKey(model.FieldName))
                                 model.FieldName = templateInfo.AllTableFields[model.FieldName];
 
-                            var condition = new List<IConditionalModel> { new ConditionalCollections() { ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>> { con } } };
-                            ctx.SqlSugarClient = ctx.DataBaseManager.ChangeDataBase(templateInfo.DbLink);
-                            var itemWhere = ctx.SqlSugarClient.SqlQueryable<object>("@")
-                                .Where(condition).ToSqlString();
-                            ctx.SqlSugarClient.AsTenant().ChangeDatabase("default");
+                            var condition = new List<ICompileConditionalModel> { new CompileConditionalCollections() { ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>> { con } } };
+                                                        var itemWhere = gateway.RenderLinkWhere(condition);
 
                             if (itemWhere.Contains("WHERE"))
                             {
@@ -178,10 +158,7 @@ public class RunSqlCompiler : ISingleton
 
                         var itemSql = ListQuerySqlFragmentHelpers.BuildSelectFrom(table.tableField, primaryKey, fieldName);
 
-                        ctx.SqlSugarClient = ctx.DataBaseManager.ChangeDataBase(templateInfo.DbLink);
-                        var itemWhere = ctx.SqlSugarClient.SqlQueryable<object>("@")
-                            .Where(where).ToSqlString();
-                        ctx.SqlSugarClient.AsTenant().ChangeDatabase("default");
+                                                var itemWhere = gateway.RenderLinkWhere(where);
                         if (itemWhere.Contains("WHERE"))
                         {
                             itemSql = string.Format("({0} IN ({1}WHERE))", primaryKey, itemSql);
@@ -221,11 +198,8 @@ public class RunSqlCompiler : ISingleton
                             var idField = templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField;
                             var itemSql = string.Format(sqlStr, idField.IsNullOrEmpty() ? primaryKey : idField, fieldName);
 
-                            var where = new List<IConditionalModel> { new ConditionalCollections() { ConditionalList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>> { subItem } } };
-                            ctx.SqlSugarClient = ctx.DataBaseManager.ChangeDataBase(templateInfo.DbLink);
-                            var itemWhere = ctx.SqlSugarClient.SqlQueryable<object>("@")
-                                .Where(where).ToSqlString();
-                            ctx.SqlSugarClient.AsTenant().ChangeDatabase("default");
+                            var where = new List<ICompileConditionalModel> { new CompileConditionalCollections() { ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>> { subItem } } };
+                                                        var itemWhere = gateway.RenderLinkWhere(where);
 
                             if (itemWhere.Contains("WHERE"))
                             {
@@ -290,7 +264,7 @@ public class RunSqlCompiler : ISingleton
             var dataRuleSqlCondition = string.Empty;
             if (dataRuleQuerDic != null && dataRuleQuerDic.Any())
             {
-                var dataRule = (ConditionalTree)dataRuleQuerDic.FirstOrDefault();
+                var dataRule = (CompileConditionalTree)dataRuleQuerDic.FirstOrDefault();
                 foreach (var item in dataRule.ConditionalList)
                 {
                     // 拼接分组sql条件
@@ -300,22 +274,19 @@ public class RunSqlCompiler : ISingleton
                     // 分组内的sql
                     var groupDataSql = string.Empty;
 
-                    var groupDataValue = (ConditionalTree)item.Value;
+                    var groupDataValue = (CompileConditionalTree)item.Value;
                     foreach (var subItem in groupDataValue.ConditionalList)
                     {
                         if (subItem.Value.IsNotEmptyOrNull())
                         {
-                            var field = ((ConditionalTree)subItem.Value).ConditionalList.FirstOrDefault();
-                            var fieldName = ((ConditionalModel)field.Value).FieldName.Split(".").FirstOrDefault();
+                            var field = ((CompileConditionalTree)subItem.Value).ConditionalList.FirstOrDefault();
+                            var fieldName = ((CompileConditionalModel)field.Value).FieldName.Split(".").FirstOrDefault();
                             SqlGuard.ValidateIdentifier(fieldName, "表名");
                             var idField = templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField;
                             var itemSql = string.Format(sqlStr, idField.IsNullOrEmpty() ? primaryKey : idField, fieldName);
 
-                            var where = new List<IConditionalModel> { new ConditionalTree() { ConditionalList = new List<KeyValuePair<WhereType, IConditionalModel>> { subItem } } };
-                            ctx.SqlSugarClient = ctx.DataBaseManager.ChangeDataBase(templateInfo.DbLink);
-                            var itemWhere = ctx.SqlSugarClient.SqlQueryable<object>("@")
-                                .Where(where).ToSqlString();
-                            ctx.SqlSugarClient.AsTenant().ChangeDatabase("default");
+                            var where = new List<ICompileConditionalModel> { new CompileConditionalTree() { ConditionalList = new List<KeyValuePair<CompileWhereType, ICompileConditionalModel>> { subItem } } };
+                                                        var itemWhere = gateway.RenderLinkWhere(where);
 
                             if (itemWhere.Contains("WHERE"))
                             {
@@ -366,7 +337,7 @@ public class RunSqlCompiler : ISingleton
             var dataPermissionsSqlCondition = string.Empty;
             if (dataPermissions != null && dataPermissions.Any())
             {
-                var allCondition = (ConditionalTree)dataPermissions.FirstOrDefault();
+                var allCondition = (CompileConditionalTree)dataPermissions.FirstOrDefault();
                 foreach (var roleCondition in allCondition.ConditionalList)
                 {
                     // 拼接多个权限组sql条件
@@ -374,41 +345,41 @@ public class RunSqlCompiler : ISingleton
                         dataPermissionsSqlCondition = string.Format("(" + dataPermissionsSqlCondition + ")" + roleCondition.Key);
 
                     var roleConditionSql = string.Empty;
-                    if (roleCondition.Value.GetType().Name.Equals("ConditionalModel"))
+                    if (roleCondition.Value.GetType().Name.Equals("CompileConditionalModel"))
                     {
-                        var where = new List<IConditionalModel> { new ConditionalTree() { ConditionalList = new List<KeyValuePair<WhereType, IConditionalModel>> { roleCondition } } };
-                        var itemWhere = ctx.VisualDevRepository.AsSugarClient().SqlQueryable<dynamic>("@").Where(where).ToSqlString();
+                        var where = new List<ICompileConditionalModel> { new CompileConditionalTree() { ConditionalList = new List<KeyValuePair<CompileWhereType, ICompileConditionalModel>> { roleCondition } } };
+                        var itemWhere = gateway.RenderDefaultWhere(where);
                         roleConditionSql = itemWhere.Split("WHERE").Last();
                     }
                     else
                     {
-                        foreach (var dpCondition in ((ConditionalTree)roleCondition.Value).ConditionalList)
+                        foreach (var dpCondition in ((CompileConditionalTree)roleCondition.Value).ConditionalList)
                         {
                             // 拼接多个权限sql条件
                             if (roleConditionSql.IsNotEmptyOrNull())
                                 roleConditionSql = string.Format("(" + roleConditionSql + ")" + dpCondition.Key);
 
                             var dpConditionSql = string.Empty;
-                            foreach (var groupCondition in ((ConditionalTree)dpCondition.Value).ConditionalList)
+                            foreach (var groupCondition in ((CompileConditionalTree)dpCondition.Value).ConditionalList)
                             {
                                 // 拼接分组sql条件
                                 if (dpConditionSql.IsNotEmptyOrNull())
                                     dpConditionSql = string.Format(dpConditionSql + groupCondition.Key);
 
                                 var groupConditionSql = string.Empty;
-                                foreach (var condition in ((ConditionalTree)groupCondition.Value).ConditionalList)
+                                foreach (var condition in ((CompileConditionalTree)groupCondition.Value).ConditionalList)
                                 {
-                                    var fieldName = ((ConditionalModel)condition.Value).FieldName.Split(".").FirstOrDefault();
+                                    var fieldName = ((CompileConditionalModel)condition.Value).FieldName.Split(".").FirstOrDefault();
                                     SqlGuard.ValidateIdentifier(fieldName, "表名");
                                     var idField = templateInfo.AllTable.Where(x => x.table.Equals(fieldName)).First().tableField;
                                     var itemSql = string.Format(sqlStr, idField.IsNullOrEmpty() ? primaryKey : idField, fieldName);
-                                    var where = new List<IConditionalModel> { new ConditionalTree() { ConditionalList = new List<KeyValuePair<WhereType, IConditionalModel>> { condition } } };
-                                    var itemWhere = ctx.VisualDevRepository.AsSugarClient().SqlQueryable<dynamic>("@").Where(where).ToSqlString();
+                                    var where = new List<ICompileConditionalModel> { new CompileConditionalTree() { ConditionalList = new List<KeyValuePair<CompileWhereType, ICompileConditionalModel>> { condition } } };
+                                    var itemWhere = gateway.RenderDefaultWhere(where);
                                     if (itemWhere.Contains("WHERE"))
                                     {
                                         // 分组内的sql条件
                                         var conditionWhere = condition.Key.ToString();
-                                        if (((ConditionalTree)groupCondition.Value).ConditionalList.FirstOrDefault().Equals(condition))
+                                        if (((CompileConditionalTree)groupCondition.Value).ConditionalList.FirstOrDefault().Equals(condition))
                                         {
                                             groupConditionSql = string.Format("( " + groupConditionSql);
                                             conditionWhere = string.Empty;
@@ -430,7 +401,7 @@ public class RunSqlCompiler : ISingleton
                                         }
                                         else
                                         {
-                                            if (groupCondition.Equals(((ConditionalTree)dpCondition.Value).ConditionalList.FirstOrDefault()))
+                                            if (groupCondition.Equals(((CompileConditionalTree)dpCondition.Value).ConditionalList.FirstOrDefault()))
                                             {
                                                 if (groupConditionSql.Contains(splitWhere))
                                                 {
@@ -450,7 +421,7 @@ public class RunSqlCompiler : ISingleton
                                         }
                                     }
 
-                                    if (((ConditionalTree)groupCondition.Value).ConditionalList.LastOrDefault().Equals(condition))
+                                    if (((CompileConditionalTree)groupCondition.Value).ConditionalList.LastOrDefault().Equals(condition))
                                         groupConditionSql = string.Format(groupConditionSql + ")");
                                 }
 
@@ -472,14 +443,14 @@ public class RunSqlCompiler : ISingleton
                 dataPermissionsSqlCondition = string.Format("and ({0})", dataPermissionsSqlCondition);
             }
 
-            if (templateInfo.FormModel.logicalDelete && ctx.DataBaseManager.IsAnyColumn(templateInfo.DbLink, templateInfo.MainTableName, "f_delete_mark"))
+            if (templateInfo.FormModel.logicalDelete && gateway.ColumnExists(templateInfo.MainTableName, "f_delete_mark"))
                 querySqlList.Add(ListQuerySqlFragmentHelpers.BuildSoftDeleteInSubquery(primaryKey, templateInfo.MainTableName)); // 处理软删除
 
             // 多租户字段隔离
-            if (ctx.Tenant.MultiTenancy)
+            if (gateway.MultiTenancy)
             {
-                var tenantCache = ctx.CacheManager.Get<List<GlobalTenantCacheModel>>(CommonConst.GLOBALTENANT).Find(it => it.TenantId.Equals(templateInfo.DbLink.Id));
-                if (tenantCache.IsNotEmptyOrNull() && tenantCache.type.Equals(1) && ctx.DataBaseManager.IsAnyColumn(templateInfo.DbLink, templateInfo.MainTableName, "f_tenant_id"))
+                var tenantCache = gateway.TenantCache;
+                if (tenantCache.IsNotEmptyOrNull() && tenantCache.type.Equals(1) && gateway.ColumnExists(templateInfo.MainTableName, "f_tenant_id"))
                     querySqlList.Add(ListQuerySqlFragmentHelpers.BuildTenantIsolationInSubquery(
                         primaryKey,
                         templateInfo.MainTableName,
@@ -497,7 +468,7 @@ public class RunSqlCompiler : ISingleton
 
             var ctFields = templateInfo.ChildTableFields;
             templateInfo.ChildTableFields = new Dictionary<string, string>();
-            var strSql = GetListQuerySql(ctx, primaryKey, templateInfo, ref input, ref tableFieldKeyValue, new List<IConditionalModel>());
+            var strSql = GetListQuerySql(gateway, primaryKey, templateInfo, ref input, ref tableFieldKeyValue, new List<ICompileConditionalModel>());
             input.dataRuleJson = string.Empty;
             input.queryJson = string.Empty;
             input.superQueryJson = string.Empty;
@@ -538,14 +509,14 @@ public class RunSqlCompiler : ISingleton
 			fields = fields.Distinct().ToList(); //modify by harry 过滤重复列
 
             sql = string.Format("select {0} from {1}", string.Join(",", fields), templateInfo.MainTableName);
-            if (templateInfo.FormModel.logicalDelete && ctx.DataBaseManager.IsAnyColumn(templateInfo.DbLink, templateInfo.MainTableName, "f_delete_mark"))
+            if (templateInfo.FormModel.logicalDelete && gateway.ColumnExists(templateInfo.MainTableName, "f_delete_mark"))
                 sql += " where f_delete_mark is null "; // 处理软删除
 
             // 多租户字段隔离
-            if (ctx.Tenant.MultiTenancy)
+            if (gateway.MultiTenancy)
             {
-                var tenantCache = ctx.CacheManager.Get<List<GlobalTenantCacheModel>>(CommonConst.GLOBALTENANT).Find(it => it.TenantId.Equals(templateInfo.DbLink.Id));
-                if (tenantCache.IsNotEmptyOrNull() && tenantCache.type.Equals(1) && ctx.DataBaseManager.IsAnyColumn(templateInfo.DbLink, templateInfo.MainTableName, "f_tenant_id"))
+                var tenantCache = gateway.TenantCache;
+                if (tenantCache.IsNotEmptyOrNull() && tenantCache.type.Equals(1) && gateway.ColumnExists(templateInfo.MainTableName, "f_tenant_id"))
                     sql += string.Format(" {0} f_tenant_id='{1}' ", sql.Contains("where") ? "and" : "where", tenantCache.connectionConfig.IsolationField);
             }
 
@@ -562,10 +533,10 @@ public class RunSqlCompiler : ISingleton
                     tableFieldKeyValue,
                     templateInfo.MainTableName);
 
-                List<IConditionalModel>? newPvalue = new List<IConditionalModel>();
-                if (pvalue.IsNotEmptyOrNull()) newPvalue = ctx.VisualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(pvalue);
+                List<ICompileConditionalModel>? newPvalue = new List<ICompileConditionalModel>();
+                if (pvalue.IsNotEmptyOrNull()) newPvalue = gateway.JsonToConditions(pvalue);
 
-                sql = ctx.VisualDevRepository.AsSugarClient().SqlQueryable<dynamic>(sql).Where(newPvalue).ToSqlString();
+                sql = gateway.RenderSqlWhere(sql, newPvalue);
             }
 
         }
@@ -621,14 +592,14 @@ public class RunSqlCompiler : ISingleton
                 templateInfo.AllTable,
                 templateInfo.MainTableName);
             //modify by harry  同时检查主表与子表的软删除
-            //if (templateInfo.FormModel.logicalDelete && ctx.DataBaseManager.IsAnyColumn(templateInfo.DbLink, templateInfo.MainTableName, "f_delete_mark"))
+            //if (templateInfo.FormModel.logicalDelete && gateway.ColumnExists(templateInfo.MainTableName, "f_delete_mark"))
             //    relationKey.Add(templateInfo.MainTableName + ".f_delete_mark is null "); // 处理软删除
 
             if (templateInfo.FormModel.logicalDelete ) 
             {                
                 foreach (var item in templateInfo.AllTable)
                 {
-                    if( ctx.DataBaseManager.IsAnyColumn(templateInfo.DbLink, item.table, "f_delete_mark")) 
+                    if( gateway.ColumnExists(item.table, "f_delete_mark")) 
                     {
                         relationKey.Add(item.table + ".f_delete_mark is null "); // 处理软删除
                     }
@@ -638,10 +609,10 @@ public class RunSqlCompiler : ISingleton
 			
 			
             // 多租户字段隔离
-            if (ctx.Tenant.MultiTenancy)
+            if (gateway.MultiTenancy)
             {
-                var tenantCache = ctx.CacheManager.Get<List<GlobalTenantCacheModel>>(CommonConst.GLOBALTENANT).Find(it => it.TenantId.Equals(templateInfo.DbLink.Id));
-                if (tenantCache.IsNotEmptyOrNull() && tenantCache.type.Equals(1) && ctx.DataBaseManager.IsAnyColumn(templateInfo.DbLink, templateInfo.MainTableName, "f_tenant_id"))
+                var tenantCache = gateway.TenantCache;
+                if (tenantCache.IsNotEmptyOrNull() && tenantCache.type.Equals(1) && gateway.ColumnExists(templateInfo.MainTableName, "f_tenant_id"))
                     relationKey.Add(string.Format(" {0}.f_tenant_id='{1}' ", templateInfo.MainTableName, tenantCache.connectionConfig.IsolationField));
             }
 
@@ -665,18 +636,61 @@ public class RunSqlCompiler : ISingleton
                     templateInfo.AllTableFields,
                     templateInfo.MainTableName);
 
-                List<IConditionalModel>? newPvalue = new List<IConditionalModel>();
-                if (pvalue.IsNotEmptyOrNull()) newPvalue = ctx.VisualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(pvalue);
+                List<ICompileConditionalModel>? newPvalue = new List<ICompileConditionalModel>();
+                if (pvalue.IsNotEmptyOrNull()) newPvalue = gateway.JsonToConditions(pvalue);
 
-                sql = ctx.VisualDevRepository.AsSugarClient().SqlQueryable<dynamic>(sql).Where(newPvalue).ToSqlString();
+                sql = gateway.RenderSqlWhere(sql, newPvalue);
             }
         }
 
         return sql;
     }
 
-    public List<IConditionalModel> GetIConditionalModelListByTableName(List<IConditionalModel> cList, string tableName)
-        => ListConditionalByTableNameFilter.Filter(cList, tableName);
+    public List<ICompileConditionalModel> GetIConditionalModelListByTableName(List<ICompileConditionalModel> cList, string tableName)
+    {
+        for (var i = 0; i < cList.Count; i++)
+        {
+            if (cList[i] is CompileConditionalTree newItem)
+            {
+                for (var j = 0; j < newItem.ConditionalList.Count; j++)
+                {
+                    var value = GetIConditionalModelListByTableName(new List<ICompileConditionalModel> { newItem.ConditionalList[j].Value }, tableName);
+                    if (value != null && value.Any())
+                    {
+                        if (newItem.ConditionalList[j].Equals(newItem.ConditionalList.FirstOrDefault()))
+                            newItem.ConditionalList[j] = new KeyValuePair<CompileWhereType, ICompileConditionalModel>(CompileWhereType.Null, value.First());
+                        else
+                            newItem.ConditionalList[j] = new KeyValuePair<CompileWhereType, ICompileConditionalModel>(newItem.ConditionalList[j].Key, value.First());
+                    }
+                    else
+                    {
+                        newItem.ConditionalList.RemoveAt(j);
+                        j--;
+                    }
+                }
+
+                if (newItem.ConditionalList.Any())
+                {
+                    cList[i] = newItem;
+                }
+                else
+                {
+                    cList.RemoveAt(i);
+                    i--;
+                }
+            }
+            else if (cList[i] is CompileConditionalModel model)
+            {
+                if (!model.FieldName.Contains(tableName))
+                {
+                    cList.RemoveAt(i);
+                    i--;
+                }
+            }
+        }
+
+        return cList;
+    }
 
     /// <summary>
     /// 组装单条信息查询sql.
@@ -746,24 +760,24 @@ public class RunSqlCompiler : ISingleton
     /// <param name="columnDesign"></param>
     /// <param name="isInteAssisData">是否为集成助手数据</param>
     /// <returns></returns>
-    public List<IConditionalModel> GetQueryJson(RunSqlCompileContext ctx, string queryJson, ColumnDesignModel columnDesign, int isInteAssisData = 0)
+    public List<ICompileConditionalModel> GetQueryJson(RunSqlCompileGateway gateway, string queryJson, ColumnDesignModel columnDesign, int isInteAssisData = 0)
     {
         // 将查询的关键字json转成Dictionary
         Dictionary<string, object> keywordJsonDic = string.IsNullOrEmpty(queryJson) ? null : queryJson.ToObject<Dictionary<string, object>>();
-        var conModels = new List<IConditionalModel>();
+        var conModels = new List<ICompileConditionalModel>();
         if (keywordJsonDic != null)
         {
             foreach (KeyValuePair<string, object> item in keywordJsonDic)
             {
                 if (item.Key.Equals(JnpfKeyConst.JNPFKEYWORD) && columnDesign.searchList.Any(it => it.isKeyword))
                 {
-                    var con = new ConditionalCollections() { ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>() };
+                    var con = new CompileConditionalCollections() { ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>() };
                     foreach (var model in columnDesign.searchList.FindAll(it => it.isKeyword))
                     {
-                        var conditional = new KeyValuePair<WhereType, ConditionalModel>(WhereType.Or, new ConditionalModel
+                        var conditional = new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.Or, new CompileConditionalModel
                         {
                             FieldName = model.id,
-                            ConditionalType = ConditionalType.Like,
+                            ConditionalType = CompileConditionalType.Like,
                             FieldValue = item.Value.ToString()
                         });
                         con.ConditionalList.Add(conditional);
@@ -805,22 +819,22 @@ public class RunSqlCompiler : ISingleton
                             }
 							//end modify
 
-                                conModels.Add(new ConditionalCollections()
+                                conModels.Add(new CompileConditionalCollections()
                                 {
-                                    ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                    ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                     {
-                                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                        new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                         {
                                             FieldName = item.Key,
-                                            ConditionalType = ConditionalType.GreaterThanOrEqual,
+                                            ConditionalType = CompileConditionalType.GreaterThanOrEqual,
                                             FieldValue = new DateTime(startTime.Year, startTime.Month, startTime.Day, startTime.Hour, startTime.Minute, startTime.Second, 0).ToString(),
                                             CSharpTypeName = "datetime",
                                             FieldValueConvertFunc = it => Convert.ToDateTime(it)
                                         }),
-                                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                        new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                         {
                                             FieldName = item.Key,
-                                            ConditionalType = ConditionalType.LessThanOrEqual,
+                                            ConditionalType = CompileConditionalType.LessThanOrEqual,
                                             FieldValue = new DateTime(endTime.Year, endTime.Month, endTime.Day, endTime.Hour, endTime.Minute, endTime.Second, 999).ToString(),
                                             CSharpTypeName = "datetime",
                                             FieldValueConvertFunc = it => Convert.ToDateTime(it)
@@ -835,20 +849,20 @@ public class RunSqlCompiler : ISingleton
                                 var timeRange = item.Value.ToObject<List<string>>();
                                 var startTime = string.Format("{0:" + model.format + "}", Convert.ToDateTime(timeRange.First()));
                                 var endTime = string.Format("{0:" + model.format + "}", Convert.ToDateTime(timeRange.Last()));
-                                conModels.Add(new ConditionalCollections()
+                                conModels.Add(new CompileConditionalCollections()
                                 {
-                                    ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                    ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                 {
-                                    new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                    new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                     {
                                         FieldName = item.Key,
-                                        ConditionalType = ConditionalType.GreaterThanOrEqual,
+                                        ConditionalType = CompileConditionalType.GreaterThanOrEqual,
                                         FieldValue = startTime
                                     }),
-                                    new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                    new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                     {
                                         FieldName = item.Key,
-                                        ConditionalType = ConditionalType.LessThanOrEqual,
+                                        ConditionalType = CompileConditionalType.LessThanOrEqual,
                                         FieldValue = endTime
                                     })
                                 }
@@ -862,22 +876,22 @@ public class RunSqlCompiler : ISingleton
                                 List<string> numArray = item.Value.ToObject<List<string>>();
                                 var startNum = numArray.First().ParseToDecimal();
                                 var endNum = numArray.Last() == null ? decimal.MaxValue : numArray.Last().ParseToDecimal();
-                                conModels.Add(new ConditionalCollections()
+                                conModels.Add(new CompileConditionalCollections()
                                 {
-                                    ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                    ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                 {
-                                    new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                    new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                     {
                                         CSharpTypeName="decimal",
                                         FieldName = item.Key,
-                                        ConditionalType = ConditionalType.GreaterThanOrEqual,
+                                        ConditionalType = CompileConditionalType.GreaterThanOrEqual,
                                         FieldValue = startNum.ToString()
                                     }),
-                                    new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                    new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                     {
                                         CSharpTypeName="decimal",
                                         FieldName = item.Key,
-                                        ConditionalType = ConditionalType.LessThanOrEqual,
+                                        ConditionalType = CompileConditionalType.LessThanOrEqual,
                                         FieldValue = endNum.ToString()
                                     })
                                 }
@@ -888,16 +902,16 @@ public class RunSqlCompiler : ISingleton
                         case JnpfKeyConst.CHECKBOX:
                             {
                                 //if (model.searchType.Equals(1))
-                                //    conModels.Add(new ConditionalModel { FieldName = item.Key, ConditionalType = ConditionalType.Equal, FieldValue = item.Value.ToString() });
+                                //    conModels.Add(new CompileConditionalModel { FieldName = item.Key, ConditionalType = CompileConditionalType.Equal, FieldValue = item.Value.ToString() });
                                 //else
-                                conModels.Add(new ConditionalCollections()
+                                conModels.Add(new CompileConditionalCollections()
                                 {
-                                    ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                    ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                     {
-                                    new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                    new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                     {
                                         FieldName = item.Key,
-                                        ConditionalType = ConditionalType.Like,
+                                        ConditionalType = CompileConditionalType.Like,
                                         FieldValue = item.Value.ToJsonString()
                                     })
                                     }
@@ -915,31 +929,31 @@ public class RunSqlCompiler : ISingleton
                                 if (model.multiple || model.searchMultiple)
                                 {
                                     var value = item.Value.ToString().Contains("[") ? item.Value.ToObject<List<object>>() : new List<object>() { item.Value.ToString() };
-                                    var addItems = new List<KeyValuePair<WhereType, ConditionalModel>>();
+                                    var addItems = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>();
                                     for (int i = 0; i < value.Count; i++)
                                     {
-                                        var add = new KeyValuePair<WhereType, ConditionalModel>(i == 0 ? WhereType.And : WhereType.Or, new ConditionalModel
+                                        var add = new KeyValuePair<CompileWhereType, CompileConditionalModel>(i == 0 ? CompileWhereType.And : CompileWhereType.Or, new CompileConditionalModel
                                         {
                                             FieldName = item.Key,
-                                            ConditionalType = model.multiple ? ConditionalType.Like : ConditionalType.Equal,
+                                            ConditionalType = model.multiple ? CompileConditionalType.Like : CompileConditionalType.Equal,
                                             FieldValue = model.multiple ? value[i].ToJsonString() : value[i].ToString()
                                         });
                                         addItems.Add(add);
                                     }
 
-                                    conModels.Add(new ConditionalCollections() { ConditionalList = addItems });
+                                    conModels.Add(new CompileConditionalCollections() { ConditionalList = addItems });
                                 }
                                 else
                                 {
                                     var value = item.Value.ToString().Contains("[") ? item.Value.ToObject<List<string>>().FirstOrDefault() : item.Value.ToString();
-                                    conModels.Add(new ConditionalCollections()
+                                    conModels.Add(new CompileConditionalCollections()
                                     {
-                                        ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                        ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                     {
-                                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                        new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                         {
                                             FieldName = item.Key,
-                                            ConditionalType = ConditionalType.Equal,
+                                            ConditionalType = CompileConditionalType.Equal,
                                             FieldValue = value
                                         })
                                     }
@@ -957,7 +971,7 @@ public class RunSqlCompiler : ISingleton
                                         var objIdList = new List<string>();
                                         if (item.Value.ToString().Contains("[")) objIdList = item.Value.ToObject<List<string>>();
                                         else objIdList.Add(item.Value.ToString());
-                                        var rIdList = ctx.VisualDevRepository.AsSugarClient().Queryable<UserRelationEntity>().Where(x => objIdList.Select(xx => xx.Replace("--user", string.Empty)).Contains(x.UserId)).Select(x => new { x.ObjectId, x.ObjectType }).ToList();
+                                        var rIdList = gateway.ResolveUserRelations(objIdList);
                                         rIdList.ForEach(x =>
                                         {
                                             if (x.ObjectType.Equals("Organize"))
@@ -971,41 +985,41 @@ public class RunSqlCompiler : ISingleton
                                             }
                                         });
 
-                                        var whereList = new List<KeyValuePair<WhereType, ConditionalModel>>();
+                                        var whereList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>();
                                         for (var i = 0; i < objIdList.Count(); i++)
                                         {
                                             if (i == 0)
                                             {
-                                                whereList.Add(new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                                whereList.Add(new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                                 {
                                                     FieldName = item.Key,
-                                                    ConditionalType = ConditionalType.Like,
+                                                    ConditionalType = CompileConditionalType.Like,
                                                     FieldValue = objIdList[i]
                                                 }));
                                             }
                                             else
                                             {
-                                                whereList.Add(new KeyValuePair<WhereType, ConditionalModel>(WhereType.Or, new ConditionalModel
+                                                whereList.Add(new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.Or, new CompileConditionalModel
                                                 {
                                                     FieldName = item.Key,
-                                                    ConditionalType = ConditionalType.Like,
+                                                    ConditionalType = CompileConditionalType.Like,
                                                     FieldValue = objIdList[i]
                                                 }));
                                             }
                                         }
 
-                                        conModels.Add(new ConditionalCollections() { ConditionalList = whereList });
+                                        conModels.Add(new CompileConditionalCollections() { ConditionalList = whereList });
                                     }
                                     else
                                     {
-                                        conModels.Add(new ConditionalCollections()
+                                        conModels.Add(new CompileConditionalCollections()
                                         {
-                                            ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                            ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                           {
-                                            new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                            new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                             {
                                                 FieldName = item.Key,
-                                                ConditionalType = ConditionalType.Equal,
+                                                ConditionalType = CompileConditionalType.Equal,
                                                 FieldValue = item.Value.ToString()
                                             })
                                           }
@@ -1021,14 +1035,14 @@ public class RunSqlCompiler : ISingleton
                                 {
                                     var value = item.Value.ToObject<List<string>>();
 
-                                    conModels.Add(new ConditionalCollections()
+                                    conModels.Add(new CompileConditionalCollections()
                                     {
-                                        ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                        ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                     {
-                                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                        new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                         {
                                             FieldName = item.Key,
-                                            ConditionalType = ConditionalType.Like,
+                                            ConditionalType = CompileConditionalType.Like,
                                             FieldValue = value.LastOrDefault()
                                         })
                                     }
@@ -1039,14 +1053,14 @@ public class RunSqlCompiler : ISingleton
                                     // 多选时为模糊查询
                                     if (model.multiple)
                                     {
-                                        conModels.Add(new ConditionalCollections()
+                                        conModels.Add(new CompileConditionalCollections()
                                         {
-                                            ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                            ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                           {
-                                            new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                            new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                             {
                                                 FieldName = item.Key,
-                                                ConditionalType = ConditionalType.Like,
+                                                ConditionalType = CompileConditionalType.Like,
                                                 FieldValue = item.Value.ToString()
                                             })
                                           }
@@ -1054,14 +1068,14 @@ public class RunSqlCompiler : ISingleton
                                     }
                                     else
                                     {
-                                        conModels.Add(new ConditionalCollections()
+                                        conModels.Add(new CompileConditionalCollections()
                                         {
-                                            ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                            ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                           {
-                                            new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                            new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                             {
                                                 FieldName = item.Key,
-                                                ConditionalType = ConditionalType.Equal,
+                                                ConditionalType = CompileConditionalType.Equal,
                                                 FieldValue = item.Value.ToString()
                                             })
                                           }
@@ -1074,14 +1088,14 @@ public class RunSqlCompiler : ISingleton
                         case JnpfKeyConst.CURRORGANIZE:
                             {
                                 var itemValue = item.Value.ToString().Contains("[") ? item.Value?.ToString().ToObject<List<string>>().ToJsonString() : item.Value.ToString();
-                                conModels.Add(new ConditionalCollections()
+                                conModels.Add(new CompileConditionalCollections()
                                 {
-                                    ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                    ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                     {
-                                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                        new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                         {
                                             FieldName = item.Key,
-                                            ConditionalType = ConditionalType.Equal,
+                                            ConditionalType = CompileConditionalType.Equal,
                                             FieldValue = itemValue
                                         })
                                     }
@@ -1092,14 +1106,14 @@ public class RunSqlCompiler : ISingleton
                         case JnpfKeyConst.CASCADER:
                             {
                                 var itemValue = item.Value.ToString().Contains("[") ? item.Value?.ToString().ToObject<List<string>>().ToJsonStringOld() : item.Value.ToString();
-                                conModels.Add(new ConditionalCollections()
+                                conModels.Add(new CompileConditionalCollections()
                                 {
-                                    ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                    ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                         {
-                                            new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                            new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                             {
                                                 FieldName = item.Key,
-                                                ConditionalType = ConditionalType.Like,
+                                                ConditionalType = CompileConditionalType.Like,
                                                 FieldValue = itemValue.Replace("[", string.Empty).Replace("]", string.Empty)
                                             })
                                         }
@@ -1115,32 +1129,32 @@ public class RunSqlCompiler : ISingleton
                                     var value = item.Value?.ToString().ToObject<List<object>>();
                                     if (value.Any())
                                     {
-                                        var addItems = new List<KeyValuePair<WhereType, ConditionalModel>>();
+                                        var addItems = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>();
                                         for (int i = 0; i < value.Count; i++)
                                         {
-                                            var add = new KeyValuePair<WhereType, ConditionalModel>(i == 0 ? WhereType.And : WhereType.Or, new ConditionalModel
+                                            var add = new KeyValuePair<CompileWhereType, CompileConditionalModel>(i == 0 ? CompileWhereType.And : CompileWhereType.Or, new CompileConditionalModel
                                             {
                                                 FieldName = item.Key,
-                                                ConditionalType = ConditionalType.Like,
+                                                ConditionalType = CompileConditionalType.Like,
                                                 FieldValue = value[i].ToJsonStringOld().Contains('[') ? value[i].ToJsonStringOld().Replace("[", string.Empty) : item.Value?.ToString().Replace("[", string.Empty).Replace("\r\n", string.Empty).Replace(" ", string.Empty),
                                             });
                                             addItems.Add(add);
                                         }
-                                        conModels.Add(new ConditionalCollections() { ConditionalList = addItems });
+                                        conModels.Add(new CompileConditionalCollections() { ConditionalList = addItems });
                                     }
                                 }
                                 else
                                 {
                                     var itemValue = item.Value.ToString().Contains('[') ? item.Value.ToJsonStringOld() : item.Value.ToString();
                                     if (itemValue.Contains("[[")) itemValue = itemValue.ToObject<List<List<object>>>().FirstOrDefault().ToJsonStringOld();
-                                    conModels.Add(new ConditionalCollections()
+                                    conModels.Add(new CompileConditionalCollections()
                                     {
-                                        ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                        ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                         {
-                                            new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                            new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                             {
                                                 FieldName = item.Key,
-                                                ConditionalType = ConditionalType.Equal,
+                                                ConditionalType = CompileConditionalType.Equal,
                                                 FieldValue = itemValue
                                             })
                                         }
@@ -1157,30 +1171,30 @@ public class RunSqlCompiler : ISingleton
                                 if (model.multiple || model.searchMultiple)
                                 {
                                     var value = item.Value.ToString().Contains("[") ? item.Value.ToObject<List<object>>() : new List<object>() { item.Value.ToString() };
-                                    var addItems = new List<KeyValuePair<WhereType, ConditionalModel>>();
+                                    var addItems = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>();
                                     for (int i = 0; i < value.Count; i++)
                                     {
-                                        var add = new KeyValuePair<WhereType, ConditionalModel>(i == 0 ? WhereType.And : WhereType.Or, new ConditionalModel
+                                        var add = new KeyValuePair<CompileWhereType, CompileConditionalModel>(i == 0 ? CompileWhereType.And : CompileWhereType.Or, new CompileConditionalModel
                                         {
                                             FieldName = item.Key,
-                                            ConditionalType = model.multiple ? ConditionalType.Like : ConditionalType.Equal,
+                                            ConditionalType = model.multiple ? CompileConditionalType.Like : CompileConditionalType.Equal,
                                             FieldValue = model.multiple ? value[i].ToJsonString() : value[i].ToString()
                                         });
                                         addItems.Add(add);
                                     }
 
-                                    conModels.Add(new ConditionalCollections() { ConditionalList = addItems });
+                                    conModels.Add(new CompileConditionalCollections() { ConditionalList = addItems });
                                 }
                                 else
                                 {
-                                    conModels.Add(new ConditionalCollections()
+                                    conModels.Add(new CompileConditionalCollections()
                                     {
-                                        ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                        ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                     {
-                                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                        new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                         {
                                             FieldName = item.Key,
-                                            ConditionalType = ConditionalType.Equal,
+                                            ConditionalType = CompileConditionalType.Equal,
                                             FieldValue = itemValue
                                         })
                                     }
@@ -1193,21 +1207,21 @@ public class RunSqlCompiler : ISingleton
                         case JnpfKeyConst.SLIDER:
                             {
                                 var rateRange = item.Value.ToObject<List<string>>();
-                                conModels.Add(new ConditionalCollections()
+                                conModels.Add(new CompileConditionalCollections()
                                 {
-                                    ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                    ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                     {
-                                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                        new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                         {
                                             FieldName = item.Key,
-                                            ConditionalType = ConditionalType.GreaterThanOrEqual,
+                                            ConditionalType = CompileConditionalType.GreaterThanOrEqual,
                                             FieldValue = rateRange.First(),
                                             CSharpTypeName = "decimal"
                                         }),
-                                        new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                        new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                         {
                                             FieldName = item.Key,
-                                            ConditionalType = ConditionalType.LessThanOrEqual,
+                                            ConditionalType = CompileConditionalType.LessThanOrEqual,
                                             FieldValue = rateRange.Last(),
                                             CSharpTypeName = "decimal"
                                         })
@@ -1222,14 +1236,14 @@ public class RunSqlCompiler : ISingleton
 
                                 if (model.searchType == 1)
                                 {
-                                    conModels.Add(new ConditionalCollections()
+                                    conModels.Add(new CompileConditionalCollections()
                                     {
-                                        ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                        ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                           {
-                                            new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                            new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                             {
                                                 FieldName = item.Key,
-                                                ConditionalType = ConditionalType.Equal,
+                                                ConditionalType = CompileConditionalType.Equal,
                                                 FieldValue = itemValue
                                             })
                                           }
@@ -1237,14 +1251,14 @@ public class RunSqlCompiler : ISingleton
                                 }
                                 else
                                 {
-                                    conModels.Add(new ConditionalCollections()
+                                    conModels.Add(new CompileConditionalCollections()
                                     {
-                                        ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                                        ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                                           {
-                                            new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                                            new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                                             {
                                                 FieldName = item.Key,
-                                                ConditionalType = ConditionalType.Like,
+                                                ConditionalType = CompileConditionalType.Like,
                                                 FieldValue = itemValue
                                             })
                                           }
@@ -1260,14 +1274,14 @@ public class RunSqlCompiler : ISingleton
 
         if (isInteAssisData.Equals(1))
         {
-            conModels.Add(new ConditionalCollections()
+            conModels.Add(new CompileConditionalCollections()
             {
-                ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                 {
-                    new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                    new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                     {
                         FieldName = "f_inte_assistant",
-                        ConditionalType = ConditionalType.Equal,
+                        ConditionalType = CompileConditionalType.Equal,
                         FieldValue = "1"
                     })
                 }
@@ -1275,14 +1289,14 @@ public class RunSqlCompiler : ISingleton
         }
         else
         {
-            conModels.Add(new ConditionalCollections()
+            conModels.Add(new CompileConditionalCollections()
             {
-                ConditionalList = new List<KeyValuePair<WhereType, ConditionalModel>>()
+                ConditionalList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>()
                 {
-                    new KeyValuePair<WhereType, ConditionalModel>(WhereType.And, new ConditionalModel
+                    new KeyValuePair<CompileWhereType, CompileConditionalModel>(CompileWhereType.And, new CompileConditionalModel
                     {
                         FieldName = "f_inte_assistant",
-                        ConditionalType = ConditionalType.EqualNull
+                        ConditionalType = CompileConditionalType.EqualNull
                     })
                 }
             });
@@ -1296,16 +1310,16 @@ public class RunSqlCompiler : ISingleton
     /// </summary>
     /// <param name="superQueryJson"></param>
     /// <returns></returns>
-    public List<IConditionalModel> GetSuperQueryJson(string superQueryJson, TemplateParsingBase tInfo)
+    public List<ICompileConditionalModel> GetSuperQueryJson(string superQueryJson, TemplateParsingBase tInfo)
     {
-        List<IConditionalModel> conModels = new List<IConditionalModel>();
+        List<ICompileConditionalModel> conModels = new List<ICompileConditionalModel>();
         if (superQueryJson.IsNotEmptyOrNull())
         {
             var querList = superQueryJson.ToObject<List<Dictionary<string, object>>>();
-            var whereTypeList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>();
+            var whereTypeList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>();
             foreach (var item in querList)
             {
-                var whereType = new WhereType();
+                var whereType = new CompileWhereType();
 
                 // 判断是否为新分组
                 if (item.ContainsKey("where"))
@@ -1315,20 +1329,20 @@ public class RunSqlCompiler : ISingleton
 
                     if (whereTypeList.Count > 0)
                     {
-                        conModels.Add(new ConditionalCollections() { ConditionalList = whereTypeList });
-                        whereTypeList = new List<KeyValuePair<WhereType, SqlSugar.ConditionalModel>>();
+                        conModels.Add(new CompileConditionalCollections() { ConditionalList = whereTypeList });
+                        whereTypeList = new List<KeyValuePair<CompileWhereType, CompileConditionalModel>>();
                     }
 
-                    whereType = item["where"].ToString().ToObject<WhereType>();
+                    whereType = item["where"].ToString().ToObject<CompileWhereType>();
                 }
                 else
                 {
-                    whereType = item["whereType"].ToString().ToObject<WhereType>();
+                    whereType = item["whereType"].ToString().ToObject<CompileWhereType>();
                 }
 
-                var conditionalType = item["ConditionalType"].ToString().ToObject<ConditionalType>();
+                var conditionalType = item["ConditionalType"].ToString().ToObject<CompileConditionalType>();
                 string _CSharpTypeName = item.ContainsKey("CSharpTypeName") ? item["CSharpTypeName"].ToString() : null;
-                whereTypeList.Add(new KeyValuePair<WhereType, ConditionalModel>(whereType, new ConditionalModel
+                whereTypeList.Add(new KeyValuePair<CompileWhereType, CompileConditionalModel>(whereType, new CompileConditionalModel
                 {
                     CSharpTypeName = _CSharpTypeName,
                     FieldName = item["field"].ToString(),
@@ -1337,7 +1351,7 @@ public class RunSqlCompiler : ISingleton
                 }));
 
                 if (item.Equals(querList.Last()))
-                    conModels.Add(new ConditionalCollections() { ConditionalList = whereTypeList });
+                    conModels.Add(new CompileConditionalCollections() { ConditionalList = whereTypeList });
             }
         }
 

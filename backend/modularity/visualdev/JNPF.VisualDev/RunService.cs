@@ -205,30 +205,30 @@ public class RunService : IRunService, ITransient, IDisposable
 
         // 所有查询条件
         input.dataRuleJson = _userManager.UserOrigin == "pc" ? templateInfo.DataRuleListJson.ToJsonStringOld() : templateInfo.AppDataRuleListJson.ToJsonStringOld(); // 数据过滤
-        var dataRuleWhere = new List<IConditionalModel>();
-        var queryWhere = new List<IConditionalModel>();
-        var superQueryWhere = new List<IConditionalModel>();
-        if (input.dataRuleJson.IsNotEmptyOrNull()) dataRuleWhere = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(input.dataRuleJson);
-        queryWhere = _compiler.GetQueryJson(BuildCompileContext(), input.queryJson, _userManager.UserOrigin == "pc" ? templateInfo.ColumnData : templateInfo.AppColumnData, input.isInteAssisData);
+        var dataRuleWhere = new List<ICompileConditionalModel>();
+        var queryWhere = new List<ICompileConditionalModel>();
+        var superQueryWhere = new List<ICompileConditionalModel>();
+        if (input.dataRuleJson.IsNotEmptyOrNull()) dataRuleWhere = CompileConditionalConverter.ToCompile(_visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(input.dataRuleJson));
+        queryWhere = _compiler.GetQueryJson(BuildCompileGateway(templateInfo), input.queryJson, _userManager.UserOrigin == "pc" ? templateInfo.ColumnData : templateInfo.AppColumnData, input.isInteAssisData);
         if (input.superQueryJson.IsNotEmptyOrNull()) superQueryWhere = _compiler.GetSuperQueryJson(input.superQueryJson, templateInfo);
 
         if (templateInfo.ColumnData.type == 4) await OptimisticLocking(link, templateInfo); // 开启行编辑 处理 开启并发锁定
         Dictionary<string, string>? tableFieldKeyValue = new Dictionary<string, string>(); // 联表查询 表字段名称 对应 前端字段名称 (应对oracle 查询字段长度不能超过30个)
-        string? sql = _compiler.GetListQuerySql(BuildCompileContext(), primaryKey, templateInfo, ref input, ref tableFieldKeyValue, pvalue); // 查询sql
+        string? sql = _compiler.GetListQuerySql(BuildCompileGateway(templateInfo), primaryKey, templateInfo, ref input, ref tableFieldKeyValue, CompileConditionalConverter.ToCompile(pvalue)); // 查询sql
 
         // 树形 / 未开启分页 → 全量
         input.pageSize = ListQueryInputHelpers.ResolveEffectivePageSize(
             input.pageSize, templateInfo.ColumnData.hasPage, templateInfo.ColumnData.type);
 
         // 处理查询
-        input.queryJson = _compiler.GetQueryJson(BuildCompileContext(), input.queryJson, templateInfo.ColumnData, input.isInteAssisData).ToJsonStringOld();
+        input.queryJson = _compiler.GetQueryJson(BuildCompileGateway(templateInfo), input.queryJson, templateInfo.ColumnData, input.isInteAssisData).ToJsonStringOld();
         input.superQueryJson = _compiler.GetSuperQueryJson(input.superQueryJson, templateInfo).ToJsonStringOld();
 
         realList = _databaseService.GetInterFaceData(link, sql, input, templateInfo.ColumnData.Adapt<MainBeltViceQueryModel>(), new List<IConditionalModel>(), tableFieldKeyValue);
 
         // 显示列有子表字段
         if ((entity.isShortLink || (templateInfo.ColumnData.type != 4 && templateInfo.ColumnData.columnList.Any(x => templateInfo.ChildTableFields.ContainsKey(x.__vModel__) || templateInfo.ChildTableFields.ContainsKey(x.prop)))) && realList.list.Any())
-            realList = await GetListChildTable(templateInfo, primaryKey, queryWhere, dataRuleWhere, superQueryWhere, realList, pvalue, input.isConvertData);
+            realList = await GetListChildTable(templateInfo, primaryKey, queryWhere, dataRuleWhere, superQueryWhere, realList, CompileConditionalConverter.ToCompile(pvalue), input.isConvertData);
 
         // 处理 自增长ID 流程表单 自增长Id转成 流程Id
         if (entity.FlowId.IsNotEmptyOrNull() && entity.EnableFlow.Equals(1) && realList.list.Any())
@@ -336,7 +336,7 @@ public class RunService : IRunService, ITransient, IDisposable
         string? queryJson = input.queryJson;
         input.queryJson = string.Empty;
 
-        string? sql = _compiler.GetListQuerySql(BuildCompileContext(), primaryKey, templateInfo, ref input, ref tableFieldKeyValue, pvalue, true); // 查询sql
+        string? sql = _compiler.GetListQuerySql(BuildCompileGateway(templateInfo), primaryKey, templateInfo, ref input, ref tableFieldKeyValue, CompileConditionalConverter.ToCompile(pvalue), true); // 查询sql
         realList = _databaseService.GetInterFaceData(link, sql, input, templateInfo.ColumnData.Adapt<MainBeltViceQueryModel>(), pvalue, tableFieldKeyValue);
 
         input.queryJson = queryJson;
@@ -2022,20 +2022,62 @@ public class RunService : IRunService, ITransient, IDisposable
     /// <param name="formType">表单类型（1：系统表单 2：自定义表单）.</param>
     /// <returns></returns>
     public string GetVisualDevModelDataConfig(string propertyJson, string tableJson, int formType)
-        => _compiler.GetVisualDevModelDataConfig(BuildCompileContext(), propertyJson, tableJson, formType);
+        => _compiler.GetVisualDevModelDataConfig(new RunSqlCompileGateway { UserSelectDefaults = BuildUserSelectDefaults }, propertyJson, tableJson, formType);
 
     /// <summary>
-    /// 构建编译层过渡依赖载体（Task 3.2 裁决 A；Task 3.3 参数化剥离后随载体移除）.
+    /// 构建编译层供数网关（Task 3.3 裁决 C：DB 读取/SQL 渲染留在调用侧，经委托供入；惰性成员仅在对应分支触达）.
     /// </summary>
-    private RunSqlCompileContext BuildCompileContext() => new()
+    private RunSqlCompileGateway BuildCompileGateway(TemplateParsingBase templateInfo) => new()
     {
-        SqlSugarClient = _sqlSugarClient,
-        VisualDevRepository = _visualDevRepository,
-        DataBaseManager = _databaseService,
-        UserManager = _userManager,
-        CacheManager = _cacheManager,
-        Tenant = _tenant,
+        UserOrigin = _userManager.UserOrigin,
+        MultiTenancy = _tenant.MultiTenancy,
+        TenantCache = _tenant.MultiTenancy ? _cacheManager.Get<List<GlobalTenantCacheModel>>(CommonConst.GLOBALTENANT).Find(it => it.TenantId.Equals(templateInfo.DbLink.Id)) : null,
+        ColumnExists = (table, column) => _databaseService.IsAnyColumn(templateInfo.DbLink, table, column),
+        JsonToConditions = json => CompileConditionalConverter.ToCompile(_visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(json)),
+        RenderLinkWhere = conditions => RenderLinkWhere(templateInfo.DbLink, conditions),
+        RenderDefaultWhere = conditions => _visualDevRepository.AsSugarClient().SqlQueryable<dynamic>("@").Where(CompileConditionalConverter.ToSqlSugar(conditions)).ToSqlString(),
+        RenderSqlWhere = (sql, conditions) => _visualDevRepository.AsSugarClient().SqlQueryable<dynamic>(sql).Where(CompileConditionalConverter.ToSqlSugar(conditions)).ToSqlString(),
+        ResolveUserRelations = objIdList => _visualDevRepository.AsSugarClient().Queryable<UserRelationEntity>().Where(x => objIdList.Select(xx => xx.Replace("--user", string.Empty)).Contains(x.UserId)).ToList(),
+        UserSelectDefaults = BuildUserSelectDefaults,
     };
+
+    /// <summary>
+    /// 外部源条件渲染（切库→渲染→复位 default，语义与剥离前逐字一致；裁决 C 网关供数侧）.
+    /// </summary>
+    private string RenderLinkWhere(DbLinkEntity link, List<ICompileConditionalModel> conditions)
+    {
+        _sqlSugarClient = _databaseService.ChangeDataBase(link);
+        var where = _sqlSugarClient.SqlQueryable<object>("@").Where(CompileConditionalConverter.ToSqlSugar(conditions)).ToSqlString();
+        _sqlSugarClient.AsTenant().ChangeDatabase("default");
+        return where;
+    }
+
+    /// <summary>
+    /// 用户选择类默认值元数据（惰性供数：原 GetVisualDevModelDataConfig 内五项元数据查询逐字上移）.
+    /// </summary>
+    private UserSelectDefaults BuildUserSelectDefaults()
+    {
+        var userId = _userManager.UserId;
+        var depId = _visualDevRepository.AsSugarClient().Queryable<UserEntity, OrganizeEntity>((a, b) => new JoinQueryInfos(JoinType.Left, b.Id == a.OrganizeId))
+            .Where((a, b) => a.Id.Equals(_userManager.UserId) && b.Category.Equals("department")).Select((a, b) => a.OrganizeId).First();
+        var posIds = _visualDevRepository.AsSugarClient().Queryable<PositionEntity, UserRelationEntity>((a, b) => new JoinQueryInfos(JoinType.Left, a.Id == b.ObjectId && b.ObjectType.Equals("Position")))
+            .Where((a, b) => b.UserId.Equals(_userManager.UserId) && a.OrganizeId.Equals(_userManager.User.OrganizeId)).Select(a => a.Id).ToList();
+        var roleIds = _visualDevRepository.AsSugarClient().Queryable<UserRelationEntity>()
+            .Where(it => it.UserId.Equals(_userManager.UserId) && it.ObjectType.Equals("Role")).Select(it => it.ObjectId).ToList();
+        var groupIds = _visualDevRepository.AsSugarClient().Queryable<UserRelationEntity>()
+            .Where(it => it.UserId.Equals(_userManager.UserId) && it.ObjectType.Equals("Group")).Select(it => it.ObjectId).ToList();
+        var allUserRelationList = _visualDevRepository.AsSugarClient().Queryable<UserRelationEntity>().Select(x => new UserRelationEntity() { UserId = x.UserId, ObjectId = x.ObjectId }).ToList();
+        return new UserSelectDefaults
+        {
+            UserId = userId,
+            DepId = depId,
+            PosIds = posIds,
+            RoleIds = roleIds,
+            GroupIds = groupIds,
+            AllUserRelationList = allUserRelationList,
+            PositionId = _userManager.User.PositionId,
+        };
+    }
 
     /// <summary>
     /// 同步业务需要的字段.
@@ -2294,11 +2336,11 @@ public class RunService : IRunService, ITransient, IDisposable
     private async Task<PageResult<Dictionary<string, object>>> GetListChildTable(
         TemplateParsingBase templateInfo,
         string primaryKey,
-        List<IConditionalModel> querList,
-        List<IConditionalModel> dataRuleList,
-        List<IConditionalModel> superQuerList,
+        List<ICompileConditionalModel> querList,
+        List<ICompileConditionalModel> dataRuleList,
+        List<ICompileConditionalModel> superQuerList,
         PageResult<Dictionary<string, object>> result,
-        List<IConditionalModel> dataPermissions,
+        List<ICompileConditionalModel> dataPermissions,
         int? isConvertData = null)
     {
         var ids = ListChildTableHelpers.CollectParentIds(result.list, primaryKey);
@@ -2307,9 +2349,9 @@ public class RunService : IRunService, ITransient, IDisposable
         var dataRuleJson = ListChildTableHelpers.RewriteQuotedMapKeys(dataRuleList.ToJsonStringOld(), templateInfo.AllTableFields);
 
         // 捞取 所有子表查询条件 <tableName , where>
-        var childTableQuery = new Dictionary<string, List<IConditionalModel>>();
-        var dataRule = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(dataRuleJson);
-        var query = querList.ToObject<List<ConditionalCollections>>();
+        var childTableQuery = new Dictionary<string, List<ICompileConditionalModel>>();
+        var dataRule = CompileConditionalConverter.ToCompile(_visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(dataRuleJson));
+        var query = querList.ToObject<List<CompileConditionalCollections>>();
         foreach (var item in templateInfo.ChildTableFields)
         {
             var tableName = item.Value.Split(".").FirstOrDefault();
@@ -2317,7 +2359,7 @@ public class RunService : IRunService, ITransient, IDisposable
             if (dataRuleConList.Any())
             {
                 //foreach (var it in dataRuleConList) it.ConditionalList.ForEach(x => x.Value.FieldName = item.Value);
-                if (!childTableQuery.ContainsKey(tableName)) childTableQuery.Add(tableName, new List<IConditionalModel>());
+                if (!childTableQuery.ContainsKey(tableName)) childTableQuery.Add(tableName, new List<ICompileConditionalModel>());
                 childTableQuery[tableName].AddRange(dataRuleConList);
             }
             var conList = query.Where(x => x.ConditionalList.Any(xx => xx.Value.FieldName.Equals(item.Key))).ToList();
@@ -2325,69 +2367,69 @@ public class RunService : IRunService, ITransient, IDisposable
             {
                 ListChildTableHelpers.RewriteChildFieldNames(conList, templateInfo.ChildTableFields);
 
-                if (!childTableQuery.ContainsKey(tableName)) childTableQuery.Add(tableName, new List<IConditionalModel>());
+                if (!childTableQuery.ContainsKey(tableName)) childTableQuery.Add(tableName, new List<ICompileConditionalModel>());
                 childTableQuery[tableName].AddRange(conList);
             }
         }
 
         // 处理高级查询值名称
-        ListChildTableHelpers.RewriteChildFieldNames(superQuerList.Cast<ConditionalCollections>(), templateInfo.ChildTableFields);
+        ListChildTableHelpers.RewriteChildFieldNames(superQuerList.Cast<CompileConditionalCollections>(), templateInfo.ChildTableFields);
 
         foreach (var item in childTableList)
         {
             var sql = ListChildTableHelpers.BuildChildTableInSql(item.Value, item.Key, relationField[item.Key], ids);
             if (childTableQuery.ContainsKey(item.Key)) // 子表查询条件
             {
-                var itemWhere = _visualDevRepository.AsSugarClient().SqlQueryable<dynamic>("@").Where(childTableQuery[item.Key]).ToSqlString();
+                var itemWhere = _visualDevRepository.AsSugarClient().SqlQueryable<dynamic>("@").Where(CompileConditionalConverter.ToSqlSugar(childTableQuery[item.Key])).ToSqlString();
                 sql = ListChildTableHelpers.AppendAndWhereFragment(sql, itemWhere);
             }
 
             // 拼接高级查询
-            var superQueryConList = new List<IConditionalModel>();
+            var superQueryConList = new List<ICompileConditionalModel>();
             if (superQuerList != null && superQuerList.Any())
             {
                 var allSuperQuery = superQuerList.ToJsonStringOld().ToObject<List<object>>();
                 var sList = ListChildTableHelpers.FilterObjectsContainingTablePrefix(allSuperQuery, item.Key);
                 if (sList.Any())
                 {
-                    superQueryConList = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(sList.ToJsonString());
+                    superQueryConList = CompileConditionalConverter.ToCompile(_visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(sList.ToJsonString()));
                     superQueryConList = _compiler.GetIConditionalModelListByTableName(superQueryConList, item.Key);
                     var json = superQueryConList.ToJsonStringOld().Replace(item.Key + ".", string.Empty);
-                    superQueryConList = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(json);
+                    superQueryConList = CompileConditionalConverter.ToCompile(_visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(json));
                 }
             }
 
             // 拼接数据权限
-            var dataPermissionsList = new List<IConditionalModel>();
+            var dataPermissionsList = new List<ICompileConditionalModel>();
             if (dataPermissions != null && dataPermissions.Any())
             {
                 var allPersissions = dataPermissions.ToObject<List<object>>();
                 var pList = ListChildTableHelpers.FilterObjectsContainingTablePrefix(allPersissions, item.Key);
                 if (pList.Any())
                 {
-                    dataPermissionsList = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(pList.ToJsonString());
+                    dataPermissionsList = CompileConditionalConverter.ToCompile(_visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(pList.ToJsonString()));
                     dataPermissionsList = _compiler.GetIConditionalModelListByTableName(dataPermissionsList, item.Key);
                     var json = dataPermissionsList.ToJsonString().Replace(item.Key + ".", string.Empty);
-                    dataPermissionsList = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(json);
+                    dataPermissionsList = CompileConditionalConverter.ToCompile(_visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(json));
                 }
             }
 
             // 数据过滤
-            var dataRuleConditionalList = new List<IConditionalModel>();
+            var dataRuleConditionalList = new List<ICompileConditionalModel>();
             if (dataRule != null && dataRule.Any())
             {
                 var allPersissions = dataRule.ToJsonStringOld().ToObject<List<object>>();
                 var pList = ListChildTableHelpers.FilterObjectsContainingTablePrefix(allPersissions, item.Key);
                 if (pList.Any())
                 {
-                    dataRuleConditionalList = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(pList.ToJsonString());
+                    dataRuleConditionalList = CompileConditionalConverter.ToCompile(_visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(pList.ToJsonString()));
                     dataRuleConditionalList = _compiler.GetIConditionalModelListByTableName(dataRuleConditionalList, item.Key);
                     var json = dataRuleConditionalList.ToJsonStringOld().Replace(item.Key + ".", string.Empty);
-                    dataRuleConditionalList = _visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(json);
+                    dataRuleConditionalList = CompileConditionalConverter.ToCompile(_visualDevRepository.AsSugarClient().Utilities.JsonToConditionalModels(json));
                 }
             }
 
-            sql = _visualDevRepository.AsSugarClient().SqlQueryable<dynamic>(sql).Where(superQueryConList).Where(dataPermissionsList).Where(dataRuleConditionalList).ToSqlString();
+            sql = _visualDevRepository.AsSugarClient().SqlQueryable<dynamic>(sql).Where(CompileConditionalConverter.ToSqlSugar(superQueryConList)).Where(CompileConditionalConverter.ToSqlSugar(dataPermissionsList)).Where(CompileConditionalConverter.ToSqlSugar(dataRuleConditionalList)).ToSqlString();
 
             var dt = _databaseService.GetSqlData(templateInfo.DbLink, sql).ToObject<List<Dictionary<string, object>>>();
             var vModel = templateInfo.AllFieldsModel.Find(x => x.__config__.tableName == item.Key)?.__vModel__;
