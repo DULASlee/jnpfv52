@@ -1,4 +1,5 @@
 using System.Reflection;
+using JNPF.Systems.Entitys.Permission;
 using JNPF.VisualDev.Query;
 using Xunit;
 
@@ -21,5 +22,23 @@ public class D1SignatureContractTests
         var p = Assert.Single(m.GetParameters());
         Assert.Equal(typeof(string), p.ParameterType);
         Assert.Equal("superQueryJson", p.Name);
+    }
+
+    [Fact]
+    public void Bind_Signature_Unchanged()
+    {
+        var m = typeof(FieldBindDefaultValueHelpers).GetMethod(
+            "Bind", BindingFlags.Public | BindingFlags.Static);
+
+        Assert.NotNull(m);
+        Assert.Equal(typeof(void), m!.ReturnType);
+        var types = m.GetParameters().Select(p => p.ParameterType).ToArray();
+        Assert.Equal(new[]
+        {
+            typeof(List<Dictionary<string, object>>).MakeByRefType(),
+            typeof(string), typeof(string),
+            typeof(List<string>), typeof(List<string>), typeof(List<string>),
+            typeof(List<UserRelationEntity>), typeof(string),
+        }, types);
     }
 }

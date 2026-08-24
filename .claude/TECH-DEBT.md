@@ -28,7 +28,7 @@
   - `GetConditionQueryClauseAppender.Append`（CC31）
   - `ImportFirstVerifyHelpers.ValidateBatchUnique`（CC35）
   - `ListSuperQueryInputRewriter.Rewrite`（CC84→已拆分销账，2026-08-24 战役 D1 D1.1：门面+子方法全部 <30，基线条目已移除，无豁免通过 CI）
-  - `FieldBindDefaultValueHelpers.Bind`（CC82，自 RunSqlCompiler.FieldBindDefaultValue 平移）
+  - `FieldBindDefaultValueHelpers.Bind`（CC82→已拆分销账，2026-08-24 战役 D1 D1.2：门面+子方法全部 <30，基线条目已移除，无豁免通过 CI）
   - `FlowFormDataMapper.ApplyMapRules`（CC37，自 RunSqlCompiler 数据迁移逻辑平移）
 - **处置**：`complexity-baseline.json` 登记冻结值（每条含归因注记）；方法级 TODO 注释；CI（`dotnet build /p:CI_BUILD=true`）拦截任何上升
 - **拆分重构（已立项，防遗忘硬绑定）**：设计规格 `docs/superpowers/specs/架构设计规格-复杂度基线技术债拆分重构.md` + 实施计划 `docs/superpowers/plans/实施计划-复杂度基线技术债拆分重构.md`（战役 D1，三波次：P0=Rewrite CC84→≤10 / Bind CC82→≤12，P1=ApplyMapRules / ValidateBatchUnique，P2=Append；目标：全部降到 30 以下并从基线销账）
