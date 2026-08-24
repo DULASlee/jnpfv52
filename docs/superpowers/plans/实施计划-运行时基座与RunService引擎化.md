@@ -82,16 +82,16 @@
 
 **Files:** ➕ `backend/modularity/visualdev/JNPF.VisualDev/Runtime/RunSqlCompiler.cs`（ISingleton 空骨架）
 
-- [ ] Step 1：建骨架类（构造无参，零 DI 依赖）
-- [ ] Step 2：构建 0 错误；提交
+- [x] Step 1：建骨架类（构造无参，零 DI 依赖）（✅ 03bffa77；施工实测发现七方法 40+ 处 DB 调用与零 DI 定性冲突 → 用户裁决 A：逐字移动+过渡承载，记录见 `.claude/evidence/runservice-engine-refactor/ruling-task32-db-coupling.md`）
+- [x] Step 2：构建 0 错误；提交（✅）
 
 ### Task 3.2：七方法纯移动（4h）｜依赖：3.1
 
 **Files:** ✏️ `RunService.cs`（GetListQuerySql/GetInfoQuerySql/GetQueryJson/GetSuperQueryJson/GetSuperQueryInput/GetIConditionalModelListByTableName/GetVisualDevModelDataConfig 移出）｜ ✏️ `Runtime/RunSqlCompiler.cs`
 
-- [ ] Step 1：七方法方法体**逐字**迁入 RunSqlCompiler；RunService 调用点改 `_compiler.X`，IRunService 成员保留委托转发
-- [ ] Step 2：构建 0 错误
-- [ ] Step 3：路由快照与基线零 diff；C-M3-RunSqlCompiler@v1 物化入台账（SHA256 登记）；提交
+- [x] Step 1：七方法方法体**逐字**迁入 RunSqlCompiler；RunService 调用点改 `_compiler.X`，IRunService 成员保留委托转发（✅ 脚本化逐行抽取+三类机械适配，见裁决记录；RunSqlCompileContext 过渡载体；RunService 4158→2874 行）
+- [x] Step 2：构建 0 错误（✅ 全解决方案）
+- [x] Step 3：路由快照与基线零 diff；C-M3-RunSqlCompiler@v1 物化入台账（SHA256 登记）；提交（✅ 1077/107 与基线逐行零 diff；存量测试 204/204 绿；快照 `s1-task32-routes.txt`）
 
 ### Task 3.3：DB 依赖参数化剥离（4h）｜依赖：3.2
 
