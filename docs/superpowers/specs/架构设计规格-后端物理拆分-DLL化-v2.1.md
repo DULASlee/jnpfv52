@@ -21,7 +21,7 @@
 
 ## 1. 总体结构分析（全局观）
 
-### 1.1 后端工程全景（73 工程 × 5 物理层；zx sln 现有 83 个 Project 条目）
+### 1.1 后端工程全景（73 工程 × 5 物理层；zx sln 现有 83 个 Project 条目；逐工程树状图见 §1.2）
 
 | 物理层 | 目录 | 工程数 | 角色 |
 |---|---|---|---|
@@ -31,7 +31,83 @@
 | 业务域层 | `modularity/{15 域}/` | **37**（Entitys/Interfaces/服务 三段式 × 15 域） | 高频业务变更区 |
 | 宿主/验证 | `application/` + `tools/` + `tests/` | **20**（2 宿主 + 5 工具 + 13 测试） | 组装与验证 |
 
-### 1.2 真实依赖骨架（实测，颠覆 v1.0 认知的三处偏离）
+### 1.2 全程序集树状图（73 工程逐项判读 · 2026-08-24 find 全量清点）
+
+**图例：** `✅W1/W2/W3` = 包域（打 3.5.0 包，P2 后退出日常编译图，波次见 §2.3）｜`❌源` = 源码域（永留编译图）｜`Tn` = 分层 DAG 层级（§1.4）｜`→X` = ProjectReference 实测边（§3.3）｜`⚠` = 结构性偏离边
+
+**计数审计：** 8(framework) + 5(infrastructure) + 3(common) + 37(15 域) + 2(application) + 5(tools) + 13(tests) = **73**，与 §1.1 全景表逐层吻合。
+
+```text
+backend/ ── 73 工程（✅包域 14 ｜ ❌源码域 59）＋ P1 将新建 3 个 B1/B2 DLL（入包域后合计 17 包）
+│
+├─ framework/ ── 框架层（8 工程）════════ 全部 ✅ 包域 ════════
+│   ├─ JNPF（内核巨无霸）                     T0   ✅W1  37 功能区；内部三组成环（不阻单包，阻细分）
+│   │    └─ ➕P1 新建：JNPF.Extensions.Cryptography / JNPF.Extensions.Utils / JNPF.Abstractions
+│   │         （git mv 自内核零依赖区 → 三个新 csproj，均 ✅W2，是内核包的前置依赖）
+│   ├─ JNPF.Extras.Authentication.JwtBearer   T1   ✅W1  孤立叶；被 JNPF.Common / WebSockets 引用
+│   ├─ JNPF.Extras.ObjectMapper.Mapster       T1   ✅W1  孤立叶；被 JNPF.Common 引用
+│   ├─ JNPF.Extras.DatabaseAccessor.Dapper    T1   ✅W1  孤立叶；零消费引用
+│   ├─ JNPF.Extras.Logging.Serilog            T1   ✅W1  孤立叶；零消费引用
+│   ├─ JNPF.Extras.DependencyModel.CodeAnalysis T1  ✅W1  →JNPF（内核唯一上行边）
+│   ├─ JNPF.Extras.DatabaseAccessor.SqlSugar  T1   ✅W2  →JNPF；被 Common/Outbox/Common.Core 消费
+│   └─ JNPF.Xunit                             T1   ✅W2  →JNPF；测试支撑包（唯一进包域的测试类工程）
+│
+├─ infrastructure/ ── 基础设施层（5 工程）════════ 全部 ✅ 包域（W3 三项被反向依赖锁序）════════
+│   ├─ JNPF.Extras.EventBus.RabbitMQ          T2'  ✅W1  孤立叶；被 Common.Core 消费
+│   ├─ JNPF.Extras.EventBus.Outbox            T2'  ✅W2  →JNPF + SqlSugar；被 API.Entry 消费
+│   ├─ JNPF.Extras.WebSockets                 T2'  ✅W3  →JNPF.Common ⚠反向 + JwtBearer；被 Message/Common.Core 消费
+│   ├─ JNPF.Extras.Thirdparty                 T2'  ✅W3  →JNPF.Common ⚠反向；被 Systems.Entitys 消费
+│   └─ JNPF.Extras.CollectiveOAuth            T2'  ✅W3  →JNPF.Common ⚠反向；被 Systems.Entitys/Systems 消费
+│
+├─ modularity/common/ ── 业务公共层（3 工程）════════ ★切包线穿过此目录（§1.5）════════
+│   ├─ JNPF.Common                            T2   ✅W2  ★业务真地基（133 .cs）→SqlSugar+Mapster+JwtBearer；
+│   │                                                线以下依赖闭包完整，43 业务工程的共同入口
+│   ├─ JNPF.Common.Core                       T5   ❌源  →4 域 Entitys+Engine.Entity+WebSockets+RabbitMQ+SqlSugar+JwtBearer ⚠跨层
+│   └─ JNPF.Common.CodeGen                    T6'  ❌源  →JNPF.VisualDev 域服务 ⚠反向；仅 2 .cs；被 SubDev/ZxDev 消费
+│
+├─ modularity/{15 域}/ ── 业务域层（37 工程）════════ 全部 ❌ 源码域（高频变更区，包化只增发版摩擦）════════
+│   ├─ app/           JNPF.Apps.Entitys ❌T3 ｜ JNPF.Apps.Interfaces ❌T4 ｜ JNPF.Apps ❌T6
+│   ├─ codegen/       JNPF.CodeGen ❌T6（代码生成域服务；注意与 common/JNPF.Common.CodeGen 是两个工程）
+│   ├─ engine/        JNPF.Engine.Entity ❌T3 ｜ JNPF.VisualDev.Engine ❌T6
+│   ├─ extend/        JNPF.Extend.Entitys ❌T3 ｜ JNPF.Extend.Interfaces ❌T4 ｜ JNPF.Extend ❌T6
+│   ├─ inteAssistant/ JNPF.InteAssistant.Entitys ❌T3 ｜ JNPF.InteAssistant.Engine ❌T6 ｜ JNPF.InteAssistant ❌T6（AI 原生开发主战场）
+│   ├─ message/       JNPF.Message.Entitys ❌T3 ｜ JNPF.Message.Interfaces ❌T4 ｜ JNPF.Message ❌T6（引 WebSockets → P2 消费边）
+│   ├─ oauth/         JNPF.OAuth ❌T6
+│   ├─ report/        JNPF.Report.Entitys ❌T3 ｜ JNPF.Report ❌T6
+│   ├─ subdev/        JNPF.SubDev.Entitys ❌T3 ｜ JNPF.SubDev.Interfaces ❌T4 ｜ JNPF.SubDev ❌T6（引 Common.CodeGen）
+│   ├─ system/        JNPF.Systems.Entitys ❌T3（额外直引 Thirdparty+CollectiveOAuth → P2 消费边）｜
+│   │                 JNPF.Systems.Interfaces ❌T4 ｜ JNPF.Systems ❌T6（引 CollectiveOAuth → P2 消费边）
+│   ├─ taskscheduler/ JNPF.TaskScheduler.Entitys ❌T3 ｜ JNPF.TaskScheduler.Interfaces ❌T4 ｜ JNPF.TaskScheduler ❌T6
+│   ├─ visualdata/    JNPF.VisualData.Entitys ❌T3 ｜ JNPF.VisualData ❌T6
+│   ├─ visualdev/     JNPF.VisualDev.Entitys ❌T3 ｜ JNPF.VisualDev.Interfaces ❌T4 ｜ JNPF.VisualDev ❌T6（被 Common.CodeGen 反向引用 ⚠）
+│   ├─ workflow/      JNPF.WorkFlow.Entitys ❌T3 ｜ JNPF.WorkFlow.Interfaces ❌T4 ｜ JNPF.WorkFlow ❌T6
+│   └─ zxdev/         JNPF.ZxDev.Entitys ❌T3 ｜ JNPF.ZxDev ❌T6（引 Common.CodeGen）
+│   （三段式：Entitys=实体 T3 ← Interfaces=接口 T4 ← 服务 T6；跨域互引经 Interfaces 解环，见 §1.4 T4 注）
+│
+├─ application/ ── 宿主层（2 工程）════════ 全部 ❌ 源码域（组装点，永不为包）════════
+│   ├─ JNPF.API.Entry     T7  ❌源  主宿主：→14 个域服务 + EventBus.Outbox（P2 六大消费边之一）
+│   └─ JNPF.OA.API.Entry  T7  ❌源  →API.Entry；禁用模块（R5 禁写），仅挂账不分析
+│
+├─ tools/ ── 工具层（5 工程）════════ 全部 ❌ 源码域（验证/基础设施，永不为包）════════
+│   ├─ JNPF.Analyzers           T8  ❌源  Roslyn 分析器（JNPF007/008/009 门禁源头，CI_BUILD 挂钩）
+│   ├─ JNPF.Analyzers.Tests     T8  ❌源  分析器自测
+│   ├─ JNPF.Database.Migrations T8  ❌源  DbUp 迁移工具
+│   ├─ JNPF.Startup.Benchmarks  T8  ❌源  →API.Entry；路由快照采集器（七件套第 3 件的生产者）
+│   └─ SaCompilerSmoke          T8  ❌源  S2 编译器冒烟
+│
+└─ tests/ ── 验证层（13 工程）════════ 全部 ❌ 源码域 ════════
+    ├─ 直引包域工程的 7 个（P2 必须切 PackageReference，§3.2 消费边）：
+    │    JNPF.Tests.Architecture（→JNPF，ARCH-01 架构门禁）｜ JNPF.Tests.Gate ｜ JNPF.Tests.PhaseB ｜
+    │    JNPF.Tests.Phase6 ｜ JNPF.Tests.Stage5 ｜ JNPF.Tests.ADR012（→SqlSugar）｜
+    │    verifications/ModuleVerification（→JNPF）—— 七者统称"→JNPF/SqlSugar/Outbox 按所引切换"
+    └─ 其余 6 个（引域工程/公共层，引用面见 §3.3 边存根）：
+         JNPF.Tests.CodeGen ｜ JNPF.Tests.Common ｜ JNPF.Tests.OAuth ｜ JNPF.Tests.Systems ｜
+         JNPF.Tests.VisualDev ｜ verifications/SqlSugarVerification
+```
+
+**树状图读法（三秒定位）：** 找任何一个工程 → 看判定列即知它会不会变成 NuGet 包、第几波；看 `→` 边即知它拖家带口带谁。**全树只有 14 个 ✅**，全部落在 framework/infrastructure/JNPF.Common 三处——这就是 §1.5 切包线的逐工程展开。
+
+### 1.3 真实依赖骨架（实测，颠覆 v1.0 认知的三处偏离）
 
 **名义分层**是 `framework → infrastructure → modularity → application` 单向塔。**实测边数据**（§3.3）揭示三处结构性偏离，它们决定了 v2.0 的一切判定：
 
@@ -50,7 +126,7 @@
        => Common.Core/CodeGen 不是干净的底座，必须留在源码域（业务侧）。
 ```
 
-### 1.3 分层依赖全景图（DAG，自底向上）
+### 1.4 分层依赖全景图（DAG，自底向上）
 
 ```
 T0  框架内核        JNPF(37区,内部三组成环)
@@ -76,7 +152,7 @@ T7  宿主            JNPF.API.Entry → 14 域服务 + EventBus.Outbox；OA.Ent
 T8  验证            8 测试工程（直引内核/Common.Core/域工程）+ Benchmarks→API.Entry + Analyzers.Tests
 ```
 
-### 1.4 切包线（本战役的核心架构决策）
+### 1.5 切包线（本战役的核心架构决策）
 
 ```
 ═════════════════ ✂ 切包线 ═════════════════
@@ -94,7 +170,7 @@ T8  验证            8 测试工程（直引内核/Common.Core/域工程）+ Be
 
 **切包线划在 T2 与 T3 之间**：线以下的依赖闭包完整（不触及任何领域工程）、变更频率低（框架/地基稳定）、消费面广（被全部上游共享）。线以上三者皆反。
 
-### 1.5 隔离层级术语（v2.1）——「独立」一词的精确含义
+### 1.6 隔离层级术语（v2.1）——「独立」一词的精确含义
 
 | 层次 | 要求 | 本战役目标 |
 |---|---|---|
@@ -105,7 +181,7 @@ T8  验证            8 测试工程（直引内核/Common.Core/域工程）+ Be
 
 **术语更正（评审采纳）：** 全文「3 个独立 DLL」应理解为「3 个**可独立构建/发布的组件**」——B1/B2 拆出物运行时仍随 JNPF 包同装（`JNPF.dll` 依赖它们），依赖并未完全隔离，隔离的是构建/发布/上下文边界。
 
-### 1.6 编译图前后对比（P2 完成时）
+### 1.7 编译图前后对比（P2 完成时）
 
 | | 切换前 | 切换后 |
 |---|---|---|
@@ -149,7 +225,7 @@ T8  验证            8 测试工程（直引内核/Common.Core/域工程）+ Be
 | **JNPF.Common.CodeGen** | T6' | — | ❌ **不发包** | ✗ 依赖 JNPF.VisualDev 域服务 | 同上，且仅 2 个 .cs |
 | **37 个业务域工程** | T3-T6 | — | ❌ **不发包** | ✗ 跨域互引 + C2 不满足 | 高频变更，包化只增发版摩擦（v1.0 决策沿用） |
 | **API.Entry / OA.Entry** | T7 | — | ❌ **不发包** | 宿主 | 组装点，永不为包 |
-| **测试/工具 10 工程** | T8 | — | ❌ **不发包** | 消费者 | 验证设施（JNPF.Xunit 除外，它本身是 W2 包） |
+| **测试/工具 18 工程** | T8 | — | ❌ **不发包** | 消费者 | 验证设施（JNPF.Xunit 除外，它本身是 W2 包） |
 
 **汇总：17 个包（14 现存工程 + 3 个 P1 新 DLL）｜59 个工程永留源码域。**
 
@@ -438,7 +514,7 @@ P1 使用 1-6；P2/发版使用全部七件。
 | P0-7 | 包间依赖图写死 | §3.1 + §2.5 dependencies 行 | nuspec 逐包核验 |
 | 附加 | 中央版本管理 | §2.4 `$(JNPFVersion)` 属性 | 完整 CPM 列 P3（避免波及 73 工程第三方引用的范围蔓延） |
 | 附加 | S3/Caching 移出主线 | §5 P3 明令置后于 G5 | v2.0 已降级，v2.1 措辞升格为禁令 |
-| 附加 | 隔离四层术语 / 「独立 DLL」表述 | §1.5 | Runtime Isolation 明令非目标 |
+| 附加 | 隔离四层术语 / 「独立 DLL」表述 | §1.6 | Runtime Isolation 明令非目标 |
 | 附加 | Abstractions/Utils 聚合边界声明 | §5 P1 | 禁止本战役顺手细拆 |
 | 附加 | 文件守恒 SHA256 升级 + 旧路径不存在门禁 | S0-10 + 七件套第 5 件 | 替代 git rename heuristic |
 | 附加 | 发包契约（PackageId/AssemblyName/Namespace…） | §2.5 | 命名空间冻结与包名解耦显式化 |
