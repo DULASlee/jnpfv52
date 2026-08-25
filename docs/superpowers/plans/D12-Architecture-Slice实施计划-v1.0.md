@@ -6,6 +6,67 @@
 
 ---
 
+## 0. 第一批批准裁决记录（2026-08-26）
+
+> **批准启动 NG-1 第一批。** 严格按照 NG-1 规格 v1.0 与 D12 计划 v1.0 执行，不再扩大范围。
+
+### 0.1 A. 289 表 Ownership Matrix
+
+1. 建立 289 表 × 六维矩阵；
+2. Domain / Tenant Scope 优先使用数据库与代码实测证据；
+3. Write Owner 必须追踪真实写入路径，不得以 Repository 所属项目或 Service 名称推断 Owner；
+4. Read Consumer 必须追踪实际查询/Join/调用关系；
+5. Transaction Boundary 必须以真实事务包裹和一致性要求为依据；
+6. Cross-Domain Dependency 必须登记实际依赖；
+7. `UNKNOWN` 与 `OWNERSHIP-CONFLICT` 一律进入人工裁决表，禁止 AI 猜测归属。
+
+### 0.2 B. D12 Order Slice S1
+
+1. 全量盘点 Order 写入路径；
+2. 全量盘点 Order → User/Tenant/Authorization/DataPermission/Dictionary/Dynamic Metadata 等依赖；
+3. 建立实际 Join/查询清单；
+4. 识别同步调用与同步权限计算；
+5. 识别真实 ACID 事务边界；
+6. 复跑并确认已有 43 项路径 B 行为基线，但**不得修改实现**；
+7. 建立 D12 当前性能/延迟基线；
+8. 不进行数据库拆分、不建立新服务、不修改 Legacy API。
+
+### 0.3 强制执行纪律
+
+- 全程只读/影子分析；不修改 Legacy 业务代码；不修改数据库结构及数据；不创建微服务；不迁移数据；不引入 Aspire Runtime/Broker/Redis/MQ 等基础设施；不因为发现「适合拆分」而提前设计实现；
+- 每一个 Ownership 结论必须有 `文件:行号 / SQL / 调用链 / 测试 / 数据库元数据` 等可追溯证据。
+
+### 0.4 反证要求（审计强制）
+
+不要只寻找支持拆分的证据，也必须主动寻找反证。对 D12 每一个潜在边界同时回答：
+
+```text
+为什么可以独立？
+为什么不能独立？
+哪些依赖可以通过 API / Event / Read Model 消除？
+哪些依赖属于真正的强一致性依赖？
+哪些依赖只是 Legacy 实现造成的偶合？
+```
+
+若发现 Order 当前不具备独立服务条件，必须如实输出 `BLOCK` 或 `REFINE`，**不得为了 NG 架构目标强行证明 PASS**。
+
+### 0.5 第一批停止条件
+
+第一批完成后立即停止，仅提交：
+
+1. Ownership Matrix
+2. UNKNOWN / OWNERSHIP-CONFLICT 清单
+3. D12 Query / Join Map
+4. D12 Transaction Map
+5. D12 Permission / Tenant Dependency Map
+6. D12 Performance Baseline
+7. 初步 BOUNDARY-PROOF
+8. 风险与反证清单
+
+**暂不进行 Gate G 最终裁决，不进入 NG-2，不开始微服务实现。** 第一批完成后汇报实测结果，由人工决定是否进入下一阶段。
+
+---
+
 ## 1. 切片定义
 
 ```text

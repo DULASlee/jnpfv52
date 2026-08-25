@@ -1,0 +1,290 @@
+﻿table_name,prefix,rows,cols,tenant_style,pk_type,domain,domain_source,classification,write_owner,read_consumers,transaction,evidence
+ai_entity_field,ai,824,26,F_TenantId,nvarchar,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ai_ir_events,ai,3780,14,F_TenantId,nvarchar,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ai_ir_fragment_snapshots,ai,782,13,F_TenantId,nvarchar,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ai_projects,ai,329,19,F_TenantId,nvarchar,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ai_route_table,ai,328,10,F_TenantId,nvarchar,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ai_seed_templates,ai,40,9,NONE,nvarchar,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ai_skill_llm_policy,ai,9,8,NONE,nvarchar,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ai_skill_runs,ai,373,11,F_TenantId,nvarchar,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_advanced_query_scheme,base,2,18,f_tenant_id,nvarchar,D3-Permission,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_AGENT_CONFIG,BASE,5,19,NONE,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_AGENT_SKILL,BASE,0,13,NONE,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_CALL_LOG,BASE,1502,25,F_TENANT_ID,nvarchar,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_EVAL_CASE,BASE,4,13,NONE,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_EVAL_GOLDEN_SET,BASE,1,11,NONE,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_EVAL_RUN,BASE,0,20,F_TenantId,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_GENERATED_PROJECT,BASE,328,25,F_TenantId,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_MCP_CONFIG,BASE,0,15,NONE,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_MODEL_PROVIDER,BASE,5,20,NONE,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_MODEL_ROUTING,BASE,5,16,NONE,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_PIPELINE,BASE,409,38,F_TENANT_ID,nvarchar,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_PIPELINE_MESSAGE,BASE,678,20,F_TENANT_ID,nvarchar,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_PIPELINE_S2_PROGRESS,BASE,3,20,F_TENANT_ID,nvarchar,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_PIPELINE_STAGE_CONFIG,BASE,5,15,NONE,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_PROMPT_TEMPLATE,BASE,0,12,F_TenantId,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_SKILL_REVIEW,BASE,0,14,F_TenantId,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_AI_UI_TEMPLATE,BASE,0,18,F_TenantId,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_api_log,base,39,38,f_tenant_id,nvarchar,D9-Log,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_app_data,base,0,20,f_tenant_id,nvarchar,TBD-Platform,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_authorize,base,2553,16,f_tenant_id,nvarchar,D3-Permission,NG0-prefix-cluster+NG1-db,SHARED,,,,ng1-batch1/db-matrix-raw.tsv
+base_bill_rule,base,61,27,f_tenant_id,nvarchar,TBD-BillRule,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_columns_purview,base,1,14,f_tenant_id,nvarchar,D3-Permission,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_common_fields,base,10,18,f_tenant_id,nvarchar,TBD-Platform,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_common_words,base,0,15,f_tenant_id,nvarchar,TBD-Platform,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_data_interface,base,146,27,f_tenant_id,nvarchar,TBD-Integration,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_data_interface_log,base,0,19,f_tenant_id,nvarchar,TBD-Integration,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_data_interface_oauth,base,1,21,f_tenant_id,nvarchar,TBD-Integration,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_data_interface_user,base,1,14,f_tenant_id,nvarchar,TBD-Integration,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_data_interface_variate,base,1,15,f_tenant_id,nvarchar,TBD-Integration,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_db_link,base,1,23,f_tenant_id,nvarchar,TBD-Integration,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_dictionary_data,base,897,20,f_tenant_id,nvarchar,D6-Dictionary,NG0-prefix-cluster+NG1-db,SHARED,,,,ng1-batch1/db-matrix-raw.tsv
+base_dictionary_type,base,145,19,f_tenant_id,nvarchar,D6-Dictionary,NG0-prefix-cluster+NG1-db,SHARED,,,,ng1-batch1/db-matrix-raw.tsv
+base_file,base,0,16,f_tenant_id,nvarchar,D7-File,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_FOUNDER_AUTH_LOG,BASE,13,16,F_TENANT_ID,nvarchar,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_group,base,1,15,f_tenant_id,nvarchar,D1-Identity,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_im_content,base,9,18,f_tenant_id,nvarchar,D8-Message,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_im_reply,base,2,15,f_tenant_id,nvarchar,D8-Message,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_integrate,base,3,20,f_tenant_id,nvarchar,TBD-Integration,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_integrate_node,base,0,26,f_tenant_id,nvarchar,TBD-Integration,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_integrate_queue,base,0,17,f_tenant_id,nvarchar,TBD-Integration,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_integrate_task,base,0,23,f_tenant_id,nvarchar,TBD-Integration,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_IR_EDIT_PATCH,BASE,0,17,F_TENANT_ID,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_IR_VERSION,BASE,0,21,F_TENANT_ID,nvarchar,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_KNOWLEDGE_EDGE,BASE,0,16,F_TENANT_ID,nvarchar,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_KNOWLEDGE_NODE,BASE,0,15,F_TENANT_ID,nvarchar,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_KNOWLEDGE_RULE,BASE,0,16,F_TenantId,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_MENU_BADGE,BASE,0,8,F_TenantId,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_message,base,1229,20,f_tenant_id,nvarchar,D8-Message,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_module,base,210,28,f_tenant_id,nvarchar,D3-Permission,NG0-prefix-cluster+NG1-db,SHARED,,,,ng1-batch1/db-matrix-raw.tsv
+base_module_authorize,base,8,24,f_tenant_id,nvarchar,D3-Permission,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_module_button,base,34,20,f_tenant_id,nvarchar,D3-Permission,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_module_column,base,6,22,f_tenant_id,nvarchar,D3-Permission,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_module_form,base,6,21,f_tenant_id,nvarchar,D3-Permission,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_module_link,base,2,15,f_tenant_id,nvarchar,D3-Permission,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_module_scheme,base,8,20,f_tenant_id,nvarchar,D3-Permission,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_msg_account,base,4,39,f_tenant_id,nvarchar,D8-Message,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_msg_monitor,base,147,21,f_tenant_id,nvarchar,D8-Message,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_msg_send,base,24,17,f_tenant_id,nvarchar,D8-Message,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_msg_send_template,base,23,17,f_tenant_id,nvarchar,D8-Message,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_msg_short_link,base,0,21,f_tenant_id,nvarchar,D8-Message,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_msg_sms_field,base,0,17,f_tenant_id,nvarchar,D8-Message,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_msg_template,base,26,23,f_tenant_id,nvarchar,D8-Message,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_msg_template_param,base,78,15,f_tenant_id,nvarchar,D8-Message,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_msg_wechat_user,base,0,16,f_tenant_id,nvarchar,D8-Message,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_notice,base,3,22,f_tenant_id,nvarchar,D8-Message,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_organize,base,6,20,f_tenant_id,nvarchar,D1-Identity,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_organize_administrator,base,5,25,f_tenant_id,nvarchar,D1-Identity,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_organize_relation,base,0,15,f_tenant_id,nvarchar,D1-Identity,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_permission_group,base,5,16,F_Tenant_Id,nvarchar,D3-Permission,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_portal,base,2,24,f_tenant_id,nvarchar,D6-Dictionary,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_portal_data,base,9,16,f_tenant_id,nvarchar,D6-Dictionary,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_portal_manage,base,2,16,f_tenant_id,nvarchar,D6-Dictionary,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_position,base,2,18,f_tenant_id,nvarchar,D1-Identity,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_print_log,base,21,14,f_tenant_id,nvarchar,TBD-Platform,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_print_template,base,5,25,f_tenant_id,nvarchar,TBD-Platform,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_province,base,47512,18,f_tenant_id,nvarchar,D6-Dictionary,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_province_atlas,base,3210,20,f_tenant_id,nvarchar,D6-Dictionary,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_REPORT,BASE,5,14,NONE,nvarchar,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_role,base,9,18,f_tenant_id,nvarchar,D1-Identity,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_SANDBOX,BASE,0,22,F_TenantId,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_schedule,base,0,33,f_tenant_id,nvarchar,TBD-Job,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_schedule_log,base,0,35,f_tenant_id,nvarchar,TBD-Job,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_schedule_user,base,0,16,f_tenant_id,nvarchar,TBD-Job,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_sign_img,base,0,15,f_tenant_id,nvarchar,D7-File,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_signature,base,0,16,f_tenant_id,NONE,D7-File,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_signature_user,base,0,15,f_tenant_id,NONE,D7-File,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_socials_users,base,0,15,f_tenant_id,nvarchar,D1-Identity,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_STUDIO_MENU,BASE,54,19,NONE,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_STUDIO_MENU_BAK_20260617,BASE,54,19,NONE,NONE,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_syn_third_info,base,0,17,f_tenant_id,nvarchar,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_sys_config,base,74,17,f_tenant_id,nvarchar,D2-Tenant,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_sys_log,base,12615,32,f_tenant_id,nvarchar,D9-Log,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_system,base,7,23,f_tenant_id,nvarchar,D2-Tenant,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_TENANT_GLOSSARY,BASE,0,13,F_TenantId,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+BASE_TENANT_INDUSTRY,BASE,0,12,F_TenantId,bigint,TBD-Base,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_time_task,base,0,21,f_tenant_id,nvarchar,TBD-Job,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_time_task_log,base,22,16,f_tenant_id,nvarchar,TBD-Job,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+base_user,base,45,68,f_tenant_id,nvarchar,D1-Identity,NG0-prefix-cluster+NG1-db,SHARED,,,,ng1-batch1/db-matrix-raw.tsv
+base_user_device,base,0,14,f_tenant_id,nvarchar,D1-Identity,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_user_old_password,base,0,15,f_tenant_id,nvarchar,D1-Identity,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_user_relation,base,82,15,f_tenant_id,nvarchar,D1-Identity,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_visual_dev,base,48,30,f_tenant_id,nvarchar,D5-FormLowCode,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_visual_filter,base,0,14,f_tenant_id,nvarchar,D5-FormLowCode,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_visual_link,base,0,26,f_tenant_id,nvarchar,D5-FormLowCode,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+base_visual_release,base,25,29,f_tenant_id,nvarchar,D5-FormLowCode,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+blade_visual,blade,77,14,f_tenant_id,nvarchar,D11-Report,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+blade_visual_category,blade,2,6,f_tenant_id,nvarchar,D11-Report,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+blade_visual_component,blade,42,7,f_tenant_id,bigint,D11-Report,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+blade_visual_config,blade,77,6,f_tenant_id,nvarchar,D11-Report,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+blade_visual_db,blade,4,16,f_tenant_id,nvarchar,D11-Report,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+blade_visual_glob,blade,0,6,f_tenant_id,NONE,D11-Report,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+blade_visual_map,blade,3,5,f_tenant_id,nvarchar,D11-Report,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+blade_visual_record,blade,3,19,f_tenant_id,nvarchar,D11-Report,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+data_report,data,15,16,f_tenant_id,nvarchar,D11-Report,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+Demo_ExcelTest,Demo,3,14,NONE,varchar,D12-Demo-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+Demo_Order,Demo,151,15,NONE,varchar,D12-Demo-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+Demo_OrderDetail,Demo,60,9,NONE,varchar,D12-Demo-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+domain_model,domain,0,15,NONE,bigint,TBD-DomainModel,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+EVAL_METRIC,EVAL,0,13,F_TENANT_ID,bigint,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_big_data,ext,0,12,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_customer,ext,7,16,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_document,ext,4,22,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_document_share,ext,0,13,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_email_config,ext,1,21,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_email_receive,ext,0,23,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_email_send,ext,0,22,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_employee,ext,0,26,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_order,ext,9,30,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,OrderService.Save/Delete(OrderService.cs L227-238,L253-259),OrderService.GetList 3-join(OrderService.cs L84-106),NONE(0 BeginTran in extend module),OrderService.cs L199-269 + BeginTran scan
+ext_order_entry,ext,6,24,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,OrderService.Save/Delete(OrderService.cs L227-238,L253-259),OrderService.GetList 3-join(OrderService.cs L84-106),NONE(0 BeginTran in extend module),OrderService.cs L199-269 + BeginTran scan
+ext_order_receivable,ext,1,19,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,OrderService.Save/Delete(OrderService.cs L227-238,L253-259),OrderService.GetList 3-join(OrderService.cs L84-106),NONE(0 BeginTran in extend module),OrderService.cs L199-269 + BeginTran scan
+ext_product,ext,3,38,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_product_classify,ext,6,12,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_product_entry,ext,12,23,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_product_goods,ext,10,18,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_project_gantt,ext,0,24,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_table_example,ext,33,28,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_work_log,ext,0,17,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+ext_work_log_share,ext,0,13,f_tenant_id,nvarchar,D12-OrderExt,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_candidates,flow,0,18,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_comment,flow,0,16,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_delegate,flow,0,23,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_event_log,flow,24,15,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_form,flow,4,27,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_form_authorize,flow,0,14,f_tenant_id,NONE,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNERSHIP-CONFLICT,,,,ng1-batch1/db-matrix-raw.tsv
+flow_form_relation,flow,1,13,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_launch_user,flow,16,18,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_reject_data,flow,0,14,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_task,flow,16,41,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_task_circulate,flow,0,17,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_task_node,flow,45,24,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_task_operator,flow,555,28,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_task_operator_record,flow,15,26,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_task_operator_user,flow,0,28,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_template,flow,6,19,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_template_json,flow,3,19,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+flow_visible,flow,41,15,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+inte_assistant_attachment,inte,55,18,F_TenantId,nvarchar,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+inte_assistant_deliverable,inte,269,11,F_TenantId,nvarchar,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+kg_pattern,kg,0,18,NONE,bigint,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+kg_pattern_usage,kg,0,6,NONE,bigint,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+mt543406707183714245,mt543406707183714245,2,7,NONE,nvarchar,D5-DynamicTable,NG0-prefix-cluster+NG1-db,SHARED,,,,ng1-batch1/db-matrix-raw.tsv
+mt543408365615710149,mt543408365615710149,64,7,NONE,nvarchar,D5-DynamicTable,NG0-prefix-cluster+NG1-db,SHARED,,,,ng1-batch1/db-matrix-raw.tsv
+mt543552698159464389,mt543552698159464389,32,7,NONE,nvarchar,D5-DynamicTable,NG0-prefix-cluster+NG1-db,SHARED,,,,ng1-batch1/db-matrix-raw.tsv
+mt543668771097673669,mt543668771097673669,2,7,NONE,nvarchar,D5-DynamicTable,NG0-prefix-cluster+NG1-db,SHARED,,,,ng1-batch1/db-matrix-raw.tsv
+mt543971603646513093,mt543971603646513093,0,3,NONE,nvarchar,D5-DynamicTable,NG0-prefix-cluster+NG1-db,SHARED,,,,ng1-batch1/db-matrix-raw.tsv
+PROCESSED_EVENT,PROCESSED,0,3,NONE,nvarchar,D8-Event,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+report_charts,report,21,16,f_tenant_id,nvarchar,D11-Report,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+report_department,report,12,5,f_tenant_id,nvarchar,D11-Report,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+report_user,report,283,10,f_tenant_id,nvarchar,D11-Report,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+sa_assumptions,sa,14,12,F_TenantId,nvarchar,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+sa_business_process,sa,19,30,tenant_id,bigint,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+sa_consistency,sa,15,11,F_TenantId,nvarchar,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+sa_data_dictionary,sa,19,35,tenant_id,bigint,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+sa_decision_table,sa,172,30,tenant_id,bigint,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+sa_dfd,sa,19,31,tenant_id,bigint,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+sa_er,sa,19,29,tenant_id,bigint,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+sa_pspec,sa,172,25,tenant_id,bigint,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+sa_quality_score,sa,14,12,F_TenantId,nvarchar,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+sa_scope,sa,19,25,tenant_id,bigint,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+sa_state_machine,sa,19,30,tenant_id,bigint,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+sa_ui,sa,210,28,tenant_id,bigint,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+sa_validation_log,sa,0,13,tenant_id,bigint,D10-AI,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+SchemaVersions,SchemaVersions,2,3,NONE,int,INFRA-Migration,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+student,student,4,7,NONE,nvarchar,TBD-Demo,NG0-prefix-cluster+NG1-db,UNKNOWN,,,,ng1-batch1/db-matrix-raw.tsv
+SYS_EVENT_OUTBOX_MESSAGE,SYS,0,9,NONE,uniqueidentifier,D8-Outbox,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+SYS_PROCESSED_EVENT,SYS,0,3,NONE,nvarchar,D8-Outbox,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+undo_log,undo,0,10,f_tenant_id,bigint,INFRA-Seata,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_applybanquet,wform,1,16,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_applydelivergoods,wform,0,20,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_applydelivergoodsentry,wform,0,11,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_applymeeting,wform,0,25,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_archivalborrow,wform,2,18,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_articleswarehous,wform,0,16,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_batchpack,wform,0,18,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_batchtable,wform,0,16,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_conbilling,wform,0,20,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_contractapproval,wform,0,26,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_contractapprovalsheet,wform,0,27,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_debitbill,wform,0,19,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_documentapproval,wform,0,15,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_documentsigning,wform,0,17,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_expenseexpenditure,wform,0,19,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_finishedproduct,wform,0,11,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_finishedproductentry,wform,0,11,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_incomerecognition,wform,0,20,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_leaveapply,wform,0,18,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_letterservice,wform,0,15,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_materialrequisition,wform,0,12,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_materialrequisitionentry,wform,0,12,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_monthlyreport,wform,0,17,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_officesupplies,wform,0,16,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_outboundorder,wform,0,14,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_outboundorderentry,wform,0,11,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_outgoingapply,wform,0,16,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_paydistribution,wform,0,21,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_paymentapply,wform,0,22,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_postbatchtab,wform,0,15,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_procurementmaterial,wform,0,17,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_procurementmaterialentry,wform,0,11,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_purchaselist,wform,0,18,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_purchaselistentry,wform,0,11,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_quotationapproval,wform,0,16,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_receiptprocessing,wform,0,12,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_receiptsign,wform,0,13,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_rewardpunishment,wform,0,13,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_salesorder,wform,1,19,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_salesorderentry,wform,1,11,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_salessupport,wform,0,24,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_staffovertime,wform,0,15,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_supplementcard,wform,0,16,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_travelapply,wform,0,17,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_travelreimbursement,wform,0,34,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_vehicleapply,wform,0,17,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_violationhandling,wform,0,18,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_warehousereceipt,wform,0,15,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_warehousereceiptentry,wform,0,11,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_workcontactsheet,wform,0,15,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+wform_zjf_wikxqi,wform,0,3,f_tenant_id,nvarchar,D4-Workflow,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+WH_BasicData,WH,208,3,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_Bill,WH,2,16,NONE,varchar,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_BillAutoID,WH,4,3,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_BillDetail,WH,4,15,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_CheckBillDetail,WH,19,12,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_Customer,WH,1,13,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_CustomerClass,WH,2,4,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_Depot,WH,2,5,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_DepotMaterial,WH,2,12,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_Dept,WH,2,4,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_Material,WH,4,14,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_MaterialClass,WH,1,4,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_Project,WH,1,4,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_RemoveBill,WH,8,10,NONE,varchar,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_RemoveBillDetail,WH,13,12,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_StorageType,WH,4,3,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_Supplier,WH,1,10,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WH_SupplierClass,WH,3,3,NONE,int,D12-WH-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_BasicData,WM,29,3,NONE,int,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_Bill,WM,151,20,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_BillAutoID,WM,4,3,NONE,int,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_BillDetail,WM,1629,16,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_CheckBill,WM,1,11,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_CheckBillDetail,WM,1613,14,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_Client,WM,1,16,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_ClientClass,WM,0,4,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_Depot,WM,1,5,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_DepotMaterial,WM,0,15,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_Dept,WM,1,7,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_Employee,WM,3,8,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_Material,WM,739,17,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_Project,WM,0,4,NONE,nchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_RemoveBill,WM,5,12,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_RemoveBillDetail,WM,7,13,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_StorageClass,WM,9,7,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_StorageType,WM,8,3,NONE,int,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_Supplier,WM,1,12,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_SupplierClass,WM,0,14,NONE,nvarchar,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+WM_TaxRate,WM,0,4,NONE,int,D12-WM-ORPHAN,NG1-grep-zero-refs,UNKNOWN,,,,grep SugarTable("WM_/WH_/Demo_ = 0 matches; code orphan
+zx_sys_config,zx,2,17,NONE,varchar,D2-Tenant,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+zx_sys_db,zx,5,8,NONE,varchar,D2-Tenant,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
+zx_system_db,zx,0,8,NONE,NONE,D2-Tenant,NG0-prefix-cluster+NG1-db,OWNED-PENDING,,,,ng1-batch1/db-matrix-raw.tsv
