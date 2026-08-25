@@ -21,11 +21,15 @@
 | E3 | QueryType.Contains 无 case → default 不追加 | D1.5 A0 补登 | ✅ D1.5 特征 | 是 | 低 | L0 |
 | E4 | USERSSELECT 单选无 `--user` 后缀 | D1.2 实测修正 | ✅ D1.2 特征 | 是 | 低 | L0 |
 
-## 2. 本审计新发现（S1-Final 扫描）
+## 2. 本审计新发现（S1-Final 扫描 + P0-B 深化）
 
 | ID | 行为/事实 | 来源 | 测试 | 级别 |
 |----|----------|------|------|------|
-| E5 | `GetConditionAsync`/`GetDataConditionAsync`（CC60）与路径 A 同构但独立消费（AppendTokenStrategy），**零特征测试** | tenant-permission-map.md P0-2 | ❌ | **L1（S2 前必须补回归）** |
+| E5 | `GetConditionAsync`/`GetDataConditionAsync` 路径 B 链路 | P0-B 规格 | ✅ **43/43 特征（2026-08-25 已锁定）** | **L1 → 已解除**（P0-B 完成后升级为 L0 保护基线） |
+| E-PB1 | `GetDataConditionAsync` L812 `x.EnCode.Equals("jnpf_alldata")` 无 null 保护（EnCode=null → NRE） | P0-B 源码核对 | 登记（不修） | L2 |
+| E-PB2 | 尾部 DenyAll 差异：A 含 `!Roles.Any()`，B 仅 `resourceList.Count==0` | P0-B 源码核对 | 登记（不修） | L2 |
+| E-PB3 | `GetConditionalModel(Between)` 无 case → 空模型 | P0-B 实测 | ✅ D-7 特征 | L2 |
+| E-PB4 | `GetDataConditionAsync` L810 `.In(it=>it.Id, roleAuthorizeList)` 传匿名对象列表（vs A 传 ItemId） | P0-B 源码核对 | 登记（不修） | L3 |
 | E6 | 台账 8 条已自然降级 <30（GetSelector 258→20 等） | complexity-inventory §3 | —（门禁仍保护） | L3（可销账观察） |
 | E7 | `ConfigController.cs`（zxdev）1 处 `$"SELECT` 插值 SQL | data-access-coupling §3 | ❌ | L3 |
 
