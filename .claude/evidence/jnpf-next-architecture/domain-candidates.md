@@ -1,3 +1,17 @@
+> ⛔ **STATUS: HISTORICAL-CANDIDATE / SUPERSEDED（2026-08-26）**
+>
+> **SUPERSEDED BY**: NG-1A（平台产品资产边界审计）+ NG-1B（Provenance Matrix）+ NG-1C（Platform Domain Ownership Proof，进行中）
+>
+> 本文 D1–D12 仅作为 **Legacy Architecture Hypothesis** 保存（历史架构决策证据价值），**不得删除**，但**不得作为 NG-1C Domain Candidate 的输入边界**，不得被任何后续 Agent 当作有效领域假设引用。
+>
+> **已被 NG-1B 证伪/失效的引用（实例，防止复发）**：
+> - D12 Demo Business 整体证伪——`ext_*` = P3 DEMO_APPLICATION，非 Order Domain；
+> - D2 Tenant 所引 `zx_sys_db` 已降级 P6 LEGACY（真正资产为 zx_system_db / zx_sys_config）；
+> - D7 File 所引 `base_file` 已判 P6 LEGACY——File 能力当前「有职责无核心表」；
+> - D4 Workflow 所引 wform_\* 51 张中 48 张已判 P2 PRODUCT_TEMPLATE（模板资产，非流程运行时数据）。
+>
+> 当前唯一有效路径：`docs/superpowers/specs/JNPF-Next-NG1C-Platform-Domain-Ownership规格.md`
+
 # NG-0 证据 5/11 — 领域候选与边界（10 维度）
 
 **方法**：不沿用 modularity 项目目录为边界——以 DB ownership（证据 4）+ 调用链（DB-2/3）+ API/权限/租户/工作流多维证据重新聚类。每个候选领域回答 10 个维度。

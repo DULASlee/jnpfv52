@@ -89,7 +89,7 @@ BASE_REPORT	report	report
 BASE_ROLE	system	system	common;engine;inteAssistant;oauth;system;visualdev
 BASE_SANDBOX			inteAssistant
 BASE_SCHEDULE	system	system	system
-BASE_SCHEDULE_LOG			
+BASE_SCHEDULE_LOG		system	
 BASE_SCHEDULE_USER		system	system
 BASE_SIGN_IMG		system	system
 BASE_SIGNATURE	system		
@@ -192,8 +192,8 @@ SA_UI		inteAssistant
 SA_VALIDATION_LOG			
 SCHEMAVERSIONS			
 STUDENT			
-SYS_EVENT_OUTBOX_MESSAGE		other	other
-SYS_PROCESSED_EVENT		other	other
+SYS_EVENT_OUTBOX_MESSAGE		infrastructure	infrastructure;JNPF.API.Entry
+SYS_PROCESSED_EVENT		infrastructure	infrastructure
 UNDO_LOG			
 WFORM_APPLYBANQUET			
 WFORM_APPLYDELIVERGOODS			

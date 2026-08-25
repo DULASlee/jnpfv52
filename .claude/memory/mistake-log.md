@@ -1811,3 +1811,13 @@ JNPF 框架: 6 ██████
 - **错**: 「美化」Merge/Inject WHERE 的空格与 and 粘连，或把子表空值 11/14 判定改成枚举解析
 - **对**: MergeWhereIntoExisting / InjectWhereIntoPlaceholder 原样保留 Split 拼缝；IsEmptyOrNullConditionalTypeJson 只认 JSON 字面 11/14；权限 FieldName 主表/联表两套 Rewrite 分叉
 - **验收**: ListQuerySqlFragmentHelpersTests + VisualDev 184；evidence w2-list-query-sql-fragments-surgery-summary.json；CR PASS
+
+### 2026-08-24 — 先澄清「项目」指 IDE 环境而非平台代码；勿把 IDE 模型切换与平台内 LLM 网关混为一谈
+- **错**: 用户要求「在项目中用智谱 GLM 5.3、粘贴 API key 切换」，我未先澄清就直接探索 JNPF 平台内部 `backend/application/JNPF.API.Entry/Configurations/AI.json`（平台运行时 LLM Provider 网关配置），做了大量后端代码级分析后才被用户打断纠正。用户要的是在 Claude Code / Cursor 两个 IDE 环境里切换模型；AI.json 是平台自身调 LLM 的设置，与 IDE 模型配置是两回事
+- **对**: 收到「切换大模型 + 粘贴 API key + IDE」类需求时，先向用户确认「项目」指什么；识别到 IDE 场景时优先想到 Claude Code 的 `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_MODEL` 环境变量或 settings.json env 块，而非平台内 LLM Provider 配置
+- **验收**: 本会话无任何代码改动（hook 统计的 3 个 .cs 变更文件为工作树既有未跟踪文件，会话开始即存在）；方向纠正后聚焦 Claude Code 的 settings.json / OS 环境变量配置 GLM-5.3（`https://open.bigmodel.cn/api/anthropic` + `glm-5.3`）
+
+### 2026-08-24 — 文档树状图勿用 ASCII 代码块 + 空格列对齐；宽表信息选流式载体
+- **错**: 在 .md 设计文档中把 73 工程树状图写进 ```text 代码块，用空格做列对齐并叠加中文注记。代码块不折行，行宽超屏即横向滚动；中文双宽字符使空格对齐视觉错位——用户反馈「格式排版错乱，全屏都看不全」，返工一轮
+- **对**: 树形结构优先用 markdown 嵌套列表（流式排版，窄屏自动折行 + 悬挂缩进对齐）；标记压缩为 `·` 分隔的短徽章（`T1 · ✅W1 · →JNPF`）；确需等宽排版时单行 ≤80 显示列（中文按 2 列计）且禁用空格列对齐
+- **验收**: 规格 v2.2 §1.2 改嵌套列表流式版（commit 9af05f7f），73 工程判读内容零丢失；§9 修订表留痕

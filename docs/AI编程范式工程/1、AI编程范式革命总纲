@@ -1,0 +1,1504 @@
+我把你上传的方案完整审核了一遍，并结合 **2026 年目前公开的 Cursor、Anthropic、OpenAI 等最新 Agentic Coding / Context Engineering / Harness Engineering 实践**进行了交叉验证。
+
+先给结论：
+
+> **这套方案总体方向是正确的，但“1+5+N”不是 2026 年最优终态。**
+>
+> 它已经从传统“30+模板驱动开发”跨到了“AI 原生开发”，但仍然残留了比较明显的**文档中心、流程中心、人类审批中心**思维。
+>
+> 如果你的最终目标是：
+>
+> **“人类容易理解、容易决策、容易冻结和验收；AI 大模型负责绝大部分分析、编码、测试、重构、验证和执行”**
+>
+> 那么我建议不要直接落地当前的“1+5+N”，而是把它升级成：
+>
+> **「人类意图 → 可验证规格 → Agent Harness → 自动执行/验证 → 人类风险审批」**
+>
+> 也就是从 **Document-driven → Context-driven → Harness-driven → Evidence-driven**。
+
+而且有一个非常重要的变化：**2026 年已经不能简单地把 AI 定义为“执行者”、人类定义为“架构师”。** OpenAI 最新公开的 Harness Engineering 实践甚至已经做到“人类不直接写代码，Agent 负责代码、测试、CI、文档、工具等”，人类主要负责意图、约束、反馈和验收。([OpenAI][1])
+
+---
+
+# 一、先评价你现在这份方案：方向 80% 正确，但架构还可以再进化
+
+你上传的方案最重要的判断，我基本赞同：
+
+> 原来 30+ 模板的真正问题不是“模板太多”，而是**上下文割裂、人机职责模糊、文档成为 AI 的负担**。
+
+这一点与 2025～2026 年业界趋势高度一致。
+
+Anthropic 已经把这个问题明确称为 **Context Engineering**：重点不再是“写一个漂亮 Prompt”，而是设计 Agent 在某个时刻应该获得什么上下文、工具、状态和反馈。([Anthropic][2])
+
+Cursor 2026 年最新的 Agent 实践也明确把 Agent Harness 定义为：
+
+**Instructions + Tools + Model**
+
+也就是说，真正决定 Agent 表现的已经不是 Prompt 本身，而是**整个执行环境**。([Cursor][3])
+
+OpenAI 的 Harness Engineering 甚至更进一步：
+
+> Humans steer. Agents execute.
+
+而其内部实践中，Agent 已经可以负责：
+
+* 产品代码
+* 测试
+* CI
+* 文档
+* observability
+* 内部工具
+* PR
+* review response
+* bug 修复
+* 验证
+* 部署相关工作
+
+人类主要负责：
+
+* 优先级
+* 用户反馈
+* 意图
+* 验收
+* 风险判断
+
+([OpenAI][1])
+
+所以你的大方向完全没有错。
+
+---
+
+# 二、但是你现在的“1+5+N”有一个很大的时代性问题
+
+你方案的核心结构是：
+
+```text
+1 .cursorrules
++
+5 核心设计文档
++
+N Skills
+```
+
+
+
+这比 30+ 模板先进很多。
+
+但如果站在 **2026 年 Agent Harness Engineering** 的角度，我会给它一个评价：
+
+> **这是一个很好的“第一代 AI 原生开发体系”，但不是最优的第二代 Agent 原生开发体系。**
+
+原因是：
+
+### 你实际上仍然把“文档”放在了中心。
+
+只是从：
+
+```text
+30份文档
+```
+
+变成：
+
+```text
+5份文档
+```
+
+而真正先进的方向正在变成：
+
+```text
+代码库本身
+    ↓
+结构化知识
+    ↓
+规则 / Policy
+    ↓
+Skills / Tools
+    ↓
+Agent
+    ↓
+Tests / Evaluations
+    ↓
+Evidence
+```
+
+也就是说：
+
+> **文档不应该成为 AI 的主要工作记忆。**
+>
+> 文档应该成为“人类可读的意图和决策记录”；真正驱动 Agent 的，是**结构化知识 + 可执行约束 + 工具 + 验证反馈**。
+
+OpenAI 的最新实践对此非常明确：他们尝试过一个巨大的 `AGENTS.md`，最终发现失败，因为上下文会膨胀、重要信息被稀释、内容腐化，而且无法机械验证。最终转向“repository as the system of record”，让知识直接存在于 Agent 能检查、验证和修改的代码库结构中。([OpenAI][1])
+
+---
+
+# 三、第一处必须修改：不要再把 `.cursorrules` 当成核心架构
+
+这是我认为你当前方案里**最应该立即修改的一点**。
+
+你写的是：
+
+> “1 = .cursorrules（AI编程宪法）”
+
+
+
+但 Cursor 当前官方文档已经明确：
+
+> `.cursorrules` 是 **Legacy / deprecated**。
+
+现在推荐的是：
+
+```text
+.cursor/rules/*.mdc
+```
+
+并且支持：
+
+* Always
+* Auto Attached
+* scoped rules
+* path-specific rules
+* composable rules
+
+([Cursor Documentation][4])
+
+因此不要设计：
+
+```text
+.cursorrules
+```
+
+而应该设计成：
+
+```text
+.cursor/
+├── rules/
+│   ├── 00-project-core.mdc
+│   ├── 10-architecture.mdc
+│   ├── 20-security.mdc
+│   ├── 30-testing.mdc
+│   ├── 40-database.mdc
+│   └── modules/
+│       ├── lowcode.mdc
+│       ├── workflow.mdc
+│       └── tenant.mdc
+│
+├── skills/
+├── hooks/
+└── plans/
+```
+
+甚至最好兼容：
+
+```text
+AGENTS.md
+```
+
+因为不同 Agent 平台正在逐渐趋向标准化。
+
+Anthropic 也已经把 Agent Skills 推向开放标准，强调 Skills 应该是**动态发现、按需加载、可组合**的，而不是所有知识一次性塞给模型。([Anthropic][5])
+
+---
+
+# 四、第二处必须修改：不要把所有东西塞进一个“大规则文件”
+
+你现在给出的 `.cursorrules` 示例有 60～70 条规则：
+
+```text
+项目身份
+技术栈
+架构约束
+编码规范
+安全规范
+测试规范
+AI行为规范
+响应格式
+...
+```
+
+
+
+这在早期 Prompt Engineering 时代很合理。
+
+但在今天反而存在风险。
+
+Cursor 官方现在明确建议：
+
+> Rules should be focused, actionable and scoped.
+
+并建议：
+
+> Keep rules under 500 lines
+> Split large rules into composable rules
+> Reference canonical files instead of copying everything
+> Use linters instead of documenting style guides
+
+([Cursor Documentation][4])
+
+所以你应该把：
+
+```text
+AI编程宪法
+```
+
+改成：
+
+> **AI Policy Layer**
+
+而且 Policy 不是“一本宪法”，而是分层的。
+
+例如：
+
+```text
+Policy
+│
+├── Global
+│   ├── security
+│   ├── git
+│   └── general architecture
+│
+├── Backend
+│   ├── API
+│   ├── database
+│   └── service
+│
+├── Frontend
+│   ├── React
+│   └── UI
+│
+└── Domain
+    ├── workflow
+    ├── low-code
+    └── tenant
+```
+
+这样 AI 只拿自己当前任务真正需要的规则。
+
+---
+
+# 五、第三处问题：你的“5份核心文档”仍然有点过度设计
+
+你现在设计：
+
+1. 需求规格
+2. 架构设计
+3. 接口契约
+4. 数据模型
+5. 部署交付
+
+
+
+这作为**人类工程治理体系**是非常好的。
+
+但作为 **Agent 工作体系**，我不建议把它们都定义为必须存在的“五份文件”。
+
+因为不同任务根本不需要全部五份。
+
+例如：
+
+### 一个 Bug
+
+可能只需要：
+
+```text
+Bug specification
++
+相关代码
++
+测试
+```
+
+### 一个 UI 调整
+
+可能只需要：
+
+```text
+需求
++
+相关组件
++
+截图/视觉验证
+```
+
+### 一个数据库字段修改
+
+可能需要：
+
+```text
+数据契约
++
+migration
++
+相关测试
+```
+
+根本不需要完整架构文档。
+
+所以应该改成：
+
+> **Canonical Artifacts，而不是固定五份文档。**
+
+也就是说：
+
+```text
+项目级
+  ├── Product Spec
+  ├── Architecture / ADR
+  ├── Domain Model
+  ├── API Contract
+  └── Deployment Contract
+
+任务级
+  ├── Task Spec
+  ├── Plan
+  ├── Acceptance Criteria
+  └── Evidence
+```
+
+Agent 根据任务选择需要的 artifact。
+
+---
+
+# 六、第四处：你提出“架构由人定义，AI只负责细节”，已经落后了一步
+
+你的原文明确写：
+
+> “架构由人定义、规范由人把控、边界由人界定，AI只负责落地细节，绝不参与架构决策。”
+
+这里我建议**一定修改**。
+
+不是说人不负责架构。
+
+而是：
+
+> **人负责架构权威和最终决策，但 AI 应该参与架构探索、比较、模拟和提出方案。**
+
+最佳模式应该是：
+
+```text
+人：
+目标 + 约束 + 不可违反边界
+
+        ↓
+
+AI：
+分析现状
+提出方案 A/B/C
+比较 trade-off
+识别风险
+预测影响
+生成 ADR
+
+        ↓
+
+人：
+批准 / 修改 / 否决
+
+        ↓
+
+AI：
+执行批准后的架构
+```
+
+而不是：
+
+```text
+人想好架构
+       ↓
+AI只是码农
+```
+
+这会浪费今天最强模型最有价值的能力——**系统推理**。
+
+OpenAI 的 Harness Engineering 实践恰恰说明，人类工作层次正在上移，而不是简单地把 AI 固定在“编码工人”位置。([OpenAI][1])
+
+---
+
+# 七、第五处：你的“2～5分钟任务”已经不适合 2026 年
+
+你写：
+
+> 每个任务拆解成 2～5 分钟可完成的子任务。
+
+这个思想来自早期 AI coding agent。
+
+今天已经不应该把“时间”作为任务粒度核心指标。
+
+Cursor 2026 年已经明确指出 Agent 可以运行：
+
+> hours
+
+并完成：
+
+> ambitious multi-file refactors
+
+([Cursor][3])
+
+所以应该从：
+
+> **时间粒度**
+
+升级成：
+
+> **验证边界粒度**
+
+例如：
+
+```text
+Task
+=
+一个明确目标
++
+明确输入
++
+明确修改范围
++
+明确验收条件
++
+可独立验证
++
+可回滚
+```
+
+所以一个任务可能是：
+
+```text
+5分钟
+```
+
+也可能是：
+
+```text
+2小时
+```
+
+甚至：
+
+```text
+一天
+```
+
+只要它：
+
+> **有明确的 Stop Condition 和 Evidence Boundary。**
+
+这是非常重要的升级。
+
+---
+
+# 八、第六处：TDD不能成为所有任务的“宗教”
+
+你现在的 Skill：
+
+```text
+RED
+↓
+GREEN
+↓
+REFACTOR
+```
+
+
+
+方向正确。
+
+但不能要求：
+
+> 所有任务必须严格 TDD。
+
+应该升级成：
+
+# Verification-Driven Development
+
+即：
+
+```text
+Task
+ ↓
+Acceptance Criteria
+ ↓
+Choose Verification Strategy
+ ↓
+Implement
+ ↓
+Run Verification
+ ↓
+Evidence
+```
+
+Verification Strategy 可以选择：
+
+```text
+Unit Test
+Integration Test
+E2E Test
+Property Test
+Snapshot
+Static Analysis
+Type Check
+Lint
+Performance Test
+Security Test
+Visual Test
+Manual Review
+```
+
+这比“TDD”更加适合 Agent。
+
+尤其你目前正在做的这种大型重构、特征单测、DLL/NuGet物理隔离之类工作，**验证矩阵**往往比单纯 TDD 更重要。
+
+---
+
+# 九、第七处：最危险的是“AI自动触发一切”
+
+你的 Skill 体系写的是：
+
+> AI在工作流中自动触发，无需人工干预。
+
+这句话我建议修改。
+
+应该是：
+
+> **低风险动作自动执行，高风险动作需要人类授权。**
+
+因为现在真正成熟的 Agent Governance 已经不是简单的：
+
+```text
+Human in the loop
+```
+
+而是：
+
+# Human on the loop + Risk-based approval
+
+例如：
+
+| 操作              |   AI |    人 |
+| --------------- | ---: | ---: |
+| 搜索代码            |    ✅ |      |
+| 写代码             |    ✅ |      |
+| 写测试             |    ✅ |      |
+| 跑测试             |    ✅ |      |
+| 重构              |    ✅ |      |
+| 创建 PR           |    ✅ |      |
+| 修改 DB migration |    ✅ | ⚠️审批 |
+| 修改权限模型          |   ⚠️ |    ✅ |
+| 删除数据            | ❌/审批 |    ✅ |
+| 生产部署            |   ⚠️ |    ✅ |
+| 修改安全边界          |   ⚠️ |    ✅ |
+| 架构重大变化          |   提案 |    ✅ |
+| 发布              |   提案 |    ✅ |
+
+OpenAI 目前公开的 Codex 安全实践也是这种思想：低风险动作尽量自动化，高风险动作显式要求批准，同时保留 Agent telemetry 和审计能力。([OpenAI][6])
+
+---
+
+# 十、我认为你现在真正缺少的是一个“第四层”：Evidence
+
+这是我最建议你增加的。
+
+你现在：
+
+```text
+需求
+↓
+设计
+↓
+Skill
+↓
+代码
+↓
+Review
+```
+
+但是还缺一个非常重要的东西：
+
+```text
+Evidence
+```
+
+也就是：
+
+> **AI 不能只告诉人“我完成了”，而必须证明“我为什么认为完成了”。**
+
+例如：
+
+```text
+Task 3.5
+
+Requirement:
+REQ-3.5
+
+Changed:
+8 files
+
+Tests:
+8/8 passed
+
+Snapshots:
+8/8 captured
+
+Regression:
+All green
+
+Architecture:
+No boundary violation
+
+Diff:
++312 -87
+
+Evidence:
+test-report.html
+snapshot/
+coverage/
+git diff
+```
+
+于是人类根本不需要重新读几千行代码。
+
+人类只需要：
+
+```text
+审查：
+1. AI到底改变了什么？
+2. 是否满足规格？
+3. 证据是否充分？
+4. 有没有风险？
+```
+
+这才是真正的：
+
+> **人类容易参与和把控。**
+
+---
+
+# 十一、因此我建议把你的体系升级成这个架构
+
+我会把：
+
+# 1 + 5 + N
+
+升级成：
+
+# **Intent + Context + Policy + Skills + Verification + Evidence**
+
+或者简称：
+
+# **ICPSVE**
+
+不过从工程实践上，我更建议你不要执着于一个漂亮缩写，而直接采用下面这个结构：
+
+```text
+                         HUMAN
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+           Intent                    Approval
+              │                         ▲
+              ▼                         │
+        ┌──────────────┐                │
+        │ Specification│                │
+        └──────┬───────┘                │
+               │                        │
+               ▼                        │
+┌──────────────────────────────────────────────┐
+│              AGENT HARNESS                   │
+│                                              │
+│  Context      Policy      Skills      Tools  │
+│     │            │           │          │    │
+│     └────────────┴───────────┴──────────┘    │
+│                       │                      │
+│                       ▼                      │
+│                    AGENT                    │
+│                       │                      │
+│          ┌────────────┼────────────┐         │
+│          ▼            ▼            ▼         │
+│        Code         Test         Refactor    │
+│                                              │
+└──────────────────────┬───────────────────────┘
+                       │
+                       ▼
+                 VERIFICATION
+                       │
+                       ▼
+                    EVIDENCE
+                       │
+                       ▼
+                    HUMAN
+                 Review / Accept
+```
+
+这比“1+5+N”更加接近今天真正的 Agent Engineering。
+
+---
+
+# 十二、最关键的变化：把“文档”降级，把“规格”和“证据”升级
+
+这是整个方案最核心的思想。
+
+传统：
+
+```text
+文档
+ ↓
+程序员
+ ↓
+代码
+ ↓
+测试
+```
+
+你的第一版：
+
+```text
+文档
+ ↓
+AI
+ ↓
+代码
+ ↓
+Skill
+```
+
+我建议最终变成：
+
+```text
+人类意图
+   ↓
+可验证规格
+   ↓
+Agent Harness
+   ↓
+执行
+   ↓
+验证
+   ↓
+证据
+   ↓
+人类判断
+```
+
+其中：
+
+### 文档
+
+主要解决：
+
+> 人类理解
+
+### Specification
+
+解决：
+
+> AI理解
+
+### Policy
+
+解决：
+
+> AI不能做什么
+
+### Skill
+
+解决：
+
+> AI怎么做
+
+### Tool
+
+解决：
+
+> AI能做什么
+
+### Test / Eval
+
+解决：
+
+> AI怎么知道自己做对了
+
+### Evidence
+
+解决：
+
+> 人类怎么快速确认 AI 做对了
+
+这七个东西分工非常清楚。
+
+---
+
+# 十三、你的“需求规格”也应该升级
+
+目前需求规格有：
+
+```text
+业务背景
+功能需求
+NFR
+数据需求
+业务规则
+追踪矩阵
+```
+
+
+
+很好。
+
+但是 AI 原生时代，我建议最重要的字段变成：
+
+```text
+Goal
+Scope
+Non-goals
+Constraints
+Acceptance Criteria
+Invariants
+Examples
+Failure Cases
+Verification
+Risk
+Approval
+```
+
+尤其增加：
+
+## Non-goals
+
+这个非常重要。
+
+例如：
+
+```text
+本任务：
+允许修改 Service 层
+
+禁止：
+修改数据库 schema
+修改公共 API
+修改权限模型
+修改跨模块依赖
+```
+
+Agent 最怕的不是不知道“应该做什么”。
+
+而是：
+
+> **不知道哪些事情绝对不能顺手做。**
+
+---
+
+# 十四、架构文档也应该从“说明书”升级成“约束系统”
+
+你目前已经有 ADR，这是非常正确的。
+
+但还应该增加：
+
+```text
+Architecture Invariants
+```
+
+例如：
+
+```text
+INV-001
+module A cannot depend on module B implementation
+
+INV-002
+domain layer cannot access infrastructure layer
+
+INV-003
+public API changes require approval
+
+INV-004
+tenant isolation must be preserved
+```
+
+然后最好不是只写 Markdown。
+
+而是：
+
+```text
+Architecture Rule
+       ↓
+Static Analyzer
+       ↓
+CI
+       ↓
+Agent
+```
+
+这就是 OpenAI 当前强调的：
+
+> **Enforce invariants, not implementations.**
+
+也就是说：
+
+不要告诉 AI：
+
+> “必须使用 Zod。”
+
+而告诉 AI：
+
+> “所有外部输入必须在 boundary 被 schema validation。”
+
+具体用什么工具，可以由 Agent 决定。
+
+([OpenAI][1])
+
+这比你现在的规则更先进。
+
+---
+
+# 十五、你的“AI编程宪法”应该从“规定AI怎么写”变成“规定AI必须满足什么”
+
+这是一个非常重要的范式转变。
+
+不推荐：
+
+```text
+Service必须这样写
+Repository必须这样写
+必须用这个工具
+必须按这个顺序
+```
+
+更推荐：
+
+```text
+Invariant:
+不得跨层访问
+
+Invariant:
+所有输入必须经过验证
+
+Invariant:
+公共接口变更必须保持 backward compatibility
+
+Invariant:
+所有 migration 必须可回滚
+
+Invariant:
+所有 P0/P1 业务规则必须有自动验证
+```
+
+即：
+
+# 从 Implementation Rules
+
+变成：
+
+# **Outcome / Invariant Rules**
+
+这会显著提高 AI 自由度，同时保持架构稳定。
+
+---
+
+# 十六、Skills 也要重新分类
+
+你现在：
+
+```text
+需求澄清
+任务拆解
+TDD
+代码审查
+接口对接
+数据库变更
+部署
+```
+
+
+
+我建议改成四类。
+
+### A. Discovery Skills
+
+```text
+explore-codebase
+analyze-impact
+find-dependencies
+understand-domain
+```
+
+### B. Planning Skills
+
+```text
+clarify-requirement
+design-solution
+create-plan
+architecture-review
+```
+
+### C. Execution Skills
+
+```text
+implement
+refactor
+migration
+api-change
+frontend-change
+```
+
+### D. Verification Skills
+
+```text
+run-tests
+security-review
+architecture-check
+performance-check
+visual-check
+generate-evidence
+```
+
+这样 Skill 不再是一条死流水线。
+
+而变成：
+
+> **Agent 根据任务动态组合能力。**
+
+这与 Anthropic 现在推动的 Agent Skills 模型高度一致：Skills 是可以被发现、按需加载、组合的程序性知识包。([Anthropic][5])
+
+---
+
+# 十七、再进一步：不要只有一个 Agent
+
+你的体系目前隐含的是：
+
+```text
+一个 AI
+ ↓
+执行全部事情
+```
+
+下一阶段应该允许：
+
+```text
+                    Orchestrator
+                         │
+        ┌────────────────┼────────────────┐
+        ▼                ▼                ▼
+   Analyst Agent     Builder Agent   Reviewer Agent
+        │                │                │
+        └────────────────┼────────────────┘
+                         ▼
+                  Verification Agent
+                         │
+                         ▼
+                      Evidence
+```
+
+这并不意味着一定要部署四个模型。
+
+可以是：
+
+```text
+同一个模型
+不同 role / context / permissions
+```
+
+也可以是：
+
+```text
+不同模型
+```
+
+核心是：
+
+> **让“生成”和“审查”尽可能形成认知隔离。**
+
+---
+
+# 十八、你目前的“代码审查 Skill”也需要升级
+
+现在：
+
+```text
+检查架构
+检查规范
+检查安全
+检查测试
+Critical → 阻塞
+```
+
+
+
+很好，但不够。
+
+应该形成：
+
+```text
+Review
+│
+├── Specification compliance
+├── Architecture invariants
+├── Security
+├── Correctness
+├── Regression
+├── Performance
+├── Maintainability
+├── Test adequacy
+└── Evidence completeness
+```
+
+最重要的是：
+
+### Reviewer 不应该只问：
+
+> “代码写得好不好？”
+
+而应该首先问：
+
+> **“有没有证据证明需求已经满足？”**
+
+---
+
+# 十九、你的“人类参与点”应该从 7 个变成 3 个
+
+这是我认为最适合你目标的地方。
+
+人类不要在每一个步骤审批。
+
+否则最后还是：
+
+> AI秘书 + 人类项目经理。
+
+应该只有三个主要人工控制点：
+
+---
+
+## Gate 1：Intent Approval
+
+人类确认：
+
+```text
+我要什么
+不要什么
+成功是什么
+风险是什么
+```
+
+批准后：
+
+> AI 自主分析 + 设计 + 制定计划。
+
+---
+
+## Gate 2：Plan / Architecture Approval
+
+人类只审核：
+
+```text
+方案
+影响范围
+关键决策
+风险
+```
+
+批准后：
+
+> AI 自主执行。
+
+---
+
+## Gate 3：Evidence Acceptance
+
+AI交付：
+
+```text
+Diff
+Tests
+Coverage
+Screenshots
+Logs
+Performance
+Architecture check
+Security check
+```
+
+人类决定：
+
+```text
+Accept
+Reject
+Request changes
+```
+
+然后 AI 自己继续循环。
+
+---
+
+# 二十、这样才是真正的“Human-in-the-loop”
+
+而不是：
+
+```text
+AI做一步
+↓
+问人
+↓
+AI做一步
+↓
+问人
+↓
+AI做一步
+↓
+问人
+```
+
+这是低效率的。
+
+真正先进的是：
+
+```text
+Human
+  ↓
+定义目标
+  ↓
+Agent自主执行
+  ↓
+Agent自主验证
+  ↓
+Agent自主修复
+  ↓
+Agent形成证据
+  ↓
+Human判断
+```
+
+也就是：
+
+# **Human decides, Agent operates, Tests arbitrate.**
+
+这是我认为目前最值得采用的核心范式。
+
+---
+
+# 二十一、你现在方案中还有一个容易忽略的问题：文档同步
+
+你的数据库 Skill 写的是：
+
+```text
+修改数据库
+ ↓
+ALTER TABLE
+ ↓
+更新数据模型文档
+ ↓
+更新枚举
+ ↓
+生成 rollback
+```
+
+
+
+这是一个隐患。
+
+因为：
+
+> **让 AI 同时维护代码 + 文档，迟早会发生 drift。**
+
+更好的原则是：
+
+```text
+Canonical Source
+       ↓
+Generate
+       ↓
+Derived Artifacts
+```
+
+例如：
+
+```text
+OpenAPI
+   ↓
+Backend types
+Frontend types
+SDK
+Docs
+Tests
+```
+
+而不是：
+
+```text
+接口文档
+代码
+前端类型
+测试
+```
+
+四份东西全部人工/AI维护。
+
+**只允许一个 Source of Truth。**
+
+这是 AI 工程非常关键的一条原则。
+
+---
+
+# 二十二、我对当前方案的最终评分
+
+如果满分 100：
+
+| 维度                  | 当前方案 |    优化后 |
+| ------------------- | ---: | -----: |
+| AI 原生程度             |   82 | **96** |
+| Context Engineering |   85 | **97** |
+| Agent Harness       |   65 | **96** |
+| Human Control       |   88 | **97** |
+| 自动化程度               |   80 | **96** |
+| 可验证性                |   78 | **98** |
+| 可维护性                |   75 | **96** |
+| 大型项目适应性             |   80 | **96** |
+| 模型无关性               |   65 | **93** |
+| 2026 前沿一致性          |   78 | **96** |
+
+所以我不会否定你现在的方案。
+
+恰恰相反：
+
+> **它已经是一个很好的过渡架构。**
+
+但我建议**不要直接把它冻结成最终标准**。
+
+---
+
+# 二十三、我建议最终不要叫“1+5+N”
+
+如果是我帮你定这个工程标准，我会把它定义成：
+
+# **AI Native Engineering System v2**
+
+核心不是数字，而是六个平面：
+
+```text
+┌───────────────────────────────────────┐
+│             HUMAN CONTROL             │
+│ Intent / Decision / Approval / Accept │
+└───────────────────┬───────────────────┘
+                    │
+┌───────────────────▼───────────────────┐
+│              SPECIFICATION             │
+│ Goal / Scope / Constraint / AC / Risk │
+└───────────────────┬───────────────────┘
+                    │
+┌───────────────────▼───────────────────┐
+│             AGENT HARNESS              │
+│ Context / Policy / Skills / Tools      │
+└───────────────────┬───────────────────┘
+                    │
+┌───────────────────▼───────────────────┐
+│             AGENT EXECUTION            │
+│ Explore / Plan / Code / Refactor       │
+└───────────────────┬───────────────────┘
+                    │
+┌───────────────────▼───────────────────┐
+│            VERIFICATION LOOP            │
+│ Test / Static / Security / Runtime     │
+└───────────────────┬───────────────────┘
+                    │
+┌───────────────────▼───────────────────┐
+│               EVIDENCE                 │
+│ Diff / Test / Logs / Coverage / Proof  │
+└────────────────────────────────────────┘
+```
+
+这套结构，我认为比你目前的“1+5+N”更接近 **2026 年真正成熟的 Agentic Software Engineering**。
+
+---
+
+# 二十四、最终最重要的一句话
+
+你现在的方案核心思想是：
+
+> **“减少文档，让 AI 更容易工作。”**
+
+我建议进一步升级成：
+
+> **“减少人类必须维护的文档；增加 AI 可以自动读取、执行、验证和证明的工程系统。”**
+
+也就是说：
+
+### 第一代
+
+**Document Driven**
+
+```text
+人维护文档
+↓
+AI读文档
+↓
+AI写代码
+```
+
+### 第二代
+
+**Context Driven**
+
+```text
+Rules
++
+Context
++
+Skills
+↓
+AI
+```
+
+### 第三代
+
+**Harness Driven**
+
+```text
+Agent
++
+Tools
++
+Policies
++
+Repository
++
+Feedback Loop
+```
+
+### 2026 更值得采用的形态
+
+**Evidence Driven Agentic Engineering**
+
+```text
+Human Intent
+      ↓
+Specification
+      ↓
+Agent Harness
+      ↓
+Autonomous Execution
+      ↓
+Continuous Verification
+      ↓
+Evidence
+      ↓
+Human Judgment
+```
+
+这也是为什么 OpenAI 最新 Harness Engineering 的核心已经从“如何让模型写代码”转向“如何设计环境、工具、约束和反馈循环，让 Agent 可以可靠完成工作”；Cursor 也把 Rules、Skills、Tools、Plans 和验证循环作为 Agent 工作环境的组成部分。([Cursor][3])
+
+---
+
+## 对你当前项目，我尤其建议一个原则
+
+结合你现在正在推进的 **Task 3.x、规格冻结、基线登记、特征单测、拆分重构设计规格/实施计划**这类工作，实际上非常适合把这套理论落地成一个真正可执行的机制：
+
+> **任何一个 Task 在批准执行之前，必须形成“规格 + 边界 + 验收标准 + 风险 + 实施计划”；批准后 AI 自主执行；每个阶段只通过“证据包”向人类汇报，而不是让人类跟着 AI 一步一步操作。**
+
+这样就能同时满足你最关心的两个目标：
+
+**人类始终掌握方向、边界、批准和最终判断；AI 则承担绝大部分具体工程劳动。**
+
+而且你刚才提到的“**先把那 5 个问题编写好拆分重构的设计规格和实施计划，再批准进入 Task 3.5，避免后续遗忘**”，其实正是这种 **Intent → Specification → Approval → Execution → Evidence** 范式的一个非常好的实际案例。
+
+[1]: https://openai.com/index/harness-engineering/?utm_source=chatgpt.com "Harness engineering: leveraging Codex in an agent-first world | OpenAI"
+[2]: https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents?utm_source=chatgpt.com "Effective context engineering for AI agents \ Anthropic"
+[3]: https://cursor.com/blog/agent-best-practices?utm_source=chatgpt.com "Best practices for coding with agents · Cursor"
+[4]: https://docs.cursor.com/context/rules-for-ai?utm_source=chatgpt.com "Cursor – Rules"
+[5]: https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills?utm_source=chatgpt.com "Equipping agents for the real world with Agent Skills \ Anthropic"
+[6]: https://openai.com/index/running-codex-safely/?utm_source=chatgpt.com "Running Codex safely at OpenAI | OpenAI"

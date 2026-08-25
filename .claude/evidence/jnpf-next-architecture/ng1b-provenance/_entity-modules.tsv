@@ -137,3 +137,5 @@ WFORM_SALESORDER	workflow	backend\modularity\workflow\JNPF.WorkFlow.Entitys\Enti
 WFORM_SALESORDERENTRY	workflow	backend\modularity\workflow\JNPF.WorkFlow.Entitys\Entity\WorkFlowForm\SalesOrderEntryEntity.cs
 ZX_SYS_CONFIG	zxdev	backend\modularity\zxdev\JNPF.ZxDev.Entitys\SysConfig.cs
 ZX_SYSTEM_DB	zxdev	backend\modularity\zxdev\JNPF.ZxDev.Entitys\SystemDbEntity.cs
+SYS_EVENT_OUTBOX_MESSAGE	infrastructure	backend\infrastructure\JNPF.Extras.EventBus.Outbox\EventBus\Outbox\EventOutboxMessage.cs
+SYS_PROCESSED_EVENT	infrastructure	backend\infrastructure\JNPF.Extras.EventBus.Outbox\EventBus\Idempotency\ProcessedEvent.cs

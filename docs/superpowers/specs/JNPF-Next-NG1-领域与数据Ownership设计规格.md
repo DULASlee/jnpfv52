@@ -182,6 +182,134 @@ NG-1A 初判完成后，下一步为 **Provenance Matrix**：对 289 表 + 代�
 
 **后续候选（不本批执行）**：Platform Independence Proof（删除/隔离实验，影子环境验证核心能力全链：启动 → 登录 → 创建应用 → 建模 → 表单 → 发布 → 运行）。
 
+### 0A.8 资产谱系方法论五原则 + 战略顺序锁定（NG-1B REFINE 裁决，2026-08-26）
+
+**裁决源**：G0 Final Review（NG-1B Provenance Matrix 完成后）人工裁决——批准窄范围 REFINE 收口 Provenance Proof，并正式确立「表存在 ≠ 领域存在」方法论。此为 NG 架构方法论的永久原则，适用于 NG-1 及后续所有阶段。
+
+#### 0A.8.1 五否定原则（架构判定的第一道闸门）
+
+> **数据库表存在 ≠ 平台领域存在。**
+> **代码存在 ≠ 平台核心能力存在。**
+> **菜单存在 ≠ 平台核心数据存在。**
+> **Entity 存在 ≠ Write Owner 存在。**
+> **有真实数据 ≠ 属于平台核心。**
+
+任何一张表进入架构决策前，必须逐条通过上述五条否定检验；任何一条无法排除的，按资产谱系落入对应分类，不得自动进入 Platform Core。
+
+#### 0A.8.2 七分支资产谱系
+
+```text
+数据库表
+   │
+   ├── Platform Core Data      —— 真正属于低代码平台运行所必需（P0）
+   ├── Platform Runtime Data   —— 引擎运行产生/维护（P1）
+   ├── Product Template        —— 平台提供的业务模板/能力样板（P2）
+   ├── Demo / Sample           —— 可安装、可删除、不可影响平台本体（P3）
+   ├── Customer Business Data  —— 用户利用平台创建的业务数据（P4）
+   ├── Legacy                  —— 历史遗留，可归档，禁止删除（P6）
+   └── Unknown                 —— 没有证据就不能进入架构决策（PX）
+```
+
+#### 0A.8.3 四分类规则（Provenance 判定基准）
+
+1. **Dapper-first**：以真实运行时访问链为准，不因缺少 Entity 就降级为非平台（sa_* 11 张 Dapper 直连 = 正常形态）。
+2. **Template ≠ Platform Domain**：WFORM_* 等模板族属于平台产品能力资产，独立模板包管理，不得污染平台核心领域模型。
+3. **Demo**：可随时清除、可独立安装/卸载，不计入平台核心数据边界（ext_* / DEMO_*）。
+4. **Legacy**：有真实历史数据但不属于当前平台核心能力的，必须 ARCHIVE，不得删除（WM_*/WH_* 42 张含真实客户数据）。
+
+#### 0A.8.4 框架运行时表（FRAMEWORK 子类）
+
+SchemaVersions（DbUp migration journal）、undo_log（Seata-AT 预留）等框架自建表：
+
+- 创建证据 = 源码级（DbUp 程序 / DDL 脚本），不得仅凭表名或 SqlSugar 推断；
+- 归属 = 平台迁移/事务基础设施（Platform Runtime Infrastructure），非业务领域；
+- undo_log 0 代码引用 = 惰性预留（Seata 未启用），真删实验归 NG-1C Platform Independence Proof。
+
+#### 0A.8.5 战略顺序锁定
+
+```text
+Provenance → Platform Boundary → Domain Ownership → Data Ownership
+           → Transaction Boundary → Query Boundary → Migration Proof
+           → 最后才决定哪些 Domain 值得微服务化
+```
+
+**禁止「看到表 → 画微服务 → 拆数据库」。** 此顺序为 NG-1 及后续 NG-2/NG-3 的唯一执行路径。
+
+#### 0A.8.6 状态声明（NG-1B REFINE 裁决后）
+
+- `NG-1B = REFINE → STOP`（Provenance Proof 收口完成后再次终审）
+- `Domain Ownership = BLOCKED`（仅 G0=PASS 后解锁）
+- `Microservice Design = BLOCKED`
+- `S2 = BLOCKED`
+- D12 Order Ownership：维持暂停（已被证伪），不恢复。
+
+### 0A.9 G0 最终 PASS 裁决 + NG-1C 解锁（2026-08-26 人工终审）
+
+**裁决源**：G0 Final Review 终审（NG-1B Provenance Matrix + REFINE 收口证据闭合：P0 UNKNOWN=0，P0/P1 PROVEN 率 88.5%，18 张 PARTIAL 缺位全部已证明）。
+
+#### 0A.9.1 终审结果
+
+```text
+NG-1A  Platform Product Boundary Audit   ✅ PASS
+NG-1B  Provenance Matrix                 ✅ PASS
+G0     Product Boundary Proof            ✅ PASS
+NG-1C  Platform Domain Ownership Proof   🔓 UNLOCKED
+Domain Ownership 裁决                    🔒 等 NG-1C Proof
+Microservice Design                      🔒 BLOCKED
+Aspire Architecture                      🔒 BLOCKED
+S2                                       🔒 BLOCKED
+D12 Order Slice                          维持证伪暂停，不恢复
+```
+
+**PASS 语义（永久有效）**：G0 PASS 仅表示 Provenance / Platform Boundary 已达到进入 Domain Ownership Proof 的证据门槛，不表示任何 Domain 或 Microservice 已被批准。Provenance 证明「这张表是什么资产、从哪里来、谁在使用」，不证明「这张表应该成为一个领域」。
+
+#### 0A.9.2 推导链锁定（禁止跳步）
+
+```text
+Asset Provenance → Platform Boundary → Business Capability → Domain Ownership
+                → Transaction Boundary → Query Boundary → Migration Boundary → Service Boundary
+```
+
+特别禁止（已被 NG-1A/1B 实测证伪的推导，只能作候选线索、不得作 Ownership 证据）：
+
+```text
+OrderService → Order Domain → Order Service → Order DB
+ext_* → Order Domain；WFORM_* → Workflow Domain；sa_* → Security Domain
+模块目录 → Domain；数据库前缀 → Domain；Service 名称 → Domain
+```
+
+Aspire 仍只是未来实现/编排工具，不得参与 Domain Boundary 判断。
+
+#### 0A.9.3 NG-1C 上位约束（规格独立成文）
+
+- 规格：`docs/superpowers/specs/JNPF-Next-NG1C-Platform-Domain-Ownership规格.md`
+- 计划：`docs/superpowers/plans/NG-1C实施计划-v1.0.md`
+- 范围：仅 P0/P1（146+11=157 张）；P2/P3/P4/P5/P6/P7/PX 全部排除；sa_\* 13 张进矩阵但 DEFERRED（延续 §0A.7 人工裁决第 6 条）
+- **方法论附加约束（本次终审新增，NG-1C 及后续阶段永久生效）**：
+  1. **禁止「一表一 Domain」强制归属**——表级主能力归属分析允许六态：`PRIMARY_DOMAIN / SHARED_INFRA / CROSS_DOMAIN / FRAMEWORK / DEFERRED / CONFLICT`（CONFLICT → Human Gate）。强制一表一域 = 重新制造刚被纠正的「表 → 领域」错误；
+  2. 候选能力集仅为 **Candidate Capability Set v0（HYPOTHESIS ONLY, NOT A DOMAIN DECISION）**；
+  3. **禁止预设候选 PASS/BLOCK**——历史 Anti-Service 清单（§3.2）候选项必须逐项反证验证，不得因「预期是共享内核」而免验（防 confirmation bias）；
+  4. **PASS 必须 Candidate 级完整取证**——抽样仅用于发现问题，「抽样未发现跨域写」不得作为 PASS 依据。
+- 约束升级为**六零**：ZERO BUSINESS CODE / ZERO DB CHANGE / ZERO DATA CHANGE / ZERO DEPLOYMENT / ZERO MICROSERVICE / ZERO ASPIRE ARCHITECTURE。
+- 执行顺序：先落盘规格+计划并经审核 → 才允许启动 C0；C4 完成后 STOP 等待人工裁决。
+- NG-0 `domain-candidates.md`（D1–D12）标记 `HISTORICAL-CANDIDATE / SUPERSEDED`——保留历史证据价值，禁止再作输入边界。
+
+#### 0A.9.4 路线收敛终局（2026-08-26 后续人工裁决——NG 编号路线退役）
+
+NG-1C 大矩阵**未执行即被收敛取代**：Capability Map 已经由《JNPF 平台整体结构基线》v0.2 §二以「五类能力地图 + 低代码核心闭环」形式交付，大矩阵的产出目的已达成。项目主路线正式切换为该基线的 **PHASE 0–8**，当前位于 **PHASE 3 数据架构设计入口**。
+
+```text
+NG-0 / NG-1A / NG-1B   ✅ 完成 → 登记为「历史证据链」（定位见总规格 §9 归档表）
+NG-1C 大矩阵           ⛔ SUSPENDED（规格/计划挂 SUSPENDED 标记，方法论保留参考）
+本规格后续延伸          ⛔ 不再新增 NG-x 分析文档
+最高技术路线           docs/architecture/MASTER-JNPF后端重构与Aspire微服务化总体设计规格.md
+总实施计划             docs/architecture/MASTER-JNPF后端重构与Aspire微服务化总体实施计划.md
+战略修正               P1 不重新设计 JNPF / P2 不预先重新设计数据库——「Next 重建」表述废止；
+                       原拟《JNPF Next 数据架构与数据库设计规范》取消（未启动，零废置成本）
+```
+
+本规格 §1~§8 的 Ownership 方法论、Anti-Service 清单、推导链锁定继续有效；但**执行载体不再是 NG 编号工程**，而是 MASTER 总体计划下的各 PHASE 执行卡。
+
 ---
 
 ## 1. NG-1 目标重定义

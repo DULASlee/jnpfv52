@@ -1,12 +1,8 @@
 {
   "calls": [
     {
-      "skill": "superpowers:systematic-debugging",
-      "ts": 1787465938121
-    },
-    {
-      "skill": "data-driven-debug",
-      "ts": 1787465942789
+      "skill": "superpowers:brainstorming",
+      "ts": 1787544348184
     }
   ]
 }

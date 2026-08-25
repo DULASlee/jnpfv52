@@ -14,7 +14,8 @@ This repo is used by **multiple AI coding agents**. Each has its own instruction
 
 **Rules of coexistence:**
 - This file is a **subset** of [CLAUDE.md](./CLAUDE.md) — it repeats only what an agent would guess wrong. CLAUDE.md remains the single source of truth.
-- **Never delete or alter** `.claude/` or `.cursor/` content from this agent — those are managed by their respective environments.
+- **Never delete or alter** `.claude/`, `.cursor/`, `.agents/` content from this agent — those are managed by their respective environments.
+- Root `.cursorrules` is an IDE short-cache pointer only — never pile new rules into it; authoritative Cursor entry is `.cursor/rules/00-constitution.mdc`.
 - **On-Demand Rules** (`.claude/rules/`) and **Cursor rules** (`.cursor/rules/`) contain deeper context. When available, prefer reading them over this summary.
 
 ## Project
@@ -50,11 +51,15 @@ Otherwise: kills stale processes on those ports, then launches frontend (`:3100`
 | Frontend build | `pnpm build` | `jnpf-web-vue3/` |
 | Toolchain verify | `node scripts/verify-toolchain.mjs` | repo root |
 | API 快测（Vitest） | `E2E_PIPELINE_ID=311 pnpm test:api` | repo root |
-| S0→S2 长链 | `node scripts/phase-sup-s2-e2e.mjs verify` | repo root |
+| S0→S2 长链（非默认） | `node scripts/_run-s2-longchain.mjs --from verify`（steps: `status/gate/pm/confirm/analyst/materialize/verify`） | repo root |
 | Git hooks enable (after clone) | `git config core.hooksPath .githooks` | repo root |
 | Hook 合规（含 L11 占位符） | `node scripts/test-hooks.mjs` | repo root |
 
-**CI gate order:** `lint → type-check → test:unit → build`
+**CI gate order:** `lint → type-check → test:unit → build`（`.github/workflows/ci.yml`）
+
+- **Backend CI:** Release build with `/p:CI_BUILD=true` — any `error JNPF*` analyzer finding hard-fails; then `dotnet test`.
+- **Module dependency gate:** CI runs `pwsh -File scripts/arch-module-dependency-scan.ps1 -Gate` — cross-module violations block merge.
+- **PR-only, non-blocking:** promptfoo LLM eval (`promptfoo/`), k6 smoke (`scripts/load/studio-pipeline.js`).
 
 **Frontend type-check:** Never run bare `npx vue-tsc --noEmit` (OOM on full `src`). Use `pnpm type-check` (Studio scoped, `tsconfig.typecheck.json`); use `pnpm type-check:full` when editing legacy modules. See `.cursor/rules/frontend/frontend-typecheck.mdc`.
 
@@ -86,7 +91,7 @@ Otherwise: kills stale processes on those ports, then launches frontend (`:3100`
 node scripts/lib/jnpf-auth.mjs --json                              # 登录，Token 缓存
 E2E_PIPELINE_ID=311 pnpm test:api                                  # Vitest 快断言
 node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser               # 冒烟
-node scripts/phase-sup-s2-e2e.mjs verify                             # S0→S2 长链
+node scripts/_run-s2-longchain.mjs --from verify                   # S0→S2 长链（非默认）
 python scripts/jnpf_auth.py GET /api/studio/ir/42/events          # Python 等价
 ```
 
@@ -95,14 +100,15 @@ python scripts/jnpf_auth.py GET /api/studio/ir/42/events          # Python 等�
 | 场景 | 工具 |
 |------|------|
 | **日常 Dev Loop（后端/API）** | **`E2E_PIPELINE_ID=311 pnpm test:api`** + `jnpf-api.mjs` |
-| 长链 Skill watch / evidence | `phase-sup-s2-e2e.mjs` 分步（**非默认**） |
+| 长链 Skill watch / evidence | `_run-s2-longchain.mjs` 分步（**非默认**） |
 | 手工调 API | `pnpm sync:http-env` + `api-tests/http/*.http` |
-| 前端 UI 交付 | Playwright → `.claude/evidence/` |
+| 前端 UI 交付 | Playwright：`pnpm e2e:login` / `pnpm e2e:studio` → `.claude/evidence/` |
 
 **E2E 知识库：** `openspec/specs/studio-e2e-toolchain/spec.md` · **规则：** `.cursor/rules/toolchain/testing-toolchain.mdc`
 
 登录：`POST /api/oauth/Login`（form-urlencoded，MD5+AES）· **不是** `/api/auth/login`
 
+## Repo Layout
 
 ```
 backend/              .NET 8 solution (zx_lowcode_netcore.sln)
@@ -111,15 +117,18 @@ backend/              .NET 8 solution (zx_lowcode_netcore.sln)
   modularity/         16 business modules (app, codegen, inteAssistant, system, visualdata, visualdev, workflow, etc.)
   application/        Hosts: JNPF.API.Entry (main), JNPF.OA.API.Entry (OA — separate entry point)
   tests/              Integration test projects (Gate, Phase6, Stage5, ADR012)
-  tools/              JNPF.Analyzers (custom Roslyn analyzer)
+  tools/              JNPF.Analyzers (custom Roslyn analyzer); DB init SQL: backend/web/jnpf_sundial_init.sql
 jnpf-web-vue3/        PC admin frontend → :3100 (pnpm, Vite, Ant Design Vue, WindiCSS)
 jnpf-web-datascreen/  Data screen frontend → :3102/DataV/ (pnpm, Element Plus)
 jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
+sa-service/           RETIRED (2026-07-15) — compile mode doesn't need or start it; kept for agent-mode regression only
+openspec/             Spec knowledge base (specs/, changes/, ADRs) — query via /spec skill
 ```
 
 ## Architecture Rules (violation = broken system)
 
-- **Assertion discipline:** Tag claims with `[KNOWN]`/`[COMPUTED]`/`[INFERRED]`/`[GUESS]` + confidence (HIGH≥80%/MED/LOW<50%). Don't guess past 3 failures — capture runtime data. See `.claude/rules/assertion-discipline.md`.
+- **Business First (B0):** 任何开发以实现业务功能为最高原则。开工前三问：用户做什么操作？完成后拿到什么业务产物？哪条 E2E 验收？答不出 → 停止编码。
+- **Assertion discipline:** Tag claims with `[KNOWN]`/`[COMPUTED]`/`[INFERRED]`/`[GUESS]` + confidence (HIGH≥80% / MED 50-80% / LOW 20-50%). Don't guess past 3 failures — capture runtime data. See `.claude/rules/assertion-discipline.md`.
 - **Never write Controllers.** All APIs auto-map from Service classes implementing `IDynamicApiController`.
 - **Unified response:** `RESTfulResult<T>` wraps automatically. Throw `Oops.Oh()` (system) / `Oops.Bah()` (business) — never raw `Exception`. HTTP code 600 = JWT expired.
 - **Codegen boundary:** Bugs in generated code → fix `.vm` template source. Never edit template output files directly.
@@ -128,6 +137,12 @@ jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
 - **API permission:** Every `IDynamicApiController` method MUST declare `[AllowAnonymous]` or `[SecurityDefine]`. Missing = hook-blocked (L0).
 - **OA module** has separate entry point (`JNPF.OA.API.Entry`) — do not modify from main entry. IoT/MES modules don't exist — never scaffold.
 - **Database:** SqlSugar (SQL Server) + Dapper. Table names: `UPPER_SNAKE_CASE` with module prefix (`BASE_USER`, `FLOW_TASK`). C# code: PascalCase.
+
+## 业务优先最高铁律 B0（宪法级）
+
+**任何编程开发和重构都必须以实现业务功能为最高原则；脱离业务的开发/重构必须先过审。** 完整条款：`.claude/rules/business-first-iron-law.md`
+
+**E2E 证据铁律：** Dev Loop = `dotnet build` → `node scripts/jnpf-api.mjs GET /api/oauth/CurrentUser` → `E2E_PIPELINE_ID=311 pnpm test:api`。无 E1 截图+E2 操作路径+E3 实际输出 → `guard-finish.mjs` BLOCK。
 
 ## 实现完整性铁律（宪法级, 永远生效, 2026-07-08 立）
 
@@ -159,7 +174,7 @@ jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
 
 ## 需求分析子链铁律（宪法级, 永远生效, 2026-07-12 立）
 
-**一切编码以阶段 A-B-C 为唯一施工依据（`1、阶段A/B/C.md`）；旧 25–33 已废止归档。未经 CR 擅自修改关键业务方法 = 最严重越权。**
+**一切编码以阶段 A-B-C 为唯一施工依据（`docs/AI原生开发/1、多用户多任务并行/1、阶段A.md` + `2、阶段B.md` + `3、阶段C.md`）；旧 25–33 已废止归档。未经 CR 擅自修改关键业务方法 = 最严重越权。**
 
 | # | 禁令 |
 |---|------|
@@ -168,7 +183,7 @@ jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
 | 三 | 逐阶段推进：门控→需求分析→架构→总体设计→开发→测试→debug→沙箱 — 审批 + L10 ✅ |
 | 四 | 以阶段 A-B-C 为总纲，编码对照阶段 A/B/C；偏离先改文档再改代码 — 人审 📋 |
 | 五 | 功能点验收：每功能点 = xUnit 绿 + 业务证据 + 用户审批；全验收后才联调 — xUnit + 审批 ✅ |
-| 六 | CR 变更审批：关键业务方法（PmSkillService/Orchestrator/AnalystSkillService/SkillsApiService/DesignSkillOrchestrator/Gates/*）修改前 MUST 提交 CR — guard-write L10a ✅ |
+| 六 | CR 变更审批：关键业务方法（PmSkillService/RequirementAnalysisOrchestrator/AnalystSkillService/SkillsApiService/DesignSkillOrchestrator/Gates/*）修改前 MUST 提交 CR — guard-write L10a ✅ |
 | 七 | 禁止复活废止模块（ScannerValidator/cascadeUpdate/sa_ddd/Q1-Q9/编排器代问/普通SINGLE）— L10b + JNPF007/008 ✅ |
 
 **CR 流程：** `.claude/change-requests/CR-{日期}-{NN}.md` → 用户审批 → `workflow-state.json` 标 `cr-approved` → L10a 放行。
@@ -181,6 +196,7 @@ jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
 
 | 阶段 | 要点 |
 |------|------|
+| P0 | Business First Q1–Q3（复用业务优先铁律） |
 | P1 | 层边界、唯一源、三元组、≥2 方案+failure_boundary |
 | P2 | 模式映射 SkillHarness / Gate / IR / IDynamicApiController |
 | P3 | 签名/DTO/事件契约，禁止方法体 |
@@ -215,6 +231,8 @@ jnpf-app-vue3/        UniApp mobile H5 → :3800 (requires proxy_server.py)
 ## Studio S2 架构（2026-07-06 — ADR-004）
 
 **两大变更：** ① SA 九步 Agent 从生产主链分离，默认 **compile** → `SaNineViewCompiler`；② **`sa_*` 九表物化迁至 C# `SaMaterializer`**（用户 confirm 后），不再经 sa-service 写主库。
+
+**sa-service 已退役（2026-07-15）：** compile 模式不启动它；仅 agent 模式回归需要（:3001，Node 服务）。禁止为 compile 模式排障去启动 sa-service。
 
 | 模式 | 需要 sa-service | S2 写九表 |
 |------|-----------------|-----------|
@@ -257,7 +275,7 @@ Skill 质量评估管线：L1 组件/L2 轨迹/L3 任务**确定性**（无 LLM�
 
 ## Hooks (自动拦截 · AI 无法绕过)
 
-Three L0 hooks registered in `.claude/settings.json` block dangerous writes, commands, and unverified completions:
+L0 hooks registered in `.claude/settings.json` block dangerous writes, commands, and unverified completions:
 
 | Hook | Guards |
 |------|--------|
@@ -266,6 +284,11 @@ Three L0 hooks registered in `.claude/settings.json` block dangerous writes, com
 | `guard-finish.mjs` | E2E evidence — blocks if no screenshot/api-smoke output |
 
 Verify hooks: `node scripts/test-hooks.mjs` (28 用例). If a write/command is blocked, check the hook output — don't retry blindly.
+
+## Git
+
+- **Git Iron Law:** any git operation requires a clean / committed / pushed worktree first. Stash is not long-term storage.
+- Only commit when explicitly asked; hooks run via `.githooks/pre-commit` (enable once after clone, see Key Commands).
 
 ## Evidence Over Assumption（禁止猜源码, 必须抓运行时数据）
 

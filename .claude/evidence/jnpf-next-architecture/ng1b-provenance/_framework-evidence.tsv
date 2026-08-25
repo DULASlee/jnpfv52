@@ -1,0 +1,3 @@
+table_name	framework	evidence_file	evidence_pos	runtime_role	active_refs
+SCHEMAVERSIONS	DbUp	backend/tools/JNPF.Database.Migrations/Program.cs	L17-22	migration journal (platform migration infra; dbup-core 5.0.87 default journal; excluded from runtime via App.cs L482-484)	2 rows = 2 scripts
+UNDO_LOG	Seata-AT	backend/web/主库脚本.sql	L4235-4246	lazy reserved (Seata not enabled; 0 code refs in backend; delete experiment → NG-1C)	0

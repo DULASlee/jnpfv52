@@ -1,0 +1,47 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "serena": {
+      "type": "local",
+      "command": [
+        "C:\\Users\\admin\\.local\\bin\\serena.exe",
+        "start-mcp-server",
+        "--project",
+        "D:\\JNPF-v52",
+        "--context",
+        "ide"
+      ],
+      "enabled": true
+    },
+    "netcoredbg": {
+      "type": "local",
+      "command": [
+        "C:\\Users\\admin\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+        "D:\\JNPF-v52\\scripts\\netcoredbg-mcp-wrapper.py"
+      ],
+      "enabled": true,
+      "environment": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    },
+    "codegraph": {
+      "type": "local",
+      "command": [
+        "D:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\admin\\AppData\\Roaming\\npm\\node_modules\\@colbymchenry\\codegraph\\npm-shim.js",
+        "serve",
+        "--mcp",
+        "--no-watch"
+      ],
+      "enabled": true
+    },
+    "tool-search": {
+      "type": "local",
+      "command": [
+        "D:\\Program Files\\nodejs\\node.exe",
+        "D:\\JNPF-v52\\.claude\\mcp\\tool-search.mjs"
+      ],
+      "enabled": true
+    }
+  }
+}

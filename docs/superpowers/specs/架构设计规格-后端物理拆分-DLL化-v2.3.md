@@ -1,9 +1,4 @@
-# 架构设计规格 — 后端物理拆分与包化（DLL/NuGet）v2.2
-
-> **文档性质：** v1.0 的评审升级版。v1.0（`架构设计规格-后端物理拆分-DLL化.md`）覆盖面止于 framework/JNPF 的 9 个零依赖区；v2.0 依据 **2026-08-24 全后端 73 工程引用边实测扫描**，将分析面扩至全后端，给出完整的发包能力判定与「框架源码退出日常编译图」的施工主线。
-> **v2.1 修订（2026-08-24 评审落地）：** 采纳外部工程评审 7 项 P0 修正——依赖图基线与禁边门禁、编译后 Public API 快照、Source/Package 双模式机制（`JNPF_PACK` 正式语义）、显式 `dotnet pack`、Package Mode 零 ProjectReference 门禁、洁净室验证协议（含破坏性命令护栏）、包间依赖图 nuspec 核验；证据门禁由五件套升格**七件套**。修正对照见 §8。
-> **v2.2 修订（2026-08-24 结构呈现增补）：** 新增 §1.2 全程序集树状图（73 工程逐项判读，含包域波次/分层/实测依赖边注记）；原 §1.2–1.6 顺移为 §1.3–1.7；修正 §2.2 测试/工具计数 10→18。**架构决策面零变更**（判定矩阵/波次/切包线/主线原样），修订明细见 §9。
-> **证据基线：** 本文档所有依赖论断均来自当日 `csproj` 全量扫描（边清单见 §3.3），非名义分层推断。差异对照见 §7。
+# 架构设计规格 — 后端物理拆分与包化（DLL/NuGet）v2.3
 
 ---
 
@@ -17,6 +12,7 @@
 | **价值兑现点** | P2 全量切换完成后：日常构建不再编译任何框架源码，构建时间下降（目标值 S0 实测基线后登记） |
 | **主线** | S0 核验基线 → P1 B1/B2 拆分（管线试炼）→ P2 内核上包+全量切换 → G5 终审 → P3 收益扩展（**明令置后于 G5**）→ P4 解环路线图（纯分析） |
 | **零改动承诺** | 框架源码零行为变更（纯移动+csproj 引用切换）；业务 `.cs` 文件零改动；csproj 变更 = **6 个业务工程切包编辑 + 双模式条件接线**（§5 P2）；消费切换走 Source/Package 双模式（§5 P2 步骤 0），Source Mode 为默认态 |
+| **执行合同** | v2.3 §10：冻结决策（F-1~F-8）+ 允许/禁止变更白黑名单 + **十门禁**（§6.1 七件套 + 方向/身份/清单三门禁）+ 波次进入/退出准则 + 失败分类 + 状态机 `migration-state.json` + 单源台账 `package-manifest.json` |
 
 ---
 
@@ -241,6 +237,8 @@ W3（依赖 W2）: WebSockets, Thirdparty, CollectiveOAuth
 | Symbol package | `.snupkg`（现有 3.4.7 已产 snupkg，管线沿用） |
 | SourceLink | P3 可选项（收益 = 调试符号溯源，非本战役阻断项） |
 | dependencies | 按 §3.1 包间 DAG 生成，S4/P2 验收逐包核验 nuspec 实际依赖声明与 DAG 一致 |
+| AssemblyVersion / FileVersion / InformationalVersion | 三者均 = `$(JNPFVersion)`（3.5.0），与 PackageId/AssemblyName/RootNamespace/DLL 文件名共同构成**身份七字段**（门禁 9，§6.1） |
+| 版本单调性 | 版本号只增不减；禁止在本地源回滚旧版本；迁移失败走 `git revert` 而非降版本号 |
 
 ---
 
@@ -271,6 +269,8 @@ JNPF.Extensions.*        → JNPF（B1 反咬内核）
 ```
 
 A-2 疑点（`JNPF.Common.Cache` 命名空间来源）的溯源结论直接并入本清单（若证实内核区引用业务命名空间，该边即首个被门禁捕获的整改对象）。基线文件：`dependency-baseline.txt`（S0-8 产出）→ `dependency-after-P1.txt` → `dependency-after-P2.txt`，逐段 diff 只允许出现「新增包域合法边」。
+
+**门禁 8 方向门禁（ARCH-PACKAGE-DIRECTION-GATE，永久生效）：** 反回流约束不随本战役结束——此后任何新代码/重构，包域成员 → 源码域工程 的边（无论 ProjectReference 还是 PackageReference）恒为 0。判定工具 = **Project Graph 扫描器**（MSBuild 展开 `zx.sln` 完整依赖图，产出 `dependency-after-{阶段}.json`）；`grep "ProjectReference.*JNPF\."` 仅作 Fast Gate（快扫层），**不作为终证**。禁边清单在本节写死为机器可判的边集合。
 
 ### 3.2 源码域 → 包域的消费边（P2 切换面，完整清单）
 
@@ -365,6 +365,8 @@ Task 1.1 Cryptography / Task 1.2 Utils / Task 2.1 Abstractions，**七件套证�
 
 ### P2 内核上包 + 全量切换（价值兑现点）
 
+**P2 分阶段（v2.3 拆解，杜绝"大爆炸"切换）：** P2.0 双模式基建 → P2.1 W1 七包 → P2.2 W2 七项 → P2.3 W3 三包 → P2.4 消费切换（§3.2 六业务 + 七测试）→ P2.5 sln 摘除 → P2.6 洁净室 → G5 终审。每个 P2.x 是一个可独立回滚的提交；DoD 见 §10.5，进入/退出准则见 §10.4/§10.5，状态跃迁写 `migration-state.json`（§10.8）。
+
 **步骤 0（v2.1）：双模式接线落地。** 为包域全部对内引用建立条件 ItemGroup——
 
 ```xml
@@ -404,7 +406,7 @@ Task 1.1 Cryptography / Task 1.2 Utils / Task 2.1 Abstractions，**七件套证�
 
 ## 6. 横切关注点
 
-### 6.1 证据门禁（**七件套**，v2.1 升格）
+### 6.1 证据门禁（**十门禁**，v2.3 升格：七件套 + 方向/身份/清单三门禁）
 
 | # | 证据 | 实现口径 |
 |---|---|---|
@@ -415,8 +417,11 @@ Task 1.1 Cryptography / Task 1.2 Utils / Task 2.1 Abstractions，**七件套证�
 | 5 | **文件守恒 = SHA256 对照** | S0-10 协议：新旧集合差集为 0 + 内容哈希变化为 0 + 旧路径不存在断言；git rename 检测仅作辅助 |
 | 6 | **依赖图 = 禁边零命中 + 无环** | `dependency-after-{阶段}.txt` vs §3.1 禁边清单（S0-8 基线机制） |
 | 7 | **Package Mode 行为等价** | 洁净室协议（§6.5）全链通过：clean→restore→build→test→启动→路由快照零 diff + CurrentUser 200 + test:api 绿 |
+| 8 | **方向门禁（反回流）** | 包域成员 → 源码域工程 = 0（ProjectReference 与 PackageReference 两态均查）；`dependency-after-*.json` 经 Project Graph 扫描器判定，grep 仅 Fast Gate（§3.1） |
+| 9 | **身份门禁** | PackageId/AssemblyName/AssemblyVersion/FileVersion/InformationalVersion/RootNamespace/DLL 文件名 七字段一致 + 缓存无污染（定向清 `~/.nuget/packages/jnpf*` 后 restore 仍一致） |
+| 10 | **清单门禁** | `package-manifest.json` ↔ csproj ↔ nupkg ↔ nuspec 四向一致；版本单调不减（无回滚） |
 
-P1 使用 1-6；P2/发版使用全部七件。
+P1 使用 1-6；P2 使用 1-7 + 8/9/10；发版全量十门禁。
 
 ### 6.2 回滚轴
 
@@ -463,6 +468,8 @@ P1 使用 1-6；P2/发版使用全部七件。
 → ⑥ 启动（路由快照采集）→ ⑦ 路由快照 vs 基线 = 0 diff
 → ⑧ jnpf-api.mjs CurrentUser = 200 → ⑨ 恢复运行资产，落盘 evidence
 ```
+
+**洁净室脚本化（v2.3，杜绝手工漂移）：** 上述序列固化为三脚本 + 一份 manifest——`clean-room/prepare.ps1`（备份运行资产 + 范围清理）、`clean-room/verify.ps1`（restore→build→test→启动→路由快照→CurrentUser 200）、`clean-room/restore.ps1`（恢复运行资产）；`clean-room/manifest.json`（记录清理范围、备份路径、验证结果摘要）。脚本受 guard-bash 管辖，执行前用户批准。
 
 ### 6.6 SLO（业务口径）
 
@@ -516,3 +523,165 @@ P1 使用 1-6；P2/发版使用全部七件。
 | 4 | §1.1 全景表标题补「逐工程树状图见 §1.2」导航 | §1.1 | 表述增补 |
 
 **升版理由：** 虽属表述层修订，但文档头部修订记录须让外部读者可感知内容演进；且章节号移动会破坏既有外部引用定位，故以文件名版本号留痕（v2.1 → v2.2）。
+
+---
+
+## 10. 工程执行合同（v2.3 冻结决策 + 执行合同 + DoD + 机器门禁）
+
+> 本节是 v2.3 相对 v2.2 的**唯一实质升级**：把 §1–§6 的架构决策冻结为不可变约束，把「原则级纪律」升格为「机器可判 + 逐状态可执行」的工程合同。工程师/Agent 施工时**只认本节 + §5 分阶段主线 + §6.1 十门禁**——§1–§4 回答「为什么」，§10 回答「怎么做 / 什么算做完 / 什么算失败」。
+
+### 10.1 冻结决策（Frozen Decisions —— 未经新 CR 不得变更）
+
+以下决策自 v2.3 起冻结。任何变更 MUST 走变更申请（CR）并重新评审，禁止在执行中「顺手改」：
+
+| 编号 | 冻结内容 | 值 |
+|---|---|---|
+| F-1 | 切包线 | **JNPF.Common 为包域底线；JNPF.Common.Core / JNPF.Common.CodeGen 永久留源码域**。禁止再尝试把 Common.Core 一起包化（其依赖 4 域 Entitys，包化 = 领域实体拖进公共包，违反 C1） |
+| F-2 | 包域清单 | 17 包 = 14 现存工程 + 3 个 P1 B1/B2 DLL；59 工程永留源码域 |
+| F-3 | 波次 | W1（内核 + JwtBearer/Mapster/Dapper/Serilog/CodeAnalysis/RabbitMQ）→ W2（SqlSugar/Xunit/Outbox/Common/B1/B2）→ W3（WebSockets/Thirdparty/CollectiveOAuth） |
+| F-4 | 双模式 | `JNPF_PACK=false`（默认，ProjectReference）与 `=true`（PackageReference）双 ItemGroup 接线；Source Mode 为默认态 |
+| F-5 | 版本域 | 包域 3.5.0（中央 `$(JNPFVersion)`）；业务域 3.6.0（`backend/Directory.Build.props`）；两域分离，互不统版 |
+| F-6 | B1/B2 聚合边界 | Abstractions（五区）/Utils（三工具）为第一阶段聚合边界；**本战役解决「物理边界」，不解决「职责边界」**，禁止顺手细拆 |
+| F-7 | Runtime Isolation | **明令非目标**。本战役只做物理边界 + 构建边界 + 包边界，不追求运行时卸载隔离 |
+| F-8 | 零行为变更 | 框架源码纯移动 + csproj 引用切换；业务 `.cs` 零改动 |
+
+### 10.2 允许变更（Allowed Changes —— 白名单）
+
+执行中无需 CR 的变更类别（超出此清单 = 越权，见 §10.3）：
+
+1. **工程文件新增/编辑**：新建 3 个 B1/B2 `.csproj`；编辑 6 业务 + 7 测试 csproj 的引用行（§3.2）。
+2. **双模式条件接线**：包域 csproj 内加 `Condition="'$(JNPF_PACK)' != 'true'"` / `== 'true'` 的 ItemGroup。
+3. **csproj 元数据**：为满足身份门禁（门禁 9）补 `AssemblyVersion`/`FileVersion`/`InformationalVersion`/`RootNamespace`/`PackageId`/`AssemblyName` 声明。
+4. **必要 using 行**：迁移区缺失的 using（以 S0 Task 0.2 白名单为界）。
+5. **证据/台账文件**：`package-manifest.json`、`migration-state.json`、`dependency-after-*.json`、`{包}.publicapi.txt`、`clean-room/*.ps1`、SHA256 对照表等本规格命名的证据产出物。
+6. **nuget.config**：追加 `framework/nupkgs` 本地源（写法 S0 Task 0.4 核验）。
+
+### 10.3 禁止变更（Forbidden Changes —— 黑名单 = Scope Creep）
+
+以下任一变更发生 = **Scope Creep，立即停工 + 拒绝**（不是「顺手改」，是违反合同）：
+
+1. 改动任何**方法体**（框架源码 `*.cs` 方法实现逐字不动）。
+2. 改动任何**命名空间**（迁移区 namespace 一字不改）。
+3. 改动业务工程 `.cs`（6 业务 + 7 测试工程除 csproj 引用行外任何改动）。
+4. 变更**切包线**（把 Common.Core/CodeGen 或其他源码域工程拖进包域）。
+5. 变更**波次**（W1/W2/W3 内容与顺序）。
+6. 新增**任何 Public API**（迁移任务不得新增 public 类型/成员，见 §10.5 门禁 8）。
+7. 解环施工（除 P4 的三份分析文档外，禁止本战役内动手拆 JNPF 内核三组成环）。
+8. 改动 schema / 数据迁移。
+9. 引入 Runtime Isolation 诉求（违反 F-7）。
+
+### 10.4 进入准则（Entry Criteria —— 波次开工前 MUST 满足）
+
+| 波次 | 进入准则（前一状态全绿 + 以下新增） |
+|---|---|
+| S0 基线 | 三疑点（A-1/A-2/A-3）溯源闭环；S0-5 sln 核验；S0-6 混合引用尖刺定论；S0-7 构建时间基线；S0-8 依赖图基线 + 禁边校验可执行；S0-9 Public API 工具定选 + 基线；S0-10 SHA256 协议；`migration-state.json` 置 S0 |
+| P1（B1/B2） | S0 节点审批通过；门禁 1-6 全绿基线 |
+| P2.0 双模式基建 | P1 三 DLL 入包域；`JNPF_PACK` 条件接线落地 |
+| P2.1 W1 | P2.0 Source/Package 两态各 build+test 自证通过 |
+| P2.2 W2 | W1 七包全绿入本地源 |
+| P2.3 W3 | W2 七项全绿入本地源 |
+| P2.4 消费切换 | W3 三包全绿；§3.2 六业务 + 七测试清单就绪 |
+| P2.5 sln 摘除 | 消费切换 Package Mode 全绿 |
+| P2.6 洁净室 | sln 摘除后 Project Graph Gate 证明 59/0（§10.8） |
+| G5 终审 | P2.6 洁净室全链通过 |
+
+### 10.5 退出准则（Exit Criteria = DoD —— 波次 MUST 全绿才算完）
+
+每个波次 DoD = **十门禁（§6.1）中该波次适用的门禁全部 PASS** + 下列波次专项：
+
+- **P1**：`C-SPLIT-{区}@v1` 契约台账条目落盘；`git status` 纯 rename；路由快照 0 diff。
+- **P2.0**：Source/Package 两态各跑一次 build+test 作接线自证。
+- **P2.1–P2.3**：`dotnet pack` 逐包 nuspec 依赖与 §3.1 DAG 一致（清单门禁）；包入本地源；**门禁 8 迁移任务不得新增 Public API**（`{包}.publicapi.txt` 的 Added = 0，仅允许 Deleted/Changed/Signature/Accessibility/Namespace 全为 0）。
+- **P2.4**：Package Mode 下包域成员 ProjectReference 零命中（方向门禁）；身份门禁逐包七字段通过。
+- **P2.5**：Project Graph Gate 证明「59 源码工程 + 0 包域工程」。
+- **P2.6**：洁净室全链（§6.5 + `clean-room/*.ps1`）通过。
+- **G5**：依赖无环核验 + 契约台账核对 + 时间收益报告 + 洁净室复验，四项全绿。
+
+### 10.6 证据门禁（Evidence —— 十门禁，机器可判）
+
+完整矩阵见 §6.1。十门禁 = 七件套（1-7）+ 方向门禁（8）+ 身份门禁（9）+ 清单门禁（10）。每门禁有可执行命令或脚本产出物，**无「人工目测」**。Public API 拆分类门禁（§2.5 / 门禁 8 专项）：Deleted / Changed / Signature / Accessibility / Namespace = 0；**Added = PASS WITH REVIEW**（迁移任务本应零新增，出现新增即触发人工复核，不得静默放行）。
+
+### 10.7 恢复与失败分类（Recovery）
+
+| 失败类别 | 判定 | 处置 |
+|---|---|---|
+| **迁移缺陷**（migration defect） | 本战役改动引入的错误（接线笔误、打包遗漏资产） | **修复**：回当前波次修复，重跑该波次 DoD |
+| **基线缺陷**（baseline defect） | S0 基线本身错误（依赖图基线漏边、Public API 基线缺符号） | **停工**：修正基线协议/工具，S0 重做，不带错误基线往下走 |
+| **架构缺陷**（architecture defect） | 冻结决策自身有问题（切包线划错、波次顺序有环） | **推迟 + ADR**：登记 ADR，回退到受影响波次前状态，等裁决；禁止就地改冻结决策 |
+| **范围蔓延**（scope creep） | 违反 §10.3 黑名单 | **拒绝**：立即停工，撤销越权改动，回报用户 |
+
+**回滚轴（§6.2 沿用）：** P1 批次级 `git revert`；P2 单提交 `git revert` 恢复全部 ProjectReference；Source Mode 是天然回退态（`JNPF_PACK=false` 即回源码消费，无需改文件）。
+
+### 10.8 状态机与单源台账（State）
+
+**迁移状态机 `migration-state.json`（唯一进度真相源）：**
+
+```
+S0 基线就绪 → S1 W1 就绪 → S2 W2 → S3 W3 → S4 包验证 → S5 sln 摘除 → S6 洁净室 → S7 G5 终审
+```
+
+每次状态跃迁写入 `migration-state.json`（含：当前状态、已完成波次、证据文件路径、通过的门禁编号、待办）。**禁止**口头声称「进行到某阶段」——以该文件为准。
+
+**包清单 `package-manifest.json`（唯一包域真相源，S0 产出，此后每波次更新）：**
+
+```json
+{
+  "version": "3.5.0",
+  "feed": "framework/nupkgs",
+  "packages": [
+    {
+      "id": "JNPF",
+      "project": "framework/JNPF/JNPF.csproj",
+      "wave": "W1",
+      "expectedDependencies": ["JNPF.Extras.DependencyModel.CodeAnalysis"],
+      "expectedConsumers": ["JNPF.Extras.DatabaseAccessor.SqlSugar", "JNPF.Xunit", "JNPF.Extras.EventBus.Outbox"]
+    }
+  ]
+}
+```
+
+四字段逐一核验：`expectedDependencies` 必须与 nuspec 实际依赖一致（清单门禁），`expectedConsumers` 必须与依赖图一致（方向门禁）。**manifest ↔ csproj ↔ nupkg ↔ nuspec 四向一致 = 门禁 10 的判定标准。**
+
+**两幅终态图（G5 必须达成，缺一即 FAIL）：**
+
+图 A — 框架侧构建图：
+```
+framework/JNPF.sln（17 工程，Source Mode 开发态）
+   └─ dotnet pack（JNPF_PACK=true，自底向上 W1→W2→W3）
+        └─ framework/nupkgs/ 本地源（17 个 .nupkg + .snupkg）
+```
+
+图 B — 业务侧消费图：
+```
+zx_lowcode_netcore.sln（59 工程，0 个包域工程）
+   └─ PackageReference（Version=$(JNPFVersion)）
+        └─ framework/nupkgs/（restore 唯一 JNPF* 来源）
+```
+
+**Build Isolation 证明（≠ sln 摘除）：** sln 摘除只是「看不见」，不是「不依赖」。真正的证明 = Project Graph Gate：MSBuild 扫描 `zx.sln` 展开后的完整依赖图，断言 **59 源码工程 + 0 包域工程 + 方向门禁零命中**。`grep -R "ProjectReference.*JNPF\."` 只是 Fast Gate（快扫），Project Graph 扫描器（S0-8 机制升级）是唯一终证。
+
+### 10.9 CI 双模式对称门禁 + 架构债登记
+
+**CI 双模式对称门禁（Continuous Gate）：** 同时跑两条对称流水线，任一红 = 阻塞合并：
+
+| 模式 | 命令 | 断言 |
+|---|---|---|
+| Source Mode | `dotnet build zx.sln` + `dotnet test` | 0 error / 全绿（日常态，包域仍源码消费） |
+| Package Mode | `JNPF_PACK=true dotnet restore` + `build` + `test` + `pack` | 0 error / 全绿 / 17 包产出 + nuspec 与 manifest 一致 |
+
+**ARCH-DEBT-001 登记（架构债，Accepted/Deferred）：** `Infrastructure → Common` 方向倒挂（WebSockets/Thirdparty/CollectiveOAuth ProjectReference → JNPF.Common，偏离二）在包图层面随 W3 合法化，但**职责方向倒挂的架构问题并未解决**。本战役的交付边界 = **构建隔离达成**，**不宣称完成架构方向治理**。登记于架构债台账，Deferred 至独立战役（职责边界重构）。
+
+---
+
+## 11. v2.3 修订记录（2026-08-24 工程执行合同落盘）
+
+| # | 变更 | 落点 | 性质 |
+|---|---|---|---|
+| 1 | 新增 §10 工程执行合同（冻结决策 F-1~F-8 / 允许变更白名单 / 禁止变更黑名单 / 波次进入-退出准则 / 失败分类 / 状态机 / 单源台账 / 两幅终态图 / CI 双模式对称门禁 / ARCH-DEBT-001 登记） | §10 | 执行合同新增 |
+| 2 | 七件套升格为十门禁：新增门禁 8 方向门禁（反回流，永久）、门禁 9 身份门禁（七字段）、门禁 10 清单门禁（四向一致 + 版本单调） | §6.1 | 门禁体系升级 |
+| 3 | 禁边清单升级 Project Graph Gate 为终证，grep 降级 Fast Gate | §3.1 / §10.8 | 机器门禁强化 |
+| 4 | P2 拆解为 P2.0–P2.6 七小步 + G5，杜绝大爆炸切换 | §5 P2 | 施工粒度细化 |
+| 5 | 发包契约补身份七字段 + 版本单调性；洁净室补脚本化（prepare/verify/restore.ps1 + manifest） | §2.5 / §6.5 | 门禁依据补齐 |
+| 6 | 锚定卡补「执行合同」行 | §0 | 表述增补 |
+
+**升版理由：** 外部 24 点评审裁决「是否可直接进入 P2 = 否」——架构方向（9/10）已冻结，但 CI/自动化（6.5）、失败恢复（6.5）、维护纪律（6.5）、构建图证明（7.0）四项未达可执行标准。v2.3 以 §10 执行合同 + 十门禁补齐工程执行面，把原则级纪律升格为机器可判、逐状态可执行、可回滚的合同。

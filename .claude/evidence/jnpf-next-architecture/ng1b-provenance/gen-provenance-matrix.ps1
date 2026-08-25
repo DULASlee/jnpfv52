@@ -18,6 +18,7 @@ $acc = @{}; foreach ($l in Import-Csv (Join-Path $dir '_access-map.tsv') -Delimi
 $sas = @{}; foreach ($l in Import-Csv (Join-Path $dir '_saservice-refs.tsv') -Delimiter "`t") { $sas[$l.table_name.ToUpper()] = $l }
 $seed = @{}; foreach ($l in Import-Csv (Join-Path $dir '_seed-map.tsv') -Delimiter "`t") { $seed[$l.table_name.ToUpper()] = [int]$l.seed_inserts }
 $apiMods = @{}; foreach ($l in Import-Csv (Join-Path $dir '_api-services.tsv') -Delimiter "`t") { $apiMods[$l.module] = $true }
+$fw = @{}; foreach ($l in Import-Csv (Join-Path $dir '_framework-evidence.tsv') -Delimiter "`t") { $fw[$l.table_name.ToUpper()] = $l }
 
 # ---- 判定辅助 ----
 function Has-ApiModule($row) {
@@ -49,6 +50,7 @@ function Get-Template($tbl) {
 
 # ---- 三态判定（计划 §3 规则，脚本可复算）----
 function Get-Provenance($tbl, $row, $apiY, $ui, $owner) {
+    if ($fw[$tbl]) { return @(6, 'PROVEN') }   # 框架运行时表：源码级创建证据 + 框架角色确认（_framework-evidence.tsv）
     $c = $cre[$tbl]
     $creation = if ($c -and $c.creation_source) { 1 } else { 0 }
     $entity = if ($row.entity_mapped -eq 'Y') { 1 } else { 0 }
@@ -73,6 +75,7 @@ function Get-PrefixOwner($tbl) {
     if ($tbl -match '^EXT_') { return 'extend' }
     if ($tbl -match '^SA_' -or $tbl -match '^AI_' -or $tbl -match '^INTE_' -or $tbl -match '^EVAL_') { return 'inteAssistant' }
     if ($tbl -match '^PROCESSED_') { return 'infrastructure' }
+    if ($tbl -eq 'SCHEMAVERSIONS' -or $tbl -eq 'UNDO_LOG') { return 'infrastructure' }
     if ($tbl -match '^BLADE_') { return 'visualdata' }
     if ($tbl -match '^KG_') { return 'inteAssistant' }
     if ($tbl -match '^SYS_') { return 'system' }
