@@ -167,6 +167,21 @@ JNPF 产品
 
 NG-1A 初判完成后，下一步为 **Provenance Matrix**：对 289 表 + 代码模块 + 初始化 SQL + migration/seed + UI/菜单 做创建来源追踪（谁创建/何时创建/哪个 SQL/哪个模块拥有/哪个代码写/哪个 API 暴露/哪个 UI 使用/是否平台启动必须/是否模板安装后才出现/是否 Demo 脚本产生/是否客户建模产生/删掉后平台核心是否正常），**优先追踪 ext_* / WM_* / WH_* / base_* / sa_***。每张表必须获得**可证明的来源身份**后，才可进入 Domain Ownership Proof。
 
+### 0A.7 G0 条件 PASS 裁决 + NG-1B Provenance Matrix 启动批准（2026-08-26）
+
+**裁决**：NG-1A 验收通过；G0 不最终 PASS，登记 **`PASS-PENDING-PROVENANCE`**。已完成「平台资产 vs 非平台资产」第一轮边界证明（289 → 159/130/6），但尚未完成全部 Provenance Proof，**不得进入 Domain Ownership Proof，不得恢复 D12**。
+
+**批准启动 NG-1B：Provenance Matrix**（只读审计）：
+- 对象：289 张表 × 14 维（DB Object / Creation Source / Code Owner / Write Owner / Read Consumers / API / UI-Menu / Template / Demo / Runtime / Startup / Product / Lifecycle / Provenance）
+- 每表终态：**`PROVEN` / `PARTIAL` / `UNKNOWN`**（证据驱动，非主观判断）
+- 优先追踪：**ext_* / WFORM_* / WM_* / WH_* / base_* / sa_***
+
+**本轮禁止项**：不进入 Domain Ownership Proof；不恢复 D12；不进行任何微服务设计；不删除 42 张孤儿表（仅 Provenance + 处置建议 ARCHIVE/DELETE/MIGRATE/DEMO/LEGACY）；对 PX UNKNOWN 不得猜测归属（**UNKNOWN 永远不能自动变成 PLATFORM_CORE**）；不真删生产数据库。
+
+**完成条件**：Provenance Matrix 完成后重新 G0 Final Review，最终只允许 **`PASS / REFINE / BLOCK`**。无论结果如何，完成后 STOP，等待人工裁决。
+
+**后续候选（不本批执行）**：Platform Independence Proof（删除/隔离实验，影子环境验证核心能力全链：启动 → 登录 → 创建应用 → 建模 → 表单 → 发布 → 运行）。
+
 ---
 
 ## 1. NG-1 目标重定义

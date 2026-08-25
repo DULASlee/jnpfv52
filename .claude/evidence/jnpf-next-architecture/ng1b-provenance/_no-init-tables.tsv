@@ -1,0 +1,17 @@
+﻿table_name	entity_mapped	code_refs
+ai_entity_field	Y	
+ai_ir_events	Y	
+ai_ir_fragment_snapshots	Y	
+ai_projects	Y	
+ai_route_table	Y	
+ai_seed_templates	Y	
+ai_skill_llm_policy	Y	
+ai_skill_runs	Y	
+BASE_AI_PIPELINE_S2_PROGRESS	Y	
+BASE_AI_SKILL_REVIEW	Y	
+BASE_REPORT	Y	
+inte_assistant_attachment	Y	
+inte_assistant_deliverable	Y	
+sa_assumptions	N	14
+sa_consistency	N	15
+sa_quality_score	N	11

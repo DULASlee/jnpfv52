@@ -50,7 +50,7 @@ NG-1A 回答「如果把所有 Demo、示例、模板、历史业务表拿掉，
 | P8 EXTERNAL | 0 | 0% | ❌（本库无） |
 | PX UNKNOWN | 6 | 2.1% | ⏸ BLOCKED |
 
-## 5. G0 初步状态（非最终裁决）
+## 5. G0 状态（2026-08-26 人工裁决，§0A.7）
 
 ```text
 G0 = Product Boundary Proof
@@ -58,15 +58,11 @@ G0 = Product Boundary Proof
 ├── 二维分类全表输出 ✅
 ├── 硬规则 1-8 全部遵守 ✅
 ├── 四证据链可追溯 ✅
-└── 最终判定 ⏸ 等待人工裁决
+└── 人工裁决：PASS-PENDING-PROVENANCE（不最终 PASS）
 ```
 
-**待人工裁决 4 项**（详见 `product-boundary-proof.md` §3）：
-1. G0 是否 PASS？
-2. ext_* 19 张 P2/P3 细分（OrderService 四种可能）
-3. PX UNKNOWN 6 张处置
-4. 130 张非平台资产归档策略
+**裁决记录**：NG-1A 验收通过；G0 登记 `PASS-PENDING-PROVENANCE`。第一轮边界证明已完成，但 Provenance Proof 未闭合 → 不得进入 Domain Ownership Proof、不得恢复 D12。已批准启动 NG-1B Provenance Matrix（只读审计，289 表 × 14 维，每表 PROVEN/PARTIAL/UNKNOWN），完成后 G0 Final Review 仅允许 PASS/REFINE/BLOCK。
 
-## 6. 下一步（§0A.6.6，不自动启动）
+## 6. 下一步（§0A.7，已批准启动 NG-1B）
 
-**Provenance Matrix**：289 表 + 代码模块 + 初始化 SQL + migration/seed + UI/菜单 的创建来源追踪，优先 ext_* / WM_* / WH_* / base_* / sa_*。每张表获得可证明的来源身份后，才进入 Domain Ownership Proof。**等待人工裁决后执行。**
+**Provenance Matrix**：289 表 × 14 维（Creation Source / Code Owner / Write Owner / Read Consumers / API / UI-Menu / Template / Demo / Runtime / Startup / Product / Lifecycle / Provenance）的创建来源追踪，优先 ext_* / WFORM_* / WM_* / WH_* / base_* / sa_*。每表获得 PROVEN/PARTIAL/UNKNOWN 三态。完成后 G0 Final Review（PASS/REFINE/BLOCK）+ STOP 等裁决。

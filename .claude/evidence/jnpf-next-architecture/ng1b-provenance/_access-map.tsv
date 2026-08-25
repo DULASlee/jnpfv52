@@ -1,0 +1,290 @@
+﻿table_name	access_modules	write_owner_modules	read_consumer_modules
+AI_ENTITY_FIELD		inteAssistant;other	inteAssistant;other
+AI_IR_EVENTS		other	inteAssistant;other
+AI_IR_FRAGMENT_SNAPSHOTS		inteAssistant	inteAssistant;other
+AI_PROJECTS		inteAssistant	inteAssistant
+AI_ROUTE_TABLE		inteAssistant	inteAssistant
+AI_SEED_TEMPLATES			inteAssistant
+AI_SKILL_LLM_POLICY			inteAssistant
+AI_SKILL_RUNS		inteAssistant	inteAssistant
+BASE_ADVANCED_QUERY_SCHEME	system		
+BASE_AI_AGENT_CONFIG		inteAssistant	inteAssistant
+BASE_AI_AGENT_SKILL		inteAssistant	inteAssistant
+BASE_AI_CALL_LOG	inteAssistant		inteAssistant;JNPF.API.Entry
+BASE_AI_EVAL_CASE			inteAssistant
+BASE_AI_EVAL_GOLDEN_SET			inteAssistant
+BASE_AI_EVAL_RUN		inteAssistant	inteAssistant
+BASE_AI_GENERATED_PROJECT		inteAssistant	inteAssistant
+BASE_AI_MCP_CONFIG			inteAssistant
+BASE_AI_MODEL_PROVIDER		inteAssistant	inteAssistant
+BASE_AI_MODEL_ROUTING		inteAssistant	inteAssistant
+BASE_AI_PIPELINE		inteAssistant	inteAssistant
+BASE_AI_PIPELINE_MESSAGE		inteAssistant	inteAssistant
+BASE_AI_PIPELINE_S2_PROGRESS			inteAssistant
+BASE_AI_PIPELINE_STAGE_CONFIG			inteAssistant
+BASE_AI_PROMPT_TEMPLATE	inteAssistant		
+BASE_AI_SKILL_REVIEW			inteAssistant
+BASE_AI_UI_TEMPLATE		inteAssistant	inteAssistant
+BASE_API_LOG		system	
+BASE_APP_DATA	app	system	system
+BASE_AUTHORIZE	system		app;common;oauth;system;visualdev
+BASE_BILL_RULE	system	system	
+BASE_COLUMNS_PURVIEW			system
+BASE_COMMON_FIELDS	system		
+BASE_COMMON_WORDS	system		system
+BASE_DATA_INTERFACE	system		system;visualdev
+BASE_DATA_INTERFACE_LOG	system		
+BASE_DATA_INTERFACE_OAUTH	system	system	system
+BASE_DATA_INTERFACE_USER		system	system
+BASE_DATA_INTERFACE_VARIATE	system		system
+BASE_DB_LINK	system		codegen;system;workflow;zxdev
+BASE_DICTIONARY_DATA	system		codegen;report;system;visualdev
+BASE_DICTIONARY_TYPE	system		message;system;visualdev
+BASE_FILE			
+BASE_FOUNDER_AUTH_LOG	inteAssistant		
+BASE_GROUP	system	system	common;engine;system;visualdev
+BASE_IM_CONTENT		common	common;message
+BASE_IM_REPLY	message		common
+BASE_INTEGRATE	inteAssistant		inteAssistant
+BASE_INTEGRATE_NODE		inteAssistant	inteAssistant
+BASE_INTEGRATE_QUEUE		common;inteAssistant	inteAssistant
+BASE_INTEGRATE_TASK	inteAssistant	inteAssistant	
+BASE_IR_EDIT_PATCH			
+BASE_IR_VERSION			inteAssistant
+BASE_KNOWLEDGE_EDGE	inteAssistant		inteAssistant
+BASE_KNOWLEDGE_NODE	inteAssistant		inteAssistant
+BASE_KNOWLEDGE_RULE			inteAssistant
+BASE_MENU_BADGE			inteAssistant
+BASE_MESSAGE	message	message	common;message;visualdev
+BASE_MODULE	system		app;common;extend;oauth;system;visualdev
+BASE_MODULE_AUTHORIZE	system	system	system;visualdev
+BASE_MODULE_BUTTON	system	system	system;visualdev
+BASE_MODULE_COLUMN	system	system	system;visualdev
+BASE_MODULE_FORM	system	system	system;visualdev
+BASE_MODULE_LINK	system		
+BASE_MODULE_SCHEME	system	system	common;system;visualdev
+BASE_MSG_ACCOUNT	message		message
+BASE_MSG_MONITOR	message		message
+BASE_MSG_SEND	message		message
+BASE_MSG_SEND_TEMPLATE		message	message
+BASE_MSG_SHORT_LINK	message		message
+BASE_MSG_SMS_FIELD		message	message
+BASE_MSG_TEMPLATE	message		message
+BASE_MSG_TEMPLATE_PARAM		message	message
+BASE_MSG_WECHAT_USER	message		message
+BASE_NOTICE	message		message;visualdev
+BASE_ORGANIZE	common;system;visualdev	system	common;engine;system;visualdev;workflow
+BASE_ORGANIZE_ADMINISTRATOR	system	system	common;oauth;system
+BASE_ORGANIZE_RELATION		system	common;system;visualdev
+BASE_PERMISSION_GROUP	system		common;system;visualdev
+BASE_PORTAL	visualdev	system	system
+BASE_PORTAL_DATA		visualdev	visualdev
+BASE_PORTAL_MANAGE	system		system;visualdev
+BASE_POSITION	system	system	common;engine;system;visualdev
+BASE_PRINT_LOG	system		
+BASE_PRINT_TEMPLATE	system		
+BASE_PROVINCE	system		common;engine;extend;visualdev
+BASE_PROVINCE_ATLAS	system		
+BASE_REPORT	report	report	
+BASE_ROLE	system	system	common;engine;inteAssistant;oauth;system;visualdev
+BASE_SANDBOX			inteAssistant
+BASE_SCHEDULE	system	system	system
+BASE_SCHEDULE_LOG			
+BASE_SCHEDULE_USER		system	system
+BASE_SIGN_IMG		system	system
+BASE_SIGNATURE	system		
+BASE_SIGNATURE_USER		system	
+BASE_SOCIALS_USERS	system		message;oauth
+BASE_STUDIO_MENU			inteAssistant
+BASE_STUDIO_MENU_BAK_20260617			
+BASE_SYN_THIRD_INFO	system		message
+BASE_SYS_CONFIG	app;system		app;common;oauth;system
+BASE_SYS_LOG	system		system
+BASE_SYSTEM	system		common;oauth;system;visualdev;zxdev
+BASE_TENANT_GLOSSARY			
+BASE_TENANT_INDUSTRY			
+BASE_TIME_TASK	taskscheduler		
+BASE_TIME_TASK_LOG			taskscheduler
+BASE_USER	common;oauth;other;system	common;oauth;system;visualdev	common;engine;extend;inteAssistant;message;oauth;report;system;visualdev;workflow
+BASE_USER_DEVICE			common
+BASE_USER_OLD_PASSWORD			system
+BASE_USER_RELATION	system		common;inteAssistant;system;visualdev;workflow
+BASE_VISUAL_DEV	codegen;engine;visualdev	visualdev	common;system;visualdev;workflow
+BASE_VISUAL_FILTER			
+BASE_VISUAL_LINK	visualdev		
+BASE_VISUAL_RELEASE			engine;visualdev
+BLADE_VISUAL	visualdata		
+BLADE_VISUAL_CATEGORY	visualdata		visualdata
+BLADE_VISUAL_COMPONENT	visualdata		
+BLADE_VISUAL_CONFIG			visualdata
+BLADE_VISUAL_DB	visualdata		
+BLADE_VISUAL_GLOB	visualdata		
+BLADE_VISUAL_MAP	visualdata		
+BLADE_VISUAL_RECORD	visualdata		
+DATA_REPORT			
+DEMO_EXCELTEST			
+DEMO_ORDER			
+DEMO_ORDERDETAIL			
+DOMAIN_MODEL			
+EVAL_METRIC			
+EXT_BIG_DATA	extend		
+EXT_CUSTOMER	extend		
+EXT_DOCUMENT	extend	extend	
+EXT_DOCUMENT_SHARE		extend	extend
+EXT_EMAIL_CONFIG			extend
+EXT_EMAIL_RECEIVE	extend;visualdev	extend	extend
+EXT_EMAIL_SEND			extend
+EXT_EMPLOYEE	extend		
+EXT_ORDER	extend		
+EXT_ORDER_ENTRY		extend	extend
+EXT_ORDER_RECEIVABLE		extend	extend
+EXT_PRODUCT	extend		
+EXT_PRODUCT_CLASSIFY	extend		
+EXT_PRODUCT_ENTRY		extend	extend
+EXT_PRODUCT_GOODS	extend		
+EXT_PROJECT_GANTT	extend		
+EXT_TABLE_EXAMPLE	extend		
+EXT_WORK_LOG	extend		
+EXT_WORK_LOG_SHARE		extend	
+FLOW_CANDIDATES		workflow	
+FLOW_COMMENT	workflow	workflow	
+FLOW_DELEGATE	workflow		visualdev;workflow
+FLOW_EVENT_LOG			workflow
+FLOW_FORM	workflow	visualdev;workflow	visualdev;workflow
+FLOW_FORM_AUTHORIZE		workflow	workflow
+FLOW_FORM_RELATION		visualdev;workflow	workflow
+FLOW_LAUNCH_USER			workflow
+FLOW_REJECT_DATA			workflow
+FLOW_TASK	workflow		engine;extend;system;visualdev;workflow
+FLOW_TASK_CIRCULATE		workflow	
+FLOW_TASK_NODE		workflow	workflow
+FLOW_TASK_OPERATOR		workflow	workflow
+FLOW_TASK_OPERATOR_RECORD		workflow	system;workflow
+FLOW_TASK_OPERATOR_USER		workflow	workflow
+FLOW_TEMPLATE	workflow	visualdev;workflow	app;visualdev;workflow
+FLOW_TEMPLATE_JSON		visualdev;workflow	app;message;visualdev;workflow
+FLOW_VISIBLE		workflow	workflow
+INTE_ASSISTANT_ATTACHMENT		inteAssistant	inteAssistant
+INTE_ASSISTANT_DELIVERABLE		inteAssistant	inteAssistant
+KG_PATTERN			
+KG_PATTERN_USAGE			
+MT543406707183714245			
+MT543408365615710149			
+MT543552698159464389			
+MT543668771097673669			
+MT543971603646513093			
+PROCESSED_EVENT			
+REPORT_CHARTS			
+REPORT_DEPARTMENT			
+REPORT_USER			
+SA_ASSUMPTIONS			inteAssistant
+SA_BUSINESS_PROCESS		inteAssistant	
+SA_CONSISTENCY			inteAssistant;other
+SA_DATA_DICTIONARY		inteAssistant	
+SA_DECISION_TABLE		inteAssistant	
+SA_DFD		inteAssistant	inteAssistant
+SA_ER		inteAssistant	
+SA_PSPEC		inteAssistant	
+SA_QUALITY_SCORE			inteAssistant
+SA_SCOPE		inteAssistant	
+SA_STATE_MACHINE		inteAssistant	inteAssistant
+SA_UI		inteAssistant	
+SA_VALIDATION_LOG			
+SCHEMAVERSIONS			
+STUDENT			
+SYS_EVENT_OUTBOX_MESSAGE		other	other
+SYS_PROCESSED_EVENT		other	other
+UNDO_LOG			
+WFORM_APPLYBANQUET			
+WFORM_APPLYDELIVERGOODS			
+WFORM_APPLYDELIVERGOODSENTRY			
+WFORM_APPLYMEETING			
+WFORM_ARCHIVALBORROW			
+WFORM_ARTICLESWAREHOUS			
+WFORM_BATCHPACK			
+WFORM_BATCHTABLE			
+WFORM_CONBILLING			
+WFORM_CONTRACTAPPROVAL			
+WFORM_CONTRACTAPPROVALSHEET			
+WFORM_DEBITBILL			
+WFORM_DOCUMENTAPPROVAL			
+WFORM_DOCUMENTSIGNING			
+WFORM_EXPENSEEXPENDITURE			
+WFORM_FINISHEDPRODUCT			
+WFORM_FINISHEDPRODUCTENTRY			
+WFORM_INCOMERECOGNITION			
+WFORM_LEAVEAPPLY	workflow		
+WFORM_LETTERSERVICE			
+WFORM_MATERIALREQUISITION			
+WFORM_MATERIALREQUISITIONENTRY			
+WFORM_MONTHLYREPORT			
+WFORM_OFFICESUPPLIES			
+WFORM_OUTBOUNDORDER			
+WFORM_OUTBOUNDORDERENTRY			
+WFORM_OUTGOINGAPPLY			
+WFORM_PAYDISTRIBUTION			
+WFORM_PAYMENTAPPLY			
+WFORM_POSTBATCHTAB			
+WFORM_PROCUREMENTMATERIAL			
+WFORM_PROCUREMENTMATERIALENTRY			
+WFORM_PURCHASELIST			
+WFORM_PURCHASELISTENTRY			
+WFORM_QUOTATIONAPPROVAL			
+WFORM_RECEIPTPROCESSING			
+WFORM_RECEIPTSIGN			
+WFORM_REWARDPUNISHMENT			
+WFORM_SALESORDER	workflow		
+WFORM_SALESORDERENTRY		workflow	workflow
+WFORM_SALESSUPPORT			
+WFORM_STAFFOVERTIME			
+WFORM_SUPPLEMENTCARD			
+WFORM_TRAVELAPPLY			
+WFORM_TRAVELREIMBURSEMENT			
+WFORM_VEHICLEAPPLY			
+WFORM_VIOLATIONHANDLING			
+WFORM_WAREHOUSERECEIPT			
+WFORM_WAREHOUSERECEIPTENTRY			
+WFORM_WORKCONTACTSHEET			
+WFORM_ZJF_WIKXQI			
+WH_BASICDATA			
+WH_BILL			
+WH_BILLAUTOID			
+WH_BILLDETAIL			
+WH_CHECKBILLDETAIL			
+WH_CUSTOMER			
+WH_CUSTOMERCLASS			
+WH_DEPOT			
+WH_DEPOTMATERIAL			
+WH_DEPT			
+WH_MATERIAL			
+WH_MATERIALCLASS			
+WH_PROJECT			
+WH_REMOVEBILL			
+WH_REMOVEBILLDETAIL			
+WH_STORAGETYPE			
+WH_SUPPLIER			
+WH_SUPPLIERCLASS			
+WM_BASICDATA			
+WM_BILL			
+WM_BILLAUTOID			
+WM_BILLDETAIL			
+WM_CHECKBILL			
+WM_CHECKBILLDETAIL			
+WM_CLIENT			
+WM_CLIENTCLASS			
+WM_DEPOT			
+WM_DEPOTMATERIAL			
+WM_DEPT			
+WM_EMPLOYEE			
+WM_MATERIAL			
+WM_PROJECT			
+WM_REMOVEBILL			
+WM_REMOVEBILLDETAIL			
+WM_STORAGECLASS			
+WM_STORAGETYPE			
+WM_SUPPLIER			
+WM_SUPPLIERCLASS			
+WM_TAXRATE			
+ZX_SYS_CONFIG	zxdev	zxdev	zxdev
+ZX_SYS_DB			
+ZX_SYSTEM_DB			zxdev

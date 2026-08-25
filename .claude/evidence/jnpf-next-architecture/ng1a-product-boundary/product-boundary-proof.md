@@ -36,22 +36,29 @@
 | P6 | AI/SA Studio 表是平台核心？ | **成立** → P0 PLATFORM_CORE | 无 init（代码自建）+ 双端活跃读写 |
 | P7 | 平台核心数据规模远小于 289？ | **成立** | 159/289 = 55.0%（去掉 45% 非平台资产） |
 
-## 3. G0 初步状态
+## 3. G0 状态（2026-08-26 人工裁决）
 
 ```text
 G0 = Product Boundary Proof
 ├── 289 表 P0-PX 全覆盖 ✅（0 表无分类；P5/P8 当前 0 张）
 ├── 二维分类（PlatformRole × AssetLifecycle）全表输出 ✅
-├── 硬规则 1-8 全部遵守 ✅（PX 6 张未入 P0；P2-P7 未入 Ownership；ext_* 未作既定边界）
+├── 硬规则 1-8 全部遵守 ✅
 ├── 四证据链可追溯 ✅（file:line 级样本见 asset-provenance-map.md §3）
-└── 最终判定 ⏸ 人工裁决（本批不自动裁决 G0）
+└── 人工裁决（§0A.7）：PASS-PENDING-PROVENANCE（不最终 PASS）
 ```
 
-**等待人工裁决的四个问题**：
-1. **G0 是否 PASS？**（若 PASS → 允许进入 Domain Ownership Proof，但仅限 159 张 P0/P1 平台资产）
-2. **ext_* 19 张的 P2/P3 细分**（OrderService 四种可能 §0A.6.4：② 产品模板 vs ③ 官方 Demo）——由 Provenance Matrix 裁决，本批暂定 P3 + P2-template-candidate
-3. **PX UNKNOWN 6 张的处置**（报表 4 张归属 P0/P8？租户词表 2 张归属 P0/P7？）
-4. **130 张非平台资产的归档策略**（保留/归档/后续清理，本批只登记不动）
+**裁决记录（§0A.7，2026-08-26）**：NG-1A 验收通过；G0 不最终 PASS，登记 **`PASS-PENDING-PROVENANCE`**。已完成「平台资产 vs 非平台资产」第一轮边界证明（289 → 159/130/6），但尚未完成全部 Provenance Proof → **不得进入 Domain Ownership Proof、不得恢复 D12**。已批准启动 NG-1B Provenance Matrix（只读审计），完成后 G0 Final Review 仅允许 **PASS/REFINE/BLOCK**。
+
+**NG-1B 聚焦（§0A.7）**：
+- 289 表 × 14 维（DB Object / Creation Source / Code Owner / Write Owner / Read Consumers / API / UI-Menu / Template / Demo / Runtime / Startup / Product / Lifecycle / Provenance）
+- 每表终态：`PROVEN` / `PARTIAL` / `UNKNOWN`（证据驱动，非主观判断）
+- 优先追踪 ext_* / WFORM_* / WM_* / WH_* / base_* / sa_*
+- 禁止项：不恢复 D12、不微服务设计、不删孤儿表（仅 Provenance + 处置建议）、PX 不猜测归属、不真删生产库
+
+**遗留待裁决（NG-1B 完成后连同 G0 Final 一并提交）**：
+1. ext_* 19 张 P2/P3 细分（OrderService 四种可能 §0A.6.4）
+2. PX UNKNOWN 6 张处置（报表 4 张 P0/P8？租户词表 2 张 P0/P7？）
+3. 130 张非平台资产归档策略（ARCHIVE/DELETE/MIGRATE/DEMO/LEGACY 建议随 NG-1B 产出）
 
 ## 4. 对 NG 架构设计的直接含义
 

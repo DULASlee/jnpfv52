@@ -54,6 +54,28 @@ P0-C ⏸ DEFERRED ｜ S2 🔒 BLOCKED ｜ P1 🔒 BLOCKED ｜ NG-0 ✅ COMPLETE/
 NG-1 第一批 ✅ 完成 ｜ D12 Candidate Slice ⏸ SUSPENDED ｜ NG-1A ▶ 启动（G0 闸门前置）｜ NG-2 ⏸ 未启动
 ```
 
+**2026-08-26 NG-1A 完成 + 资产模型升级 + G0 条件 PASS 裁决**（规格 §0A.6/§0A.7）：
+- 分类体系升级为 **P0-PX 十类 + 二维（PlatformRole × AssetLifecycle）**；Template ≠ Platform Domain；OrderService 四种可能建模；
+- 289 表全分类实测：**平台资产 159（P0 148 + P1 11）/ 非平台 130（P2 48 + P3 25 + P4 5 + P6 45 + P7 1）/ PX UNKNOWN 6**；
+- G0 人工裁决：**`PASS-PENDING-PROVENANCE`**（不最终 PASS）；批准启动 **NG-1B Provenance Matrix**（289 表 × 14 维，每表 PROVEN/PARTIAL/UNKNOWN）；
+- 状态表：
+
+```text
+NG-1A ✅ 完成（6 产出物）｜ G0 ⏳ PASS-PENDING-PROVENANCE ｜ NG-1B ▶ 启动（Provenance Matrix）
+D12 Candidate Slice ⏸ SUSPENDED（禁恢复）｜ Domain Ownership Proof 🔒 未解锁 ｜ NG-2 ⏸ 未启动
+```
+
+**2026-08-26 NG-1B Provenance Matrix 完成 + G0 Final Review = REFINE（待人工裁决）**：
+- 289 表 × 14 维全覆盖，三态脚本驱动：**PROVEN 157 / PARTIAL 77 / UNKNOWN 55**（P0/P1 核心 PROVEN 率 84.9%，P1 100%）；
+- 核心定性铁证：ext_* 19 = P3 Demo / WFORM_* 48 = P2 模板 / WM_WH_* 42 = P6 LEGACY（WM_BillDetail 1629 行实测）/ sa_* 13 = P1 / PX 6 零猜测；
+- 未闭合：P0 24 张边界表（21 PARTIAL + 3 UNKNOWN）→ 建议 REFINE 窄范围补强（框架证据 2 + 访问证据 ≤10 + zx_sys_db 降级裁决 + 判定原则 3 项确认）；
+- 状态表：
+
+```text
+NG-1B ✅ 完成（3 产出物：matrix.csv / report / G0-Final-Review）｜ G0 ⏳ PASS-PENDING-PROVENANCE（建议 REFINE）
+D12 Candidate Slice ⏸ SUSPENDED（禁恢复）｜ Domain Ownership Proof 🔒 未解锁 ｜ NG-1C ⏸ 未批准（Platform Independence Proof 候选）
+```
+
 ## 六、提交
 
 - 新增：5 规格 + 1 计划 + 10 证据 + 8 数据底账（`.claude/evidence/jnpf-next-architecture/`）；
