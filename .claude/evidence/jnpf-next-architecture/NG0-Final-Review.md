@@ -44,11 +44,11 @@ NG-0 ──► REJECT（回 Legacy 路线）
     └──► APPROVE（进入 NG-1：原型阶段——另行计划+批准）
 ```
 
-**NG-1 不自动启动。** 状态表：
+**NG-0 已 APPROVE；NG-1 已于 2026-08-26 获人工有条件批准**（范围 = Domain & Data Ownership Proof + D12 Slice 证伪；BOUNDARY-PROOF 闸门 + 反证机制 + PASS/REFINE/BLOCK 三态已写入 NG-1 规格 §0/§2.4/§5 与 D12 计划 §4/§4.1）。状态表：
 
 ```text
 D1 ✅ CLOSED ｜ Backend S1 Audit ✅ CLOSED ｜ P0-A ✅ APPROVED ｜ P0-B ✅ APPROVED/BASELINED
-P0-C ⏸ DEFERRED ｜ S2 🔒 BLOCKED ｜ P1 ⏸ DEFERRED ｜ NG-0 ✅ COMPLETE（待裁决）｜ NG-1 🔒 BLOCKED
+P0-C ⏸ DEFERRED ｜ S2 🔒 BLOCKED ｜ P1 🔒 BLOCKED ｜ NG-0 ✅ COMPLETE/APPROVED ｜ NG-1 ▶ APPROVED（有条件）
 ```
 
 ## 六、提交

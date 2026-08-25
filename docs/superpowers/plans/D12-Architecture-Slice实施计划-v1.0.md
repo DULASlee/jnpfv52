@@ -2,7 +2,7 @@
 
 **日期**：2026-08-26 ｜ **关联**：《JNPF-Next-NG1-领域与数据Ownership设计规格》
 **定位**：D12 从「沙盘」升级为 **Architecture Slice**——验证一整条真实链（Order → User/Tenant/Permission/Query/Repository/Transaction/Database），**不是验证 Order 自身能否运行**。
-**状态**：实施计划（待批准后执行）
+**状态**：已批准执行（2026-08-26 人工裁决——NG-1 有条件批准范围内）
 
 ---
 
@@ -12,6 +12,8 @@
 范围：Order 域（WM_BillDetail/WM_Material/WM_CheckBillDetail/WH_* 相关）
 真实链：Order 数据 → User 引用 → Tenant 引用 → Permission 数据权限 → Query 组装 → Transaction → Database
 验证面：数据 / 查询 / 事务 / 迁移 / 性能（五面）
+
+**目标（裁决锁定）**：不以「证明 Order 应该微服务化」为目标，而以**证明或证伪 Order 是否具备独立领域、数据、事务、查询、租户、权限和迁移边界**为目标。证伪（BLOCK）是同等有价值的架构结论。
 ```
 
 **禁止**：改造 Legacy 实现 / 建新库 / 新服务进程 / 修改任何生产表结构。D12 是**测量与验证实验**（只读 + 影子执行），不是改造。
@@ -91,12 +93,28 @@ Create Order 链（现状）：Permission → User → Order(主表+明细) → 
 | G-4 | 影子比对通过（特征一致，无权限/租户语义漂移） |
 | G-5 | 性能基线+影子对比数据出齐（不要求优化，要求数据） |
 
-**全绿** → 该边界在真实业务压力下成立 → 进入 Gate A-G 汇总 → ARCHITECTURE DECISION。
-**任一红** → 边界不成立 → 该域维持单体内（如实记录，不做拆分）。
+**全绿** → 该边界在真实业务压力下成立 → 进入 Gate A-G 汇总 → ARCHITECTURE DECISION（PASS）。
+**部分满足** → REFINE（调整 Slice 范围或补充证据）。
+**证伪** → BLOCK（该域维持单体内，登记 BLOCK 原因进 §4.1 反证表，如实记录，不做拆分；寻找更合适的第一个 Slice）。
+
+### 4.1 D12 反证表（证伪机制，裁决第 5 条）
+
+| 发现 | 结论 |
+|------|------|
+| Order 写入 7 个领域表 | BLOCK |
+| Order 创建必须同步权限计算 | BLOCK |
+| Order 与 User 强 ACID | BLOCK |
+| Order 读取跨 9 个领域 Join | REFINE |
+| 95% 查询可通过 Read Model 消除 | PASS |
+| 权限可转换为 Snapshot | PASS |
+| Tenant 依赖可通过 Context 注入 | PASS |
+| 迁移可双写校验 | PASS |
+
+> 上表为**判定形式示例（非预设结论）**。D12 实测发现逐项登记于此。最终结论不是「我们觉得 Order 可以拆」，而是「经过 7 个维度验证，Order 满足/不满足独立服务边界条件」——这就是 Architecture Proof。
 
 ## 5. 边界与纪律
 
-- 只读/影子执行：不改 Legacy 代码、不改表结构、不建新库、不启新进程；
+- 只读/影子执行：不改 Legacy 代码、不改表结构、不建新库、不启新进程、不启动微服务实现；
 - 特征测试为等价判据（P0-B 43 + 路径 A 33）；
 - 不修任何怪异（Q/E 登记）；
 - 执行中发现的 Ownership 冲突进裁决表（不猜测）；
@@ -113,4 +131,4 @@ Create Order 链（现状）：Permission → User → Order(主表+明细) → 
 | 租户模型裁决（Gate D） | NG-0 租户规格 + 矩阵 Tenant Scope |
 | 权限模型裁决（Gate E） | P0-B 契约 + D12 权限面 |
 
-**执行顺序**：六维矩阵（第一批）→ D12 切片（并行）→ 清单汇总 → Gate A-G → ARCHITECTURE DECISION。
+**执行顺序**：六维矩阵（第一批）→ D12 切片（并行）→ 清单汇总 → Gate A-G → ARCHITECTURE DECISION（PASS / REFINE / BLOCK）。
