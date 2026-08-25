@@ -1,0 +1,14 @@
+kg_pattern_usage	kg_pattern
+sa_business_process	sa_dfd
+sa_data_dictionary	sa_business_process
+sa_data_dictionary	sa_dfd
+sa_decision_table	sa_data_dictionary
+sa_decision_table	sa_pspec
+sa_dfd	sa_scope
+sa_er	sa_data_dictionary
+sa_pspec	sa_business_process
+sa_pspec	sa_data_dictionary
+sa_state_machine	sa_business_process
+sa_state_machine	sa_data_dictionary
+sa_ui	sa_business_process
+sa_ui	sa_data_dictionary
