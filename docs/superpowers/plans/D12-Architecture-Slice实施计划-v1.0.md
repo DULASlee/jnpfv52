@@ -1,8 +1,8 @@
-# D12 Architecture Slice 实施计划 v1.0（NG-1 核心执行单元）
+# D12 Candidate Slice 实施计划 v1.0（NG-1 执行单元）
 
 **日期**：2026-08-26 ｜ **关联**：《JNPF-Next-NG1-领域与数据Ownership设计规格》
 **定位**：D12 从「沙盘」升级为 **Architecture Slice**——验证一整条真实链（Order → User/Tenant/Permission/Query/Repository/Transaction/Database），**不是验证 Order 自身能否运行**。
-**状态**：已批准执行（2026-08-26 人工裁决——NG-1 有条件批准范围内）
+**状态**：⏸ **SUSPENDED（2026-08-26 架构纠偏裁决）**——更名为 **Candidate Slice（待验证业务资产切片）**；第一批实测证据保留，但暂停 Architecture Decision；ProductAssetClass 重证前不得作为既定边界（NG-1A 硬规则 6/7）。
 
 ---
 
@@ -64,6 +64,17 @@
 8. 风险与反证清单
 
 **暂不进行 Gate G 最终裁决，不进入 NG-2，不开始微服务实现。** 第一批完成后汇报实测结果，由人工决定是否进入下一阶段。
+
+### 0.6 架构纠偏裁决：D12 暂停（2026-08-26）
+
+> 第一批实测暴露了更基础的问题：**尚未证明哪些表属于「低代码平台产品本身」，哪些只是历史演示/样例/客户/测试遗留**。Ownership 之前必须增加 **NG-1A：Platform Product Boundary Audit**（ProductAssetClass 十类 + G0 闸门），详见 NG-1 规格 §0A。
+
+- D12 Order Slice **暂停**，不进入第二批 Ownership，不得基于 Order/ext_*/WM_*/WH_* 推导微服务边界；
+- Order/Customer/Product/Warehouse 等业务表不得因名称或 Service 名称自动成为 Domain；
+- WM/WH 42 张孤儿表作为历史污染样本单独登记，不得定义为 Warehouse Domain；
+- ext_* 当前暂定 UNKNOWN，经 NG-1A 重新证明前不得作为既定边界；
+- 第一批已产出的 8 项实测证据**保留**（可作为 ext_* 归属证明的输入），但暂停 Architecture Decision；
+- 恢复条件：NG-1A G0 PASS → 才允许重新定义本切片并继续。
 
 ---
 

@@ -25,6 +25,150 @@
 
 ---
 
+## 0A. 架构纠偏裁决记录（NG-1A 启动，2026-08-26）
+
+> **依据第一批实测结果，立即暂停 D12 Order Architecture Slice，不进入第二批 Ownership，也不得基于 Order/ext_*/WM_*/WH_* 推导微服务边界。**
+
+**纠偏依据（实测）**：数据库存在 Order/Product/Customer/Warehouse/WorkLog 等表，不能证明这些是低代码平台自身领域——WM/WH 42 张孤儿表（代码零引用但 DB 有真实数据）恰是「历史/演示/遗留资产」强信号；ext_* 19 张表实为 12 个子域服务的打包容器。**Ownership 之前必须先做产品资产归属识别。**
+
+**NG-1 新增 NG-1A：Platform Product Boundary Audit（平台产品资产边界审计）**，审计顺序修正为：
+
+```text
+数据库
+ ↓
+① 产品资产归属识别（NG-1A）
+ ↓
+② 平台核心数据集
+ ↓
+③ 非平台/演示/历史/客户数据排除
+ ↓
+④ 核心数据 Ownership
+ ↓
+⑤ Domain Boundary
+ ↓
+⑥ Architecture Slice
+ ↓
+⑦ 是否值得微服务化
+```
+
+### 0A.1 ProductAssetClass（289 表最高层分类字段）
+
+| 分类 | 含义 |
+|------|------|
+| CORE_PLATFORM | 低代码平台自身不可缺少的数据 |
+| PLATFORM_SUPPORT | 平台运行基础设施数据 |
+| LOWCODE_RUNTIME | 动态表、动态字段、表单、流程等运行时数据 |
+| DEMO_APPLICATION | 官方演示应用 |
+| SAMPLE_APPLICATION | 示例/模板应用 |
+| CUSTOMER_GENERATED | 用户通过低代码平台创建的业务数据 |
+| TEST_FIXTURE | 测试数据 |
+| LEGACY | 历史遗留 |
+| UNKNOWN | 无法证明 |
+| EXTERNAL | 外部/第三方模块 |
+
+> **UNKNOWN ≠ CORE_PLATFORM**：不能因为「不知道是什么」就纳入平台核心。
+
+### 0A.2 证据链（每张表必须经过）
+
+```text
+DB metadata → Code reference → Runtime reachability → API/UI reachability
+→ Migration/configuration → Tests → Deployment dependency → Data characteristics → Historical provenance
+```
+
+### 0A.3 硬规则（违反任一条 = 违规）
+
+1. `UNKNOWN` 不得归入 CORE_PLATFORM。
+2. Demo/Sample/Customer/Legacy/Orphan 不得参与 Domain Ownership Proof。
+3. 只有被证明属于 CORE_PLATFORM 或 LOWCODE_RUNTIME 的资产，才能进入后续 Domain/Ownership 分析。
+4. Order/Customer/Product/Warehouse 等业务表不得因名称或 Service 名称自动成为 Domain。
+5. WM/WH 42 张孤儿表作为**历史污染检测样本**单独登记，不得直接定义为 Warehouse Domain。
+6. ext_* 必须重新证明其 ProductAssetClass；当前暂定 UNKNOWN，不得继续作为 D12 Architecture Slice 的既定边界。
+7. 现有 D12 Order Slice 改名为 **Candidate Slice（待验证业务资产切片）**，保留已有实测证据，但暂停 Architecture Decision。
+8. 不删除、不修改任何历史表和数据，只做只读归属审计。
+
+### 0A.4 新增 Gate G0（Product Boundary Proof）
+
+```text
+G0 = Product Boundary Proof
+只有 G0 PASS → 才允许进入 Domain Ownership Proof
+             → 才允许重新定义 D12 Candidate Slice
+             → 才允许进行 Microservice Boundary Proof
+
+无法证明属于平台的资产 → 登记 UNKNOWN / LEGACY，不强行解释。
+```
+
+### 0A.5 NG-1A 停止条件（6 项产出物）
+
+1. `platform-asset-classification.csv`
+2. `core-platform-data-inventory.md`
+3. `demo-sample-legacy-registry.md`
+4. `asset-provenance-map.md`
+5. `product-boundary-proof.md`
+6. `NG-1A Final Review`
+
+**本轮五零约束**：零业务代码修改 / 零数据库修改 / 零微服务实现 / 零 Aspire 引入 / 零迁移。完成 NG-1A 后 STOP，等待人工裁决。
+
+### 0A.6 资产模型升级裁决（P0-PX 十类 + 二维分类，2026-08-26）
+
+**裁决源**：用户对十类体系的架构级升级——「平台为展示/验证/提供模板而预置的业务数据 ≠ 平台自身业务领域」；Template 必须与 Demo 分开建模。
+
+#### 0A.6.1 四层资产模型
+
+```text
+JNPF 产品
+├── A. Platform Core       —— 平台自身必须存在的数据
+├── B. Low-Code Runtime    —— 用户应用/模型运行所依赖的元数据
+├── C. Product Templates / Sample Apps —— CRM/ERP/OA/项目模板、示例流程、示例表单、示例数据
+└── D. External / Customer Applications —— 用户真正创建出来的业务系统
+```
+
+**C 类特殊**：属于 JNPF 产品交付内容，但不属于平台核心架构。`ext_order` 等若实为「预置模板业务数据」→ `PRODUCT_TEMPLATE`，而非 `Domain = Order`。**存在 OrderService ≠ 存在 Order 领域**（硬规则 4 强化）。
+
+#### 0A.6.2 二维分类（替换单字段十类）
+
+- **PlatformRole**：CORE / RUNTIME / PRODUCT_CONTENT / EXTERNAL / LEGACY / UNKNOWN
+- **AssetLifecycle**：MANDATORY / OPTIONAL / TEMPLATE / DEMO / CUSTOMER_GENERATED / TEST / LEGACY / ORPHAN / UNKNOWN
+
+典型组合：租户核心表=CORE+MANDATORY；动态表元数据=RUNTIME+MANDATORY；CRM 模板表=PRODUCT_CONTENT+TEMPLATE；官方 Demo=PRODUCT_CONTENT+DEMO；客户订单=EXTERNAL+CUSTOMER_GENERATED；老 WM/WH 表=LEGACY+LEGACY；无代码引用的历史表=LEGACY+ORPHAN。
+
+#### 0A.6.3 最终分类体系（P0-PX，替换 0A.1 旧十类）
+
+| 类 | 含义 | 进 NG 设计 |
+|----|------|-----------|
+| P0 PLATFORM_CORE | 平台自身必须数据 | ✅ 唯一允许进入领域/Ownership 分析 |
+| P1 LOWCODE_RUNTIME | 低代码运行时元数据 | ✅ 唯一允许进入领域/Ownership 分析 |
+| P2 PRODUCT_TEMPLATE | 产品交付模板内容 | ❌ 独立模板包，不进 Platform Core |
+| P3 DEMO_APPLICATION | 官方演示应用 | ❌ 可删除/隔离，不进新架构 |
+| P4 CUSTOMER_APPLICATION | 用户创建的业务系统 | ❌ 不进入平台核心 |
+| P5 TEST_FIXTURE | 测试数据 | ❌ 清理或隔离 |
+| P6 LEGACY | 历史遗留（有来源已弃用） | ❌ 归档/迁移/清理 |
+| P7 ORPHAN | 彻底孤儿（无来源无引用） | ❌ 隔离 |
+| P8 EXTERNAL | 外部/第三方模块 | ❌ 不进入平台核心 |
+| PX UNKNOWN | 无法证明 | ⏸ BLOCKED 直至证明 |
+
+> **只有 P0/P1 允许进入「平台领域与数据 Ownership」分析。P2/P3 虽属产品交付资产，但不得污染平台核心领域模型。P4 更不能进入平台核心。P5/P6/P7 原则上清理或隔离。PX 必须保持 BLOCKED。**
+
+#### 0A.6.4 OrderService 四种可能（ext_* 判定问题）
+
+```text
+① 平台核心 Order          → Domain Ownership → Service Boundary → Microservice Candidate
+② 平台官方业务模板        → Product Template → 独立模板包 → 不进 Platform Core
+③ 官方 Demo 应用          → Demo Application → 可删除 → 不进新架构
+④ 历史客户/开发测试应用  → Legacy/Customer Asset → 归档/迁移/清理
+```
+
+四种情况架构结论完全不同。当前证据（12 个编译期服务 + init 打包 + API 可达）只能证明「预置可运行内容」，P2/P3 细分需 Provenance Matrix。
+
+#### 0A.6.5 Product Capability Fixture（模板的第二种价值）
+
+订单数据本身不是平台核心，但「平台能正确创建并运行订单模板」是平台能力的重要验收场景——订单表可作为 Product Capability Fixture，用于验证建模/表单/权限/流程/查询/数据权限/性能。**验证对象是平台能力，而非订单领域本身。**
+
+#### 0A.6.6 下一步指令：Provenance Matrix（替代 D12 Order Ownership）
+
+NG-1A 初判完成后，下一步为 **Provenance Matrix**：对 289 表 + 代码模块 + 初始化 SQL + migration/seed + UI/菜单 做创建来源追踪（谁创建/何时创建/哪个 SQL/哪个模块拥有/哪个代码写/哪个 API 暴露/哪个 UI 使用/是否平台启动必须/是否模板安装后才出现/是否 Demo 脚本产生/是否客户建模产生/删掉后平台核心是否正常），**优先追踪 ext_* / WM_* / WH_* / base_* / sa_***。每张表必须获得**可证明的来源身份**后，才可进入 Domain Ownership Proof。
+
+---
+
 ## 1. NG-1 目标重定义
 
 > NG-1 不是「把设计做到满意」，而是回答一个核心问题：

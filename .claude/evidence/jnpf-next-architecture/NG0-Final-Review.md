@@ -44,11 +44,14 @@ NG-0 ──► REJECT（回 Legacy 路线）
     └──► APPROVE（进入 NG-1：原型阶段——另行计划+批准）
 ```
 
-**NG-0 已 APPROVE；NG-1 已于 2026-08-26 获人工有条件批准**（范围 = Domain & Data Ownership Proof + D12 Slice 证伪；BOUNDARY-PROOF 闸门 + 反证机制 + PASS/REFINE/BLOCK 三态已写入 NG-1 规格 §0/§2.4/§5 与 D12 计划 §4/§4.1）。状态表：
+**NG-0 已 APPROVE；NG-1 已于 2026-08-26 获人工有条件批准**（范围 = Domain & Data Ownership Proof + D12 Slice 证伪；BOUNDARY-PROOF 闸门 + 反证机制 + PASS/REFINE/BLOCK 三态已写入 NG-1 规格 §0/§2.4/§5 与 D12 计划 §4/§4.1）。
+
+**2026-08-26 架构纠偏裁决**：第一批实测（WM/WH 42 孤儿表 + ext_* 12 子域打包）触发 **NG-1A：Platform Product Boundary Audit**（ProductAssetClass 十类 + G0 闸门，见 NG-1 规格 §0A）；**D12 Order Slice ⏸ SUSPENDED**（改名 Candidate Slice）。状态表：
 
 ```text
 D1 ✅ CLOSED ｜ Backend S1 Audit ✅ CLOSED ｜ P0-A ✅ APPROVED ｜ P0-B ✅ APPROVED/BASELINED
 P0-C ⏸ DEFERRED ｜ S2 🔒 BLOCKED ｜ P1 🔒 BLOCKED ｜ NG-0 ✅ COMPLETE/APPROVED ｜ NG-1 ▶ APPROVED（有条件）
+NG-1 第一批 ✅ 完成 ｜ D12 Candidate Slice ⏸ SUSPENDED ｜ NG-1A ▶ 启动（G0 闸门前置）｜ NG-2 ⏸ 未启动
 ```
 
 ## 六、提交
