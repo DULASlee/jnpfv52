@@ -142,10 +142,10 @@ public class EmailService : IDynamicApiController, ITransient
 
             _db.CommitTran();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             _db.RollbackTran();
-            throw Oops.Oh(ErrorCode.COM1002);
+            throw new AppFriendlyException(Oops.Text(ErrorCode.COM1002), ErrorCode.COM1002, ex);
         }
     }
 
