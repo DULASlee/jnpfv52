@@ -445,7 +445,7 @@ public class FileService : IFileService, IDynamicApiController, ITransient
     [NonAction]
     public async Task UploadFileByType(string uploadFilePath, string directoryPath, string fileName)
     {
-        FileStream? file = new FileStream(uploadFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var file = new FileStream(uploadFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         await _fileManager.UploadFileByType(file, directoryPath, fileName);
     }
     #endregion
