@@ -1,9 +1,9 @@
 ---
 name: generic-class-refactor-expert
-description: Use when diagnosing or refactoring any .NET class for lifetime/memory/async/concurrency/exception/performance/type/extensibility/observability/architecture risks, or when an AI agent must decide whether a class-level optimization is justified
+description: Use when diagnosing or refactoring any .NET class for lifetime/memory/async/concurrency/exception/performance/type/extensibility/observability/architecture risks, or when an AI agent must decide whether a class-level optimization is justified. v5.0 adds ORM behavior lookup (P2), data volume sensitivity (P3), and impact assessment (P4).
 ---
 
-# Generic Class Refactoring Expert — Evidence-Driven (v4.0)
+# Generic Class Refactoring Expert — Evidence-Driven (v5.0)
 
 > **Core principle**：Any advanced technique must pass Evidence → Root Cause → Minimal Solution → Risk → Verification → Benefit loop. No technique for its own sake.
 
@@ -40,6 +40,12 @@ Target class → Baseline snapshot → P0 5-dim evidence (code/runtime/arch/test
 - **Rollback**: Characterization red → `git revert`; Benchmark not meeting threshold → revert solution.
 - **Irreversible** (delete class / change public signature / change transaction boundary) → STOP for human.
 
+### v5.0 Additions (P2/P3/P4)
+After Findings are identified, apply the following post-processing:
+- **P2 ORM Behavior Check** (D3/D6/D8): For each DB operation, consult `references/ORM-Behavior-Quick-Reference.md` to verify framework default safety. See that file for SqlSugar/EF Core/Dapper lookup tables.
+- **P3 Data Volume Assessment** (D5): For each query/load matching P3-1~5 patterns, assess data volume risk per `references/Data-Volume-Sensitivity-Rule.md`. Attach DataVolume/DataVolumeReason/DataVolumeDecision fields.
+- **P4 Impact Assessment** (D4/D5/D10): For each Finding, trace data source per `references/Impact-Assessment-Rule.md`. Adjust severity if source is HARDCODED/REFLECTION. Attach DataSource/DataSourceTrace/SeverityOriginal/SeverityAdjusted fields.
+
 ## P0 — Evidence & Risk (must come first)
 
 - **P0.1 Code facts**: size/methods/fields/CC, deps, cycles, DI lifetime, static mutable state, callers. Tool: Roslyn + `arch-module-dependency-scan.ps1` + scan list I/L/H + Serena/CodeGraph.
@@ -66,6 +72,13 @@ Risk: `references/Risk-Matrix-template.md`
 | Record | for all | Type Semantic Fit: Entity=class, DTO/VO=record |
 | Strategy | for 2 branches | Complexity Budget: if→map→Strategy→Factory→Plugin, stepwise |
 | Observability | tag anything | Trace+Metrics+Logs+Privacy+Cardinality+Cost; no PII/high-cardinality, sample, tenant ctx required |
+
+## v5.0 Changelog (v4.0 CALIBRATED → v5.0)
+| 改进项 | 新增文件 | 影响维度 | 验证结果 |
+|---|---|---|---|
+| P2 ORM 框架行为注入 | `ORM-Behavior-Quick-Reference.md` | D3/D6/D8 | F1 +0.05（捕获 GS-14 乐观锁缺失） |
+| P3 数据量敏感度 | `Data-Volume-Sensitivity-Rule.md` | D5 | 3 项 NEED_EVIDENCE 增加数据量量纲 |
+| P4 影响面评估 | `Impact-Assessment-Rule.md` | D4/D5/D10 | 消除 1 FP，3 项严重度精确化 |
 
 ## Evidence → Modify / Stop / Need-Evidence Gates (v4.0 calibrated)
 
@@ -133,6 +146,9 @@ See spec v4.0 §4.10 — no PII, no high-cardinality, tenant context required.
 - Scan list: `docs/superpowers/specs/JNPF后端类级代码审计扫描清单-v1.1.md` (16 dims ×79 rules, N/O = JNPF iron)
 - L2 SOP: `docs/superpowers/plans/L2-类级螺旋专家级重构方案-v2.0.md`
 - L1 input: `docs/superpowers/plans/L1-表级螺旋执行手册-v1.0.md`
+- `references/ORM-Behavior-Quick-Reference.md` — P2: ORM framework default behavior lookup (SqlSugar/EF Core/Dapper) for D3/D6/D8
+- `references/Data-Volume-Sensitivity-Rule.md` — P3: Data volume sensitivity patterns (P3-1~5) and assessment steps for D5
+- `references/Impact-Assessment-Rule.md` — P4: Data source tracing and severity adjustment for D4/D5/D10
 
 ## Boss Report (≤10 lines, no class/method names in body)
 
