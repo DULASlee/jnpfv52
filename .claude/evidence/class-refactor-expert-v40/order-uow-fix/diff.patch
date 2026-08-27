@@ -1,0 +1,28 @@
+diff --git a/backend/modularity/extend/JNPF.Extend/OrderService.cs b/backend/modularity/extend/JNPF.Extend/OrderService.cs
+index ad9804e3..9acf449a 100644
+--- a/backend/modularity/extend/JNPF.Extend/OrderService.cs
++++ b/backend/modularity/extend/JNPF.Extend/OrderService.cs
+@@ -7,6 +7,7 @@ using JNPF.Common.Filter;
+ using JNPF.Common.Manager;
+ using JNPF.Common.Models;
+ using JNPF.Common.Security;
++using JNPF.DatabaseAccessor;
+ using JNPF.DependencyInjection;
+ using JNPF.DynamicApiController;
+ using JNPF.Extend.Entitys;
+@@ -196,6 +197,7 @@ public class OrderService : IDynamicApiController, ITransient
+     /// <param name="input">璇锋眰鍙傛暟.</param>
+     /// <returns></returns>
+     [HttpPost("{id}")]
++    [UnitOfWork]
+     public async Task Save(string id, [FromBody] OrderCrInput input)
+     {
+         var orderEntity = input.Adapt<OrderEntity>();
+@@ -245,6 +247,7 @@ public class OrderService : IDynamicApiController, ITransient
+     /// <param name="id">涓婚敭鍊?/param>
+     /// <returns></returns>
+     [HttpDelete("{id}")]
++    [UnitOfWork]
+     public async Task Delete(string id)
+     {
+         var entity = await _repository.GetFirstAsync(x => x.Id == id && x.DeleteMark == null);

@@ -7,6 +7,7 @@ using JNPF.Common.Filter;
 using JNPF.Common.Manager;
 using JNPF.Common.Models;
 using JNPF.Common.Security;
+using JNPF.DatabaseAccessor;
 using JNPF.DependencyInjection;
 using JNPF.DynamicApiController;
 using JNPF.Extend.Entitys;
@@ -196,6 +197,7 @@ public class OrderService : IDynamicApiController, ITransient
     /// <param name="input">请求参数.</param>
     /// <returns></returns>
     [HttpPost("{id}")]
+    [UnitOfWork]
     public async Task Save(string id, [FromBody] OrderCrInput input)
     {
         var orderEntity = input.Adapt<OrderEntity>();
@@ -245,6 +247,7 @@ public class OrderService : IDynamicApiController, ITransient
     /// <param name="id">主键值</param>
     /// <returns></returns>
     [HttpDelete("{id}")]
+    [UnitOfWork]
     public async Task Delete(string id)
     {
         var entity = await _repository.GetFirstAsync(x => x.Id == id && x.DeleteMark == null);
