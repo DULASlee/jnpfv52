@@ -80,14 +80,18 @@ v4.0 类级专家重构 Skill
 ├── Exception Semantics
 │   └── Golden #1 — Preserve Cause (e45f724a)
 │
-└── Resource Lifetime
+├── Resource Lifetime
     ├── Golden #2 — UploadFileByType `using var` (d6117dce)
     └── Golden #3 — FileDown `using var` (acc6f5d0)
+│
+└── Business Transaction
+    └── Golden #4 — UnitOfWork Boundary (339689af, +3 lines, Runtime=DEFERRED)
 ```
 
 - `references/Golden-Example-01.md` — Exception Semantics / Preserve Cause (`e45f724a`, EmailService Delete, 2+2 lines). Frozen decision pattern: multiple Findings → keep one → gate → single-point → behavior preserved → InnerException → regression.
 - `references/Golden-Example-02.md` — Resource Lifetime / UploadFileByType `using var` (`d6117dce`, FileService UploadFileByType, 1+1 lines). Upload path resource lifecycle.
-- `references/Golden-Example-03.md` — Resource Lifetime / FileDown `using var` (`acc6f5d0`, FileService FileDown, 3+4 lines). Download path resource lifecycle. #2 与 #3 属于同一技术性质的**异场景双样本**，证明 Skill 在 Resource Lifetime 原则下的可重复性。
+- `references/Golden-Example-03.md` — Resource Lifetime / FileDown `using var` (`acc6f5d0`, FileService FileDown, 3+4 lines). Download path resource lifecycle. #2 与 #3 属于同一技术性质的**异场景双样本**，证明 Skill 在 Resource Lifetime 原则下的可重复性.
+- `references/Golden-Example-04.md` — Business Transaction / UnitOfWork Boundary (`339689af`, OrderService Save/Delete `+1 using+2 [UnitOfWork]`, 6要素全满足). 价值：异质技术性质（事务边界）。标记：`Implementation/Build/Code-semantics=VERIFIED, Runtime rollback=DEFERRED / ENVIRONMENT BLOCKED — no claim`.
 
 **注意**：不要为了凑 Golden Example 数量而连续修同类 Finding。下一步应回到"类级剩余风险盘点/选择"，从剩余 Stop Findings 中按证据、风险、收益和改造半径重新选择最值得推进的一个。
 
@@ -127,3 +131,5 @@ See spec v4.0 §4.10 — no PII, no high-cardinality, tenant context required.
 【你怎么验】命令一行+产物路径
 【要你做】继续/通过/打回/重开（单选）
 ```
+
+
