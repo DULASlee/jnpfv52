@@ -67,6 +67,15 @@ Risk: `references/Risk-Matrix-template.md`
 | Strategy | for 2 branches | Complexity Budget: if→map→Strategy→Factory→Plugin, stepwise |
 | Observability | tag anything | Trace+Metrics+Logs+Privacy+Cardinality+Cost; no PII/high-cardinality, sample, tenant ctx required |
 
+## Evidence → Modify / Stop Gates (frozen, v4.0 Golden)
+
+- **Allow Modify** (6 conjunctive): Finding evidenced ∧ Contract violation ∧ single-point boundary ∧ gates pass ∧ regression path exists ∧ no Contract expansion. See `references/Evidence-to-Modify-Gate.md`.
+- **Must Stop** (10 disjunctive): guess without evidence / capability not Contract / test gap only / not a defect / needs Contract expansion / needs new arch / needs perf without evidence / cannot keep single-point / cross-module contagion / cannot regress. See `references/Evidence-to-Stop-Gate.md`. Principle: `unknown → Stop, not guess`.
+
+## Golden Example #1
+
+- `references/Golden-Example-01.md` — Confirmed Low-Cost Exception Context Fix (`e45f724a`, EmailService Delete, 2+2 lines). Frozen decision pattern: multiple Findings → keep one → gate → single-point → behavior preserved → InnerException → regression.
+
 ## Performance Change Gate
 
 See `references/Performance-Change-Gate-checklist.md` — 7 questions + ValueTask/Pool bans.
