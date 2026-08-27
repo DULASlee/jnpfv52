@@ -1,6 +1,7 @@
-# Complexity Budget Scale（v4.0）
+# Complexity Budget Scale（v4.0 calibrated M1）
 
 > **从“能用多高级就用多高级”改为“逐级升级，收益>成本才升”**
+> **Fix Budget = Semantic Scope + Physical Diff + Dependency Expansion**（非纯行数）。编译必需的 `using`/import 若不引入新依赖，属语义中性，但需显式获批（OrderService `CS0246` 案例）。
 
 ## 扩展性（P8）
 

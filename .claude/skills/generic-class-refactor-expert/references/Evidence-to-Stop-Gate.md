@@ -20,6 +20,13 @@
 **防幻觉原则**（宪法级）：
 - `Evidence 不足 → Decision = Stop`，禁止 Agent 用“经验”“最佳实践”“我认为”补全。
 - `Finding 多 ≠ 批量修`：每 Finding 独立过门控，单次仅允许一个 Fix Boundary。
-- `高级优化必须有证据`：无 P0.2 + BDN 证据，Span/Pool/ValueTask 等一律 Stop。
+- `高级优化必须有证据`：无 P0.2 + BDN 证据，Span/Pool/ValueTask 等一律 Stop.
 
-**记录要求**：Stop 时必须在 P0-Evidence-Pack 的 Decision 中写明命中的拒绝项编号及依据，形成可审计链。
+**STOP vs NEED EVIDENCE（M2 calibrated）**：
+- **STOP** = 有足够证据决定“当前不应做”（如 F-L3 ownership 跨层）。
+- **NEED EVIDENCE** = 问题可能真实但证据不足以决定做/不做（如 F-P1 N+1 无实测），冻结为 `NEED EVIDENCE / BLOCKED`，禁止因压力强行 GO，也禁止无重决策直接转为 STOP。
+
+**Class-Level Convergence（M3 calibrated）**：
+- 当剩余 Finding 满足 `风险收益递减 + 需跨类/架构级变化 + 证据不足 + 局部修改风险上升` 时，主动宣布 `Class-level convergence`，结束当前类局部重构。这不是偷懒，是专家完成准则。
+
+**记录要求**：Stop/Need-Evidence 时必须在 P0-Evidence-Pack 的 Decision 中写明命中的拒绝项编号及依据，形成可审计链。

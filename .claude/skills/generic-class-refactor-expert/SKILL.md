@@ -67,10 +67,11 @@ Risk: `references/Risk-Matrix-template.md`
 | Strategy | for 2 branches | Complexity Budget: if→map→Strategy→Factory→Plugin, stepwise |
 | Observability | tag anything | Trace+Metrics+Logs+Privacy+Cardinality+Cost; no PII/high-cardinality, sample, tenant ctx required |
 
-## Evidence → Modify / Stop Gates (frozen, v4.0 Golden)
+## Evidence → Modify / Stop / Need-Evidence Gates (v4.0 calibrated)
 
 - **Allow Modify** (6 conjunctive): Finding evidenced ∧ Contract violation ∧ single-point boundary ∧ gates pass ∧ regression path exists ∧ no Contract expansion. See `references/Evidence-to-Modify-Gate.md`.
-- **Must Stop** (10 disjunctive): guess without evidence / capability not Contract / test gap only / not a defect / needs Contract expansion / needs new arch / needs perf without evidence / cannot keep single-point / cross-module contagion / cannot regress. See `references/Evidence-to-Stop-Gate.md`. Principle: `unknown → Stop, not guess`.
+- **Must Stop** (10 disjunctive — sufficient evidence to decide NOT to do): guess without evidence / capability not Contract / test gap only / not a defect / needs Contract expansion / needs new arch / needs perf without evidence / cannot keep single-point / cross-module contagion / cannot regress. See `references/Evidence-to-Stop-Gate.md`. **STOP = Evidence proves should NOT do now.**
+- **NEED EVIDENCE** (distinct — insufficient evidence to decide): Finding may be real (e.g., N+1 shape) but runtime/benefit proof missing and env blocked, cannot claim GO nor STOP. Must freeze as `NEED EVIDENCE / BLOCKED` and be re-decided only after evidence补充. 禁止：`NEED EVIDENCE → pressure → GO`，也禁止无重决策直接转为 STOP. Principle: `unknown → Stop, not guess`; `insufficient → Need Evidence, not guess`.
 
 ## Golden Examples (v4.0 基线)
 
@@ -99,9 +100,19 @@ v4.0 类级专家重构 Skill
 
 See `references/Performance-Change-Gate-checklist.md` — 7 questions + ValueTask/Pool bans.
 
-## Complexity Budget
+## Fix Budget — Semantic Change Budget (M1 calibrated)
 
-See `references/Complexity-Budget-scale.md` — stepwise upgrade, benefit > cost.
+Budget is `Semantic Scope + Physical Diff + Dependency Expansion`, not line-count alone (proven by OrderService `+1 using+2 [UnitOfWork]` CS0246 case):
+- **Semantic Scope**: what semantics may change (DB consistency vs external side-effect vs API Contract)
+- **Physical Diff**: files/lines changed (prefer +3 minimal over FullyQualified workaround)
+- **Dependency Expansion**: new cross-class/cross-layer deps introduced?
+A `using` import needed for compilation is semantic-budget-neutral if no new dependency; must still be explicitly approved. See `references/Complexity-Budget-scale.md`.
+
+## Class-Level Convergence Rule (M3 calibrated)
+
+Not every Finding should be fixed. Declare `Class-level convergence` when:
+- remaining Findings risk/benefit diminishing, or require cross-class/arch boundary, or evidence insufficient, or local fix risk rising
+Then **actively converge** the class (no more local Finding dig). This is `Expert Refactoring Completion Criterion`, not laziness. See `references/Evidence-to-Stop-Gate.md` STOP vs NEED EVIDENCE.
 
 ## Observability Boundary
 
