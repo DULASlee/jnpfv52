@@ -72,9 +72,24 @@ Risk: `references/Risk-Matrix-template.md`
 - **Allow Modify** (6 conjunctive): Finding evidenced ∧ Contract violation ∧ single-point boundary ∧ gates pass ∧ regression path exists ∧ no Contract expansion. See `references/Evidence-to-Modify-Gate.md`.
 - **Must Stop** (10 disjunctive): guess without evidence / capability not Contract / test gap only / not a defect / needs Contract expansion / needs new arch / needs perf without evidence / cannot keep single-point / cross-module contagion / cannot regress. See `references/Evidence-to-Stop-Gate.md`. Principle: `unknown → Stop, not guess`.
 
-## Golden Example #1
+## Golden Examples (v4.0 基线)
 
-- `references/Golden-Example-01.md` — Confirmed Low-Cost Exception Context Fix (`e45f724a`, EmailService Delete, 2+2 lines). Frozen decision pattern: multiple Findings → keep one → gate → single-point → behavior preserved → InnerException → regression.
+```
+v4.0 类级专家重构 Skill
+│
+├── Exception Semantics
+│   └── Golden #1 — Preserve Cause (e45f724a)
+│
+└── Resource Lifetime
+    ├── Golden #2 — UploadFileByType `using var` (d6117dce)
+    └── Golden #3 — FileDown `using var` (acc6f5d0)
+```
+
+- `references/Golden-Example-01.md` — Exception Semantics / Preserve Cause (`e45f724a`, EmailService Delete, 2+2 lines). Frozen decision pattern: multiple Findings → keep one → gate → single-point → behavior preserved → InnerException → regression.
+- `references/Golden-Example-02.md` — Resource Lifetime / UploadFileByType `using var` (`d6117dce`, FileService UploadFileByType, 1+1 lines). Upload path resource lifecycle.
+- `references/Golden-Example-03.md` — Resource Lifetime / FileDown `using var` (`acc6f5d0`, FileService FileDown, 3+4 lines). Download path resource lifecycle. #2 与 #3 属于同一技术性质的**异场景双样本**，证明 Skill 在 Resource Lifetime 原则下的可重复性。
+
+**注意**：不要为了凑 Golden Example 数量而连续修同类 Finding。下一步应回到"类级剩余风险盘点/选择"，从剩余 Stop Findings 中按证据、风险、收益和改造半径重新选择最值得推进的一个。
 
 ## Performance Change Gate
 
