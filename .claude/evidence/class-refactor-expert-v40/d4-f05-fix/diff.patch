@@ -1,0 +1,19 @@
+diff --git a/backend/modularity/system/JNPF.Systems/Common/FileService.cs b/backend/modularity/system/JNPF.Systems/Common/FileService.cs
+index e002eb28..6e2d7305 100644
+--- a/backend/modularity/system/JNPF.Systems/Common/FileService.cs
++++ b/backend/modularity/system/JNPF.Systems/Common/FileService.cs
+@@ -198,11 +198,10 @@ public class FileService : IFileService, IDynamicApiController, ITransient
+             systemFilePath = Path.Combine(_fileManager.GetPathByType(type), fileName);
+         }
+         var fileStreamResult = await _fileManager.DownloadFileByType(systemFilePath, fileName);
+-        byte[] bytes = new byte[fileStreamResult.FileStream.Length];
++        using var fs = fileStreamResult.FileStream;
++        byte[] bytes = new byte[fs.Length];
+ 
+-        fileStreamResult.FileStream.Read(bytes, 0, bytes.Length);
+-
+-        fileStreamResult.FileStream.Close();
++        fs.Read(bytes, 0, bytes.Length);
+         var httpContext = App.HttpContext;
+         httpContext.Response.ContentType = "application/octet-stream";
+         httpContext.Response.Headers.Add("Content-Disposition", "attachment;filename=" + HttpUtility.UrlEncode(fileName, Encoding.UTF8));
