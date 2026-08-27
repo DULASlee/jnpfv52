@@ -17,7 +17,7 @@ public static class BatchDeleteSqlPlanner
         IReadOnlyList<string> ids,
         int deleteRule)
     {
-        var idList = string.Join("','", ids);
+        var idList = string.Join("','", ids.Select(SanitizeId));
         var predicate = deleteRule.Equals(0)
             ? $"{mainPrimary} not in ('{idList}')"
             : $"{mainPrimary} in ('{idList}')";
@@ -39,7 +39,7 @@ public static class BatchDeleteSqlPlanner
         IReadOnlyList<string> ids,
         int deleteRule)
     {
-        var idList = string.Join("','", ids);
+        var idList = string.Join("','", ids.Select(SanitizeId));
         var sql = new List<string>();
 
         if (deleteRule.Equals(0))
@@ -63,4 +63,7 @@ public static class BatchDeleteSqlPlanner
     /// </summary>
     public static List<string> BuildClearAllTablesSql(IEnumerable<string> tableNames)
         => tableNames.Select(t => string.Format("delete from {0}", t)).ToList();
+
+    private static string SanitizeId(string id)
+        => id.Replace("'", string.Empty);
 }

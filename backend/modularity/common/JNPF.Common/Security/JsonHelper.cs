@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace JNPF.Common.Security;
@@ -11,6 +11,7 @@ namespace JNPF.Common.Security;
 /// </summary>
 public static class JsonHelper
 {
+    private static readonly JsonSerializerSettings SafeSettings = new() { TypeNameHandling = TypeNameHandling.None };
     /// <summary>
     /// Object 转 JSON字符串.
     /// </summary>
@@ -50,7 +51,7 @@ public static class JsonHelper
     /// <returns></returns>
     public static T ToObject<T>(this string json)
     {
-        return _ = JsonConvert.DeserializeObject<T>(json) ?? default(T);
+        return _ = JsonConvert.DeserializeObject<T>(json, SafeSettings) ?? default(T);
     }
 
     /// <summary>
@@ -61,7 +62,7 @@ public static class JsonHelper
     /// <returns></returns>
     public static T ToObjectOld<T>(this string json)
     {
-        return _ = JsonConvert.DeserializeObject<T>(json) ?? default(T);
+        return _ = JsonConvert.DeserializeObject<T>(json, SafeSettings) ?? default(T);
     }
 
     /// <summary>
@@ -73,7 +74,7 @@ public static class JsonHelper
     /// <returns></returns>
     public static T ToObject<T>(this string json, object jsonSerializerOptions = default)
     {
-        return _ = JsonConvert.DeserializeObject<T>(json) ?? default(T);
+        return _ = JsonConvert.DeserializeObject<T>(json, SafeSettings) ?? default(T);
     }
 
     /// <summary>
@@ -107,7 +108,7 @@ public static class JsonHelper
     /// <returns></returns>
     public static List<T> ToList<T>(this string json)
     {
-        return _ = JsonConvert.DeserializeObject<List<T>>(json) ?? null;
+        return _ = JsonConvert.DeserializeObject<List<T>>(json, SafeSettings) ?? null;
     }
 
     /// <summary>
@@ -119,7 +120,7 @@ public static class JsonHelper
     /// <returns></returns>
     public static List<T> ToList<T>(this string json, object jsonSerializerOptions = default)
     {
-        return _ = JsonConvert.DeserializeObject<List<T>>(json) ?? null;
+        return _ = JsonConvert.DeserializeObject<List<T>>(json, SafeSettings) ?? null;
     }
 
     /// <summary>

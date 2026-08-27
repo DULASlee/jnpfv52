@@ -1,4 +1,4 @@
-﻿using Aliyun.Credentials.Http;
+using Aliyun.Credentials.Http;
 using JNPF.ClayObject;
 using JNPF.Common.Configuration;
 using JNPF.Common.Const;
@@ -1942,9 +1942,9 @@ public class DataInterfaceService : IDataInterfaceService, IDynamicApiController
         var result = new JObject();
 
         string requestHeaders = input.F_REQUEST_Headers;
-        Dictionary<string, object> heraderParameters = JsonConvert.DeserializeObject<Dictionary<string, object>>(requestHeaders);
+        Dictionary<string, object> heraderParameters = JsonHelper.ToObject<Dictionary<string, object>>(requestHeaders);
         string requestParam = input.f_request_param;
-        var queryParameters = JsonConvert.DeserializeObject<Dictionary<string, object>>(requestParam);
+        var queryParameters = JsonHelper.ToObject<Dictionary<string, object>>(requestParam);
 
         string requestUrl = input.f_request_url;
         string bodyType = input.F_REQUEST_Body_Type;
@@ -1954,7 +1954,7 @@ public class DataInterfaceService : IDataInterfaceService, IDynamicApiController
         try
         {
 
-            var body = JsonConvert.DeserializeObject(rquestBody);
+            var body = JsonHelper.ToObject<object>(rquestBody);
 
             var httpClient = requestUrl.SetHeaders(heraderParameters).SetQueries(queryParameters);
             if (requestMethod.ToUpper()=="GET")

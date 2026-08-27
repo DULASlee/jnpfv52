@@ -1,4 +1,4 @@
-﻿using JNPF.Common.Core.Manager;
+using JNPF.Common.Core.Manager;
 using JNPF.Common.CodeGen.DataParsing;
 using JNPF.Extensions;
 using JNPF.Common.Manager;
@@ -189,7 +189,7 @@ public class ConfigController : IDynamicApiController, ITransient
         var config = _sqlSugarClient.Queryable<SysConfig>().First(it => it.KeyName == configName && it.DeleteMark == null);
 
         string jsonData = config.KeyValue ?? "";
-        var formDataObject = JsonConvert.DeserializeObject(jsonData);
+        var formDataObject = JsonHelper.ToObject<object>(jsonData);
         formDataObject = formDataObject ?? new object();
         return new { formData = formDataObject };
     }
@@ -233,7 +233,7 @@ public class ConfigController : IDynamicApiController, ITransient
     public async Task CreateDatabale(string Id)
     {
         var entity = _sqlSugarClient.Queryable<SystemDbEntity>().First(aa => aa.Id == Id);
-        dynamic jsonEntity = JsonConvert.DeserializeObject<JArray>(entity.filename);
+        dynamic jsonEntity = JsonHelper.ToObject<JArray>(entity.filename);
         string filename = (string)jsonEntity[0]["fileId"];
 
         var filePath = Path.Combine(KeyVariable.SystemPath, "SystemFile", filename);

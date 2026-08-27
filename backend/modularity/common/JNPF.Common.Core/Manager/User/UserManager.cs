@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using JNPF.Common.Const;
 using JNPF.Common.Core.Manager.User.Conditions;
 using JNPF.Common.Enums;
@@ -1061,7 +1061,7 @@ public class UserManager : IUserManager, IScoped
         var condList = await GetCondition<object>(primaryKey, moduleId, isDataPermissions, primaryKeyPolicy.Equals(2));
 
         var minTable = ConditionalByTableNameFilter.Filter(
-            JsonConvert.DeserializeObject<List<IConditionalModel>>(JsonConvert.SerializeObject(condList)), null);
+            JsonHelper.ToObject<List<IConditionalModel>>(JsonConvert.SerializeObject(condList)), null);
 
         if (minTable.Any())
         {
@@ -1076,7 +1076,7 @@ public class UserManager : IUserManager, IScoped
         foreach (var tName in allTableName.Distinct().ToList())
         {
             var tNameConditional = ConditionalByTableNameFilter.Filter(
-                JsonConvert.DeserializeObject<List<IConditionalModel>>(JsonConvert.SerializeObject(condList)), tName);
+                JsonHelper.ToObject<List<IConditionalModel>>(JsonConvert.SerializeObject(condList)), tName);
 
             if (tNameConditional.Any())
             {
