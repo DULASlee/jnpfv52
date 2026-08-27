@@ -1,9 +1,9 @@
 ---
 name: generic-class-refactor-expert
-description: Use when diagnosing or refactoring any .NET class for lifetime/memory/async/concurrency/exception/performance/type/extensibility/observability/architecture risks, or when an AI agent must decide whether a class-level optimization is justified. v5.0 adds ORM behavior lookup (P2), data volume sensitivity (P3), and impact assessment (P4).
+description: Use when diagnosing or refactoring any .NET class for lifetime/memory/async/concurrency/exception/performance/type/extensibility/observability/architecture risks, or when an AI agent must decide whether a class-level optimization is justified. v5.0 adds ORM behavior lookup (P2), data volume sensitivity (P3), and impact assessment (P4). v6.0 adds Cross-class lifecycle analysis (D11).
 ---
 
-# Generic Class Refactoring Expert — Evidence-Driven (v5.0)
+# Generic Class Refactoring Expert — Evidence-Driven (v6.0)
 
 > **Core principle**：Any advanced technique must pass Evidence → Root Cause → Minimal Solution → Risk → Verification → Benefit loop. No technique for its own sake.
 
@@ -45,6 +45,21 @@ After Findings are identified, apply the following post-processing:
 - **P2 ORM Behavior Check** (D3/D6/D8): For each DB operation, consult `references/ORM-Behavior-Quick-Reference.md` to verify framework default safety. See that file for SqlSugar/EF Core/Dapper lookup tables.
 - **P3 Data Volume Assessment** (D5): For each query/load matching P3-1~5 patterns, assess data volume risk per `references/Data-Volume-Sensitivity-Rule.md`. Attach DataVolume/DataVolumeReason/DataVolumeDecision fields.
 - **P4 Impact Assessment** (D4/D5/D10): For each Finding, trace data source per `references/Impact-Assessment-Rule.md`. Adjust severity if source is HARDCODED/REFLECTION. Attach DataSource/DataSourceTrace/SeverityOriginal/SeverityAdjusted fields.
+
+### Step 2.5: Cross-Class Analysis (D11)
+After completing the 10-dimension scan, check if cross-class context is available.
+If available, read `references/Cross-Class-Context-Rule.md` and analyze:
+
+- **11.1** Stream/IDisposable ownership across class boundaries
+- **11.2** DI lifecycle alignment across injection chain
+- **11.3** Data volume propagation across method calls
+
+Cross-class context may be provided as:
+- Manual description (Level 0): human tells you the call chain
+- Text summary (Level 1): a document listing class dependencies
+- Automated analysis (Level 2): call-graph/DI-graph JSON
+
+If no cross-class context is available, mark D11 as `SKIPPED — no cross-class context provided` and proceed to Step 3.
 
 ## P0 — Evidence & Risk (must come first)
 
@@ -149,6 +164,9 @@ See spec v4.0 §4.10 — no PII, no high-cardinality, tenant context required.
 - `references/ORM-Behavior-Quick-Reference.md` — P2: ORM framework default behavior lookup (SqlSugar/EF Core/Dapper) for D3/D6/D8
 - `references/Data-Volume-Sensitivity-Rule.md` — P3: Data volume sensitivity patterns (P3-1~5) and assessment steps for D5
 - `references/Impact-Assessment-Rule.md` — P4: Data source tracing and severity adjustment for D4/D5/D10
+- `references/Cross-Class-Context-Rule.md` — D11: Cross-class lifecycle analysis (stream ownership, DI lifecycle, data volume propagation)
+
+| D11 | `references/Cross-Class-Context-Rule.md` | Cross-class stream ownership, DI lifecycle chain, data volume propagation |
 
 ## Boss Report (≤10 lines, no class/method names in body)
 
