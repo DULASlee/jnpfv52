@@ -232,3 +232,17 @@
 - JNPF 是多子项目结构（jnpf-web-vue3、jnpf-app-vue3 各有独立 node_modules）
 - 必须从被编辑文件路径向上动态查找最近的 node_modules
 - `findProjectRoot()` 函数实现：从文件路径向上遍历，检查 `node_modules/.bin` 是否存在
+
+---
+
+## 2026-08-28 | Skill v6.0 Sprint: 验证体系会吞噬终点
+
+**现象**: R1->R2->36-run 一路"发现边界->补协议->再验证"无限演进, 架构师被迫踩刹车划硬终点 (FINAL-SPRINT-SCOPE)。
+
+**教训**:
+- **"定义可执行 != 执行层能执行"**: R1 规则自洽且过了 Decision Replay, 但真实 LLM 执行层对"逐字复制工具输出""精确自报计量"存在系统性能力边界 (V-5 13 runs、V-1d 9 runs 同源失败)。
+- **修复轮次必须有硬上限**: <=2 轮, 超限即 STOP->归类->人工决定, 防完美主义拖成无限 backlog。
+- **答案卡前提必须可由代码复核推翻**: Directory!=Zip 的事实修正说明预期值不是金科玉律, 规则推导要回到代码事实。
+- **评估 ECC 技能先读全文再看成熟度**: token-budget-advisor 自称 +-15% 无 tokenizer=伪精确; strategic-compact 的 hook 依赖 Claude 专属 transcript。
+
+**引用**: session-summaries/2026-08-28-skill-v60-final-sprint.md、r2/FINAL-ACCEPTANCE-AND-CLOSURE.md

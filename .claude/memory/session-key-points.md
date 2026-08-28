@@ -34,3 +34,15 @@ PM 新流程澄清续跑：pipeline 404 第2轮答完说「继续」，应进步
 ## 待用户验
 
 pipeline 404：答2轮 → 继续 → 说明书确认卡片
+
+## 2026-08-28 | Skill v6.0 收尾 + ECC 启用
+
+**会话主题**：类级专家重构 Skill v6.0 Final Sprint 收尾（DEFERRED 关闭）+ ECC Memory Vault 启用与 7 技能三 harness 安装。
+
+**关键点**：
+- **Skill v6.0 = DEFERRED（P1 Execution Capability）**：R1 协议 PASS&FROZEN、R2 机制包实施、S3 36-run 终验 13/36 CLEAN；卡点在 Executor 执行层无法稳定产出 exact snippet/精确自报，非 Contract 缺陷。已提交 github（227adc28）。
+- **知识库闭环**：session-summaries 三篇 2026-08-28 文件（final-sprint 关闭判定 / delivery-snapshot 资产状态 / ecc-harness-setup 安装记录）。
+- **ECC 启用**：ecc-universal@2.2.0 全局安装，project vault 建于 .ecc/memory/project/（不入 git），7 技能 x3 harness 落地。
+- **三个可选技能不装**（token-budget-advisor / parallel-execution-optimizer / strategic-compact）：伪精确/重复/运行时错配。
+
+**下一版本前置**：Executor 执行层能力达标后重跑既有 12 场景 x3。

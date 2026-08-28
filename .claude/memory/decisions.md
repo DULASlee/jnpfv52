@@ -90,3 +90,16 @@
 **硬性约束：** 零 eval/Function，全部 @jnpf-generated 标记
 
 **提交：** 371956e
+
+---
+
+## 2026-08-28 | Skill v6.0 终局判定 + ECC 技能选型
+
+**决策**：
+1. **R1 冻结、v6.0 版本 DEFERRED 关闭**：R1 Context Model=PASS&FROZEN，V-5 Anchor Contract Patch 后仍无法稳定获得 exact snippet，按架构师终局裁决 STOP→P1/Execution Capability→DEFERRED；未进第三轮修复。**影响**：SKILL.md/references/生产代码零改动，F-R=0。
+2. **A-§4 计数锁定**：定点 grep 免 Scope 但计 Artifact/Depth/Iteration；broad discovery=scope expansion。**影响**：R2/R3 计数口径唯一化，R1 分档表不动。
+3. **答案卡码证修正（v2→v3）**：Directory≠Zip（CreateFromDirectory 后目录不再被引用）⇒ "目录打包后可局部清理"为合法 GO 终态。**影响**：GO/STOP/NEED 三态均规则内可推导，非迁就行为。
+4. **ECC 仅装 7 技能，三可选不装**：production-audit/agent-architecture-audit/rules-distill/skill-stocktake/skill-scout/prompt-optimizer/dotnet-patterns 装；token-budget-advisor（伪精确）/parallel-execution-optimizer（重复）/strategic-compact（运行时错配）不装。
+5. **ECC vault 与 .claude/memory 并存**：前者跨 harness 共享（unreviewed、不入 git），后者项目知识库（随仓库共享）。
+
+**commit**：227adc28
