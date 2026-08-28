@@ -1,0 +1,110 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-01",
+  "run": 2,
+  "finding": {
+    "project": "JNPF.Extend",
+    "file": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+    "risk": "High",
+    "nature": "Local",
+    "nature_order_checked": ["Local"],
+    "nature_justification": "按 §1.3 顺序:先看 Local——Finding 涉及对象=OrderService.Save 方法体;类/方法/方法体的所有 ExecuteCommandAsync 调用与 [UnitOfWork] 标注缺失全部可在本文件内观察(OrderService.cs:36 类声明 / :198 方法签名 / :224-238 方法体),缺陷本身可在 OrderService.cs 自证;Regional 跨 1 层(去 UnitOfWorkAttribute.cs 验证 [UnitOfWork] 行为)不属于缺陷检测必须——Local 即可判定;Systemic 跨模块依赖不涉及。定档 Local。",
+    "claim": "OrderService.Save(string, OrderCrInput)(OrderService.cs:198) 的 if 分支(:226-230 共 5 个 ExecuteCommandAsync)与 else 分支(:235-237 共 3 个 ExecuteCommandAsync)顺序执行多条数据库写入;Save 方法与 OrderService 类均未标注 [UnitOfWork],方法体内亦无 using(TransactionScope)/BeginTransaction() 包裹——任一中间调用抛异常,前序已提交的写入不会回滚,订单/明细/应收出现部分成功不一致。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true,
+    "fq_notes": "FQ-1: 反例可构造——若 Save 上存在 [UnitOfWork] 或方法体内有 using(TransactionScope),则 Claim 假;FQ-2: 对象=OrderService.Save 类+方法+方法体,状态=被调用执行时;FQ-3: 无'合理/适当/尽量'类修饰词,纯机械判定(数 ExecuteCommandAsync 调用数 + 查 [UnitOfWork] 标注)。"
+  },
+  "budget_allocation": {
+    "depth": 1,
+    "artifact": 3,
+    "iteration": 1,
+    "scope": 0,
+    "tier_rule": "Risk=High × Nature=Local → Patch §1.2 分档: D=1/A=3/I=1/S=0"
+  },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "hop": 1,
+          "purpose": "verify Save method's class lifetime marker, [UnitOfWork] attribute presence, and sequential ExecuteCommandAsync structure within method body"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "36",
+          "snippet": "public class OrderService : IDynamicApiController, ITransient",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "198",
+          "snippet": "    public async Task Save(string id, [FromBody] OrderCrInput input)",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "226-230",
+          "snippet": "            await _repository.AsSugarClient().Deleteable<OrderEntryEntity>(x => x.OrderId == id).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Deleteable<OrderReceivableEntity>(x => x.OrderId == id).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderEntryList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderReceivableList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Updateable(orderEntity).IgnoreColumns(ignoreAllNullColumns: true).CallEntityMethod(m => m.LastModify()).ExecuteCommandAsync();",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "235-237",
+          "snippet": "            await _repository.AsSugarClient().Insertable(orderEntryList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderReceivableList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderEntity).CallEntityMethod(m => m.LastModify()).ExecuteCommandAsync();",
+          "confidence": "H",
+          "card_id": null
+        }
+      ],
+      "counters_after": {
+        "depth": 0,
+        "artifact": 0,
+        "iteration": 1,
+        "scope": 0
+      },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-1",
+        "rationale": "STOP-4 (Boundary): 未触发——本 Finding 在 baseline 内仍可取 UnitOfWorkAttribute.cs / SqlSugarConfigureExtensions.cs,但 Local 性质下不必要(缺陷检测不依赖外部类证据)。STOP-5 (Escalation): 未触发——无 E1~E5 条件成立。STOP-1 (Evidence Sufficient): §2.3 五判据全部满足——(1) Claim 可证伪(FQ-1/2/3 全过,见 claim_gate);(2) 4 条证据均带 file:line 且 snippet 逐字(Level 1 静态代码);(3) Impact 链完整(成立→GO;不成立→STOP);(4) Decision 唯一 GO(v4 GO 6 合取全过 / v4 STOP 10 析取无一命中 / NEED_EVIDENCE 不适用——非性能/非运行时缺口);(5) Confidence=High(无推断)。STOP-2 (Decision Stable) 不适用(STOP-1 先命中且 §3.1 优先级更高)。STOP-3 (Budget Exhausted) 未触发(iteration=1/1,artifact=0/3)。"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "OrderService.Save 的 if(:226-230)/else(:235-237) 分支共 5+3 个 ExecuteCommandAsync 顺序执行,无任何事务包裹;任一中间失败 → 前序不回滚 → 订单/明细/应收部分成功不一致。",
+    "evidence": "OrderService.cs:36 类声明(仅 IDynamicApiController + ITransient,无 [UnitOfWork]);OrderService.cs:198 Save 方法签名(无 [UnitOfWork]);OrderService.cs:226-230 5 个 ExecuteCommandAsync 无 using/begin-transaction 包裹;OrderService.cs:235-237 3 个 ExecuteCommandAsync 无 using/begin-transaction 包裹。",
+    "impact": "Claim 成立 → 多步写无事务为缺陷 → v4 GO 6 合取全过(Finding 已证 / 违反 SqlSugar UoW Contract / 单点边界可守——Save 上加 [UnitOfWork] 即可 / 各 gate 通过——非性能非安全非架构 / 存在回归路径——SqlSugarUnitOfWork 有测试 / 不扩 Contract)→ Decision=GO。Claim 不成立(若事实上有事务包裹)→ 不需修复 → Decision=STOP。",
+    "confidence": "High",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§2.3 Evidence Sufficiency 五判据全部满足;§3.1 STOP 顺序检查命中 STOP-1(FQ-1/2/3 ✓ / Level 1 file:line 证据 / Impact 链完整 / Decision 唯一 GO / Confidence High)。ESCALATE 未触发,Decision 保持三门封闭值 GO。v4 三安全阀均为 No(非高级优化、非性能宣称、非自动改码)。"
+  },
+  "escalation": null,
+  "meta": {
+    "time_observed_minutes": 0,
+    "executor_note": "scenario.md 中'设计文档摘录'(提到 IScoped)与 baseline 实际 ITransient 不一致——scenario.md 已声明该摘录未经核实;本 trace 以 baseline OrderService.cs:36 为唯一事实来源,scenario 文档摘录一律不作为事实引用。Finding 性质 Local,故 Budget 上限 D=1/A=3/I=1/S=0(High × Local 分档);本轮实际消耗 D=0/A=0/I=1/S=0(finding 文件读取不计工件)。"
+  }
+}

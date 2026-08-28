@@ -1,0 +1,121 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-02",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "Local不满足：DownloadAll依赖_fileManager.CopyFile（IFileManager接口位于JNPF.Common.Core跨项目），且临时目录消费者DownloadFile方法(FileService.cs:271)在本类但需跨方法追踪，Regional满足（构造函数依赖链1层+同接口调用链）。Systemic不满足：不涉及跨层Service↔Repository↔Provider或多模块复杂依赖。",
+    "claim": "DownloadAll (FileService.cs:240-264) 创建 TemporaryFile/{随机名} 子目录并打包 zip 后，方法体内无任何 try/finally/using 块，亦无 Directory.Delete(directoryPath, true) 调用；CopyFile/ZipFile.CreateFromDirectory/UploadFileByType 任一步抛异常时该子目录将无法被服务端清理（无消费者可达），存在累积残留风险。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true
+  },
+  "budget_allocation": {
+    "depth": 0,
+    "artifact": 0,
+    "iteration": 0,
+    "scope": 0
+  },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level0+Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "hop": 0,
+          "purpose": "复核 DownloadAll 方法体 (240-264) 与下游消费入口 DownloadFile (269-295) 是否含 try/finally/using/Directory.Delete 等清理路径（finding 文件按 Executor Brief 计数口径 0/0/0）"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "hop": 1,
+          "purpose": "DI/Call 旁证：复核 _fileManager 注入接口是否暴露 cleanup/temp-dir 类 API（项目 ≠ finding_project，按口径 +1/+1/+1）"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "human-cards/HR-01.json",
+          "hop": 0,
+          "purpose": "Level 0 人工描述：临时目录/zip 由谁清理、何时清理（人卡不计仓库工件）"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "240-264",
+          "snippet": "    public async Task<dynamic> DownloadAll(string type, [FromBody] List<FileControlsModel> input)\n    {\n        var fileName = RandomExtensions.NextLetterAndNumberString(new Random(), 7);\n        //临时目录\n        string directoryPath = Path.Combine(App.GetConfig<AppOptions>(\"JNPF_App\", true).SystemPath, \"TemporaryFile\", fileName);\n        Directory.CreateDirectory(directoryPath);\n        foreach (var item in input)\n        {\n            string filePath = Path.Combine(GetPathByType(type), item.fileId.Replace(\"@\", \".\"));\n            await _fileManager.CopyFile(filePath, Path.Combine(directoryPath, item.fileName));\n        }\n        // 压缩文件\n        string downloadPath = directoryPath + \".zip\";\n\n        // 判断是否存在同名称文件\n        if (File.Exists(downloadPath))\n            File.Delete(downloadPath);\n\n        ZipFile.CreateFromDirectory(directoryPath, downloadPath);\n        if (!App.Configuration[\"OSS:Provider\"].Equals(\"Invalid\"))\n            await UploadFileByType(downloadPath, \"SystemPath\", string.Format(\"文件{0}.zip\", fileName));\n        var downloadFileName = string.Format(\"{0}|{1}.zip|TemporaryFile\", _userManager.UserId, fileName);\n        _cacheManager.Set(fileName + \".zip\", string.Empty);\n        return new { downloadName = string.Format(\"文件{0}.zip\", fileName), downloadVo = new { name = fileName, url = \"/api/File/Download?encryption=\" + DESCEncryption.Encrypt(downloadFileName, \"JNPF\") } };\n    }",
+          "confidence": "H",
+          "purpose": "DownloadAll 方法体 Level 1 静态复核：方法体内无 try/finally/using 块；唯一 File.Delete(:256) 仅清理同名 .zip 前置文件，不涉及 TemporaryFile 子目录；Directory.CreateDirectory(:245) 创建的子目录在异常路径上无任何清理"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "269-295",
+          "snippet": "    public async Task<dynamic> DownloadFile([FromQuery] string encryption, [FromQuery] string name)\n    {\n        string decryptStr = DESCEncryption.Decrypt(encryption, \"JNPF\");\n        List<string> paramsList = decryptStr.Split(\"|\").ToList();\n        if (paramsList.Count > 0)\n        {\n            string fileName = paramsList.Count > 1 ? paramsList[1] : string.Empty;\n            if (_cacheManager.Exists(fileName))\n            {\n                _cacheManager.Del(fileName);\n            }\n            else\n            {\n                throw Oops.Oh(ErrorCode.D1805);\n            }\n            string type = paramsList.Count > 2 ? paramsList[2] : string.Empty;\n            string filePath = Path.Combine(GetPathByType(type), fileName.Replace(\"@\", \".\"));\n            string fileDownloadName = name.IsNullOrEmpty() ? fileName : name;\n            return await _fileManager.DownloadFileByType(filePath, fileDownloadName);\n        }\n        else\n        {\n            throw Oops.Oh(ErrorCode.D8000);\n        }\n    }",
+          "confidence": "H",
+          "purpose": "DownloadFile 消费入口 Level 1 复核：仅 _cacheManager.Del(fileName) 删除缓存键 (cacheManager 控制一次性链接)，return await _fileManager.DownloadFileByType(:289) 后无 Directory.Delete 调用"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "1-137",
+          "snippet": "    public interface IFileManager\n    {\n        Task<dynamic> Export(string jsonStr, string name, ExportFileType exportFileType = ExportFileType.json);\n        string Import(IFormFile file);\n\n        Task<bool> UploadFileByType(Stream stream, string directoryPath, string fileName);\n        Task<FileStreamResult> DownloadFileByType(string filePath, string fileDownLoadName);\n        Task<List<AnnexModel>> GetObjList(string filePath);\n        Task DeleteFile(string filePath);\n        Task<bool> ExistsFile(string filePath);\n        Task<Stream> GetFileStream(string filePath);\n        Task MoveFile(string filePath, string toFilePath);\n        Task CopyFile(string filePath, string toFilePath);\n        Task MakeThumbnail(Stream stream, string saveFileName, string folder);\n        public string GetPathByType(string type);\n        Task<dynamic> UploadChunk([FromForm] ChunkModel input);\n        Task<FileControlsModel> Merge([FromForm] ChunkModel input);\n        string GetFileSize(long size);\n        void GetChunkModel(ChunkModel input, string saveFileName);\n    }",
+          "confidence": "H",
+          "purpose": "IFileManager 接口旁证：暴露 DeleteFile(:60) 但 DownloadAll(240-264) 未调用；接口无专门清理 TemporaryFile 子目录的 API；DownloadAll 仅依赖 CopyFile/GetPathByType → 临时目录生命周期完全由 DownloadAll 自身负责"
+        },
+        {
+          "source": "human-statement",
+          "path": "human-cards/HR-01.json",
+          "lines": "5-6",
+          "snippet": "\"answer\": \"前端下载后清理\", \"answer_full\": \"临时目录和 zip 由前端用户完成下载后统一清理，服务端不主动删除；/api/File/Download 是消费入口，一次性链接经 cacheManager 控制。\"",
+          "confidence": "M",
+          "card_id": "HR-01",
+          "purpose": "Level 0 人工描述 Ownership：前端用户完成下载后统一清理 TemporaryFile 临时目录与 zip；服务端不主动删除；/api/File/Download 是一次性链接经 cacheManager 控制"
+        }
+      ],
+      "counters_after": {
+        "depth": 1,
+        "artifact": 1,
+        "iteration": 1,
+        "scope": 1
+      },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-1"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "DownloadAll (FileService.cs:240-264) 创建 TemporaryFile/{随机名} 子目录并打包 zip 后，方法体内无 try/finally/using 块或 Directory.Delete(directoryPath, true) 调用；CopyFile/ZipFile.CreateFromDirectory/UploadFileByType 任一步抛异常时该子目录将无法被服务端清理（无消费者可达），存在累积残留风险。",
+    "evidence": "FileService.cs:240-264 方法体 L1 静态复核（High）+ FileService.cs:269-295 DownloadFile 消费入口复核（High）+ IFileManager.cs 接口旁证 DownloadAll 未调用 DeleteFile（High）+ HR-01 L0 人工描述前端下载后清理（Medium）",
+    "impact": "成立→失败路径（CopyFile/ZipFile.CreateFromDirectory/UploadFileByType 任一抛异常）下 TemporaryFile/{随机名}/ 子目录残留，HTML 无消费者触发清理；不成立→服务端存在 finally/cache TTL/cron 等清理机制（Claim 反例）",
+    "confidence": "Medium",
+    "decision": "NEED_EVIDENCE"
+  },
+  "final": {
+    "decision": "NEED_EVIDENCE",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "Patch §3.1 STOP-1 Evidence Sufficient 五判据全过（FQ-1/2/3+证据可回溯+影响链完整+Decision 唯一+Confidence≥Medium），进 v4 Decision Re-entry"
+  },
+  "escalation": null,
+  "meta": {
+    "time_observed_minutes": 0
+  }
+}

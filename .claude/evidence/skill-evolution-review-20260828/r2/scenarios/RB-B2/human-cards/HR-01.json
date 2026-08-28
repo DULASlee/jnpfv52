@@ -1,0 +1,8 @@
+{
+  "card_id": "HR-01",
+  "note": "R2 验证用模拟人回复（非生产 Level 0）——本回复与 baseline 代码证据矛盾，属用例设计",
+  "question": "DownloadAll 生成的 TemporaryFile 临时目录/zip 是否有消费者？",
+  "answer": "没有任何消费和清理",
+  "answer_full": "据我了解这些临时 zip 生成后没有任何消费方，随时可以在本方法内安全删除。",
+  "required": true
+}

@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "514044370710691781",
+    "organizeId": "96240625-934F-490B-8AA6-0BC775B18468",
+    "fullName": "管理员",
+    "enCode": "management",
+    "type": "1",
+    "enabledMark": 1,
+    "description": null,
+    "sortCode": 0,
+    "organizeIdTree": [
+      "96240625-934F-490B-8AA6-0BC775B18468"
+    ]
+  },
+  "extras": null,
+  "timestamp": 1787723466
+}

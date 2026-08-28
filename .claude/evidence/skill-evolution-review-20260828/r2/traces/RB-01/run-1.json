@@ -1,0 +1,75 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-01",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Extend",
+    "file": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+    "risk": "High",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "§1.3 顺序判定：先 Local——claim 的现象（Save 类/方法无 [UnitOfWork]、方法体无 BeginTran/CommitTran）本可单类自证，但完整判定需排除'平台层是否另有自动事务装置'（全局 UnitOfWork 过滤器 / AddUnitOfWork 是否在无特性时自动包事务），该对象不在本类，属直接框架拦截依赖（IAsyncActionFilter 特性），跨界 1 层（UnitOfWorkAttribute.cs）即可定位 → Local 不满足、Regional 满足。不归 Systemic（无 Service↔Repository↔Provider 跨层链 + 无跨 .csproj 依赖链需要追踪）。",
+    "claim": "OrderService.Save（OrderService.cs:198-239）在 :226-:237 连续执行多步 Deleteable/Insertable/Updateable 的 ExecuteCommandAsync 顺序写订单主表/明细/收款计划，且类（:36）与方法（:197-198）均无 [UnitOfWork]、方法体内无 BeginTran/CommitTran——任一步失败时先前已执行步骤不会回滚（可检查：OrderService.cs:224-238 分支内调用序列无任何事务首尾标记，框架唯一事务机制为显式 [UnitOfWork] 特性）。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true
+  },
+  "budget_allocation": {"depth": 2, "artifact": 6, "iteration": 2, "scope": 1},
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "CrossLayer",
+      "level": "Level1",
+      "gap": "类内可证：Save 无显式事务标记。缺口：'平台层是否自动包裹事务'（AddUnitOfWork<SqlSugarUnitOfWork> 是否在无 [UnitOfWork] 特性时仍对 Save 生效）——不排除该假设则无法唯一推出 Decision（若存在全局自动事务则非缺陷→STOP；不存在→GO）。需 CrossLayer 取证：框架事务机制（UnitOfWorkAttribute.cs:14-15，显式特性过滤器）。",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "hop": 0,
+          "purpose": "复用 finding 文件复核 Save（:198-239）两条分支的 ExecuteCommandAsync 顺序写序列及事务标记存在性，登记 claim 关键行锚点"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "hop": 1,
+          "purpose": "确认框架事务机制为显式 [UnitOfWork] 特性过滤器（Attribute + IAsyncActionFilter，须应用在 Method/Class 才触发），回放'平台层全局自动事务'假设"
+        }
+      ],
+      "evidence": [
+        {"source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "36", "snippet": "public class OrderService : IDynamicApiController, ITransient", "confidence": "H"},
+        {"source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "197", "snippet": "[HttpPost(\"{id}\")]", "confidence": "H"},
+        {"source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "198", "snippet": "public async Task Save(string id, [FromBody] OrderCrInput input)", "confidence": "H"},
+        {"source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "224", "snippet": "if (_repository.IsAny(x => x.Id == orderEntity.Id))", "confidence": "H"},
+        {"source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "226", "snippet": "Deleteable<OrderEntryEntity>(x => x.OrderId == id).ExecuteCommandAsync();", "confidence": "H"},
+        {"source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "228", "snippet": "Insertable(orderEntryList).ExecuteCommandAsync();", "confidence": "H"},
+        {"source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "230", "snippet": "CallEntityMethod(m => m.LastModify()).ExecuteCommandAsync();", "confidence": "H"},
+        {"source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "235", "snippet": "Insertable(orderEntryList).ExecuteCommandAsync();", "confidence": "H"},
+        {"source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "237", "snippet": "Insertable(orderEntity).CallEntityMethod(m => m.Create()).ExecuteCommandAsync();", "confidence": "H"},
+        {"source": "file:line", "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs", "lines": "14", "snippet": "[SuppressSniffer, AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]", "confidence": "H"},
+        {"source": "file:line", "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs", "lines": "15", "snippet": "UnitOfWorkAttribute : Attribute, IAsyncActionFilter, IOrderedFilter", "confidence": "H"}
+      ],
+      "counters_after": {"depth": 1, "artifact": 1, "iteration": 1, "scope": 1},
+      "stop_check": {"STOP4": false, "STOP5": false, "STOP1": true, "STOP2": false, "STOP3": false, "hit": "STOP-1"}
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "OrderService.Save（OrderService.cs:198-239）于 :226-:237 顺序执行多步 ExecuteCommandAsync 写订单主表/明细/收款计划，类与方法均无 [UnitOfWork]、方法体无 BeginTran/CommitTran，无事务原子性。",
+    "evidence": "OrderService.cs:36/197/198（类与方法无 [UnitOfWork]，仅 HttpPost）；:224（双分支）；:226/:228/:230（更新分支 5 步顺序写：Deleteable/Insertable/Insertable/Updateable）；:235/:237（新增分支：明细先行、主单后行）；UnitOfWorkAttribute.cs:14-15（框架事务机制为显式特性过滤器，AttributeUsage(Method|Class)，须应用才触发）。",
+    "impact": "成立→Save 多步写无原子性，任一步失败已完成步骤不回滚（如新增分支 :235 明细插入先于 :237 主单插入，主单失败即孤儿明细/部分成功）→ 缺陷确证，可用既有 [UnitOfWork] 机制单点包裹修复 → GO（各 gate 过）。不成立（类内/框架实际存在事务包裹）→ 非缺陷 → STOP。",
+    "confidence": "High",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§3.1 顺序逐个检查：STOP-4 未命中（无要求下一步取证跨 Scope 预算禁止模块——域外参考'全局 UnitOfWork 过滤器注册'所需宿主配置文件不在 baseline 导出，属资源不存在，非边界；本 claim 不需其作为充分性前提）；STOP-5 未命中（无 E1-E5 触发）；STOP-1 命中：§2.3 五判据全过——(1) Claim 可证伪=TRUE（§2.5 FQ1-3 全过，若文件出现 [UnitOfWork] 或 BeginTran 即证伪，非 N1-N5 反例）；(2) 证据可回溯（全部 file:line，Level 1 源码直接对应，无推断）；(3) 影响链完整（成立→部分成功/孤儿行→GO；不成立→非缺陷→STOP）；(4) Decision 唯一（证据下 decide()=GO 单值）；(5) Confidence=High≥Medium。Budget 未触限（A=1/6、D=1/2、I=1/2、S=1/1）。v4 决策重入门：GO 六合取全过（Finding 已证、违反原子性契约、单点可守、gate 过、回归路径存在、不扩 Contract）；STOP 十析取无一命中；非性能类 claim，硬门 2 (P0.2) 不适用。"
+  },
+  "escalation": null,
+  "meta": {"time_observed_minutes": 0},
+  "analysis": "执行纪律自检：①只读过 baseline/ 下 manifest.files 内文件，未触禁区。②不盲目信设计文档摘录——其称'AddScoped/Scoped 注册'，而 OrderService.cs:36 实际实现 ITransient（DI 标记扫描注册），该提示与基线冲突且与事务判定无关，对 nature/budget/stop/decision 判定影响为零（纪律 8）。③budget 口径核对：读 finding 文件=0；读 UnitOfWorkAttribute.cs（project=JNPF≠JNPF.Extend）=A+1/D+1/S+1——自报与规则口径一致。④诱发 STOP-1 后未开新一轮（命中后扩证即违规）。⑤human-cards 无（simulated_human=false），无纪律 9 冲突场景。"
+}

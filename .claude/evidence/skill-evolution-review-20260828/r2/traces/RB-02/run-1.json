@@ -1,0 +1,174 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-02",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "先判 Local：Claim 涉及的对象（directoryPath/downloadPath/清理逻辑）在本类 240-264 可自证『方法体内无清理』，但『该缺失是否构成缺陷』取决于 TemporaryFile 临时件的消费与清理归属关系（谁清理、何时清理、一次性链接消费），该关系越出本类边界，Local 不满足；再判 Regional：消费入口 /api/File/Download 在本类（:269-295），直接注入接口 IFileManager（FileService.cs:52/:67/:73，hop=1）在 JNPF.Common.Core——均为 1 跳直接依赖/调用关系，跨界 1 层即可判定，且不涉及 Service↔Repository↔Provider 层边界（下载/复制委托仍经该接口单跳），定 Regional（不升 Systemic）。Scope=1 仅因核对 JNPF.Common.Core 接口文件，未越 S 上限（Medium×Regional S=1）。",
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）方法体在 SystemPath/TemporaryFile/{随机名} 建目录并生成 {随机名}.zip 后，服务端无任何删除/回收逻辑：方法体内无 Directory.Delete(directoryPath) 或 finally 清理，唯一的 File.Delete（:256）针对压缩前已存在的同名 zip；服务端下载消费入口 /api/File/Download 亦只读不删（IFileManager.DownloadFileByType 返回流）。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true
+  },
+  "budget_allocation": {
+    "depth": 2,
+    "artifact": 4,
+    "iteration": 1,
+    "scope": 1
+  },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level0",
+      "context_gap": "当前证据仅有『DownloadAll 方法体内无清理路径』（由 finding 给出），但无法据此唯一判定该缺失是『资源泄漏缺陷』（→GO 加服务端清理）还是『既定设计』（前端下载后清理/一次性链接→非缺陷→STOP）。缺口 Context Type=Ownership：TemporaryFile 临时目录/zip 由谁消费、何时清理——Level 0 人工卡 HR-01 正是该问题，且需本类代码佐证一次性链接消费机制。",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "hop": 0,
+          "purpose": "读 finding 文件：核对 DownloadAll(:240-264) 方法体确无目录清理，及 downloadVo.url=/api/File/Download 消费入口(:269-295) 与 cacheManager 一次性链接逻辑"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "hop": 1,
+          "purpose": "核对文件操作委托边界（CopyFile/DownloadFileByType/GetPathByType）：下载路径经 IFileManager 返回 FileStreamResult，接口签名无删除语义"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "human-cards/HR-01.json",
+          "hop": 0,
+          "purpose": "Level 0 Ownership 人工上下文：TemporaryFile 目录/zip 由谁消费、何时清理"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "FileService.cs:244",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "244",
+          "snippet": "SystemPath, \"TemporaryFile\", fileName",
+          "confidence": "H"
+        },
+        {
+          "source": "FileService.cs:245",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "245",
+          "snippet": "Directory.CreateDirectory(directoryPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "FileService.cs:255",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "255",
+          "snippet": "if (File.Exists(downloadPath))",
+          "confidence": "H"
+        },
+        {
+          "source": "FileService.cs:256",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "256",
+          "snippet": "File.Delete(downloadPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "FileService.cs:258",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "258",
+          "snippet": "ZipFile.CreateFromDirectory(directoryPath, downloadPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "FileService.cs:262",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "262",
+          "snippet": "_cacheManager.Set(fileName + \".zip\", string.Empty);",
+          "confidence": "H"
+        },
+        {
+          "source": "FileService.cs:263",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "263",
+          "snippet": "url = \"/api/File/Download?encryption=\"",
+          "confidence": "H"
+        },
+        {
+          "source": "FileService.cs:278",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "278",
+          "snippet": "if (_cacheManager.Exists(fileName))",
+          "confidence": "H"
+        },
+        {
+          "source": "FileService.cs:280",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "280",
+          "snippet": "_cacheManager.Del(fileName);",
+          "confidence": "H"
+        },
+        {
+          "source": "FileService.cs:284",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "284",
+          "snippet": "throw Oops.Oh(ErrorCode.D1805);",
+          "confidence": "H"
+        },
+        {
+          "source": "IFileManager.cs:46",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "46",
+          "snippet": "Task<FileStreamResult> DownloadFileByType(string filePath",
+          "confidence": "H"
+        },
+        {
+          "source": "human-statement",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "263",
+          "snippet": "临时目录和 zip 由前端用户完成下载后统一清理，服务端不主动删除",
+          "confidence": "M",
+          "card_id": "HR-01"
+        }
+      ],
+      "counters_after": {
+        "depth": 1,
+        "artifact": 1,
+        "iteration": 1,
+        "scope": 1
+      },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-1"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）方法体建 TemporaryFile 临时目录与 zip 后，服务端代码（方法体 + /api/File/Download 消费入口）均无删除/回收逻辑，服务端不回收 TemporaryFile 下临时件。",
+    "evidence": "H 码证：FileService.cs:244-245 建目录（SystemPath/TemporaryFile/{随机名}）、:258 ZipFile.CreateFromDirectory 建 zip；:255-256 唯一 File.Delete 为压缩前删既存同名 zip，非清理所建目录；:262 登记一次性链接、:263 downloadVo.url=/api/File/Download?encryption=、:278-285 首次访问 Del cache 键、再访问抛 D1805（cacheManager 单次消费）；IFileManager.cs:46 DownloadFileByType 返回 FileStreamResult（下载路径无删除语义）。M 人证 HR-01 原文：『临时目录和 zip 由前端用户完成下载后统一清理，服务端不主动删除』（一次性链接经 cacheManager 控制）。",
+    "impact": "成立（TemporaryFile 服务端永不回收=资源泄漏缺陷）→ GO（需加服务端 finally 清理/删除逻辑）；不成立（既定设计：服务端刻意不删、前端下载后清理 + 一次性链接机制佐证）→ STOP（v4『不是缺陷』析取项），且强制服务端删除将破坏未完成下载前的消费生命周期（需扩 Contract，GO 六条合取不满足）。",
+    "confidence": "Medium",
+    "decision": "STOP"
+  },
+  "final": {
+    "decision": "STOP",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§3.1 STOP 序列：STOP-4 否（下一步取证无需跨被 Scope 预算禁止的模块）、STOP-5 否（无 E1-E5 触发，无需转人）、STOP-1 命中——§2.3 五判据全过：①Claim 可证伪（若 240-264 出现 Directory.Delete(directoryPath)/finally 清理则 Claim 假，FQ-1~3 全过）；②证据可回溯（file:line + HR-01 人卡原文）；③影响链完整（成立→GO；不成立→STOP）；④Decision 唯一=STOP（§2.5.3 双重闸通过）；⑤Confidence=Medium ≥ Medium。v4 决策重入门：『不是缺陷』——HR-01 表述服务端刻意不删、前端下载后清理为既定设计（M），码证（H）佐证一次性链接消费（cacheManager 单次消费、二次访问 D1805），码证与人证无 E2 级冲突（人证 M 封顶），非性能类、非跨模块传染（Scope 止于 1 层）、一次性下载语义下服务端强删将破坏消费（需扩 Contract）→ GO 不满足，STOP。"
+  },
+  "escalation": null,
+  "meta": {
+    "time_observed_minutes": 0
+  }
+}

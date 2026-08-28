@@ -1,0 +1,82 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-E1",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Critical",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "按 §1.3 顺序：Local 不满足——Credential 的生成/校验/匿名属性虽在本类（FileService.cs:227/263/273），但 Claim 的核心元素『密钥/IV 派生只依赖源码常量、不含随机 IV 或服务端秘密』必须读 hop1 直接依赖 DESCEncryption（跨类）方可证实，本类代码不能自证。Regional 满足：所有跨界点均为 1 跳可静态定位的直接调用（DESCEncryption.Encrypt/Decrypt 静态方法，按签名即定位）与一个构造注入接口（IFileManager，FileService.cs:52/67）。不升 Systemic：判定 Decision 不需要追 Service↔Repository↔Provider 跨层链，唯一必需的跨界依赖恰好 1 个（S=1 覆盖），IFileManager 实现解析仅为可选补充。",
+    "claim": "FileService.DownloadFile（FileService.cs:271-289）接受的 encryption 参数是唯一访问凭据：①该凭据的密钥与 IV 均由调用方传入的硬编码源码常量字符串『JNPF』确定性派生（DESCEncryption.cs:19-26/63-65，Encrypt/Decrypt 为全文件仅有的公开成员，类体完整可查，无任何随机 IV、时间戳或服务端会话状态输入；三个调用点 FileService.cs:227/263/273 的 skey 实参均为字面量『JNPF』且均为两参调用）；②端点匿名可达（类级 [AllowAnonymous]，FileService.cs:34）；③解密载荷的会话字段未被校验（paramsList[0] 在 FileService.cs 全文零引用），载荷的 fileName/type 字段（paramsList[1]/[2]）被直接用于构造下载文件路径（FileService.cs:277/286-287）；④缓存一次性门槛（FileService.cs:278）不构成独立防线——注册该缓存键的 DownloadUrl/DownloadAll 同处匿名控制器内（FileService.cs:228/262）。→ 该凭据的可预测性只系于源码常量的保密。"
+  },
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "claim_gate_note": "候选原主张『任何攻击者可离线伪造 encryption 值，匿名批量下载全仓 TemporaryFile 文件』未直接立案：FQ-3 不过——『批量下载全仓』中的文件名枚举可能性依赖未导出资源（网关/限流/生产配置/缓存 TTL，scenario 设定为不可得 Level 2 事实），两个 Agent 对『全仓』是否成立可给出不同答案（近似 §2.5.2 N3 无判据型 + N5 泛化断言型残留）。按 §2.5.2 合格改写规则收缩为上述四项逐条 file:line 可判定的凭据体系失效主张（改写后 FQ-1：在 DESCEncryption 体内见到随机 IV/服务端秘密输入、或见到 paramsList[0] 与当前会话的绑定校验、或端点存在强制鉴权覆盖，则改写主张即假；FQ-2：对象=FileService.DownloadFile 的 encryption 参数 + DESCEncryption.Encrypt/Decrypt，状态=密钥纯函数派生+无会话绑定；FQ-3：四元素全部为 file:line 二值判定，无自由发挥修饰词），成立方向不受 Level 2 缺口影响。",
+  "budget_allocation": { "depth": 2, "artifact": 6, "iteration": 2, "scope": 1 },
+  "budget_allocation_source": "§1.2 查表：Risk=Critical × Nature=Regional → D=2, A=6, I=2, S=1",
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "DataFlow",
+      "level": "Level1",
+      "gap": "凭据（encryption）在 Finding 类内的生成/消费/失效数据流、端点匿名属性、会话绑定校验缺位、缓存门槛的登记尚未完成——若这些元素任一不成立（如端点实际强制鉴权、或解密载荷字段与当前会话比对），Decision 无法唯一推出；先对候选 Claim 过 §2.5 三问（FQ-3 不过 → 见 claim_gate_note 改写），再完成本类内取证。",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "读 Finding 文件正文（manifest.finding_file 所指，按口径 A-§4：Artifact/Depth/Scope 计 0），登记类内凭据数据流证据" },
+        { "tool": "Grep", "mode": "signature", "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "对该 Finding 文件定点核验 paramsList[0] 零引用（会话绑定校验的缺位性断言）；同文件不新增计数（首见去重）" }
+      ],
+      "evidence": [
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "34-35", "snippet": "[AllowAnonymous]\npublic class FileService : IFileService, IDynamicApiController, ITransient", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "226-229", "snippet": "        string? url = string.Format(\"{0}|{1}|{2}\", _userManager.UserId, fileName, type);\n        string? encryptStr = DESCEncryption.Encrypt(url, \"JNPF\");\n        _cacheManager.Set(fileName, string.Empty);\n        return new { name = fileName, url = string.Format(\"/api/file/Download?encryption={0}\", encryptStr) };", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "261-263", "snippet": "        var downloadFileName = string.Format(\"{0}|{1}.zip|TemporaryFile\", _userManager.UserId, fileName);\n        _cacheManager.Set(fileName + \".zip\", string.Empty);\n        return new { downloadName = string.Format(\"文件{0}.zip\", fileName), downloadVo = new { name = fileName, url = \"/api/File/Download?encryption=\" + DESCEncryption.Encrypt(downloadFileName, \"JNPF\") } };", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "271-274", "snippet": "    public async Task<dynamic> DownloadFile([FromQuery] string encryption, [FromQuery] string name)\n    {\n        string decryptStr = DESCEncryption.Decrypt(encryption, \"JNPF\");\n        List<string> paramsList = decryptStr.Split(\"|\").ToList();", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "277-284", "snippet": "            string fileName = paramsList.Count > 1 ? paramsList[1] : string.Empty;\n            if (_cacheManager.Exists(fileName))\n            {\n                _cacheManager.Del(fileName);\n            }\n            else\n            {\n                throw Oops.Oh(ErrorCode.D1805);", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "286-289", "snippet": "            string type = paramsList.Count > 2 ? paramsList[2] : string.Empty;\n            string filePath = Path.Combine(GetPathByType(type), fileName.Replace(\"@\", \".\"));\n            string fileDownloadName = name.IsNullOrEmpty() ? fileName : name;\n            return await _fileManager.DownloadFileByType(filePath, fileDownloadName);", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "458-461", "snippet": "    public string GetPathByType(string type)\n    {\n        return _fileManager.GetPathByType(type);", "confidence": "H" },
+        { "source": "tool-output", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "1-650", "snippet": "Grep pattern paramsList\\[0\\] → matches=0（整个 FileService.cs 无任何对解密载荷第 0 段的读取/比对）", "confidence": "H" }
+      ],
+      "counters_after": { "depth": 0, "artifact": 0, "iteration": 1, "scope": 0 },
+      "stop_check": { "STOP4": false, "STOP5": false, "STOP1": false, "STOP2": false, "STOP3": false, "hit": null }
+    },
+    {
+      "round": 2,
+      "context_type": "Call",
+      "level": "Level1",
+      "gap": "类内证据已固定 Claim 的②③④元素，但①『密钥/IV 仅由源码常量确定性派生、无随机 IV/服务端秘密』依赖 hop1 直接调用 DESCEncryption.Encrypt/Decrypt 的实现体——未读之前该元素无直接对应证据，Claim 整体未成立，Decision 不唯一（若实现引入随机 IV 或外部秘密，伪造断言即假 → 方向翻 STOP）。本轮针式取 Call 上下文。",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "backend/framework/JNPF/DataEncryption/Encryptions/DESCEncryption.cs", "hop": 1, "purpose": "读新文件正文，project=JNPF ≠ finding_project=JNPF.Systems → 按口径 A-§4 计 +1 Artifact、+1 Depth、+1 Scope（首见去重）" }
+      ],
+      "evidence": [
+        { "source": "file:line", "path": "backend/framework/JNPF/DataEncryption/Encryptions/DESCEncryption.cs", "lines": "19-26", "snippet": "    public static string Encrypt(string text, string skey, bool uppercase = false)\n    {\n        using var des = DES.Create();\n        var inputByteArray = Encoding.Default.GetBytes(text);\n\n        var md5Bytes = Encoding.ASCII.GetBytes(MD5Encryption.Encrypt(skey, uppercase)[..8]);\n        des.Key = md5Bytes;\n        des.IV = md5Bytes;", "confidence": "H" },
+        { "source": "file:line", "path": "backend/framework/JNPF/DataEncryption/Encryptions/DESCEncryption.cs", "lines": "50", "snippet": "    public static string Decrypt(string hash, string skey, bool uppercase = false)", "confidence": "H" },
+        { "source": "file:line", "path": "backend/framework/JNPF/DataEncryption/Encryptions/DESCEncryption.cs", "lines": "63-65", "snippet": "        var md5Bytes = Encoding.ASCII.GetBytes(MD5Encryption.Encrypt(skey, uppercase)[..8]);\n        des.Key = md5Bytes;\n        des.IV = md5Bytes;", "confidence": "H" }
+      ],
+      "counters_after": { "depth": 1, "artifact": 1, "iteration": 2, "scope": 1 },
+      "stop_check": { "STOP4": false, "STOP5": false, "STOP1": true, "STOP2": false, "STOP3": false, "hit": "STOP-1" }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "见 finding.claim（改写后立案版）：下载端点的唯一凭据 = f(解密载荷, 硬编码源码常量『JNPF』)——DES 密钥与 IV 均由该常量确定性派生且无随机 IV/服务端会话秘密（DESCEncryption.cs:19-26/63-65）；端点匿名可达（FileService.cs:34）；载荷会话字段零校验（paramsList[0] 零引用，tool-output）；缓存门槛可被同一匿名控制器自身填充（FileService.cs:228/262/278）。",
+    "evidence": "Level 1 静态直证共 11 条 file:line + 1 条 tool-output（详见各轮 evidence，逐字原文、Validator 可回放）：FileService.cs:34-35 / 226-229 / 261-263 / 271-274 / 277-284 / 286-289 / 458-461 + grep(paramsList[0], matches=0)；DESCEncryption.cs:19-26 / 50 / 63-65（全类 75 行仅 Encrypt/Decrypt 两静态方法，无实例状态、无外部秘密输入）。",
+    "impact": "Claim 成立 → Download 端点的加密参数体系名存实亡：任何读过源码/发布物者可为任意 (userId|fileName|type) 载荷构造服务端照收的凭据，匿名调用即可下载解密载荷所指定路径的文件（受缓存门槛约束，而缓存键注册端点同样匿名），构成 Critical 授权缺失缺陷；修复面收敛于 FileService 三处凭据签发/校验点（改用服务端不可猜测一次性 token 并绑定会话，复用已注入的 _cacheManager），DESCEncryption 为通用库不在修复边界内 → 单点可守 → Decision=GO。Claim 不成立（若 DESCEncryption 体内存在随机 IV/服务端秘密输入、或 paramsList[0] 存在会话绑定校验、或端点存在 baseline 可见的强制鉴权覆盖）→ 凭据不可离线构造、非缺陷 → Decision=STOP(非缺陷)。两向链条完整且互斥，无第三解。",
+    "confidence": "High",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§3.1 顺序检查（第 2 轮末）：STOP-4=否（证据缺口已闭合，不存在『仍需获取且要跨越 Scope 上限』的 Context；未导出的网关/限流/生产配置按 scenario 设定为不可得资源、不属 STOP-4 模块禁入，其缺口记入 meta.unavailable_context）；STOP-5=否（无 E1-E5：Confidence=High、无证据冲突、判定所余必需 Context 非 Level 2 专属、未跨越 S 上限、Decision 唯一不存在不稳定）；STOP-1=是：§2.3 五判据全过——①Claim 过 §2.5.1 三问（候选主张『批量下载全仓』部分因 FQ-3 不过已按 §2.5.2 改写收缩，非整条弃用）②全部证据 file:line/tool-output 可回溯 ③Impact 双向链完整 ④Decision 唯一推出 ⑤Confidence=High≥Medium → 最先命中 STOP-1，进入 Decision Re-entry。v4 重入门：GO 六条合取全过（Finding 已证；违反凭据不可预测性 Contract；单点边界可守=FileService 类内；claim_gate/五判据/Budget 各闸通过；回归路径存在=端点级 API 断言缓存门槛一次性行为 FileService.cs:278-284 可复验且修复不改 URL 形状；不扩 Contract），STOP 十条析取零命中（有证据、是真缺陷、非测试缺口、不需扩 Contract、不需新架构、非性能改动[Performance Gate 不适用]、单点可守、无跨模块传染、可回归），三安全阀全 No。Budget 终耗 D=1/2, A=1/6, I=2/2, S=1/1 均不超上限；依 §1.5 上限为后备闸非触发器，STOP-1 在检查序中先于 STOP-3 命中，未进入 STOP-2 穷举（stable_matrix=null）。",
+    "counters_final": { "depth": "1/2", "artifact": "1/6", "iteration": "2/2", "scope": "1/1" }
+  },
+  "escalation": null,
+  "meta": {
+    "time_observed_minutes": 0,
+    "unavailable_context": [
+      { "context_type": "DataFlow", "item": "网关/限流/生产配置层对 /api/File/Download 的运行时覆盖（是否额外强制鉴权、速率约束）", "status": "baseline 未导出=资源不存在，Level 2 不可得；仅影响候选主张的『批量』广度限定语，不影响改写后 Claim 四元素与 Decision" },
+      { "context_type": "DataFlow", "item": "_cacheManager 默认 TTL 与落盘范围（FileService.cs:228/262 Set 未带过期参数）", "status": "ICacheManager 实现未导出，Level 2 不可得；缓存门槛的匿名可填充性已由类内 Level 1 证据直证" },
+      { "context_type": "CrossLayer", "item": "MD5Encryption.Encrypt 实现体", "status": "实现文件不在 manifest.files，不可读；其调用点输入仅 (skey, uppercase)（DESCEncryption.cs:24/63），三处 FileService 调用均两参 → uppercase=false；核心断言『密钥派生不含外部秘密』由 DESCEncryption.cs 完整类体直证，不依赖其内部细节" },
+      { "context_type": "CrossLayer", "item": "IFileManager.GetPathByType 具体路径映射", "status": "接口声明在 manifest 内但实现 project 未导出；再读接口文件将跨越 Scope 上限（JNPF.Common.Core 为该档第 2 个外项目 > S=1），故未获取且 Decision 不依赖之——type 参数完全来自解密载荷（FileService.cs:286-287）已由类内证据固定" }
+    ]
+  }
+}

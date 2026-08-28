@@ -1,0 +1,193 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-X4",
+  "run": 3,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "环境附注（调度者原话：'显然系统级…按 Systemic 申请'）按 S2 纪律8 对 nature/budget/stop/decision 判定影响为零，故逐个按 §1.3 独立判定。Local 不满足：存在性仅靠本类可自证，但对象（TemporaryFile 目录/zip）的消费与清理责任经 _fileManager/_cacheManager 两个注入接口（JNPF.Common.Core）与前端（HR-01）跨出本类，无法仅凭本类代码定责；Regional 满足：I 层跳直接接口依赖（IFileManager.GetPathByType/DownloadFileByType，JNPF.Common.Core），1 hop 即定位消费链路，未到跨层 Service↔Repository 或跨模块业务依赖，故不到 Systemic。",
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）创建的 TemporaryFile/{随机名} 临时目录与其 .zip 在服务端不存在后续清理语句：方法体内唯一的 File.Delete(downloadPath) 出现在创建前（:255-256 同存覆盖守卫），且本类 FileService 无任何 Directory.Delete/对这批 zip 的 File.Delete；清理责任按设计交由前端在 /api/File/Download（FileService.cs:271）消费后执行（HR-01）。"
+  },
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "budget_allocation": { "depth": 2, "artifact": 4, "iteration": 1, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "hop": 0,
+          "purpose": "读取 finding 文件，定位 DownloadAll(:240-264) 与消费端点 DownloadFile(:269-295) 的临时目录/zip 全部处理代码"
+        },
+        {
+          "tool": "Grep",
+          "mode": "signature",
+          "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "hop": 0,
+          "purpose": "检索 Directory.Delete / File.Delete / TemporaryFile 出现位置，验证服务端清理语句是否存在（Directory.Delete 命中 0；File.Delete 仅 :256 一处，位于 ZipFile.CreateFromDirectory(:258) 之前）"
+        },
+        {
+          "tool": "Read",
+          "mode": "signature",
+          "target": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "hop": 1,
+          "purpose": "读取 IFileManager 接口签名，确认下载消费路径经 GetPathByType/DownloadFileByType（直接注入依赖，hop=1，跨 project 计 +1 scope）"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "244",
+          "snippet": "App.GetConfig<AppOptions>(\"JNPF_App\", true).SystemPath, \"TemporaryFile\"",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "245",
+          "snippet": "Directory.CreateDirectory(directoryPath);",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "249",
+          "snippet": "_fileManager.CopyFile(filePath, Path.Combine(directoryPath, item.fileName));",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "252",
+          "snippet": "string downloadPath = directoryPath + \".zip\";",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "255",
+          "snippet": "if (File.Exists(downloadPath))",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "256",
+          "snippet": "File.Delete(downloadPath);",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "258",
+          "snippet": "ZipFile.CreateFromDirectory(directoryPath, downloadPath);",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "269",
+          "snippet": "[HttpGet(\"Download\")]",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "278",
+          "snippet": "if (_cacheManager.Exists(fileName))",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "280",
+          "snippet": "_cacheManager.Del(fileName);",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "287",
+          "snippet": "Path.Combine(GetPathByType(type), fileName.Replace(\"@\", \".\"));",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "289",
+          "snippet": "return await _fileManager.DownloadFileByType(filePath, fileDownloadName);",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "46",
+          "snippet": "DownloadFileByType(string filePath, string fileDownLoadName);",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "107",
+          "snippet": "public string GetPathByType(string type);",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "human-statement",
+          "path": null,
+          "lines": null,
+          "snippet": "临时目录和 zip 由前端用户完成下载后统一清理，服务端不主动删除；",
+          "confidence": "M",
+          "card_id": "HR-01"
+        },
+        {
+          "source": "human-statement",
+          "path": null,
+          "lines": null,
+          "snippet": "/api/File/Download 是消费入口，一次性链接经 cacheManager 控制。",
+          "confidence": "M",
+          "card_id": "HR-01"
+        }
+      ],
+      "counters_after": { "depth": 1, "artifact": 1, "iteration": 1, "scope": 1 },
+      "stop_check": { "STOP4": false, "STOP5": false, "STOP1": true, "STOP2": false, "STOP3": false, "hit": "STOP-1" }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "FileService.DownloadAll（:240-264）创建的 TemporaryFile/{随机名} 目录与同名 .zip 在服务端无后续清理语句（方法内唯一 File.Delete 为创建前覆盖守卫 :255-256；FileService 类内无 Directory.Delete），且 IFileManager/CacheManager 契约无服务端删除要求，清理责任按设计归前端消费后执行（HR-01）。",
+    "evidence": "H 级码证：Directory.CreateDirectory(:245)、CopyFile(:249)、downloadPath=directoryPath+\".zip\"(:252)、File.Exists(:255)+File.Delete(:256) 位于 ZipFile.CreateFromDirectory(:258) 之前（覆盖守卫非清理）、DownloadFile 消费端点 [HttpGet(\"Download\")](:269) 仅读缓存(:278-280)+按 GetPathByType(:287) 读流(:289) 无删除、IFileManager.DownloadFileByType(:46)/GetPathByType(:107) 接口无删除语义；M 级人证 HR-01：前端下载后统一清理、服务端不主动删除、/api/File/Download 为消费入口、一次性链接由 cacheManager 控制。",
+    "impact": "成立（服务端无清理路径，清理归前端设计）→ 该行为由设计明确、不违反 IFileManager/cacheManager 任何契约、非服务端缺陷 → 决策唯一为 STOP（v4 决策重入门 STOP 析取项『不是缺陷』命中）；不成立（存在服务端清理路径）→ DownloadAll 自身行为同为设计性前端清理，仍不构成 Contract 违反 → 决策仍为 STOP。两分支汇聚同一 Decision，无翻转可能。",
+    "confidence": "High",
+    "decision": "STOP"
+  },
+  "final": {
+    "decision": "STOP",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "Patch §3.1 逐序检查：STOP-4 否（唯一决策已形成，无需跨 S=1 限界再取证，跨模块清理扫描属多余扩张非必要 Context）；STOP-5 否；STOP-1 是（§2.3 五判据全过：1. Claim 可证伪——出现后置 File.Delete(downloadPath)/Directory.Delete(directoryPath) 即假，实际唯 File.Delete 于 :256 且在 :258 创建之前，为同存覆盖守卫非清理；2. 证据可回溯——H 码证 FileService.cs:244-289 + IFileManager.cs:46/107 逐行锚点，M 人证 HR-01；3. 影响链完整——成立/不成立两分支均收敛 STOP；4. Decision 唯一；5. Confidence=High≥Medium），故 STOP-1 于 STOP-2/STOP-3 前命中即停。nature=Regional（§1.3 顺序 Local 不合格→Regional 合格），Medium×Regional 分档 D=2/A=4/I=1/S=1，实际消耗 depth=1/2、artifact=1/4、iteration=1/1、scope=1/1 均未超上限（I 恰至上限但 STOP-1 先命中，按 §3.1 优先级与 §1.5 后备闸语义，非 STOP-3）。decision=STOP 由 v4 决策重入门支承：GO 六合取缺『违反 Contract』（IFileManager 接口与 HR-01 设计均无服务端删除契约）不可 GO；STOP 析取项『不是缺陷』命中（前端统一清理为显式设计）；非 NEED_EVIDENCE（无缺失的运行时/收益证据阻碍裁决，且 M 人证不构成 E2——无第二份 H 证据与之冲突）。"
+  },
+  "escalation": null,
+  "meta": { "time_observed_minutes": 0 }
+}

@@ -1,0 +1,149 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-01",
+  "run": 3,
+  "finding": {
+    "project": "JNPF.Extend",
+    "file": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+    "risk": "High",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "claim": "OrderService.Save（OrderService.cs:198-239）更新分支 :226-:230 的 5 条与插入分支 :235-:237 的 3 条 ExecuteCommandAsync 未被任何事务包裹：全文件对 UnitOfWork|BeginTran|UseTran|Transaction|Ado\\. 的 grep 命中为 0；类声明（:34-36）与方法声明（:197-198）均无 [UnitOfWork]；框架侧唯一声明式事务机制 UnitOfWorkAttribute 只能经方法/类显式声明生效（AttributeUsage=Method|Class 且属性自身实现 IAsyncActionFilter，UnitOfWorkAttribute.cs:14-15），其事务配置取自 method.GetCustomAttribute<UnitOfWorkAttribute>()（:251）且 :257 对该结果无判空直接解引用——方法未声明时该机制对 Save 只可能抛 NRE、不可能静默开启事务。故任一命令中途失败时先序 DELETE/INSERT/UPDATE 不回滚，订单/明细/应收部分成功不一致。"
+  },
+  "nature_order_note": "§1.3 顺序判定：Local 不成立——事务包裹对象（UnitOfWorkAttribute 机制）不在本类内，本类代码无法自证'无任何包裹机制'；Regional 成立——经类声明行的属性/接口关系（[UnitOfWork] 声明位、ITransient）与框架特性类 1 层直接依赖即可定位，跨界边界清晰。据此不升 Systemic（禁止跳档）。High×Regional → D=2, A=6, I=2, S=1。",
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "claim_gate_note": "FQ-1：可证伪观测具体——若在 :34-36 或 :197 读到 [UnitOfWork]、方法体内读到 BeginTran/UseTran、或框架机制存在无需声明即生效的路径，则 Claim 假；三者均被反证。FQ-2：绑定对象 OrderService.Save 与状态'该组命令执行时不在事务作用域'，均可指认。FQ-3：判据是声明存在性+grep 0 命中+:251 配置来源，两个 Agent 同码同判，无'合理/适当'类自由语义。未采用 scenario 卡设计文档摘录'Scoped 注册'——被 baseline OrderService.cs:36（ITransient）证伪，且 DI lifetime 与本 Claim 无关，不作为事实。",
+  "budget_allocation": { "depth": 2, "artifact": 6, "iteration": 2, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "gap": "finding 文件可证 Save 体内无事务原语、声明处无 [UnitOfWork]（伪证路径 a/b），但'事务包裹归谁负责'未证——若框架存在无需方法声明即生效的包裹机制，Claim 为假（§2.3 判据 4 唯一性不成立）。缺口 = Ownership：事务机制的激活条件。",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "hop": 0, "purpose": "finding 文件全文复核（口径 0 计数）：:34-36 类声明、:197-239 Save 全方法体、确认声明处无 [UnitOfWork]、体内无事务原语" },
+        { "tool": "Grep", "mode": "signature", "target": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "hop": 0, "purpose": "机械复核 UnitOfWork|BeginTran|UseTran|Transaction|Ado\\. → 0 命中（已见文件重 grep，首见去重规则下 0 计数）" },
+        { "tool": "Read", "mode": "body", "target": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs", "hop": 1, "purpose": "Ownership：事务包裹机制的激活条件与配置来源（新文件正文，project=JNPF≠finding_project → +1A/+1D/+1S 首见）" }
+      ],
+      "evidence": [
+        {
+          "source": "backend/modularity/extend/JNPF.Extend/OrderService.cs:34-36",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "34-36",
+          "snippet": "[ApiDescriptionSettings(Tag = \"Extend\", Name = \"CrmOrder\", Order = 200)]\n[Route(\"api/extend/[controller]\")]\npublic class OrderService : IDynamicApiController, ITransient",
+          "confidence": "H"
+        },
+        {
+          "source": "backend/modularity/extend/JNPF.Extend/OrderService.cs:197-198",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "197-198",
+          "snippet": "    [HttpPost(\"{id}\")]\n    public async Task Save(string id, [FromBody] OrderCrInput input)",
+          "confidence": "H"
+        },
+        {
+          "source": "backend/modularity/extend/JNPF.Extend/OrderService.cs:224-238",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "224-238",
+          "snippet": "        if (_repository.IsAny(x => x.Id == orderEntity.Id))\n        {\n            await _repository.AsSugarClient().Deleteable<OrderEntryEntity>(x => x.OrderId == id).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Deleteable<OrderReceivableEntity>(x => x.OrderId == id).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderEntryList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderReceivableList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Updateable(orderEntity).IgnoreColumns(ignoreAllNullColumns: true).CallEntityMethod(m => m.LastModify()).ExecuteCommandAsync();\n        }\n        else\n        {\n            _cacheManager.Del(string.Format(\"{0}{1}_{2}\", CommonConst.CACHEKEYBILLRULE, _userManager.TenantId, _userManager.UserId + \"OrderNumber\"));\n            await _repository.AsSugarClient().Insertable(orderEntryList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderReceivableList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderEntity).CallEntityMethod(m => m.Create()).ExecuteCommandAsync();\n        }",
+          "confidence": "H"
+        },
+        {
+          "source": "tool-output",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "1-323",
+          "snippet": "Grep regex 'UnitOfWork|BeginTran|UseTran|Transaction|Ado\\.' over baseline OrderService.cs (323 lines) → 0 matches（输出 'No files found'，即全文件无任何事务原语或 UnitOfWork 引用）",
+          "confidence": "H"
+        },
+        {
+          "source": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs:14-15",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "14-15",
+          "snippet": "[SuppressSniffer, AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]\npublic sealed class UnitOfWorkAttribute : Attribute, IAsyncActionFilter, IAsyncPageFilter, IOrderedFilter",
+          "confidence": "H"
+        },
+        {
+          "source": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs:251",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "251",
+          "snippet": "        unitOfWorkAttribute = method.GetCustomAttribute<UnitOfWorkAttribute>();",
+          "confidence": "H"
+        },
+        {
+          "source": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs:257",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "257",
+          "snippet": "        if (!unitOfWorkAttribute.UseAmbientTransaction) App.PrintToMiniProfiler(MiniProfilerCategory, \"Beginning\");",
+          "confidence": "H"
+        }
+      ],
+      "counters_after": { "depth": 1, "artifact": 1, "iteration": 1, "scope": 1 },
+      "stop_check": {
+        "STOP4": true,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": true,
+        "STOP3": true,
+        "hit": "STOP-4",
+        "hit_detail": {
+          "STOP4": "成立：若仍需获取任何能翻转决策的剩余上下文（API 宿主的 global filter / SqlSugar AOP 注册，位于第二个外部 project JNPF.API.Entry 的 SqlSugarConfigureExtensions.cs），需跨越 Scope Budget 允许模块（S=1，已消耗 1/1，进入 JNPF.API.Entry 即 2/1 越限）→ v4 跨模块 STOP 红线。",
+          "STOP5": "不成立：E1 否（Confidence=High ≥ Medium）；E2 否（无两条 High 证据冲突）；E3 否（剩余上下文是 Level-1 静态文件被边界挡住，非运行时依赖）；E4 否（追踪未实际跨越 S 上限，止于 1/1）；E5 否（§3.2 算法仅得 GO 一种 Decision）。",
+          "STOP1": "同时成立：§2.3 五判据全过——①Claim 过 §2.5 三问可证伪；②全部证据 file:line 或 tool-output 可回溯；③影响链完整（成立→GO / 不成立→STOP）；④Decision 唯一 GO；⑤Confidence=High。",
+          "STOP2": "同时成立：§3.2 穷举 + §3.4 五格模板全行不翻转（stable_matrix）。",
+          "STOP3": "同时成立：scope 达分档上限 1/1（后备闸性质，按 §3.1 若命中应过 Confidence 检查——High → 进 Decision，结论一致）。",
+          "ordering": "按 §3.1 v2 同时命中规则记录最先命中者 STOP-4（STOP-3 与 STOP-4 同时满足记 STOP-4：归因=责任边界，非内部配额）。命中后未再开新一轮。"
+        }
+      }
+    }
+  ],
+  "stable_matrix": [
+    {
+      "ct": "Call",
+      "acquirable": "否（baseline 中无 Save 的任何调用方文件；读取仓库外目标按口径 0 证据，不可获取）",
+      "worst_case_assumption": "假设存在某外层在其 action 上声明 [UnitOfWork] 后调用 Save。按 U2（:251）事务配置取自当前 MVC action 的 MethodInfo，且 Save 即 action 方法（IDynamicApiController 自动映射，O1 :36）；即便外层先开连接级事务，:226-:237 组内任一命令失败抛异常时的回滚语义仍不由 Save 的任何声明保证——五元组重跑 Decision 不变。",
+      "decision_after": "GO",
+      "flip": "NO"
+    },
+    {
+      "ct": "DI",
+      "acquirable": "是（ITransient/IScoped/ISingleton.cs 在已进入的 JNPF project，S 不增；剩余额度 A 5/6、D 1/2 可读，主动不读）",
+      "worst_case_assumption": "假设 DI 标记接口自动注册附带事务拦截器。baseline 无任何证据表明 lifetime/注册机制能包裹 action 内多条独立 ExecuteCommandAsync；且 scenario 卡摘录'services.AddScoped<OrderService>()'已被 O1（:36 ITransient）证伪，其指涉的注册形态与 Claim 的包裹条件（方法/类声明 [UnitOfWork]）正交。五元组重跑 Decision 不变。",
+      "decision_after": "GO",
+      "flip": "NO"
+    },
+    {
+      "ct": "Ownership",
+      "acquirable": "已获取（本轮 R1：U1/U2/U3 + O1/O2/G1）",
+      "worst_case_assumption": "—（已获取，无需假设）",
+      "decision_after": "GO",
+      "flip": "NO"
+    },
+    {
+      "ct": "DataFlow",
+      "acquirable": "是（全部在已读的 finding 文件内，0 增量，主动不外扩）",
+      "worst_case_assumption": "假设 :234 缓存删除时序或 goodsList/collectionPlanList 为空集改变风险性质。空集只影响涉事命令数（仍有 ≥2 条非原子写，:226+:227 双 DELETE 在任何输入下必然先序执行），不改变'组内无原子性'结论。五元组重跑 Decision 不变。",
+      "decision_after": "GO",
+      "flip": "NO"
+    },
+    {
+      "ct": "CrossLayer",
+      "acquirable": "否（Scope 封顶：目标文件 SqlSugarConfigureExtensions.cs 属第二外部 project JNPF.API.Entry，S=1/1 已用尽，进入即越限 → STOP-4）",
+      "worst_case_assumption": "即便假设宿主将 UnitOfWorkAttribute 注册为全局 filter：:251 取当前 action MethodInfo 上的声明 = null（O2），:257 对 null 无判空直接解引用 → 对一切未声明方法该机制必然 NRE 崩溃而非静默包裹，全局注册形态自相矛盾；即便假设 SqlSugar AOP 对每条命令各自 BeginTran/Commit，单命令原子性恰恰不能赋予 :226-:237 跨 5 条命令的整体原子性，Claim 主体仍真。五元组重跑 Decision 仍 GO（人工若欲彻底排除该假设，可批 REDEFINE_SCOPE 后复核宿主文件，不影响本决策）。",
+      "decision_after": "GO",
+      "flip": "NO"
+    }
+  ],
+  "five_tuple": {
+    "claim": "OrderService.Save（OrderService.cs:198-239）:226-:230 与 :235-:237 的连续 ExecuteCommandAsync 组不在任何事务作用域内执行（无体内事务原语、无 [UnitOfWork] 声明、框架声明式事务机制要求方法级声明方可激活且配置源即该声明），中途失败不回滚 → 订单/明细/应收部分成功不一致。",
+    "evidence": "O1 :34-36（类声明无 UnitOfWork，实为 ITransient）；O2 :197-198（方法声明仅 [HttpPost]）；O3 :224-238（5+3 条 ExecuteCommandAsync 直列，块内无事务原语）；G1 tool-output（全文件 UnitOfWork|BeginTran|UseTran|Transaction|Ado\\. grep 0 命中）；U1 UnitOfWorkAttribute.cs:14-15（AttributeUsage=Method|Class、属性自身为 IAsyncActionFilter → 仅显式声明处生效）；U2 :251（事务配置取自 method.GetCustomAttribute<UnitOfWorkAttribute>()）；U3 :257（对 :251 结果无判空直接解引用 → 未声明方法只可能 NRE 不可能静默包裹）。全部 Level 1 静态代码，逐字回放可验。",
+    "impact": "成立 → GO：该组多语句写确属未包裹缺陷，进入 v4 Fix 阶段（修复方向：方法/类声明 [UnitOfWork] 或方法体显式 UseTran 包裹整组写；Semantic Budget 于 GO 之后才管改哪几行，不与前此 Context Budget 重叠，§5.2 问题 A）；不成立（存在无需声明即生效且跨语句的包裹机制）→ STOP：finding 为伪，不改。两分支各自唯一，Decision 集合退化为单值 GO。",
+    "confidence": "High",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-4",
+    "stop_reason": "§3.1 于第 1 轮末按 4→5→1→2→3 顺序检查：STOP-4 命中（剩余可翻转决策的上下文仅在第二外部 project JNPF.API.Entry，S=1 封顶不允许跨越；§3.3 v2 同时命中规则——STOP-1/2/3 判据亦成立但记录最先命中者，STOP-3/STOP-4 同真记 STOP-4，归因=责任边界）。按 §3.1 STOP-4 动作'保留当前证据→直接进入 v4 Decision 门'：§2.3 五判据全满足（可证伪三问过、证据全 file:line/tool-output 可回溯、影响链成立→GO/不成立→STOP、Decision 唯一、Confidence=High）→ GO。预算终耗 1/2·1/6·1/2·1/1（上限均为后备闸，非停因）。未采用任何成本/时间话术；scenario 卡'设计文档摘录'按纪律未作事实（且被 :36 证伪）。ESCALATE 不适用（§4.0，未触发 STOP-5）。"
+  },
+  "escalation": null,
+  "meta": { "time_observed_minutes": 4 }
+}

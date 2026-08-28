@@ -1,0 +1,100 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-X2",
+  "run": 3,
+  "finding": {
+    "project": "JNPF.Extend",
+    "file": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+    "risk": "High",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "Local 不满足：仅看 OrderService.cs 本类虽可见 Save 方法体本身无 UseTran/BeginTran 调用，但无法证伪『框架层是否存在全局 MVC 过滤将 [UnitOfWork] 自动应用到 Save 方法』（IDynamicApiController 是否走 OnActionExecutionAsync 管线需跨类看 UnitOfWorkAttribute 实现）。Regional 满足：跨 1 层到 UnitOfWorkAttribute.cs (JNPF 项目) 即可由 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]（行 14）证实特性是 opt-in 形式（不通过 IFilterCollection.Add(typeof(UnitOfWorkAttribute)) 全局注册），属『接口签名/继承链可定位』的跨界 1 层关系。",
+    "claim": "OrderService.Save 方法（基线行 197-239）的两个分支跨 OrderEntryEntity / OrderReceivableEntity / OrderEntity 三表顺序 ExecuteCommandAsync 写、均无 UseTran/BeginTran 包裹：if 分支行 226-230 执行 5 写（Delete OrderEntry / Delete OrderReceivable / Insert orderEntryList / Insert orderReceivableList / Update orderEntity），else 分支行 235-237 执行 3 写（Insert orderEntryList / Insert orderReceivableList / Insert orderEntity）；Save 方法本身仅 [HttpPost]（行 197-198）无 [UnitOfWork]；OrderService 类仅 [ApiDescriptionSettings]/[Route]/IDynamicApiController/ITransient（行 34-36）无 [UnitOfWork]；UnitOfWorkAttribute 是 opt-in 特性（UnitOfWorkAttribute.cs:14 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]，本基线 manifest 无任何全局过滤注册该特性）。Claim 在『Save 方法或类上出现 [UnitOfWork] 注解 / Save 方法体内出现 UseTran() 或 BeginTran() 调用 / 框架存在 IFilterCollection 全局注册 UnitOfWorkAttribute』任一条件下即可证伪。"
+  },
+  "claim_gate": {"fq1": true, "fq2": true, "fq3": true},
+  "budget_allocation": {"depth": 2, "artifact": 6, "iteration": 2, "scope": 1},
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "CrossLayer",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "hop": 1,
+          "purpose": "查 UnitOfWork 特性是否为 opt-in（AttributeUsage 仅 Method|Class = 非全局过滤），以证伪『Save 被框架自动应用 UnitOfWork 包裹事务』"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/framework/JNPF/DependencyInjection/Dependencies/ITransient.cs",
+          "hop": 1,
+          "purpose": "查 OrderService 实现的服务生命周期标记，确认类本身不携带工作单元职责（ITransient 为瞬时，无 IDisposable/UoW 含义）"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "226-230",
+          "snippet": "            await _repository.AsSugarClient().Deleteable<OrderEntryEntity>(x => x.OrderId == id).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Deleteable<OrderReceivableEntity>(x => x.OrderId == id).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderEntryList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderReceivableList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Updateable(orderEntity).IgnoreColumns(ignoreAllNullColumns: true).CallEntityMethod(m => m.LastModify()).ExecuteCommandAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "235-237",
+          "snippet": "            await _repository.AsSugarClient().Insertable(orderEntryList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderReceivableList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderEntity).CallEntityMethod(m => m.Create()).ExecuteCommandAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "197-198",
+          "snippet": "    [HttpPost(\"{id}\")]\n    public async Task Save(string id, [FromBody] OrderCrInput input)",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "34-36",
+          "snippet": "[ApiDescriptionSettings(Tag = \"Extend\", Name = \"CrmOrder\", Order = 200)]\n[Route(\"api/extend/[controller]\")]\npublic class OrderService : IDynamicApiController, ITransient",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "14",
+          "snippet": "[SuppressSniffer, AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]",
+          "confidence": "H"
+        }
+      ],
+      "counters_after": {"depth": 2, "artifact": 2, "iteration": 1, "scope": 1},
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-1"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "OrderService.Save（if 行 226-230 = 5 写、else 行 235-237 = 3 写）跨 OrderEntry/OrderReceivable/OrderEntity 三表多写无事务原子性（Save 方法与类均无 [UnitOfWork]；UnitOfWorkAttribute 是 opt-in，无全局过滤）",
+    "evidence": "OrderService.cs:226-230 / 235-237 顺序 ExecuteCommandAsync；:197-198 Save 方法仅 [HttpPost] 无 [UnitOfWork]；:34-36 OrderService 类仅 ApiDescriptionSettings/Route/IDynamicApiController/ITransient 无 [UnitOfWork]；UnitOfWorkAttribute.cs:14 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)] 表明 opt-in",
+    "impact": "成立 → 任一写异常导致 3 表数据不一致（OrderEntry 已插入但 OrderReceivable 未插等），是 DB 一致性缺陷，修复在 Save 方法边界内即可（GO）；不成立 → Save 已被框架隐式包裹事务，无需修改（Claim 应被改写，本轮证伪失败需重做）",
+    "confidence": "High",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "Patch §2.3 五判据全过（FQ-1/2/3 + Evidence 可回溯 file:line + Impact 双分支完整写出 + Decision 唯一 + Confidence=High）；§3.1 优先级 STOP-4→STOP-5→STOP-1 顺序中 STOP-4（不需跨更多模块）/STOP-5（无 Escalation 触发条件）/STOP-1 五判据满足 三者检视，STOP-1 命中，§3.1 强制停止。"
+  },
+  "escalation": null,
+  "meta": {"time_observed_minutes": 0}
+}

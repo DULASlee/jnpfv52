@@ -1,0 +1,250 @@
+[
+  {
+    "id": "oauth-login-01",
+    "domain": "oauth",
+    "layer": "L-core",
+    "method": "POST",
+    "endpoint": "/api/oauth/Login",
+    "fixture": "oauth"
+  },
+  {
+    "id": "currentuser-01",
+    "domain": "oauth",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/oauth/CurrentUser",
+    "fixture": "oauth"
+  },
+  {
+    "id": "dict-type-list-01",
+    "domain": "system",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/system/DictionaryType",
+    "fixture": "system"
+  },
+  {
+    "id": "dict-type-selector-01",
+    "domain": "system",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/system/DictionaryType/Selector/0",
+    "fixture": "system"
+  },
+  {
+    "id": "dict-data-all-01",
+    "domain": "system",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/system/DictionaryData/All",
+    "fixture": "system"
+  },
+  {
+    "id": "users-current-profile-01",
+    "domain": "permission",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Users/Current",
+    "fixture": "permission"
+  },
+  {
+    "id": "users-list-01",
+    "domain": "permission",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Users?currentPage=1&pageSize=20",
+    "fixture": "permission"
+  },
+  {
+    "id": "users-all-01",
+    "domain": "permission",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Users/All",
+    "fixture": "permission"
+  },
+  {
+    "id": "users-selector-01",
+    "domain": "permission",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Users/Selector",
+    "fixture": "permission"
+  },
+  {
+    "id": "users-info-admin-01",
+    "domain": "permission",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Users/349057407209541",
+    "fixture": "permission"
+  },
+  {
+    "id": "roles-list-01",
+    "domain": "permission",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Role?currentPage=1&pageSize=20",
+    "fixture": "permission"
+  },
+  {
+    "id": "roles-selector-01",
+    "domain": "permission",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Role/Selector",
+    "fixture": "permission"
+  },
+  {
+    "id": "menu-module-main-01",
+    "domain": "menu",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/system/Menu/ModuleBySystem/mainSystem",
+    "fixture": "menu"
+  },
+  {
+    "id": "menu-selector-root-01",
+    "domain": "menu",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/system/Menu/Selector/0/0",
+    "fixture": "menu"
+  },
+  {
+    "id": "menu-selector-all-01",
+    "domain": "menu",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/system/Menu/Selector/All",
+    "fixture": "menu"
+  },
+  {
+    "id": "datainterface-list-01",
+    "domain": "datainterface",
+    "layer": "L-edge",
+    "method": "GET",
+    "endpoint": "/api/system/DataInterface?currentPage=1&pageSize=20",
+    "fixture": "datainterface"
+  },
+  {
+    "id": "datainterface-selector-01",
+    "domain": "datainterface",
+    "layer": "L-edge",
+    "method": "GET",
+    "endpoint": "/api/system/DataInterface/Selector",
+    "fixture": "datainterface"
+  },
+  {
+    "id": "visualdev-base-list-01",
+    "domain": "formflow",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/visualdev/Base?currentPage=1&pageSize=20&type=1",
+    "fixture": "formflow"
+  },
+  {
+    "id": "visualdev-formlist-01",
+    "domain": "formflow",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/visualdev/Base/list",
+    "fixture": "formflow"
+  },
+  {
+    "id": "flow-template-list-01",
+    "domain": "workflow",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/workflow/Engine/flowTemplate?currentPage=1&pageSize=20",
+    "fixture": "workflow"
+  },
+  {
+    "id": "flow-before-list-01",
+    "domain": "workflow",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/workflow/Engine/FlowBefore/List/1?currentPage=1&pageSize=20",
+    "fixture": "workflow"
+  },
+  {
+    "id": "positions-list-01",
+    "domain": "permission",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Position?currentPage=1&pageSize=20",
+    "fixture": "permission"
+  },
+  {
+    "id": "positions-info-01",
+    "domain": "permission",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Position/514044370710691781",
+    "fixture": "permission"
+  },
+  {
+    "id": "organize-list-01",
+    "domain": "permission",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Organize?currentPage=1&pageSize=20",
+    "fixture": "permission"
+  },
+  {
+    "id": "roles-info-01",
+    "domain": "permission",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Role/587617885354983365",
+    "fixture": "permission"
+  },
+  {
+    "id": "authority-model-role-01",
+    "domain": "authority",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Authority/Model/587617885354983365/role",
+    "fixture": "authority"
+  },
+  {
+    "id": "authority-portal-role-01",
+    "domain": "authority",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Authority/Portal/587617885354983365",
+    "fixture": "authority"
+  },
+  {
+    "id": "menu-info-devdemo-01",
+    "domain": "menu",
+    "layer": "L-edge",
+    "method": "GET",
+    "endpoint": "/api/system/Menu/devDemoSystem",
+    "fixture": "menu"
+  },
+  {
+    "id": "flow-monitor-list-01",
+    "domain": "workflow",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/workflow/Engine/FlowMonitor?currentPage=1&pageSize=20",
+    "fixture": "workflow"
+  },
+  {
+    "id": "users-getorganization-01",
+    "domain": "permission",
+    "layer": "L-core",
+    "method": "GET",
+    "endpoint": "/api/permission/Users/getOrganization",
+    "fixture": "permission"
+  },
+  {
+    "id": "printlog-list-01",
+    "domain": "printlog",
+    "layer": "L-bug",
+    "method": "GET",
+    "endpoint": "/api/system/PrintLog/545192873159557061?currentPage=1&pageSize=20",
+    "fixture": "printlog"
+  }
+]

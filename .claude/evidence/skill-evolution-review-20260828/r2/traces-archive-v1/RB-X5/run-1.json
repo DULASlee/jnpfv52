@@ -1,0 +1,78 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-X5",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Extend",
+    "file": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+    "risk": "High",
+    "nature": "Systemic",
+    "nature_order_checked": ["Local", "Regional", "Systemic"],
+    "nature_justification": "Local 不满足：涉及对象（FlowTaskEntity/FLOW_TASK 表、ProjectReference 声明）不在 OrderService 类内部，本类代码无法自证全部主张。Regional 不满足：Finding 的问题不是定位一条直接依赖（依赖本身已在 :20/:85/:259 可见），而是判定跨模块事务写入的安全性——所需的 FLOW_TASK 写入语义证据位于 JNPF.WorkFlow 模块服务实现（Service↔其自身 Repository 层），跨越 1 层接口签名不可达。Systemic 满足：§1.3 Systemic 的明确形态『跨模块依赖（不同 .csproj）』——OrderService（JNPF.Extend.csproj）直接读写 JNPF.WorkFlow.Entitys（不同 .csproj）的 FLOW_TASK 域实体，且涉及跨层写入语义。按 §1.3 顺序逐级判定后定 Systemic。",
+    "claim": "OrderService.GetList 在 OrderService.cs:85 以 Queryable<OrderEntity, UserEntity, FlowTaskEntity> 联表读取 FlowTaskEntity，OrderService.Delete（OrderService.cs:250 标注 [UnitOfWork]）在事务内于 OrderService.cs:259 Queryable<FlowTaskEntity>() 查询并在 :262 Updateable(flowTaskEntity)...ExecuteCommandHasChangeAsync() 对 FLOW_TASK 执行软删除写操作；FlowTaskEntity 声明于 JNPF.WorkFlow.Entitys 工程（FlowTaskEntity.cs:4 namespace、:9 SugarTable(\"FLOW_TASK\")）；而 JNPF.Extend.csproj:4-7 的 ProjectReference 列表仅声明 JNPF.WorkFlow.Interfaces，未声明 JNPF.WorkFlow.Entitys——存在跨 .csproj 边界的未声明直接读+写 FLOW_TASK 域实体。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true,
+    "note": "FQ-1：若在 file:20-327 看不到 FlowTaskEntity 引用、或 :249-272 Delete 方法无 [UnitOfWork]、或 JNPF.Extend.csproj:4-7 含 .Entitys 引用，Claim 即为假——三处均可直接检查。FQ-2：绑定对象（OrderService.GetList/Delete、JNPF.Extend.csproj 引用列表、FlowTaskEntity→FLOW_TASK）与状态（事务内跨模块读+软删、引用未声明）均可指认。FQ-3：全部为逐行可核对事实，无『合理/适当/尽量/更好』类修饰词，两 Agent 同码同答。非 N1-N5：非模糊优化（N1）、资源与路径已绑定（非 N2）、无『数据量大』类无界判据（非 N3）、主张是静态可观测的引用/调用结构而非高并发死锁（非 N4）、仅绑定单类两方法非全称断言（非 N5）。"
+  },
+  "budget_allocation": { "depth": 3, "artifact": 8, "iteration": 2, "scope": 1 },
+  "budget_allocation_source": "Patch §1.2 分档表 Risk=High × Nature=Systemic → D=3, A=8, I=2, S=1",
+  "iterations": [
+    {
+      "round": 1,
+      "gap": "初始仅有 Finding 文本断言，三组事实未直证：① 跨模块读写调用点与 [UnitOfWork] 事务边界（OrderService.cs）；② JNPF.Extend 工程引用清单是否排除 .Entitys（JNPF.Extend.csproj）；③ FlowTaskEntity 归属工程与 FLOW_TASK 表映射（FlowTaskEntity.cs）。缺此直证则 Claim 无法与文件比对，Decision 无法唯一推出。",
+      "context_type": "CrossLayer",
+      "level": "Level1",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "hop": 0, "purpose": "finding 文件复核：确认 :20 using、:85 三表联查、:250 [UnitOfWork]、:259/:262 跨模块读写调用点，且全文件无 finally/补偿逻辑围绕 flowTask 更新" },
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/extend/JNPF.Extend/JNPF.Extend.csproj", "hop": 0, "purpose": "确认 ProjectReference 声明清单（finding_project 自身工件）" },
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/workflow/JNPF.WorkFlow.Entitys/Entity/FlowTaskEntity.cs", "hop": 1, "purpose": "确认 FlowTaskEntity 的命名空间归属与 SugarTable 映射（finding 类 OrderService 的直接类型依赖，调用距离 1）" }
+      ],
+      "evidence": [
+        { "source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "20", "snippet": "using JNPF.WorkFlow.Entitys.Entity;", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "85", "snippet": "        var pageList = await _repository.AsSugarClient().Queryable<OrderEntity, UserEntity, FlowTaskEntity>((a, b, c) => new JoinQueryInfos(JoinType.Left, a.CreatorUserId == b.Id, JoinType.Left, a.Id == c.Id))", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "249-251", "snippet": "    [HttpDelete(\"{id}\")]\n    [UnitOfWork]\n    public async Task Delete(string id)", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "259", "snippet": "            var flowTaskEntity = await _repository.AsSugarClient().Queryable<FlowTaskEntity>().FirstAsync(x => x.Id == entity.Id);", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "262", "snippet": "                await _repository.AsSugarClient().Updateable(flowTaskEntity).CallEntityMethod(m => m.Delete()).UpdateColumns(it => new { it.DeleteMark, it.DeleteTime, it.DeleteUserId }).ExecuteCommandHasChangeAsync();", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/JNPF.Extend.csproj", "lines": "4-7", "snippet": "    <ProjectReference Include=\"..\\..\\common\\JNPF.Common.Core\\JNPF.Common.Core.csproj\" />\n    <ProjectReference Include=\"..\\..\\system\\JNPF.Systems.Interfaces\\JNPF.Systems.Interfaces.csproj\" />\n    <ProjectReference Include=\"..\\..\\workflow\\JNPF.WorkFlow.Interfaces\\JNPF.WorkFlow.Interfaces.csproj\" />\n    <ProjectReference Include=\"..\\JNPF.Extend.Interfaces\\JNPF.Extend.Interfaces.csproj\" />", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/workflow/JNPF.WorkFlow.Entitys/Entity/FlowTaskEntity.cs", "lines": "4", "snippet": "namespace JNPF.WorkFlow.Entitys.Entity;", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/workflow/JNPF.WorkFlow.Entitys/Entity/FlowTaskEntity.cs", "lines": "9-10", "snippet": "[SugarTable(\"FLOW_TASK\")]\npublic class FlowTaskEntity : CLDSEntityBase", "confidence": "H" }
+      ],
+      "counters_after": { "depth": 2, "artifact": 2, "iteration": 1, "scope": 1 },
+      "counters_note": "finding 文件 Read=0/0/0；JNPF.Extend.csproj 新文件同 project=+1A/+1D/+0S；FlowTaskEntity.cs 新文件 project≠finding_project=+1A/+1D/+1S（首见去重）。合计 D=2/3, A=2/8, I=1/2, S=1/1（Scope 触顶）。",
+      "stop_check": {
+        "STOP4": true,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-4",
+        "detail": {
+          "STOP4": "命中：剩余所需 Context（FLOW_TASK 写入语义——JNPF.WorkFlow 模块服务实现如何写 FLOW_TASK、软删是否伴随状态机/通知/补偿）需要进入 JNPF.WorkFlow / JNPF.WorkFlow.Interfaces 等新 .csproj；Scope Budget S=1/1 已触顶（JNPF.WorkFlow.Entitys 首见 +1），且该模块目录不在本场景 baseline 内，物理不可获取——同时满足『跨越 Scope Budget 允许模块』与 v4 跨模块红线。",
+          "STOP5": "未命中：E1 需 Confidence<Medium（当前 High）；E2 无 High 证据冲突；E3 不成立——剩余 Context 属 Level 1 静态代码而非全为 Level 2，不可得的理由是边界（S 触顶+模块不在 baseline）而非运行时手段缺失；E4 前提『判定为 Regional』不成立（已判 Systemic）；E5 无 ≥2 种 Decision。",
+          "STOP1": "同时满足（按 §3.3 顺序仍记 STOP-4 为先命中者）：§2.3 五判据——①Claim 过三问可证伪；②每条证据 file:line 可回溯；③Impact 成立/不成立两分支完整；④Decision 单值（两分支均不得 GO，STOP 不依赖缺失证据即可推出，唯一）；⑤Confidence=High。",
+          "STOP2": "未判定：未执行 §3.2 穷举算法（无资格宣布 Stable，亦无需宣布——STOP-4 已先命中，按 §3.4 不留空表）。",
+          "STOP3": "未命中：D=2/3、A=2/8、I=1/2 均未达上限；唯 S 触顶但 §3.3 记 STOP-4（边界归因优先，Escalation 建议不同）。"
+        }
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "OrderService 在 [UnitOfWork] 事务内（Delete :250/:259/:262）与联表查询（GetList :85）中直接读+软删 JNPF.WorkFlow.Entitys 工程的 FlowTaskEntity/FLOW_TASK，而 JNPF.Extend.csproj:4-7 仅声明 JNPF.WorkFlow.Interfaces 引用、未声明 .Entitys——跨 .csproj 的未声明直接读写成立。",
+    "evidence": "Level 1 静态直证：OrderService.cs:20,85,249-251,259,262；JNPF.Extend.csproj:4-7；FlowTaskEntity.cs:4,9-10（各条 file:line 见 iterations[0].evidence，snippet 逐字）。",
+    "impact": "成立→FLOW_TASK 域写入发生在 JNPF.Extend 的本地事务边界内且依赖未在工程清单声明，任何守约修复都要么补声明跨模块实体引用（延续跨域写、需 FLOW_TASK 写入语义背书）、要么扩展 JNPF.WorkFlow.Interfaces 契约把删除下沉回归属模块（需扩 Contract+双模块改动）→『单点边界可守』失守、触发 v4 STOP 析取项『跨模块传染』『需扩 Contract』→STOP；不成立（无跨模块读写点/引用清单实含 .Entitys/实体非 FLOW_TASK 归属）→不是缺陷→亦 STOP。两分支唯一合取=STOP，且即使补到『FLOW_TASK 写入语义』证据，GO 六条合取中『单点边界可守』仍不成立——缺失证据不改变结论方向。",
+    "confidence": "High",
+    "decision": "STOP"
+  },
+  "final": {
+    "decision": "STOP",
+    "stop_triggered": "STOP-4",
+    "stop_reason": "Patch §3.1 STOP-4（优先级序列首位）：剩余可获取 Context（FLOW_TASK 写入语义）需跨越 Scope Budget 允许模块数——S 已消耗 1/1（JNPF.WorkFlow.Entitys 首见计数），目标模块 JNPF.WorkFlow 不在 baseline 且进入即超 S 上限，亦触发 v4 跨模块红线；按 §3.3 多条件同时满足（STOP-1 亦成立）记最先命中者 STOP-4。STOP-4 动作『保留当前证据→直接进入 v4 Decision 门』：v4 STOP 十条析取中『跨模块传染』（缺陷与修复均跨 .csproj 边界，修复须触及 JNPF.WorkFlow.Interfaces/实现或改依赖声明策略）与『守不住单点』（无任何单文件修复可既守模块契约又保行为）由已证事实直接命中→decision=STOP。非成本/时间话术；NEED EVIDENCE 不适用——被阻断的写入语义证据在 GO/STOP 两个假设取值下结论分支均不产生 GO，Decision 已由现有证据唯一导出。三门封闭：STOP。"
+  },
+  "escalation": null,
+  "escalation_note": "STOP-4 非 STOP-5，不产出 Escalation Pack（§4.0/§6.2 不变式：escalation!=null ⇔ STOP-5；本 trace escalation=null 且 stop_triggered=STOP-4，proposed_decision 三门内取值，一致）。人工若后续裁定补 JNPF.WorkFlow 证据或批准跨模块契约扩展，属 v4 STOP 结论之上的人工重决策，不由 AI 自行扩预算。",
+  "meta": { "time_observed_minutes": 4 }
+}

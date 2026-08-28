@@ -1,0 +1,122 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-B1",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "§1.3 顺序判定：Local 检查=否——'本类未回收'虽可见于 FileService.cs 正文，但'回收职责是否已委托给直接依赖契约'无法仅凭本类自证（清理可能位于注入接口 IFileManager 的契约语义中），存在跨类边界；Regional 检查=是——Finding 涉及直接依赖接口 IFileManager（本类构造函数注入，FileService.cs:67），跨界 1 层、可经接口签名定位，边界清晰；未达 Systemic（无需跨层 Service↔Repository↔Provider 追踪，Claim 不绑定全仓无清理器这一全局否定）。",
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）在 :245 创建临时目录 directoryPath 后，directoryPath 在类内的最后一次引用是 :258 ZipFile.CreateFromDirectory；整个 FileService 类不含任何 Directory.Delete 调用、也不调用契约中唯一的删除 API _fileManager.DeleteFile（grep 全类 _fileManager. 共 15 处，无 DeleteFile）；注入依赖契约 IFileManager 仅提供文件级 DeleteFile(string filePath)，无目录回收方法。即：创建者在其生命期确定终点（:258 之后）不回收该目录及其全部复制文件。可证伪条件：若在本类任意行发现对 directoryPath 的删除调用，或 IFileManager 契约声明目录清理职责且被 DownloadAll 调用，则 Claim 为假。"
+  },
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "budget_allocation": { "depth": 2, "artifact": 4, "iteration": 1, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "gap": "类内正文已显示无 finally/无 Directory.Delete，但'创建者不回收'要成为可裁决 Claim，还需排除回收职责位于直接依赖契约 IFileManager（跨界 1 层），否则 GO/STOP 均不唯一。",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "finding 文件全文复核：DownloadAll 方法体 240-264 无 finally/无目录删除；登记（finding 文件读取计 0/0/0）" },
+        { "tool": "Grep", "mode": "signature", "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "定点检索模式 Directory\\.|\\.Delete\\(|\\.Del\\(|TemporaryFile，定位类内全部删除/临时目录相关行（已见文件，不增计数）" },
+        { "tool": "Grep", "mode": "signature", "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "定点检索 directoryPath 全部引用，确认方法内最后引用止于 :258（已见文件，不增计数）" },
+        { "tool": "Grep", "mode": "signature", "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "定点检索 _fileManager\\. 全部调用点，确认本类从不调用 DeleteFile（已见文件，不增计数）" },
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs", "hop": 1, "purpose": "读直接依赖契约全文：确认无目录回收方法、仅文件级 DeleteFile（新文件、project≠finding_project：+1 artifact/+1 depth/+1 scope，首见去重；其后对其定点 grep 不重复计数）" },
+        { "tool": "Grep", "mode": "signature", "target": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs", "hop": 1, "purpose": "定点检索 Directory|目录|Delete|删除，机械确认接口删除面仅 :56/:60 两处（文件已首见，去重不增计数）" }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "244-245",
+          "snippet": "        string directoryPath = Path.Combine(App.GetConfig<AppOptions>(\"JNPF_App\", true).SystemPath, \"TemporaryFile\", fileName);\n        Directory.CreateDirectory(directoryPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "248-249",
+          "snippet": "            string filePath = Path.Combine(GetPathByType(type), item.fileId.Replace(\"@\", \".\"));\n            await _fileManager.CopyFile(filePath, Path.Combine(directoryPath, item.fileName));",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "252",
+          "snippet": "        string downloadPath = directoryPath + \".zip\";",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "254-258",
+          "snippet": "        // 判断是否存在同名称文件\n        if (File.Exists(downloadPath))\n            File.Delete(downloadPath);\n\n        ZipFile.CreateFromDirectory(directoryPath, downloadPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "261-263",
+          "snippet": "        var downloadFileName = string.Format(\"{0}|{1}.zip|TemporaryFile\", _userManager.UserId, fileName);\n        _cacheManager.Set(fileName + \".zip\", string.Empty);\n        return new { downloadName = string.Format(\"文件{0}.zip\", fileName), downloadVo = new { name = fileName, url = \"/api/File/Download?encryption=\" + DESCEncryption.Encrypt(downloadFileName, \"JNPF\") } };",
+          "confidence": "H"
+        },
+        {
+          "source": "tool-output",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "244-280",
+          "snippet": "Grep pattern=directoryPath → Found 8 matches: Line 244 / Line 245 / Line 249 / Line 252 / Line 258 / Line 441 / Line 445 / Line 448（后三处为 UploadFileByType 同名形参，非本临时目录）→ DownloadAll 内对 directoryPath 的引用止于 :258，方法体 259-263 及返回路径无任何删除。",
+          "confidence": "H"
+        },
+        {
+          "source": "tool-output",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "152-460",
+          "snippet": "Grep pattern=_fileManager\\. → Found 15 matches: Lines 152,170,198,200,249,289,355,356,363,364,400,416,429,448,460 → 全类对注入依赖的调用中不存在 DeleteFile 调用。",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "55-60",
+          "snippet": "        /// <summary>\n        /// 删除文件.\n        /// </summary>\n        /// <param name=\"filePath\"></param>\n        /// <returns></returns>\n        Task DeleteFile(string filePath);",
+          "confidence": "H"
+        },
+        {
+          "source": "tool-output",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "56-60",
+          "snippet": "Grep pattern=Directory|目录|Delete|删除 → Found 2 matches: Line 56: \"        /// 删除文件.\" / Line 60: \"        Task DeleteFile(string filePath);\" → 契约删除面仅文件级方法，无目录级清理职责。",
+          "confidence": "H"
+        }
+      ],
+      "counters_after": { "depth": 1, "artifact": 1, "iteration": 1, "scope": 1 },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": true,
+        "hit": "STOP-1",
+        "note": "按 §3.1 优先级 4→5→1→2→3 逐条检查。STOP-4=false：剩余取证无需跨入 Scope 禁入模块（Claim 按 Regional 绑定'本类+直接依赖契约'范围，且该范围已闭环，未主张全仓无后台清理器）。STOP-5=false：E1-E5 均不触发（Confidence=High≥Medium；无 H 级证据冲突；所需 Context 全为 Level1 已获取；未越 S 上限；Decision 唯一）。STOP-1=true：§2.3 五判据全满足。STOP-2=false：流程图在 STOP-1=YES 处已停，未进入第 4 步检查。STOP-3=true（I=1/1 触顶）但依 §3.1 v2 同时命中规则记录先命中者 STOP-1——Budget 上限是后备闸非触发器（§1.5 v2）。命中后不开新一轮。"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "FileService.DownloadAll 于 :245 创建临时目录 directoryPath，其类内最后引用止于 :258（ZipFile.CreateFromDirectory），全类无 Directory.Delete 且从不调用契约唯一删除 API _fileManager.DeleteFile，IFileManager 契约无目录回收方法——创建者在资源生命期确定终点不回收。",
+    "evidence": "FileService.cs:244-245（创建）/ :248-249（复制入目录）/ :252（zip 在目录外）/ :254-258（类内唯一文件系统删除 File.Delete 针对旧 zip；目录最后触达 :258）/ :261-263（返回 URL 仅消费 zip）；tool-output grep directoryPath（方法内引用集 {244,245,249,252,258}）；tool-output grep _fileManager\\.（15 调用点无 DeleteFile）；IFileManager.cs:55-60 + tool-output grep（契约删除面仅 Task DeleteFile(string filePath)，文件级）。全部 Level1 静态来源，逐条可回放。",
+    "impact": "Claim 成立 → 每次 PackDownload 调用在 {SystemPath}/TemporaryFile/ 下遗留 1 个目录及全部复制文件，无界增长，违反'创建者于确定生命期终点回收'的资源所有权契约；修复点封闭于 DownloadAll 方法体（:258 之后或 try/finally），单点边界可守、不扩契约 → 过 v4 GO 六条件 → GO。Claim 不成立（类内存在对 directoryPath 的删除、或契约提供目录清理且被调用）→ 非缺陷 → STOP。",
+    "confidence": "High",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§2.3 五判据全满足：①Claim 过 §2.5 三问（FQ-1 可写证伪观测：类内出现 Directory.Delete(directoryPath…) 或契约目录清理被调用即为假；FQ-2 对象=directoryPath 临时目录、状态=:258 后无回收；FQ-3 无自由发挥词，两 Agent 同码同判）②证据全为 file:line / tool-output 可回溯 ③Impact 链双向完整 ④Decision 由三门重入唯一推出 ⑤Confidence=High（Level1 静态直证）。§3.1 优先级序列先命中 STOP-1（STOP-3 I=1/1 触顶仅为后备闸，按 §1.5 v2 不作触发器）。v4 决策重入 GO 六条件：Finding 已证✓；违反契约（所有权回收）✓；单点边界可守（修复封闭于 DownloadAll 体内，zip 位于目录外 :252，OSS 上传 :259-260 与消费方 DownloadFile 均不依赖该目录）✓；各 gate 通过——本 Finding 为资源所有权确定性泄漏缺陷（机制逐行可证：Create 无配对 Delete），非性能优化主张，Performance 7Q/P0.2 门槛不适用于缺陷裁决✓；回归路径存在（xUnit + mock IFileManager 接口，断言调用后目录不存在）✓；不扩 Contract✓。三安全阀均为 No。"
+  },
+  "escalation": null,
+  "meta": { "time_observed_minutes": 3 }
+}

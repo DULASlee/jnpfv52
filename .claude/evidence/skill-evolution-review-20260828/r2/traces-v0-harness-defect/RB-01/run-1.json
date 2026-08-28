@@ -1,0 +1,160 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-01",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Extend",
+    "file": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+    "risk": "High",
+    "nature": "Systemic",
+    "nature_order_checked": ["Local", "Regional", "Systemic"],
+    "nature_rationale": "§1.3 顺序判定：Local 不成立——'Save 的多条 ExecuteCommandAsync 无事务包裹'不能仅由本类代码自证（事务可能由类外机制注入：[UnitOfWork] 过滤器或全局 AOP）；Regional 不成立——构造/接口/继承链（ITransient、ISqlSugarRepository）只揭示生命周期与依赖，不揭示事务包裹，判定需跨越 Service↔Repository/Provider 层边界并核查框架与宿主模块（不同 .csproj）的注册机制；Systemic 成立——Finding 本身即跨层边界（Service→SqlSugar Provider）且裁定证据跨模块。未跳档：先验 Local、再验 Regional 后方定 Systemic。",
+    "claim": "OrderService.Save（baseline OrderService.cs:198-239）更新分支 :226-230 连续 5 条、插入分支 :235-237 连续 3 条 await ...ExecuteCommandAsync()，方法体内无 BeginTran/UseTran/Ado 事务调用，类与方法均无 [UnitOfWork] 标注（:34-36、:197）；且 baseline 证据表明事务机制仅可显式标注激活（UnitOfWorkAttribute.cs:14-15,251）、JNPF.API.Entry 的 SqlSugar 注册配置中不存在全局事务拦截（无 BeginTran/UseTran/事务型 AOP 钩子/全局 Filters.Add）——Claim 为假当且仅当：上述任一位置出现事务包裹证据（可在 file:line 指认）。",
+    "distractor_note": "scenario 卡'设计文档摘录'称 DI 注册为 Scoped——非事实，不计入证据。实际 finding 文件 :36 显示 OrderService : IDynamicApiController, ITransient（经标记接口注册为 Transient）；且服务生命周期与'Save 命令序列是否被事务包裹'正交，不构成裁定缺口，未为其花费任何 Budget。"
+  },
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "claim_gate_note": "FQ-1：在 :34-36/:197 或框架/宿主注册处看到事务标注/全局事务拦截即 Claim 为假，可指认 file:line；FQ-2：对象=OrderService.Save、资源=SqlSugar 命令序列、状态=无事务包裹，均可指认；FQ-3：两个 Agent 依同一 baseline grep/Read 属性与事务 API 命中即得同判，无'合理/适当'类自由词。非五类反例：绑定单类（非 N5 全称）、绑定具体调用序列与缺失机制（非 N1/N2/N3）、Level 1 静态可观测（非 N4）。",
+  "budget_allocation": { "depth": 3, "artifact": 8, "iteration": 2, "scope": 1 },
+  "budget_tier_source": "Patch v2 §1.2 Risk=High × Nature=Systemic → D=3, A=8, I=2, S=1",
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "CrossLayer",
+      "level": "Level1",
+      "declared_gap": "本类代码复核（免费读 finding 文件）已确认 :226-230/:235-237 多步 ExecuteCommandAsync 无方法内事务、:34-36/:197 无 [UnitOfWork] 标注；但无法排除框架级事务机制（UnitOfWorkAttribute 过滤器）是否被隐式/自动应用于 Save——若该机制无条件生效则 Claim 不成立→Decision=STOP，若不生效则→GO，当前 Decision 不唯一。",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "baseline/backend/modularity/extend/JNPF.Extend/OrderService.cs", "hop": 0, "purpose": "finding 文件全文复核（manifest.finding_file；按锁定口径 A-§4 计 0/0/0）" },
+        { "tool": "Read", "mode": "body", "target": "baseline/backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs", "hop": 1, "purpose": "读新文件正文（project=JNPF ≠ finding_project）：+1A +1D +1S（JNPF 首见）" }
+      ],
+      "evidence": [
+        {
+          "source": "file:34-36",
+          "path": "baseline/backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "34-36",
+          "snippet": "[ApiDescriptionSettings(Tag = \"Extend\", Name = \"CrmOrder\", Order = 200)]\n[Route(\"api/extend/[controller]\")]\npublic class OrderService : IDynamicApiController, ITransient",
+          "confidence": "H",
+          "note": "类级仅有 ApiDescriptionSettings/Route 两个特性，无 [UnitOfWork]；且实际为 ITransient 标记接口注册，与 scenario 卡'Scoped'摘录不符（摘录非事实）"
+        },
+        {
+          "source": "file:197-198",
+          "path": "baseline/backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "197-198",
+          "snippet": "[HttpPost(\"{id}\")]\npublic async Task Save(string id, [FromBody] OrderCrInput input)",
+          "confidence": "H",
+          "note": "Save 动作方法仅 [HttpPost] 标注，无 [UnitOfWork]"
+        },
+        {
+          "source": "file:226-230",
+          "path": "baseline/backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "226-230",
+          "snippet": "await _repository.AsSugarClient().Deleteable<OrderEntryEntity>(x => x.OrderId == id).ExecuteCommandAsync();\nawait _repository.AsSugarClient().Deleteable<OrderReceivableEntity>(x => x.OrderId == id).ExecuteCommandAsync();\nawait _repository.AsSugarClient().Insertable(orderEntryList).ExecuteCommandAsync();\nawait _repository.AsSugarClient().Insertable(orderReceivableList).ExecuteCommandAsync();\nawait _repository.AsSugarClient().Updateable(orderEntity).IgnoreColumns(ignoreAllNullColumns: true).CallEntityMethod(m => m.LastModify()).ExecuteCommandAsync();",
+          "confidence": "H",
+          "note": "更新分支连续 5 条独立 ExecuteCommandAsync，方法体内无 BeginTran/UseTran 包裹"
+        },
+        {
+          "source": "file:235-237",
+          "path": "baseline/backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "235-237",
+          "snippet": "await _repository.AsSugarClient().Insertable(orderEntryList).ExecuteCommandAsync();\nawait _repository.AsSugarClient().Insertable(orderReceivableList).ExecuteCommandAsync();\nawait _repository.AsSugarClient().Insertable(orderEntity).CallEntityMethod(m => m.Create()).ExecuteCommandAsync();",
+          "confidence": "H",
+          "note": "插入分支连续 3 条独立 ExecuteCommandAsync，同样无事务包裹"
+        },
+        {
+          "source": "file:14-15",
+          "path": "baseline/backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "14-15",
+          "snippet": "[SuppressSniffer, AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]\npublic sealed class UnitOfWorkAttribute : Attribute, IAsyncActionFilter, IAsyncPageFilter, IOrderedFilter",
+          "confidence": "H",
+          "note": "UnitOfWork 机制 = 标注型过滤器特性，AttributeUsage 限 Method|Class——事务包裹以显式标注为前提；Save/OrderService 均无该标注（见上）"
+        },
+        {
+          "source": "file:251",
+          "path": "baseline/backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "251",
+          "snippet": "unitOfWorkAttribute = method.GetCustomAttribute<UnitOfWorkAttribute>();",
+          "confidence": "H",
+          "note": "BeginTransaction 路径从方法自定义特性解析事务配置——再次印证 opt-in 语义"
+        }
+      ],
+      "counters_after": { "depth": 1, "artifact": 1, "iteration": 1, "scope": 1 },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": false,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": null
+      },
+      "stop_rationale": "STOP-4：残余缺口（宿主模块全局事务注册）可按锁定口径以定点检索获取（Grep 新文件 +1A+1D+0S，用后 A=2/8、D=2/3、I=2/2 均未超上限，Scope 不再增长），无'必需 Context 必跨越 S 上限'→false。STOP-5：E1-E5 均不成立→false。STOP-1：判据 4 未过——全局 AOP/全局过滤器尚未排除，Decision 尚非单值→false。STOP-2：存在未展开 CT（CrossLayer/DI→宿主配置）其证据可翻转（若发现全局事务拦截则 STOP）→false。STOP-3：无维度超上限；S=1/1 触顶但 §1.5 v2 明示'上限是后备闸非触发器'，后续必需扩展均在预算内→false。继续 Expansion。"
+    },
+    {
+      "round": 2,
+      "context_type": "DI",
+      "level": "Level1",
+      "declared_gap": "框架过滤器为 opt-in 已证，但宿主 JNPF.API.Entry 的 DI/AOP 配置仍可能全局注册事务拦截（全局 Filters.Add 或 SqlSugar 事务型 AOP）——若存在则 Claim 不成立→STOP，若不存在→GO。Decision 仍不唯一，此为最后一个缺口。",
+      "actions": [
+        { "tool": "Grep", "mode": "signature", "target": "baseline/backend/application/JNPF.API.Entry/Extensions/SqlSugarConfigureExtensions.cs", "hop": 2, "purpose": "定点检索新文件事务/过滤器/AOP 相关行（pattern: Tran|UnitOfWork|Filter|Aop|BeginTran|UseTran|Transaction）：+1A +1D +0S（首见去重）" },
+        { "tool": "Read", "mode": "body", "target": "baseline/backend/application/JNPF.API.Entry/Extensions/SqlSugarConfigureExtensions.cs", "hop": 2, "purpose": "取所引行（:47/:54/:98/:103）逐字原文窗口；文件本轮首见已由上一 action 计 1A1D，同文件窗口按'首见去重'不再增计，Grep 口径下 Scope +0" }
+      ],
+      "evidence": [
+        {
+          "source": "file:54",
+          "path": "baseline/backend/application/JNPF.API.Entry/Extensions/SqlSugarConfigureExtensions.cs",
+          "lines": "54",
+          "snippet": "services.AddUnitOfWork<SqlSugarUnitOfWork>();",
+          "confidence": "H",
+          "note": "UnitOfWork 服务注册存在，但其消费者是 opt-in 标注过滤器（见 R1 证据），注册本身不对未标注动作施加事务"
+        },
+        {
+          "source": "file:47",
+          "path": "baseline/backend/application/JNPF.API.Entry/Extensions/SqlSugarConfigureExtensions.cs",
+          "lines": "47",
+          "snippet": "SetDbAop(dbProvider, httpContextAccessor);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:98-103",
+          "path": "baseline/backend/application/JNPF.API.Entry/Extensions/SqlSugarConfigureExtensions.cs",
+          "lines": "98-103",
+          "snippet": "public static void SetDbAop(SqlSugarScopeProvider db, IHttpContextAccessor httpContextAccessor)\n{\nvar config = db.CurrentConnectionConfig;\n\n// 设置超时时间\ndb.Ado.CommandTimeOut = 30;",
+          "confidence": "H",
+          "note": "全局 AOP 配置入口；db.Ado 仅设 CommandTimeOut，无 BeginTran/CommitTran/RollbackTran"
+        },
+        {
+          "source": "tool-output",
+          "path": "baseline/backend/application/JNPF.API.Entry/Extensions/SqlSugarConfigureExtensions.cs",
+          "lines": "grep-full-file",
+          "snippet": "grep pattern 'Tran|UnitOfWork|Filter|Aop|BeginTran|UseTran|Transaction' 全文件命中行：47,54,95,98,107,116,129,143,154,200,207,208,215,227。事务类命中仅 :54 AddUnitOfWork（服务注册）；db.Aop 挂载点为 OnLogExecuting(:107)/OnLogExecuted(:116)/OnError(:129)/OnExecutingChangeSql(:143)/OnDiffLogEvent(:154)/DataExecuting(:200)——全部为日志/数据填充钩子，无事务型钩子；'BeginTran|UseTran' 零命中；'Filter' 命中均为 DataFilterType/ITenantFilter/IZxSystemFilter（数据过滤器，非 MVC 全局事务过滤器），无 Filters.Add 注册。",
+          "confidence": "H",
+          "note": "宿主全局注册中不存在对未标注动作施加事务的机制"
+        }
+      ],
+      "counters_after": { "depth": 2, "artifact": 2, "iteration": 2, "scope": 1 },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-1"
+      },
+      "stop_rationale": "STOP-4：false——裁定已闭合，无任何'必需而不可得'的跨模块 Context（SqlSugarUnitOfWork 实现类不在 baseline 内，属外部目标：0 计数 0 证据）；实际 Scope=1/1 未超。STOP-5：false——E1（未耗尽且 Conf=High）/E2（无 High 证据冲突）/E3（无剩余 Level 2 缺口）/E4（判定即 Systemic，未越 S）/E5（稳定判定单值）全不触发。STOP-1：true——§2.3 五判据全过（见 five_tuple），命中即停，按 §3.1 顺序 4→5→1 记录最先命中者 STOP-1，不再开轮（I=2/2 亦至上限，后备闸未启）。"
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "OrderService.Save 更新分支(:226-230)连续 5 条与插入分支(:235-237)连续 3 条 ExecuteCommandAsync 无事务包裹：方法内无 BeginTran/UseTran，类/方法无 [UnitOfWork]，框架事务机制为 Method|Class 标注才激活(opt-in)，宿主 SqlSugar 注册配置无全局事务 AOP/全局事务过滤器——中途一步失败即订单主表/明细/应收部分成功不一致。",
+    "evidence": "Level 1 静态代码：OrderService.cs:34-36/197-198/226-230/235-237（无标注、无事务 API、连续独立 ExecuteCommandAsync）；UnitOfWorkAttribute.cs:14-15/251（事务过滤器=标注型，AttributeUsage 限 Method|Class，从 method.GetCustomAttribute 解析）；SqlSugarConfigureExtensions.cs:47/54/98-103 + 全文件事务关键词 grep（仅 AddUnitOfWork 服务注册与日志/数据填充 AOP 钩子，BeginTran/UseTran/Filters.Add 零命中）。全部 source 为 file:line 或 tool-output，可逐字回放。",
+    "impact": "Claim 成立 → 部分写入不一致风险为真且无框架兜底 → GO（允许 Fix：将 Save 的多条写命令收拢入单一事务，如 [UnitOfWork] 标注或 UseTran 包裹，属 Semantic Budget 阶段范畴）；Claim 不成立（若在 :34-36/:197 或注册配置发现事务包裹证据）→ STOP（Finding 被驳回，不得以无事务为由重构）。当前证据下两分支唯一推出前者 → Decision 单值。",
+    "confidence": "High",
+    "confidence_rationale": "§2.2：证据全部来自 Level 1 静态代码/工具输出，与 Claim 直接对应，0 推断步骤。",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "Patch v2 §2.3 判据 1-5 全部满足（Claim 过 §2.5 三问；证据均可回溯 file:line/tool-output；影响链双向完整；Decision 单值；Confidence=High）→ §3.1 第 3 位 STOP-1 Evidence Sufficient 命中（前两位 STOP-4/STOP-5 已先查为 false），进入 Decision Re-entry。预算实耗 D=2/3, A=2/8, I=2/2, S=1/1，均未超 §1.2 High×Systemic 分档上限；依 §1.5 v2 上限为后备闸非触发器，本轮停止归因于证据充分而非预算耗尽。"
+  },
+  "escalation": null,
+  "meta": { "time_observed_minutes": 0 }
+}

@@ -1,0 +1,66 @@
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "pagination": {
+      "currentPage": 1,
+      "pageSize": 20,
+      "total": 3
+    },
+    "list": [
+      {
+        "id": "587617885354983365",
+        "parentId": "",
+        "num": 0,
+        "onlyId": null,
+        "organizeId": null,
+        "organizeInfo": "",
+        "organize": null,
+        "fullName": "测试",
+        "enCode": "test",
+        "type": "全局",
+        "description": null,
+        "enabledMark": 1,
+        "creatorTime": 1722264223300,
+        "sortCode": 0,
+        "icon": "icon-ym icon-ym-tree-department1"
+      },
+      {
+        "id": "538197183673925573",
+        "parentId": "",
+        "num": 0,
+        "onlyId": null,
+        "organizeId": null,
+        "organizeInfo": "",
+        "organize": null,
+        "fullName": "后台管理员",
+        "enCode": "XY.Management",
+        "type": "全局",
+        "description": null,
+        "enabledMark": 1,
+        "creatorTime": 1710481409827,
+        "sortCode": 0,
+        "icon": "icon-ym icon-ym-tree-department1"
+      },
+      {
+        "id": "514044066686566341",
+        "parentId": "",
+        "num": 0,
+        "onlyId": null,
+        "organizeId": null,
+        "organizeInfo": "",
+        "organize": null,
+        "fullName": "管理员",
+        "enCode": "management",
+        "type": "全局",
+        "description": null,
+        "enabledMark": 1,
+        "creatorTime": 1704722857993,
+        "sortCode": 0,
+        "icon": "icon-ym icon-ym-tree-department1"
+      }
+    ]
+  },
+  "extras": null,
+  "timestamp": 1787723186
+}

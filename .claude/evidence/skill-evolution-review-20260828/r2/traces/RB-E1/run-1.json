@@ -1,0 +1,82 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-E1",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Critical",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "先判 Local——主张依赖 DESCEncryption（JNPF framework 模块）与 IFileManager.GetPathByType（JNPF.Common.Core 模块），非本类内部可自证 → Local 不满足；再判 Regional——FileService 直接静态调用 DESCEncryption.Encrypt/Decrypt（1 跳）、直接注入 IFileManager（接口签名 1 跳），跨界 1 层即达 → Regional 满足；按 §1.3 判定顺序不跳判 Systemic。",
+    "claim": "FileService 下载令牌可离线伪造：DESC 密钥 'JNPF' 为源码硬编码常量（FileService.cs:227/263/273 生成与消费共用），DESCEncryption 的 DES key/IV 由 MD5(skey) 前 8 个 ASCII 字符确定性派生（DESCEncryption.cs:24-26），DownloadFile 仅校验 cache 中 fileName 存在（FileService.cs:278，单次消费即删）且从不比对解密出的 userId（paramsList[0] 未被读取，只取 [1] 与 [2]）；全类 [AllowAnonymous]（FileService.cs:34）→ 知悉存储文件名与存储 type 者可在无认证状态下构造有效 encryption 值获取对应存储文件。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true
+  },
+  "budget_allocation": { "depth": 2, "artifact": 6, "iteration": 2, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "读 finding 文件正文，定位令牌生成/消费与鉴权点（finding 文件计 0 成本）" },
+        { "tool": "Read", "mode": "body", "target": "backend/framework/JNPF/DataEncryption/Encryptions/DESCEncryption.cs", "hop": 1, "purpose": "取证 DESC 密钥/IV 派生确定性，证明令牌可离线重算" },
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs", "hop": 1, "purpose": "取证 GetPathByType 为直接注入依赖（存储路径解析依赖）" },
+        { "tool": "Read", "mode": "body", "target": "backend/framework/JNPF/DataEncryption/Encryptions/AESEncryption.cs", "hop": 1, "purpose": "确认下载链路仅使用 DESCEncryption，无更强加密替代参与" }
+      ],
+      "evidence": [
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "34", "snippet": "[AllowAnonymous]", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "227", "snippet": "string? encryptStr = DESCEncryption.Encrypt(url, \"JNPF\");", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "228", "snippet": "_cacheManager.Set(fileName, string.Empty);", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "263", "snippet": "DESCEncryption.Encrypt(downloadFileName, \"JNPF\")", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "273", "snippet": "string decryptStr = DESCEncryption.Decrypt(encryption, \"JNPF\");", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "277", "snippet": "string fileName = paramsList.Count > 1 ? paramsList[1] : string.Empty;", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "278", "snippet": "if (_cacheManager.Exists(fileName))", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "286", "snippet": "string type = paramsList.Count > 2 ? paramsList[2] : string.Empty;", "confidence": "H" },
+        { "source": "file:line", "path": "backend/framework/JNPF/DataEncryption/Encryptions/DESCEncryption.cs", "lines": "24", "snippet": "Encoding.ASCII.GetBytes(MD5Encryption.Encrypt(skey, uppercase)[..8]);", "confidence": "H" }
+      ],
+      "counters_after": { "depth": 3, "artifact": 3, "iteration": 1, "scope": 2 },
+      "stop_check": { "STOP4": false, "STOP5": true, "STOP1": false, "STOP2": false, "STOP3": true, "hit": "STOP-5" }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "FileService 下载令牌可离线伪造：硬编码密钥 'JNPF'（FileService.cs:227/263/273），DES key/IV 确定性派生（DESCEncryption.cs:24-26），DownloadFile 仅按 cache 中 fileName 存在性放行（:278）且不比对解密出的 userId（paramsList[0] 未读），全类匿名（:34）→ 知悉存储文件名与 type 者可无认证构造合法令牌。",
+    "evidence": "8 条 High 级代码锚点（iterations[0].evidence）：三处硬编码密钥、DES 派生确定性、cache 单文件名门闩、userId 未比对、匿名端点；null 鉴权可直接从 DownloadUrl/DownloadAll 匿名预置 cache（FileService.cs:228）。",
+    "impact": "成立 → 下载授权契约可被匿名绕过，命中 Critical（修复：配置化密钥/强签名令牌 + userId 与当前身份绑定 + cache 按用户隔离，倾向 GO）；不成立 → 生产存在网关鉴权/限流/存储不可达，降级为设计风险（STOP）。成立与否依赖未导出部署层（网关/限流/存储映射实现）且 R1 禁 Level 2 → 当前预算内无法终结 → NEED_EVIDENCE。",
+    "confidence": "Low",
+    "decision": "NEED_EVIDENCE"
+  },
+  "final": {
+    "decision": "NEED_EVIDENCE",
+    "stop_triggered": "STOP-5",
+    "stop_reason": "§3.1 序列：STOP-4=false（所需目标资源未导出/属 Level 2，非跨模块禁入）；STOP-5=true（§4.1 E1 BudgetExhausted：scope=2/1、depth=3/2 达 §1.2 Critical/Regional 上限且完整 Critical 主张 Confidence<Medium（§2.2 Low，依赖未导出部署层））。因 §6.3 不变式 escalation 非空 ⇔ stop_triggered=STOP-5，记为 STOP-5；同时按 §3.1 同命中记录规则确证 hit=STOP-5。§3.1 STOP-3 分支（置信不足→转 STOP-5）+ §4.0 映射：Decision 冻结 NEED_EVIDENCE。§4.3 纪律：不当无候选人硬撑 GO。"
+  },
+  "escalation": {
+    "escalation_type": "E1",
+    "finding_identity": "RB-E1 / JNPF.Systems Common/FileService.cs:263 下载令牌硬编码密钥 'JNPF' 可离线伪造（Critical 安全）",
+    "finding_decision_record": "NEED_EVIDENCE",
+    "current_claim": "任何攻击者可离线伪造 encryption 值，匿名批量下载全仓 TemporaryFile 文件（Critical 安全）。机制证据 High（代码锚定），完整 Critical 影响未闭合。",
+    "current_evidence": [
+      { "source": "FileService.cs:34", "content": "[AllowAnonymous]（类级，全端点匿名）", "confidence": "H" },
+      { "source": "FileService.cs:227", "content": "string? encryptStr = DESCEncryption.Encrypt(url, \"JNPF\");（DownloadUrl 生成令牌）", "confidence": "H" },
+      { "source": "FileService.cs:228", "content": "_cacheManager.Set(fileName, string.Empty);（匿名端点可预置任意 fileName 的 cache 门闩）", "confidence": "H" },
+      { "source": "FileService.cs:263", "content": "DESCEncryption.Encrypt(downloadFileName, \"JNPF\")（DownloadAll 生成下载 URL，硬编码密钥）", "confidence": "H" },
+      { "source": "FileService.cs:273", "content": "string decryptStr = DESCEncryption.Decrypt(encryption, \"JNPF\");（消费端同密钥）", "confidence": "H" },
+      { "source": "FileService.cs:277/286", "content": "解密串仅取 paramsList[1]（fileName）与 [2]（type），paramsList[0]（userId）从不使用 → 无用户绑定", "confidence": "H" },
+      { "source": "FileService.cs:278", "content": "if (_cacheManager.Exists(fileName)) —— 唯一授权门闩为 cache 中 fileName 存在性", "confidence": "H" },
+      { "source": "DESCEncryption.cs:24-26", "content": "des.Key=des.IV=MD5Encryption.Encrypt(skey,uppercase)[..8]，密钥/IV 由公开常量确定性派生", "confidence": "H" }
+    ],
+    "current_confidence": "Low",
+    "budget_consumed": { "scope": "2/1", "depth": "3/2", "artifact": "3/6", "iteration": "1/2" },
+    "missing_information": "① 生产部署层是否存在网关鉴权/IP 限流/风控（baseline 未导出，场景明示视为不可读资源）；② IFileManager.GetPathByType 实际存储映射对 'TemporaryFile'/各 type 是否可达、路径是否可预测（实现未导出）；③ '匿名批量下载全仓 TemporaryFile' 需要目标文件可枚举——DownloadAll 产生的 zip 名为随机 7 位字母数字（62^7），与'批量全仓'主张冲突，需运行时枚举性验证；④ DownloadFile 依赖 cache 命中，攻击者须先经匿名 DownloadUrl（FileService.cs:228）预置门闩，该预置路径的匿名可达性与频率限制需运行时确认。以上全部属 Level 2/运行时采集范围，R1 禁 Level 2。",
+    "candidate_decisions": ["GO", "STOP", "NEED_EVIDENCE"],
+    "human_decision_required": "APPROVE_MORE_CONTEXT",
+    "recommended_action": "机制证据保留（High，代码锚定，可溯源）；建议人工批准采集运行时证据（网关/限流存在性、GetPathByType 存储映射、目标文件可枚举性）以闭合 Critical 影响；若获准扩 Scope 可补读 IFileManager 实现并按需升级 Nature 判档（E4 需人工裁定）。禁止在缺运行时证据下宣布 GO（v4 硬门/§4.3）。"
+  },
+  "meta": { "time_observed_minutes": 5 }
+}

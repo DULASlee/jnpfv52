@@ -1,0 +1,29 @@
+{
+  "repo_root": "D:/JNPF-v52",
+  "default_commit": "b3b8acde",
+  "finding_file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+  "finding_project": "JNPF.Systems",
+  "simulated_human": false,
+  "files": [
+    {
+      "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+      "project": "JNPF.Systems",
+      "exported_from": "b3b8acde"
+    },
+    {
+      "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+      "project": "JNPF.Common.Core",
+      "exported_from": "b3b8acde"
+    },
+    {
+      "path": "backend/framework/JNPF/DataEncryption/Encryptions/DESCEncryption.cs",
+      "project": "JNPF",
+      "exported_from": "b3b8acde"
+    },
+    {
+      "path": "backend/framework/JNPF/DataEncryption/Encryptions/AESEncryption.cs",
+      "project": "JNPF",
+      "exported_from": "b3b8acde"
+    }
+  ]
+}

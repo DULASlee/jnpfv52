@@ -1,0 +1,70 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-X5",
+  "run": 2,
+  "finding": {
+    "project": "JNPF.Extend",
+    "file": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+    "risk": "High",
+    "nature": "Systemic",
+    "nature_order_checked": ["Local", "Regional", "Systemic"],
+    "nature_justification": "按 §1.3 顺序：Local 不满足——涉及对象（FlowTaskEntity、JNPF.Extend.csproj 的 ProjectReference 清单、FLOW_TASK 写入语义）不在当前类内部，本类代码无法自证。Regional 不满足——不止直接依赖跨界 1 层：安全判定所需核心证据（F_STATUS 状态机流转、关联表/事件维护等写入语义）位于 JNPF.WorkFlow 模块服务实现，跨越 FlowTaskEntity 直接依赖之外 ≥2 步，无法在跨类边界清晰可终止处取全。Systemic 成立——Finding 核心即不同 .csproj 的跨模块依赖：JNPF.Extend → JNPF.WorkFlow.Entitys（using/Queryable/Updateable 直触）且写入语义在 JNPF.WorkFlow。",
+    "claim": "OrderService 在 [UnitOfWork] 事务边界内（Delete 方法，OrderService.cs:250-251 挂 [UnitOfWork]）跨模块直读直写另一模块的 FLOW_TASK 域实体：:85 三表联查含 FlowTaskEntity、:259 Queryable<FlowTaskEntity>()、:262 Updateable(flowTaskEntity) 软删 FLOW_TASK 行；而 JNPF.Extend.csproj:4-7 的 ProjectReference 列表仅含 JNPF.WorkFlow.Interfaces、不含 JNPF.WorkFlow.Entitys。证伪判据：若 csproj 第 4-7 行引用清单中出现 JNPF.WorkFlow.Entitys，或 :259-262 的 FlowTaskEntity 读写不在挂 [UnitOfWork] 的方法体内，或 :85 泛型参数不含 FlowTaskEntity，则 Claim 为假。"
+  },
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "budget_allocation": { "depth": 3, "artifact": 8, "iteration": 2, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "DataFlow",
+      "level": "Level1",
+      "gap": "结构性主张（跨模块触碰点、事务边界、引用清单）尚未逐行固定；不固定则无法区分『事务内写 FLOW_TASK』与『读侧联查』，也排不出 csproj 是否显式引用 Entitys，Decision 无法推出唯一值。",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "hop": 0, "purpose": "finding 文件复核：固定 using:20、三表联查:85、[UnitOfWork]:250、FLOW_TASK 读写:259-262（finding 文件读取不计预算）" },
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/extend/JNPF.Extend/JNPF.Extend.csproj", "hop": 0, "purpose": "固定 JNPF.Extend 的 ProjectReference 清单，验证是否只引用 WorkFlow.Interfaces 而无 WorkFlow.Entitys" }
+      ],
+      "evidence": [
+        { "source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "20", "snippet": "using JNPF.WorkFlow.Entitys.Entity;", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "85", "snippet": "        var pageList = await _repository.AsSugarClient().Queryable<OrderEntity, UserEntity, FlowTaskEntity>((a, b, c) => new JoinQueryInfos(JoinType.Left, a.CreatorUserId == b.Id, JoinType.Left, a.Id == c.Id))", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "250-251", "snippet": "    [UnitOfWork]\n    public async Task Delete(string id)", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "259", "snippet": "            var flowTaskEntity = await _repository.AsSugarClient().Queryable<FlowTaskEntity>().FirstAsync(x => x.Id == entity.Id);", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "262", "snippet": "                await _repository.AsSugarClient().Updateable(flowTaskEntity).CallEntityMethod(m => m.Delete()).UpdateColumns(it => new { it.DeleteMark, it.DeleteTime, it.DeleteUserId }).ExecuteCommandHasChangeAsync();", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/extend/JNPF.Extend/JNPF.Extend.csproj", "lines": "4-7", "snippet": "    <ProjectReference Include=\"..\\..\\common\\JNPF.Common.Core\\JNPF.Common.Core.csproj\" />\n    <ProjectReference Include=\"..\\..\\system\\JNPF.Systems.Interfaces\\JNPF.Systems.Interfaces.csproj\" />\n    <ProjectReference Include=\"..\\..\\workflow\\JNPF.WorkFlow.Interfaces\\JNPF.WorkFlow.Interfaces.csproj\" />\n    <ProjectReference Include=\"..\\JNPF.Extend.Interfaces\\JNPF.Extend.Interfaces.csproj\" />", "confidence": "H" }
+      ],
+      "counters_after": { "depth": 1, "artifact": 1, "iteration": 1, "scope": 0 },
+      "stop_check": { "STOP4": false, "STOP5": false, "STOP1": false, "STOP2": false, "STOP3": false, "hit": null, "note": "STOP4否：下一步所需 FlowTaskEntity 定义在 Scope 预算内（S 0/1→可取 1 模块）。STOP5否：无 E1-E5 命中（预算未封顶、无冲突、剩余缺口为 Level1 静态码非 Level2、nature 已判 Systemic 故 E4 不适用、决策无多值不稳定）。STOP1否：核心安全问题『绕过 WorkFlow 写入语义是否构成缺陷』的五元组缺写入语义项，不成立。STOP2否：取到实体/语义证据可能翻转决策。STOP3否：D1/3 A1/8 I1/2 S0/1 均未达上限。" }
+    },
+    {
+      "round": 2,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "gap": "FLOW_TASK 行的写入语义归属（谁负责 F_STATUS 状态机、挂起/完成标志、关联数据一致性）无法由 OrderService 或 JNPF.Extend 侧证据判定；先固定实体侧归属线索（表映射、状态字段、基类），确认剩余取证目标所在模块。",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/workflow/JNPF.WorkFlow.Entitys/Entity/FlowTaskEntity.cs", "hop": 1, "purpose": "新文件、非 finding project（JNPF.WorkFlow.Entitys）：确认 [SugarTable(\"FLOW_TASK\")] 映射与 F_STATUS 状态机字段，定位写入语义实现归属" }
+      ],
+      "evidence": [
+        { "source": "file:line", "path": "backend/modularity/workflow/JNPF.WorkFlow.Entitys/Entity/FlowTaskEntity.cs", "lines": "9", "snippet": "[SugarTable(\"FLOW_TASK\")]", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/workflow/JNPF.WorkFlow.Entitys/Entity/FlowTaskEntity.cs", "lines": "10", "snippet": "public class FlowTaskEntity : CLDSEntityBase", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/workflow/JNPF.WorkFlow.Entitys/Entity/FlowTaskEntity.cs", "lines": "120-124", "snippet": "    /// <summary>\n    /// 任务状态：【0-草稿、1-处理、2-通过、3-驳回、4-撤销、5-终止】.\n    /// </summary>\n    [SugarColumn(ColumnName = \"F_STATUS\")]\n    public int Status { get; set; } = 0;", "confidence": "H" }
+      ],
+      "counters_after": { "depth": 2, "artifact": 2, "iteration": 2, "scope": 1 },
+      "stop_check": { "STOP4": true, "STOP5": false, "STOP1": false, "STOP2": false, "STOP3": true, "hit": "STOP-4", "note": "STOP4命中：实体文件证明 FLOW_TASK 带 F_STATUS 状态机（FlowTaskEntity.cs:120-124），安全判定剩余必需 Context = JNPF.WorkFlow 模块服务实现中的 FLOW_TASK 写入语义（状态流转、关联表/事件一致性、OrderService:262 直改 DeleteMark 是否绕过校验），该目标为 finding project 之外的第二个 project（S 将 1→2 超上限 S=1，S 名额已被 JNPF.WorkFlow.Entitys 消耗）且不在 baseline、按场景访问规则不可达——符合 §3.1『剩余可获取 Context 需要跨越 Scope Budget 允许模块』。STOP3 同时命中（I=2/2 达上限），按 §3.3 v2 同时命中规则记录最先者 STOP-4（归因=责任边界，非内部配额）。STOP5否：E1 需预算封顶且 Confidence<Medium，当前已集证据为 High；E3 剩余缺口是 Level1 静态码（越界）非 Level2；E4 前提是误判 Regional，本案 nature 即为 Systemic；E2/E5 无冲突无翻转枚举。STOP1否：五元组的 Confidence 项对核心安全问题不满足，写入语义证据缺失。STOP2否：取得写入语义证据可能将决策翻为 GO 或 STOP，不宣布 Stable（未做 §3.4 穷举，stable_matrix=null）。" }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "OrderService 在 [UnitOfWork] 事务边界内跨模块直读直写 FLOW_TASK 域实体（:85/:259/:262），且 JNPF.Extend.csproj 引用清单不含 JNPF.WorkFlow.Entitys（:4-7）；该操作是否构成绕过 WorkFlow 写入语义的缺陷，取决于 JNPF.WorkFlow 模块的 FLOW_TASK 写入语义证据。",
+    "evidence": "Level1 静态：OrderService.cs:20、:85、:250-251、:259、:262（事务内对 FlowTaskEntity 的读与软删直写）；JNPF.Extend.csproj:4-7（ProjectReference 仅列 WorkFlow.Interfaces，无 WorkFlow.Entitys）；FlowTaskEntity.cs:9、:10、:120-124（FLOW_TASK 表含 F_STATUS 状态机字段，流转逻辑不在实体内）。全部 High（可直接指认、无推断）。",
+    "impact": "成立（写入语义证据显示 :262 直改 FLOW_TASK 绕过 F_STATUS 状态机/关联一致性维护）→ GO（收敛到 JNPF.WorkFlow.Interfaces 抽象后修复）；不成立（证据显示 DeleteMark/DeleteTime/DeleteUserId 软删不涉及状态流转且无副作用）→ STOP（不是缺陷）；当前两向证据均缺失且取证通道越出 Scope 边界 → NEED EVIDENCE。",
+    "confidence": "High",
+    "decision": "NEED_EVIDENCE"
+  },
+  "final": {
+    "decision": "NEED_EVIDENCE",
+    "stop_triggered": "STOP-4",
+    "stop_reason": "§3.1 STOP-4 Boundary Reached（round 2 命中，优先于同时满足的 STOP-1 评估与 STOP-3）：核心安全判定剩余必需 Context（FLOW_TASK 写入语义 = JNPF.WorkFlow 模块服务实现，第二个跨模块 .csproj 且不在 baseline）超出 Scope Budget S=1 允许范围。按 §3.1 STOP-4 动作携当前证据直入 v4 Decision 门：GO 六条合取不满足（『违反 Contract』方向未证实——绕过写入语义无证据；『单点边界可守』未证明——修复需触碰 WorkFlow 侧契约）；STOP 十条析取未确证（不能证明『不是缺陷』，也不属无证据猜测——结构事实全部 High）；符合 NEED EVIDENCE 第三态定义：Finding 结构部分已证、安全判定证据缺失且取证环境受阻（越界+不在 baseline）→ 冻结 NEED EVIDENCE，禁止压力推 GO 或转 STOP。",
+    "budget_consumed": { "scope": "1/1", "depth": "2/3", "artifact": "2/8", "iteration": "2/2" }
+  },
+  "escalation": null,
+  "meta": { "time_observed_minutes": 4 }
+}

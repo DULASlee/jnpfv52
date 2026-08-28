@@ -1,0 +1,110 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-03",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+    "risk": "Medium",
+    "nature": "Local",
+    "nature_order_checked": [
+      "Local"
+    ],
+    "claim": "类 JNPF.Systems 的 ScheduleService.Delete 方法（:744）的 case 2 分支中，:807 处 `foreach (var item in dataList)`（dataList 来自 :800-802 无行数上限的按组查询），其循环体 :809-811 是无条件执行的、按循环变量 item.Id 过滤的独立查询 `Queryable<ScheduleUserEntity>()...ToListAsync()`，即 dataList 有 N 行时该处逐迭代发起 N 次 SQL（N+1 查询形态）。可检验证伪：若 :809-811 的查询不在 :807 循环体内、或其过滤条件不依赖 item.Id，则 Claim 为假。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true
+  },
+  "budget_allocation": {
+    "depth": 1,
+    "artifact": 2,
+    "iteration": 1,
+    "scope": 0
+  },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "DataFlow",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "hop": 1,
+          "purpose": "钉取 :760-869 窗口，核实 Finding 的行号断言：:807 foreach 循环体 :809-811 是否逐迭代无条件执行依赖 item.Id 的 ToListAsync 查询；:800-802 dataList 来源与无上限性；else 分支 :817-819 的批量 Contains 形态（类内既有改写先例）。finding 文件本体读取，A-§4 口径 0/0/0"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "hop": 1,
+          "purpose": "同一 finding 文件上窗 :700-759，定位所属方法签名 :743-744（Delete）以绑定 Claim 的判定对象（FQ-2）。首见去重，不新增工件"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "807-813",
+          "snippet": "                        foreach (var item in dataList)\n                        {\n                            var dataUser = await _repository.AsSugarClient().Queryable<ScheduleUserEntity>()\n                                .Where(it => it.DeleteMark == null && it.ScheduleId.Equals(item.Id))\n                                .ToListAsync();\n                            scheduleLogList.Add(AddScheduleLog(item, string.Join(\",\", dataUser), \"3\"));\n                        }",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "800-802",
+          "snippet": "                    var dataList = await _repository.AsQueryable()\n                        .Where(it => it.DeleteMark == null && it.GroupId.Equals(data.GroupId) && it.StartDay >= data.StartDay)\n                        .ToListAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "817-819",
+          "snippet": "                        var dataUser = await _repository.AsSugarClient().Queryable<ScheduleUserEntity>()\n                            .Where(it => it.DeleteMark == null && it.ToUserId.Equals(_userManager.UserId) && dataList.Select(s => s.Id).ToList().Contains(it.ScheduleId))\n                            .ToListAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "743-744",
+          "snippet": "    [HttpDelete(\"{id}/{type}\")]\n    public async Task Delete(string id, int type)",
+          "confidence": "H"
+        }
+      ],
+      "counters_after": {
+        "depth": 0,
+        "artifact": 0,
+        "iteration": 1,
+        "scope": 0
+      },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": true,
+        "hit": "STOP-1"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "类 JNPF.Systems 的 ScheduleService.Delete 方法（:744）的 case 2 分支中，:807 处 `foreach (var item in dataList)`（dataList 来自 :800-802 无行数上限的按组查询），其循环体 :809-811 是无条件执行的、按循环变量 item.Id 过滤的独立查询 `Queryable<ScheduleUserEntity>()...ToListAsync()`，即 dataList 有 N 行时该处逐迭代发起 N 次 SQL（N+1 查询形态）。可检验证伪：若 :809-811 的查询不在 :807 循环体内、或其过滤条件不依赖 item.Id，则 Claim 为假。",
+    "evidence": "Level 1 静态代码（baseline 副本，commit b3b8acde，ScheduleService.cs）：:807-813 逐字原文显示 foreach 循环体内含无条件、依赖循环变量 item.Id 的 Queryable<ScheduleUserEntity>()...ToListAsync() 独立查询；:800-802 显示 dataList 来自按 GroupId+StartDay 的集合查询、无行数上限；:817-819 显示同方法 else 分支已有 dataList.Id 集合 Contains 的单次批量形态（类内可执行的改写先例）；:743-744 锚定所属方法 Delete。全部证据为可逐字回放的 file:line。",
+    "impact": "Claim 成立 => N+1 确认，且 :818 同型批量先例在类内已存在，修复局限于 ScheduleService.Delete 单方法、无跨类/跨模块依赖 => Decision=GO；Claim 不成立（查询不在循环体内或过滤不依赖 item.Id）=> 无 N+1、无需重构 => Decision=STOP。给定现有证据唯一推出前者，非集合。",
+    "confidence": "High",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "按 §3.1 优先级 4→5→1→2→3：STOP-4 未命中（S=0/0，判定所需 Context 全部在本类内，无跨模块需求）；STOP-5 未命中（§4.1 E1-E5 均不适用：无 Budget+置信双缺、无 High 证据冲突、剩余 Context 非 Level 2、Nature=Local 未跨 S 上限、§3.2 下 Decision 唯一无翻转）；STOP-1 命中（§2.3 五判据全满足：1) Claim 过 §2.5 三问 FQ-1/2/3 且非 N1-N5 反例，2) 每条 Evidence 均 file:line 可逐字回放，3) Impact 写明成立→GO/不成立→STOP 完整影响链，4) Decision 唯一=GO，5) Confidence=High≥Medium）。§3.3 流程在 STOP-1 处命中后不再评估 STOP-2/3，故 hit=STOP-1、stable_matrix=null；末轮 I=1/1 的算术触顶条件虽同时满足，按 §3.3 v2 同时命中规则记录最先命中者 STOP-1（§1.5：Budget 上限是后备闸而非触发器）。未使用成本/时间话术。"
+  },
+  "escalation": null,
+  "meta": {
+    "time_observed_minutes": 4
+  }
+}

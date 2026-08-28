@@ -1,0 +1,131 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-B1",
+  "run": 3,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "按 §1.3 判定顺序：先 Local — 不满足：临时目录/压缩包删除责任的归属无法仅凭 FileService 本类文本自证，必须核查本类构造函数注入的直接依赖接口 IFileManager 是否提供目录/临时清理契约（FileService.cs:52,67），故本类不能自闭。再 Regional — 成立：Finding 涉及本类直接注入的接口依赖 IFileManager（JNPF.Common.Core 项目），跨界 1 层、接口签名清晰可定位。Systemic 无需判定：不需要跨 Service↔Repository↔Provider 多层或跨 .csproj 依赖链（1 跳接口即达判定所需契约）。",
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）创建的 {SystemPath}/TemporaryFile/{fileName} 目录（:244-245）及其生成的 {fileName}.zip（:252,:258）在下载链接交付链上无任何删除路径：DownloadAll 方法体内无 finally、无删除调用（:240-264 全文可查，唯一 File.Delete 在 :256 仅删压缩前同名旧 zip）；同类提供消费的 DownloadFile（:271-295，type 段 'TemporaryFile' 见 :261）只删缓存键（:280）不删磁盘文件；且 baseline 两文件内 Directory.Delete/finally 零命中（grep 实证）、唯一删除契约 IFileManager.DeleteFile（IFileManager.cs:60）在 baseline 内零调用点（grep 实证）。"
+  },
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "budget_allocation": { "depth": 2, "artifact": 4, "iteration": 1, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "gap_declaration": "已声明缺口：DownloadAll 创建临时目录/zip 后，'谁负责删除'（Ownership/DataFlow）无法从本类推不出唯一 Decision——若删除契约在本类直接依赖接口 IFileManager 中不存在且无调用点，则泄漏责任收敛于可见交付链；若接口提供清理方法，责任归属可能转移。不查此 1 跳直接依赖，GO（是缺陷需修）与 STOP（清理在别处、非缺陷）无法唯一判定。Level 0 人工卡本场景不可得（Timeout），只能打 Level 1 码证缺口。",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "finding 文件全文复核（manifest.finding_file，按口径计 0/0/0）：确认 DownloadAll 全方法体无 finally/无目录删除，DownloadFile 交付链只删缓存键" },
+        { "tool": "Read", "mode": "body", "target": "baseline/backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs", "hop": 1, "purpose": "针式取证直接依赖接口：新文件正文 read，project=JNPF.Common.Core ≠ finding_project=JNPF.Systems → +1 artifact/+1 depth/+1 scope（首见去重）；查其是否提供临时目录/批量清理契约" },
+        { "tool": "Grep", "mode": "signature", "target": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "定点核验（pattern: Directory\\.Delete|Directory\\.CreateDirectory|TemporaryFile|DeleteFile|finally，范围=本场景 baseline 目录仅 2 文件，非全仓拖网）：将两文件的否定性观察转为可回放 tool-output 证据；两文件均首见已计，按口径不重复计数" }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "244-245",
+          "snippet": "        string directoryPath = Path.Combine(App.GetConfig<AppOptions>(\"JNPF_App\", true).SystemPath, \"TemporaryFile\", fileName);\n        Directory.CreateDirectory(directoryPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "254-256",
+          "snippet": "        // 判断是否存在同名称文件\n        if (File.Exists(downloadPath))\n            File.Delete(downloadPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "258-263",
+          "snippet": "        ZipFile.CreateFromDirectory(directoryPath, downloadPath);\n        if (!App.Configuration[\"OSS:Provider\"].Equals(\"Invalid\"))\n            await UploadFileByType(downloadPath, \"SystemPath\", string.Format(\"文件{0}.zip\", fileName));\n        var downloadFileName = string.Format(\"{0}|{1}.zip|TemporaryFile\", _userManager.UserId, fileName);\n        _cacheManager.Set(fileName + \".zip\", string.Empty);\n        return new { downloadName = string.Format(\"文件{0}.zip\", fileName), downloadVo = new { name = fileName, url = \"/api/File/Download?encryption=\" + DESCEncryption.Encrypt(downloadFileName, \"JNPF\") } };",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "278-281",
+          "snippet": "            if (_cacheManager.Exists(fileName))\n            {\n                _cacheManager.Del(fileName);\n            }",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "60",
+          "snippet": "        Task DeleteFile(string filePath);",
+          "confidence": "H"
+        },
+        {
+          "source": "tool-output",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "244-261",
+          "snippet": "Line 244:         string directoryPath = Path.Combine(App.GetConfig<AppOptions>(\"JNPF_App\", true).SystemPath, \"TemporaryFile\", fileName);\nLine 245:         Directory.CreateDirectory(directoryPath);\nLine 261:         var downloadFileName = string.Format(\"{0}|{1}.zip|TemporaryFile\", _userManager.UserId, fileName);",
+          "confidence": "H"
+        },
+        {
+          "source": "tool-output",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "60",
+          "snippet": "Line 60:         Task DeleteFile(string filePath);",
+          "confidence": "H"
+        }
+      ],
+      "evidence_note": "tool-output 两条为同一 grep（pattern 'Directory\\.Delete|Directory\\.CreateDirectory|TemporaryFile|DeleteFile|finally'，范围=本场景 baseline 目录）的返回：全 baseline 中 Directory.Delete 与 finally 零命中；'TemporaryFile' 仅 FileService.cs:244/245/261；'DeleteFile' 全 baseline 仅命中 IFileManager.cs:60 声明一处——即 baseline 内 DeleteFile 零调用点、FileService 全文无目录删除。否定性观察（方法体内无清理）另由 round1 两次全文 Read 的正文直接支撑（:240-264 无任何 finally/DeleteFile/Directory.Delete）。",
+      "counters_after": { "depth": 1, "artifact": 1, "iteration": 1, "scope": 1 },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": true,
+        "STOP1": false,
+        "STOP2": false,
+        "STOP3": true,
+        "hit": "STOP-5"
+      },
+      "stop_check_note": "按 §3.1 优先级 4→5→1→2→3：STOP-4=false——剩余缺口（清理契约调用方/外部清扫者）所在文件根本未导出进 baseline = 资源不存在，按 S2 纪律 7 不构成 STOP-4（STOP-4 仅指跨入被 Scope 预算禁止的模块边界取证）。STOP-5=true——§4.1 E1 命中：Iteration 1/1、Scope 1/1 达 §1.2 Medium×Regional 上限，且对'是否缺陷'的 Confidence=Low（<Medium，§2.2：由两文件无删除推断'全系统无人清理'需 ≥2 步推断；Level 0 人工不可得 Timeout，无法补 Ownership）。先命中即 STOP-5，其后 STOP-1=false（§2.3 判据 4'唯一决策'与判据 5'Confidence≥Medium'不满足）、STOP-2=false（缺失的 Ownership 上下文任一取值均可翻转 GO/STOP，决策不稳定；且 Iteration 已无余量开启后续轮，不构成 Stable 意义上的'穷举后不变'）、STOP-3=true（Iteration/Scope 双封顶，被优先级更高的 STOP-5 先记）。同时命中记录最先者（§3.3 v2 规则）。命中后未再开新轮。"
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "见 finding.claim：DownloadAll 创建的 TemporaryFile/{fileName} 目录与 {fileName}.zip 在 DownloadAll 方法体、同类消费链 DownloadFile、以及本类直接依赖接口 IFileManager 可见范围内均无删除路径（Directory.Delete/finally 零命中、DeleteFile 零调用点）。",
+    "evidence": "FileService.cs:244-245（创建）、:254-256（唯一 File.Delete 仅删压缩前同名旧 zip）、:258-263（压缩后仅上传+返回 URL，方法体结束无清理）、:278-281（消费端点只删缓存键）、IFileManager.cs:60（唯一删除契约为文件级且 baseline 内零调用）、grep tool-output（两文件 Directory.Delete/finally 零命中）。来源均可回溯，Level 1 静态码证，Confidence H（就'两文件内无删除路径'这一局部主张）。",
+    "impact": "Claim 成立且清理责任确无外部归属（需 Ownership 证据）→ Finding 成立为资源泄漏缺陷 → GO（修复：消费完成后删除 zip 与目录，走 DeleteFile 契约或 finally）；Claim 成立但外部存在清扫归属（定时任务/其他模块/运维流程，C09 先例即人工描述'外部消费后清理'）→ 不是缺陷 → STOP。二者当前均无法排除。",
+    "confidence": "Low",
+    "decision": "NEED_EVIDENCE",
+    "confidence_justification": "§2.2：局部码证为 H，但支撑最终 GO/STOP 判定的关键命题'TemporaryFile 无任何外部清理归属'需从已读的 2 个文件出发再做 ≥2 步推断（①其余调用方/组件无删除路径 ②无定时清扫/运维机制），且证据链断裂处恰为人工不可得（Level 0 Timeout）+ 目标文件未导出（资源不存在）→ 判定整体 Confidence=Low < Medium，§2.3 判据 4/5 不满足，五元组 NOT Sufficient。"
+  },
+  "final": {
+    "decision": "NEED_EVIDENCE",
+    "stop_triggered": "STOP-5",
+    "stop_reason": "§3.1 优先级序中 STOP-5 先命中（STOP-4 排除见 round1 stop_check_note，资源不存在≠边界禁入）：§4.1 E1 条件成立——Iteration 1/1 与 Scope 1/1 达 §1.2 Medium×Regional 分档上限（后备闸落闸），同时判定 Confidence=Low < Medium（'无外部清理归属'需 ≥2 步推断且 Level 0 人工不可得 Timeout、调用方文件未导出 baseline）。等价路径 §3.1 STOP-3 行：Budget 封顶且 Confidence<Medium → 转 STOP-5，与 §4.4（E1 触发 STOP-5）一致。§4.0：ESCALATE 是动作非 Decision，Finding 决策态冻结为 NEED_EVIDENCE / BLOCKED-BY-HUMAN；§4.3 纪律：硬撑 GO（断言缺陷）或硬撑 STOP（断言非缺陷）均为违反。"
+  },
+  "escalation": {
+    "escalation_type": "E1",
+    "finding_identity": "RB-B1 — JNPF.Systems / Common/FileService.cs / DownloadAll 临时目录未清理（:240-:264），Risk=Medium, Nature=Regional",
+    "finding_decision_record": "NEED_EVIDENCE",
+    "current_claim": "DownloadAll 创建的 TemporaryFile/{fileName} 目录及其 .zip 在下载交付链（DownloadAll 方法体 + 同类 DownloadFile 消费端点 + 直接依赖接口 IFileManager）可见范围内无任何删除路径。",
+    "current_evidence": [
+      { "source": "FileService.cs:244-245", "content": "临时目录 directoryPath 经 Directory.CreateDirectory 创建，位于 SystemPath/TemporaryFile/{fileName}", "confidence": "H" },
+      { "source": "FileService.cs:254-256", "content": "方法内唯一 File.Delete 只删压缩前同名旧 downloadPath，非临时目录清理", "confidence": "H" },
+      { "source": "FileService.cs:258-263", "content": "ZipFile.CreateFromDirectory 后仅上传(OSS)/写缓存键/返回 /api/File/Download URL，方法体结束无 finally 无清理", "confidence": "H" },
+      { "source": "FileService.cs:278-281", "content": "消费端点 DownloadFile 命中缓存后仅 _cacheManager.Del(fileName)，不删磁盘 zip/目录", "confidence": "H" },
+      { "source": "IFileManager.cs:60", "content": "直接依赖接口唯一删除契约为文件级 Task DeleteFile(string filePath)，无目录/临时清理方法", "confidence": "H" },
+      { "source": "tool-output(grep, baseline 范围)", "content": "Directory.Delete 与 finally 在 baseline 两文件零命中；DeleteFile 仅声明一处、零调用点；'TemporaryFile' 仅 FileService.cs:244/245/261", "confidence": "H" }
+    ],
+    "current_confidence": "Low",
+    "budget_consumed": { "scope": "1/1", "depth": "1/2", "artifact": "1/4", "iteration": "1/1" },
+    "missing_information": "临时目录/压缩包的删除责任归属（Ownership）：(a) baseline 之外是否存在对 TemporaryFile 路径的 Directory.Delete / DeleteFile 调用方（IFileManager 实现类、后台托管服务、其他模块控制器均未导出）；(b) Level 0 人工/运维陈述：是否存在外部定时清扫或消费后清理约定（本场景人工完全不可得，按 Timeout 冻结）；(c) Level 2 运行时观测：TemporaryFile 目录是否实际累积残留（辅助定性，非必需）。",
+    "candidate_decisions": ["GO", "STOP", "NEED_EVIDENCE"],
+    "human_decision_required": "APPROVE_MORE_CONTEXT",
+    "recommended_action": "人工提供 Level 0 Ownership 陈述（TemporaryFile 目录/zip 由谁清理），或批准将 IFileManager 实现类及全仓 'TemporaryFile'/'DeleteFile' 调用点文件补导出进 baseline 后重跑；亦可裁定按 §1.2 升档（Medium 行 Regional→Systemic：I=2,A=6,S=1）扩充 Context 预算。裁定后重入 v4 决策门：确证无外部清理归属且违反资源清理契约 → 按 GO 六条件复验（含单点边界可守：修复点收敛于 FileService.cs:240-264/271-295 与 DeleteFile 契约）；确证外部存在清理归属 → 按 STOP 析取项'不是缺陷'关单。"
+  },
+  "meta": {
+    "time_observed_minutes": 3,
+    "human_availability": "本场景人工完全不可得（无 human-cards），Level 0 请求按 scenario §环境约束视为 Timeout；trace 中无任何 human-statement 证据（未伪造）。",
+    "pre_round_note": "正式 round1 之前仅用 PowerShell 目录列举确认 baseline 实际只含 manifest.files 声明的 2 个文件（目录枚举，未读工件正文，按口径不计 Artifact/Depth/Scope）。",
+    "discipline_notes": "纪律5：全部 snippet 从当轮 Read/Grep 工具返回原文复制；纪律6：hop=调用/依赖链中间类数（finding 文件=0，直接注入接口 IFileManager=1）；纪律7：未导出文件=资源不存在，走 STOP-3→E1 分支记 STOP-5，未记 STOP-4；纪律8：scenario 内'人工完全不可得'为环境约束事实，nature/budget/decision 均按 Patch 条文独立推导；纪律9：无人卡故无码证/人证冲突处理需要。"
+  }
+}

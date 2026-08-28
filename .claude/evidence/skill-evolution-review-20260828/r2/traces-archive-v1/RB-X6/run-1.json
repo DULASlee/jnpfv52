@@ -1,0 +1,115 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-X6",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "按 §1.3 顺序判：先 Local — 不成立，Cleanup 判定不能在本类 DownloadAll 方法内自证：临时目录/zip 的消费在独立方法 DownloadFile（/api/File/Download 入口），且目录留存语义取决于直接依赖 IFileManager.CopyFile（跨类）；再 Regional — 成立，跨界仅一层接口/方法依赖（FileService↔IFileManager、DownloadAll↔DownloadFile），边界清晰，与 Patch §1.5 C09 同 Finding 判定一致；Systemic 不采用：无 Service↔Repository↔Provider 跨层链、无多模块依赖。",
+    "claim": "在仓库冻结范围内，FileService.DownloadAll（FileService.cs:240-264）对 :245 创建的 TemporaryFile 临时目录及其 :258 生成的 zip 无任何删除调用（:255-256 仅在压缩前删除旧同名 zip，不删除本次产物）；消费入口 DownloadFile（FileService.cs:271-295）命中缓存后仅执行 _cacheManager.Del 删缓存键（:278-281），无磁盘文件/目录删除；临时目录在 ZipFile.CreateFromDirectory（:258）后即无任何仓库内读者，且 IFileManager.CopyFile 为复制语义（IFileManager.cs:90）意味着目录内复制件持续留存；清理职责按 HR-01 被指派给外部（服务端不主动删除）。若在上述任一路径发现 Directory.Delete、File.Delete(downloadPath) 或 _fileManager.DeleteFile 针对本次产物的调用，Claim 即为假。"
+  },
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "budget_allocation": { "depth": 2, "artifact": 4, "iteration": 1, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "hop": 0,
+          "purpose": "复核 DownloadAll(:240-264) 与消费入口 DownloadFile(:271-295) 全文：确认无 finally/Dispose/Directory.Delete/文件级 DeleteFile 针对本次临时目录与 zip"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "hop": 1,
+          "purpose": "检查直接依赖接口：CopyFile 是否为移动语义（若是则目录内容不残留）、接口是否含清理/回收契约、DownloadFileByType 是否含消费即删语义"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "human-cards/HR-01.json",
+          "hop": 0,
+          "purpose": "取 Level 0 人工 Ownership 描述：临时目录/zip 由谁消费、何时清理（人卡不计 Artifact/Depth/Scope，Brief 格式约束 #3）"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "244-245",
+          "snippet": "        string directoryPath = Path.Combine(App.GetConfig<AppOptions>(\"JNPF_App\", true).SystemPath, \"TemporaryFile\", fileName);\n        Directory.CreateDirectory(directoryPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "255-256",
+          "snippet": "        if (File.Exists(downloadPath))\n            File.Delete(downloadPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "258",
+          "snippet": "        ZipFile.CreateFromDirectory(directoryPath, downloadPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "278-281",
+          "snippet": "            if (_cacheManager.Exists(fileName))\n            {\n                _cacheManager.Del(fileName);\n            }",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "90",
+          "snippet": "        Task CopyFile(string filePath, string toFilePath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "60",
+          "snippet": "        Task DeleteFile(string filePath);",
+          "confidence": "H"
+        },
+        {
+          "source": "human-statement",
+          "path": "human-cards/HR-01.json",
+          "lines": "6",
+          "snippet": "临时目录和 zip 由前端用户完成下载后统一清理，服务端不主动删除；/api/File/Download 是消费入口，一次性链接经 cacheManager 控制。",
+          "confidence": "M",
+          "card_id": "HR-01"
+        }
+      ],
+      "counters_after": { "depth": 1, "artifact": 1, "iteration": 1, "scope": 1 },
+      "stop_check": { "STOP4": false, "STOP5": false, "STOP1": true, "STOP2": false, "STOP3": false, "hit": "STOP-1" }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "FileService.DownloadAll(:240-264) 与 DownloadFile(:271-295) 对 :245 创建的临时目录及 :258 生成的 zip 在仓库内无任何删除路径：:255-256 只删压缩前旧同名 zip，:278-281 只删缓存键；CopyFile 为复制语义（IFileManager.cs:90）故目录内容随每次调用永久残留；清理职责被 HR-01 指派为外部，服务端不存在实现。",
+    "evidence": "FileService.cs:244-245（每次调用无条件 CreateDirectory）+ :255-256（仅删旧 zip 非本次产物）+ :258（打包后目录无读者）+ :278-281（消费仅 Del 缓存键不删磁盘文件）—— Level 1 静态代码与 Claim 直接对应；IFileManager.cs:90（复制语义）+ :60（存在 DeleteFile 契约但本路径零调用）；HR-01 human-statement（Level 0：服务端不主动删除，清理在外部）。",
+    "impact": "Claim 成立 → 每次 PackDownload 必然孤儿化一个含复制件的临时目录与一次性 zip，服务端无回收路径，属资源生命周期缺陷且单点可守 → 经 v4 门入 GO；Claim 不成立（上述任一行存在本次产物删除调用）→ 非缺陷 → STOP。两向各自唯一推出，无第三分支。",
+    "confidence": "Medium",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§2.3 五判据全满足：①Claim 过 §2.5 三问（FQ-1/FQ-2/FQ-3=true，绑定 FileService.cs:240-264/271-295 具体对象与'无删除调用'状态，可指认证伪行）；②证据全可回溯（file:line ×6 + human-statement ×1）；③影响链完整（成立→GO 单点修复；不成立→STOP）；④Decision 由 §2.3+v4 门唯一推出（GO 六合取逐项过：Finding 已证[Level 1 直接对应]、违反 Contract[Level 0 声明'下载后统一清理'而仓库内无任何服务端清理路径，目录打包后即孤儿]、单点边界可守[FileService 内补 :258 后目录删除与一次性 zip 消费后删除，接口已有 IFileManager.DeleteFile 或 BCL Directory.Delete]、各 gate 通过[资源生命周期缺陷非性能类改动，硬门 2 不适用]、存在回归路径[调用 DownloadAll 后断言临时目录与 zip 不存在]、不扩 Contract[无新 API/签名变更]；STOP 十析取逐项 scan 无命中）；⑤Confidence=Medium≥Medium。§3.3 顺序 4→5→1：STOP-4 未触发（判定所需 Context 全在 Budget 内获得，S=1/1 未越界）、STOP-5 未触发（E1-E5 条件均不成立）、STOP-1 命中即停。按 §1.5 v2：Budget 上限是后备闸非触发器，I=1/1 到达上限不构成停止理由。"
+  },
+  "escalation": null,
+  "meta": { "time_observed_minutes": 40 }
+}

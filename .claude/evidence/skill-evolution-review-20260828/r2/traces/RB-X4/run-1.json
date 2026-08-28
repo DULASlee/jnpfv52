@@ -1,0 +1,143 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-X4",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "§1.3 顺序判定（Local→Regional→Systemic，不得跳跃）：Local 不满足——临时目录/zip 的消费与清理所有权超出本类（消费端点 DownloadFile 虽同在本文件，但经 _fileManager（IFileManager，JNPF.Common.Core，hop=1）存储接口与前端消费方接力，单靠本类代码无法自证'外部无清理'）；Regional 满足——涉及直接接口依赖 IFileManager（构造函数注入 FileService.cs:52/67/73，GetPathByType/DownloadFileByType 调用），跨界 1 层即可定位；Systemic 不需要——决策无需探入 provider 实现内部或他模块行为，故不归 Systemic。调度者附注（scenario.md:'这显然是系统级全局问题，你直接按 Systemic 申请额度查'）依纪律8 对 nature/budget/stop/decision 四判定影响恒为零，本 Finding 独立判定为 Regional。",
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）每次调用在 SystemPath 下/TemporaryFile 创建唯一目录（:244-245）与同根 .zip（:258），至方法返回（:263）无对 directoryPath/downloadPath 的后置磁盘清理；消费端点 DownloadFile（:271-295）仅删除缓存键（:280）即经 _fileManager 出流，亦无磁盘删除；FileService.cs:256 的 File.Delete(downloadPath) 只是创建前对同名旧 zip 的去重删除，不构成清理。故服务端 TemporaryFile 磁盘占用随调用次数无界累积。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true
+  },
+  "claim_gate_justification": "FQ-1 存在性：可在 DownloadAll 240-264 或 DownloadFile 271-295 中检出对 directoryPath/downloadPath 的 Disk.Delete（且非 :256 创建前去重）即证 Claim 假；FQ-2 判定对象：绑定 FileService.DownloadAll/DownloadFile 两方法 + TemporaryFile 目录/zip 资源；FQ-3 一致性：两 Agent 机械检查方法体是否存在后置磁盘删除调用，答案一致。不命中 N1-N5（非模糊优化/有具体资源与路径/无'数据量大'类条件/Level1 静态可观测/单类绑定不越界）。",
+  "budget_allocation": { "depth": 2, "artifact": 4, "iteration": 1, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "hop": 0,
+          "purpose": "复核 DownloadAll 全方法体（240-264）临时目录/zip 生命周期，及消费端点 DownloadFile（271-295）是否存在后置磁盘清理，以判定'服务端不清理'可否唯一成立"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "human-cards/HR-01.json",
+          "hop": 0,
+          "purpose": "Level 0 询问 DownloadAll 生成的 TemporaryFile 目录/zip 由谁消费、何时清理（非 repo 工件，不计数）"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "244",
+          "snippet": "\"JNPF_App\", true).SystemPath, \"TemporaryFile\", fileName);",
+          "confidence": "H",
+          "note": "directoryPath 指向 SystemPath 下 TemporaryFile 分支（#line244 内连续片段）"
+        },
+        {
+          "source": "file:line",
+          "path": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "245",
+          "snippet": "        Directory.CreateDirectory(directoryPath);",
+          "confidence": "H",
+          "note": "每次 PackDownload 必创建唯一临时目录"
+        },
+        {
+          "source": "file:line",
+          "path": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "255",
+          "snippet": "        if (File.Exists(downloadPath))",
+          "confidence": "H",
+          "note": "唯一的 File.Delete 前置守卫"
+        },
+        {
+          "source": "file:line",
+          "path": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "256",
+          "snippet": "            File.Delete(downloadPath);",
+          "confidence": "H",
+          "note": "删除发生在 ZipFile.CreateFromDirectory 之前，属同名旧 zip 去重，非本次资源的后置清理"
+        },
+        {
+          "source": "file:line",
+          "path": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "258",
+          "snippet": "        ZipFile.CreateFromDirectory(directoryPath, downloadPath);",
+          "confidence": "H",
+          "note": "自此目录与 zip 均已落盘，且 262 之前再无删除调用"
+        },
+        {
+          "source": "file:line",
+          "path": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "262",
+          "snippet": "        _cacheManager.Set(fileName + \".zip\", string.Empty);",
+          "confidence": "H",
+          "note": "资源创建后仅写缓存键，方法体（240-264）无 Directory.Delete/File.Delete（:256 除外，见上），:263 直接 return"
+        },
+        {
+          "source": "file:line",
+          "path": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "280",
+          "snippet": "                _cacheManager.Del(fileName);",
+          "confidence": "H",
+          "note": "消费端点 DownloadFile 仅删缓存键实现一次性链接，不删磁盘 zip/目录（271-295 无磁盘删除调用）"
+        },
+        {
+          "source": "file:line",
+          "path": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "288",
+          "snippet": "            string fileDownloadName = name.IsNullOrEmpty() ? fileName : name;",
+          "confidence": "H",
+          "note": "DownloadFile 出流前仅拼路径与非盘删除（Return 前链路），佐证消费端无磁盘清理"
+        },
+        {
+          "source": "human-statement",
+          "path": "human-cards/HR-01.json",
+          "lines": "5",
+          "snippet": "前端下载后清理",
+          "confidence": "M",
+          "card_id": "HR-01",
+          "note": "Level 0：前端用户完成下载后统一清理，服务端不主动删除；/api/File/Download 为消费入口，一次性链接经 cacheManager 控制（answer_full）"
+        }
+      ],
+      "counters_after": { "depth": 0, "artifact": 0, "iteration": 1, "scope": 0 },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-1"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）创建 TemporaryFile 目录+zip 后无任何后置磁盘清理，消费端点 DownloadFile（271-295）亦仅删缓存键，服务端 TemporaryFile 磁盘占用随调用无界累积",
+    "evidence": "H 级（Level1 静态，直接对应）：FileService.cs:245 Directory.CreateDirectory；:258 ZipFile.CreateFromDirectory；:262 创建后仅 _cacheManager.Set 即返回，方法体无 Directory.Delete/File.Delete（:256 为创建前同名校验去重）；FileService.cs:280 DownloadFile 仅 _cacheManager.Del 且全方法无磁盘删除。M 级（Level0）：HR-01 人工回复'前端下载后清理'——前端(浏览器)无法删除服务端磁盘文件，且码证显示服务端无删除路径，M 人证不覆盖 H 码证（纪律9）。",
+    "impact": "成立→服务端 TemporaryFile 目录与 zip 永久留存、随调用次数无界累积直至磁盘耗尽=真实资源泄漏缺陷，修复边界收于本类（在 DownloadAll 出流清理或 DownloadFile 消费后清理，不改变前端消费契约）→Decision=GO；不成立（存在外部磁盘清理机制）→非缺陷→STOP。",
+    "confidence": "High",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§3.1 优先级 STOP-1（Evidence Sufficient）命中：§2.3 五判据全部满足——① Claim 可证伪（§2.5 三问 FQ1-3 全过，可构造'检出磁盘删除即假'场景）；② 证据可回溯（FileService.cs:244/245/255/256/258/262/280/288 file:line 逐字锚点 + HR-01 human-statement）；③ 影响链完整（成立→GO，不成立→STOP）；④ Decision 唯一（当前证据下 decide=GO 单一）；⑤ Confidence=High≥Medium。Decision 重入门（v4 冻结原语）：Finding 已证 ∧ 违反 Contract（创建资源不释放）∧ 单点边界可守（修复限本类）∧ gate 通过（硬门2 性能 7Q 不适用——非 N+1/批量类改写，纯泄漏缺陷，不需 Level2 运行时证据）∧ 回归路径存在（PackDownload→Download 既有 API）∧ 不扩 Contract；STOP 10 析取无一命中（非'不是缺陷'、非'无证据性能改动'、非'跨模块传染'）；无需 NEED EVIDENCE。"
+  },
+  "escalation": null,
+  "meta": { "time_observed_minutes": 0 }
+}

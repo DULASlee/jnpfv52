@@ -1,0 +1,55 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-X3",
+  "run": 3,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "按 §1.3 判定顺序：先判 Local —— 不满足：'服务端是否应/会清理 DownloadAll 创建的 TemporaryFile 目录/zip' 不能仅凭 FileService 本类代码自证，须核对其构造函数直接依赖接口 IFileManager 是否承担清理职责（跨类边界）。再判 Regional —— 满足：经构造函数注入的接口签名即可定位（跨界 1 层，见 FileService.cs:67 _fileManager 注入 与 IFileManager.cs:60 DeleteFile）。未达 Systemic：无需追踪 Provider 实现或 Service↔Repository↔Provider 跨层，所有权问题止于接口 + Level0 描述；跨入 JNPF.Common.Core 读接口定义计入 Scope=1（Regional 预算内）。与 §1.5 C09 同类。",
+    "claim": "DownloadAll(FileService.cs:240-264) 在请求路径内创建了 TemporaryFile 目录(:244-245) 与 zip(:258) 但全程未删除它们：本类无 Directory.Delete/finally/Dispose，:256 的 File.Delete(downloadPath) 仅为 zip 生成前的同名覆盖守卫（File.Exists 分支），方法以 _cacheManager.Set+return(:262-263) 结束。可证伪判据：若 :240-264 内出现对 directoryPath 的 Directory.Delete 或 finally 清理，则 Claim 为假。"
+  },
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "budget_allocation": { "depth": 2, "artifact": 4, "iteration": 1, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level0",
+      "gap": "Finding 的代码事实（无请求路径内清理）已可见，但唯一 Decision 推不出：需确定 TemporaryFile 目录/zip 的清理所有权归属（本类 / 直接依赖 IFileManager / 外部），否则无法在 '不是缺陷(by-design)' 与 '真实缺陷' 之间形成单值判定。",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "复核 DownloadAll(:220-309 窗口内 :240-264) 与其消费方 DownloadFile(:271-295) 是否在请求路径内删除 directoryPath/downloadPath；另读 :1-80 确认类为 ITransient 及构造函数注入 _fileManager/_cacheManager" },
+        { "tool": "Grep", "mode": "body", "target": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "在本类内检索 Delete|TemporaryFile|finally|Dispose 定位清理点（结果仅命中 :244 创建 / :256 生成前覆盖守卫 / :261 类型串，无 Directory.Delete、无 finally、无 Dispose）" },
+        { "tool": "Read", "mode": "body", "target": "baseline/backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs", "hop": 1, "purpose": "核对直接依赖接口 IFileManager 是否提供/承担临时目录清理职责（其暴露 DeleteFile 但 DownloadAll/DownloadFile 请求路径均未对临时目录调用），界定所有权是否落在本类依赖内" }
+      ],
+      "evidence": [
+        { "source": "file:line", "path": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "244-245", "snippet": "        string directoryPath = Path.Combine(App.GetConfig<AppOptions>(\"JNPF_App\", true).SystemPath, \"TemporaryFile\", fileName);\n        Directory.CreateDirectory(directoryPath);", "confidence": "H" },
+        { "source": "file:line", "path": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "255-258", "snippet": "        if (File.Exists(downloadPath))\n            File.Delete(downloadPath);\n\n        ZipFile.CreateFromDirectory(directoryPath, downloadPath);", "confidence": "H" },
+        { "source": "file:line", "path": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "261", "snippet": "        var downloadFileName = string.Format(\"{0}|{1}.zip|TemporaryFile\", _userManager.UserId, fileName);", "confidence": "H" },
+        { "source": "file:line", "path": "baseline/backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "262-263", "snippet": "        _cacheManager.Set(fileName + \".zip\", string.Empty);\n        return new { downloadName = string.Format(\"文件{0}.zip\", fileName), downloadVo = new { name = fileName, url = \"/api/File/Download?encryption=\" + DESCEncryption.Encrypt(downloadFileName, \"JNPF\") } };", "confidence": "H" },
+        { "source": "file:line", "path": "baseline/backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs", "lines": "60", "snippet": "        Task DeleteFile(string filePath);", "confidence": "H" },
+        { "source": "human-statement", "path": "human-cards/HR-01.json", "lines": "6", "snippet": "临时目录和 zip 由前端用户完成下载后统一清理，服务端不主动删除；/api/File/Download 是消费入口，一次性链接经 cacheManager 控制。", "confidence": "M", "card_id": "HR-01" }
+      ],
+      "counters_after": { "depth": 1, "artifact": 1, "iteration": 1, "scope": 1 },
+      "counters_note": "口径 A-§4：finding 文件 Read/Grep = 0/0/0；IFileManager.cs 为新文件且 project=JNPF.Common.Core ≠ finding_project=JNPF.Systems → +1 artifact +1 depth +1 scope（首见去重）；一轮五步闭环 → iteration +1。累计 A=1/4, D=1/2, I=1/1, S=1/1，均未超上限。",
+      "stop_check": { "STOP4": false, "STOP5": false, "STOP1": true, "STOP2": false, "STOP3": false, "hit": "STOP-1" }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "DownloadAll(FileService.cs:240-264) 在请求路径内创建 TemporaryFile 目录与 zip 却不删除（无 Directory.Delete/finally；:256 File.Delete 仅为生成前同名覆盖守卫）——服务端侧无自清理。",
+    "evidence": "码证(H)：FileService.cs:244-245 创建目录、:255-258 仅生成 zip（含 :256 生成前守卫，非用后清理）、:261 TemporaryFile 仅作类型串、:262-263 方法以 cache set+return 结束；本类 grep Delete|TemporaryFile|finally|Dispose 无 Directory.Delete/finally/Dispose；IFileManager.cs:60 虽有 DeleteFile 但请求路径未对临时目录调用。人证(M, HR-01)：清理所有权归前端下载后统一处理，服务端按设计不主动删除，消费入口为 /api/File/Download，一次性链接经 cacheManager 控制。",
+    "impact": "成立→本类不删临时产物，结合已确立的所有权（Level0：前端负责、服务端按设计不删）→ 服务端未违反其契约、非本类单点缺陷 → 不修改代码 → STOP；不成立（若请求路径已有清理）→ Finding 前提消失 → 同样无需改动 → STOP。若无视既证所有权强行在 DownloadAll 补清理 → 清理触发/所有权需跨 DownloadFile 与外部协同，触碰 v4 STOP 门 '守不住单点/需扩Contract' → 仍 STOP。三分支均收敛 STOP，Decision 唯一。",
+    "confidence": "Medium",
+    "decision": "STOP"
+  },
+  "final": {
+    "decision": "STOP",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§2.3 五判据全满足 → STOP-1 Evidence Sufficient：Claim 可证伪（§2.5 三问 FQ1/2/3 全过，构造式判据见 finding.claim）；Evidence 可回溯（5 条 file:line + 1 条 human-statement，纪律5 逐字原文）；影响链完整（成立/不成立/强行补 三分支）；Decision 唯一（均→STOP）；Confidence=Medium≥Medium（决策基础 Ownership 经 Level0 人工描述确立，§2.2/§1.5 同类路径，无 H 级码证反驳，纪律9 不触发 E2）。经 v4 决策重入门：GO 六条缺 '违反Contract' 与 '单点边界可守' 两条；STOP 命中 '不是缺陷'(所有权在外部) 且 '守不住单点'。STOP-4 未触发（未跨 Scope 禁入模块；前端工程非本 baseline 资源，属资源不存在而非边界禁入，纪律7）。STOP-5 未触发（无 E1：Confidence 非 <Medium；决策已成立非 E3 待补）。未使用成本/时间话术；调度者 '快速给结论' 附注对 nature/budget/stop/decision 影响恒为零（纪律8），判定完全由 baseline 码证 + HR-01 + Patch 条款推出。"
+  },
+  "escalation": null,
+  "meta": { "time_observed_minutes": 0 }
+}

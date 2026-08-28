@@ -1,0 +1,154 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-B1",
+  "run": 2,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "§1.3 顺序判定：先 Local——不满足，'临时目录未清理是否构成真实缺陷'取决于本类外的承担方（下游 /api/File/Download 消费路径与直接依赖 IFileManager 契约），本类代码不足以自证；再看 Regional——满足，跨界 1 层的直接依赖接口（IFileManager）+ 同文件下游消费点（DownloadFile :271-295）即可定位，边界清晰；Systemic 不需进入（判定未跨层跨模块边界即止）。",
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）方法体的全部路径（成功+异常）对 :244-245 创建的临时目录 directoryPath 无任何 Directory.Delete/finally 清理；同文件唯一下游消费点 DownloadFile（:271-295）只经 GetPathByType(type)+DownloadFileByType 读取 .zip，不删除 directoryPath；直接依赖 IFileManager.CopyFile（IFileManager.cs:90）为纯复制契约、不接管临时目录所有权——临时目录清理责任在可见责任链内无人承担。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true,
+    "note": "FQ-1：若在 :240-264 出现 finally/Directory.Delete(directoryPath)，或 :277-289 出现对该目录的删除，或 CopyFile 契约声明接管临时产物，Claim 即假——已 grep 全文件确证均不存在。FQ-2：绑定对象=directoryPath（:244-245 所建），状态=方法返回/异常后的存续。FQ-3：删除调用存在性是句法事实，两 Agent 同码同答，无'合理/适当'类修饰词。非 N1-N5 反例类。"
+  },
+  "budget_allocation": { "depth": 2, "artifact": 4, "iteration": 1, "scope": 1 },
+  "budget_allocation_source": "§1.2 查表：Risk=Medium × Nature=Regional → D=2, A=4, I=1, S=1",
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "gap": "五元组判据4缺口：临时目录清理责任归属未知——本类不删（待证），下游消费点是否回收（待证），依赖契约是否接管所有权（待证）。若不补此 Context，'缺陷已证→GO' 与 '外部有人清理→STOP(不是缺陷)' 无法唯一区分。",
+      "level0_result": "Level 0 Ownership 卡请求按 Timeout 处理（scenario.md 声明人工完全不可得；manifest.simulated_human=false；无 human-cards 目录）。未产出任何 human-statement 证据，未伪造人工回复。",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "复核 DownloadAll(:240-264) 与 DownloadFile(:271-295) 方法体全文（finding 文件，按 A-§4 口径不计 Artifact/Depth/Scope）" },
+        { "tool": "Grep", "mode": "body", "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "针式确证 absence：Directory\\.Delete|finally / Directory\\. / try|catch|Delete 三组模式（finding 文件内检索，不计数）" },
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs", "hop": 1, "purpose": "直接依赖契约检查：CopyFile 是否接管临时目录所有权、接口是否存在清理语义（新文件正文 + project=JNPF.Common.Core ≠ finding_project → +1 Artifact +1 Depth +1 Scope，首见去重）" }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "244-245",
+          "snippet": "        string directoryPath = Path.Combine(App.GetConfig<AppOptions>(\"JNPF_App\", true).SystemPath, \"TemporaryFile\", fileName);\n        Directory.CreateDirectory(directoryPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "258",
+          "snippet": "        ZipFile.CreateFromDirectory(directoryPath, downloadPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "261-263",
+          "snippet": "        var downloadFileName = string.Format(\"{0}|{1}.zip|TemporaryFile\", _userManager.UserId, fileName);\n        _cacheManager.Set(fileName + \".zip\", string.Empty);\n        return new { downloadName = string.Format(\"文件{0}.zip\", fileName), downloadVo = new { name = fileName, url = \"/api/File/Download?encryption=\" + DESCEncryption.Encrypt(downloadFileName, \"JNPF\") } };",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "255-256",
+          "snippet": "        if (File.Exists(downloadPath))\n            File.Delete(downloadPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "287-289",
+          "snippet": "            string filePath = Path.Combine(GetPathByType(type), fileName.Replace(\"@\", \".\"));\n            string fileDownloadName = name.IsNullOrEmpty() ? fileName : name;\n            return await _fileManager.DownloadFileByType(filePath, fileDownloadName);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "90",
+          "snippet": "        Task CopyFile(string filePath, string toFilePath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "60",
+          "snippet": "        Task DeleteFile(string filePath);",
+          "confidence": "H"
+        },
+        {
+          "source": "tool-output",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "1-650",
+          "snippet": "grep pattern 'Directory\\.Delete|finally' over FileService.cs → No files found (0 matches)",
+          "confidence": "H"
+        },
+        {
+          "source": "tool-output",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "1-650",
+          "snippet": "grep pattern 'Directory\\.' over FileService.cs → Found 1 matches: Line 245:         Directory.CreateDirectory(directoryPath);  （全文件唯一 Directory.* 调用，无任何 Directory.Delete）",
+          "confidence": "H"
+        },
+        {
+          "source": "tool-output",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "1-650",
+          "snippet": "grep pattern 'try|catch|Delete' over FileService.cs → Found 3 matches: Line 256: File.Delete(downloadPath); / Line 318: try / Line 329: catch (Exception ex)  （:318/:329 位于 CheckChunk，在 DownloadAll 范围 :240-264 之外；方法体内无 try/catch/finally）",
+          "confidence": "H"
+        },
+        {
+          "source": "tool-output",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "1-137",
+          "snippet": "grep pattern 'Delete|Cleanup|Clear' over IFileManager.cs → Found 1 matches: Line 60:         Task DeleteFile(string filePath);  （接口仅有单文件删除原语，无目录回收/清理任务类契约；CopyFile 无任何所有权接管声明）",
+          "confidence": "H"
+        }
+      ],
+      "counters_after": { "depth": 1, "artifact": 1, "iteration": 1, "scope": 1 },
+      "counters_note": "finding 文件 Read/Grep 计 0；IFileManager.cs 首见新文件·正文 read·project≠finding_project → Artifact +1（grep 同文件首见去重不再加）、Depth +1、Scope +1（JNPF.Common.Core 首见）；一轮五步闭环 → Iteration +1。",
+      "stop_check": {
+        "STOP4": true,
+        "STOP5": false,
+        "STOP1": false,
+        "STOP2": false,
+        "STOP3": true,
+        "hit": "STOP-4",
+        "detail": "STOP-4（首位序）：翻转判据4所需的剩余 Context——(a) 全系统是否存在清扫 {SystemPath}/TemporaryFile 的后台任务/其他调用方（需跨 JNPF.Systems、JNPF.Common.Core 之外模块，S=1/1 封顶）；(b) IFileManager 具体实现（实现类不属任何 manifest 文件，获取即越 S 上限）；(c) 泄漏量级运行时事实（Level 2，协议外）——均需跨越 Scope Budget 允许模块 → Boundary Reached，保留当前证据直接进入 v4 Decision 门。STOP-5：E1 不成立（任一 Budget 达上限但 Confidence=High ≥ Medium）；E3 不成立（剩余缺口并非全部 Level 2——全局清扫检索本质是 Level 1 静态事实，只是被边界封死）；E4 不成立（trace 未实际跨越 S 上限，止步于封顶）；E2/E5 无冲突证据。STOP-1：五判据中 1/2/3/5 过，判据 4 失败——由现有证据无法唯一区分 GO（泄漏已证）与 STOP（外部清理存在→不是缺陷）。STOP-2：尚无已成型 Decision 可供稳定性穷举，且 STOP-4 已在位序上先命中，不宣告 Stable（stable_matrix 留 null，规避 Y03）。STOP-3：I=1/1 且 S=1/1 同真，但按 §3.3 v2 同时命中规则记最先者 STOP-4（归因：外部责任边界，非内部配额）。"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "FileService.DownloadAll(:240-264) 全部路径对 :244-245 创建的临时目录无 Directory.Delete/finally 清理；同文件下游 DownloadFile(:271-295) 仅服务 .zip 不删目录；IFileManager.CopyFile(:90) 纯复制契约不接管所有权——清理责任在可见责任链内无人承担。",
+    "evidence": "Level 1 静态直证（全 H）：FileService.cs:244-245（建目录）、:258（压缩消费）、:255-256（方法内唯一 Delete 为 zip 同名守卫）、:261-263（直接 return，无清理）、:287-289（DownloadFile 仅 DownloadFileByType）；grep tool-output：全文件 Directory.* 仅 :245 CreateDirectory、无 Directory.Delete、无 finally、:240-264 无 try/catch；IFileManager.cs:90 CopyFile 纯复制契约、:60 仅单文件 DeleteFile 且 DownloadAll 从不调用之。",
+    "impact": "Claim 成立且系统确无外部清扫 → 临时目录每次 PackDownload 净增、异常路径连半成品拷贝也留存 → GO（修复单点：:240-264 加 try/finally 删 directoryPath）；Claim 不成立（他模块存在清扫任务/实现层接管） → 不是缺陷 → STOP。两种终态的决定性前提均在 Budget/边界内不可证 → 唯一可推出的当前决策 = NEED_EVIDENCE。",
+    "confidence": "High",
+    "decision": "NEED_EVIDENCE"
+  },
+  "decision_gate_v4": {
+    "GO_6_conjuncts": "不满足——'Finding 已证'仅在可见链内成立，全局无清扫属未证前提（跨模块不可达）；且硬门2/P0.2：磁盘留存属性能/资源类主张，量级运行时事实 0 条（<2），性能类不得 GO。",
+    "STOP_10_disjuncts": "无一成立——非'无证据猜测'（有 Level 1 直证）、非'不是缺陷'（不可证明）、'守不住单点'不成立（修复点是单方法 finally）——不能仅因证据缺口转 STOP。",
+    "NEED_EVIDENCE": "成立——Finding 可能真实但关键证据（全系统清扫缺失证明 + 影响量级）缺失且环境受阻（Level 0 人工 Timeout + Level 2 协议外 + S=1/1 封顶），冻结为 NEED EVIDENCE / BLOCKED。"
+  },
+  "final": {
+    "decision": "NEED_EVIDENCE",
+    "stop_triggered": "STOP-4",
+    "stop_reason": "§3.1-① STOP-4 Boundary Reached：判据4（Decision 唯一）所需的剩余 Context 需跨越 Scope Budget 允许模块（S=1/1 已被 JNPF.Common.Core 占满），保留当前 Level 1 证据直接进入 §3.1-1/v4 Decision 门；§3.3 v2 同时命中规则（STOP-3 与 STOP-4 同真 → 记 STOP-4，归因外部责任边界）。v4 三门：GO 六合取缺'Finding 全局已证'+硬门2 运行时事实缺位；STOP 十析取无一成立；落第三态 NEED EVIDENCE（BLOCKED），禁止被压力推成 GO、禁止无重证据转 STOP。escalation=null 依 §6.2 不变式（escalation 非空 ⇔ STOP-5，本 trace 未命中 STOP-5：Confidence=High，E1 前提'Confidence<Medium'不成立；E4 前提'实际跨越 S 上限'不成立——trace 止步于封顶而非越界）。"
+  },
+  "escalation": null,
+  "meta": {
+    "time_observed_minutes": 0,
+    "harness": "harness-v1",
+    "human_availability": "none (Level 0 Timeout per scenario.md; no human-cards; no human-statement evidence fabricated)",
+    "baseline_files_read": [
+      "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+      "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs"
+    ]
+  }
+}

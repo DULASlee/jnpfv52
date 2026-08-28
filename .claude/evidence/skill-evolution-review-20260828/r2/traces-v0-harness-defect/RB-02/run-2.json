@@ -1,0 +1,127 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-02",
+  "run": 2,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": [
+      "Local — 不成立：DownloadAll 涉及的资源生命周期不完全在本类内可自证：文件复制经注入接口 IFileManager.CopyFile(:249) 跨类 1 层；zip 由本类另一出口 DownloadFile(:271) 经 cacheManager 一次性链接消费，清理责任归属需类外 Ownership 信息（Level 0）",
+      "Regional — 成立：直接依赖/接口边界（IFileManager 属 JNPF.Common.Core，构造函数 :62-:74 注入可定位），跨界 1 层即可判定，未触及跨层/跨模块链 → 不再升 Systemic"
+    ],
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）创建的 TemporaryFile/{7位随机名} 目录（:245）与 directoryPath+\".zip\"（:252、:258 生成）在本类代码内无任何删除调用（全类检索无 Directory.Delete；唯一 File.Delete(:256) 仅在 ZipFile.CreateFromDirectory 之前删除旧同名 zip）；其消费出口 DownloadFile(:271-295) 消费时仅删 cacheManager 键(:280)，不删除临时目录与 zip。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true
+  },
+  "budget_allocation": { "depth": 2, "artifact": 4, "iteration": 1, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level0",
+      "gap": "Finding 文本未经代码复核：不知道类内是否存在清理路径、也不知道 TemporaryFile 资源的消费/清理归属；缺任一者时 Claim 真假未定，GO/STOP 推不出唯一值。",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 1, "purpose": "复核 DownloadAll(:240-264) 方法体与同类消费出口 DownloadFile(:271-295)（finding_file，计数 0）" },
+        { "tool": "Grep", "mode": "body", "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 1, "purpose": "全类检索删除/清理调用（\\.Delete|Dispose|Cleanup|Clean|RemoveDirectory|Directory\\.）验证『类内无清理路径』（同文件，计数 0）" },
+        { "tool": "Grep", "mode": "signature", "target": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs", "hop": 1, "purpose": "定点检索注入依赖接口是否含 TemporaryFile 生命周期成员（pattern: TemporaryFile；新文件定点查：+1A/+1D）" },
+        { "tool": "Read", "mode": "body", "target": ".claude/evidence/skill-evolution-review-20260828/r2/scenarios/RB-02/human-cards/HR-01.json", "hop": 1, "purpose": "Level 0 Ownership：临时目录/zip 由谁消费、何时清理（人卡非 baseline 代码工件，计数 0）" }
+      ],
+      "evidence": [
+        {
+          "source": "file:244-245",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "244-245",
+          "snippet": "        string directoryPath = Path.Combine(App.GetConfig<AppOptions>(\"JNPF_App\", true).SystemPath, \"TemporaryFile\", fileName);\n        Directory.CreateDirectory(directoryPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:252-252",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "252-252",
+          "snippet": "        string downloadPath = directoryPath + \".zip\";",
+          "confidence": "H"
+        },
+        {
+          "source": "file:255-258",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "255-258",
+          "snippet": "        if (File.Exists(downloadPath))\n            File.Delete(downloadPath);\n\n        ZipFile.CreateFromDirectory(directoryPath, downloadPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:261-263",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "261-263",
+          "snippet": "        var downloadFileName = string.Format(\"{0}|{1}.zip|TemporaryFile\", _userManager.UserId, fileName);\n        _cacheManager.Set(fileName + \".zip\", string.Empty);\n        return new { downloadName = string.Format(\"文件{0}.zip\", fileName), downloadVo = new { name = fileName, url = \"/api/File/Download?encryption=\" + DESCEncryption.Encrypt(downloadFileName, \"JNPF\") } };",
+          "confidence": "H"
+        },
+        {
+          "source": "file:278-281",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "278-281",
+          "snippet": "            if (_cacheManager.Exists(fileName))\n            {\n                _cacheManager.Del(fileName);\n            }",
+          "confidence": "H"
+        },
+        {
+          "source": "file:289-289",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "289-289",
+          "snippet": "            return await _fileManager.DownloadFileByType(filePath, fileDownloadName);",
+          "confidence": "H"
+        },
+        {
+          "source": "tool-output",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "245,256",
+          "snippet": "Found 2 matches\nFileService.cs:\n  Line 245:         Directory.CreateDirectory(directoryPath);\n  Line 256:             File.Delete(downloadPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "tool-output",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "none",
+          "snippet": "No files found (pattern: TemporaryFile)",
+          "confidence": "H"
+        },
+        {
+          "source": "human-statement",
+          "path": ".claude/evidence/skill-evolution-review-20260828/r2/scenarios/RB-02/human-cards/HR-01.json",
+          "lines": "6-6",
+          "snippet": "临时目录和 zip 由前端用户完成下载后统一清理，服务端不主动删除；/api/File/Download 是消费入口，一次性链接经 cacheManager 控制。",
+          "confidence": "M",
+          "card_id": "HR-01"
+        }
+      ],
+      "counters_after": { "depth": 1, "artifact": 1, "iteration": 1, "scope": 0 },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": true,
+        "hit": "STOP-1",
+        "note": "按 §3.1 顺序 4→5→1→2→3：STOP-4 否（Claim 绑定单类+1 层依赖边界，无判定所需的越界 Context）；STOP-5 否（无 E1-E5 触发：Confidence=High、无冲突、剩余缺口非 Level-2-only、决策未多值）；STOP-1 命中（§2.3 五判据全满足，见 five_tuple）。同轮 I=1/1 达分档上限使 STOP-3 条件同时成立，按 §3.3 v2 同时命中规则记最先者 STOP-1（§1.5：Budget 上限是后备闸而非触发器）。STOP-2 因 §3.1 顺序在 STOP-1 之后不再需要，记 false。命中后不再开新一轮。"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）创建的 TemporaryFile 目录(:245)与 zip(:258)在本类内无任何删除调用（唯一 File.Delete(:256) 为打包前删除旧同名 zip，非清理路径）；消费出口 DownloadFile(:271-295) 仅删缓存键(:280)、经 DownloadFileByType 返回文件(:289)后不删除临时目录与 zip。",
+    "evidence": "Level 1：FileService.cs:244-245/252/255-258/261-263/278-281/289 逐字复核 + 全类清理调用检索仅命中 :245、:256（tool-output）+ IFileManager.cs 无 TemporaryFile 成员（tool-output）；Level 0：HR-01『临时目录和 zip 由前端用户完成下载后统一清理，服务端不主动删除；/api/File/Download 是消费入口，一次性链接经 cacheManager 控制。』——与代码证据方向一致，无冲突（不构成 E2）。",
+    "impact": "成立 → 服务端临时目录+zip 随每次 PackDownload 持续增长且类内无清理路径，Finding 成立，Decision=GO（Fix 需补服务端清理或落实外部清理契约，当前外部契约仅有 HR-01 单点 Level 0 支撑，须在 Fix 阶段作为待验证前提带出）；不成立（若类内别处存在删除调用或消费出口删文件）→ Finding 不成立，Decision=STOP。",
+    "confidence": "High",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§2.3 判据 1-5 全部满足（Claim 过 §2.5 三问且非 N1-N5；Evidence 均 file:line/tool-output/human-statement 可回溯；Impact 成立→GO/不成立→STOP；Decision 单值；Confidence=High≥Medium）→ §3.1 优先级序列于第 1 轮命中 STOP-1（Evidence Sufficient）。同轮 I=1/1 达 §1.2 Medium×Regional 分档上限（D=1/2, A=1/4, S=0/1）触发 STOP-3 条件，按 §3.3 同时命中记录规则以序列最先者 STOP-1 归因（§1.5 后备闸原则）。"
+  },
+  "escalation": null,
+  "meta": { "time_observed_minutes": 5 }
+}

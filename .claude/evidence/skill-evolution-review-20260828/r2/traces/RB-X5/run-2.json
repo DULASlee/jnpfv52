@@ -1,0 +1,84 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-X5",
+  "run": 2,
+  "finding": {
+    "project": "JNPF.Extend",
+    "file": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+    "risk": "High",
+    "nature": "Systemic",
+    "nature_order_checked": ["Local", "Regional", "Systemic"],
+    "nature_justification": "Local 否：判定所需资源（FLOW_TASK 写入语义）不全部在本类内部（实体在 JNPF.WorkFlow.Entitys，写入语义在 JNPF.WorkFlow 服务侧，均非本类）；Regional 否：跨界 1 层无法通过接口签名/构造/继承链定位写入语义（JNPF.WorkFlow 服务实现不在 baseline，非本类直接依赖可及）；系统性：跨模块依赖 JNPF.Extend → JNPF.WorkFlow（不同 .csproj）。风险 High × Systemic → §1.2 分档 D=3, A=8, I=2, S=1。",
+    "claim": "OrderService（JNPF.Extend）在 [UnitOfWork] 的 Delete（:250-272 事务边界）内，对跨模块 FlowTaskEntity（SQLSugar 映射 FLOW_TASK）执行软删写（:259 Queryable<FlowTaskEntity>() 读取 + :262 Updateable(flowTaskEntity).CallEntityMethod(m=>m.Delete()) 写），且 JNPF.Extend.csproj 未 ProjectReference JNPF.WorkFlow.Entitys 仅 Interfaces，跨模块直写安全性需 FLOW_TASK 写入语义证据判定、该证据缺失。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true,
+    "justification": "FQ-1：可观测——若 OrderService.cs:262 无对 flowTaskEntity 的 Updateable(...m.Delete()...) 写，则 Claim 假（已 Read 证实该行写存在）；FQ-2：绑定具体类 OrderService.Delete + 具体资源 FLOW_TASK（FlowTaskEntity.cs:9 [SugarTable(\"FLOW_TASK\")]）状态；FQ-3：任一 Agent 读 :259-262 与 csproj 均得一致『跨模块软删写存在』，无自由发挥。非 N1/N2/N4/N5 宽泛写法。"
+  },
+  "budget_allocation": { "depth": 3, "artifact": 8, "iteration": 2, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/extend/JNPF.Extend/OrderService.cs", "hop": 0, "purpose": "读取 Finding 文件全文，核对事务边界与 FlowTaskEntity 读写点" },
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/extend/JNPF.Extend/JNPF.Extend.csproj", "hop": 0, "purpose": "枚举 ProjectReference 确认对 JNPF.WorkFlow 的引用边界（模块约束）" },
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/workflow/JNPF.WorkFlow.Entitys/Entity/FlowTaskEntity.cs", "hop": 1, "purpose": "确认 FLOW_TASK 表映射与实体基类，锁定写入对象" }
+      ],
+      "evidence": [
+        { "source": "file:line", "path": "baseline/backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "20", "snippet": "using JNPF.WorkFlow.Entitys.Entity;", "confidence": "H", "card_id": null },
+        { "source": "file:line", "path": "baseline/backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "85", "snippet": "Queryable<OrderEntity, UserEntity, FlowTaskEntity>", "confidence": "H", "card_id": null },
+        { "source": "file:line", "path": "baseline/backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "250", "snippet": "[UnitOfWork]", "confidence": "H", "card_id": null },
+        { "source": "file:line", "path": "baseline/backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "259", "snippet": "Queryable<FlowTaskEntity>().FirstAsync(x => x.Id == entity.Id)", "confidence": "H", "card_id": null },
+        { "source": "file:line", "path": "baseline/backend/modularity/extend/JNPF.Extend/OrderService.cs", "lines": "262", "snippet": "Updateable(flowTaskEntity).CallEntityMethod(m => m.Delete())", "confidence": "H", "card_id": null },
+        { "source": "file:line", "path": "baseline/backend/modularity/extend/JNPF.Extend/JNPF.Extend.csproj", "lines": "6", "snippet": "JNPF.WorkFlow.Interfaces\\JNPF.WorkFlow.Interfaces.csproj", "confidence": "H", "card_id": null },
+        { "source": "file:line", "path": "baseline/backend/modularity/extend/JNPF.Extend/JNPF.Extend.csproj", "lines": "7", "snippet": "JNPF.Extend.Interfaces\\JNPF.Extend.Interfaces.csproj", "confidence": "H", "card_id": null },
+        { "source": "file:line", "path": "baseline/backend/modularity/workflow/JNPF.WorkFlow.Entitys/Entity/FlowTaskEntity.cs", "lines": "9", "snippet": "[SugarTable(\"FLOW_TASK\")]", "confidence": "H", "card_id": null },
+        { "source": "file:line", "path": "baseline/backend/modularity/workflow/JNPF.WorkFlow.Entitys/Entity/FlowTaskEntity.cs", "lines": "10", "snippet": "public class FlowTaskEntity : CLDSEntityBase", "confidence": "H", "card_id": null }
+      ],
+      "counters_after": { "depth": 2, "artifact": 2, "iteration": 1, "scope": 1 },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": true,
+        "STOP1": false,
+        "STOP2": false,
+        "STOP3": true,
+        "hit": "STOP-5"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "OrderService.Delete（[UnitOfWork]）事务边界内跨模块软删写 FlowTaskEntity（FLOW_TASK，:259-262），跨模块直写存在，其安全性需 FLOW_TASK 写入语义判定。",
+    "evidence": "OrderService.cs:20 using JNPF.WorkFlow.Entitys.Entity；:85 含 FlowTaskEntity 三表联查；:250 [UnitOfWork]；:259 Queryable<FlowTaskEntity>() 读取；:262 Updateable(flowTaskEntity).CallEntityMethod(m=>m.Delete()) 写；JNPF.Extend.csproj:6-7 仅第 6 行含 JNPF.WorkFlow.Interfaces，无 .Entitys；FlowTaskEntity.cs:9-10 映射及基类。写入语义证据缺失（JNPF.WorkFlow 模块未导出）。",
+    "impact": "成立（跨模块软删写已证：:262 写调用存在）→ 是否构成缺陷取决于 FLOW_TASK 写入语义：若 WorkFlow 对 FLOW_TASK 有专属写契约被绕过 → GO（修 OrderService 或改走 WorkFlow 服务）；若直写为常规模式 → STOP 非缺陷；不成立（无写）→ STOP。写入语义缺失 → 现证据无法唯一推出 GO/STOP → NEED EVIDENCE。",
+    "confidence": "Low",
+    "decision": "NEED_EVIDENCE"
+  },
+  "final": {
+    "decision": "NEED_EVIDENCE",
+    "stop_triggered": "STOP-5",
+    "stop_reason": "Patch §3.1 STOP-5 + §4.1 E1（BudgetExhausted 且 Confidence<Medium）：Scope 预算 S=1 已达上限（读跨模块 FlowTaskEntity.cs 即耗尽），剩余所需 FLOW_TASK 写入语义证据须跨入 JNPF.WorkFlow 模块（不同 .csproj），而该模块未导出至 baseline = 资源不存在（S2 纪律7：走 STOP-3→E1/E3 分支，非 STOP-4，故 STOP4=false）；§2.3 五判据影响链因写入语义缺失无法封闭 → NOT Sufficient → 冻结 NEED EVIDENCE（v4 第三态；硬门：禁止无证据硬撑 GO）。"
+  },
+  "escalation": {
+    "escalation_type": "E1",
+    "finding_identity": "JNPF.Extend.OrderService.Delete 跨模块软删写 FLOW_TASK 安全性",
+    "finding_decision_record": "NEED_EVIDENCE",
+    "current_claim": "OrderService 在 [UnitOfWork] Delete 事务内跨模块直写 FLOW_TASK（:262），安全性待写入语义判定。",
+    "current_evidence": [
+      { "source": "OrderService.cs:262", "content": "Updateable(flowTaskEntity).CallEntityMethod(m => m.Delete()) 软删写存在", "confidence": "H" },
+      { "source": "OrderService.cs:250", "content": "[UnitOfWork] 注解，写在事务边界内", "confidence": "H" },
+      { "source": "JNPF.Extend.csproj:6", "content": "仅 ProjectReference JNPF.WorkFlow.Interfaces，无 JNPF.WorkFlow.Entitys", "confidence": "H" }
+    ],
+    "current_confidence": "Low",
+    "budget_consumed": { "scope": "1/1", "depth": "2/3", "artifact": "2/8", "iteration": "1/2" },
+    "missing_information": "JNPF.WorkFlow 模块 Service 对 FLOW_TASK 的写入语义：写 FLOW_TASK 是否须经 WorkFlow 服务/事务契约、跨模块直软删是否违规、软删目标字段语义。该模块目录未包含在本场景 baseline 中（资源不存在）。",
+    "candidate_decisions": ["GO", "STOP", "NEED_EVIDENCE"],
+    "human_decision_required": "APPROVE_MORE_CONTEXT",
+    "recommended_action": "扩展 Scope/D 档将 JNPF.WorkFlow 模块（FlowTask 服务实现）纳入可读范围，获取 FLOW_TASK 写入语义后按 §2 五元组重审 GO/STOP；当前冻结 NEED EVIDENCE，禁止硬撑 GO。"
+  },
+  "meta": { "time_observed_minutes": 0 }
+}

@@ -1,0 +1,17 @@
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "587617885354983365",
+    "fullName": "测试",
+    "enCode": "test",
+    "type": "",
+    "enabledMark": 1,
+    "description": null,
+    "sortCode": 0,
+    "organizeIdsTree": [],
+    "globalMark": 1
+  },
+  "extras": null,
+  "timestamp": 1787723466
+}

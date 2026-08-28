@@ -1,0 +1,169 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-01",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Extend",
+    "file": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+    "risk": "High",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "先查 Local 不满足：Save 调用 _repository.AsSugarClient()，跨越 ISqlSugarRepository<OrderEntity> 接口边界（构造注入），不在 OrderService 类内部完成自证。再查 Regional 满足：依赖 ISqlSugarRepository（构造注入）+ UoW 特性框架（UnitOfWorkAttribute 在不同 .csproj），跨界 1 层即可定位；尚未跨 Service↔Repository↔Provider 多层，也未跨多个模块（仅入 JNPF 框架一个项目），故非 Systemic。",
+    "claim": "OrderService.Save (OrderService.cs:198 起) 的 if 分支（:226-:230，5 条 await ... ExecuteCommandAsync 调用）与 else 分支（:235-:237，3 条 await ... ExecuteCommandAsync 调用）既无 [UnitOfWork] 特性标注（:197-:198），也无 BeginTran / using transaction 包裹。若中途任一调用失败，已成功的 ExecuteCommandAsync 各自独立提交，不会回滚 → 订单主表 / 订单明细 / 应收计划三表出现部分成功不一致。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true
+  },
+  "budget_allocation": {
+    "depth": 2,
+    "artifact": 6,
+    "iteration": 2,
+    "scope": 1
+  },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Call",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "hop": 1,
+          "purpose": "验证 Claim 的 Local 部分：Save 方法体内 ExecuteCommandAsync 序列无事务包裹（无 [UnitOfWork]、无 BeginTran、无 using transaction），同时记录 if/else 两分支的实际调用次数"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "36",
+          "snippet": "public class OrderService : IDynamicApiController, ITransient",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "197-198",
+          "snippet": "    [HttpPost(\"{id}\")]\n    public async Task Save(string id, [FromBody] OrderCrInput input)",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "226-230",
+          "snippet": "            await _repository.AsSugarClient().Deleteable<OrderEntryEntity>(x => x.OrderId == id).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Deleteable<OrderReceivableEntity>(x => x.OrderId == id).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderEntryList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderReceivableList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Updateable(orderEntity).IgnoreColumns(ignoreAllNullColumns: true).CallEntityMethod(m => m.LastModify()).ExecuteCommandAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "235-237",
+          "snippet": "        await _repository.AsSugarClient().Insertable(orderEntryList).ExecuteCommandAsync();\n        await _repository.AsSugarClient().Insertable(orderReceivableList).ExecuteCommandAsync();\n        await _repository.AsSugarClient().Insertable(orderEntity).CallEntityMethod(m => m.Create()).ExecuteCommandAsync();",
+          "confidence": "H"
+        }
+      ],
+      "counters_after": {
+        "depth": 0,
+        "artifact": 0,
+        "iteration": 1,
+        "scope": 0
+      },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": false,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": null
+      },
+      "decision_after_round": "Local 部分已证：Save 方法体（:197-:239）确认无 [UnitOfWork] 特性、无 BeginTran、无 using transaction。Impact 需补 Regional 证据：UoW 框架是否 opt-in 特性？为此需跨入 JNPF 项目读取 UnitOfWorkAttribute.cs 与 ITransient.cs。预算余 A=6, D=2, I=1, S=1，允许 Round 2 跨模块。"
+    },
+    {
+      "round": 2,
+      "context_type": "DI",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "hop": 2,
+          "purpose": "确认 UoW 框架是 opt-in 特性过滤器：仅当方法标注 [UnitOfWork] 时 OnActionExecutionAsync 才会触发 BeginTransaction"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/framework/JNPF/DependencyInjection/Dependencies/ITransient.cs",
+          "hop": 2,
+          "purpose": "确认 OrderService 类声明中的 ITransient 标记语义（瞬时 DI 生命周期），与 scenario.md 中'应为 Scoped'的设计文档摘录不一致，需实证纠正"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "14",
+          "snippet": "[SuppressSniffer, AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "89",
+          "snippet": "public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "104",
+          "snippet": "            BeginTransaction(context, method, out var _unitOfWork, out var unitOfWorkAttribute);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/framework/JNPF/DependencyInjection/Dependencies/ITransient.cs",
+          "lines": "6",
+          "snippet": "public interface ITransient : IPrivateDependency",
+          "confidence": "H"
+        }
+      ],
+      "counters_after": {
+        "depth": 2,
+        "artifact": 2,
+        "iteration": 2,
+        "scope": 1
+      },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-1"
+      },
+      "decision_after_round": "§2.3 五判据全过：(1) FQ-1/2/3 三问过；(2) Evidence 全部 file:line 可回溯；(3) Impact 链完整——UoW 是 opt-in 特性（UnitOfWorkAttribute.cs:14 AttributeUsage.Method|Class + :104 BeginTransaction 仅在过滤器内调用），OrderService.Save 未标注 → 无事务；成立→多步写入无原子性，不成立→Save 含 [UnitOfWork] 或 BeginTran→无缺陷；(4) Decision 唯一（v4 GO 6 合取全过、STOP 10 析取零命中、NEED_EVIDENCE 不适用）；(5) Confidence=High（Level 1 静态代码直读）。命中 STOP-1（§1.5 C09 重放同款路径）。预算 A=2/6 D=2/2 I=2/2 S=1/1 全部已用/达限，但按 §3.1 顺序 STOP-1 优先于 STOP-3，本轮即停。"
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "OrderService.Save (OrderService.cs:198-:239) 的 if 分支（:226-:230 共 5 条 await ... ExecuteCommandAsync 调用）与 else 分支（:235-:237 共 3 条 await ... ExecuteCommandAsync 调用）既无 [UnitOfWork] 特性标注（:197-:198），也无 BeginTran / using transaction 包裹。",
+    "evidence": "OrderService.cs:36（class OrderService 实现 IDynamicApiController + ITransient）；OrderService.cs:197-198（[HttpPost] 与 Save 签名，无 [UnitOfWork]）；OrderService.cs:226-230（更新分支 5 条 ExecuteCommandAsync：Delete+Delete+Insert+Insert+Update）；OrderService.cs:235-237（插入分支 3 条 ExecuteCommandAsync：Insert+Insert+Insert）；UnitOfWorkAttribute.cs:14（[SuppressSniffer, AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)] 表明 UoW 是 opt-in 特性）；UnitOfWorkAttribute.cs:89（OnActionExecutionAsync 过滤器入口）；UnitOfWorkAttribute.cs:104（BeginTransaction 调用位于过滤器体内——未标注即不调用）；ITransient.cs:6（public interface ITransient : IPrivateDependency，确认 OrderService 为 Transient 而非 Scoped）。",
+    "impact": "成立 → Save 方法体内多步 ExecuteCommandAsync 无原子包裹（UnitOfWorkAttribute 是 opt-in 特性，Save 未标注 → 过滤器不触发 → 无 BeginTransaction），每步独立提交；任一调用失败时已成功步骤不回滚 → 订单主表 / 订单明细 / 应收计划三表部分提交不一致（数据完整性缺陷）。不成立 → Save 方法体含 [UnitOfWork] 标注或 BeginTran/using transaction → 多步写入原子 → 无缺陷。",
+    "confidence": "High",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§2.3 五判据全过（FQ-1/2/3 全过 + Evidence 全部 file:line 可回溯 + Impact 链成立/不成立分别映射到缺陷/无缺陷 + Decision 唯一 + Confidence=High）→ 命中 §3.1 STOP-1（Evidence Sufficient）；§3.1 顺序下 STOP-4/5/2/3 均未先命中；§1.5 C09 重放已示范同款停止路径。v4 重入门：GO 6 条合取（Finding 已证 ∧ 违反多步写入原子性契约 ∧ 单点边界可守——一处 [UnitOfWork] 标注即可 ∧ 无 perf gate ∧ 回归路径存在——集成测试可在 ExecuteCommandAsync 中途注入异常验证回滚 ∧ 不扩 Contract——公开 API 签名不变）全过；STOP 10 条析取无命中；NEED_EVIDENCE 不适用（结构缺陷以 Level 1 静态代码直读为充分证据，非性能类 N+1 形态，无硬门 2 触发）。"
+  },
+  "escalation": null,
+  "meta": {
+    "time_observed_minutes": 8
+  }
+}

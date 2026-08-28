@@ -1,0 +1,141 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-X2",
+  "run": 2,
+  "finding": {
+    "project": "JNPF.Extend",
+    "file": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+    "risk": "High",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "Local 检验失败：仅本类可看到 8 次独立 ExecuteCommandAsync + 方法无 [UnitOfWork] 标签，但无法排除跨类隐式事务（UnitOfWork 过滤器跨类 / SqlSugar AOP 层封装）。Regional 满足：跨界 1 个项目读 UnitOfWorkAttribute.cs 即可确认 UoW 是否 opt-in，证伪 Claim 所需的全部信息触手可及。",
+    "claim": "OrderService.cs Save 方法（行 198）体内 IF 分支 (OrderService.cs:226-230) 含 5 次独立 await ExecuteCommandAsync（2 Deleteable + 2 Insertable + 1 Updateable），ELSE 分支 (OrderService.cs:235-237) 含 3 次独立 await ExecuteCommandAsync（3 Insertable），合计 8 次写入调用；且方法仅标注 [HttpPost(\"{id}\")]，未标注 [UnitOfWork]；因此这 8 次写入不存在任何事务包裹。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true,
+    "fq1_rationale": "可证伪：若 Save 被打上 [UnitOfWork] 标签，或 UnitOfWorkAttribute 被注册为全局 IAsyncActionFilter，或 SqlSugar AOP 隐式开启事务，则 Claim 假——三种反例均可由 file:line 单一证据判定。",
+    "fq2_rationale": "对象绑定明确：OrderService 类 / Save 方法 / 行 226-237 / SqlSugar ExecuteCommandAsync 调用。状态可指认（IF/ELSE 分支互斥）。",
+    "fq3_rationale": "无语义自由空间：不含「合理/适当/尽量」修饰词；两个 Agent 读同一 baseline 必得同答案。"
+  },
+  "budget_allocation": {
+    "depth": 2,
+    "artifact": 6,
+    "iteration": 2,
+    "scope": 1
+  },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Call",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "hop": 1,
+          "purpose": "复核 Save 方法特性签名 + 定位多写操作行区间 226-237"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "197-198",
+          "snippet": "    [HttpPost(\"{id}\")]\n    public async Task Save(string id, [FromBody] OrderCrInput input)",
+          "confidence": "H",
+          "meaning": "Save 方法特性签名仅 [HttpPost(\"{id}\")]，无 [UnitOfWork] 标签"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "226-237",
+          "snippet": "            await _repository.AsSugarClient().Deleteable<OrderEntryEntity>(x => x.OrderId == id).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Deleteable<OrderReceivableEntity>(x => x.OrderId == id).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderEntryList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderReceivableList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Updateable(orderEntity).IgnoreColumns(ignoreAllNullColumns: true).CallEntityMethod(m => m.LastModify()).ExecuteCommandAsync();\n        }\n        else\n        {\n            _cacheManager.Del(string.Format(\"{0}{1}_{2}\", CommonConst.CACHEKEYBILLRULE, _userManager.TenantId, _userManager.UserId + \"OrderNumber\"));\n            await _repository.AsSugarClient().Insertable(orderEntryList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderReceivableList).ExecuteCommandAsync();\n            await _repository.AsSugarClient().Insertable(orderEntity).CallEntityMethod(m => m.Create()).ExecuteCommandAsync();",
+          "confidence": "H",
+          "meaning": "IF 分支 5 次 + ELSE 分支 3 次 ExecuteCommandAsync（合计 8 次写入），均为独立 await 调用，无 using/tran 包裹"
+        }
+      ],
+      "counters_after": {
+        "depth": 0,
+        "artifact": 0,
+        "iteration": 1,
+        "scope": 0
+      },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": false,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": null,
+        "note": "本类证据只证伪『Save 体内无显式事务』。仍需排除 (a) JNPF.UnitOfWorkAttribute 通过全局 IAsyncActionFilter 跨类注入 Save，(b) SqlSugar AOP 层隐式事务封装。Budget 允许 1 次跨界，进入 Round 2。"
+      }
+    },
+    {
+      "round": 2,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "hop": 1,
+          "purpose": "验证 UnitOfWorkAttribute 是否 opt-in（必须显式打标才触发 OnActionExecutionAsync）"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "14-15",
+          "snippet": "    [SuppressSniffer, AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]\n    public sealed class UnitOfWorkAttribute : Attribute, IAsyncActionFilter, IAsyncPageFilter, IOrderedFilter",
+          "confidence": "H",
+          "meaning": "AttributeUsage 限定 Method|Class——非方法/类级打标不附着；类本身是 Attribute 子类，触发路径只能经 GetCustomAttribute 反射取出"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "89-91",
+          "snippet": "        public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)\n        {\n            // 获取动作方法描述器",
+          "confidence": "H",
+          "meaning": "OnActionExecutionAsync 是 IAsyncActionFilter 接口实现，需由 ASP.NET Core MVC 过滤器管线在 Save 被调用时按反射匹配 [UnitOfWork] 后才调度；本类未注册为全局 Filter（class-level 无该特性），方法级亦无"
+        }
+      ],
+      "counters_after": {
+        "depth": 1,
+        "artifact": 1,
+        "iteration": 2,
+        "scope": 1
+      },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-1",
+        "note": "五元组全过：(1) Claim 可证伪 ✓ (2) Evidence 来源 file:line 可回溯 ✓ (OrderService.cs:197-198 / 226-237 / UnitOfWorkAttribute.cs:14-15 / 89-91) (3) Impact 影响链可写 ✓ (4) Confidence=High Level1 ✓ (5) Decision 单值 → GO（见 five_tuple）。Budget 维度 depth=1/2, artifact=1/6, iteration=2/2, scope=1/1 均未超上限。"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "OrderService.Save 方法体内 IF+ELSE 分支共 8 次 ExecuteCommandAsync 调用无任何事务包裹（无 [UnitOfWork] 标签，且 UnitOfWorkAttribute 为 opt-in 特性）。",
+    "evidence": "OrderService.cs:197-198 仅含 [HttpPost(\"{id}\")] 无 [UnitOfWork]；OrderService.cs:226-237 显示 8 次独立 ExecuteCommandAsync 调用（IF 5 / ELSE 3）；UnitOfWorkAttribute.cs:14 AttributeUsage(Method|Class) 表明不显式打标不附着；UnitOfWorkAttribute.cs:89 OnActionExecutionAsync 是 IAsyncActionFilter，需 ASP.NET Core 反射匹配特性后才调度。",
+    "impact": "成立→任一 ExecuteCommandAsync 失败时 DB 留半成品（订单头 / 明细 / 收款计划三者状态不一致），违反数据完整性契约；不成立→无影响（无事务包裹的 8 次写入是预期行为）。",
+    "confidence": "High",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "Patch §3.1 STOP-1 五判据全满足：Claim 可证伪、Evidence 来源 file:line 可回溯、Impact 影响链明确、Decision 单值 GO、Confidence=High Level1。Budget 维度 depth=1/2, artifact=1/6, iteration=2/2, scope=1/1 均未超上限。"
+  },
+  "escalation": null,
+  "meta": {
+    "time_observed_minutes": 0
+  }
+}

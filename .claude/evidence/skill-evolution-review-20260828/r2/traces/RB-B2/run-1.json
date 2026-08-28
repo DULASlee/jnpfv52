@@ -1,0 +1,138 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-B2",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "按 §1.3 顺序判定：先看 Local——不满足：GO 安全性的消费者判定需跨出方法体（临时目录的下载服务路径经同类的 DownloadFile(FileService.cs:271-295) 与注入接口 IFileManager.GetPathByType/DownloadFileByType 解析），非本类代码单点自证；再看 Regional——满足：涉及直接的接口/依赖关系（IFileManager 构造注入，hop=1 可由接口签名定位），与 Patch §1.5 C09 判例（Medium/Regional，S=1）一致；不归 Systemic：无 Service↔Repository↔Provider 跨层追溯需求。",
+    "claim": "FileService.DownloadAll(:240-264) 中临时目录 directoryPath（Path.Combine(SystemPath,'TemporaryFile',fileName)，:244）自创建后无任何清理路径（方法体无 finally、无 Directory.Delete，末句为 :263 的 return），目录在方法内仅作为 ZipFile.CreateFromDirectory(:258) 的输入；下载服务路径只消费其兄弟文件 {name}.zip（:263 返回 /api/File/Download 加密串→:287 按 TemporaryFile/{name}.zip 拼接），不读目录内文件。故在 :258 产出 zip 后补 finally 清理该临时目录不破坏下载消费方。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true
+  },
+  "budget_allocation": {
+    "depth": 2,
+    "artifact": 4,
+    "iteration": 1,
+    "scope": 1
+  },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "hop": 0,
+          "purpose": "复核 DownloadAll:240-264 完整方法体：枚举 directoryPath/临时文件的所有使用点，确认无 finally/删除，及下载 URL 产出"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "hop": 1,
+          "purpose": "确认下载服务路径经注入接口 IFileManager（GetPathByType 已存在于接口层面），佐证目录定位与接口跨界层"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "human-cards/HR-01.json",
+          "hop": 0,
+          "purpose": "获取 Level 0 人工 Ownership 上下文（临时目录/zip 是否有消费者）"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "245",
+          "snippet": "Directory.CreateDirectory(directoryPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "249",
+          "snippet": "await _fileManager.CopyFile(filePath, Path.Combine(directoryPath, item.fileName));",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "258",
+          "snippet": "ZipFile.CreateFromDirectory(directoryPath, downloadPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "263",
+          "snippet": "url = \"/api/File/Download?encryption=\"",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "287",
+          "snippet": "Path.Combine(GetPathByType(type), fileName.Replace(\"@\", \".\"));",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs",
+          "lines": "107",
+          "snippet": "public string GetPathByType(string type);",
+          "confidence": "H"
+        },
+        {
+          "source": "human-statement",
+          "path": null,
+          "lines": null,
+          "snippet": "据我了解这些临时 zip 生成后没有任何消费方，随时可以在本方法内安全删除。",
+          "confidence": "M",
+          "card_id": "HR-01"
+        }
+      ],
+      "counters_after": {
+        "depth": 1,
+        "artifact": 1,
+        "iteration": 1,
+        "scope": 1
+      },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-1"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "DownloadAll(:240-264) 创建的临时目录在方法内无任何清理路径（:244-258 枚举后无 finally/Directory.Delete，末句 return:263），目录只作 ZipFile.CreateFromDirectory(:258) 输入；下载服务只消费兄弟文件 {name}.zip（:263→:287），不读目录。可证伪：:240-264 出现 Directory.Delete 或另行法读 TemporaryFile/{name}/ 则 Claim 假。",
+    "evidence": "H：FileService.cs:245 创建目录；:249 复制文件入目录；:258 目录唯一后续用途=zip 输入；:263 返回 /api/File/Download 加密串（末句，无 finally）；:287 下载路径=GetPathByType(TemporaryFile)+{name}.zip，读的是 zip 兄弟文件非目录；IFileManager.cs:107 路径解析经接口。M：HR-01 人卡（无消费方、可安全删除）。人卡对 zip 的断言与 H 码证矛盾 → 按纪律9 码证胜，但该矛盾仅推翻 zip 项，不推翻目录项。",
+    "impact": "成立 → 临时目录确无服务路径消费者且缺清理 → 局部 GO（:258 后补 try/finally Directory.Delete(directoryPath,true)，保留被 DownloadFile 消费的 zip 不被删除；补这点不扩 Contract、单点可守、PackDownload→Download 可回归）；不成立 → 目录有消费者或清理已存在 → STOP（不得改码）。",
+    "confidence": "Medium",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§3.1 STOP-1 + §2.3 五判据全过：①Claim 可证伪（:240-264 无 Directory.Delete/finally 可逐行核验，出现即假，过 §2.5 三问）；②证据可回溯（5 条 H 级 file:line + 1 条 M human-statement，全部指认）；③影响链完整（成立→GO，不成立→STOP 已写）；④Decision 唯一（缺陷 High 直接证；目录无消费者=1 步静态推断→Medium；zip 消费者存在经 :263/:287 H 证，故清理范围限定目录、不删 zip，GO 唯一成立）；⑤Confidence=Medium≥Medium。经 v4 GO 六合取门：Find 已证∧单点边界可守(:258 后 finally)∧存在回归路径(PackDownload→/api/File/Download)∧不扩 Contract∧非性能无证据改动∧非跨模块传染。Budget 为后备闸（I=1/1,S=1/1,A=1/4,D=1/2 均未超限）。"
+  },
+  "escalation": null,
+  "meta": {
+    "time_observed_minutes": 0
+  }
+}

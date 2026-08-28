@@ -1,0 +1,233 @@
+{
+  "topIssues": [
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 84,
+      "Code": "public async Task<dynamic> Preview(string fileName, string fileDownloadUrl)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 124,
+      "Code": "public async Task<IActionResult> GetImg(string type, string fileName)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 167,
+      "Code": "public async Task<IActionResult> GetScreenImg(string type, string fileName)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 181,
+      "Code": "public async Task<IActionResult> GetCode(string timestamp)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 193,
+      "Code": "public async Task FileDown(string fileName, [FromQuery] string type)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 225,
+      "Code": "public dynamic DownloadUrl(string type, string fileName)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 241,
+      "Code": "public async Task<dynamic> DownloadAll(string type, [FromBody] List<FileControlsModel> input)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 272,
+      "Code": "public async Task<dynamic> DownloadFile([FromQuery] string encryption, [FromQuery] string name)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 303,
+      "Code": "public async Task<dynamic> AppStartInfo(string appName)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 317,
+      "Code": "public async Task<dynamic> CheckChunk([FromQuery] ChunkModel input)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 446,
+      "Code": "public async Task UploadFileByType(string uploadFilePath, string directoryPath, string fileName)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 459,
+      "Code": "public string GetPathByType(string type)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 472,
+      "Code": "public string KKFileUploaderPreview(string fileName, string fileDownloadUrl)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\FileService.cs",
+      "Line": 499,
+      "Code": "public async Task<string> YoZoUploaderPreview(string fileName, int maxNumber, int number)",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\ScheduleTaskService.cs",
+      "Line": 49,
+      "Code": "public async Task<dynamic> ScheduleTask(string taskCode, [FromBody] ScheduleTaskModel scheduleTaskMo",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N5",
+      "Severity": "P1",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\ScheduleTaskService.cs",
+      "Line": 23,
+      "Code": "public class ScheduleTaskService : IDynamicApiController, ITransient",
+      "Description": "Route compliance",
+      "Fix": "Add ApiDescriptionSettings"
+    },
+    {
+      "Dimension": "J",
+      "RuleId": "J6",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\TenantService.cs",
+      "Line": 231,
+      "Code": "//var moduleList = await _sqlSugarClient.Queryable<ModuleEntity>().Where(x => x.DeleteMark == null &",
+      "Description": "Multi-tenant filter missing",
+      "Fix": "Add ITenantFilter"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N1",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\TenantService.cs",
+      "Line": 231,
+      "Code": "//var moduleList = await _sqlSugarClient.Queryable<ModuleEntity>().Where(x => x.DeleteMark == null &",
+      "Description": "Multi-tenant filter missing (R4)",
+      "Fix": "Add ITenantFilter"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N3",
+      "Severity": "P0",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\TenantService.cs",
+      "Line": 405,
+      "Code": "public void VerificationHeaders()",
+      "Description": "API permission missing (R8)",
+      "Fix": "Add permission"
+    },
+    {
+      "Dimension": "N",
+      "RuleId": "N5",
+      "Severity": "P1",
+      "Module": "system",
+      "File": "D:\\JNPF-v52\\backend\\modularity\\system\\JNPF.Systems\\Common\\TenantService.cs",
+      "Line": 29,
+      "Code": "public class TenantService : IDynamicApiController, ITransient",
+      "Description": "Route compliance",
+      "Fix": "Add ApiDescriptionSettings"
+    }
+  ],
+  "bySeverity": {
+    "P3": 68,
+    "P1": 995,
+    "P0": 2144,
+    "P2": 900
+  },
+  "totalIssues": 4107,
+  "totalFiles": 522,
+  "scanDate": "2026-08-27"
+}

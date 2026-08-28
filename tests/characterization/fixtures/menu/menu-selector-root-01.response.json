@@ -1,0 +1,36 @@
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "list": [
+      {
+        "fullName": "功能演示",
+        "icon": "icon-ym icon-ym-signature",
+        "type": 0,
+        "systemId": "devDemoSystem",
+        "id": "devDemoSystem",
+        "parentId": "-1",
+        "hasChildren": false,
+        "children": null,
+        "num": 0,
+        "isLeaf": true,
+        "disabled": false
+      },
+      {
+        "fullName": "功能演示",
+        "icon": "icon-ym icon-ym-signature",
+        "type": 0,
+        "systemId": "devDemoSystem",
+        "id": "devDemoSystem",
+        "parentId": "-1",
+        "hasChildren": false,
+        "children": null,
+        "num": 0,
+        "isLeaf": true,
+        "disabled": false
+      }
+    ]
+  },
+  "extras": null,
+  "timestamp": 1787723187
+}

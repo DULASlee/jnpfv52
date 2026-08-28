@@ -1,0 +1,14 @@
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "pagination": {
+      "currentPage": 1,
+      "pageSize": 20,
+      "total": 0
+    },
+    "list": []
+  },
+  "extras": null,
+  "timestamp": 1787723466
+}

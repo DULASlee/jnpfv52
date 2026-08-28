@@ -1,0 +1,9 @@
+{
+  "agent_id": "opencode-refactor-01",
+  "expected_continuation": true,
+  "goal_id": "jnpf-v52-goal",
+  "last_decision_action": "autonomous_replan_required",
+  "last_poll_at": "2026-08-26T16:41:11.196527+00:00",
+  "poll_count": 34,
+  "schema_version": "loopx_host_poll_receipt_v0"
+}

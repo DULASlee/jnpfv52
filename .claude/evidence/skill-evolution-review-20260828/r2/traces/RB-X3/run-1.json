@@ -1,0 +1,100 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-X3",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "Local 不成立：TemporaryFile 临时目录生命周期延伸至本方法外——zip 经行263 URL 交由 /api/File/Download 下载端点（本类行269）消费，清理职责按 HR-01 归属外部前端用户，本类代码不存在目录自清理路径，非「全部在当前类内部即可自证」。Regional 成立：直接依赖 IFileManager 接口（行52注入/行249调用）+ 跨界 1 层消费（下载端点/前端），边界清晰。未判定 Systemic：无跨 Service↔Repository↔Provider 层或跨 .csproj 依赖必要。",
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）在行244-245 创建 TemporaryFile 临时目录后，方法体内不存在对该目录的任何删除/清理语句（无 Directory.Delete(directoryPath)、无 try-finally 回收），该目录及生成的 zip 的清理责任完全交由方法外消费者承担。"
+  },
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "budget_allocation": { "depth": 2, "artifact": 4, "iteration": 1, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "hop": 0,
+          "purpose": "基础：读取 finding 文件全文，复核 DownloadAll(240-264) 目录创建后是否存在删除/清理逻辑，并定位 zip 消费入口"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "human-cards/HR-01.json",
+          "hop": 0,
+          "purpose": "Ownership 缺口：获取 TemporaryFile 目录/zip 清理职责归属的人工描述（Level 0）"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "245",
+          "snippet": "Directory.CreateDirectory(directoryPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "258",
+          "snippet": "ZipFile.CreateFromDirectory(directoryPath, downloadPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "256",
+          "snippet": "File.Delete(downloadPath);",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "263",
+          "snippet": "url = \"/api/File/Download?encryption=\"",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "269",
+          "snippet": "[HttpGet(\"Download\")]",
+          "confidence": "H"
+        },
+        {
+          "source": "human-statement",
+          "path": "human-cards/HR-01.json",
+          "snippet": "临时目录和 zip 由前端用户完成下载后统一清理，服务端不主动删除；/api/File/Download 是消费入口，一次性链接经 cacheManager 控制。",
+          "confidence": "M",
+          "card_id": "HR-01"
+        }
+      ],
+      "counters_after": { "depth": 0, "artifact": 0, "iteration": 1, "scope": 0 },
+      "stop_check": { "STOP4": false, "STOP5": false, "STOP1": true, "STOP2": false, "STOP3": false, "hit": "STOP-1" }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）创建 TemporaryFile 临时目录（行245）后，方法体内无任何对该目录的删除/清理语句，清理责任完全依赖方法外消费者。",
+    "evidence": "码证 H：行245 创建目录、行258 由目录生成 zip、行256 仅当同名 zip 已存在时删除旧 zip 而非目录、行263 返回 /api/File/Download 一次性链接、行269 下载端点位于本类。人证 M（HR-01）：临时目录和 zip 由前端用户下载后统一清理，服务端不主动删除；/api/File/Download 是消费入口。",
+    "impact": "成立→TemporaryFile 目录未清理是按设计的交接到外部消费者（HR-01 明示服务端不主动删除），服务端无自清理契约 → 不是缺陷 → STOP；不成立→若存在服务端必须自清理的契约 → 资源泄漏缺陷 → GO。",
+    "confidence": "Medium",
+    "decision": "STOP"
+  },
+  "final": {
+    "decision": "STOP",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "Patch §3.1 STOP-1（§2.3 五判据全过：Claim 可证伪、证据可回溯 file:line/human-statement、影响链完整、Decision 唯一、Confidence≥Medium）。交叉 v4 Evidence-to-Stop-Gate '不是缺陷'：HR-01（M 人证）明示临时目录/zip 由前端下载后统一清理、服务端不主动删除，即设计契约=外部消费后清理；码证 H 确认方法内无目录删除语句，双方一致（人证 M 不构成 E2）。GO 门合取缺 '违反 Contract' 一环——无任何证据表明存在服务端自清理契约 → 非 GO；证据充分、不依赖需运行时观测的收益证据 → 非 NEED EVIDENCE。STOP 唯一。"
+  },
+  "escalation": null,
+  "meta": { "time_observed_minutes": 0 }
+}

@@ -1,0 +1,137 @@
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "list": [
+      {
+        "fullName": "某某公司",
+        "organizeIdTree": "96240625-934F-490B-8AA6-0BC775B18468",
+        "enCode": "yinmai.com",
+        "type": "company",
+        "description": null,
+        "enabledMark": 1,
+        "creatorTime": 1542620132000,
+        "sortCode": 0,
+        "category": "company",
+        "icon": "icon-ym icon-ym-tree-organization3",
+        "organize": null,
+        "organizeIds": [
+          "96240625-934F-490B-8AA6-0BC775B18468"
+        ],
+        "lastFullName": null,
+        "id": "96240625-934F-490B-8AA6-0BC775B18468",
+        "parentId": "-1",
+        "hasChildren": true,
+        "children": [
+          {
+            "fullName": "教职工",
+            "organizeIdTree": "96240625-934F-490B-8AA6-0BC775B18468,9E998490-40B2-45EF-A82E-E225BF2109E1",
+            "enCode": "yinmai.ceo",
+            "type": "department",
+            "description": null,
+            "enabledMark": 1,
+            "creatorTime": 1542620133000,
+            "sortCode": 0,
+            "category": "department",
+            "icon": "icon-ym icon-ym-tree-department1",
+            "organize": null,
+            "organizeIds": [
+              "96240625-934F-490B-8AA6-0BC775B18468",
+              "9E998490-40B2-45EF-A82E-E225BF2109E1"
+            ],
+            "lastFullName": null,
+            "id": "9E998490-40B2-45EF-A82E-E225BF2109E1",
+            "parentId": "96240625-934F-490B-8AA6-0BC775B18468",
+            "hasChildren": false,
+            "children": null,
+            "num": 0,
+            "isLeaf": true,
+            "disabled": false
+          },
+          {
+            "fullName": "部门A",
+            "organizeIdTree": "96240625-934F-490B-8AA6-0BC775B18468,536722098769362885",
+            "enCode": "1001",
+            "type": "department",
+            "description": null,
+            "enabledMark": 1,
+            "creatorTime": 1710129722273,
+            "sortCode": 10,
+            "category": "department",
+            "icon": "icon-ym icon-ym-tree-department1",
+            "organize": null,
+            "organizeIds": [
+              "96240625-934F-490B-8AA6-0BC775B18468",
+              "536722098769362885"
+            ],
+            "lastFullName": null,
+            "id": "536722098769362885",
+            "parentId": "96240625-934F-490B-8AA6-0BC775B18468",
+            "hasChildren": true,
+            "children": [
+              {
+                "fullName": "部门A1",
+                "organizeIdTree": "96240625-934F-490B-8AA6-0BC775B18468,536722098769362885,536723303704821701",
+                "enCode": "100101",
+                "type": "department",
+                "description": null,
+                "enabledMark": 1,
+                "creatorTime": 1710130009623,
+                "sortCode": 0,
+                "category": "department",
+                "icon": "icon-ym icon-ym-tree-department1",
+                "organize": null,
+                "organizeIds": [
+                  "96240625-934F-490B-8AA6-0BC775B18468",
+                  "536722098769362885",
+                  "536723303704821701"
+                ],
+                "lastFullName": null,
+                "id": "536723303704821701",
+                "parentId": "536722098769362885",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              }
+            ],
+            "num": 0,
+            "isLeaf": false,
+            "disabled": false
+          },
+          {
+            "fullName": "部门B",
+            "organizeIdTree": "96240625-934F-490B-8AA6-0BC775B18468,593774622579621829",
+            "enCode": "1004",
+            "type": "department",
+            "description": null,
+            "enabledMark": 1,
+            "creatorTime": 1723732103950,
+            "sortCode": 15,
+            "category": "department",
+            "icon": "icon-ym icon-ym-tree-department1",
+            "organize": null,
+            "organizeIds": [
+              "96240625-934F-490B-8AA6-0BC775B18468",
+              "593774622579621829"
+            ],
+            "lastFullName": null,
+            "id": "593774622579621829",
+            "parentId": "96240625-934F-490B-8AA6-0BC775B18468",
+            "hasChildren": false,
+            "children": null,
+            "num": 0,
+            "isLeaf": true,
+            "disabled": false
+          }
+        ],
+        "num": 3,
+        "isLeaf": false,
+        "disabled": false
+      }
+    ]
+  },
+  "extras": null,
+  "timestamp": 1787723466
+}

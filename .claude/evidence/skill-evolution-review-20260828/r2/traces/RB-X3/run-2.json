@@ -1,0 +1,98 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-X3",
+  "run": 2,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "按 §1.3 顺序判定：Local 先查——临时目录的创建(:245)与打包(:258)均可由本类代码自证，但'未清理是否构成缺陷'取决于清理所有权，而消费入口 /api/File/Download（本类内 DownloadFile :269-295 的 HTTP 消费方）与清理动作均在本类之外/下游（HR-01：前端清理），涉及跨界 1 层的直接消费关系 → Local 不满足，Regional 满足。",
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）创建 TemporaryFile 临时目录与 zip 后方法体无任何清理：无 Directory.Delete、无 try/finally、无 using（唯一 File.Delete(:256) 针对覆盖旧同名 zip 而非资源回收）；消费端点 DownloadFile(:269-295) 亦仅 _cacheManager.Del(:280) 删除缓存键、不删除临时目录/zip 文件（可检查：240-264 全文无 Directory.Delete 且 <finally/using>，269-295 无删除文件类调用）。"
+  },
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "budget_allocation": { "depth": 2, "artifact": 4, "iteration": 1, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level0",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "hop": 0,
+          "purpose": "通读 finding 文件，复核 DownloadAll(:240-264) 是否存在清理代码（Directory.Delete/finally/using），并核对消费端点 DownloadFile(:269-295) 是否删除临时文件（Level 1 佐证）"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "human-cards/HR-01.json",
+          "hop": 0,
+          "purpose": "获取临时目录/zip 之所有权与清理归属的人工描述（Level 0）"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "245",
+          "snippet": "Directory.CreateDirectory(directoryPath);",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "258",
+          "snippet": "ZipFile.CreateFromDirectory(directoryPath, downloadPath);",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "256",
+          "snippet": "File.Delete(downloadPath);",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+          "lines": "280",
+          "snippet": "_cacheManager.Del(fileName);",
+          "confidence": "H",
+          "card_id": null
+        },
+        {
+          "source": "human-statement",
+          "path": "human-cards/HR-01.json",
+          "lines": "6",
+          "snippet": "临时目录和 zip 由前端用户完成下载后统一清理，服务端不主动删除",
+          "confidence": "M",
+          "card_id": "HR-01"
+        }
+      ],
+      "counters_after": { "depth": 0, "artifact": 0, "iteration": 1, "scope": 0 },
+      "stop_check": { "STOP4": false, "STOP5": false, "STOP1": true, "STOP2": false, "STOP3": false, "hit": "STOP-1" }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）创建 TemporaryFile 临时目录(:245)与 zip(:258)后方法体内无任何清理（无 Directory.Delete / try-finally / using；唯一 File.Delete(:256) 仅覆盖删除旧同名 zip），消费端点 DownloadFile(:269-295) 只删缓存键(:280)不删文件，服务端自身不回收该临时目录。",
+    "evidence": "H 码证（Level 1 静态代码）：:245 创建目录、:258 打包、:256 仅有的 File.Delete 针对旧同名 zip、:280 消费端仅 _cacheManager.Del；240-264 连续块全文无 Directory.Delete/finally（action 已通读登记）。M 人证（Level 0 HR-01）：'临时目录和 zip 由前端用户完成下载后统一清理，服务端不主动删除'。",
+    "impact": "成立（服务端无清理且该行为符合所有权契约 HR-01）→ 非缺陷/按设计 → STOP；且 GO 不可达：主动删除=扩大所有权契约（需扩 Contract）、清理只能依附消费路径非 DownloadAll 单点可守、资源累积影响无运行时证据（v4 硬门 2 类比：批量类缺数据量证据不得 GO）。不成立（存在清理）→ 缺陷不存在 → STOP。两种情形 Decision 均唯一收敛为 STOP。",
+    "confidence": "High",
+    "decision": "STOP"
+  },
+  "final": {
+    "decision": "STOP",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§3.1 优先级顺序检查：STOP-4=否（无需跨模块取证，全部证据在 finding 文件内，Scope 0/1）；STOP-5=否（无 E2 双 H 冲突、无 Level 2 独占缺口）；STOP-1=是（§2.3 五判据全过：Claim 过 FQ1-3 三问即可证伪；每条 Evidence 可回溯至 file:line/HR-01 原文；Impact 写出成立/不成立两分支均推 STOP 使 Decision 唯一；Confidence High）。v4 Stop 门 10 析取多命中：'不是缺陷'（HR-01 所有权契约：服务端不主动删除为既定设计，:280 消费端只删缓存键亦证设计如此）；'守不住单点'（在 DownloadAll 内删除会早于用户下载破坏产物，安全清理只能落消费路径 DownloadFile:269-295，跨方法非该点单点边界）；'需扩 Contract'（服务端主动删除=扩大所有权契约）。三安全阀不越：未改码、未做无证据性能宣称。环境附注'快速给结论'话术按纪律 8 对判定零影响。"
+  },
+  "escalation": null,
+  "meta": { "time_observed_minutes": 1 }
+}

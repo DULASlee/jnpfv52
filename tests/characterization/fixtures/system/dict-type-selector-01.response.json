@@ -1,0 +1,1488 @@
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "list": [
+      {
+        "fullName": "系统自定义字典",
+        "sortCode": null,
+        "id": "0",
+        "parentId": "-1",
+        "hasChildren": false,
+        "children": null,
+        "num": 0,
+        "isLeaf": true,
+        "disabled": false
+      },
+      {
+        "fullName": "平台通用字典",
+        "sortCode": null,
+        "id": "1",
+        "parentId": "-1",
+        "hasChildren": false,
+        "children": null,
+        "num": 0,
+        "isLeaf": true,
+        "disabled": false
+      },
+      {
+        "fullName": "系统通用字典",
+        "sortCode": null,
+        "id": "2",
+        "parentId": "-1",
+        "hasChildren": false,
+        "children": null,
+        "num": 0,
+        "isLeaf": true,
+        "disabled": false
+      },
+      {
+        "fullName": "开发逻辑字典",
+        "sortCode": null,
+        "id": "3",
+        "parentId": "-1",
+        "hasChildren": true,
+        "children": [
+          {
+            "fullName": "t9",
+            "sortCode": 0,
+            "id": "577460481975910341",
+            "parentId": "3",
+            "hasChildren": true,
+            "children": [
+              {
+                "fullName": "t10",
+                "sortCode": 0,
+                "id": "577468065873133509",
+                "parentId": "577460481975910341",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              }
+            ],
+            "num": 0,
+            "isLeaf": false,
+            "disabled": false
+          },
+          {
+            "fullName": "电厂系统",
+            "sortCode": 0,
+            "id": "556426172150316997",
+            "parentId": "3",
+            "hasChildren": true,
+            "children": [
+              {
+                "fullName": "告警消除审核人级别",
+                "sortCode": 0,
+                "id": "556429882565853125",
+                "parentId": "556426172150316997",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "加分类别",
+                "sortCode": 0,
+                "id": "556427091457867717",
+                "parentId": "556426172150316997",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "处罚方式",
+                "sortCode": 0,
+                "id": "556426859118591941",
+                "parentId": "556426172150316997",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "违章级别",
+                "sortCode": 0,
+                "id": "556426735634087877",
+                "parentId": "556426172150316997",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "部门隶属分类",
+                "sortCode": 0,
+                "id": "556426552233951173",
+                "parentId": "556426172150316997",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              }
+            ],
+            "num": 0,
+            "isLeaf": false,
+            "disabled": false
+          },
+          {
+            "fullName": "校友系统",
+            "sortCode": 0,
+            "id": "536688661920481221",
+            "parentId": "3",
+            "hasChildren": true,
+            "children": [
+              {
+                "fullName": "模块管理",
+                "sortCode": 0,
+                "id": "536758566481035205",
+                "parentId": "536688661920481221",
+                "hasChildren": true,
+                "children": [
+                  {
+                    "fullName": "院士类别",
+                    "sortCode": 0,
+                    "id": "537467436010569669",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "校友会",
+                    "sortCode": 0,
+                    "id": "537439751523794885",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "学制",
+                    "sortCode": 0,
+                    "id": "536792253679534021",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "短信签名",
+                    "sortCode": 1,
+                    "id": "536701982270816197",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "短信所属模块",
+                    "sortCode": 4,
+                    "id": "536703010726739909",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "职位标签",
+                    "sortCode": 6,
+                    "id": "536703680028606405",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "单位规模",
+                    "sortCode": 8,
+                    "id": "536703914880270277",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "工作年限",
+                    "sortCode": 9,
+                    "id": "536703994790150085",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "薪资范围",
+                    "sortCode": 10,
+                    "id": "536710175134842821",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "所属行业",
+                    "sortCode": 11,
+                    "id": "536710256747610053",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "专业",
+                    "sortCode": 12,
+                    "id": "536710311315505093",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "企业标签",
+                    "sortCode": 13,
+                    "id": "536710378000744389",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "省市码表",
+                    "sortCode": 14,
+                    "id": "536710694431621061",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "通讯录标签",
+                    "sortCode": 17,
+                    "id": "536710970366492613",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "培养方式代码",
+                    "sortCode": 18,
+                    "id": "536711173622464453",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "培养层次代码",
+                    "sortCode": 19,
+                    "id": "536711254459285445",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "政治面貌",
+                    "sortCode": 20,
+                    "id": "536711352496947141",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "政治民族",
+                    "sortCode": 21,
+                    "id": "536711615978930117",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "籍贯",
+                    "sortCode": 22,
+                    "id": "536712158541512645",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "单位区域",
+                    "sortCode": 26,
+                    "id": "536712927659425733",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "单位性质",
+                    "sortCode": 27,
+                    "id": "536713004843007941",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "来源",
+                    "sortCode": 31,
+                    "id": "536748085091499973",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "活动形式",
+                    "sortCode": 40,
+                    "id": "536752202149003205",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "活动私密性",
+                    "sortCode": 42,
+                    "id": "536752484283056069",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "查看权限",
+                    "sortCode": 45,
+                    "id": "536753130704994245",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "活动费用",
+                    "sortCode": 62,
+                    "id": "536770709410545605",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "交通方式",
+                    "sortCode": 62,
+                    "id": "536766111320899525",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "活动主题",
+                    "sortCode": 62,
+                    "id": "536765322091298757",
+                    "parentId": "536758566481035205",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  }
+                ],
+                "num": 0,
+                "isLeaf": false,
+                "disabled": false
+              },
+              {
+                "fullName": "自定义状态",
+                "sortCode": 0,
+                "id": "536754465110228933",
+                "parentId": "536688661920481221",
+                "hasChildren": true,
+                "children": [
+                  {
+                    "fullName": "订单状态",
+                    "sortCode": 0,
+                    "id": "536790019646422981",
+                    "parentId": "536754465110228933",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "退款状态",
+                    "sortCode": 0,
+                    "id": "536789597267427269",
+                    "parentId": "536754465110228933",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "捐赠状态",
+                    "sortCode": 0,
+                    "id": "536754165276213189",
+                    "parentId": "536754465110228933",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "审核状态",
+                    "sortCode": 32,
+                    "id": "536748006960005061",
+                    "parentId": "536754465110228933",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "通用有效状态",
+                    "sortCode": 33,
+                    "id": "536749008014540741",
+                    "parentId": "536754465110228933",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "报名状态",
+                    "sortCode": 46,
+                    "id": "536753582708359109",
+                    "parentId": "536754465110228933",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "签到状态",
+                    "sortCode": 47,
+                    "id": "536753678581759941",
+                    "parentId": "536754465110228933",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "上架状态",
+                    "sortCode": 59,
+                    "id": "536762985834610629",
+                    "parentId": "536754465110228933",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  }
+                ],
+                "num": 0,
+                "isLeaf": false,
+                "disabled": false
+              },
+              {
+                "fullName": "自定义类型",
+                "sortCode": 0,
+                "id": "536755650357624773",
+                "parentId": "536688661920481221",
+                "hasChildren": true,
+                "children": [
+                  {
+                    "fullName": "文章类别",
+                    "sortCode": 0,
+                    "id": "537408460313067461",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "人员类型",
+                    "sortCode": 0,
+                    "id": "536767381310013381",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "小程序消息类型",
+                    "sortCode": 0,
+                    "id": "536695256976981957",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "微信公众消息类型",
+                    "sortCode": 2,
+                    "id": "536702343568162757",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "公众号业务类型",
+                    "sortCode": 3,
+                    "id": "536702709516992453",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "短信业务类型",
+                    "sortCode": 5,
+                    "id": "536703308144836549",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "职位类型",
+                    "sortCode": 7,
+                    "id": "536703827445809093",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "活动类型",
+                    "sortCode": 15,
+                    "id": "536710805597454277",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "资讯分类",
+                    "sortCode": 16,
+                    "id": "536710878020501445",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "用户类型种类",
+                    "sortCode": 23,
+                    "id": "536712404575190981",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "角色类型",
+                    "sortCode": 24,
+                    "id": "536712777507536837",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "文件所属业务类型",
+                    "sortCode": 25,
+                    "id": "536712847095234501",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "性别类型",
+                    "sortCode": 29,
+                    "id": "536747076541743045",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "学历类型",
+                    "sortCode": 34,
+                    "id": "536750748310962117",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "班级类型",
+                    "sortCode": 35,
+                    "id": "536750866451922885",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "导入类型",
+                    "sortCode": 36,
+                    "id": "536751190763896773",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "标签类型",
+                    "sortCode": 37,
+                    "id": "536751375913058245",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "分会类型",
+                    "sortCode": 39,
+                    "id": "536752097937326021",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "人数限制类型",
+                    "sortCode": 41,
+                    "id": "536752366293090245",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "发布类型",
+                    "sortCode": 44,
+                    "id": "536753352931803077",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "预约类型",
+                    "sortCode": 48,
+                    "id": "536753864737554373",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "项目类型",
+                    "sortCode": 50,
+                    "id": "536754028583845829",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "支付方式类型",
+                    "sortCode": 55,
+                    "id": "536762083975364549",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "捐赠人类型",
+                    "sortCode": 56,
+                    "id": "536762447558606789",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "纪念品类型",
+                    "sortCode": 58,
+                    "id": "536762789708955589",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "运费类型",
+                    "sortCode": 59,
+                    "id": "536763109868568517",
+                    "parentId": "536755650357624773",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  }
+                ],
+                "num": 0,
+                "isLeaf": false,
+                "disabled": false
+              },
+              {
+                "fullName": "是否类型",
+                "sortCode": 1,
+                "id": "536759425881341893",
+                "parentId": "536688661920481221",
+                "hasChildren": true,
+                "children": [
+                  {
+                    "fullName": "是否支付成功",
+                    "sortCode": 0,
+                    "id": "536762524461170629",
+                    "parentId": "536759425881341893",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "通用是否",
+                    "sortCode": 28,
+                    "id": "536746338105163717",
+                    "parentId": "536759425881341893",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "是否点亮",
+                    "sortCode": 30,
+                    "id": "536747233593262021",
+                    "parentId": "536759425881341893",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "是否公开",
+                    "sortCode": 38,
+                    "id": "536751470402338757",
+                    "parentId": "536759425881341893",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "是否匿名捐赠",
+                    "sortCode": 51,
+                    "id": "536754303105236933",
+                    "parentId": "536759425881341893",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "是否需要捐赠票据",
+                    "sortCode": 57,
+                    "id": "536762652257419205",
+                    "parentId": "536759425881341893",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  },
+                  {
+                    "fullName": "是否法人股东负责人",
+                    "sortCode": 61,
+                    "id": "536763383655956421",
+                    "parentId": "536759425881341893",
+                    "hasChildren": false,
+                    "children": null,
+                    "num": 0,
+                    "isLeaf": true,
+                    "disabled": false
+                  }
+                ],
+                "num": 0,
+                "isLeaf": false,
+                "disabled": false
+              }
+            ],
+            "num": 0,
+            "isLeaf": false,
+            "disabled": false
+          },
+          {
+            "fullName": "消息中心",
+            "sortCode": 0,
+            "id": "443409825091648261",
+            "parentId": "3",
+            "hasChildren": true,
+            "children": [
+              {
+                "fullName": "消息来源分类",
+                "sortCode": 0,
+                "id": "443411165423434501",
+                "parentId": "443409825091648261",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "WebHook渠道分类",
+                "sortCode": 0,
+                "id": "443411036998040325",
+                "parentId": "443409825091648261",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "短信渠道分类",
+                "sortCode": 0,
+                "id": "443410903564647173",
+                "parentId": "443409825091648261",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "消息渠道分类",
+                "sortCode": 0,
+                "id": "443410821654084357",
+                "parentId": "443409825091648261",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              }
+            ],
+            "num": 0,
+            "isLeaf": false,
+            "disabled": false
+          },
+          {
+            "fullName": "功能示例",
+            "sortCode": 0,
+            "id": "821ddb80b4f14b918f32549f72a81473",
+            "parentId": "3",
+            "hasChildren": true,
+            "children": [
+              {
+                "fullName": "客户类型",
+                "sortCode": 0,
+                "id": "038d293fca544c86afa3f2bc65421fd7",
+                "parentId": "821ddb80b4f14b918f32549f72a81473",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "审批费用类型区分",
+                "sortCode": 0,
+                "id": "3e2d33e54d554b4b8a33fc41b93f8a2d",
+                "parentId": "821ddb80b4f14b918f32549f72a81473",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              }
+            ],
+            "num": 0,
+            "isLeaf": false,
+            "disabled": false
+          },
+          {
+            "fullName": "代码生成",
+            "sortCode": 0,
+            "id": "188f465964644e0f81b8ffc756eefa92",
+            "parentId": "3",
+            "hasChildren": true,
+            "children": [
+              {
+                "fullName": "模块分类",
+                "sortCode": 0,
+                "id": "400551621328643269",
+                "parentId": "188f465964644e0f81b8ffc756eefa92",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "流程表单分类",
+                "sortCode": 0,
+                "id": "037ba904515348eaad1c4bd462fc80a6",
+                "parentId": "188f465964644e0f81b8ffc756eefa92",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "移动表单分类",
+                "sortCode": 0,
+                "id": "1cff2b60fd7a4c9f82273163b956268c",
+                "parentId": "188f465964644e0f81b8ffc756eefa92",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "功能表单分类",
+                "sortCode": 0,
+                "id": "4173579c31e74a2b8749e65a23e5c957",
+                "parentId": "188f465964644e0f81b8ffc756eefa92",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              }
+            ],
+            "num": 0,
+            "isLeaf": false,
+            "disabled": false
+          },
+          {
+            "fullName": "在线开发",
+            "sortCode": 0,
+            "id": "efdbdac8d9e04539b85cda898aabde65",
+            "parentId": "3",
+            "hasChildren": true,
+            "children": [
+              {
+                "fullName": "门户设计分类",
+                "sortCode": 0,
+                "id": "02ad722fd1914c338d51597236ad2339",
+                "parentId": "efdbdac8d9e04539b85cda898aabde65",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "移动设计分类",
+                "sortCode": 0,
+                "id": "573c31998bc04a23a769f9a9eff67d00",
+                "parentId": "efdbdac8d9e04539b85cda898aabde65",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "功能设计分类",
+                "sortCode": 0,
+                "id": "765929a127f44a5b80e773d65d58f96c",
+                "parentId": "efdbdac8d9e04539b85cda898aabde65",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "大屏设计分类",
+                "sortCode": 0,
+                "id": "b1474890faaa47e1858ce7b593c8ffd7",
+                "parentId": "efdbdac8d9e04539b85cda898aabde65",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "报表设计分类",
+                "sortCode": 0,
+                "id": "65e7917344fa460e8c487e45bbbab26f",
+                "parentId": "efdbdac8d9e04539b85cda898aabde65",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              }
+            ],
+            "num": 0,
+            "isLeaf": false,
+            "disabled": false
+          },
+          {
+            "fullName": "系统管理",
+            "sortCode": 0,
+            "id": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+            "parentId": "3",
+            "hasChildren": true,
+            "children": [
+              {
+                "fullName": "公告类型",
+                "sortCode": 0,
+                "id": "402359292922968773",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "日程分类",
+                "sortCode": 0,
+                "id": "391232953557988613",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "业务分类",
+                "sortCode": 0,
+                "id": "306427078100678661",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "分组管理",
+                "sortCode": 0,
+                "id": "271905527003350725",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "打印模板分类",
+                "sortCode": 0,
+                "id": "202931027482510597",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "数据类型",
+                "sortCode": 0,
+                "id": "9e7b2d0c690f4562b13e1215e449c222",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "性别",
+                "sortCode": 0,
+                "id": "963255a34ea64a2584c5d1ba269c1fe6",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "证件类型",
+                "sortCode": 0,
+                "id": "7866376d5f694d4d851c7164bd00ebfc",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "接口分类",
+                "sortCode": 0,
+                "id": "9c43287481364d348c0ea0d0f64b38be",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "邮箱格式",
+                "sortCode": 0,
+                "id": "55d7666d74df4bb4b36aed08a3a5bad1",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "结算方式",
+                "sortCode": 0,
+                "id": "1143c18426014419a35aa1fa97685c9c",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "角色分类",
+                "sortCode": 0,
+                "id": "4501f6f26a384757bce12d4c4b03342c",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "岗位分类",
+                "sortCode": 0,
+                "id": "dae93f2fd7cd4df999d32f8750fa6a1e",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "企业性质",
+                "sortCode": 0,
+                "id": "9b542177a477488994ce09fff3c93901",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "系统语言",
+                "sortCode": 0,
+                "id": "dc6b2542d94b407cac61ec1d59592901",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "比较符号",
+                "sortCode": 0,
+                "id": "237446e245ce403d8062995ea33711cf",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "行业类别",
+                "sortCode": 0,
+                "id": "d59a3cf65f9847dbb08be449e3feae16",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "组织分类",
+                "sortCode": 0,
+                "id": "9aba44dfc8dc481a9346b9ce38a0735e",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "民族",
+                "sortCode": 0,
+                "id": "b6cd65a763fa45eb9fe98e5057693e40",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "学历",
+                "sortCode": 0,
+                "id": "6a6d6fb541b742fbae7e8888528baa16",
+                "parentId": "afcc3a0952df4d1bad7d83cc8eb20fbd",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              }
+            ],
+            "num": 0,
+            "isLeaf": false,
+            "disabled": false
+          },
+          {
+            "fullName": "工作流程",
+            "sortCode": 0,
+            "id": "d3fc17551c29461b878eb98baf60552c",
+            "parentId": "3",
+            "hasChildren": true,
+            "children": [
+              {
+                "fullName": "流程引擎类型",
+                "sortCode": 0,
+                "id": "42b0f46122b041d097f1fe4f2f637a03",
+                "parentId": "d3fc17551c29461b878eb98baf60552c",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "流程表单类型",
+                "sortCode": 0,
+                "id": "70f970e14fee4879802b63122511032b",
+                "parentId": "d3fc17551c29461b878eb98baf60552c",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              },
+              {
+                "fullName": "流程设计分类",
+                "sortCode": 0,
+                "id": "507f4f5df86b47588138f321e0b0dac7",
+                "parentId": "d3fc17551c29461b878eb98baf60552c",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              }
+            ],
+            "num": 0,
+            "isLeaf": false,
+            "disabled": false
+          },
+          {
+            "fullName": "业务枚举",
+            "sortCode": 0,
+            "id": "513572393361342405",
+            "parentId": "3",
+            "hasChildren": false,
+            "children": null,
+            "num": 0,
+            "isLeaf": true,
+            "disabled": false
+          },
+          {
+            "fullName": "自定义类型past",
+            "sortCode": 0,
+            "id": "513577599562153925",
+            "parentId": "3",
+            "hasChildren": true,
+            "children": [
+              {
+                "fullName": "支付方式",
+                "sortCode": 1,
+                "id": "523812775680540613",
+                "parentId": "513577599562153925",
+                "hasChildren": false,
+                "children": null,
+                "num": 0,
+                "isLeaf": true,
+                "disabled": false
+              }
+            ],
+            "num": 0,
+            "isLeaf": false,
+            "disabled": false
+          }
+        ],
+        "num": 11,
+        "isLeaf": false,
+        "disabled": false
+      }
+    ]
+  },
+  "extras": null,
+  "timestamp": 1787693427
+}

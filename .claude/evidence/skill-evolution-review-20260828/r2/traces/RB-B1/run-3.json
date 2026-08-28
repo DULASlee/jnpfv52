@@ -1,0 +1,84 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-B1",
+  "run": 3,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/Common/FileService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "按 §1.3 顺序 Local→Regional：Local 不满足——DownloadAll 自身无清理虽可由本类代码自证（:240-:264 全方法体可见），但 Finding 结论（是否构成未管理缺陷）取决于 TemporaryFile 目录的消费/清理责任归属，涉及下游消费端点 /api/File/Download→DownloadFile(:271-:295) 与本类直接注入的 IFileManager（:52,:67）清理能力，跨界 1 层即可定位→ Regional；不满足 Systemic（未跨 Service↔Repository↔Provider 层边界，依赖链仅 1 层接口）。",
+    "claim": "FileService.DownloadAll（FileService.cs:240-264）创建临时目录 directoryPath（:244-245）与 zip downloadPath（:252）后，方法体内无 finally 清理、无 Directory.Delete(directoryPath) 删除源目录；:256 的 File.Delete(downloadPath) 仅是压缩前置的同名旧文件清除检查，方法直接 return（:263）结束；同文件消费端点 DownloadFile（:271-295）也不删除所提供文件。"
+  },
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "claim_gate_notes": "FQ-1：在 :240-:264 内可见 finally 或 Directory.Delete(directoryPath) 即 Claim 为假；FQ-2：对象=FileService.DownloadAll（状态=方法体 240-264 全部语句）；FQ-3：扫描同一方法体是否存在 finally/Delete 清理，两 Agent 结果一致，无「合理/适当/更好」类修饰词。",
+  "budget_allocation": { "depth": 2, "artifact": 4, "iteration": 1, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "gap_statement": "缺 Ownership 证据：TemporaryFile 目录由谁消费与清理？仅凭命名无法判定「未清理是否为缺陷」。需静态复核：(a) DownloadAll 方法体是否含 finally/Delete 清理（本类自证）；(b) 可见消费端点 DownloadFile 是否清理；(c) IFileManager 是否暴露清理能力且是否被 DownloadAll 调用。Level 0 人工（Ownership 明确描述）本场景完全不可得（manifest simulated_human=false、无预置回复，发卡即 Timeout），因此用 Level1 静态取证收敛可自证部分，剩余仓库级证据缺口在 STOP 检查处裁决。",
+      "actions": [
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "hop": 0, "purpose": "复核 DownloadAll（240-264）全方法体，确认 finally/Directory.Delete 清理是否存在；确认同文件消费端点 DownloadFile（271-295）是否清理" },
+        { "tool": "Read", "mode": "body", "target": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs", "hop": 1, "purpose": "确认 IFileManager 是否暴露清理能力（DeleteFile）且 DownloadAll 是否调用之（本类直接注入接口，hop=1）" }
+      ],
+      "evidence": [
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "245", "snippet": "Directory.CreateDirectory(directoryPath);", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "252", "snippet": "string downloadPath = directoryPath + \".zip\";", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "256", "snippet": "File.Delete(downloadPath);", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "258", "snippet": "ZipFile.CreateFromDirectory(directoryPath, downloadPath);", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "259", "snippet": "if (!App.Configuration[\"OSS:Provider\"].Equals(\"Invalid\"))", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "289", "snippet": "return await _fileManager.DownloadFileByType(filePath, fileDownloadName);", "confidence": "H" },
+        { "source": "file:line", "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs", "lines": "60", "snippet": "Task DeleteFile(string filePath);", "confidence": "H" }
+      ],
+      "interpretation": "240-264 逐行复核：:244-245 创建目录→:248-250 复制文件→:252-258 压缩→:259-260 条件式上传→:261-262 写缓存→:263 直接 return；全方法体无 finally、无 Directory.Delete(directoryPath)，唯一的 File.Delete(:256) 是压缩前置的同名旧文件清除（:255-256），非对本次产物的清理。消费端 DownloadFile(:271-295) 经 /api/File/Download?type=TemporaryFile 提供 zip 后亦不删除文件（:287-289 仅下载缓存校验）。IFileManager 暴露 DeleteFile(:60) 但 DownloadAll 未调用。逐字锚点均来自当轮 Read 原文，V-5 合规（单行 ≤80）。",
+      "counters_after": { "depth": 1, "artifact": 1, "iteration": 1, "scope": 1 },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": true,
+        "STOP1": false,
+        "STOP2": false,
+        "STOP3": true,
+        "hit": "STOP-5"
+      },
+      "stop_check_notes": "STOP-4=false：剩余缺口（仓库级 TemporaryFile 清理者是否存在、实际磁盘/OSS 累积）非「跨入 Scope 预算禁止模块」，而是 baseline 仅导出 manifest 两文件、人工 Timeout 的资源不存在（discipline 7）→ 非 STOP-4。STOP-5=true：§4.1 E1 触发——Budget 触顶（I=1/1、S=1/1）且 Confidence=Low<Medium → §3.1 STOP-3 行「confidence<Medium→转 STOP-5」。STOP-1=false：五元组判据4（Decision 唯一）不满足——GO 需「违反 Contract+单点可守+不扩契约」（zip 供 /api/File/Download 消费，直接删文件破坏下载契约→无法守单点），STOP 需「不是缺陷」（无仓库级证据证明存在外部清理者）均不可唯一推出；硬门2：累积类收益无运行时证据不得 GO。STOP-2=false：未宣告 Stable。STOP-3=true：iteration 1/1 与 scope 1/1 达上限。按 v2 同时命中记录最先命中者→ stop_triggered=STOP-5；因含 escalation 亦与 §6.2 不变式一致。"
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "FileService.DownloadAll（:240-264）创建临时目录与 zip 后无 finally/Delete 清理（逐字锚点：:245,:252,:256,:258）；可见消费端点 DownloadFile（:271-295）亦不删除所提供文件（:289）。",
+    "evidence": "7 条 H 级 file:line 锚点：FileService.cs:245（创建目录）、:252（zip 路径）、:256（唯一 File.Delete 为前置同名检查）、:258（压缩）、:259（条件上传）、:289（消费端点不清理）；IFileManager.cs:60（清理能力存在但未被调用）。Claim 级（DownloadAll 自身不清理）证据直接对应源码，H 级。",
+    "impact": "成立→DownloadAll 每次 PackDownload 均遗留 TemporaryFile 目录+zip，可见路径无任何清理，构成未管理资源累积（缺陷候选，GO 或 NEED_EVIDENCE）；不成立→存在 finally 或外部清理机制（调度/宿主服务），非缺陷（STOP）。",
+    "confidence": "Low",
+    "decision": "NEED_EVIDENCE"
+  },
+  "final": {
+    "decision": "NEED_EVIDENCE",
+    "stop_triggered": "STOP-5",
+    "stop_reason": "§3.1 STOP-3（I=1/1、S=1/1 触顶）且 Confidence=Low<Medium → 转 STOP-5 → §4.1 E1 BudgetExhausted Escalation。DownloadAll 自身无清理已 H 级证实，但 GO/STOP 唯一决策所需仓库级+运行时证据（TemporaryFile 是否存在外部清理者；实际磁盘/OSS 累积量）在 baseline 仅导出 2 文件、Level 0 人工 Timeout 环境下不可得（discipline 7：资源不存在→非 STOP-4）；§2.3 判据4 Decision 不唯一（GO 被 v4 GO 六合取之单点/不扩契约阻断——zip 供下载端点消费，无法守单点；STOP 的「不是缺陷」无法证实）+ 硬门2（累积类收益无运行时证据不得 GO）→ 冻结 NEED_EVIDENCE。不使用成本/时间话术。",
+    "decision_reentry_notes": "v4 三门检查：GO 六合取不完全成立（守不住单点：zip 生命周期跨 DownloadAll 与 DownloadFile；减小契约面需要新 TTL 设计=扩契约）；STOP 十析取不构成（无证据证明「不是缺陷/有外部管理」）；NEED EVIDENCE 命中：Finding 可能真实（源目录为纯废料）但收益/运行时证据缺失且环境受阻（人工 Timeout+无用例+无 Level2 工具）→ BLOCKED 冻结。"
+  },
+  "escalation": {
+    "escalation_type": "E1",
+    "finding_identity": "RB-B1 FileService.DownloadAll 临时目录未清理（:240-:264）",
+    "finding_decision_record": "NEED_EVIDENCE",
+    "current_claim": "DownloadAll 创建临时目录 directoryPath 与 zip downloadPath 后无 finally/Delete 清理；唯一 File.Delete(:256) 为同名旧文件前置检查；消费端点 DownloadFile 亦不删除所提供文件。",
+    "current_evidence": [
+      { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "245", "snippet": "Directory.CreateDirectory(directoryPath);", "confidence": "H" },
+      { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "252", "snippet": "string downloadPath = directoryPath + \".zip\";", "confidence": "H" },
+      { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "256", "snippet": "File.Delete(downloadPath);", "confidence": "H" },
+      { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "258", "snippet": "ZipFile.CreateFromDirectory(directoryPath, downloadPath);", "confidence": "H" },
+      { "source": "file:line", "path": "backend/modularity/system/JNPF.Systems/Common/FileService.cs", "lines": "289", "snippet": "return await _fileManager.DownloadFileByType(filePath, fileDownloadName);", "confidence": "H" },
+      { "source": "file:line", "path": "backend/modularity/common/JNPF.Common.Core/Manager/Files/IFileManager.cs", "lines": "60", "snippet": "Task DeleteFile(string filePath);", "confidence": "H" }
+    ],
+    "current_confidence": "Low",
+    "budget_consumed": { "scope": "1/1", "depth": "1/2", "artifact": "1/4", "iteration": "1/1" },
+    "missing_information": "(1) 仓库级：SystemPath/TemporaryFile 目录是否存在外部清理者（调度任务/宿主服务/定时器），需扫 JNPF.Systems 及宿主项目（baseline 未导出，当前不可得）；(2) 运行时：实际磁盘（本地）/OSS 对象（远端）累积量级，判定严重度；(3) 契约面：zip 在 /api/File/Download 消费后的生命周期约定（是否存在 TTL 或手动清除入口）。",
+    "candidate_decisions": ["GO", "STOP", "NEED_EVIDENCE"],
+    "human_decision_required": "APPROVE_MORE_CONTEXT",
+    "recommended_action": "批准放行 (a) 读取 baseline 外 JNPF.Systems/宿主项目以定位 TemporaryFile 清理者；(b) Level 0 人工描述该目录生命周期或采集运行时磁盘/OSS 累积观测。若确认无任何清理路径→可将本 Finding 重定为 GO（范围收缩为：源目录 directoryPath 压缩后 finally 删除为单点修复；zip 引入消费后 TTL 需单独 CR）；若确认存在外部清理→转 STOP（非缺陷）。未经补充证据不得定为 GO（硬门2）。"
+  },
+  "meta": { "time_observed_minutes": 0 }
+}

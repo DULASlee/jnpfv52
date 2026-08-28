@@ -1,0 +1,143 @@
+{
+    "byDimension":  [
+                        {
+                            "Count":  189,
+                            "Dimension":  "I"
+                        },
+                        {
+                            "Count":  83,
+                            "Dimension":  "E"
+                        },
+                        {
+                            "Count":  59,
+                            "Dimension":  "J"
+                        },
+                        {
+                            "Count":  46,
+                            "Dimension":  "C"
+                        },
+                        {
+                            "Count":  1,
+                            "Dimension":  "N"
+                        },
+                        {
+                            "Count":  1,
+                            "Dimension":  "O"
+                        },
+                        {
+                            "Count":  1,
+                            "Dimension":  "D"
+                        }
+                    ],
+    "totalP0Original":  1096,
+    "byModule":  [
+                     {
+                         "Count":  264,
+                         "Module":  "inteAssistant"
+                     },
+                     {
+                         "Count":  36,
+                         "Module":  "engine"
+                     },
+                     {
+                         "Count":  32,
+                         "Module":  "common"
+                     },
+                     {
+                         "Count":  21,
+                         "Module":  "system"
+                     },
+                     {
+                         "Count":  11,
+                         "Module":  "visualdev"
+                     },
+                     {
+                         "Count":  6,
+                         "Module":  "workflow"
+                     },
+                     {
+                         "Count":  3,
+                         "Module":  "zxdev"
+                     },
+                     {
+                         "Count":  3,
+                         "Module":  "message"
+                     },
+                     {
+                         "Count":  2,
+                         "Module":  "taskscheduler"
+                     },
+                     {
+                         "Count":  1,
+                         "Module":  "app"
+                     },
+                     {
+                         "Count":  1,
+                         "Module":  "visualdata"
+                     }
+                 ],
+    "p0Remaining":  380,
+    "j6n1Suppressed":  716,
+    "byRule":  [
+                   {
+                       "Description":  "Service direct DB access",
+                       "RuleId":  "I2",
+                       "Count":  189
+                   },
+                   {
+                       "Description":  "Exception info leak",
+                       "RuleId":  "E4",
+                       "Count":  53
+                   },
+                   {
+                       "Description":  "Sync-over-Async deadlock",
+                       "RuleId":  "C1",
+                       "Count":  43
+                   },
+                   {
+                       "Description":  "Path traversal",
+                       "RuleId":  "J4",
+                       "Count":  34
+                   },
+                   {
+                       "Description":  "Empty catch block",
+                       "RuleId":  "E1",
+                       "Count":  30
+                   },
+                   {
+                       "Description":  "Unsafe deserialization",
+                       "RuleId":  "J5",
+                       "Count":  13
+                   },
+                   {
+                       "Description":  "SQL injection risk",
+                       "RuleId":  "J1",
+                       "Count":  11
+                   },
+                   {
+                       "Description":  "async void abuse",
+                       "RuleId":  "C2",
+                       "Count":  3
+                   },
+                   {
+                       "Description":  "SQL injection (R7)",
+                       "RuleId":  "N2",
+                       "Count":  1
+                   },
+                   {
+                       "Description":  "Transaction boundary unclear",
+                       "RuleId":  "O5",
+                       "Count":  1
+                   },
+                   {
+                       "Description":  "Dangerous lock object",
+                       "RuleId":  "D2",
+                       "Count":  1
+                   },
+                   {
+                       "Description":  "Hardcoded secrets",
+                       "RuleId":  "J2",
+                       "Count":  1
+                   }
+               ]
+}

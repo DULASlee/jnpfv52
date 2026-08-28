@@ -1,0 +1,24 @@
+{
+  "repo_root": "D:/JNPF-v52",
+  "default_commit": "b3b8acde",
+  "finding_file": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+  "finding_project": "JNPF.Extend",
+  "simulated_human": false,
+  "files": [
+    {
+      "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+      "project": "JNPF.Extend",
+      "exported_from": "b3b8acde"
+    },
+    {
+      "path": "backend/modularity/workflow/JNPF.WorkFlow.Entitys/Entity/FlowTaskEntity.cs",
+      "project": "JNPF.WorkFlow.Entitys",
+      "exported_from": "b3b8acde"
+    },
+    {
+      "path": "backend/modularity/extend/JNPF.Extend/JNPF.Extend.csproj",
+      "project": "JNPF.Extend",
+      "exported_from": "b3b8acde"
+    }
+  ]
+}

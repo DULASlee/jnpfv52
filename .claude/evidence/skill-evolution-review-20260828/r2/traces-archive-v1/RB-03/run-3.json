@@ -1,0 +1,123 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-03",
+  "run": 3,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "按 §1.3 顺序先判 Local：foreach 循环 + ToListAsync 调用字面上全在 ScheduleService.Delete 本方法内（lines 807-813），N+1 形态自身可通过本方法代码自证。但循环体执行的是 _repository.AsSugarClient().Queryable<ScheduleUserEntity>()，其引用 ScheduleUserEntity（跨类类型引用）并穿越 _repository 这一 Repository 依赖（直接的接口/依赖关系），属于『直接的接口/依赖/继承关系，跨界 1 层即可定位』，故定档 Regional。未跳判 Systemic：所有依赖与跨层调用都在当前 .csproj 内（manifest.finding_project=JNPF.Systems，files 也仅 1 个），未跨模块；Case 3 同方法内还有同形态（839-846/850-860）但同样不跨模块，不构成 Systemic 证据。",
+    "claim": "ScheduleService.Delete 在 case 2 分支的 foreach (var item in dataList)（:807）循环体内，对 _repository.AsSugarClient().Queryable<ScheduleUserEntity>() 执行 ToListAsync()（:809-:811），形成『每条 dataList item 触发一次独立 DB 查询』的 N+1 形态。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true
+  },
+  "budget_allocation": {
+    "depth": 2,
+    "artifact": 4,
+    "iteration": 1,
+    "scope": 1
+  },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Call",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "hop": 1,
+          "purpose": "复核 case 2 分支 foreach + ToListAsync 形态（lines 780-879）"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "hop": 1,
+          "purpose": "复核 Delete 方法签名与 case 1/case 2 入口上下文（lines 744-803）"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "hop": 1,
+          "purpose": "锚点逐字取证 lines 805-816（含 case 2 foreach 完整代码）"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "hop": 1,
+          "purpose": "复核同方法 case 3 的同形态 N+1（lines 832-861）以确认模式非孤例"
+        },
+        {
+          "tool": "Grep",
+          "mode": "signature",
+          "target": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "hop": 0,
+          "purpose": "定位所有 async Task 方法签名以锚定 Delete 方法位置（pattern: public.*async.*Task）"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "807-811",
+          "snippet": "                        foreach (var item in dataList)\n                        {\n                            var dataUser = await _repository.AsSugarClient().Queryable<ScheduleUserEntity>()\n                                .Where(it => it.DeleteMark == null && it.ScheduleId.Equals(item.Id))\n                                .ToListAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "839-846",
+          "snippet": "                        foreach (var item in allDataList)\n                        {\n                            var userList = await _repository.AsSugarClient().Queryable<ScheduleUserEntity>()\n                                .Where(it => it.DeleteMark == null && it.ScheduleId.Equals(item.Id))\n                                .ToListAsync();\n                            scheduleList.Add(item);\n                            scheduleLogList.Add(AddScheduleLog(item, string.Join(\",\", userList), \"3\"));\n                        }",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "850-860",
+          "snippet": "                        foreach (var item in allDataList)\n                        {\n                            var user = await _repository.AsSugarClient().Queryable<ScheduleUserEntity>()\n                                .Where(it => it.DeleteMark == null && it.ScheduleId.Equals(item.Id) && it.ToUserId.Equals(_userManager.UserId))\n                                .FirstAsync();\n                            if (user.IsNotEmptyOrNull())\n                            {\n                                scheduleParticipantsList.Add(user);\n                                scheduleLogList.Add(AddScheduleLog(item, user.ToUserId, \"4\"));\n                            }\n                        }",
+          "confidence": "H"
+        }
+      ],
+      "counters_after": {
+        "depth": 0,
+        "artifact": 0,
+        "iteration": 1,
+        "scope": 0
+      },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-1"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "ScheduleService.Delete 在 case 2 分支的 foreach (var item in dataList)（:807）循环体内，对 _repository.AsSugarClient().Queryable<ScheduleUserEntity>() 执行 ToListAsync()（:809-:811），形成『每条 dataList item 触发一次独立 DB 查询』的 N+1 形态。",
+    "evidence": "ScheduleService.cs:807-811 静态代码字面呈现『foreach 体内 ToListAsync()』，且同方法 case 3（:839-846/850-860）重复出现同形态（FileService.cs 不相关）。来源 = Level1 静态代码，三条独立 file:line 互相佐证。",
+    "impact": "Claim 成立（N+1 形态字面成立，High 置信度）→ v4 硬门 2 (P0.2) Performance Gate 7Q 缺位 + 缺数据量级运行时证据（dataList.Count 实际量级未知、无 CPU/内存/GC/延迟/慢查询等 ≥2 条运行时事实）→ Decision 锁定 NEED_EVIDENCE（v4 明示『N+1/批量类 Claim 即使形态确证，若数据量级无运行时证据 → Decision 不得为 GO，应为 NEED EVIDENCE』）。Claim 不成立（若实际为批量 IN 查询）→ 不属本次 Finding 范围 → Decision = STOP（无 N+1 缺陷）。",
+    "confidence": "High",
+    "decision": "NEED_EVIDENCE"
+  },
+  "final": {
+    "decision": "NEED_EVIDENCE",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§2.3 五元组全部满足（FQ-1/2/3 通过 + Evidence 可 file:line 回溯 + Impact 双分支推演完整 + Decision 三门封闭唯一推出 + Confidence=High≥Medium）；Decision 由 v4 P0.2/硬门 2（Performance Gate 7Q 缺位 + N+1 类 Claim 无数据量级运行时证据）唯一锁定 NEED_EVIDENCE；不再 Expansion（Budget 仍有 A/D/S 余量，但新增证据均为同形态静态佐证，不影响 v4 硬门判定路径；本场景无 Level 0 人卡、缺 Level 2 运行时工具，按 STOP-5 触发后唯一动作仍是 NEED_EVIDENCE，且 §3.1 优先级 STOP-1 先于 STOP-5 命中）。"
+  },
+  "escalation": null,
+  "meta": {
+    "time_observed_minutes": 0
+  }
+}

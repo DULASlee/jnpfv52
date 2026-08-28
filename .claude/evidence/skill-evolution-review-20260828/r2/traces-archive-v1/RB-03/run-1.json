@@ -1,0 +1,102 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-03",
+  "run": 1,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+    "risk": "Medium",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "Patch §1.3 ordered check. Local first: N+1 foreach+ToListAsync pattern is observable inside one class/method (ScheduleService.Delete case 2 creator branch, lines 804-814). But the per-item query targets ScheduleUserEntity (a typed-entity different from ScheduleEntity) via the ISqlSugarRepository<ScheduleEntity>.AsSugarClient() interface — i.e. the pattern crosses a direct typed-entity dependency through a 1-layer interface method (AsSugarClient → Queryable<T>). Per §1.3 Regional = 'direct interface/dependency/inheritance relationship, 1-layer crossable via interface signature/constructor/inheritance chain', this matches. Ruled out Systemic because no cross-.csproj or Service↔Repository↔Provider layer crossing is required to falsify the Claim.",
+    "claim": "ScheduleService.Delete (line 744) case 2 creator branch (lines 804-814) executes an N+1 query shape: a single 'dataList' fetch at lines 800-802 is followed by 'foreach (var item in dataList)' (line 807) whose body issues 'await _repository.AsSugarClient().Queryable<ScheduleUserEntity>().Where(...).ToListAsync()' at lines 809-811, producing 1 + N independent SQL round-trips where N = dataList.Count. Falsifiable by: (a) reading lines 807-811 to see the foreach+per-item ToListAsync; (b) observing that the sibling else branch (lines 815-826) batches the same ScheduleUserEntity fetch at lines 817-819 outside the foreach, proving the N+1 shape is not forced by API constraints."
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true
+  },
+  "budget_allocation": {
+    "depth": 2,
+    "artifact": 4,
+    "iteration": 1,
+    "scope": 1
+  },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Call",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "baseline/backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "hop": 1,
+          "purpose": "Read Delete method case 2 (lines 759-829) to confirm N+1 foreach + per-item Queryable<ScheduleUserEntity>.ToListAsync shape at lines 807-811, and contrast with the batched else branch at lines 815-826."
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "baseline/backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "800-802",
+          "snippet": "                    var dataList = await _repository.AsQueryable()\n                        .Where(it => it.DeleteMark == null && it.GroupId.Equals(data.GroupId) && it.StartDay >= data.StartDay)\n                        .ToListAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "baseline/backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "804",
+          "snippet": "                    if (data.CreatorUserId == _userManager.UserId)",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "baseline/backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "807-811",
+          "snippet": "                        foreach (var item in dataList)\n                        {\n                            var dataUser = await _repository.AsSugarClient().Queryable<ScheduleUserEntity>()\n                                .Where(it => it.DeleteMark == null && it.ScheduleId.Equals(item.Id))\n                                .ToListAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "baseline/backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "817-819",
+          "snippet": "                        var dataUser = await _repository.AsSugarClient().Queryable<ScheduleUserEntity>()\n                            .Where(it => it.DeleteMark == null && it.ToUserId.Equals(_userManager.UserId) && dataList.Select(s => s.Id).ToList().Contains(it.ScheduleId))\n                            .ToListAsync();",
+          "confidence": "H"
+        }
+      ],
+      "counters_after": {
+        "depth": 0,
+        "artifact": 0,
+        "iteration": 1,
+        "scope": 0
+      },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-1"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "ScheduleService.Delete case 2 creator branch (lines 804-814) executes an N+1 query shape: 1 fetch of dataList (lines 800-802) followed by N independent per-item ToListAsync against ScheduleUserEntity (lines 809-811).",
+    "evidence": "Level 1 verbatim code at file:line 800-802 (dataList source query), 804 (branch predicate), 807-811 (foreach + per-item Queryable<ScheduleUserEntity>.ToListAsync). Contrast: the sibling else branch (lines 815-826) batches the same query (lines 817-819) outside the foreach, demonstrating the N+1 shape in the creator branch is not API-forced.",
+    "impact": "Claim 成立 → scheduleLogList 累积过程中对每条 dataList 都触发一次独立 SQL，命中 Executor-Brief v4 硬门 2 (性能)：N+1/批量类 Claim 即使形态确证，若缺运行时数据量级证据，Decision 不得为 GO；同时 Patch §3 Decision 必须唯一且 Confidence 边界决定升级路径. Claim 不成立 → 即便 fetch 模式成立，形态仅是 potential；若运行期 dataList.Count=1 (典型单日程删除)，则无性能影响，不构成缺陷.",
+    "confidence": "High",
+    "decision": "NEED_EVIDENCE"
+  },
+  "final": {
+    "decision": "NEED_EVIDENCE",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§2.3 五判据全部满足 (Claim 可证伪 [FQ-1/2/3=✓, 不命中 N1-N5]/ Evidence 可回溯 [file:line 800-802, 804, 807-811, 817-819]/ Impact 链完整 [成立/不成立分述]/ Decision 唯一 [单值 NEED_EVIDENCE]/ Confidence=High) → STOP-1 命中 → Decision Re-entry → Executor-Brief v4 硬门 2 (N+1/批量类 Claim 即使形态确证，缺运行时数据量级证据 → 不得为 GO，应为 NEED_EVIDENCE). v4 三门封闭：NEED_EVIDENCE 为第三独立态，既不滑入 GO，也不压成 STOP；非 ESCALATE (按 §4.0，ESCALATE 非第四 Decision，本 Finding 未触发 STOP-5)."
+  },
+  "escalation": null,
+  "meta": {
+    "time_observed_minutes": 0
+  }
+}

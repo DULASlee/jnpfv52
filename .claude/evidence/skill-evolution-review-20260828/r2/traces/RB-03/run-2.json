@@ -1,0 +1,116 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-03",
+  "run": 2,
+  "finding": {
+    "project": "JNPF.Systems",
+    "file": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+    "risk": "Medium",
+    "nature": "Local",
+    "nature_order_checked": ["Local"],
+    "nature_justification": "按 Patch §1.3 顺序先判 Local：N+1 形态的全部判定对象（dataList 加载 :800-802、foreach :807、循环内 Queryable<ScheduleUserEntity>().ToListAsync :809-811）均在本类本方法内，可由本类代码自证；批量替代形态亦在同一方法内（:818/:883 的 Contains 批量查询）。不涉及跨类接口/依赖解析（非 Regional），更不涉及 Service↔Repository↔Provider 跨层或跨 .csproj（非 Systemic）。",
+    "claim": "Delete(string id, int type) 的 type=2 且 data.CreatorUserId==_userManager.UserId 分支中，foreach (var item in dataList)（:807）循环体内对 Queryable<ScheduleUserEntity>() 逐条执行 ToListAsync()（:809-811）——每次迭代对 ScheduleUserEntity 发一次独立数据库查询（N+1 形态）。"
+  },
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "budget_allocation": { "depth": 1, "artifact": 2, "iteration": 1, "scope": 0 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "DataFlow",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "hop": 0,
+          "purpose": "读取 finding 文件：核查 :800-813 循环内 N+1 形态、dataList 单次加载来源，并对照同方法 :817-819/:883 的批量 Contains 替代形态（决定对 claim 形态的自证与可证伪性）"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "800-802",
+          "snippet": "var dataList = await _repository.AsQueryable()",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "807",
+          "snippet": "foreach (var item in dataList)",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "809",
+          "snippet": "var dataUser = await _repository.AsSugarClient().Queryable<ScheduleUserEntity>()",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "810",
+          "snippet": ".Where(it => it.DeleteMark == null && it.ScheduleId.Equals(item.Id))",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "811",
+          "snippet": ".ToListAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs",
+          "lines": "818",
+          "snippet": "dataList.Select(s => s.Id).ToList().Contains(it.ScheduleId)",
+          "confidence": "H"
+        }
+      ],
+      "counters_after": { "depth": 0, "artifact": 0, "iteration": 1, "scope": 0 },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": true,
+        "STOP1": false,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-5"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "Delete(type=2, 创建人分支) 中 foreach :807 循环体内 Queryable<ScheduleUserEntity>().ToListAsync()（:809-811）每次迭代发一次独立 SQL（N+1 形态）。",
+    "evidence": "Level 1 静态（全部 H）：:800-802 dataList 单次 AsQueryable().ToListAsync 加载；:807 foreach 逐项；:809/810/811 循环体内构造并执行查询（谓词随 item.Id 变化，每迭代一次 ToListAsync）；:818（及 :883）同方法存在等价批量 dataList.Select(s=>s.Id).ToList().Contains(...) 查询形态作对照。",
+    "impact": "成立→N+1 形态确证，但为性能类 Claim，硬门2 要求数据量级有运行时证据才允许 GO，本场景无任何运行时证据且环境阻断采集 → Decision=NEED_EVIDENCE（不得 GO）；不成立（如该分支循环外已有批量预取/非逐条查询）→ 非缺陷 → STOP。",
+    "confidence": "High",
+    "decision": "NEED_EVIDENCE"
+  },
+  "final": {
+    "decision": "NEED_EVIDENCE",
+    "stop_triggered": "STOP-5",
+    "stop_reason": "§3.1 序号2 STOP-5（Escalation Required）命中，E3 RuntimeDependent（§4.1）：N+1 形态已由 Level 1 静态证据确证（:800-811，Confidence=High，中间无推断），但性能类 Claim 的 GO 判定被硬门2 锁死——「N+1/批量类 Claim 即使形态确证，若数据量级无运行时证据 → Decision 不得为 GO，应为 NEED EVIDENCE」（Executor-Brief 硬门2，P0.2 需 ≥2 条运行时事实）。剩余可获取的决策性 Context（实际 dataList 规模、本方法实际 SQL 条数/耗时）全部属于 Level 2 工具/运行时；本场景 manifest.simulated_human=false（无 Level 0）、无 Level 2 采集手段 → 无法获取，故触发 E3 交人，Decision 冻结为 NEED_EVIDENCE。STOP-4=false（无需跨模块取证，属资源不存在非模块边界，见纪律7）。"
+  },
+  "escalation": {
+    "escalation_type": "E3",
+    "finding_identity": "RB-03 / JNPF.Systems.System.ScheduleService.Delete(type=2,创建人分支) foreach(:807) 内逐条 Queryable<ScheduleUserEntity>().ToListAsync(:809-811) N+1",
+    "finding_decision_record": "NEED_EVIDENCE",
+    "current_claim": "Delete(type=2, 创建人分支) foreach(:807) 循环体对 Queryable<ScheduleUserEntity>() 逐条 ToListAsync(:809-811)，每次迭代一次独立 SQL（N+1 形态）。",
+    "current_evidence": [
+      { "source": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs:800-802", "content": "dataList 单次 AsQueryable().ToListAsync() 加载（List<ScheduleEntity>）", "confidence": "H" },
+      { "source": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs:807,809-811", "content": "foreach (var item in dataList) { Queryable<ScheduleUserEntity>().Where(it=>...it.ScheduleId.Equals(item.Id)).ToListAsync(); } 每次迭代发一次查询", "confidence": "H" },
+      { "source": "backend/modularity/system/JNPF.Systems/System/ScheduleService.cs:817-819", "content": "同方法 else 分支用 dataList.Select(s=>s.Id).ToList().Contains(it.ScheduleId) 批量一次查询取出全部 ScheduleUserEntity——证明存在等价非逐条形态", "confidence": "H" }
+    ],
+    "current_confidence": "Medium",
+    "budget_consumed": { "scope": "0/0", "depth": "0/1", "artifact": "0/2", "iteration": "1/1" },
+    "missing_information": "运行时量级证据：Delete(type=2,创建人分支) 实际调用时 dataList 元素规模、该分支实际执行的 SQL 条数与耗时基线（SQL Server Profiler / SqlSugar ToSql/ToTraceString / 分层 DB 统计，≥2 条运行时事实）。本环境无 Level 0 人工、无 Level 2 采集渠道，静态 baseline 无法提供。",
+    "candidate_decisions": ["GO", "STOP", "NEED_EVIDENCE"],
+    "human_decision_required": "NEED_EVIDENCE",
+    "recommended_action": "不自动改码。决策冻结为 NEED_EVIDENCE 直至人工提供运行时量级证据（或批准 Level 2 采集）。若量级确证显著，可将 :807-811 逐条查询改写为同方法 :817-819 已用的批量 Contains 形态（dataList.Select(s=>s.Id).ToList().Contains(it.ScheduleId)）单次取出 ScheduleUserEntity 后回填 AddScheduleLog——注意 scheduleLogList 仍需逐项构造（写法不变），仅去掉每次迭代的独立 DB 往返。未取得运行时证据前禁止改为 GO。"
+  },
+  "meta": { "time_observed_minutes": 0 }
+}

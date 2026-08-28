@@ -1,0 +1,124 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-X2",
+  "run": 3,
+  "finding": {
+    "project": "JNPF.Extend",
+    "file": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+    "risk": "High",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "Local FAILS：'多条写无事务'能否成立取决于框架是否以全局过滤器隐式开事务，需在本类外确认；Regional 成立：事务机制是直接依赖关系（UnitOfWorkAttribute 该 action filter 是否 opt-in）跨界 1 层即可定位。非 Systemic：无 Service↔Repository↔Provider 跨层链条。",
+    "claim": "OrderService.Save（226-237）在更新分支执行 5 次、新增分支执行 3 次 SqlSugar 写命令（Deleteable/Insertable/Updateable 各自 ExecuteCommandAsync 自动提交隔离），全程无事务：方法（198）与类（36）均无 [UnitOfWork]，亦无 UseTran/BeginTran/TransactionScope；框架事务仅由 opt-in 的 [UnitOfWork] ActionFilter 触发（UnitOfWorkAttribute.cs:14,251）——若成立则该方法非原子。"
+  },
+  "claim_gate": {
+    "fq1": true,
+    "fq2": true,
+    "fq3": true
+  },
+  "budget_allocation": {
+    "depth": 2,
+    "artifact": 6,
+    "iteration": 2,
+    "scope": 1
+  },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "Ownership",
+      "level": "Level1",
+      "gap_declared": "Claim 断言 Save 多条写无事务。需确认两件事：1) 方法/类是否携带框架事务特性；2) 框架事务是否 opt-in（无特性 = 无事务），即事务所有权在方法侧而非框架全局侧。",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "hop": 0,
+          "purpose": "读取 Finding 文件：核对 Save 的写命令序列与事务相关特性（[UnitOfWork]/UseTran/BeginTran/TransactionScope）是否存在"
+        },
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "hop": 1,
+          "purpose": "确认框架事务触发机制：该 filter 是全局包装还是 opt-in 特性，从而判定无特性时是否自动开事务"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "OrderService.cs:198",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "198",
+          "snippet": "public async Task Save(string id, [FromBody] OrderCrInput input)",
+          "confidence": "H"
+        },
+        {
+          "source": "OrderService.cs:36",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "36",
+          "snippet": "public class OrderService : IDynamicApiController, ITransient",
+          "confidence": "H"
+        },
+        {
+          "source": "OrderService.cs:226",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "226",
+          "snippet": "Deleteable<OrderEntryEntity>(x => x.OrderId == id).ExecuteCommandAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "OrderService.cs:237",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "237",
+          "snippet": "Insertable(orderEntity).CallEntityMethod(m => m.Create()).ExecuteCommandAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "UnitOfWorkAttribute.cs:14",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "14",
+          "snippet": "[SuppressSniffer, AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]",
+          "confidence": "H"
+        },
+        {
+          "source": "UnitOfWorkAttribute.cs:251",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "251",
+          "snippet": "unitOfWorkAttribute = method.GetCustomAttribute<UnitOfWorkAttribute>();",
+          "confidence": "H"
+        }
+      ],
+      "counters_after": {
+        "depth": 1,
+        "artifact": 1,
+        "iteration": 1,
+        "scope": 1
+      },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-1"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "OrderService.Save 更新分支 5 次/新增分支 3 次写命令各自 ExecuteCommandAsync 自动提交、全程无任何事务（无 [UnitOfWork]、无 UseTran/BeginTran/TransactionScope）；框架事务为 opt-in 特性，未标注即无事务包裹。",
+    "evidence": "H 级码证 6 条：Save 仅挂 [HttpPost] 无 [UnitOfWork]（OrderService.cs:198）；类无 [UnitOfWork]（:36）；更新分支删除/写入命令序列（:226）与新增分支插入命令（:237）；单元事务机制是 AttributeUsage(Method|Class) 的 opt-in ActionFilter（UnitOfWorkAttribute.cs:14）；BeginTransaction 仅在 filter 从方法读取到该特性时才执行（:251）。全部 file:line 可回溯。",
+    "impact": "成立 → Save 多条写各自独立自动提交，中途执行失败将留下部分写入（如子表删除后未重建 / 明细插入一半）＝非原子缺陷（High 风险）→ 判定 GO；不成立（框架全局隐式开事务）→ 写操作原子 → 判定 STOP。",
+    "confidence": "High",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§2.3 五元组全部满足且 §3.1 按序检查：STOP-4 否（无需跨 S=1 之外取证，证据已在预算内充分）；STOP-5 否；STOP-1 是 —— Claim 可证伪（FQ1：若方法出现 [UnitOfWork]/UseTran 则 Claim 假；FQ2：对象=OrderService.Save 方法，状态=无事务特性基线；FQ3：两个 Agent 对 197-198/36/226-237 机械判定一致），证据全部 file:line 可回溯，Impact 链写出成立→GO/不成立→STOP，Confidence High（Level1 静态码 6 条直接对应），Decision 唯一 = GO（v4 GO 六合取：Finding 已证、违反框架事务契约、单点收紧在 Save、无性能 gate 涉及、回退可经 Save 测试、不扩 Contract）。非性能/N+1 类 Claim，硬门 2 不设障。"
+  },
+  "escalation": null,
+  "meta": {
+    "time_observed_minutes": 0
+  }
+}

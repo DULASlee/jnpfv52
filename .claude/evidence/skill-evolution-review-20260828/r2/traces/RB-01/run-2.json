@@ -1,0 +1,121 @@
+{
+  "schema": "r2-trace/1",
+  "case_id": "RB-01",
+  "run": 2,
+  "finding": {
+    "project": "JNPF.Extend",
+    "file": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+    "risk": "High",
+    "nature": "Regional",
+    "nature_order_checked": ["Local", "Regional"],
+    "nature_justification": "§1.3 判定顺序：Local 不成立（是否被某隐式框架事务折叠包裹无法由本类代码自证，Claim 的否定需框架层才能排除）→ Regional 成立（涉及直接依赖/机制层——事务由框架 UnitOfWorkAttribute 特性开启，跨 1 层读该特性定义即可证；不涉 Service↔Repository↔Provider 跨层链或跨多模块追溯，故不定 Systemic）",
+    "claim": "OrderService.Save（OrderService.cs:198-238）连续执行的多条 Deleteable/Insertable/Updateable...ExecuteCommandAsync（:226-230, :235-237）无任何事务包裹——类（:36）与方法（:198）均未挂 [UnitOfWork]，框架事务仅经该特开启（UnitOfWorkAttribute.cs:251/254），故中途一步失败时已提交语句不回滚，产生订单/明细/应收部分成功不一致"
+  },
+  "claim_gate": { "fq1": true, "fq2": true, "fq3": true },
+  "budget_allocation": { "depth": 2, "artifact": 6, "iteration": 2, "scope": 1 },
+  "iterations": [
+    {
+      "round": 1,
+      "context_type": "CrossLayer",
+      "level": "Level1",
+      "actions": [
+        {
+          "tool": "Read",
+          "mode": "body",
+          "target": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "hop": 1,
+          "purpose": "核查框架事务机制是否由 [UnitOfWork] 特性经 IAsyncActionFilter 开启、挂载条件（Method|Class）及 BeginTransaction 触发点，以判定 Save 未挂该特性时框架层面是否存在事务"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "36",
+          "snippet": "public class OrderService : IDynamicApiController, ITransient",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "198",
+          "snippet": "public async Task Save(string id, [FromBody] OrderCrInput input)",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "226",
+          "snippet": "Deleteable<OrderEntryEntity>(x => x.OrderId == id).ExecuteCommandAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "230",
+          "snippet": "CallEntityMethod(m => m.LastModify()).ExecuteCommandAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/modularity/extend/JNPF.Extend/OrderService.cs",
+          "lines": "235",
+          "snippet": "Insertable(orderEntryList).ExecuteCommandAsync();",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "14",
+          "snippet": "AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "15",
+          "snippet": "public sealed class UnitOfWorkAttribute : Attribute, IAsyncActionFilter",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "251",
+          "snippet": "unitOfWorkAttribute = method.GetCustomAttribute<UnitOfWorkAttribute>();",
+          "confidence": "H"
+        },
+        {
+          "source": "file:line",
+          "path": "backend/framework/JNPF/UnitOfWork/FilterAttributes/UnitOfWorkAttribute.cs",
+          "lines": "254",
+          "snippet": "_unitOfWork.BeginTransaction(context, unitOfWorkAttribute);",
+          "confidence": "H"
+        }
+      ],
+      "counters_after": { "depth": 1, "artifact": 1, "iteration": 1, "scope": 1 },
+      "stop_check": {
+        "STOP4": false,
+        "STOP5": false,
+        "STOP1": true,
+        "STOP2": false,
+        "STOP3": false,
+        "hit": "STOP-1"
+      }
+    }
+  ],
+  "stable_matrix": null,
+  "five_tuple": {
+    "claim": "OrderService.Save（OrderService.cs:198-238）连续执行的多条 Deleteable/Insertable/Updateable...ExecuteCommandAsync（:226-230, :235-237）无任何事务包裹——类（:36）与方法（:198）均未挂 [UnitOfWork]，框架事务仅经该特性开启，中途失败时已提交语句不回滚，产生部分成功不一致",
+    "evidence": "限框架层可证：①OrderService.cs:36 类声明无 [UnitOfWork]；②OrderService.cs:198 Save 方法签名无 [UnitOfWork]；③OrderService.cs:226/230/235 连发 ExecuteCommandAsync 且方法内无 BeginTran/会话级事务；④UnitOfWorkAttribute.cs:14 特性仅挂 Method|Class、:15 为 IAsyncActionFilter、:251 经 method.GetCustomAttribute 取特性、:254 _unitOfWork.BeginTransaction 开启事务——即事务仅在被挂载动作上开启。以上均为 H 级静态代码直证；'未挂特性⇒过滤器不执行⇒无事务⇒单语句自动提交'为 1 步静态推断",
+    "impact": "成立→Save 的多条写非原子，中途失败遗留已提交的部分步骤，破坏订单/明细/应收一致性（数据一致性缺陷）→ Decision=GO（在 Save/类上加 [UnitOfWork] 的单点修复）；不成立（存在隐式全局事务机制覆盖 Save）→ 则非缺陷 → Decision=STOP",
+    "confidence": "Medium",
+    "decision": "GO"
+  },
+  "final": {
+    "decision": "GO",
+    "stop_triggered": "STOP-1",
+    "stop_reason": "§2.3 五判据全满足：①Claim 经 §2.5 三问可证伪（FQ-1 反例可构造：若 Save/类出现 [UnitOfWork] 或显式 BeginTran 则 Claim 假）；②证据逐条 file:line 可回溯（均来自当轮 Read 原文）；③Impact 链完整（成立→GO，不成立→STOP）；④Decision 唯一=GO；⑤Confidence=Medium≥Medium → 命中 §3.1 判序 STOP-1 Evidence Sufficient，进入 Decision Re-entry（无需再 Expansion，故 §3.1 STOP-4 不在序前命中）。GO 六合取（v4 Evidence-to-Modify 冻结原语）全部通过：Finding 已证 ∧ 违反框架事务使用契约（框架已备 [UnitOfWork] 原子写机制而 Save 未用，master-detail 写应为原子单位）∧ 单点边界可守（仅 Save 一方法 +[UnitOfWork]，不跨模块改码、不扩 Contract）∧ Evidence-to-Modify 三安全阀均 No（非无证据高级优化、无性能宣称、Finding 不自改码）+ 硬门2（性能）不适用（非性能/N+1 类 Claim）∧ 回归路径可构造（注入主键重复使中途 ExecuteCommandAsync 抛错，断言全量回滚）∧ 不扩 Contract"
+  },
+  "escalation": null,
+  "meta": { "time_observed_minutes": 6 }
+}
