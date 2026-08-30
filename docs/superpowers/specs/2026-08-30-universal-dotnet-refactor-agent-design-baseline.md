@@ -1,6 +1,7 @@
 # Universal .NET Class Refactoring Architect — Design Baseline (v1.0)
 
-**Status**：✅ BASELINE LOCKED（2026-08-30）
+**Status**：✅ BASELINE LOCKED（**v2.0 Major Revision**，2026-08-30 Platform Vision 重定位）
+**Change Record**：v1.0→v1.1=D-12/D-13；v1.1→v1.2=D-14+A1–A4；v1.2→v1.3=C-01–C-05+L-10；v1.3→v1.4=Section 3 采纳+D-15–D-18；v1.4→v1.5=D-19；v1.5→v1.6=Section 4 安全强化；v1.6→v1.7=Section 5 校准；v1.7→v1.8=Section 6 知识治理；v1.8→v1.9=Section 7 Evidence 校准；**v1.9→v2.0 Major Revision = Platform Vision 重定位**
 **Author**：Chief Architect
 **上位**：Generic Class Refactor Expert Skill v6.0；L2 类级螺旋 SOP v2.0
 **性质**：本轮设计决策的冻结记录。下一步将基于本基线编写完整设计 Spec。
@@ -277,6 +278,246 @@ universal-dotnet-refactor-expert/
 | D-09 | 发布渠道：GitHub | ✅ LOCKED | 可发布标准设计 |
 | D-10 | 首个 Project Profile = JNPF | ✅ LOCKED | 其他 Profile 后续 |
 | D-11 | 本轮不做的事（7 项） | ✅ LOCKED | 见 §8 |
+| D-12 | Knowledge 是不可变 Expertise，独立版本/测试/演进 | ✅ LOCKED | 来自 §5 知识分层原则的强化 |
+| D-13 | Profile 不可覆盖 Core Principles（单向约束） | ✅ LOCKED | 来自 §3 Universal Core 隔离的强化 |
+| D-14 | Profile Validation Gate：任何 Profile 加载前必须过 Core 兼容性校验 | ✅ LOCKED | 来自 Section 1 AC-04 校准的强化 |
+| D-15 | **Evidence First Reasoning**：Agent 不允许先产生方案再寻找理由 | ✅ LOCKED | Section 3 采纳 |
+| D-16 | **Finding Requires Confidence**：所有 Finding 必须携带 Confidence Level | ✅ LOCKED | Section 3 采纳 |
+| D-17 | **Minimal Change Principle**：默认方案必须最小影响 | ✅ LOCKED | Section 3 采纳 |
+| D-18 | **Golden Example Is Decision Pattern**：Golden Example 不复制代码，只沉淀判断模型 | ✅ LOCKED | Section 3 采纳 |
+| D-19 | **Risk Model / Risk Policy Separation**：Core 冻结 Risk Model（3 个独立维度），Profile 提供 Risk Policy（权重 / 阈值 / 优先级映射）。默认 Universal Profile 提供初始 Policy，其他 Profile 可调整 | ✅ LOCKED | Section 3 Risk 公式校准 |
+| D-20 | **Agent Does Not Own Repository History**（v1.6 升级：吸收原 D-24 内容）：Agent 可 Read（git log/diff/show）与 Generate（patch/diff/report），但绝不能 Modify repository history（commit/push/reset/checkout destructive） | ✅ LOCKED | Section 4 强化 |
+| D-21 | **Mode Escalation Requires Explicit Authorization**：NEED_VERIFY / NEED_EXECUTE 必须用户授权 | ✅ LOCKED | Section 4 |
+| D-22 | **Explicit Change Boundary**（v1.6 升级）：Execute Mode 必须定义 Positive Scope（allowed）+ Negative Scope（forbidden）+ Operation Scope + Rollback Strategy | ✅ LOCKED | Section 4 强化 |
+| D-23 | **Diff Review Before Human Commit**：Diff Review 是 Agent + Human 共同责任 | ✅ LOCKED | Section 4 |
+| D-25 | **External Side Effect Isolation**（v1.6 升级：含原 Cross-Mode Prohibitions）：禁止 Production system access / Cloud mutation / Database mutation / External service mutation / Git destructive / NuGet install / CI modify / 文件删除 | ✅ LOCKED | Section 4 强化 |
+| D-26 | **Command Policy Layer**：Mode → Capability Policy → Tool → Command Allowlist 四层过滤。Bash 本身不是能力，是容器，必须有显式 Command Allowlist | ✅ LOCKED | Section 4 新增 |
+| D-27 | **Knowledge Router Retrieval Only**（v1.8 采纳）：Router 只负责 Tag → KnowledgeRef / Version / Priority / Dedupe，**禁止**修改 Finding severity / Risk Score / 推荐最终方案 / 覆盖 Core Decision Model | ✅ LOCKED | Section 6 校准 |
+| D-28 | **Knowledge Evidence Compatibility Contract**（v1.8 采纳）：Knowledge 必须声明 `minimum_evidence` / `preferred_evidence` / `prohibited_claims`。Knowledge Claim ≤ Evidence Level 能支持的范围 | ✅ LOCKED | Section 6 校准 |
+| D-29 | **Golden Example Must Include Misuse Boundary**（v1.8 采纳）：每个 Golden Example 必须含 Misuse Cases（误用场景 / 原因 / 替代方案） | ✅ LOCKED | Section 6 校准 |
+| D-30 | **Knowledge Promotion Cross-Context Validation**（v1.8 采纳）：Knowledge Stable 晋升必须 ≥2 不同项目 + ≥2 不同技术上下文 + 反例验证 + Evidence 可追溯 + Review Record | ✅ LOCKED | Section 6 校准 |
+| D-31 | **Evidence Sufficiency Threshold Defaults**（v1.9 采纳）：Core 默认阈值 Critical=E3/E4、High=E2、Medium/Low=E1；Profile 可**提门槛不可降门槛**（C-21） | ✅ LOCKED | Section 7 校准 |
+| **PV-1** | **Platform Position（v2.0）**：Universal Enterprise Engineering Agent（UEEA）= 企业软件工程智能体运行框架。**不是**AI Platform；不替代 OpenAI / Claude / Qoder / Cursor / LangGraph | ✅ LOCKED | v2.0 Major |
+| **PV-2** | **Mission Definition（v2.0）**：让 AI 在严格工程约束下完成复杂软件系统 **理解 → 推理 → 设计 → 执行 → 验证 → 沉淀**。不是"让 AI 写代码" | ✅ LOCKED | v2.0 Major |
+| **PV-3** | **Phase 0-5 Roadmap（v2.0）**：每 Phase 必须满足 Exit Gate 才能进入下一阶段，禁止"功能完成"即推进 | ✅ LOCKED | v2.0 Major |
+| **PV-4** | **Five-Layer Architecture（v2.0）**：Human Collaboration / Agent Runtime / Engineering Intelligence / Governance Kernel / Infrastructure | ✅ LOCKED | v2.0 Major |
+| **PV-5** | **Success Criteria（v2.0）**：Reasoning Quality / Evidence Quality / Engineering Safety / Knowledge Evolution / Enterprise Scalability 5 维验收 | ✅ LOCKED | v2.0 Major |
+| **R-NG-01** | **Runtime Non-Goal：Runtime 不负责模型训练**（v2.0 补充，不升 Major） | ✅ LOCKED | Section 8 补充 |
+| **R-NG-02** | **Runtime Non-Goal：Runtime 不负责 Knowledge 创建**（Knowledge 升级必须 D-30 验证） | ✅ LOCKED | Section 8 补充 |
+| **R-NG-03** | **Runtime Non-Goal：Runtime 不负责业务规则定义**（业务规则属 Profile / Governance） | ✅ LOCKED | Section 8 补充 |
+| **R-NG-04** | **Runtime Non-Goal：Runtime 不替代 Governance Kernel**（Runtime 是执行器，Kernel 是决策约束） | ✅ LOCKED | Section 8 补充 |
+| **R-NG-05** | **Runtime Non-Goal：Runtime 不直接修改生产代码**（必须 Execute Mode 授权 + Human Commit） | ✅ LOCKED | Section 8 补充 |
+| **R-NG-06** | **Runtime Non-Goal：Runtime 不拥有最终审批权**（Critical Decision 必须人类介入） | ✅ LOCKED | Section 8 补充 |
+| **IRON-01** | **禁止降级为固定流程引擎**（v2.0 补充）：Agent Runtime 不允许退化为 Input → 固定步骤 → LLM 调用 → Output；必须保持 Goal → Mission → Plan → Action → Observe → Validate → Reflect → Next Action 闭环 | ✅ LOCKED | Implementation Iron Law §15 |
+| **IRON-02** | **Agent Loop 不允许被简化删除**（v2.0 补充）：Plan / Execute / Observe / Validate / Reflect / Continue 6 个能力禁止删除；允许简化实现方式，不允许退化为一次性 Prompt | ✅ LOCKED | Implementation Iron Law §15 |
+| **IRON-03** | **Task Graph 不得退化为任务列表**（v2.0 补充）：必须保留 DAG（dependency / priority / execution state / failure state / retry state）；允许 Single Worker 调度，不允许 for 循环 | ✅ LOCKED | Implementation Iron Law §15 |
+| **IRON-04** | **简化调度，不简化执行模型**（v2.0 补充）：v0.1 Sequential Scheduler 可以接受，但必须保留 dependency / priority / execution / failure / retry 5 个状态 | ✅ LOCKED | Implementation Iron Law §15 |
+| **IRON-05** | **Agent 状态必须显式存在**（v2.0 补充）：禁止"Prompt上下文 = Agent状态"；6 个 State（Session / Task / Context / Evidence / Decision / Audit）必须独立维护 | ✅ LOCKED | Implementation Iron Law §15 |
+| **IRON-06** | **长任务必须可恢复**（v2.0 补充）：必须支持 Start → Checkpoint → Pause → Resume → Continue；禁止"中断则重新开始" | ✅ LOCKED | Implementation Iron Law §15 |
+| **IRON-07** | **Evidence 必须影响 Agent 行为**（v2.0 补充）：Evidence 必须参与判断 / Gate / 决策 / 下一步规划；禁止"报告附件化" | ✅ LOCKED | Implementation Iron Law §15 |
+| **IRON-08** | **Runtime 不拥有治理权**（v2.0 补充）：Runtime 仅执行 / 状态管理 / 调度 / 反馈；不得定义 / 修改 / 绕过 / 覆盖规则（R-NG-04 强化） | ✅ LOCKED | Implementation Iron Law §15 |
+| **IRON-09** | **禁止永久禁止代码修改能力**（v2.0 补充）：MVP 不直接修改生产代码，但架构必须预留 Audit/Verify/Assist/Execute Mode Extension Point；MVP 禁止删除 Execute 扩展点 | ✅ LOCKED | Implementation Iron Law §15 |
+| **IRON-10** | **Knowledge 不允许无治理增长**（v2.0 补充）：必须 Project Memory → Validation → Knowledge Promotion；禁止"一次经验 → 永久知识"（R-NG-02 强化） | ✅ LOCKED | Implementation Iron Law §15 |
+| **IRON-11** | **MVP 不能成为最终架构陷阱**（v2.0 补充）：MVP 必须保留未来扩展点 + 保持能力模型 + 可平滑升级 + 不导致重新设计；否则禁止采用 | ✅ LOCKED | Implementation Iron Law §15 |
+| **IRON-12** | **禁止未经批准的能力削减**（v2.0 补充）：AI 工程师删除接口 / 合并状态 / 简化数据模型 / 移除验证流程 / 替换 DAG 为列表 / 删除 Audit / 删除 Evidence 前必须提交 Capability Impact Analysis | ✅ LOCKED | Implementation Iron Law §15 |
+
+> **v1.8 演进备注**：C-17~C-20 全部采纳，新增 D-27~D-30 四个知识治理硬门。
+
+> **v1.6 演进备注**：原 D-20（Git Commit 永远禁止）和 D-24（Human Commit）合并入新 D-20；原 D-25（Cross-Mode Prohibitions）内容被新 D-25（External Side Effect Isolation）吸收并扩充；D-22（Scope Declaration）升级为 Explicit Change Boundary（增加 Negative Scope）；D-26 为新增（Command Policy Layer）。
+
+**D-14 详细约束**（Profile Validation Gate）：
+
+```
+Load Profile
+   ↓
+Check 1: Core Conflict（是否修改 Core 词汇黑名单 / Finding Taxonomy / Risk Model）
+Check 2: Security Conflict（是否试图禁用 IDisposable / 资源检查 / 权限限制）
+Check 3: Quality Gate Conflict（是否试图豁免 Hard Gate / P0 证据 / 验证路径）
+   ↓
+PASS  → Activate（顶部记录 `✅ VALIDATED against Core v1.x @ <date>`）
+FAIL  → Reject（顶部记录 `❌ REJECTED — CONFLICT: <rule>`，禁用）
+```
+
+- **强制门控**：所有 Profile 必须经过 Gate，第三方提交的 Profile 也不例外。
+- **越权处理**：Profile 试图豁免 Core 规则 → Gate FAIL → Profile 不加载 → Agent 报告冲突并建议人工介入。
+- **门控实现**：Section 2 会明确 Gate 的执行点（建议位于 Agent Runtime bootstrap 阶段）。
+- **门验证证**：未来 CI 中跑 `validate-profile.mjs` 对 `profiles/` 全部文件扫一遍。
+
+**Section 1 校准项记录**（v1.2 演进，不修改 D-01~D-13，仅追加）：
+
+| ID | 校准项 | 体现位置 |
+|----|--------|---------|
+| A1 | Mission Statement 区分「默认不修改」与「永久不修改」，明确 Execute Mode 授权后可受控修改 | Final Spec §1.1 |
+| A2 | Scope 增加 Class Boundary Definition（Primary Target / Allowed Context / Forbidden Expansion） | Final Spec §1.2 |
+| A3 | Out of Scope §8 改为「可验证项目事实」，不再依赖 L1 事实卡（公开发布兼容） | Final Spec §1.3 |
+| A4 | M-01 名称重命名为 **Core Authority Protection**（更准确描述 Agent 不让 Profile 改写工程原则） | Final Spec §1.7 |
+| D-14 | Profile Validation Gate（见上） | Final Spec §1.8 + §5 |
+
+> **演进纪律**：v1.0 的 D-01~D-11 完全未修改；v1.1 追加 D-12/D-13；v1.2 追加 D-14 + Section 1 校准。后续版本仅追加，修改需走 CR-01+ change request。
+>
+> ---
+
+## 11.2 Section 3 采纳记录（v1.4 演进）
+
+| ID | 采纳项 | 体现位置 / 处理 |
+|----|--------|----------------|
+| **C-06** | 采纳用户提议的 Section 3 骨架：E-D-R-V 循环 + C01–C16 Finding Taxonomy + E0–E4 Evidence Level + 3D Risk Model (Impact×Probability×ChangeCost) + 4 个 Hard Gates + Expert Refactoring Report 输出模板 | Final Spec §3 全文 |
+| **C-07** | 融合补充：保留外层 Frame → 循环 E-D-R-V → Decide → Report 结构。即 E-D-R-V 是**内层可迭代循环**（NEED_EVIDENCE 时重跑），Frame/Decide/Report 是外层包装 | Final Spec §3.3 |
+
+### 11.2.1 Section 3 详细采纳项
+
+**采纳的设计**（用户提议，已 LOCKED）：
+- **Core 定位**：专家级推理框架（不是 Code Analyzer / Rule Engine / Script Generator / Replacement Engine）
+- **Input Contract**：Refactoring Context Package（YAML 结构化输入）
+- **核心循环**：E-D-R-V（Evidence → Diagnosis → Recommendation → Verification）
+- **Finding Taxonomy**：C01–C16（16 个 Universal Engineering Dimensions）
+- **Evidence Level**：E0–E4（No / Code / Test / Runtime / Production）
+- **Risk Model**：Risk = Impact × Probability × Change Cost → P0–P3
+- **Hard Gates**：4 个横切 Gate（Evidence / Behavior / Scope / Profile）
+- **Output Contract**：Expert Refactoring Report（结构化 markdown 模板）
+- **新增决策**：D-15 / D-16 / D-17 / D-18
+
+**融合补充**（在用户提议上微调，已 LOCKED）：
+- 外层补充 Frame（前置定位与边界声明）与 Decide（GO/DEFER/STOP/NEED_EVIDENCE 决策）与 Report（结构化输出）
+- 内层 E-D-R-V 循环可迭代（NEED_EVIDENCE → 重跑 Evidence）
+- 5 个 Step Gates（Frame-G/Evidence-G/Diagnose-G/Decide-G/Report-G）+ 4 个横切 Hard Gates 叠加
+- C01–C16 的命名采用用户的"Category"而非"Dimension"，更直观
+
+**完整推理结构**：
+
+```
+Frame (前置)
+   ↓
+[Evidence → Diagnosis → Recommendation → Verification]×N （内层循环，可 NEED_EVIDENCE 重跑）
+   ↓
+Decide (GO/DEFER/STOP/NEED_EVIDENCE)
+   ↓
+Report (Expert Refactoring Report 结构化输出)
+```
+
+**Hard Gates 叠加**：
+- 4 个横切 Gate（每个 Step 都要过）：Evidence-G / Behavior-G / Scope-G / Profile-G
+- 5 个 Step Gate（每 Step 出口）：Frame-G / Evidence-G / Diagnose-G / Decide-G / Report-G
+
+| ID | 校准项 | 体现位置 / 处理 |
+|----|--------|----------------|
+| **C-01** | Core 与 Profile 边界精确化：Core 不是“无感”而是“通过 Context Descriptor 协议消费”。Core 知道 Profile 提供的能力**类别**（data_access / tenancy / logging 等），但不知道任何 ORM/项目具体实现名 | 修正 L-02，见 §11.1.1 |
+| **C-02** | **Knowledge Router 分离**：Knowledge Index 不属于 Core，而是 Layer 4 的独立逻辑组件（Knowledge Router）。Core 发出 Finding Tag → Router 路由 → Knowledge Asset | 见 §11.1.2 |
+| **C-03** | L-09 降级：system prompt ≤90% 从硬规则降级为 **Design Guideline**（保留性能目标，移除架构约束） | 见 §11.1.3 |
+| **C-04** | Execute Mode 双重授权 L-05 保留，但 magic token 不写入 Spec。抽象为 **Execution Authorization Challenge**，具体机制属于 Implementation | 见 §11.1.4 |
+| **C-05** | 新增 **L-10 No Hidden State**：Agent 推理不依赖历史 session / 未声明 cache。输入仅来自 User Request + Repository + Selected Profile + Selected Knowledge | 见 §11.1.5 |
+
+### 11.1.1 C-01 详细定义（Core / Profile 边界精确化）
+
+**错误模型**（Section 2 2.3 原版本）：
+```
+Profile → Core（Core 无感 Profile 存在）
+```
+
+**正确模型**（C-01 修订后）：
+```
+Profile
+   ↓
+D-14 Validation Gate
+   ↓
+Context Descriptor (结构化能力描述)
+   ↓
+Core（Core 理解能力**类别**，不识别具体实现）
+```
+
+**Core 词汇黑名单补充**：
+- Core 仍不知道：SqlSugar / EF Core / IRepository / JNPF / ABP / 任何命名空间。
+- Core **可以**理解：`data_access.capability`、`tenancy.capability`、`logging.framework`、`validation.framework` 等抽象能力字段。
+- Core 通过 Context Descriptor 的**结构化字段**消费 Profile，不是通过 Profile 文本。
+
+### 11.1.2 C-02 详细定义（Knowledge Router 分离）
+
+**原架构**：
+```
+Core
+ ├── Knowledge Index  ← 被认为属于 Core
+ └── ...
+```
+
+**修订后**：
+```
+Layer 1: Core Reasoning Engine
+Layer 2: Execution Modes
+Layer 3: Project Profiles
+Layer 4: Knowledge Assets
+   ├── Knowledge Router  ← 独立逻辑组件
+   └── Knowledge Assets  ← 实际知识文件
+```
+
+**Router 与 Assets 关系**：
+- Knowledge Router = Core 与 Knowledge Assets 之间的**中间层**，处理 Tag → Path 路由 + 版本协商 + 缓存策略。
+- Router 配置文件（`knowledge/router.yaml`）独立演进。
+- Router 不依赖 Core 版本（Core 升级不强制 Router 升级）。
+- 这符合 D-12（Knowledge 独立演进）。
+
+### 11.1.3 C-03 详细定义（L-09 降级）
+
+**原 L-09**：
+```
+system prompt ≤ 90% 框架 + 10% 上下文（硬规则）
+```
+
+**修订后 L-09（Design Guideline）**：
+- Core instructions must remain **compact**
+- Knowledge must **never** be embedded by default（这是硬规则）
+- **Performance Target（建议值）**：Framework instructions < 30% of context window
+- 不作为架构硬约束，仅作为优化方向
+
+**原因**：不同 LLM 的 context window / instruction hierarchy / tool system 不同，硬规则会限制未来迁移。
+
+### 11.1.4 C-04 详细定义（Authorization 抽象）
+
+- L-05（Execute 双重授权）保留为架构原则。
+- 但具体 magic token（如 `[EXECUTE-AUTHORIZED]`）**不写入 Spec**，实现层可自由设计（可改为 OAuth challenge、UI 按钮交互、文件级审批记录等）。
+- Spec 层只要求：**用户明确授权 + 文件范围 + 操作范围**三要素必须全部具备。
+
+### 11.1.5 C-05 详细定义（L-10 No Hidden State）
+
+**L-10 定义**：
+
+Agent 推理过程**不依赖**任何"未声明的隐式状态"，包括但不限于：
+- 上一次项目分析的结果残留
+- 历史 session 的 memory / cache
+- LLM 内部未暴露的隐式 context
+- 未在 system prompt 显式声明的"缓存"
+
+**输入白名单**（Agent 推理的合法输入）：
+```
+1. User Request（当前请求）
+2. Repository（当前项目代码 / 文件）
+3. Selected Profile（已通过 D-14 Gate 的 profile）
+4. Selected Knowledge（由 Knowledge Router 路由返回的知识资产）
+```
+
+**违规检测**：Agent 输出如果依赖上述白名单以外的信息（如"上次你提到..."、"根据之前的分析..."），视为违反 L-10，应 STOP 并报告。
+
+**实现层配套**：每次 Agent 启动应从**零状态**开始（无 history prefill），确保白名单纯净。
+
+**D-12 详细约束**：
+
+- Knowledge 文件 ≠ Prompt 扩展。
+- 每个 Knowledge 模块（如 `resource-lifetime`）必须有独立版本号（v1.0、v1.1...）。
+- 演进路径：Knowledge v1.1 可推翻 v1.0 结论，但不可污染 Core。
+- 测试：Knowledge 的每条结论必须有可复现的 demo 代码 + 反例（reference repo 中验证）。
+- 命名约定：`knowledge/<topic>/v<MAJOR>.<MINOR>.md` + `knowledge/<topic>/CHANGELOG.md`。
+
+**D-13 详细约束**（单向约束链）：
+
+```
+Core  ←  Mode  ←  Profile  ←  Project
+↑ 安全边界
+```
+
+- Core 是安全边界。Profile 不能宣称"为兼容历史代码，可以忽略 IDisposable"——这违反 D-13。
+- Mode 必须在 Core 规则内运作。Audit/Verify/Execute 都不可越权。
+- Profile 不可修改 Core 词汇黑名单（§2），不可修改 Finding Taxonomy，不可修改 Risk Model。
+- Profile 可**扩展** Core（如补充额外的项目特异 Finding），但不可**重写** Core 既有规则。
+- 越权检测：当 Profile 内容与 Core 冲突时，以 Core 为准并在 Profile 顶部标注 `⚠ CONFLICT WITH CORE — DISABLED`。
 
 ---
 
@@ -285,3 +526,847 @@ universal-dotnet-refactor-expert/
 | 版本 | 日期       | 变更                          |
 | ---- | ---------- | ----------------------------- |
 | v1.0 | 2026-08-30 | 设计基线冻结（D-01 ~ D-11） |
+| v1.1 | 2026-08-30 | C 架构选型后演进：追加 D-12 / D-13（Knowledge 独立性 + Profile 单向约束）。v1.0 的 D-01~D-11 未修改，仅追加。 |
+| v1.2 | 2026-08-30 | Section 1 校准后演进：追加 D-14（Profile Validation Gate）+ 校准项 A1–A4 + M-01 重命名为 Core Authority Protection。v1.0/v1.1 的 D-01~D-13 未修改。 |
+| v1.3 | 2026-08-30 | Section 2 校准后演进：追加 C-01（Core/Profile 边界精确化）+ C-02（Knowledge Router 分离）+ C-03（L-09 降级为 Guideline）+ C-04（Authorization 抽象）+ C-05（新增 L-10 No Hidden State）。v1.0–v1.2 的所有 D 与 L 未修改。 |
+## 11.3 Section 3 Risk Policy 分离（v1.5 演进）
+
+### 11.3.1 问题
+
+Section 3 v1.4 原锁定 Risk = Impact × Probability × Change Cost，并提出聚合公式 `Score = Impact×2 + Probability×2 + ChangeCost×1 → P0–P3`。但聚合公式的具体权重不适合作为 Universal Core 永久冻结值：
+
+- **基础业务系统**：Impact 权重最高（数据错误 > 性能问题）
+- **高并发交易系统**：Probability 权重最高（低概率并发 Bug 可能造成事故）
+- **基础设施库**：Change Cost 权重最高（错误 API 修改影响数百项目）
+
+冻结权重会令 Agent 被某一类项目的经验绑死，违反公开发布目标。
+
+### 11.3.2 D-19 解决方案（Risk Model / Risk Policy Separation）
+
+**关系图**：
+
+```
+Core（Universal Risk Model）
+   ├─ 维度定义：Impact / Probability / Change Cost（独立评估，不可聚合）
+   └─ 不提供权重 / 阈值 / 映射
+        ↓
+Risk Policy（Profile 提供）
+   ├─ weights: { impact, probability, change_cost }
+   ├─ thresholds: { P0, P1, P2, P3 }
+   └─ priority_mapping: Score → P-Level
+        ↓
+Project Profile（不同项目不同 Risk Policy）
+   ├─ universal-dotnet.md：默认权重
+   ├─ jnpf-sqlsugar.md：可能调整
+   └─ efcore-ddd.md：可能调整
+```
+
+**默认 Risk Policy**（Universal Profile 提供）：
+
+```yaml
+risk_policy:
+  weights:
+    impact: 2
+    probability: 2
+    change_cost: 1
+  thresholds:
+    P0: ">=7"   # Score ≥7 → 立即处理
+    P1: "5-6"   # Score 5-6 → 推荐处理
+    P2: "3-4"   # Score 3-4 → 优化建议
+    P3: "1-2"   # Score 1-2 → 观察项
+```
+
+**Core 锁定的不变量**：
+
+1. Risk 必须按 3 个独立维度评估（禁止直接拍脑袋输出 P0-P3）
+2. Risk Policy 必须由 Profile 提供（Core 不内嵌默认 Policy — 但提供 universal-dotnet 默认）
+3. Profile 可调整 weights / thresholds，但**不能跳过维度**（3 个维度都必须填写）
+4. D-14 Gate 校验 Risk Policy 是否与 Core 冲突（如"全部维度都设 0" → 拒绝）
+
+**Profile 调整示例**（JNPF）：
+
+```yaml
+# jnpf-sqlsugar.md risk_policy 覆盖
+risk_policy:
+  weights:
+    impact: 3      # 提级：数据一致性优先
+    probability: 2
+    change_cost: 1
+  thresholds:
+    P0: ">=8"      # JNPF 中 P0 阈值提级（更严）
+    P1: "6-7"
+    P2: "4-5"
+    P3: "1-3"
+```
+
+### 11.3.3 Final Spec §3 体现
+
+- §3.6 Risk Decision Model 仅定义 Risk 3 维 + 聚合公式**结构**
+- §3.6.1 Risk Policy 章节引用 §5 Profile System 中的 Risk Policy Schema
+- §5.4 Profile 必填字段包含 risk_policy 块
+
+---
+
+| v1.4 | 2026-08-30 | Section 3 采纳后演进：采纳 E-D-R-V 循环 + C01–C16 Taxonomy + E0–E4 Evidence + 3D Risk + 4 Hard Gates + Report 模板；新增 D-15/D-16/D-17/D-18；融合外层 Frame → 循环 → Decide → Report 结构。v1.0–v1.3 的所有 D 与 L 未修改。 |
+## 11.4 Section 4 安全边界强化（v1.6 演进）
+
+### 11.4.1 5 项校准
+
+| ID | 校准项 | 处理 |
+|----|--------|------|
+| **C-08** | D-20 / D-24 合并为 **D-20 Agent Does Not Own Repository History**：Agent 可 Read 与 Generate，但绝不能 Modify history（commit / push / reset / checkout destructive）。commit 不仅是技术动作，包含作者/Review/发布/审计责任，均属人类工程治理 | Final Spec §4.5 + §4.7 |
+| **C-09** | D-22 升级为 **Explicit Change Boundary**：Execute Mode Scope 必须包含 Positive Scope（allowed）+ **Negative Scope**（forbidden，如 *.csproj / appsettings.json / migrations / CI）+ Operation Scope + Rollback Strategy。修改范围意外扩大是 AI 最大风险 | Final Spec §4.7 Step 3 |
+| **C-10** | 能力名称调整：Write/Edit source → **Apply Approved Patch**（Scoped Patch Capability）。不允许创建/删除/覆盖文件，只能 modify existing file within approved region | Final Spec §4.4 Capability Matrix |
+| **C-11** | D-25 升级为 **External Side Effect Isolation**：禁止 Production system access / Cloud mutation / Database mutation / External service mutation。代码重构 Agent 不应成为运维 Agent | Final Spec §4.5 Cross-Mode Prohibitions |
+| **C-12** | 移除固定 token 概念（magic token），改为 **Authorization Context**：user_confirmed + scope_approved + mode。权限来自「用户意图 + 明确范围」而非字符串 | Final Spec §4.7 Step 2 |
+
+### 11.4.2 D-26 Command Policy Layer（新增）
+
+**问题**：Bash 本身不是能力，是容器。直接赋予 Bash 工具权限意味着 Agent 可执行任意命令。
+
+**解决方案**架构**四层过滤链**：
+
+```
+Mode
+   ↓
+Capability Policy （能力级白名单：Build / Test / Read / Patch）
+   ↓
+Tool （工具级：Bash / Edit / Read / Grep）
+   ↓
+Command Allowlist （命令级：dotnet test / dotnet build / git diff / ❌ rm / ❌ curl production）
+```
+
+**默认 Command Allowlist**（Auditor 模式 / Verify 模式共用）：
+
+```yaml
+command_allowlist:
+  allow:
+    - "dotnet test"
+    - "dotnet build"
+    - "dotnet --version"
+    - "dotnet --list-sdks"
+    - "git log"
+    - "git diff"
+    - "git show"
+    - "git blame"
+    - "dotnet-counters *"
+    - "dotnet-trace *"
+    - "dotnet-gcmon *"
+  deny:  # 永远禁止（任何 Mode）
+    - "rm"
+    - "rm -rf"
+    - "curl *"
+    - "wget *"
+    - "docker rm"
+    - "docker rmi"
+    - "git commit"
+    - "git push"
+    - "git checkout --"
+    - "git reset --hard"
+    - "dotnet new"
+    - "dotnet tool install"
+    - "dotnet add package"
+    - "Remove-Item"
+    - "Invoke-Expression"
+```
+
+**Execute Mode 补充**：
+
+```yaml
+command_allowlist_execute_addition:
+  allow:
+    - "Apply Approved Patch"  # 受 Scope 限制的修改
+  deny_supplement:
+    - "*"  # 不在 allow 列表的全部拒绝
+```
+
+### 11.4.3 C-12 Authorization Context（替代 magic token）
+
+**旧设计（已废弃）**：
+
+```yaml
+escalation_token: "<uuid>"  # 不进入最终设计
+```
+
+**新设计**：
+
+```yaml
+authorization_context:
+  user_confirmed: true         # 必须显式确认
+  scope_approved:                # 必须明确范围
+    allowed:
+      - "OrderService.cs"
+    forbidden:
+      - "*.csproj"
+      - "appsettings.json"
+      - "migrations/*"
+      - "CI/*"
+    operations:
+      - "edit line 145: catch(Exception) → catch(Exception ex)"
+  mode: "execute"
+  timestamp: "2026-08-30T..."
+  request_id: "<uuid>"           # 仅作为请求追踪 ID，非权限凭证
+```
+
+**关键原则**：权限来自「用户意图 + 明确范围」，不是字符串 token。
+
+---
+
+| v1.5 | 2026-08-30 | Section 3 Risk Policy 分离后演进：新增 D-19（Risk Model / Risk Policy Separation）。Core 冻结 3 维独立评估，Profile 提供 weights/thresholds；默认 universal-dotnet Profile 提供初始 Policy。v1.0–v1.4 的所有 D 与 L 未修改。 |
+## 11.5 Section 5 校准（v1.7 演进）
+
+### 11.5.1 4 项校准
+
+| ID | 校准项 | 处理 |
+|----|--------|------|
+| **C-13** | **Profile Applicability Separation**：`framework: net8.0` 不应是 Profile 身份，应拆为 `runtime_family: dotnet` + `compatibility.frameworks.{supported, minimum}`。避免 Profile 数量爆炸 | Final Spec §5.2 |
+| **C-14** | **Custom Finding Permission Model**：`custom_findings` 必须有 allowed / forbidden 权限分级。允许增加项目特异 Finding / 调整优先级；禁止删除 C01-C16 / 修改 Gate / 降低安全检查 | Final Spec §5.2 + §5.5 |
+| **C-15** | **Semantic Validation Pipeline**：三层验证 (Layer 1 Schema → Layer 2 Semantic AST → Layer 3 Policy D-13/D-14/D-25/D-26)。Regex 仅作 Layer 2 辅助 | Final Spec §5.5 |
+| **C-16** | **Risk Semantic Contract**：Core 冻结「风险维度含义 + 评分数学模型」，Profile 可调整「权重 / 阈值 / 优先级」，**不能调整「风险语言本身」**（例如不可把 `Critical` 含义改为"可以忽略"） | Final Spec §5.4 + §5.6 |
+
+### 11.5.2 C-13 详细定义（Profile Applicability Separation）
+
+**原 Schema**：
+
+```yaml
+applies_to:
+  language: csharp
+  framework: net8.0
+```
+
+**修订后**：
+
+```yaml
+applies_to:
+  language: csharp
+  runtime_family: dotnet     # 抽象运行时家族
+
+compatibility:
+  frameworks:
+    supported: [net8.0, net9.0]   # 可用框架版本
+    minimum: [net8.0]              # 最低要求
+  # 可选：
+  sdks:
+    minimum: [8.0.100]
+```
+
+**理由**：Profile 描述"工程上下文如何影响重构判断"，不是"项目当前 csproj 是什么"。否则 .NET 8 / 9 / 10 都要写一份 Profile。
+
+### 11.5.3 C-14 详细定义（Custom Finding Permission Model）
+
+**原 Schema**：
+
+```yaml
+custom_findings: []  # 完全开放
+```
+
+**修订后**：
+
+```yaml
+custom_findings:
+  allowed:                       # 可创建项目特异 Finding
+    - id: JNPF-001
+      description: "JNPF 动态表元数据不一致"
+      severity_modifier: +1
+    - id: JNPF-002
+      description: "多租户字段缺失"
+      severity_modifier: +1
+
+  forbidden:                     # 显式禁止
+    - override_core_dimension    # 覆盖 C01-C16
+    - disable_hard_gate          # 禁用 Gate
+    - lower_security_check       # 降低安全检查
+```
+
+**D-14 Gate 校验**：
+
+1. custom_findings 中每个 id 必须唯一（不能与 C01-C16 冲突）
+2. description 不能修改 Core Finding 语义
+3. severity_modifier 必须在 [-3, +3] 范围内
+4. forbidden 列表中的操作 → REJECT
+
+### 11.5.4 C-15 详细定义（Semantic Validation Pipeline）
+
+**原设计**：仅 regex 扫描黑名单。
+
+**修订后三层**：
+
+```
+Layer 1: Schema Validation
+  工具：ajv (JSON Schema) / yaml-schema
+  检查：必填字段 / 类型 / 枚举值 / range
+
+   ↓ PASS
+
+Layer 2: Semantic Validation
+  工具：YAML AST Parser + Regex 辅助
+  检查：词汇黑名单（regex）、字段语义一致性、comment 中的越权内容
+
+   ↓ PASS
+
+Layer 3: Policy Validation
+  工具：自定义 rule engine
+  检查：D-13/D-14/D-25/D-26 合规性
+        Risk Policy 不变量（C-16）
+        custom_findings 权限（C-14）
+```
+
+**关键**：Regex 仅作 Layer 2 辅助，不能作为唯一校验手段（comment 中的"兼容 EF Core"可能误判）。
+
+### 11.5.5 C-16 详细定义（Risk Semantic Contract）
+
+**Core 冻结的内容**（不可改）：
+
+1. **风险维度含义**（每个值的语义）
+2. **评分数学模型**（公式类型）
+3. **维度名称**（impact / probability / change_cost）
+
+**Profile 可调整的内容**：
+
+1. **权重**（weights.{impact, probability, change_cost}）
+2. **阈值**（thresholds.{P0, P1, P2, P3}）
+3. **优先级映射**（priority_mapping）
+
+**Profile 不可调整的内容**：
+
+1. **风险语言本身**（Critical 的含义不能改为"可以忽略"）
+2. **维度枚举值**（不能增加/删除值）
+3. **公式类型**（不能改为 max/min/custom）
+
+**Risk Semantic Contract 字段**：
+
+```yaml
+risk_policy:
+  semantic_contract:           # Core 锁定，Profile 不可改
+    impact:
+      meaning:
+        Critical: "system correctness/security/business loss"
+        High: "major reliability/observability impact"
+        Medium: "moderate maintainability impact"
+        Low: "cosmetic/style impact"
+    probability:
+      meaning:
+        High: "likely reproducible in production"
+        Medium: "occurs under specific conditions"
+        Low: "theoretical or rare edge case"
+    change_cost:
+      meaning:
+        High: "large blast radius / many dependents"
+        Medium: "single component impact"
+        Low: "local change, no ripple effect"
+```
+
+**D-14 Gate Step 5.5 校验**：semantic_contract 与 Core 不一致 → REJECT。
+
+---
+
+| v1.6 | 2026-08-30 | Section 4 安全边界强化后演进：D-20/D-24 合并为 D-20（Agent Does Not Own Repository History）；D-22 升级为 Explicit Change Boundary（增加 Negative Scope）；D-25 升级为 External Side Effect Isolation；新增 D-26（Command Policy Layer）；C-12 Authorization Context 替代 magic token。v1.0–v1.5 的所有 D 与 L 未修改。 |
+## 11.6 Section 6 知识治理校准（v1.8 演进）
+
+### 11.6.1 4 项校准
+
+| ID | 校准项 | 处理 |
+|----|--------|------|
+| **C-17** | **Knowledge Router Retrieval Only**：Router 只负责召回，不负责判断。禁止修改 Finding severity / Risk Score / 推荐方案 / 覆盖 Core Decision Model | Final Spec §6.4 |
+| **C-18** | **Knowledge Evidence Compatibility Contract**：Knowledge 必须声明 minimum_evidence / preferred_evidence / prohibited_claims。Claim 不能超越 Evidence 能支持的范围 | Final Spec §6.2 |
+| **C-19** | **Golden Example Must Include Misuse Boundary**：每个 Golden Example 必须含 Misuse Cases（误用场景 / 原因 / 替代方案） | Final Spec §6.7 |
+| **C-20** | **Knowledge Promotion Cross-Context Validation**：Stable 晋升必须≥2 不同项目 + ≥2 不同技术上下文 + 反例验证 + Evidence 可追溯 + Review Record | Final Spec §6.6 |
+
+### 11.6.2 D-27 详细定义（Router Retrieval Only）
+
+**Router 职责白名单**：
+
+```
+✅ Tag → KnowledgeRef 映射
+✅ Version resolution（取最新 stable）
+✅ Priority sorting（按 Profile + Index 优先级）
+✅ Deduplication（同 topic 去重）
+```
+
+**Router 职责黑名单**（绝对禁止）：
+
+```
+❌ 修改 Finding severity
+❌ 修改 Risk Score
+❌ 推荐最终方案
+❌ 覆盖 Core Decision Model
+❌ 跳过 Core Gate
+❌ 注入额外 Evidence
+```
+
+**最终推理链路**：
+
+```
+Evidence
+   ↓
+Core Diagnosis  ← Core 独立判断
+   ↓
+Router 提供 Knowledge （仅检索）
+   ↓
+Core 综合判断
+   ↓
+Recommendation
+```
+
+### 11.6.3 D-28 详细定义（Evidence Compatibility Contract）
+
+**Knowledge Schema 扩展**：
+
+```yaml
+topic:
+  id: "resource-lifetime"
+  evidence_binding:
+    minimum_evidence:
+      level: E1  # 至少需要 E1（Code 观察）才能应用
+    
+    preferred_evidence:
+      - E2       # Test 验证更佳
+      - E3       # Runtime 指标更佳
+    
+    prohibited_claims:
+      - "performance improvement guaranteed"   # 不能用 E1 声称性能提升
+      - "production memory leak confirmed"    # 不能用 E1 声称生产泄漏
+```
+
+**Core 校验规则**：
+
+```
+Finding Evidence Level (E0-E4) ≥ Knowledge.minimum_evidence.level
+   ↓ YES → 允许 Knowledge 应用
+   ↓ NO  → Knowledge 降级为"参考"，不作为决策依据
+   ↓
+Finding 中 Claim 不能超过 Knowledge 的 prohibited_claims
+```
+
+### 11.6.4 D-29 详细定义（Misuse Boundary）
+
+**Golden Example 强制章节**：
+
+```markdown
+## Misuse Cases（误用案例） ← 必需
+
+### Scenario 1: 对象由 DI Container 管理
+- 表现：看起来符合 "Disposable lifetime explicit" 模式
+- 为什么不能应用：Ownership 不在使用方，DI 容器负责释放
+- 替代方案：依赖容器生命周期，仅在特殊场景手动释放
+
+### Scenario 2: 长生命周期共享资源
+- 表现：似乎需要 using scope 强制释放
+- 为什么不能应用：强制释放会中断其他订阅者
+- 替代方案：使用 IDisposable + 引用计数，或工厂模式
+```
+
+**D-14 Gate 校验**：Golden Example 缺 Misuse Cases → 不能进入 Beta。
+
+### 11.6.5 D-30 详细定义（Cross-Context Validation）
+
+**Stable 晋升条件**（全部必须满足）：
+
+```
+□ ≥2 个不同项目验证
+□ ≥2 个不同技术上下文验证（如不同 ORM / 不同框架）
+□ ≥1 个反例验证（证明 Knowledg e 有边界）
+□ Evidence 可追溯（每条结论有 file:line 或 measurement）
+□ Review Record 存在（reviewer + date + 决议）
+□ CHANGELOG.md 完整记录
+□ reference repo 中的 demo 代码可复现
+```
+
+**反例验证目的**：防止"一次成功 = 普遍适用"的认知偏差。
+
+---
+
+| v1.7 | 2026-08-30 | Section 5 校准后演进：新增 C-13（Profile Applicability Separation，framework 拆为 compatibility）+ C-14（Custom Finding Permission Model）+ C-15（Semantic Validation Pipeline 三层）+ C-16（Risk Semantic Contract）。v1.0–v1.6 的所有 D 与 L 未修改。 |
+## 11.7 Section 7 Evidence Threshold 校准（v1.9 演进）
+
+### 11.7.1 3 项校准
+
+| ID | 校准项 | 处理 |
+|----|--------|------|
+| **C-21** | **Profile Evidence Threshold 单向约束**：Profile 可**提高** Evidence Sufficiency Threshold（如 Critical 需 E4），**不可降低** Core 默认（Critical 默认 E3/E4、High=E2、Medium/Low=E1） | Final Spec §7.3 |
+| **C-22** | **Audit Trail 是 Decision Trace，不保存 LLM 私有思维链**：仅保存输入上下文摘要 + Evidence 引用 + Finding + Decision + Gate 状态 + Verification Result；不保存内部隐式推理过程或未公开模型思考轨迹 | Final Spec §7.8 |
+| **D-31** | **Evidence Sufficiency Threshold Defaults**：Core 锁定默认阈值，Profile 可调高不可降 | Final Spec §7.3 |
+
+### 11.7.2 C-21 详细定义（Profile Threshold 单向约束）
+
+**Core 默认阈值**（不可降）：
+
+```yaml
+evidence_sufficiency_defaults:
+  critical_finding:
+    minimum_evidence_level: [E3, E4]   # Critical 必须有运行时 / 生产数据
+  high_finding:
+    minimum_evidence_level: [E2]      # High 至少测试验证
+  medium_finding:
+    minimum_evidence_level: [E1]      # Medium 代码观察足够
+  low_finding:
+    minimum_evidence_level: [E1]      # Low 代码观察足够 + Risk 评估完整
+```
+
+**Profile 调整**（仅允许提门槛）：
+
+```yaml
+# 允许：JNPF 提高门槛（金融系统严格）
+jnpf-sqlsugar:
+  evidence_sufficiency_overrides:
+    critical_finding:
+      minimum_evidence_level: [E4]   # 仅生产数据，禁用 E3
+
+# 不允许：legacy-project 降低门槛
+legacy-project:
+  evidence_sufficiency_overrides:
+    critical_finding:
+      minimum_evidence_level: [E1]   # 违规！Critical 默认需 E3/E4
+```
+
+**D-14 Gate Step 5.6 校验**：
+
+```
+1. profile.evidence_sufficiency_overrides 各等级 minimum_evidence_level
+2. 对比 Core 默认阈值：
+   - 同等级允许
+   - 高于默认允许（如 E3→E4）
+   - 低于默认 REJECT
+3. 不提供 overrides → 使用 Core 默认
+```
+
+**理由**：与 D-13 / D-19 / C-16 一致——Profile 可调整政策，不可降低 Core 安全门槛。
+
+### 11.7.3 C-22 详细定义（Audit Trail 边界）
+
+**Audit Trail 范畴**（✅ 保存）：
+
+```
+✅ 输入上下文摘要（Context Descriptor 摘要）
+✅ Evidence 引用（file:line / measurement 引用）
+✅ Finding（结构化记录）
+✅ Decision（Gate Decision + 三件套）
+✅ Gate 状态（每个 Step Gate PASS/FAIL）
+✅ Verification Result（行为验证 + Benchmark 结果）
+✅ Profile + Mode 状态
+✅ Knowledge 加载清单（path + version）
+```
+
+**Audit Trail 不保存**（❌ 禁止）：
+
+```
+❌ LLM 内部隐式推理过程
+❌ 未公开模型思考轨迹（Chain of Thought）
+❌ Token-by-token 生成记录
+❌ 中间 Prompt 文本
+❌ 任何模型私有状态
+```
+
+**理由**：
+
+1. **可重现性**：外部审计者能从 Trail 重建决策（不依赖模型私有状态）
+2. **隐私**：模型内部状态可能包含训练数据 / 用户隐私
+3. **可解释性**：决策依据必须显式，思维链不需要
+4. **可移植性**：模型升级后 Trail 仍有效
+
+**实现**：Audit Trail 输出 = Decision Trace + Execution Trace 两个 YAML 文件，明确分文件存储。
+
+### 11.7.4 Gate 命名规范化（推迟 Section 8）
+
+**问题**：
+
+```
+Step Gate:    Evidence-G
+Cross Gate:   Evidence-G
+```
+
+两者同名，调用时易混淆。
+
+**建议命名**（推迟 Section 8 实现）：
+
+```
+Step Gates:
+  STEP-FRAME-G
+  STEP-EVIDENCE-G
+  STEP-DIAGNOSE-G
+  STEP-DECIDE-G
+  STEP-REPORT-G
+
+Cross Cutting Hard Gates:
+  HC-EVIDENCE-G    (横切 Evidence)
+  HC-BEHAVIOR-G
+  HC-SCOPE-G
+  HC-PROFILE-G
+
+Mission Constraints:
+  M-01 ~ M-06
+```
+
+**Section 8 实施时**：所有 Gate 引用按上述命名规范，避免歧义。
+
+---
+
+| v1.8 | 2026-08-30 | Section 6 知识治理后演进：采纳 C-17~C-20，新增 D-27（Knowledge Router Retrieval Only）+ D-28（Evidence Compatibility Contract）+ D-29（Golden Example Misuse Boundary）+ D-30（Knowledge Promotion Cross-Context Validation）。v1.0–v1.7 的所有 D 与 L 未修改。 |
+| v1.9 | 2026-08-30 | Section 7 Evidence Threshold 校准后演进：新增 D-31（Evidence Sufficiency Threshold Defaults）+ C-21（Profile Threshold 单向约束，可提不可降）+ C-22（Audit Trail 是 Decision Trace，不保存 LLM 私有思维链）。Gate 命名规范化推迟到 Section 8。v1.0–v1.8 的所有 D 与 L 未修改。 |
+| **v2.0** | **2026-08-30** | **Major Revision = Platform Vision 重定位。**v1.0–v1.9 全部决策（D-01~D-31 + C-01~C-22 + L-01~L-10 + CR-01~CR-11 + K-01~K-10 + P-01~P-08 + V-01~V-09 + I-01~I-08）**全部保留**并重新定位为 **UEEA Governance Kernel**。新增 PV-1~PV-5 五个 Platform Vision 决策。Section 8-12 重新映射到 Phase 1-5 路线。**不动既有任何决策，仅追加上位框架。** |
+| **v2.0.x** | **2026-08-30** | **Implementation Iron Laws 固化。**新增 IRON-01~IRON-12 十二条铁律，防止 MVP 实现过程将 Agent Runtime 退化为 Workflow / Prompt Chain。**详细定义**见 `docs/harness/UEEA-Agent-Runtime-Engineering-Rules.md`（独立完整文档）。 |
+
+---
+
+## 12. Platform Vision（v2.0 Major Revision）
+
+### 12.1 平台重定位
+
+**原定位（v1.x）**：
+
+> Universal .NET Class Refactoring Architect — 一个面向任意 .NET 项目的类级重构专家分析 Agent。
+
+**新定位（v2.0）**：
+
+> **Universal Enterprise Engineering Agent（UEEA）—— 企业软件工程智能体运行框架**
+
+**英文标语**：
+
+```
+Universal Enterprise Engineering Agent
+A governed autonomous engineering agent runtime
+for enterprise software lifecycle.
+```
+
+**中文定义**：
+
+> 一个具备工程知识治理、证据验证、任务规划、工具执行能力的企业级软件工程智能体运行框架。
+
+### 12.2 边界定义（防越界）
+
+**不是**：
+
+```
+❌ AI Platform
+❌ 自研 LLM
+❌ 通用 Agent 编排平台
+❌ SaaS 平台
+❌ 通用 AI 基础设施
+❌ 替代 OpenAI / Claude / Qoder / Cursor / LangGraph
+```
+
+**是**：
+
+```
+✅ 企业软件工程领域的 Expert Agent Runtime
+✅ 依托现有 LLM + IDE 适配
+✅ 服务复杂企业系统理解 / 设计 / 演进 / 验证
+✅ 独立领域逻辑（区别于通用编程助手）
+```
+
+### 12.3 核心使命（PV-2）
+
+不是“让 AI 写代码”，而是：
+
+> 让 AI 在严格工程约束下完成复杂软件系统**理解 → 推理 → 设计 → 执行 → 验证 → 沉淀**。
+
+```
+Understand  理解系统
+     ↓
+Reason     工程推理
+     ↓
+Design     架构设计
+     ↓
+Execute    执行变更
+     ↓
+Verify     验证结果
+     ↓
+Learn      沉淀知识
+```
+
+### 12.4 Phase 0-5 路线（PV-3）
+
+| Phase | 目标 | 主要 Section | Exit Gate |
+|-------|------|-------------|-----------|
+| **Phase 0** | Governance Foundation | Section 1-7 | 所有 D/C/L 锁定 + Profile + Knowledge Schema + Evidence + Risk + Audit 规范完成 |
+| **Phase 1** | Minimal Agent Runtime MVP | Section 8 + 9 | Runtime 可运行 + State 可恢复 + Task 可规划 + Evidence 可生成 + Audit 可回放 + Golden Test PASS |
+| **Phase 2** | Engineering Intelligence | Section 10 | Code Understanding / Database Intelligence / Domain Modeling 三大引擎达标 |
+| **Phase 3** | Enterprise Architect | Section 11 | Requirement Analyzer / System Design Generator / UI Design Agent 产出达到专家评审标准 |
+| **Phase 4** | Engineering Execution | Section 12 上半 | Tool Layer 集成 + Execute Mode 隔离 + 默认 Read-Only + Human Approval |
+| **Phase 5** | Multi-Agent Collaboration | Section 12 下半 | Supervisor Agent 协调 Architecture / Database / Backend / Frontend / QA / Security 多 Agent |
+
+**Exit Gate 铁律**：每 Phase 必须满足 Exit Gate才能进入下一阶段，**禁止"功能完成"即推进**。
+
+### 12.5 五层架构（PV-4）
+
+```
+┌───────────────────────────────┐
+│ Layer 5 Human Collaboration     │
+│ Review / Approval / Feedback  │
+└─────────────▲──────────────────┘
+              │
+┌─────────────┴──────────────────┐
+│ Layer 4 Agent Runtime            │
+│ Planner / Executor / Context   │
+│ Memory / Workflow / Reflector  │
+└─────────────▲──────────────────┘
+              │
+┌─────────────┴──────────────────┐
+│ Layer 3 Engineering Intelligence│
+│ Code Analysis / Domain Modeling │
+│ Architecture Reasoning          │
+│ Database Intelligence            │
+└─────────────▲──────────────────┘
+              │
+┌─────────────┴──────────────────┐
+│ Layer 2 Governance Kernel       │
+│ Core / Profile / Knowledge      │
+│ Evidence / Validation / Risk    │
+└─────────────▲──────────────────┘
+              │
+┌─────────────┴──────────────────┐
+│ Layer 1 Infrastructure           │
+│ LLM / Vector DB / Git / IDE     │
+│ Database / CI/CD                │
+└───────────────────────────────┘
+```
+
+**与原 Section 1-7 关系**：
+
+- Layer 2 Governance Kernel = Section 1-7 所有决策的运行时身份
+- Layer 4 Agent Runtime = Phase 1 重点（Section 8 + 9）
+- Layer 3 Engineering Intelligence = Phase 2 重点（Section 10）
+- Layer 5 Human Collaboration = Phase 3-4 重点（Section 11 + 12）
+- Layer 1 Infrastructure = 外部依赖（不自己造轮子）
+
+### 12.6 平台成功标准（PV-5）
+
+| 维度 | 验收标准 |
+|------|---------|
+| **Reasoning Quality** | 不是看代码数量，而是分析正确率 / 架构判断质量 / 风险识别能力 |
+| **Evidence Quality** | 每个 Claim 都有 Evidence + Confidence + Verification |
+| **Engineering Safety** | 默认 Read-Only；执行变更必须 Human Approval |
+| **Knowledge Evolution** | 知识 Capture → Validate → Promote → Version 闭环 |
+| **Enterprise Scalability** | 支持 Small Service → Monolith → Microservice → Enterprise Platform |
+
+### 12.7 Section 1-7 重新定位（不废弃）
+
+**原**：Universal .NET Class Refactoring Architect 设计 Spec
+
+**新**：**UEEA Governance Kernel v2.0**
+
+包含：
+
+```
+Core Reasoning Contract (Section 3)
++ Risk Model (Section 3.6)
++ Evidence Model (Section 7)
++ Validation System (Section 7.4 + Gates)
++ Knowledge Governance (Section 6)
++ Profile System (Section 5)
+```
+
+类似“操作系统内核规则”——为上层 Runtime 提供不变约束。
+
+---
+
+## 13. Section 重新映射（v2.0）
+
+### 13.1 原 Section 8-10 重新映射
+
+| 原 Section（v1.x 计划） | 新 Section（v2.0） | 对应 Phase |
+|------------------------|-------------------|-----------|
+| Section 8 Qoder Implementation Mapping | **Section 8 Agent Runtime Architecture** | Phase 1 |
+| Section 9 Open Source Packaging Strategy | **Section 9 Runtime MVP Design** | Phase 1 |
+| Section 10 Migration from v6.0 Skill | **Section 10 Engineering Intelligence** | Phase 2 |
+
+### 13.2 新增 Section 11-12
+
+| 新 Section | 对应 Phase | 核心内容 |
+|-----------|-----------|---------|
+| **Section 11 Enterprise Architect Capability** | Phase 3 | Requirement Analyzer / System Design Generator / UI Design Agent |
+| **Section 12 Execution & Multi-Agent** | Phase 4 + 5 | Engineering Execution Agent + Multi-Agent Collaboration (Supervisor + Architecture/Database/Backend/Frontend/QA/Security Agent) |
+
+### 13.3 Section 8 重点（Phase 1 起点）
+
+新版 Section 8 不谈 Qoder Mapping，直接谈 Runtime 架构：
+
+```
+8.1 Runtime 总体架构（Kernel / Agent Loop / Session / State / Lifecycle）
+8.2 Agent Execution Loop（Goal → Plan → Execute → Observe → Validate → Reflect）
+8.3 Agent State Model（AgentSession / TaskState / ContextState / EvidenceState / DecisionState / AuditState）
+8.4 Planner Architecture（Mission → Task Graph → Execution DAG → Result）
+8.5 Memory Architecture（Working / Session / Project / Knowledge Memory 四层）
+8.6 Runtime 与 Governance Kernel 集成（Runtime 必须经 Governance Check）
+8.7 Adapter Architecture（Qoder / Claude Code / Cursor / VS 为入口层，非核心）
+```
+
+### 13.4 Section 8-12 开发顺序纪律
+
+```
+Section 8 Runtime Architecture（设计）
+    ↓
+Section 9 Runtime Technical Specification（技术规范）
+    ↓
+Section 10 Runtime Implementation Plan（实施计划）
+```
+
+**禁止**“边设计边写代码”——这是 v2.0 Major Revision 后的纪律。
+
+### 13.5 重新定位后的 docs/harness/封装手册
+
+**不是废弃，而是扩展**：
+
+原 `docs/harness/类级重构专家Agent封装手册.md`（v1.0）作为 Phase 0 产物保留。
+
+未来扩展为：
+
+```
+docs/harness/
+├── 类级重构专家Agent封装手册.md          ← Phase 0（已发布）
+├── 类级重构专家Agent封装手册-CHANGELOG.md
+├── UEEA-Runtime-MVP-实施手册.md       ← Phase 1（待编写）
+├── UEEA-Engineering-Intelligence-手册.md ← Phase 2（推迟）
+└── ...
+```
+
+**CHANGELOG 需补充**：v2.0 Major Revision 后本文档定位变更记录。
+
+### 13.6 Governance Kernel 与 Runtime 关系
+
+```
+┌───────────────────────────────────────────────┐
+│ Agent Runtime (Phase 1) │
+│ │ Planner / Executor / Context / Memory │
+│ │ │
+│ │ 使用什么规则？ │ │
+│ ▼ ▼ │
+│ ┌───────────────────────────────────────────────┐ │
+│ │ UEEA Governance Kernel (Phase 0) │ │
+│ │ Core / Profile / Knowledge / Evidence / Risk │ │
+│ │ 全部为不可变决策 (v2.0 LOCKED) │ │
+│ └───────────────────────────────────────────────┘ │
+└───────────────────────────────────────────────┘
+```
+
+**Runtime 调用 Governance**：Runtime 不允许直接运行任何决策，必须调用 Governance Kernel 验证后才能执行。
+
+---
+
+## 14. v2.0 验证与提交
+
+### 14.1 验证清单（v2.0 Major Revision）
+
+- [x] PV-1 平台定位明确（UEEA，非 AI Platform）
+- [x] PV-2 使命定义明确（理解 → 推理 → 设计 → 执行 → 验证 → 沉淀）
+- [x] PV-3 Phase 0-5 路线 + Exit Gate 锁定
+- [x] PV-4 五层架构定义
+- [x] PV-5 5 维成功标准
+- [x] Section 1-7 重新定位为 Governance Kernel（不废弃）
+- [x] Section 8-12 重新映射（Section 8 = Runtime Architecture）
+- [x] docs/harness/封装手册扩展计划
+
+### 14.2 后续动作
+
+```
+1. docs/harness/类级重构专家Agent封装手册-CHANGELOG.md
+   → 补充 v2.0 Major Revision 记录
+
+2. docs/harness/类级重构专家Agent封装手册.md
+   → §11 / §12 / §13 追加（Platform Vision + Section Mapping）
+
+3. 新版 Section 8（Agent Runtime Architecture）
+   → 按 PV-3 + PV-4 重新设计
+
+4. git commit + push（v2.0 是 Major Revision，需明确提交）
+```
