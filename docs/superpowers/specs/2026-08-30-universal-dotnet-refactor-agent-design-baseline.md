@@ -320,6 +320,8 @@ universal-dotnet-refactor-expert/
 | **IRON-10** | **Knowledge 不允许无治理增长**（v2.0 补充）：必须 Project Memory → Validation → Knowledge Promotion；禁止"一次经验 → 永久知识"（R-NG-02 强化） | ✅ LOCKED | Implementation Iron Law §15 |
 | **IRON-11** | **MVP 不能成为最终架构陷阱**（v2.0 补充）：MVP 必须保留未来扩展点 + 保持能力模型 + 可平滑升级 + 不导致重新设计；否则禁止采用 | ✅ LOCKED | Implementation Iron Law §15 |
 | **IRON-12** | **禁止未经批准的能力削减**（v2.0 补充）：AI 工程师删除接口 / 合并状态 / 简化数据模型 / 移除验证流程 / 替换 DAG 为列表 / 删除 Audit / 删除 Evidence 前必须提交 Capability Impact Analysis | ✅ LOCKED | Implementation Iron Law §15 |
+| **HIP-01** | **Human Interrupt Policy**（v2.0.y 补充）：默认连续执行；仅在 4 类情况暂停请求人类决策（A 架构冲突 / B 范围变化 / C 高风险不可逆 / D 重大风险）；阶段性汇报。与 Iron Laws 互补 | ✅ LOCKED | 运行纪律 §16 |
+| **WORKFLOW-IRON-01** | **Autonomous Engineering Execution Loop**（v2.0.z 补充）：Superpowers 从"工具调用规范"升级为"工程闭环基础设施"；强制 4 环节闭环（Self Evaluation / Self Test / Self Repair / Reviewer Review）；AI 不允许自行弱化。未经过 Superpowers 验证不得进入最终汇报 | ✅ LOCKED | 工作流驱动层 §18 |
 
 > **v1.8 演进备注**：C-17~C-20 全部采纳，新增 D-27~D-30 四个知识治理硬门。
 
@@ -1105,6 +1107,8 @@ Mission Constraints:
 | v1.9 | 2026-08-30 | Section 7 Evidence Threshold 校准后演进：新增 D-31（Evidence Sufficiency Threshold Defaults）+ C-21（Profile Threshold 单向约束，可提不可降）+ C-22（Audit Trail 是 Decision Trace，不保存 LLM 私有思维链）。Gate 命名规范化推迟到 Section 8。v1.0–v1.8 的所有 D 与 L 未修改。 |
 | **v2.0** | **2026-08-30** | **Major Revision = Platform Vision 重定位。**v1.0–v1.9 全部决策（D-01~D-31 + C-01~C-22 + L-01~L-10 + CR-01~CR-11 + K-01~K-10 + P-01~P-08 + V-01~V-09 + I-01~I-08）**全部保留**并重新定位为 **UEEA Governance Kernel**。新增 PV-1~PV-5 五个 Platform Vision 决策。Section 8-12 重新映射到 Phase 1-5 路线。**不动既有任何决策，仅追加上位框架。** |
 | **v2.0.x** | **2026-08-30** | **Implementation Iron Laws 固化。**新增 IRON-01~IRON-12 十二条铁律，防止 MVP 实现过程将 Agent Runtime 退化为 Workflow / Prompt Chain。**详细定义**见 `docs/harness/UEEA-Agent-Runtime-Engineering-Rules.md`（独立完整文档）。 |
+| **v2.0.y** | **2026-08-30** | **Human Interrupt Policy (HIP-01) 固化。**默认连续执行；仅 4 类情况主动请求人类决策（A 架构冲突 / B 范围变化 / C 高风险不可逆 / D 重大风险）；阶段性汇报。**与 Iron Laws 互补**：Iron Laws 防止 AI 自行降低能力，HIP-01 防止人类审批粒度过细。**详细定义**见 baseline §16。 |
+| **v2.0.z** | **2026-08-30** | **Autonomous Engineering Execution Loop (WORKFLOW-IRON-01) 固化。**Superpowers 从工具调用规范升级为工程闭环基础设施；强制 4 环节闭环（Self Evaluation / Self Test / Self Repair / Reviewer Review）。**与 HIP-01 + Iron Laws 互补**：Iron Laws 防止 AI 降低能力（设计层），HIP-01 防止人类审批过细（节奏层），WORKFLOW-IRON-01 保证工程质量（执行层）。**详细定义**见 baseline §18 + `docs/harness/UEEA-Agent-Runtime-Engineering-Rules.md` §17。 |
 
 ---
 
@@ -1343,7 +1347,104 @@ docs/harness/
 
 ---
 
-## 14. v2.0 验证与提交
+## 16. Human Interrupt Policy（HIP-01）
+
+### 16.1 核心思想
+
+**默认连续执行 + 阶段性汇报 + 仅 4 类情况主动请求人类决策**。
+
+防止人类审批粒度过细导致 Agent 无法连续工作；同时保证关键治理节点有人类控制。
+
+### 16.2 4 类必须暂停并等待人类决策的情况
+
+**A. 架构级决策冲突**
+
+- 需要修改已冻结 baseline
+- 需要改变已 LOCKED Decision
+- 出现两个不可兼容的架构方向
+
+**B. 范围边界变化**
+
+- 需要扩大或缩小 Phase Scope
+- 需要引入原计划之外的重要组件
+- 需要改变阶段目标
+
+**C. 高风险不可逆操作**
+
+- 删除已有设计资产
+- 修改公共契约
+- 破坏向后兼容性
+- 大规模重构目录 / 模块边界
+
+**D. 发现重大风险**
+
+- 当前方案无法满足 Iron Laws
+- 会导致 Agent Runtime 能力退化
+- 会导致未来无法扩展
+
+### 16.3 不暂停的情况（无需单独汇报）
+
+- 文档章节完成
+- 普通接口细化
+- 非关键措辞调整
+- 格式优化
+- 内部一致性检查通过
+- 已明确决策下的展开设计
+- 不影响架构方向的小调整
+
+这些内容统一放入**阶段性工作汇报**。
+
+### 16.4 汇报节奏
+
+默认：
+
+```
+完成一个完整 Section 或重大里程碑后汇报
+```
+
+汇报格式（6 要素）：
+
+```
+1. 做了什么
+2. 发现什么
+3. 判断影响
+4. 下一步计划
+5. 是否需要决策
+6. 核心原则
+```
+
+### 16.5 与 Iron Laws 的关系
+
+| 维度 | Iron Laws | HIP-01 |
+|------|----------|--------|
+| **作用对象** | AI 实现能力 | 人类审批节奏 |
+| **防止问题** | AI 自行降低系统能力 | 人类审批粒度过细 |
+| **违反后果** | Capability Impact Analysis | 工作流中断 |
+| **互补关系** | 约束 AI 行为 | 约束人机交互 |
+
+两者结合 = **人类控制方向，Agent 连续完成复杂推理与执行**。
+
+### 16.6 与 Phase Exit Gate 的关系
+
+- HIP-01 不替代 Phase Exit Gate（PV-3）
+- HIP-01 仅调整**审批节奏**，不改变**审批节点**
+- Phase Exit Gate 仍必须遵守（Section 8-12 Exit Gate 6 项）
+
+---
+
+## 17. v2.0.x 与 v2.0.y 关系总结
+
+| 治理层 | 决策编号 | 作用 |
+|--------|---------|------|
+| **v2.0** Major | PV-1 ~ PV-5 | Platform Vision（方向） |
+| **v2.0** Major | R-NG-01 ~ R-NG-06 | Runtime Non-Goals（边界） |
+| **v2.0.x** | IRON-01 ~ IRON-12 | Implementation Iron Laws（AI 约束） |
+| **v2.0.y** | HIP-01 | Human Interrupt Policy（人机节奏） |
+| **v2.0.z** | WORKFLOW-IRON-01 | Autonomous Engineering Execution Loop（执行质量） |
+
+五层互补，共同构成 UEEA v2.0 Governance Kernel。
+
+---
 
 ### 14.1 验证清单（v2.0 Major Revision）
 
@@ -1370,3 +1471,167 @@ docs/harness/
 
 4. git commit + push（v2.0 是 Major Revision，需明确提交）
 ```
+
+---
+
+## 18. Autonomous Engineering Execution Loop（WORKFLOW-IRON-01）
+
+### 18.1 核心原则
+
+**Superpowers = 工程闭环基础设施（不是工具调用规范）**。
+
+任何工作轮次不得仅以"完成任务步骤"为结束条件，必须以"通过完整工程闭环"为结束条件。
+
+### 18.2 强制闭环（4 环节）
+
+```
+Implementation
+   ↓
+Superpowers Self Evaluation（自动评估）
+   ↓
+Superpowers Self Test（自动测试）
+   ↓
+Superpowers Self Repair（自动修复，如失败）
+   ↓
+Superpowers Reviewer Review（独立审查）
+   ↓
+Final Report
+```
+
+**任一环节缺失** → 状态不得标记为完成。
+
+### 18.3 Superpowers 绑定规则
+
+| 工作环节 | 必须调用 Superpower |
+|---------|-------------------|
+| 方案设计 | Architecture / Design Superpower |
+| 实现修改 | Implementation / Coding Superpower |
+| 自动评估 | Review / Analysis Superpower |
+| 自动测试 | Testing / Validation Superpower |
+| 自动修复 | Debug / Refactoring Superpower |
+| Reviewer 审查 | Independent Review Superpower |
+
+### 18.4 Self Evaluation（自动评估）
+
+通过 **Review / Analysis Superpower** 完成。
+
+**3 大检查**：
+
+1. **目标完成度**：用户目标全覆盖 + 无遗漏 + 达 Acceptance Criteria
+2. **架构一致性**：符合 Baseline + 不违反 Governance Kernel + 不违反 Iron Laws + 无隐藏耦合 + 不影响未来扩展
+3. **Capability Impact Analysis**（强制）：
+   - 增加什么能力？
+   - 保持什么能力？
+   - 减少什么能力？
+   - 是否产生能力退化？
+
+**禁止**：
+
+```
+❌ 为简单而删除核心状态
+❌ 为简单而减少验证
+❌ 为简单而降低接口能力
+❌ 为简单而隐藏复杂性
+```
+
+### 18.5 Self Test（自动测试）
+
+通过 **Testing / Validation Superpower** 完成。
+
+**3 大验证**：
+
+1. **功能验证**：主流程 + 核心能力 + 输出符合预期
+2. **边界验证**：异常流程 + 空输入 + 错误恢复 + 状态恢复 + 资源释放
+3. **回归验证**：原有能力保持 + Contract 未破坏 + 架构约束未破坏
+
+### 18.6 Self Repair（自动修复）
+
+通过 **Debug / Refactoring Superpower** 完成。
+
+**强制流程**：
+
+```
+发现问题
+   ↓
+定位根因
+   ↓
+制定修复方案
+   ↓
+执行修复
+   ↓
+重新测试
+   ↓
+重新 Reviewer 审查
+```
+
+**禁止**：
+
+```
+❌ 发现失败 → 直接汇报等待人工
+```
+
+**例外**（必须人工）：
+
+- 无法获得必要信息
+- 存在架构决策
+- 存在业务选择
+
+### 18.7 Reviewer Review（独立审查）
+
+通过 **Independent Review Superpower** 完成。Reviewer 模拟第三方工程评审。
+
+**3 大检查**：
+
+1. **架构风险**：可理解性 + 可扩展性 + 技术债
+2. **工程质量**：最佳实践 + 隐藏 Bug + 测试覆盖
+3. **AI 防退化检查**（重点）：
+   - 是否简化核心能力？
+   - 是否删除必要状态？
+   - 是否减少验证流程？
+   - 是否使用假实现？
+   - 是否把未来能力设计死？
+
+**任一失败** → 必须返回 Self Repair。
+
+### 18.8 仅允许人工介入的 3 类情况
+
+A. **不可逆架构选择**：单体 vs 微服务 / 数据模型重大调整 / Public Contract 变化
+
+B. **业务价值判断**：删除功能 / 改变用户流程 / 接受成本/性能权衡
+
+C. **与既定 Governance 冲突**：唯一修复方案违反 Governance 时
+
+### 18.9 最终汇报规则
+
+只有完成：
+
+```
+Superpowers 执行
++ Self Evaluation PASS
++ Self Test PASS
++ Self Repair 完成（如有失败）
++ Reviewer Review PASS
+```
+
+之后才能汇报完成。汇报只包含：
+
+```
+1. 完成事实
+2. 验证证据（测试结果 + Review 结果 + 风险检查）
+3. 当前状态：PASS / BLOCKED / NEED HUMAN DECISION
+4. 下一步计划
+```
+
+### 18.10 与 v2.0 其他治理层的关系
+
+| 治理层 | 决策 | 强化对象 |
+|--------|------|---------|
+| **v2.0.x IRON-01** | 防止能力简化 | 设计层 |
+| **v2.0.x IRON-05** | 保证状态完整 | 设计层 |
+| **v2.0.x IRON-07** | 保证 Evidence 驱动 | 设计层 |
+| **v2.0.x IRON-08** | 保证治理边界 | 设计层 |
+| **v2.0.x IRON-11** | 防止能力退化 | 设计层 |
+| **v2.0.y HIP-01** | 防止人类审批过细 | 节奏层 |
+| **v2.0.z WORKFLOW-IRON-01** | 保证工程质量 | **执行层** |
+
+WORKFLOW-IRON-01 是 **执行层铁律**，约束工程实施过程必须通过 4 环节闭环才能汇报。

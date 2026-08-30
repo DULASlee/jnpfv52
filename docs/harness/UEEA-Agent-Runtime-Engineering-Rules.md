@@ -985,3 +985,295 @@ echo "=== 全部 PASS ==="
 > **下次更新触发**：新增 Iron Law（如 IRON-13+）/ Phase 2 实施发现需细化 / Phase 3 评审需修订。
 
 > **维护纪律**：每次更新本文档主体，必须同步更新 `docs/superpowers/specs/2026-08-30-universal-dotnet-refactor-agent-design-baseline.md` §15 决策索引。
+
+---
+
+## 17. WORKFLOW-IRON-01：Autonomous Engineering Execution Loop
+
+> **本章节为 v2.0.z 补充，与 IRON-01~12 互补。**
+> **Iron Laws 防止 AI 削弱能力（设计层），WORKFLOW-IRON-01 保证工程质量（执行层）。**
+
+### 17.1 核心原则
+
+**Superpowers = 工程闭环基础设施（不是工具调用规范）**。
+
+任何工作轮次不得仅以"完成任务步骤"为结束条件，必须以"通过完整工程闭环"为结束条件。
+
+### 17.2 强制闭环（4 环节）
+
+```
+Implementation
+   ↓
+Superpowers Self Evaluation（自动评估）
+   ↓
+Superpowers Self Test（自动测试）
+   ↓
+Superpowers Self Repair（自动修复，如失败）
+   ↓
+Superpowers Reviewer Review（独立审查）
+   ↓
+Final Report
+```
+
+**任一环节缺失** → 状态不得标记为完成。
+
+### 17.3 Superpowers 绑定规则
+
+| 工作环节 | 必须调用 Superpower |
+|---------|-------------------|
+| 方案设计 | Architecture / Design Superpower |
+| 实现修改 | Implementation / Coding Superpower |
+| 自动评估 | Review / Analysis Superpower |
+| 自动测试 | Testing / Validation Superpower |
+| 自动修复 | Debug / Refactoring Superpower |
+| Reviewer 审查 | Independent Review Superpower |
+
+**禁止行为**：
+
+```
+❌ 不调用对应 Skill 自行判断
+❌ 只阅读 Skill 不执行流程
+❌ 跳过 Skill 中的验证步骤
+❌ 使用简单检查替代完整验证
+❌ 为追求速度删除关键能力
+```
+
+### 17.4 Self Evaluation（自动评估）
+
+通过 **Review / Analysis Superpower** 完成。
+
+**3 大检查**：
+
+1. **目标完成度**：用户目标全覆盖 + 无遗漏 + 达 Acceptance Criteria
+2. **架构一致性**：符合 Baseline + 不违反 Governance Kernel + 不违反 Iron Laws + 无隐藏耦合 + 不影响未来扩展
+3. **Capability Impact Analysis**（强制）：
+   - 增加什么能力？
+   - 保持什么能力？
+   - 减少什么能力？
+   - 是否产生能力退化？
+
+### 17.5 Self Test（自动测试）
+
+通过 **Testing / Validation Superpower** 完成。
+
+**3 大验证**：
+
+1. **功能验证**：主流程 + 核心能力 + 输出符合预期
+2. **边界验证**：异常流程 + 空输入 + 错误恢复 + 状态恢复 + 资源释放
+3. **回归验证**：原有能力保持 + Contract 未破坏 + 架构约束未破坏
+
+### 17.6 Self Repair（自动修复）
+
+通过 **Debug / Refactoring Superpower** 完成。
+
+**强制流程**：
+
+```
+发现问题
+   ↓
+定位根因
+   ↓
+制定修复方案
+   ↓
+执行修复
+   ↓
+重新测试
+   ↓
+重新 Reviewer 审查
+```
+
+**禁止**：
+
+```
+❌ 发现失败 → 直接汇报等待人工
+```
+
+**例外**（必须人工）：
+
+- 无法获得必要信息
+- 存在架构决策
+- 存在业务选择
+
+### 17.7 Reviewer Review（独立审查）
+
+通过 **Independent Review Superpower** 完成。Reviewer 模拟第三方工程评审。
+
+**3 大检查**：
+
+1. **架构风险**：可理解性 + 可扩展性 + 技术债
+2. **工程质量**：最佳实践 + 隐藏 Bug + 测试覆盖
+3. **AI 防退化检查**（重点）：
+   - 是否简化核心能力？
+   - 是否删除必要状态？
+   - 是否减少验证流程？
+   - 是否使用假实现？
+   - 是否把未来能力设计死？
+
+**任一失败** → 必须返回 Self Repair。
+
+### 17.8 仅允许人工介入的 3 类情况
+
+A. **不可逆架构选择**：单体 vs 微服务 / 数据模型重大调整 / Public Contract 变化
+
+B. **业务价值判断**：删除功能 / 改变用户流程 / 接受成本/性能权衡
+
+C. **与既定 Governance 冲突**：唯一修复方案违反 Governance 时
+
+### 17.9 最终汇报规则
+
+只有完成：
+
+```
+Superpowers 执行
++ Self Evaluation PASS
++ Self Test PASS
++ Self Repair 完成（如有失败）
++ Reviewer Review PASS
+```
+
+之后才能汇报完成。汇报只包含：
+
+```
+1. 完成事实
+2. 验证证据（测试结果 + Review 结果 + 风险检查）
+3. 当前状态：PASS / BLOCKED / NEED HUMAN DECISION
+4. 下一步计划
+```
+
+### 17.10 与 Iron Laws 的强化关系
+
+| Iron Law | WORKFLOW-IRON-01 强化方向 |
+|---------|--------------------------|
+| **IRON-01** | 防止能力简化（不仅在设计，更在执行）|
+| **IRON-05** | 保证状态完整（Self Test 验证状态恢复）|
+| **IRON-07** | 保证 Evidence 驱动（Self Evaluation 引用 Evidence）|
+| **IRON-08** | 保证治理边界（Reviewer Review 检查治理合规）|
+| **IRON-11** | 防止能力退化（防退化检查是 Reviewer Review 核心）|
+
+---
+
+## 18. HIP-01：Human Interrupt Policy
+
+> **本章节为 v2.0.y 补充，与 Iron Laws / WORKFLOW-IRON-01 互补。**
+> **Iron Laws 防止 AI 削弱能力（设计层），WORKFLOW-IRON-01 保证工程质量（执行层），HIP-01 防止人类审批过细（节奏层）。**
+
+### 18.1 核心思想
+
+**默认连续执行 + 阶段性汇报 + 仅 4 类情况主动请求人类决策**。
+
+防止人类审批粒度过细导致 Agent 无法连续工作；同时保证关键治理节点有人类控制。
+
+### 18.2 连续工作原则
+
+AI 工程师必须保持连续推进能力。
+
+**标准流程**：
+
+```
+理解任务
+   ↓
+选择 Superpowers
+   ↓
+执行工作
+   ↓
+自动评估
+   ↓
+自动测试
+   ↓
+自动修复
+   ↓
+Reviewer 审查
+   ↓
+阶段汇报
+```
+
+**禁止**：
+
+```
+❌ 每完成一个小步骤立即请求人工确认
+❌ 每发现普通问题立即暂停
+❌ 将内部执行过程拆成大量人工审批节点
+❌ 用频繁汇报替代工程验证
+```
+
+### 18.3 4 类必须暂停请求人类决策的情况
+
+**A. 架构级决策冲突**
+- 需要修改已冻结 baseline
+- 需要改变已 LOCKED Decision
+- 出现两个不可兼容的架构方向
+
+**B. 范围边界变化**
+- 需要扩大或缩小 Phase Scope
+- 需要引入原计划之外的重要组件
+- 需要改变阶段目标
+
+**C. 高风险不可逆操作**
+- 删除已有设计资产
+- 修改公共契约
+- 破坏向后兼容性
+- 大规模重构目录 / 模块边界
+
+**D. 发现重大风险**
+- 当前方案无法满足 Iron Laws
+- 会导致 Agent Runtime 能力退化
+- 会导致未来无法扩展
+
+### 18.4 不暂停的情况
+
+- 文档章节完成
+- 普通接口细化
+- 非关键措辞调整
+- 格式优化
+- 内部一致性检查通过
+- 已明确决策下的展开设计
+- 不影响架构方向的小调整
+
+这些内容统一放入**阶段性工作汇报**。
+
+### 18.5 汇报节奏
+
+默认：
+
+```
+完成一个完整 Section 或重大里程碑后汇报
+```
+
+汇报格式（6 要素）：
+
+```
+1. 做了什么
+2. 发现什么
+3. 判断影响
+4. 下一步计划
+5. 是否需要决策
+6. 核心原则
+```
+
+### 18.6 与 Phase Exit Gate 的关系
+
+- HIP-01 不替代 Phase Exit Gate（PV-3）
+- HIP-01 仅调整**审批节奏**，不改变**审批节点**
+- Phase Exit Gate 仍必须遵守（Section 8-12 Exit Gate 6 项）
+
+---
+
+## 19. 三层互补关系总结
+
+| 治理层 | 决策 | 作用 | 防止问题 |
+|--------|------|------|---------|
+| **v2.0.x IRON-01~12** | Implementation Iron Laws | 设计层 | AI 削弱 Agent Runtime 能力 |
+| **v2.0.y HIP-01** | Human Interrupt Policy | 节奏层 | 人类审批粒度过细 |
+| **v2.0.z WORKFLOW-IRON-01** | Autonomous Engineering Execution Loop | 执行层 | 工程质量不足 |
+
+**三层闭环**：
+
+```
+设计层（IRON Laws）
+   ↓ 约束 Agent 实现不削弱能力
+执行层（WORKFLOW-IRON-01）
+   ↓ 强制 4 环节闭环保证工程质量
+节奏层（HIP-01）
+   ↓ 防止人类审批中断工作流
+最终：人类控制方向，Agent 连续完成复杂工程任务
+```
