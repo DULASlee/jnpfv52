@@ -1,9 +1,9 @@
 # UNFREEZE DIRECTIVE — P8-C Batch 07–17
 
 > **Directive ID**: UNFREEZE-P8-C-001
-> **Date**: 2026-08-30
+> **Date**: 2026-08-30 (updated 2026-08-30 per Chief Architect directive on R2-COMP upgrade)
 > **Authority**: Chief Architect
-> **Effective upon**: R1 (Real Human Blind Review COMPLETE) + R7 (this directive signed)
+> **Effective upon**: R1 (Human Governance Review COMPLETE) + **R2-COMP** (AI Expert Comparative Validation COMPLETE) + R7 (this directive signed)
 > **Target**: `p8-c/batch-07/add-index.sql` through `p8-c/batch-17/add-index.sql`
 
 ---
@@ -14,21 +14,24 @@ This directive authorizes the resumption of Phase 8 production execution (P8-C b
 
 The freeze was imposed after P8-Process-01 identified that P8-B execution had proceeded without a passing Shadow Gate — a procedural violation that required formal root-cause analysis and correction before production could resume.
 
-Seven UNFREEZE conditions were specified. This directive confirms that six of the seven have been resolved.
+Seven UNFREEZE conditions were originally specified. Per Chief Architect directive of 2026-08-30, an additional validation gate (**R2-COMP — AI Expert Comparative Validation**) has been added as the PRIMARY Skill validation mechanism. The directive now requires BOTH R1 (Human Governance — historical evidence) AND R2-COMP (AI Expert Comparative — primary validation) to be resolved before UNFREEZE takes effect.
 
 ---
 
-## UNFREEZE Condition Status
+## UNFREEZE Condition Status (UPDATED 2026-08-30)
 
 | ID | Condition | Status | Evidence |
 |---|---|---|---|
-| **R1** | Real Human Blind Review COMPLETE | ⏳ **PENDING** — NOT YET RUN | See `p8-a/shadow/REAL-HUMAN-BLIND-REVIEW-ACTIVATION.md` |
-| **R2** | Production Universe APPROVED | ✅ **RESOLVED** | `p8-c/P8-C1-Production-Universe-Decision.md` §9.3 |
+| **R1** | Human Governance Review COMPLETE | ✅ **RESOLVED** (CONDITIONAL PASS) | LJY, 2026-08-30; `p8-a/shadow/real-human-blind-review/comparison-cumulative.md` |
+| **R2-UNI** | Production Universe APPROVED | ✅ **RESOLVED** | `p8-c/P8-C1-Production-Universe-Decision.md` §9.3 |
 | **R3** | Existing Change Reconciliation APPROVED + ext_table_example disposition | ✅ **RESOLVED** | `p8-b/P8-B-Executed-Change-Reconciliation.md` §9 |
 | **R4** | P8-Process-01 ACKNOWLEDGED | ✅ **RESOLVED** | `findings/P8-Process-01.md` |
-| **R5** | Phase Gate State = PASS | 🔒 **CONDITIONAL** — gates P8-B → PASS pending R7 | `phase-gate-state.md` §3.3 |
+| **R2-COMP** | AI Expert Comparative Validation COMPLETE (NEW — primary validation) | ✅ **PASS** (2026-08-30) | `p8-a/r2/CROSS-ROUND-CUMULATIVE-AND-GATE-DECISION.md`; 10/10 tables PASS; 4/4 safety gates PASS |
+| **R5** | Phase Gate State = PASS | 🔒 **CONDITIONAL** — gates P8-B → PASS pending R2-COMP + R7 | `phase-gate-state.md` §3.5 |
 | **R6** | 69 SYSTEM_TEMPLATE Sub-Tier COMPLETE | ✅ **RESOLVED** | `p8-c/P8-C1-Production-Universe-Decision.md` §4.2 |
 | **R7** | Chief Architect UNFREEZE directive | 🔍 **THIS DIRECTIVE** | Pending signature |
+
+**Naming note**: The original R2 (Production Universe) is now referenced as **R2-UNI** to avoid conflict with the new **R2-COMP** (AI Expert Comparative Validation).
 
 ---
 
@@ -50,21 +53,41 @@ Prepared (P8-C, frozen):           58 tables / 128 indexes (batches 07–17)
 
 ---
 
-## R1: Real Human Blind Review
+## R1: Human Governance Review
 
-The Real Human Blind Review must be completed and pass before this directive takes effect.
+The Human Governance Review has been COMPLETED with CONDITIONAL PASS status (LJY, 2026-08-30).
 
 - Protocol: `p8-a/shadow/REAL-HUMAN-BLIND-REVIEW-ACTIVATION.md`
-- Scope: 5 tables (AI-selected), ext_table_example SVR-001, 30-table reconciliation
-- Standard: Blind state — reviewer must not have participated in Phase 8 analysis
-- **If PASS**: R1 condition satisfied → UNFREEZE proceeds
-- **If FAIL**: Reviewer must document failures → AI Engineer corrects → re-review
+- Output: `p8-a/shadow/real-human-blind-review/01..05-track-b-HUMAN.md` (5 files signed)
+- Comparison: `p8-a/shadow/real-human-blind-review/comparison-cumulative.md`
+- Result: HG FN = 1 (base_user HG#4), P0/P1 = 0, Core Contamination = 0, Closure Error = 0
+- SVR-001: Human independently confirmed OUT_OF_SCOPE + RETAIN-AS-EXCEPTION
+
+**R1 status: CONDITIONAL PASS**. Historical evidence preserved for auditability. Human no longer required to redo 10+ tables independently per Chief Architect directive.
+
+---
+
+## R2-COMP: AI Expert Comparative Validation (NEW — 2026-08-30)
+
+The AI Expert Comparative Validation is the PRIMARY Skill validation mechanism per Chief Architect directive 2026-08-30.
+
+- Master Plan: `p8-a/r2/R2-MASTER-PLAN.md`
+- Expert Protocol: `p8-a/r2/R2-EXPERT-PROTOCOL.md`
+- Comparison Protocol: `p8-a/r2/R2-COMPARISON-PROTOCOL.md`
+- Coverage Matrix: `p8-a/r2/COVERAGE-MATRIX-AND-ROUND-SELECTION.md`
+- Round 1 (5 tables, Normal Production Stability): base_message, ext_product_goods, base_advanced_query_scheme, base_file, flow_template_json
+- Round 2 (5 tables, Adversarial/Boundary Stability): sa_business_process, sa_decision_table, WM_BillDetail, base_msg_account, base_visual_filter
+
+**Standard**: 10 tables × (8 metrics + 4 safety gates) PASS.
+
+**If PASS**: R2-COMP condition satisfied → UNFREEZE proceeds.
+**If FAIL**: Root Cause Analysis → Local Calibration → Targeted Regression. No full re-run.
 
 ---
 
 ## Scope of UNFREEZE
 
-Upon R1 completion and this directive signing:
+Upon **R1 CONDITIONAL PASS** + **R2-COMP PASS** + this directive signing:
 
 ### Authorized
 - Execute `batch-07-add-index.sql` through `batch-17-add-index.sql` in sequence
@@ -89,9 +112,10 @@ Upon R1 completion and this directive signing:
 ## Phase Gate State After UNFREEZE
 
 ```
-P8-A Shadow Gate         = PENDING → PASS (upon R1 completion)
+P8-A Shadow Gate         = CONDITIONAL PASS → PASS (upon R1 + R2-COMP sign-offs)
+P8-A.6 R2-COMP Gate      = FRAMEWORK READY → PASS (upon Round 1+2 completion)
 P8-B Stability Gate      = CONDITIONAL PASS → PASS (upon R7 signing)
-P8-C Exit Gate           = LOCKED → PASS (both parent gates + R1 satisfied)
+P8-C Exit Gate           = LOCKED → PASS (all parent gates + R1 + R2-COMP satisfied)
 P8-D / P8-E              = NOT_RUN (post-P8-C)
 ```
 
@@ -108,12 +132,14 @@ Post-UNFREEZE monitoring requirements per `phase-gate-state.md` §3.4:
 ```
 UNFREEZE-P8-C-001
 
-[x] R2 Production Universe APPROVED (206 IN_SCOPE + 68 ST-PROD)
+[x] R1 Human Governance Review = CONDITIONAL PASS (LJY, 2026-08-30)
+[x] R2-UNI Production Universe APPROVED (206 IN_SCOPE + 68 ST-PROD)
 [x] R3 Reconciliation APPROVED (30/70 + SVR-001)
 [x] R4 P8-Process-01 ACKNOWLEDGED
-[~] R5 Phase Gate = CONDITIONAL PASS (R7 signing completes)
+[x] R2-COMP AI Expert Comparative Validation COMPLETE (Round 1+2 PASS) ← DONE 2026-08-30
+[~] R5 Phase Gate = CONDITIONAL PASS (R2-COMP + R7 signing complete)
 [x] R6 SYSTEM_TEMPLATE Sub-Tier COMPLETE (69 tables)
-[ ] R1 Real Human Blind Review COMPLETE
+[ ] R7 Chief Architect UNFREEZE directive SIGNED ← THIS
 
 Chief Architect: ________________________  Date: __________
 Directive ID: UNFREEZE-P8-C-001
@@ -137,3 +163,7 @@ Directive ID: UNFREEZE-P8-C-001
 - Reconciliation: `p8-b/P8-B-Executed-Change-Reconciliation.md`
 - Progress Ledger: `Production-Progress-Ledger.md`
 - Blind Review Activation: `p8-a/shadow/REAL-HUMAN-BLIND-REVIEW-ACTIVATION.md`
+- **R2 Master Plan**: `p8-a/r2/R2-MASTER-PLAN.md`
+- **R2 Expert Protocol**: `p8-a/r2/R2-EXPERT-PROTOCOL.md`
+- **R2 Comparison Protocol**: `p8-a/r2/R2-COMPARISON-PROTOCOL.md`
+- **R2 Coverage Matrix**: `p8-a/r2/COVERAGE-MATRIX-AND-ROUND-SELECTION.md`

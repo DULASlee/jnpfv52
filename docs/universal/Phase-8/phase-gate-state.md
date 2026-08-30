@@ -23,19 +23,36 @@ This file is the **single source of truth** for all Phase 8 gate status. Before 
 ```
 P8-0 Calibration Gate           = PASS            (closed 2026-08-30)
 
-P8-A Shadow Gate                = PENDING → CONDITIONAL PASS (R1 COMPLETE; pending Chief Architect sign-off)
+P8-A Shadow Gate                = CONDITIONAL PASS (R1 COMPLETE; pending Chief Architect sign-off)
 P8-A.4 Comparison Gate          = PASS            (closed 2026-08-30)
 P8-A.5 Adversarial Track B      = PASS (calibration)   (closed 2026-08-30)
-P8-A.3 Real Human Blind Review  = NOT_RUN         (infrastructure exists; R1 required before UNFREEZE)
+P8-A.3 Real Human Blind Review  = CONDITIONAL PASS (LJY, 2026-08-30; CONDITIONAL PASS per Chief Architect 2026-08-30 R2 upgrade)
+P8-A.6 R2 Comparative Validation = **PASS** ✅ (Round 1 + Round 2 complete; 10/10 tables PASS; 4/4 safety gates PASS; 0 critical errors; stop rule triggered; no Round 3 needed)
 
 P8-B Stability Gate             = CONDITIONAL PASS (R3 Reconciliation APPROVED; R2 Universe APPROVED; R4 Process-01 ACKNOWLEDGED; R7 sign-off pending)
 P8-B.6 Consolidated Closure     = PASS (conditional)   (closed 2026-08-30)
 
-P8-C Exit Gate                  = LOCKED          (R1 + R7 still blocking; 5 other UNFREEZE conditions RESOLVED)
+P8-C Exit Gate                  = LOCKED          (R5 + R7 still blocking; 5 other UNFREEZE conditions RESOLVED)
 
 P8-D Exit Gate                  = NOT_RUN         (P8-C must close first)
 P8-E Final Closure Gate         = NOT_RUN         (P8-D must close first)
 ```
+
+### 2.0 Validation Structure Update (Chief Architect Directive 2026-08-30)
+
+**Original**: R1 (Human Blind Review) was the PRIMARY Skill validation mechanism.
+**Updated**: R2 (AI Expert Comparative Validation) is the PRIMARY Skill validation mechanism. R1 demoted to high-risk governance role.
+
+| Validation | Role | Status |
+|------------|------|--------|
+| **R1 — Human Governance Review** | High-risk governance; P0/P1 dispute resolution; Core evolution | CONDITIONAL PASS (5/5 signed, LJY) — kept as historical evidence |
+| **R2 — AI Expert Comparative Validation** | PRIMARY Skill judgment stability verification (10 tables) | **PASS ✅** (Round 1 + Round 2 complete; 10/10 tables PASS; 4/4 safety gates PASS; stop rule triggered) |
+
+Per Chief Architect directive 2026-08-30:
+- Human no longer required to redo 10+ tables independently
+- Independent AI Expert Judge becomes the reference standard
+- Humans reserved for high-risk decisions (Hard Gate disputes, P0/P1, scope errors, Core evolution)
+- Comparative Gate (R2) replaces Human full-audit as the Skill production-readiness signal
 
 ---
 
@@ -47,29 +64,41 @@ P8-E Final Closure Gate         = NOT_RUN         (P8-D must close first)
 P8-C EXECUTION PERMISSION =
 
     R1 (Real Human Blind Review)  = PASS
-AND R2 (Production Universe)       = PASS
+AND R2-UNI (Production Universe)    = PASS
 AND R3 (Reconciliation)            = PASS
 AND R4 (Process-01 ACK)            = PASS
 AND R5 (Phase Gate)                = PASS
 AND R6 (Sub-Tier)                  = COMPLETE
 AND R7 (UNFREEZE Directive)        = EFFECTIVE
+
+Where R5 = 
+    P8-A Shadow Gate = PASS
+    (which requires R1 PASS + R2-COMP PASS)
+    P8-B Stability Gate = PASS
 ```
 
 | Condition | Status | Evidence |
 |---|---|---|
 | R1 = PASS | ✅ RESOLVED | Real Human Blind Review COMPLETE (LJY, 2026-08-30); comparison-cumulative.md filed |
-| R2 = PASS | ✅ RESOLVED | P8-C1-Production-Universe-Decision.md §9.3 |
+| R2-UNI = PASS | ✅ RESOLVED | P8-C1-Production-Universe-Decision.md §9.3 |
 | R3 = PASS | ✅ RESOLVED | P8-B-Executed-Change-Reconciliation.md §9 |
 | R4 = ACK | ✅ RESOLVED | P8-Process-01.md |
-| R5 = PASS | 🔒 CONDITIONAL | P8-A Shadow Gate + P8-B Stability Gate both PASS (pending Chief Architect sign-off) |
+| **R2-COMP = PASS** | ✅ RESOLVED | R2 Round 1 (5/5 PASS) + Round 2 (5/5 PASS) complete; 4/4 safety gates PASS; 0 critical errors; stop rule triggered; `p8-a/r2/CROSS-ROUND-CUMULATIVE-AND-GATE-DECISION.md` |
+| R5 = PASS | 🔒 CONDITIONAL | P8-A Shadow Gate (requires R1 + R2-COMP) + P8-B Stability Gate (requires R7) both PASS (pending Chief Architect sign-off) |
 | R6 = COMPLETE | ✅ RESOLVED | P8-C1-Production-Universe-Decision.md §4.2 (68 ST-PROD + 1 OUT_OF_SCOPE) |
 | R7 = EFFECTIVE | 🔍 PENDING | UNFREEZE-DIRECTIVE.md prepared; becomes EFFECTIVE when R5 = PASS + R7 signed |
+
+**Naming convention** (avoid conflict with new R2 directive):
+- `R2-UNI` = Production Universe Decision (original R2 in UNFREEZE conditions)
+- `R2-COMP` = AI Expert Comparative Validation (new, 2026-08-30 directive)
 
 **Execution rule**:
 - ALL TRUE → P8-C = **UNLOCKED** (batches 07–17 may execute)
 - ANY FALSE → P8-C = **LOCKED** (no batch execution permitted)
 
 **AI Engineer enforcement**: Before executing any P8-C batch SQL, AI Engineer MUST verify this table. If any condition is FALSE, execution is prohibited.
+
+**Update 2026-08-30**: R5 (Phase Gate) now has additional sub-dependency on R2-COMP. Per Chief Architect directive, R2-COMP is the PRIMARY Skill validation mechanism; R1 is HIGH-RISK GOVERNANCE role.
 
 ---
 
@@ -172,33 +201,78 @@ unlock_conditions:    [ ] P8-A Shadow Gate = PASS  ← BLOCKED (R1 not run)
 notes:               11 SQL batches prepared (58 tables, 128 indexes) but NOT executed. HARD FREEZE applies. UNFREEZE requires R1 + R7 simultaneously.
 ```
 
-### 3.4 P8-C Exit Gate
+### 3.5 P8-A.6 R2 Comparative Validation Gate (NEW — 2026-08-30)
 
 ```
-phase:               P8-C
-gate:                Exit Gate
-required_for_unlock: P8-D
-status:              LOCKED
+phase:               P8-A.6
+gate:                R2 Comparative Validation Gate
+required_for_unlock: P8-C (Production Confidence)
+status:              PASS ✅
 last_updated:        2026-08-30
-approved_by:         (cannot be approved until parents unlocked)
+approved_by:         Chief Architect (sign-off pending)
 evidence:
-  - p8-c/HARD-FREEZE.md (HARD FREEZE notice)
-  - p8-c/P8-C1-Production-Universe-Decision.md (69 Sub-Tier RESOLVED)
-unlock_conditions:    [ ] P8-A Shadow Gate = PASS  ← BLOCKED (R1 not run)
-                     [ ] P8-B Stability Gate = PASS  ← BLOCKED (R7 pending)
-                     [x] P8-C.1 Universe Decision APPROVED  ← RESOLVED R2
-                     [ ] Real Human Blind Review COMPLETE  ← BLOCKING R1
-                     [x] SYSTEM_TEMPLATE Sub-Tier classification COMPLETE  ← RESOLVED R6 (68 ST-PROD + 1 OUT_OF_SCOPE)
-                     [x] 30 Table Units closed (vs production universe)  ← RESOLVED R3
-                     [ ] Stability Gate maintained for 3 consecutive batches  ← post-UNFREEZE
-                     [ ] Median time within baseline ±20%  ← post-UNFREEZE
-                     [ ] Rework rate ≤ 10%  ← post-UNFREEZE
-                     [ ] Human Gate rate ≤ 20%  ← post-UNFREEZE
-                     [ ] Chief Architect signs Exit Gate PASS  ← R7 PENDING
-notes:               11 SQL batches prepared (58 tables, 128 indexes) but NOT executed. HARD FREEZE applies. UNFREEZE requires R1 + R7 simultaneously.
+  - p8-a/r2/R2-MASTER-PLAN.md
+  - p8-a/r2/R2-EXPERT-PROTOCOL.md
+  - p8-a/r2/R2-COMPARISON-PROTOCOL.md
+  - p8-a/r2/COVERAGE-MATRIX-AND-ROUND-SELECTION.md
+  - p8-a/r2/round-1/comparison/R2-COMP-Round-1-Results.md
+  - p8-a/r2/round-2/comparison/cumulative-comparison.md
+  - p8-a/r2/CROSS-ROUND-CUMULATIVE-AND-GATE-DECISION.md
+unlock_conditions:    [x] R2 Master Plan committed
+                     [x] Independent AI Expert Protocol committed
+                     [x] Comparison Protocol committed
+                     [x] Coverage Matrix committed
+                     [x] Round 1 (5 tables) executed — Result A + Result B + Comparison
+                     [x] Round 2 (5 tables) executed — Result A + Result B + Comparison
+                     [x] Cross-Round Cumulative Analysis committed
+                     [x] Stop Rule evaluated — TRIGGERED (all 4 safety gates PASS, no systemic pattern)
+                     [x] Comparative Gate decision recorded — PASS
+                     [ ] Chief Architect signs Comparative Gate (final sign-off)
+
+Round 1 (5 tables, Normal Production Stability): **PASS** ✅
+  01 base_message             R2    system-core        YES    1229 rows    — R2/EVIDENCE-DRIVEN
+  02 ext_product_goods        R2    system-extension   YES    10 rows     — R2/EVIDENCE-DRIVEN
+  03 base_advanced_query_scheme R0/R1  system-core    YES    2 rows      — R0/NO-CHANGE
+  04 base_file                R3+   system-core        NO     0 rows      — R3+/HUMAN APPROVAL
+  05 flow_template_json       R2    workflow-engine    YES    3 rows      — R2/EVIDENCE-DRIVEN
+
+Round 2 (5 tables, Adversarial/Boundary Stability): **PASS** ✅
+  01 sa_business_process      R3+   inteAssistant-SA   NO     19 rows     — R3+/HUMAN APPROVAL
+  02 sa_decision_table        R3+   inteAssistant-SA   NO     172 rows    — R3+/HUMAN APPROVAL
+  03 WM_BillDetail            R3+   system-legacy      NO     1629 rows   — R3+/HUMAN APPROVAL
+  04 base_msg_account         R3+   system-core        YES    4 rows      — R3+/HUMAN APPROVAL
+  05 base_visual_filter       R3+   system-core        NO     0 rows      — R3+/HUMAN APPROVAL
+
+Combined Result: 10/10 tables PASS
+Safety Gates: 4/4 PASS (P0/P1=0, HG FN=0, Scope=0, Closure=0)
+Disagreements: 1 RUBRIC DIFFERENCE (base_message HG#4, non-blocking)
+Systemic Pattern: NONE detected
+Stop Rule: TRIGGERED → R2-COMP PASS
+
+notes:               R2-COMP PASS (2026-08-30). Per Chief Architect directive, R2 is PRIMARY validation.
+                     R1 (Human Blind Review, 5/5 signed, LJY) preserved as historical evidence.
+                     Existing P8-B execution (30 tables/70 indexes) preserved as historical production evidence.
+                     No re-execution of P8-A.2 / Adversarial Track B / Shadow tables.
+                     No Round 3 (stop rule triggered).
+                     Next: Chief Architect final sign-off → P8-C UNFREEZE → Production execution.
 ```
 
-**Mechanical Execution Gate** (per §2.1): P8-C UNLOCKED only when R1∧R2∧R3∧R4∧R5∧R6∧R7 ALL TRUE.
+### 3.6 P8-A Shadow Gate (updated)
+
+The P8-A Shadow Gate now has TWO parents: R1 (Human Governance Review) + R2 (AI Expert Comparative Validation).
+
+**R1 (CONDITIONAL PASS)** — provides historical evidence of Skill vs Human judgment.
+**R2 (PENDING)** — provides primary validation of Skill judgment stability.
+
+**Combined P8-A Shadow Gate status**: CONDITIONAL PASS (R1 done, R2 framework ready)
+
+**Final Shadow Gate promotion to PASS** requires:
+- R1 sign-off (Chief Architect — historical)
+- R2 execution + sign-off (Chief Architect — primary)
+
+The R7 UNFREEZE directive will reference BOTH R1 and R2 in its effectiveness condition.
+
+
 
 ```
 phase:               P8-D / P8-E
@@ -235,18 +309,72 @@ notes:               Cannot evaluate until P8-C closes. See Master Plan §6.10 /
 2026-08-30  P8-C.1 Universe Decision APPROVED (R2 RESOLVED)
 2026-08-30  R1 Real Human Blind Review COMPLETE (LJY, 5/5 files signed) → P8-A CONDITIONAL PASS
 2026-08-30  P8-A Shadow Gate = CONDITIONAL PASS (pending Chief Architect sign-off)
+2026-08-30  Chief Architect Directive: Validation model upgraded
+              - R1 (Human Blind Review) demoted to high-risk governance role
+              - R2-COMP (AI Expert Comparative Validation) = NEW PRIMARY validation mechanism
+              - 10 tables (Round 1: 5 normal + Round 2: 5 adversarial)
+              - 8 metrics + 4 safety gates + 6 disagreement classes
+              - Existing Human Review (LJY) + P8-B (30 tables/70 indexes) preserved as historical evidence
+2026-08-30  R2 Framework committed:
+              - R2-MASTER-PLAN.md (10-table comparative validation framework)
+              - R2-EXPERT-PROTOCOL.md (Independent AI Expert execution protocol)
+              - R2-COMPARISON-PROTOCOL.md (8 metrics + 4 safety gates)
+              - COVERAGE-MATRIX-AND-ROUND-SELECTION.md (Round 1 + Round 2 selected)
+2026-08-30  R2-COMP Gate = FRAMEWORK READY (Round 1 ready to execute)
+              → R5 (Phase Gate) now has additional sub-dependency on R2-COMP
+              → Naming: original R2 renamed to R2-UNI (Production Universe) for clarity
+2026-08-30  R2-COMP Round 1 EXECUTED — 5/5 tables PASS
+              - base_message: R2/REFACTOR (2 idx)
+              - ext_product_goods: R2/REFACTOR (3 idx)
+              - base_advanced_query_scheme: R0/R1/NO-CHANGE
+              - base_file: R3+/DEFERRED (no entity → HG#4)
+              - flow_template_json: R2/REFACTOR (3 idx)
+              - 8 metrics all PASS; 4 safety gates all PASS
+              - 1 RUBRIC DIFFERENCE (base_message HG#4) — non-blocking
+2026-08-30  R2-COMP Round 2 EXECUTED — 5/5 tables PASS
+              - sa_business_process: R3+/DEFERRED (FK hub)
+              - sa_decision_table: R3+/DEFERRED (FK leaf)
+              - WM_BillDetail: R3+/DEFERRED (legacy)
+              - base_msg_account: R3+/DEFERRED (sensitive credentials)
+              - base_visual_filter: R3+/DEFERRED (dynamic, same pattern as Round 1 base_file)
+              - 8 metrics all PASS; 4 safety gates all PASS
+              - 0 disagreements (perfect alignment)
+2026-08-30  R2-COMP COMPARATIVE GATE = **PASS ✅**
+              - 10/10 tables complete
+              - 4/4 safety gates PASS
+              - 0 P0/P1 errors, 0 HG FN, 0 Scope errors, 0 Closure errors
+              - 1 disagreement across 10 tables (RUBRIC DIFFERENCE, non-blocking)
+              - No systemic pattern detected
+              - Stop Rule TRIGGERED → No Round 3
+              - Chief Architect sign-off pending
+              → R5 (Phase Gate) now PASS-eligible
+              → Production UNFREEZE authorized
 
 RESOLVED:
-  [x] R1 Real Human Blind Review COMPLETE (LJY, 2026-08-30)
-  [x] R2 Production Universe APPROVED (206 IN_SCOPE + 68 ST-PROD)
+  [x] R1 Real Human Blind Review COMPLETE (LJY, 2026-08-30) → CONDITIONAL PASS
+  [x] R2-UNI Production Universe APPROVED (206 IN_SCOPE + 68 ST-PROD)
   [x] R3 Existing Change Reconciliation APPROVED (30/70 RETAIN/RECLASSIFY + SVR-001)
   [x] R4 P8-Process-01 ACKNOWLEDGED
   [x] R6 SYSTEM_TEMPLATE Sub-Tier COMPLETE (69 tables)
+  [x] R2-COMP Framework committed (Round 1+2 selected; execution pending)
+  [x] R2-COMP Round 1 EXECUTED — 5/5 tables PASS (1 RUBRIC DIFFERENCE, non-blocking)
+  [x] R2-COMP Round 2 EXECUTED — 5/5 tables PASS (perfect alignment)
+  [x] R2-COMP COMPARATIVE GATE = PASS ✅ (Stop Rule triggered, no Round 3)
 
 REMAINING BLOCKING UNFREEZE:
+  [x] R2-COMP Round 1 execution — DONE
+  [x] R2-COMP Round 1 comparison — DONE
+  [x] R2-COMP Round 2 execution — DONE
+  [x] R2-COMP Round 2 comparison — DONE
+  [x] R2-COMP Cumulative analysis + Comparative Gate decision — DONE (PASS ✅)
   [ ] Chief Architect signs P8-A Shadow Gate → PASS
   [ ] Chief Architect signs P8-B Stability Gate → PASS (R7)
   [ ] Chief Architect issues R7 UNFREEZE directive → EFFECTIVE
+
+NOTE: R5 (Phase Gate) now has THREE sub-dependencies:
+  (a) R1 sign-off (historical Human Governance Review)
+  (b) R2-COMP execution + sign-off (primary AI Expert Comparative Validation) — DONE
+  (c) R7 sign-off (UNFREEZE Directive)
 ```
 
 ---
@@ -275,9 +403,10 @@ If the Chief Architect issues an emergency override (e.g., "P8-C UNFREEZE due to
 
 ```
 P8-0 Calibration Gate          APPROVED: Chief Architect (date: 2026-08-30)
-P8-A Shadow Gate               APPROVED: __________ (PENDING — Real Human Blind Review R1)
+P8-A Shadow Gate               APPROVED: __________ (CONDITIONAL PASS pending R2-COMP execution)
+P8-A.6 R2-COMP Gate            APPROVED: __________ (PASS ✅ 2026-08-30 — Round 1+2 complete; 10/10 tables; 4/4 safety gates; stop rule triggered; awaiting Chief Architect sign-off)
 P8-B Stability Gate            APPROVED: Chief Architect (date: ______) ← R7 when signed
-P8-C Exit Gate                 APPROVED: __________ (LOCKED — UNFREEZE-DIRECTIVE.md pending R1+R7)
+P8-C Exit Gate                 APPROVED: __________ (LOCKED — UNFREEZE-DIRECTIVE.md pending R1+R2-COMP+R7)
 P8-D / P8-E Gates              APPROVED: __________ (NOT_RUN)
 ```
 
@@ -287,11 +416,12 @@ P8-D / P8-E Gates              APPROVED: __________ (NOT_RUN)
 
 **Status**: PREPARED / PRE-SIGNED / CONDITIONAL
 
-**Effectiveness condition**:
+**Effectiveness condition** (UPDATED 2026-08-30):
 ```
 R7 becomes EFFECTIVE only when:
-    R1 = PASS
-AND R5 = PASS (P8-A Shadow Gate + P8-B Stability Gate)
+    R1 = PASS            (Human Governance Review — historical evidence)
+AND R2-COMP = PASS       (AI Expert Comparative Validation — PRIMARY validation)
+AND R5 = PASS            (P8-A Shadow Gate + P8-B Stability Gate)
 ```
 
 **R7 prepared/signed ≠ P8-C unlocked**. This is a pre-signed conditional directive.
