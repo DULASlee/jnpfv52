@@ -2,7 +2,7 @@
 # Canonical reference for all completed milestones and current state.
 
 version: "8.28"
-last_updated: "2026-08-19"
+last_updated: "2026-08-30"
 current_phase: "阶段 C — 说明书正式版预览/下载 + 门控 JSON 修复"
 current_focus:
   - "PM 4 步：门控→骨架(PM内)→九步→步骤③→澄清≥2轮→说明书确认→Finalize"
@@ -11,6 +11,29 @@ current_focus:
   next_gate: "新 pipeline 全路径：门控→澄清2轮→说明书预览/下载 → 用户通过"
 
 session_log:
+  - date: "2026-08-30"
+    topic: "代码变更"
+    hook_auto_archive: "46d71ed2-5dcd-424e-8521-97d1b7eb1a1a"
+    outcomes:
+      - "hook 自动归档：4 个代码文件 · 代码变更"
+      - ".claude/memory/session-digest/latest.json"
+      - ".claude/memory/session-digest/2026-08-30-20260829172419.json"
+      - ".claude/memory/session-digest/2026-08-30-20260829172420.json"
+      - ".claude/memory/session-digest/2026-08-30-20260829172422.json"
+    verify: "node scripts/verify-toolchain.mjs"
+    session_summary: ".claude/memory/session-summaries/2026-08-30-代码变更-AUTO.md"
+    mistake_log: "M186"
+    episodic_project_id: "D--JNPF-v52"
+  - date: "2026-08-30"
+    topic: "代码变更"
+    hook_auto_archive: "2099b038-29b9-4d4b-9370-120d8642de93"
+    outcomes:
+      - "hook 自动归档：1 个代码文件 · 代码变更"
+      - ".claude/memory/session-digest/2026-08-30-20260829172419.json"
+    verify: "node scripts/verify-toolchain.mjs"
+    session_summary: ".claude/memory/session-summaries/2026-08-30-代码变更-AUTO.md"
+    mistake_log: "M179"
+    episodic_project_id: "D--JNPF-v52"
   - date: "2026-08-19"
     topic: "代码变更"
     hook_auto_archive: "96ccb227-889f-4776-98eb-7b236431434d"

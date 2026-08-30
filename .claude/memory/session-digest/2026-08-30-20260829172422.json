@@ -1,0 +1,45 @@
+{
+  "date": "2026-08-30",
+  "endedAt": "2026-08-29T17:24:22.699Z",
+  "hookEvent": "sessionEnd",
+  "conversationId": "c2ec3765-9f0d-424e-856d-33797d3c47b2",
+  "changedFiles": [
+    ".claude/memory/session-digest/2026-08-30-20260829172419.json",
+    ".claude/memory/session-digest/2026-08-30-20260829172420.json",
+    ".claude/skills/table-refactor-expert/SKILL.md",
+    "docs/universal/Table-Refactoring-Expert-Execution-Manual.md",
+    "docs/universal/Table-Refactoring-Expert-Foundry-Target-Profile.md",
+    "docs/universal/Table-Refactoring-Expert-Generic-Validation-Report.md",
+    "docs/universal/Table-Refactoring-Expert-JNPF-Extension.md",
+    "docs/universal/Table-Refactoring-Expert-Master-Spec.md",
+    "docs/universal/Table-Refactoring-Expert-Phase-5-Report.md",
+    "docs/universal/Table-Refactoring-Expert-Phase-6-JNPF-Pilot-Plan.md",
+    "docs/universal/Table-Refactoring-Expert-Phase-6-JNPF-Pilot-Results.md",
+    "docs/universal/Table-Refactoring-Expert-Product-Definition.md",
+    "docs/universal/generic-validation-cases/case-01-simple-tenant-saas.md",
+    "docs/universal/generic-validation-cases/case-02-fk-heavy.md",
+    "docs/universal/generic-validation-cases/case-03-soft-delete-audit.md",
+    "docs/universal/generic-validation-cases/case-04-aggregate-root-child.md",
+    "docs/universal/generic-validation-cases/case-05-query-index-heavy.md",
+    "docs/universal/generic-validation-cases/case-06-legacy-messy.md",
+    "docs/universal/generic-validation-cases/case-07-ambiguous-evidence.md"
+  ],
+  "codeFilesChanged": 2,
+  "archiveStatus": "complete",
+  "archiveChecks": {
+    "mistakeOk": true,
+    "focusOk": true,
+    "registryOk": true,
+    "complete": true
+  },
+  "topic": "代码变更",
+  "metaOnly": false,
+  "autoSummaryPath": "D:\\JNPF-v52\\.claude\\memory\\session-summaries\\2026-08-30-代码变更-AUTO.md",
+  "machineArchival": {
+    "applied": true,
+    "sessionId": "c2ec3765-9f0d-424e-856d-33797d3c47b2",
+    "mistakeId": "M185",
+    "focusPath": ".cursor/CURRENT-FOCUS.md",
+    "registryPath": "docs/progress-registry.yaml"
+  }
+}

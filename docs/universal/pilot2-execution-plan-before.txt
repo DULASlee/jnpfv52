@@ -1,0 +1,20 @@
+StmtText                                                                                                                   
+---------------------------------------------------------------------------------------------------------------------------
+SELECT F_ID, F_SOURCE_NODE_ID FROM BASE_KNOWLEDGE_EDGE WHERE F_TENANT_ID = 'default' AND F_SOURCE_NODE_ID = 'TEST_VALUE';  
+
+(1 行受影响)
+StmtText                                                                                                                                                                                                                                                                                                                                        
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  |--Clustered Index Scan(OBJECT:([ZXAF_V1_DevTest1].[dbo].[BASE_KNOWLEDGE_EDGE].[PK__BASE_KNO__2C6EC7C37D5BBF05]), WHERE:([ZXAF_V1_DevTest1].[dbo].[BASE_KNOWLEDGE_EDGE].[F_TENANT_ID]=CONVERT_IMPLICIT(nvarchar(4000),[@1],0) AND [ZXAF_V1_DevTest1].[dbo].[BASE_KNOWLEDGE_EDGE].[F_SOURCE_NODE_ID]=CONVERT_IMPLICIT(nvarchar(4000),[@2],0))) 
+
+(1 行受影响)
+消息 1067，级别 15，状态 2，服务器 codesoft\SQLEXPRESS，第 1 行
+SET SHOWPLAN 语句必须是批处理中仅有的语句。
+消息 1067，级别 15，状态 2，服务器 codesoft\SQLEXPRESS，第 1 行
+SET SHOWPLAN 语句必须是批处理中仅有的语句。
+消息 207，级别 16，状态 1，服务器 codesoft\SQLEXPRESS，第 3 行
+列名 'DeleteMark' 无效。
+消息 207，级别 16，状态 1，服务器 codesoft\SQLEXPRESS，第 3 行
+列名 'SourceNodeId' 无效。
+消息 207，级别 16，状态 1，服务器 codesoft\SQLEXPRESS，第 3 行
+列名 'TargetNodeId' 无效。

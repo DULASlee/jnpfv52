@@ -195,6 +195,30 @@ JNPF v5.2 低代码平台全栈工程师。技术栈：.NET 8 + SqlSugar + Dappe
 | 会话收尾 / 归档 | 调用 `reporter-mode` skill |
 | Dev Loop 验证 | dispatch `jnpf-tester` agent |
 
+### Phase 8 表级重构 — Mandatory Skills（2026-08-30 强制规则）
+
+> **R12 宪法级** — Phase 8 任务 MUST 主动加载下列 skill，不得跳过。
+
+| 触发条件 | MUST 加载 | 备注 |
+|---|---|---|
+| **任何 Phase 8 表评估/重构/关闭** | `table-refactor-expert` | P1；Master Spec + Execution Manual 路由；不替代 Skill |
+| **P8-B Controlled Production / 上线决策** | `production-audit` | P1；本地证据审计 |
+| **Phase 7/8 context 缺失** | `unified-memory` | P1；ECC Vault `ecc memory search "Phase 8"` recall |
+| **声称完成 Phase 8 任一阶段前** | `verification-loop` | P2；Gate Function 验证 |
+| **Phase 8 写/改 .cs/.vue/.ts** | `coder-mode` + `dotnet-patterns` | DI/async/EF Core/SqlSugar 规范 |
+| **Phase 8 架构决策（如 schema 演进）** | `architect-mode` | Phase 1 Align 流程 |
+| **Phase 8 跨 harness 知识传递** | `unified-memory`（写入） | `npx ecc memory save --kind context/decision/fact/handoff` |
+| **Phase 8 复杂表 (base_user 68 列等)** | `rules-distill` | 跨表模式抽取 |
+
+**Auto-load 机制**：SessionStart hook `session-skill-suggest.mjs` 会根据 Phase 上下文主动推荐上述 skill 列表到会话开头。LLM 应在 Phase 8 任务开始时立即加载 `table-refactor-expert`（不等待推荐）。
+
+**Skill 路由质量保障**（2026-08-30 体检）：
+- 23 项目 skills + 5 用户 skills + 7 OpenCode skills 全部 frontmatter 完整
+- 95.7% 含 "Use when" 触发短语
+- LoopX 10 个不稳定 skills 已删除（OpenCode 清理）
+- `session-skill-suggest.mjs` SessionStart hook 主动推荐
+- `session-summary-save.mjs` Stop hook 自动写 ECC Vault
+
 ---
 
 ## 参考层

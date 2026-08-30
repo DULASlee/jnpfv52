@@ -1,0 +1,35 @@
+FK_kg_pattern_usage dbo kg_pattern_usage pattern_id kg_pattern id NO_ACTION NO_ACTION
+FK_sa_bpm_dfd dbo sa_business_process dfd_id sa_dfd id NO_ACTION NO_ACTION
+FK_sa_dict_bpm dbo sa_data_dictionary bpm_id sa_business_process id NO_ACTION NO_ACTION
+FK_sa_dict_dfd dbo sa_data_dictionary dfd_id sa_dfd id NO_ACTION NO_ACTION
+FK_sa_dt_dict dbo sa_decision_table dict_id sa_data_dictionary id NO_ACTION NO_ACTION
+FK_sa_dt_pspec dbo sa_decision_table pspec_id sa_pspec id NO_ACTION NO_ACTION
+FK_sa_dfd_scope dbo sa_dfd scope_id sa_scope id NO_ACTION NO_ACTION
+FK_sa_er_dict dbo sa_er dict_id sa_data_dictionary id NO_ACTION NO_ACTION
+FK_sa_pspec_bpm dbo sa_pspec bpm_id sa_business_process id NO_ACTION NO_ACTION
+FK_sa_pspec_dict dbo sa_pspec dict_id sa_data_dictionary id NO_ACTION NO_ACTION
+FK_sa_std_bpm dbo sa_state_machine bpm_id sa_business_process id NO_ACTION NO_ACTION
+FK_sa_std_dict dbo sa_state_machine dict_id sa_data_dictionary id NO_ACTION NO_ACTION
+FK_sa_ui_bpm dbo sa_ui bpm_id sa_business_process id NO_ACTION NO_ACTION
+FK_sa_ui_dict dbo sa_ui dict_id sa_data_dictionary id NO_ACTION NO_ACTION
+
+(14 行受影响)
+sa_data_dictionary 2
+sa_decision_table 2
+sa_pspec 2
+sa_state_machine 2
+sa_ui 2
+kg_pattern_usage 1
+sa_business_process 1
+sa_dfd 1
+sa_er 1
+
+(9 行受影响)
+sa_data_dictionary 5
+sa_business_process 4
+sa_dfd 2
+sa_pspec 1
+sa_scope 1
+kg_pattern 1
+
+(6 行受影响)
