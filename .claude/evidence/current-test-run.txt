@@ -201,3 +201,5 @@ C:\Program Files\dotnet\sdk\8.0.424\Roslyn\Microsoft.CSharp.Core.targets(85,5): 
      at JNPF.Tests.Agent.GateATests.GateA_WarningsDoNotIncreaseFromPreRefactorBaseline() in D:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\GateATests.cs:line 55
    at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
    at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+澶辫触!  - 澶辫触:     2锛岄€氳繃:    65锛屽凡璺宠繃:     3锛屾€昏:    70锛屾寔缁椂闂? 1 h 2 m - JNPF.Tests.Runtime.Expert.dll (net8.0)
