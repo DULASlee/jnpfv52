@@ -1,6 +1,6 @@
 # MCP Code Search — 强制规则（宪法级）
 
-> 背景：2026-07-17 复审确认 **三大 MCP 工具链已就绪**（Serena + Codebase-Memory + Knowledge-Graph）。逐文件 Grep/Read 遍历对大型 C# 代码库效率极低且容易漏引用——必须用 MCP 语义级搜索。
+> 背景：2026-07-17 复审确认 **三大 MCP 工具链已就绪**（Serena + codegraph + Knowledge-Graph；2026-08 升级：原 Codebase-Memory v0.9.0 已被 codegraph v1.1.0 替代）。逐文件 Grep/Read 遍历对大型 C# 代码库效率极低且容易漏引用——必须用 MCP 语义级搜索。
 >
 > 触发条件：**任何代码搜索/符号查找/引用追踪/架构分析任务。** 这不是建议，是铁律。
 
@@ -14,13 +14,13 @@
 | **C# 文件结构概览** | **Serena `get_symbols_overview`** | 拿到一个文件，先看它有什么 |
 | **C# 引用追踪**（精确到调用点） | **Serena `find_referencing_symbols`** | "谁调用了 X" / "X 是否被注入" / "X 是不是孤儿" |
 | **C# 接口实现** | **Serena `find_implementations`** | "这个接口有哪些实现类" |
-| **跨文件调用链**（callers/callees 多跳） | **Codebase-Memory `trace_path`** | "这条链路完整经过哪些函数" / 影响分析 |
-| **项目架构/社区聚类** | **Codebase-Memory `get_architecture`** | "这个项目的 de-facto 模块边界在哪" |
-| **复杂度热点** | **Codebase-Memory `query_graph`**（Cypher） | "哪些方法圈复杂度最高 / 有 loop nested-loop" |
+| **跨文件调用链**（callers/callees 多跳） | **codegraph `trace_path`** | "这条链路完整经过哪些函数" / 影响分析 |
+| **项目架构/社区聚类** | **codegraph `get_architecture`** | "这个项目的 de-facto 模块边界在哪" |
+| **复杂度热点** | **codegraph `query_graph`**（Cypher） | "哪些方法圈复杂度最高 / 有 loop nested-loop" |
 | **领域知识/设计意图/历史决策** | **Knowledge Graph `search_nodes` / `read_graph`** | 子链使命、控制流、架构哲学 |
 | 文本内容兜底 | Grep / `git grep` | **仅当三大 MCP 不适用时**（字符串字面量、配置值、日志文案） |
 
-**禁止：** 在能使用 Serena/Codebase-Memory 的情况下用 Grep 搜 C# 符号名再逐文件 Read 验证——这是反模式，慢且漏。
+**禁止：** 在能使用 Serena/codegraph 的情况下用 Grep 搜 C# 符号名再逐文件 Read 验证——这是反模式，慢且漏。
 
 ---
 
@@ -68,11 +68,11 @@ relative_path: "backend/.../Llm/LlmCircuitBreaker.cs"
 
 ---
 
-## Codebase-Memory 调用速查
+## codegraph 调用速查
 
-> **场景：** 跨文件调用链分析、项目架构总览、复杂度/热点查询。基于知识图谱（符号+调用边）。
+> **场景：** 跨文件调用链分析、项目架构总览、复杂度/热点查询。基于知识图谱（符号+调用边）。v1.1.0（替代 Codebase-Memory v0.9.0）。
 >
-> **前置条件：** 必须先 `index_repository` 一次。索引产物在 `.codebase-memory/graph.db.zst`。
+> **前置条件：** 必须先 `codegraph init` 索引一次。索引产物在 `.codegraph/graph.db`。
 
 ### 1. 项目架构总览 → `get_architecture`
 ```
@@ -134,7 +134,7 @@ path_filter: "^backend/"  // 正则限定路径
 
 **KG 持久化路径：** `D:\JNPF-v52\.ai-memory\knowledge-graph.json`（gitignored）
 
-**注意：** KG 与 Codebase-Memory 不同。KG 是**人工沉淀的领域知识**（设计意图、控制流、哲学）；Codebase-Memory 是**自动索引的代码结构**（符号、调用边、复杂度）。查"这个方法被谁调用"用 Codebase-Memory；查"这个子链为什么这样设计"用 KG。
+**注意：** KG 与 codegraph 不同。KG 是**人工沉淀的领域知识**（设计意图、控制流、哲学）；codegraph 是**自动索引的代码结构**（符号、调用边、复杂度）。查"这个方法被谁调用"用 codegraph；查"这个子链为什么这样设计"用 KG。
 
 ---
 
@@ -167,13 +167,14 @@ path_filter: "^backend/"  // 正则限定路径
 
 ## 配置位置
 
-MCP 服务器配置在 `.zcode/config.json`（项目级，优先级高于用户级）：
-- **serena**: `stdio` 启动，`--context desktop-app --project D:\JNPF-v52`，timeout 180s
-- **codebase-memory**: `codebase-memory-mcp.exe`，timeout 300s，需先 `index_repository`
+MCP 服务器配置在 `opencode.json`（项目级，优先级高于用户级）：
+- **serena**: `stdio` 启动，`--context ide --project D:\JNPF-v52`，timeout 180s
+- **codegraph**: `@colbymchenry/codegraph` v1.1.0 npm-shim，timeout 300s，需先 `codegraph init`
 - **knowledge-graph**: `@modelcontextprotocol/server-memory`，持久化到 `.ai-memory/knowledge-graph.json`
+- ~~**codebase-memory**: `codebase-memory-mcp.exe` v0.9.0~~ ⚠️ **已废弃** — 2026-08 被 codegraph v1.1.0 替代
 
 **⚠️ context 参数铁律：** Serena 必须用 `--context desktop-app`。**禁止** `--context claude-code`（在 ZCode 客户端下会握手失败，服务器启动后 2ms 即被关闭）。`--project-from-cwd` 参数 Serena CLI 不支持，也禁止使用。
 
 **冷启动注意：** ZCode 新会话首次调用 MCP 可能有几秒延迟（进程拉起）。Serena 首次启动还需加载 Roslyn LSP（约 2-5 秒）。若某次调用超时，重试一次即可——通常是冷启动，不是配置错。
 
-**已验证可用（2026-07-17）：** Serena CLI 手动启动成功（51 工具，JNPF-v52 已注册，2349+2354 符号已缓存）；Knowledge Graph `read_graph` 返回 10 实体完整；Codebase-Memory 待索引。
+**已验证可用（2026-07-17 / 2026-08-31 升级）：** Serena CLI 手动启动成功（51 工具，JNPF-v52 已注册，2349+2354 符号已缓存）；Knowledge Graph `read_graph` 返回 10 实体完整；**codegraph v1.1.0 已替代 Codebase-Memory v0.9.0 作为代码图谱主力**。

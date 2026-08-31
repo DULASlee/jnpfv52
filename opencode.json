@@ -1,5 +1,12 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.md",
+    ".agents/skills/using-superpowers/SKILL.md",
+    ".claude/rules/engineering-laws.md",
+    ".claude/rules/workflow-iron-law.md",
+    ".claude/rules/agent-runtime-iron-laws.md"
+  ],
   "mcp": {
     "serena": {
       "type": "local",

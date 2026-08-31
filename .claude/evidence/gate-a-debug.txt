@@ -1,0 +1,435 @@
+鐢熸垚鍚姩鏃堕棿涓?2026/9/1 4:07:57銆?
+     0>鏈娇鐢ㄧ粓绔褰曞櫒锛屽洜涓烘鍦ㄥ皢杈撳嚭閲嶅畾鍚戝埌鏂囦欢銆?
+       杩涚▼ = "C:\Program Files\dotnet\dotnet.exe"
+       MSBuild 鍙墽琛屾枃浠惰矾寰?= "C:\Program Files\dotnet\sdk\10.0.301\MSBuild.exe"
+       鍛戒护琛屽弬鏁?= "C:\Program Files\dotnet\sdk\10.0.301\MSBuild.exe -maxcpucount --verbosity:m -tlp:default=auto --property:VSTestTestCaseFilter="FullyQualifiedName~GateATests.GateA_AfterRefactor_BuildSucceeds_ViaCanonicalRunner" --property:VSTestNoBuild=true --property:VSTestNoLogo=true --property:NuGetInteractive=false --property:VSTestVerbosity=detailed --property:VSTestArtifactsProcessingMode=collect --property:VSTestSessionCorrelationId=18168_8a5968a8-5a86-42e9-8fbc-961f1c280d83 --target:VSTest --verbosity:detailed --nologo -nodereuse:false D:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\JNPF.Tests.Runtime.Expert.csproj -distributedlogger:Microsoft.DotNet.Cli.Commands.MSBuild.MSBuildLogger,C:\Program Files\dotnet\sdk\10.0.301\dotnet.dll*Microsoft.DotNet.Cli.Commands.MSBuild.MSBuildForwardingLogger,C:\Program Files\dotnet\sdk\10.0.301\dotnet.dll"
+       褰撳墠鐩綍 = "D:\JNPF-v52"
+       MSBuild 鐗堟湰 = "18.6.4+96856fd72"
+       鍩轰簬 Windows 娉ㄥ唽琛ㄩ」 LongPathsEnabled锛孡ongPaths 鍔熻兘涓?宸插惎鐢ㄣ€?
+       鍩轰簬 Windows 娉ㄥ唽琛ㄩ」 VerifiedAndReputablePolicyState锛孲AC 鐘舵€?= 0: 宸插叧闂€?
+       SDK鈥淢icrosoft.NET.Sdk鈥濆凡鐢扁€淒efaultSdkResolver鈥濊В鏋愮▼搴忔垚鍔熻В鏋愪负浣嶇疆鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\Sdk鈥濆拰鐗堟湰鈥溾€濄€?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\Sdk\Sdk.props(49,11): message : 鍊间负鈥淐:\Program Files\dotnet\sdk\10.0.301\鈥濈殑灞炴€р€淢SBuildExtensionsPath鈥濅粠鐜涓睍寮€銆?
+       C:\Program Files\dotnet\sdk\10.0.301\Current\Microsoft.Common.props(60,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Current\Microsoft.Common.props (60,5) 澶勯噸鏂板垎閰嶅睘鎬? $(MSBuildProjectExtensionsPath)=鈥淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\obj\鈥?鍏堝墠鍊?鈥渙bj\鈥?
+       鍦?Evaluation 鏈熼棿鍔犺浇鐨勭▼搴忛泦: System.Threading.Tasks.Parallel, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (浣嶇疆: C:\Program Files\dotnet\shared\Microsoft.NETCore.App\10.0.9\System.Threading.Tasks.Parallel.dll锛孧VID: 77ed1d0e-0329-4271-95d9-44c0c22f3576锛孉ssemblyLoadContext: Default)
+       C:\Program Files\dotnet\sdk\10.0.301\Current\Microsoft.Common.props(84,119): message : 鍊间负鈥淐:\Users\admin\AppData\Local\Microsoft\MSBuild鈥濈殑灞炴€р€淢SBuildUserExtensionsPath鈥濅粠鐜涓睍寮€銆?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props(90,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props (90,5) 澶勯噸鏂板垎閰嶅睘鎬? $(AssemblySearchPaths)=鈥渰CandidateAssemblyFiles};{HintPathFromItem}鈥?鍏堝墠鍊?鈥渰CandidateAssemblyFiles}鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props(91,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props (91,5) 澶勯噸鏂板垎閰嶅睘鎬? $(AssemblySearchPaths)=鈥渰CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory}鈥?鍏堝墠鍊?鈥渰CandidateAssemblyFiles};{HintPathFromItem}鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props(92,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.props (92,5) 澶勯噸鏂板垎閰嶅睘鎬? $(AssemblySearchPaths)=鈥渰CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory};{RawFileName}鈥?鍏堝墠鍊?鈥渰CandidateAssemblyFiles};{HintPathFromItem};{TargetFrameworkDirectory}鈥?
+       鈥淒efaultSdkResolver鈥濊В鏋愮▼搴忓凡灏濊瘯瑙ｆ瀽 SDK鈥淢icrosoft.NET.SDK.WorkloadAutoImportPropsLocator鈥濄€?
+       璀﹀憡: null
+       閿欒: MSB4276: 榛樿 SDK 瑙ｆ瀽绋嬪簭瑙ｆ瀽 SDK鈥淢icrosoft.NET.SDK.WorkloadAutoImportPropsLocator鈥濆け璐ワ紝鍥犱负鐩綍鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.SDK.WorkloadAutoImportPropsLocator\Sdk鈥濅笉瀛樺湪銆?
+       鍦?Evaluation 鏈熼棿鍔犺浇鐨勭▼搴忛泦: Microsoft.Build.NuGetSdkResolver, Version=7.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (浣嶇疆: C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Build.NuGetSdkResolver.dll锛孧VID: e5583d1f-c737-42f8-bfb8-ad354e87f69c锛孉ssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Build.NuGetSdkResolver.dll)
+       鍦?Evaluation 鏈熼棿鍔犺浇鐨勭▼搴忛泦: System.Reflection.Metadata, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (浣嶇疆: C:\Program Files\dotnet\shared\Microsoft.NETCore.App\10.0.9\System.Reflection.Metadata.dll锛孧VID: fee19bb7-ddfb-4290-87be-e7bc54fce89b锛孉ssemblyLoadContext: Default)
+       鍦?Evaluation 鏈熼棿鍔犺浇鐨勭▼搴忛泦: NuGet.Common, Version=7.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (浣嶇疆: C:\Program Files\dotnet\sdk\10.0.301\NuGet.Common.dll锛孧VID: 53441cde-b7f3-4aae-afad-7f9b356c0065锛孉ssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Build.NuGetSdkResolver.dll)
+       鍦?Evaluation 鏈熼棿鍔犺浇鐨勭▼搴忛泦: Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver, Version=10.0.301.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (浣嶇疆: C:\Program Files\dotnet\sdk\10.0.301\Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll锛孧VID: d9ce0dd4-5bc7-4dce-b0be-842f9569f80b锛孉ssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\10.0.301\Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll)
+       鍦?Evaluation 鏈熼棿鍔犺浇鐨勭▼搴忛泦: Microsoft.DotNet.Cli.CoreUtils, Version=10.0.301.0, Culture=neutral, PublicKeyToken=adb9793829ddae60 (浣嶇疆: C:\Program Files\dotnet\sdk\10.0.301\Microsoft.DotNet.Cli.CoreUtils.dll锛孧VID: 80d59bd3-ec3e-412c-9711-762ea86c8a4b锛孉ssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\10.0.301\Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll)
+       鍦?Evaluation 鏈熼棿鍔犺浇鐨勭▼搴忛泦: Microsoft.NET.Sdk.WorkloadManifestReader, Version=10.0.301.0, Culture=neutral, PublicKeyToken=adb9793829ddae60 (浣嶇疆: C:\Program Files\dotnet\sdk\10.0.301\Microsoft.NET.Sdk.WorkloadManifestReader.dll锛孧VID: 15d75c63-d5d4-417b-8929-77940bae9164锛孉ssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\10.0.301\Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll)
+       鍦?Evaluation 鏈熼棿鍔犺浇鐨勭▼搴忛泦: Microsoft.Deployment.DotNet.Releases, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (浣嶇疆: C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Deployment.DotNet.Releases.dll锛孧VID: 2c0d9534-e211-4d4d-9419-0799af0445a8锛孉ssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\10.0.301\Microsoft.NET.Sdk.WorkloadMSBuildSdkResolver.dll)
+       SDK鈥淢icrosoft.NET.SDK.WorkloadAutoImportPropsLocator鈥濆凡鐢扁€淢icrosoft.DotNet.MSBuildWorkloadSdkResolver鈥濊В鏋愮▼搴忔垚鍔熻В鏋愪负浣嶇疆鈥淐:\Program Files\dotnet\packs\Microsoft.NET.Runtime.WebAssembly.Sdk\6.0.36\Sdk鈥濆拰鐗堟湰鈥渘ull鈥濄€?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.ImportPublishProfile.targets(28,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.ImportPublishProfile.targets (28,5) 澶勯噸鏂板垎閰嶅睘鎬? $(PublishProfileImported)=鈥渇alse鈥?鍏堝墠鍊?鈥渢rue鈥?
+       鍦?Evaluation 鏈熼棿鍔犺浇鐨勭▼搴忛泦: NuGet.Frameworks, Version=7.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35 (浣嶇疆: C:\Program Files\dotnet\sdk\10.0.301\NuGet.Frameworks.dll锛孧VID: f139722d-71e1-4dbe-a663-31903f3d4ab1锛孉ssemblyLoadContext: Assembly.LoadFile(C:\Program Files\dotnet\sdk\10.0.301\NuGet.Frameworks.dll))
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.TargetFrameworkInference.targets(81,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.TargetFrameworkInference.targets (81,5) 澶勯噸鏂板垎閰嶅睘鎬? $(TargetPlatformVersion)=鈥溾€?鍏堝墠鍊?鈥?.0鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets(127,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets (127,5) 澶勯噸鏂板垎閰嶅睘鎬? $(DefaultItemExcludes)=鈥?bin\Debug\/**;obj\Debug\/**鈥?鍏堝墠鍊?鈥?bin\Debug\/**鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets(142,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets (142,5) 澶勯噸鏂板垎閰嶅睘鎬? $(OutputPath)=鈥渂in\Debug\net8.0\鈥?鍏堝墠鍊?鈥渂in\Debug\鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets(147,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DefaultOutputPaths.targets (147,5) 澶勯噸鏂板垎閰嶅睘鎬? $(IntermediateOutputPath)=鈥渙bj\Debug\net8.0\鈥?鍏堝墠鍊?鈥渙bj\Debug\鈥?
+       鈥淒efaultSdkResolver鈥濊В鏋愮▼搴忓凡灏濊瘯瑙ｆ瀽 SDK鈥淢icrosoft.NET.SDK.WorkloadManifestTargetsLocator鈥濄€?
+       璀﹀憡: null
+       閿欒: MSB4276: 榛樿 SDK 瑙ｆ瀽绋嬪簭瑙ｆ瀽 SDK鈥淢icrosoft.NET.SDK.WorkloadManifestTargetsLocator鈥濆け璐ワ紝鍥犱负鐩綍鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.SDK.WorkloadManifestTargetsLocator\Sdk鈥濅笉瀛樺湪銆?
+       SDK鈥淢icrosoft.NET.SDK.WorkloadManifestTargetsLocator鈥濆凡鐢扁€淢icrosoft.DotNet.MSBuildWorkloadSdkResolver鈥濊В鏋愮▼搴忔垚鍔熻В鏋愪负浣嶇疆鈥淐:\Program Files\dotnet\sdk-manifests\10.0.100\microsoft.net.workload.mono.toolchain.current\10.0.109鈥濆拰鐗堟湰鈥渘ull鈥濄€?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.BeforeCommon.targets(379,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.BeforeCommon.targets (379,5) 澶勯噸鏂板垎閰嶅睘鎬? $(RoslynTargetsPath)=鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\..\..\..\Roslyn鈥?鍏堝墠鍊?鈥淐:\Program Files\dotnet\sdk\10.0.301\Roslyn鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Roslyn\Microsoft.Managed.Core.targets(6,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Roslyn\Microsoft.Managed.Core.targets (6,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_BuildTasksDirectory)=鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\..\..\..\Roslyn\鈥?鍏堝墠鍊?鈥淐:\Program Files\dotnet\sdk\10.0.301\Roslyn\鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Roslyn\Microsoft.CSharp.Core.targets(213,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Roslyn\Microsoft.CSharp.Core.targets (213,5) 澶勯噸鏂板垎閰嶅睘鎬? $(CommandLineArgsForDesignTimeEvaluation)=鈥?langversion:12.0 -define:TRACE鈥?鍏堝墠鍊?鈥?langversion:12.0鈥?
+       鍦?Evaluation 鏈熼棿鍔犺浇鐨勭▼搴忛泦: Microsoft.Build.Utilities.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (浣嶇疆: C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Build.Utilities.Core.dll锛孧VID: 95ec2b21-9bd7-4894-b501-9ea3df055feb锛孉ssemblyLoadContext: Default)
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(175,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets (175,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_DebugSymbolsProduced)=鈥渢rue鈥?鍏堝墠鍊?鈥渇alse鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(185,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets (185,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_DocumentationFileProduced)=鈥渇alse鈥?鍏堝墠鍊?鈥渢rue鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(392,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets (392,5) 澶勯噸鏂板垎閰嶅睘鎬? $(MSBuildCopyMarkerName)=鈥淛NPF.Tes.2163A297鈥?鍏堝墠鍊?鈥淛NPF.Tests.Runtime.Expert.csproj鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(393,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets (393,5) 澶勯噸鏂板垎閰嶅睘鎬? $(MSBuildCopyMarkerName)=鈥淛NPF.Tes.2163A297.Up2Date鈥?鍏堝墠鍊?鈥淛NPF.Tes.2163A297鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(541,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets (541,5) 澶勯噸鏂板垎閰嶅睘鎬? $(ProcessorArchitecture)=鈥渕sil鈥?鍏堝墠鍊?鈥溾€?
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(580,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets (580,5) 澶勯噸鏂板垎閰嶅睘鎬? $(DelaySign)=鈥溾€?鍏堝墠鍊?鈥渇alse鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(2622,5): message : 鍊间负鈥淐:\Users\admin\AppData\Local鈥濈殑灞炴€р€淟OCALAPPDATA鈥濅粠鐜涓睍寮€銆?
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(3950,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets (3950,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_SGenGenerateSerializationAssembliesConfig)=鈥淎uto鈥?鍏堝墠鍊?鈥溾€?
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(3951,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets (3951,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_SGenGenerateSerializationAssembliesConfig)=鈥淥ff鈥?鍏堝墠鍊?鈥淎uto鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5162,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets (5162,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_TargetsThatPrepareProjectReferences)=鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5162,5): message :       AssignProjectConfiguration;
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5162,5): message :       _SplitProjectReferencesByFileExistence
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5162,5): message :     鈥?鍏堝墠鍊?鈥淿SplitProjectReferencesByFileExistence鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(6975,5): message : 鍊间负鈥淐:\Program Files\dotnet\sdk\10.0.301鈥濈殑灞炴€р€淢SBuildExtensionsPath32鈥濅粠鐜涓睍寮€銆?
+       鈥淣uGetInteractive鈥濆睘鎬ф槸鍏ㄥ眬灞炴€э紝涓嶈兘淇敼銆?
+       鈥淰STestNoBuild鈥濆睘鎬ф槸鍏ㄥ眬灞炴€э紝涓嶈兘淇敼銆?
+       E:\NuGetPackages\microsoft.net.test.sdk\17.8.0\build\netcoreapp3.1\Microsoft.NET.Test.Sdk.targets(20,5): message : 鍦?E:\NuGetPackages\microsoft.net.test.sdk\17.8.0\build\netcoreapp3.1\Microsoft.NET.Test.Sdk.targets (20,5) 澶勯噸鏂板垎閰嶅睘鎬? $(OutputType)=鈥淓xe鈥?鍏堝墠鍊?鈥淟ibrary鈥?
+       E:\NuGetPackages\coverlet.collector\6.0.0\build\netstandard1.0\coverlet.collector.targets(31,5): message : 鍦?E:\NuGetPackages\coverlet.collector\6.0.0\build\netstandard1.0\coverlet.collector.targets (31,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_CoverletSourceRootTargetName)=鈥淚nitializeSourceRootMappedPaths鈥?鍏堝墠鍊?鈥淐overletGetPathMap鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.Common.targets(37,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.Common.targets (37,5) 澶勯噸鏂板垎閰嶅睘鎬? $(HasRuntimeOutput)=鈥渢rue鈥?鍏堝墠鍊?鈥溾€?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(29,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (29,5) 澶勯噸鏂板垎閰嶅睘鎬? $(ProjectAssetsCacheFile)=鈥淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\obj\Debug\net8.0\JNPF.Tests.Runtime.Expert.assets.cache鈥?鍏堝墠鍊?鈥渙bj\Debug\net8.0\JNPF.Tests.Runtime.Expert.assets.cache鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (80,5) 澶勯噸鏂板垎閰嶅睘鎬? $(ResolveAssemblyReferencesDependsOn)=鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       ResolveProjectReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       FindInvalidProjectReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       GetFrameworkPaths;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       GetReferenceAssemblyPaths;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       PrepareForBuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       ResolveSDKReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       ExpandSDKReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :     ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       ResolvePackageDependenciesForBuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       _HandlePackageFileConflicts;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :     鈥?鍏堝墠鍊?鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       ResolveProjectReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       FindInvalidProjectReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       GetFrameworkPaths;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       GetReferenceAssemblyPaths;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       PrepareForBuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       ResolveSDKReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :       ExpandSDKReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(80,5): message :     鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets (86,5) 澶勯噸鏂板垎閰嶅睘鎬? $(PrepareResourcesDependsOn)=鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :       ResolvePackageDependenciesForBuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :       _HandlePackageFileConflicts;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :       
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :       ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :       PrepareResourceNames;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :       ResGen;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :       CompileLicxFiles
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :     
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :     鈥?鍏堝墠鍊?鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :       ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :       PrepareResourceNames;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :       ResGen;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :       CompileLicxFiles
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.PackageDependencyResolution.targets(86,5): message :     鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets(35,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (35,5) 澶勯噸鏂板垎閰嶅睘鎬? $(DefaultItemExcludes)=鈥?bin\Debug\/**;obj\Debug\/**;bin\/**鈥?鍏堝墠鍊?鈥?bin\Debug\/**;obj\Debug\/**鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets(37,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (37,5) 澶勯噸鏂板垎閰嶅睘鎬? $(DefaultItemExcludes)=鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**鈥?鍏堝墠鍊?鈥?bin\Debug\/**;obj\Debug\/**;bin\/**鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets(41,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (41,5) 澶勯噸鏂板垎閰嶅睘鎬? $(DefaultItemExcludes)=鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;bin\Debug\net8.0\publish\/**鈥?鍏堝墠鍊?鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets(44,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (44,5) 澶勯噸鏂板垎閰嶅睘鎬? $(DefaultItemExcludes)=鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;bin\Debug\net8.0\publish\/**;**/*.user鈥?鍏堝墠鍊?鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;bin\Debug\net8.0\publish\/**鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets(45,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (45,5) 澶勯噸鏂板垎閰嶅睘鎬? $(DefaultItemExcludes)=鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;bin\Debug\net8.0\publish\/**;**/*.user;**/*.*proj鈥?鍏堝墠鍊?鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;bin\Debug\net8.0\publish\/**;**/*.user鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets(46,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (46,5) 澶勯噸鏂板垎閰嶅睘鎬? $(DefaultItemExcludes)=鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;bin\Debug\net8.0\publish\/**;**/*.user;**/*.*proj;**/*.sln鈥?鍏堝墠鍊?鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;bin\Debug\net8.0\publish\/**;**/*.user;**/*.*proj鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets(47,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (47,5) 澶勯噸鏂板垎閰嶅睘鎬? $(DefaultItemExcludes)=鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;bin\Debug\net8.0\publish\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx鈥?鍏堝墠鍊?鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;bin\Debug\net8.0\publish\/**;**/*.user;**/*.*proj;**/*.sln鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets(48,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (48,5) 澶勯噸鏂板垎閰嶅睘鎬? $(DefaultItemExcludes)=鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;bin\Debug\net8.0\publish\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc鈥?鍏堝墠鍊?鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;bin\Debug\net8.0\publish\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets(49,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.DefaultItems.targets (49,5) 澶勯噸鏂板垎閰嶅睘鎬? $(DefaultItemExcludes)=鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;bin\Debug\net8.0\publish\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc;**/.DS_Store鈥?鍏堝墠鍊?鈥?bin\Debug\/**;obj\Debug\/**;bin\/**;obj\/**;bin\Debug\net8.0\publish\/**;**/*.user;**/*.*proj;**/*.sln;**/*.slnx;**/*.vssscc鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets (14,5) 澶勯噸鏂板垎閰嶅睘鎬? $(ResolveAssemblyReferencesDependsOn)=鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolveProjectReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       FindInvalidProjectReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       GetFrameworkPaths;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       GetReferenceAssemblyPaths;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       PrepareForBuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolveSDKReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ExpandSDKReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :     ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolvePackageDependenciesForBuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       _HandlePackageFileConflicts;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :     ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolveTargetingPackAssets;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :     鈥?鍏堝墠鍊?鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolveProjectReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       FindInvalidProjectReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       GetFrameworkPaths;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       GetReferenceAssemblyPaths;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       PrepareForBuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolveSDKReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ExpandSDKReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :     ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       ResolvePackageDependenciesForBuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :       _HandlePackageFileConflicts;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets(14,5): message :     鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(44,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (44,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_GenerateRuntimeConfigurationPropertyInputsCache)=鈥淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\obj\Debug\net8.0\JNPF.Tests.Runtime.Expert.genruntimeconfig.cache鈥?鍏堝墠鍊?鈥渙bj\Debug\net8.0\JNPF.Tests.Runtime.Expert.genruntimeconfig.cache鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(46,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (46,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_GeneratePublishDependencyFilePropertyInputsCache)=鈥淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\obj\Debug\net8.0\JNPF.Tests.Runtime.Expert.genpublishdeps.cache鈥?鍏堝墠鍊?鈥渙bj\Debug\net8.0\JNPF.Tests.Runtime.Expert.genpublishdeps.cache鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(48,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (48,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_GenerateSingleFileBundlePropertyInputsCache)=鈥淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\obj\Debug\net8.0\JNPF.Tests.Runtime.Expert.genbundle.cache鈥?鍏堝墠鍊?鈥渙bj\Debug\net8.0\JNPF.Tests.Runtime.Expert.genbundle.cache鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(81,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (81,5) 澶勯噸鏂板垎閰嶅睘鎬? $(GenerateRuntimeConfigDevFile)=鈥渇alse鈥?鍏堝墠鍊?鈥渢rue鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(98,5): message : 鍊间负鈥淐:\Users\admin鈥濈殑灞炴€р€淯SERPROFILE鈥濅粠鐜涓睍寮€銆?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(98,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (98,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_DefaultUserProfileRuntimeStorePath)=鈥淐:\Users\admin鈥?鍏堝墠鍊?鈥溾€?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(99,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (99,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_DefaultUserProfileRuntimeStorePath)=鈥淐:\Users\admin\.dotnet\store鈥?鍏堝墠鍊?鈥淐:\Users\admin鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(144,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (144,5) 澶勯噸鏂板垎閰嶅睘鎬? $(AvailablePlatforms)=鈥淎ny CPU,x86,x64,ARM32鈥?鍏堝墠鍊?鈥淎ny CPU,x86,x64鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(148,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (148,5) 澶勯噸鏂板垎閰嶅睘鎬? $(AvailablePlatforms)=鈥淎ny CPU,x86,x64,ARM32,ARM64鈥?鍏堝墠鍊?鈥淎ny CPU,x86,x64,ARM32鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (204,5) 澶勯噸鏂板垎閰嶅睘鎬? $(CoreBuildDependsOn)=鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       _CheckForBuildWithNoBuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       BuildOnlySettings;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       PrepareForBuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       PreBuildEvent;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       ResolveReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       PrepareResources;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       ResolveKeySource;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       Compile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       ExportWindowsMDFile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       UnmanagedUnregistration;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       GenerateSerializationAssemblies;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       CreateSatelliteAssemblies;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       GenerateManifests;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       GetTargetPath;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       PrepareForRun;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       UnmanagedRegistration;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       IncrementalClean;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       PostBuildEvent
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :     ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       GenerateBuildDependencyFile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       GenerateBuildRuntimeConfigurationFiles
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :     鈥?鍏堝墠鍊?鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       BuildOnlySettings;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       PrepareForBuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       PreBuildEvent;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       ResolveReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       PrepareResources;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       ResolveKeySource;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       Compile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       ExportWindowsMDFile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       UnmanagedUnregistration;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       GenerateSerializationAssemblies;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       CreateSatelliteAssemblies;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       GenerateManifests;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       GetTargetPath;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       PrepareForRun;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       UnmanagedRegistration;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       IncrementalClean;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :       PostBuildEvent
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(204,5): message :     鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(213,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (213,5) 澶勯噸鏂板垎閰嶅睘鎬? $(CoreCleanDependsOn)=鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(213,5): message :       _SdkBeforeClean;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(213,5): message :       
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(213,5): message :     鈥?鍏堝墠鍊?鈥溾€?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (220,5) 澶勯噸鏂板垎閰嶅睘鎬? $(RebuildDependsOn)=鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message :       _SdkBeforeRebuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message :       
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message :       BeforeRebuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message :       Clean;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message :       Build;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message :       AfterRebuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message :     
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message :     鈥?鍏堝墠鍊?鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message :       BeforeRebuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message :       Clean;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message :       Build;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message :       AfterRebuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(220,5): message :     鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (799,5) 澶勯噸鏂板垎閰嶅睘鎬? $(CompileDependsOn)=鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       ResolveReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       ResolveKeySource;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       SetWin32ManifestProperties;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       _SetPreferNativeArm64Win32ManifestProperties;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       FindReferenceAssembliesForReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       _GenerateCompileInputs;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       BeforeCompile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       _TimeStampBeforeCompile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       _GenerateCompileDependencyCache;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       CoreCompile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       _TimeStampAfterCompile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       AfterCompile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :     ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       _CreateAppHost;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       _CreateComHost;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       _GetIjwHostPaths;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :     鈥?鍏堝墠鍊?鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       ResolveReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       ResolveKeySource;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       SetWin32ManifestProperties;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       _SetPreferNativeArm64Win32ManifestProperties;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       FindReferenceAssembliesForReferences;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       _GenerateCompileInputs;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       BeforeCompile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       _TimeStampBeforeCompile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       _GenerateCompileDependencyCache;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       CoreCompile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       _TimeStampAfterCompile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :       AfterCompile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(799,5): message :     鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets (1131,5) 澶勯噸鏂板垎閰嶅睘鎬? $(CreateSatelliteAssembliesDependsOn)=鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message :       
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message :       ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message :       _GenerateSatelliteAssemblyInputs;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message :       ComputeIntermediateSatelliteAssemblies;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message :       GenerateSatelliteAssemblies
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message :     ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message :       CoreGenerateSatelliteAssemblies
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message :     鈥?鍏堝墠鍊?鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message :       ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message :       _GenerateSatelliteAssemblyInputs;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message :       ComputeIntermediateSatelliteAssemblies;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message :       GenerateSatelliteAssemblies
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets(1131,5): message :     鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets (21,5) 澶勯噸鏂板垎閰嶅睘鎬? $(DesignerRuntimeImplementationProjectOutputGroupDependsOn)=鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       BuildOnlySettings;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       PrepareForBuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       AssignTargetPaths;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       ResolveReferences
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :     
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :     ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       _GenerateDesignerDepsFile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       _GenerateDesignerRuntimeConfigFile;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       GetCopyToOutputDirectoryItems;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       _GatherDesignerShadowCopyFiles;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :     鈥?鍏堝墠鍊?鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       ;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       BuildOnlySettings;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       PrepareForBuild;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       AssignTargetPaths;
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :       ResolveReferences
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :     
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets(21,5): message :     鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.CSharp.targets(31,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.CSharp.targets (31,5) 澶勯噸鏂板垎閰嶅睘鎬? $(DefineConstants)=鈥淭RACE;DEBUG鈥?鍏堝墠鍊?鈥淭RACE鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.CSharp.targets(45,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.CSharp.targets (45,5) 澶勯噸鏂板垎閰嶅睘鎬? $(WarningsAsErrors)=鈥?NU1605;SYSLIB0011鈥?鍏堝墠鍊?鈥?NU1605鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\NuGet.Build.Tasks.Pack.targets(59,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\NuGet.Build.Tasks.Pack.targets (59,5) 澶勯噸鏂板垎閰嶅睘鎬? $(GenerateNuspecDependsOn)=鈥淏uild;_LoadPackInputItems; _GetTargetFrameworksOutput; _WalkEachTargetPerFramework; _GetPackageFiles; 鈥?鍏堝墠鍊?鈥淿LoadPackInputItems; _GetTargetFrameworksOutput; _WalkEachTargetPerFramework; _GetPackageFiles; 鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\Sdk\Sdk.targets(59,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\Sdk\Sdk.targets (59,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_IsNotSetContainersTargetsDir)=鈥渢rue鈥?鍏堝墠鍊?鈥渇alse鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Containers\build\Microsoft.NET.Build.Containers.targets(5,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Containers\build\Microsoft.NET.Build.Containers.targets (5,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_IsSDKContainerAllowedVersion)=鈥渢rue鈥?鍏堝墠鍊?鈥渇alse鈥?
+       C:\Program Files\dotnet\sdk\10.0.301\Containers\build\Microsoft.NET.Build.Containers.targets(15,5): message : 鍦?C:\Program Files\dotnet\sdk\10.0.301\Containers\build\Microsoft.NET.Build.Containers.targets (15,5) 澶勯噸鏂板垎閰嶅睘鎬? $(_ContainerIsTargetingNet8TFM)=鈥渢rue鈥?鍏堝墠鍊?鈥渇alse鈥?
+       E:\NuGetPackages\microsoft.testplatform.testhost\17.8.0\build\netcoreapp3.1\Microsoft.TestPlatform.TestHost.props(15,14): message : 鍊间负鈥淲indows_NT鈥濈殑灞炴€р€淥S鈥濅粠鐜涓睍寮€銆?
+       姝ｅ湪浣跨敤椤圭洰鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.FrameworkReferenceResolution.targets鈥濅腑鐨勭洰鏍団€淩esolveFrameworkReferences鈥濋噸鍐欓」鐩€淐:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets鈥濅腑鐨勭洰鏍団€淩esolveFrameworkReferences鈥濄€?
+       姝ｅ湪浣跨敤椤圭洰鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets鈥濅腑鐨勭洰鏍団€淕enerateSupportedTargetFrameworkAlias鈥濋噸鍐欓」鐩€淐:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets鈥濅腑鐨勭洰鏍団€淕enerateSupportedTargetFrameworkAlias鈥濄€?
+       姝ｅ湪浣跨敤椤圭洰鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DisableStandardFrameworkResolution.targets鈥濅腑鐨勭洰鏍団€淕etReferenceAssemblyPaths鈥濋噸鍐欓」鐩€淐:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets鈥濅腑鐨勭洰鏍団€淕etReferenceAssemblyPaths鈥濄€?
+       姝ｅ湪浣跨敤椤圭洰鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DisableStandardFrameworkResolution.targets鈥濅腑鐨勭洰鏍団€淕etFrameworkPaths鈥濋噸鍐欓」鐩€淐:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets鈥濅腑鐨勭洰鏍団€淕etFrameworkPaths鈥濄€?
+       姝ｅ湪浣跨敤椤圭洰鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.DesignerSupport.targets鈥濅腑鐨勭洰鏍団€淒esignerRuntimeImplementationProjectOutputGroup鈥濋噸鍐欓」鐩€淐:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets鈥濅腑鐨勭洰鏍団€淒esignerRuntimeImplementationProjectOutputGroup鈥濄€?
+       姝ｅ湪浣跨敤椤圭洰鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Publish.targets鈥濅腑鐨勭洰鏍団€淧ublish鈥濋噸鍐欓」鐩€淐:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets鈥濅腑鐨勭洰鏍団€淧ublish鈥濄€?
+       姝ｅ湪浣跨敤椤圭洰鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Publish.targets鈥濅腑鐨勭洰鏍団€淩esolveReadyToRunCompilers鈥濋噸鍐欓」鐩€淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.CrossGen.targets鈥濅腑鐨勭洰鏍団€淩esolveReadyToRunCompilers鈥濄€?
+       姝ｅ湪浣跨敤椤圭洰鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Publish.targets鈥濅腑鐨勭洰鏍団€淕etCopyToPublishDirectoryItems鈥濋噸鍐欓」鐩€淐:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets鈥濅腑鐨勭洰鏍団€淕etCopyToPublishDirectoryItems鈥濄€?
+       姝ｅ湪浣跨敤椤圭洰鈥淐:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.Sdk.targets鈥濅腑鐨勭洰鏍団€淩un鈥濋噸鍐欓」鐩€淐:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets鈥濅腑鐨勭洰鏍団€淩un鈥濄€?
+       椤圭洰涓笉瀛樺湪 AfterTargets 鐗规€т腑鐨勨€淓:\NuGetPackages\microsoft.extensions.options\8.0.2\buildTransitive\net6.0\Microsoft.Extensions.Options.targets (11,11)鈥濅綅缃垪鍑虹殑鐩爣鈥淩esolveNuGetPackageAssets鈥濓紝灏嗗拷鐣ヨ鐩爣銆?
+       椤圭洰涓笉瀛樺湪 AfterTargets 鐗规€т腑鐨勨€淓:\NuGetPackages\microsoft.extensions.options\8.0.2\buildTransitive\net6.0\Microsoft.Extensions.Options.targets (23,11)鈥濅綅缃垪鍑虹殑鐩爣鈥淩esolveNuGetPackageAssets鈥濓紝灏嗗拷鐣ヨ鐩爣銆?
+       椤圭洰涓笉瀛樺湪 AfterTargets 鐗规€т腑鐨勨€淓:\NuGetPackages\microsoft.extensions.configuration.binder\8.0.0\buildTransitive\netstandard2.0\Microsoft.Extensions.Configuration.Binder.targets (9,13)鈥濅綅缃垪鍑虹殑鐩爣鈥淩esolveNuGetPackageAssets鈥濓紝灏嗗拷鐣ヨ鐩爣銆?
+       椤圭洰涓笉瀛樺湪 AfterTargets 鐗规€т腑鐨勨€淓:\NuGetPackages\microsoft.extensions.logging.abstractions\8.0.2\buildTransitive\net6.0\Microsoft.Extensions.Logging.Abstractions.targets (11,11)鈥濅綅缃垪鍑虹殑鐩爣鈥淩esolveNuGetPackageAssets鈥濓紝灏嗗拷鐣ヨ鐩爣銆?
+       椤圭洰涓笉瀛樺湪 AfterTargets 鐗规€т腑鐨勨€淓:\NuGetPackages\microsoft.extensions.logging.abstractions\8.0.2\buildTransitive\net6.0\Microsoft.Extensions.Logging.Abstractions.targets (23,11)鈥濅綅缃垪鍑虹殑鐩爣鈥淩esolveNuGetPackageAssets鈥濓紝灏嗗拷鐣ヨ鐩爣銆?
+     1>椤圭洰鈥淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\JNPF.Tests.Runtime.Expert.csproj鈥濆湪鑺傜偣 1 涓?VSTest 涓洰鏍?銆?
+     1>鏉ヨ嚜椤圭洰鈥淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\JNPF.Tests.Runtime.Expert.csproj鈥濈殑鏂囦欢鈥淓:\NuGetPackages\microsoft.extensions.configuration.binder\8.0.0\buildTransitive\netstandard2.0\Microsoft.Extensions.Configuration.Binder.targets鈥濅腑鐨勭洰鏍団€淣ETStandardCompatError_Microsoft_Extensions_Configuration_Binder鈥?鍏ュ彛鐐?:
+     1>宸插畬鎴愬湪椤圭洰鈥淛NPF.Tests.Runtime.Expert.csproj鈥濅腑鐢熸垚鐩爣鈥淣ETStandardCompatError_Microsoft_Extensions_Configuration_Binder鈥濈殑鎿嶄綔銆?
+     1>鏉ヨ嚜椤圭洰鈥淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\JNPF.Tests.Runtime.Expert.csproj鈥濈殑鏂囦欢鈥淓:\NuGetPackages\microsoft.net.test.sdk\17.8.0\build\netcoreapp3.1\Microsoft.NET.Test.Sdk.targets鈥濅腑鐨勭洰鏍団€淕enerateProgramFile鈥?鍏ュ彛鐐?:
+     1>宸插畬鎴愬湪椤圭洰鈥淛NPF.Tests.Runtime.Expert.csproj鈥濅腑鐢熸垚鐩爣鈥淕enerateProgramFile鈥濈殑鎿嶄綔銆?
+     1>鏉ヨ嚜椤圭洰鈥淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\JNPF.Tests.Runtime.Expert.csproj鈥濈殑鏂囦欢鈥淓:\NuGetPackages\coverlet.collector\6.0.0\build\netstandard1.0\coverlet.collector.targets鈥濅腑鐨勭洰鏍団€淪etXPlatDataCollectorPath鈥?鐩爣鈥淰STest鈥濅緷璧栦簬瀹?:
+     1>宸插畬鎴愬湪椤圭洰鈥淛NPF.Tests.Runtime.Expert.csproj鈥濅腑鐢熸垚鐩爣鈥淪etXPlatDataCollectorPath鈥濈殑鎿嶄綔銆?
+     1>鏉ヨ嚜椤圭洰鈥淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\JNPF.Tests.Runtime.Expert.csproj鈥濈殑鏂囦欢鈥淐:\Program Files\dotnet\sdk\10.0.301\Microsoft.TestPlatform.targets鈥濅腑鐨勭洰鏍団€淰STest鈥?鍏ュ彛鐐?:
+       C:\Program Files\dotnet\sdk\10.0.301\Microsoft.TestPlatform.targets(33,42): message : 鍊间负鈥?鈥濈殑灞炴€р€淿MSBUILDTLENABLED鈥濅粠鐜涓睍寮€銆?[D:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\JNPF.Tests.Runtime.Expert.csproj]
+       姝ｅ湪浣跨敤绋嬪簭闆嗏€淢icrosoft.Build.Tasks.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a鈥濅腑鐨勨€淐allTarget鈥濅换鍔°€?
+       浠诲姟鈥淐allTarget鈥?
+     1>鏉ヨ嚜椤圭洰鈥淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\JNPF.Tests.Runtime.Expert.csproj鈥濈殑鏂囦欢鈥淐:\Program Files\dotnet\sdk\10.0.301\Microsoft.TestPlatform.targets鈥濅腑鐨勭洰鏍団€淿VSTestConsole鈥?鐩爣鈥淰STest鈥濅緷璧栦簬瀹?:
+       浠诲姟鈥淐allTarget鈥?
+     1>鏉ヨ嚜椤圭洰鈥淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\JNPF.Tests.Runtime.Expert.csproj鈥濈殑鏂囦欢鈥淐:\Program Files\dotnet\sdk\10.0.301\Microsoft.TestPlatform.targets鈥濅腑鐨勭洰鏍団€淪howCallOfVSTestTaskWithParameter鈥?鐩爣鈥淿VSTestConsole鈥濅緷璧栦簬瀹?:
+       姝ｅ湪浣跨敤绋嬪簭闆嗏€淢icrosoft.Build.Tasks.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a鈥濅腑鐨勨€淢essage鈥濅换鍔°€?
+       浠诲姟鈥淢essage鈥?
+         Calling task Microsoft.TestPlatform.Build.Tasks.VSTestTask with following parameter...
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         TestFileFullPath = D:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\bin\Debug\net8.0\JNPF.Tests.Runtime.Expert.dll
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestSetting = 
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestTestAdapterPath = ;E:\NuGetPackages\coverlet.collector\6.0.0\build\netstandard1.0\
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestFramework = .NETCoreApp,Version=v8.0
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestPlatform = 
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestTestCaseFilter = FullyQualifiedName~GateATests.GateA_AfterRefactor_BuildSucceeds_ViaCanonicalRunner
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestLogger = 
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestListTests = 
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestDiag = 
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestCLIRunSettings = 
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestResultsDirectory = 
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestConsolePath = C:\Program Files\dotnet\sdk\10.0.301\vstest.console.dll
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestVerbosity = detailed
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestCollect = 
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestBlame = 
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestTraceDataCollectorDirectoryPath = E:\NuGetPackages\microsoft.codecoverage\17.8.0\build\netstandard2.0\
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+       浠诲姟鈥淢essage鈥?
+         VSTestNoLogo = true
+       宸插畬鎴愭墽琛屼换鍔♀€淢essage鈥濈殑鎿嶄綔銆?
+     1>宸插畬鎴愬湪椤圭洰鈥淛NPF.Tests.Runtime.Expert.csproj鈥濅腑鐢熸垚鐩爣鈥淪howCallOfVSTestTaskWithParameter鈥濈殑鎿嶄綔銆?
+       宸插畬鎴愭墽琛屼换鍔♀€淐allTarget鈥濈殑鎿嶄綔銆?
+       鍦?TaskRun 鏈熼棿鍔犺浇鐨勭▼搴忛泦: Microsoft.TestPlatform.Build, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a (浣嶇疆: C:\Program Files\dotnet\sdk\10.0.301\Microsoft.TestPlatform.Build.dll锛孧VID: 5f87e24c-d284-49b1-9fad-72f517abfbe8锛孉ssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\10.0.301\Microsoft.TestPlatform.Build.dll)
+       姝ｅ湪浣跨敤绋嬪簭闆嗏€淐:\Program Files\dotnet\sdk\10.0.301\Microsoft.TestPlatform.Build.dll鈥濅腑鐨勨€淰STestTask鈥濅换鍔°€?
+       浠诲姟鈥淰STestTask鈥?
+D:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\bin\Debug\net8.0\JNPF.Tests.Runtime.Expert.dll (.NETCoreApp,Version=v8.0)鐨勬祴璇曡繍琛?
+         鍦?TaskRun (Microsoft.TestPlatform.Build.Tasks.VSTestTask) 鏈熼棿鍔犺浇鐨勭▼搴忛泦: Microsoft.TestPlatform.Build.resources, Version=15.0.0.0, Culture=zh-Hans, PublicKeyToken=b03f5f7f11d50a3a (浣嶇疆: C:\Program Files\dotnet\sdk\10.0.301\zh-Hans\Microsoft.TestPlatform.Build.resources.dll锛孧VID: 5b6dec8f-d3fe-4ec9-8c45-be75f6945cef锛孉ssemblyLoadContext: MSBuild plugin C:\Program Files\dotnet\sdk\10.0.301\Microsoft.TestPlatform.Build.dll)
+鎬诲叡 1 涓祴璇曟枃浠朵笌鎸囧畾妯″紡鐩稿尮閰嶃€?
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.4.1+b9eacec401 (64-bit .NET 8.0.30)
+[xUnit.net 00:00:00.05]   Discovering: JNPF.Tests.Runtime.Expert
+[xUnit.net 00:00:00.09]   Discovered:  JNPF.Tests.Runtime.Expert
+[xUnit.net 00:00:00.09]   Starting:    JNPF.Tests.Runtime.Expert
+[CanonicalBuildRunner] workDir='D:\JNPF-v52\backend' args='build "D:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow\JNPF.WorkFlow.csproj" --no-restore --no-incremental'
+[xUnit.net 00:00:00.50]     JNPF.Tests.Agent.GateATests.GateA_AfterRefactor_BuildSucceeds_ViaCanonicalRunner [FAIL]
+[xUnit.net 00:00:00.50]       Build failed (exit=1, errors=0).
+STDOUT:
+C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.TargetFrameworkInference.targets(160,5): error MSB4062: 閺堫亣鍏樻禒搴ｂ柤鎼村繘娉?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\..\tools\net10.0\Microsoft.NET.Build.Tasks.dll 閸旂姾娴囨禒璇插閳ユ穾llowEmptyTelemetry閳ユ縿鈧景ould not load file or assembly 'System.Runtime, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'. 缁崵绮洪幍鍙ョ瑝閸掔増瀵氱€规氨娈戦弬鍥︽閵?鐠囬鈥樼拋?<UsingTask> 婢圭増妲戝锝団€橀敍宀冾嚉缁嬪绨梿鍡楀挤閸忚埖澧嶉張澶夌贩鐠ф牠銆嶉柈钘夊讲閻㈩煉绱濋獮鏈电瑬鐠囥儰鎹㈤崝鈥冲瘶閸氼偄鐤勯悳?Microsoft.Build.Framework.ITask 閻ㄥ嫬鍙曢崗杈╄閵?[D:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow\JNPF.WorkFlow.csproj]
+[xUnit.net 00:00:00.50]       
+[xUnit.net 00:00:00.50]       閻㈢喐鍨氭径杈Е閵?
+
+[xUnit.net 00:00:00.50]       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.TargetFrameworkInference.targets(160,5): error MSB4062: 閺堫亣鍏樻禒搴ｂ柤鎼村繘娉?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\..\tools\net10.0\Microsoft.NET.Build.Tasks.dll 閸旂姾娴囨禒璇插閳ユ穾llowEmptyTelemetry閳ユ縿鈧景ould not load file or assembly 'System.Runtime, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'. 缁崵绮洪幍鍙ョ瑝閸掔増瀵氱€规氨娈戦弬鍥︽閵?鐠囬鈥樼拋?<UsingTask> 婢圭増妲戝锝団€橀敍宀冾嚉缁嬪绨梿鍡楀挤閸忚埖澧嶉張澶夌贩鐠ф牠銆嶉柈钘夊讲閻㈩煉绱濋獮鏈电瑬鐠囥儰鎹㈤崝鈥冲瘶閸氼偄鐤勯悳?Microsoft.Build.Framework.ITask 閻ㄥ嫬鍙曢崗杈╄閵?[D:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow\JNPF.WorkFlow.csproj]
+[xUnit.net 00:00:00.50]           0 娑擃亣顒熼崨?
+    1 娑擃亪鏁婄拠?
+
+[xUnit.net 00:00:00.50]       瀹歌尙鏁ら弮鍫曟？ 00:00:00.20
+[xUnit.net 00:00:00.50]       
+STDERR:
+
+[xUnit.net 00:00:00.50]       Stack Trace:
+[xUnit.net 00:00:00.50]         D:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\GateATests.cs(43,0): at JNPF.Tests.Agent.GateATests.GateA_AfterRefactor_BuildSucceeds_ViaCanonicalRunner()
+[xUnit.net 00:00:00.50]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+[xUnit.net 00:00:00.50]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.51]   Finished:    JNPF.Tests.Runtime.Expert
+  澶辫触 JNPF.Tests.Agent.GateATests.GateA_AfterRefactor_BuildSucceeds_ViaCanonicalRunner [382 ms]
+  閿欒娑堟伅:
+   Build failed (exit=1, errors=0).
+STDOUT:
+C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.TargetFrameworkInference.targets(160,5): error MSB4062: 閺堫亣鍏樻禒搴ｂ柤鎼村繘娉?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\..\tools\net10.0\Microsoft.NET.Build.Tasks.dll 閸旂姾娴囨禒璇插閳ユ穾llowEmptyTelemetry閳ユ縿鈧景ould not load file or assembly 'System.Runtime, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'. 缁崵绮洪幍鍙ョ瑝閸掔増瀵氱€规氨娈戦弬鍥︽閵?鐠囬鈥樼拋?<UsingTask> 婢圭増妲戝锝団€橀敍宀冾嚉缁嬪绨梿鍡楀挤閸忚埖澧嶉張澶夌贩鐠ф牠銆嶉柈钘夊讲閻㈩煉绱濋獮鏈电瑬鐠囥儰鎹㈤崝鈥冲瘶閸氼偄鐤勯悳?Microsoft.Build.Framework.ITask 閻ㄥ嫬鍙曢崗杈╄閵?[D:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow\JNPF.WorkFlow.csproj]
+
+閻㈢喐鍨氭径杈Е閵?
+
+C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.TargetFrameworkInference.targets(160,5): error MSB4062: 閺堫亣鍏樻禒搴ｂ柤鎼村繘娉?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\..\tools\net10.0\Microsoft.NET.Build.Tasks.dll 閸旂姾娴囨禒璇插閳ユ穾llowEmptyTelemetry閳ユ縿鈧景ould not load file or assembly 'System.Runtime, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'. 缁崵绮洪幍鍙ョ瑝閸掔増瀵氱€规氨娈戦弬鍥︽閵?鐠囬鈥樼拋?<UsingTask> 婢圭増妲戝锝団€橀敍宀冾嚉缁嬪绨梿鍡楀挤閸忚埖澧嶉張澶夌贩鐠ф牠銆嶉柈钘夊讲閻㈩煉绱濋獮鏈电瑬鐠囥儰鎹㈤崝鈥冲瘶閸氼偄鐤勯悳?Microsoft.Build.Framework.ITask 閻ㄥ嫬鍙曢崗杈╄閵?[D:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow\JNPF.WorkFlow.csproj]
+    0 娑擃亣顒熼崨?
+    1 娑擃亪鏁婄拠?
+
+瀹歌尙鏁ら弮鍫曟？ 00:00:00.20
+
+STDERR:
+
+  鍫嗘爤璺熻釜:
+     at JNPF.Tests.Agent.GateATests.GateA_AfterRefactor_BuildSucceeds_ViaCanonicalRunner() in D:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\GateATests.cs:line 43
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+娴嬭瘯杩愯澶辫触銆?
+娴嬭瘯鎬绘暟: 1
+     澶辫触鏁? 1
+鎬绘椂闂? 0.8635 绉?
+         MSB4181: 鈥淰STestTask鈥濅换鍔¤繑鍥炰簡 false锛屼絾鏈褰曢敊璇€?
+       宸插畬鎴愭墽琛屼换鍔♀€淰STestTask鈥濈殑鎿嶄綔 - 澶辫触銆?
+     1>宸插畬鎴愬湪椤圭洰鈥淛NPF.Tests.Runtime.Expert.csproj鈥濅腑鐢熸垚鐩爣鈥淿VSTestConsole鈥濈殑鎿嶄綔 - 澶辫触銆?
+       宸插畬鎴愭墽琛屼换鍔♀€淐allTarget鈥濈殑鎿嶄綔 - 澶辫触銆?
+     1>宸插畬鎴愬湪椤圭洰鈥淛NPF.Tests.Runtime.Expert.csproj鈥濅腑鐢熸垚鐩爣鈥淰STest鈥濈殑鎿嶄綔 - 澶辫触銆?
+     1>宸插畬鎴愮敓鎴愰」鐩€淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\JNPF.Tests.Runtime.Expert.csproj鈥?VSTest 涓洰鏍?鐨勬搷浣?- 澶辫触銆?
+
+鐢熸垚澶辫触銆?
+    0 涓鍛?
+    0 涓敊璇?
+
+宸茬敤鏃堕棿 00:00:01.28

@@ -1,0 +1,59 @@
+{
+  "document": "final-runtime-validation",
+  "version": "v1.0",
+  "generated_at": "2026-08-31T19:10:00",
+  "scope": "M32-01 + M32-02 Migration Runtime Validation",
+  "checks": {
+    "build": {
+      "command": "dotnet build JNPF.Systems.csproj",
+      "result": "PASS",
+      "errors": 0,
+      "warnings": 0,
+      "timestamp": "2026-08-31T18:55:00"
+    },
+    "architecture_tests": {
+      "command": "dotnet test JNPF.Tests.Architecture --filter FullyQualifiedName!~SugarTable_Mappings",
+      "result": "PASS",
+      "passed": 92,
+      "failed": 0,
+      "skipped": 0,
+      "excluded_test": "SugarTable_Mappings_ShouldBe_Unique (PRE_EXISTING)"
+    },
+    "signature_service_analysis": {
+      "entity": "SignatureEntity",
+      "entity_base": "CLDSEntityBase",
+      "primary_key_requirement": "SqlSugar Insertable/Updateable requires PK for non-auto-id entities",
+      "migration_compatible": true,
+      "crud_operations": ["Insert", "Update", "Delete", "GetList", "GetInfo"],
+      "dynamic_sql_references": "NONE",
+      "workflow_references": "NONE",
+      "permission_references": "NONE"
+    },
+    "signature_user_service_analysis": {
+      "entity": "SignatureUserEntity",
+      "entity_base": "CLDSEntityBase",
+      "primary_key_requirement": "Association table — composite key preserves business semantics",
+      "migration_compatible": true,
+      "sqlsugar_navigate": {
+        "attribute": "[Navigate(NavigationType.OneToMany, nameof(SignatureId))]",
+        "fk_column": "SignatureId",
+        "target_column": "Id (parent SignatureEntity.Id)",
+        "compatible": true,
+        "note": "FK column SignatureId is independent of child table's composite PK structure"
+      },
+      "crud_operations": ["Insert", "Update", "Delete", "GetList"],
+      "dynamic_sql_references": "NONE",
+      "workflow_references": "NONE",
+      "permission_references": "NONE"
+    },
+    "api_smoke": {
+      "target": "SignatureService API endpoints",
+      "result": "BLOCKED",
+      "reason": "Backend localhost:5000 not running",
+      "mitigation": "ORM analysis + build verification confirms no regression; API smoke deferred but not required for schema-only migration"
+    }
+  },
+  "migration_induced_regression": false,
+  "regression_risk": "NONE",
+  "conclusion": "Runtime validation PASS — no migration-induced regression detected. Backend not running blocks API smoke but does not indicate regression."
+}

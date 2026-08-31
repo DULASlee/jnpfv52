@@ -1,0 +1,323 @@
+{
+  "metadata": {
+    "gate": "Batch 30+ Gap Review Acceptance",
+    "executed_at": "2026-08-31T15:23:11.012181",
+    "criteria": "17/17 reviewed + evidence + target + risk + migration_type + runtime_impact + rollback"
+  },
+  "per_gap": [
+    {
+      "gap_id": "GAP-01",
+      "table": "base_signature",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-02",
+      "table": "base_signature_user",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-a",
+      "table": "base_advanced_query_scheme",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-b",
+      "table": "base_app_data",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-c",
+      "table": "base_columns_purview",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-d",
+      "table": "base_data_interface_user",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-e",
+      "table": "base_data_interface_variate",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-f",
+      "table": "base_db_link",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-g",
+      "table": "base_im_content",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-h",
+      "table": "base_im_reply",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-i",
+      "table": "base_integrate",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-j",
+      "table": "base_integrate_node",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-k",
+      "table": "base_organize_relation",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-l",
+      "table": "base_portal",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-m",
+      "table": "base_portal_data",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-n",
+      "table": "base_signature",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-03-o",
+      "table": "base_signature_user",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-04-a",
+      "table": "base_advanced_query_scheme",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-04-b",
+      "table": "base_app_data",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-04-c",
+      "table": "base_im_content",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-04-d",
+      "table": "base_integrate",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    },
+    {
+      "gap_id": "GAP-04-e",
+      "table": "base_portal",
+      "checks": {
+        "evidence": true,
+        "target_contract": true,
+        "risk": true,
+        "migration_type": true,
+        "runtime_impact": true,
+        "rollback_strategy": true,
+        "decision_recorded": true
+      },
+      "all_pass": true
+    }
+  ],
+  "summary": {
+    "total_gaps": 22,
+    "all_pass": true,
+    "pass_count": 22,
+    "fail_count": 0
+  }
+}

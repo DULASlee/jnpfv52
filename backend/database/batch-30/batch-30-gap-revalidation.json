@@ -1,0 +1,267 @@
+{
+  "metadata": {
+    "batch": "Batch 30+ Gap Review",
+    "task": "30.2 Gap Re-validation",
+    "executed_at": "2026-08-31T15:23:10.936554",
+    "method": "Fresh DB query, no historical trust"
+  },
+  "revalidations": [
+    {
+      "gap_id": "GAP-01",
+      "table": "base_signature",
+      "dimension": "primary_key",
+      "fresh_query_result": {
+        "has_primary_key": false,
+        "pk_columns": []
+      },
+      "gap_confirmed": true,
+      "evidence": "INFORMATION_SCHEMA.TABLE_CONSTRAINTS (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-02",
+      "table": "base_signature_user",
+      "dimension": "primary_key",
+      "fresh_query_result": {
+        "has_primary_key": false,
+        "pk_columns": []
+      },
+      "gap_confirmed": true,
+      "evidence": "INFORMATION_SCHEMA.TABLE_CONSTRAINTS (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-a",
+      "table": "base_advanced_query_scheme",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-b",
+      "table": "base_app_data",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-c",
+      "table": "base_columns_purview",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-d",
+      "table": "base_data_interface_user",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-e",
+      "table": "base_data_interface_variate",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-f",
+      "table": "base_db_link",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-g",
+      "table": "base_im_content",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-h",
+      "table": "base_im_reply",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-i",
+      "table": "base_integrate",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-j",
+      "table": "base_integrate_node",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-k",
+      "table": "base_organize_relation",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-l",
+      "table": "base_portal",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-m",
+      "table": "base_portal_data",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-n",
+      "table": "base_signature",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-03-o",
+      "table": "base_signature_user",
+      "dimension": "tenant_index",
+      "fresh_query_result": {
+        "non_pk_index_count": 0,
+        "index_columns_combined": "",
+        "has_tenant_index": false
+      },
+      "gap_confirmed": true,
+      "evidence": "sys.indexes + sys.index_columns (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-04-a",
+      "table": "base_advanced_query_scheme",
+      "dimension": "audit_fields",
+      "fresh_query_result": {
+        "column_count": 18,
+        "missing_audit_fields": []
+      },
+      "gap_confirmed": false,
+      "evidence": "INFORMATION_SCHEMA.COLUMNS (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-04-b",
+      "table": "base_app_data",
+      "dimension": "audit_fields",
+      "fresh_query_result": {
+        "column_count": 20,
+        "missing_audit_fields": []
+      },
+      "gap_confirmed": false,
+      "evidence": "INFORMATION_SCHEMA.COLUMNS (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-04-c",
+      "table": "base_im_content",
+      "dimension": "audit_fields",
+      "fresh_query_result": {
+        "column_count": 18,
+        "missing_audit_fields": []
+      },
+      "gap_confirmed": false,
+      "evidence": "INFORMATION_SCHEMA.COLUMNS (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-04-d",
+      "table": "base_integrate",
+      "dimension": "audit_fields",
+      "fresh_query_result": {
+        "column_count": 20,
+        "missing_audit_fields": []
+      },
+      "gap_confirmed": false,
+      "evidence": "INFORMATION_SCHEMA.COLUMNS (fresh query 2026-08-31)"
+    },
+    {
+      "gap_id": "GAP-04-e",
+      "table": "base_portal",
+      "dimension": "audit_fields",
+      "fresh_query_result": {
+        "column_count": 24,
+        "missing_audit_fields": []
+      },
+      "gap_confirmed": false,
+      "evidence": "INFORMATION_SCHEMA.COLUMNS (fresh query 2026-08-31)"
+    }
+  ]
+}

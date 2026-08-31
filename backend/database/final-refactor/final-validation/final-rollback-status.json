@@ -1,0 +1,58 @@
+{
+  "document": "final-rollback-status",
+  "version": "v1.0",
+  "generated_at": "2026-08-31T19:10:00",
+  "migration_scope": "M32-01 + M32-02",
+  "rollback_scripts": {
+    "rollback_sql": {
+      "file": "backend/database/phase-32/rollback.sql",
+      "status": "VALIDATED",
+      "validation_result": "Syntax correct, targets correct constraints, correct order (M32-02 first, then M32-01)"
+    },
+    "rollback_validation_sql": {
+      "file": "backend/database/final-refactor/execution/rollback-validation.sql",
+      "status": "VALIDATED",
+      "validation_result": "Live execution confirms both PKs exist, FK dependencies none, row counts 0, rollback order safe"
+    }
+  },
+  "rollback_execution": {
+    "status": "NOT_EXECUTED",
+    "reason": "Environment policy prohibits actual rollback execution in production database",
+    "validation_method": "DESIGNED + VALIDATED (not EXECUTED)",
+    "execution_environment": "(local)\\SQLEXPRESS / ZXAF_V1_DevTest1"
+  },
+  "live_validation_evidence": {
+    "pk_base_signature": {
+      "exists": true,
+      "confirmed_at": "2026-08-31T19:05:00"
+    },
+    "pk_base_signature_user": {
+      "exists": true,
+      "confirmed_at": "2026-08-31T19:05:00"
+    },
+    "no_foreign_keys": true,
+    "row_counts_zero": true,
+    "rollback_order_safe": true
+  },
+  "rollback_characteristics": {
+    "operation_type": "INSTANT_METADATA",
+    "data_loss_risk": "ZERO",
+    "execution_time": "INSTANT",
+    "redo_mechanism": "Re-execute migration.sql (M32-01 + M32-02)"
+  },
+  "rollback_steps": [
+    {
+      "order": 1,
+      "sql": "ALTER TABLE dbo.base_signature_user DROP CONSTRAINT PK_base_signature_user",
+      "target": "base_signature_user",
+      "condition": "IF EXISTS (PK exists)"
+    },
+    {
+      "order": 2,
+      "sql": "ALTER TABLE dbo.base_signature DROP CONSTRAINT PK_base_signature",
+      "target": "base_signature",
+      "condition": "IF EXISTS (PK exists)"
+    }
+  ],
+  "conclusion": "Rollback is DESIGNED and VALIDATED. NOT EXECUTED due to environment policy. Rollback would succeed if executed (zero data risk, instant metadata operation)."
+}

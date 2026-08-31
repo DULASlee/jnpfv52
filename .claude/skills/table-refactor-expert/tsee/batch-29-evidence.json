@@ -1,0 +1,2265 @@
+{
+  "metadata": {
+    "batch": "Batch 29",
+    "purpose": "Baseline Confirmation (NO-CHANGE evidence)",
+    "collected_at": "2026-08-31T04:30:28.568946",
+    "collector": "tsee.batch29.collect_evidence (v0.1)",
+    "total_tables": 15
+  },
+  "tables": [
+    {
+      "table_name": "base_advanced_query_scheme",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_full_name",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 200,
+          "ordinal": 2
+        },
+        {
+          "name": "f_match_logic",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 20,
+          "ordinal": 3
+        },
+        {
+          "name": "f_condition_json",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": -1,
+          "ordinal": 4
+        },
+        {
+          "name": "f_module_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 5
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 6
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 7
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 8
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 9
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 10
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 11
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 12
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 13
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 14
+        },
+        {
+          "name": "f_inte_assistant",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 15
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 16
+        },
+        {
+          "name": "f_flow_task_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 17
+        },
+        {
+          "name": "f_flow_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 18
+        }
+      ],
+      "column_count": 18,
+      "primary_key": [
+        "f_id"
+      ],
+      "has_primary_key": true,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 2,
+      "table_created": "2025-04-14T16:11:36.860000",
+      "table_modified": "2025-04-14T16:20:33.420000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_app_data",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_object_type",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 2
+        },
+        {
+          "name": "f_object_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 3
+        },
+        {
+          "name": "f_object_data",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": -1,
+          "ordinal": 4
+        },
+        {
+          "name": "f_description",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 500,
+          "ordinal": 5
+        },
+        {
+          "name": "f_enabled_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 6
+        },
+        {
+          "name": "f_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 7
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 8
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 9
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 10
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 11
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 12
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 13
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 14
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 15
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 16
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 17
+        },
+        {
+          "name": "f_flow_task_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 18
+        },
+        {
+          "name": "f_flow_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 19
+        },
+        {
+          "name": "f_inte_assistant",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 20
+        }
+      ],
+      "column_count": 20,
+      "primary_key": [
+        "f_id"
+      ],
+      "has_primary_key": true,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 0,
+      "table_created": "2025-04-14T16:11:36.770000",
+      "table_modified": "2025-04-14T16:20:33.393000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_columns_purview",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_field_list",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": -1,
+          "ordinal": 2
+        },
+        {
+          "name": "f_module_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 3
+        },
+        {
+          "name": "f_enabled_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 4
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 5
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 6
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 7
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 8
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 9
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 10
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 11
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 12
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 13
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 14
+        }
+      ],
+      "column_count": 14,
+      "primary_key": [
+        "f_id"
+      ],
+      "has_primary_key": true,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 1,
+      "table_created": "2025-04-14T16:11:40.530000",
+      "table_modified": "2025-04-14T16:20:33.427000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_data_interface_user",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 2
+        },
+        {
+          "name": "f_user_key",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 3
+        },
+        {
+          "name": "f_oauth_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 4
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 5
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 6
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 7
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 8
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 9
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 10
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 11
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 12
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 13
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 14
+        }
+      ],
+      "column_count": 14,
+      "primary_key": [
+        "f_id"
+      ],
+      "has_primary_key": true,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 1,
+      "table_created": "2025-04-14T16:11:45.293000",
+      "table_modified": "2025-04-14T16:21:21.563000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_data_interface_variate",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_interface_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 2
+        },
+        {
+          "name": "f_full_name",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 200,
+          "ordinal": 3
+        },
+        {
+          "name": "f_expression",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 500,
+          "ordinal": 4
+        },
+        {
+          "name": "f_value",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": -1,
+          "ordinal": 5
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 6
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 7
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 8
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 9
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 10
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 11
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 12
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 13
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 14
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 15
+        }
+      ],
+      "column_count": 15,
+      "primary_key": [
+        "f_id"
+      ],
+      "has_primary_key": true,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 1,
+      "table_created": "2025-04-14T16:11:48.240000",
+      "table_modified": "2025-04-14T16:21:21.570000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_db_link",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_full_name",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 200,
+          "ordinal": 2
+        },
+        {
+          "name": "f_db_type",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 3
+        },
+        {
+          "name": "f_host",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 4
+        },
+        {
+          "name": "f_port",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 5
+        },
+        {
+          "name": "f_user_name",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 6
+        },
+        {
+          "name": "f_password",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 7
+        },
+        {
+          "name": "f_service_name",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 8
+        },
+        {
+          "name": "f_description",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 500,
+          "ordinal": 9
+        },
+        {
+          "name": "f_db_schema",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 10
+        },
+        {
+          "name": "f_table_space",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 11
+        },
+        {
+          "name": "f_oracle_param",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 500,
+          "ordinal": 12
+        },
+        {
+          "name": "f_oracle_extend",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 13
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 14
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 15
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 16
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 17
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 18
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 19
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 20
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 21
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 22
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 23
+        }
+      ],
+      "column_count": 23,
+      "primary_key": [
+        "f_id"
+      ],
+      "has_primary_key": true,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 1,
+      "table_created": "2025-04-14T16:11:48.800000",
+      "table_modified": "2025-04-14T16:21:21.583000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_im_content",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_send_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 2
+        },
+        {
+          "name": "f_send_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 3
+        },
+        {
+          "name": "f_receive_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 4
+        },
+        {
+          "name": "f_receive_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 5
+        },
+        {
+          "name": "f_content",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": -1,
+          "ordinal": 6
+        },
+        {
+          "name": "f_content_type",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 7
+        },
+        {
+          "name": "f_enabled_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 8
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 9
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 10
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 11
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 12
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 13
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 14
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 15
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 16
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 17
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 18
+        }
+      ],
+      "column_count": 18,
+      "primary_key": [
+        "f_id"
+      ],
+      "has_primary_key": true,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 9,
+      "table_created": "2025-04-14T16:11:53.310000",
+      "table_modified": "2025-04-14T16:21:21.860000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_im_reply",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 2
+        },
+        {
+          "name": "f_receive_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 3
+        },
+        {
+          "name": "f_receive_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 4
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 5
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 6
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 7
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 8
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 9
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 10
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 11
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 12
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 13
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 14
+        },
+        {
+          "name": "f_enabled_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 15
+        }
+      ],
+      "column_count": 15,
+      "primary_key": [
+        "f_id"
+      ],
+      "has_primary_key": true,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 2,
+      "table_created": "2025-04-14T16:11:53.870000",
+      "table_modified": "2026-07-06T16:23:29.917000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_integrate",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_full_name",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 200,
+          "ordinal": 2
+        },
+        {
+          "name": "f_en_code",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 200,
+          "ordinal": 3
+        },
+        {
+          "name": "f_template_json",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": -1,
+          "ordinal": 4
+        },
+        {
+          "name": "f_trigger_type",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 5
+        },
+        {
+          "name": "f_resultType",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 6
+        },
+        {
+          "name": "f_type",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 7
+        },
+        {
+          "name": "f_form_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 8
+        },
+        {
+          "name": "f_description",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 500,
+          "ordinal": 9
+        },
+        {
+          "name": "f_enabled_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 10
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 11
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 12
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 13
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 14
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 15
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 16
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 17
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 18
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 19
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 20
+        }
+      ],
+      "column_count": 20,
+      "primary_key": [
+        "f_id"
+      ],
+      "has_primary_key": true,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 3,
+      "table_created": "2025-04-14T16:11:56.927000",
+      "table_modified": "2025-04-14T16:21:21.923000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_integrate_node",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_task_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 2
+        },
+        {
+          "name": "f_form_Id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 3
+        },
+        {
+          "name": "f_node_type",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 4
+        },
+        {
+          "name": "f_start_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 5
+        },
+        {
+          "name": "f_end_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 6
+        },
+        {
+          "name": "f_error_msg",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": -1,
+          "ordinal": 7
+        },
+        {
+          "name": "f_node_code",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 8
+        },
+        {
+          "name": "f_node_name",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 9
+        },
+        {
+          "name": "f_node_next",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 2000,
+          "ordinal": 10
+        },
+        {
+          "name": "f_result_type",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 11
+        },
+        {
+          "name": "f_node_property_json",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": -1,
+          "ordinal": 12
+        },
+        {
+          "name": "f_enabled_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 13
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 14
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 15
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 16
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 17
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 18
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 19
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 20
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 21
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 22
+        },
+        {
+          "name": "f_description",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 500,
+          "ordinal": 23
+        },
+        {
+          "name": "f_parent_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 24
+        },
+        {
+          "name": "f_is_retry",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 25
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 26
+        }
+      ],
+      "column_count": 26,
+      "primary_key": [
+        "f_id"
+      ],
+      "has_primary_key": true,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 0,
+      "table_created": "2025-04-14T16:11:56.707000",
+      "table_modified": "2025-04-14T16:21:21.880000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_organize_relation",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_organize_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 2
+        },
+        {
+          "name": "f_object_type",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 3
+        },
+        {
+          "name": "f_object_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 4
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 5
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 6
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 7
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 8
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 9
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 10
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 11
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 12
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 13
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 14
+        },
+        {
+          "name": "f_enabled_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 15
+        }
+      ],
+      "column_count": 15,
+      "primary_key": [
+        "f_id"
+      ],
+      "has_primary_key": true,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 0,
+      "table_created": "2025-04-14T16:12:22.883000",
+      "table_modified": "2025-04-14T16:21:22.483000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_portal",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_full_name",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 200,
+          "ordinal": 2
+        },
+        {
+          "name": "f_en_code",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 200,
+          "ordinal": 3
+        },
+        {
+          "name": "f_category",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 4
+        },
+        {
+          "name": "f_type",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 5
+        },
+        {
+          "name": "f_state",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 6
+        },
+        {
+          "name": "f_custom_url",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 500,
+          "ordinal": 7
+        },
+        {
+          "name": "f_link_type",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 8
+        },
+        {
+          "name": "f_enabled_lock",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 9
+        },
+        {
+          "name": "f_platform",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 10
+        },
+        {
+          "name": "f_description",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 500,
+          "ordinal": 11
+        },
+        {
+          "name": "f_enabled_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 12
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 13
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 14
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 15
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 16
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 17
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 18
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 19
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 20
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 21
+        },
+        {
+          "name": "f_platform_release",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 100,
+          "ordinal": 22
+        },
+        {
+          "name": "f_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 23
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 24
+        }
+      ],
+      "column_count": 24,
+      "primary_key": [
+        "f_id"
+      ],
+      "has_primary_key": true,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 2,
+      "table_created": "2025-04-14T16:12:26.083000",
+      "table_modified": "2025-04-14T16:21:22.530000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_portal_data",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_portal_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 2
+        },
+        {
+          "name": "f_platform",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 3
+        },
+        {
+          "name": "f_form_data",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": -1,
+          "ordinal": 4
+        },
+        {
+          "name": "f_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 5
+        },
+        {
+          "name": "f_type",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 6
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 7
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 8
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 9
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 10
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 11
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 12
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 13
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 14
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 15
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 16
+        }
+      ],
+      "column_count": 16,
+      "primary_key": [
+        "f_id"
+      ],
+      "has_primary_key": true,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 9,
+      "table_created": "2025-04-14T16:12:25.753000",
+      "table_modified": "2025-04-14T16:21:22.503000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_signature",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_full_name",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 200,
+          "ordinal": 2
+        },
+        {
+          "name": "f_en_code",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 200,
+          "ordinal": 3
+        },
+        {
+          "name": "f_icon",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": -1,
+          "ordinal": 4
+        },
+        {
+          "name": "f_enabled_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 5
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 6
+        },
+        {
+          "name": "f_description",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 500,
+          "ordinal": 7
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 8
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 9
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 10
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 11
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 12
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 13
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 14
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 15
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 16
+        }
+      ],
+      "column_count": 16,
+      "primary_key": [],
+      "has_primary_key": false,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 0,
+      "table_created": "2025-04-14T16:12:39.610000",
+      "table_modified": "2025-04-14T16:12:39.623000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    },
+    {
+      "table_name": "base_signature_user",
+      "schema": "dbo",
+      "columns": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar",
+          "is_nullable": false,
+          "max_length": 50,
+          "ordinal": 1
+        },
+        {
+          "name": "f_signature_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 2
+        },
+        {
+          "name": "f_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 3
+        },
+        {
+          "name": "f_enabled_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 4
+        },
+        {
+          "name": "f_sort_code",
+          "data_type": "bigint",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 5
+        },
+        {
+          "name": "f_description",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 500,
+          "ordinal": 6
+        },
+        {
+          "name": "f_creator_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 7
+        },
+        {
+          "name": "f_creator_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 8
+        },
+        {
+          "name": "f_last_modify_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 9
+        },
+        {
+          "name": "f_last_modify_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 10
+        },
+        {
+          "name": "f_delete_time",
+          "data_type": "datetime",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 11
+        },
+        {
+          "name": "f_delete_user_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 12
+        },
+        {
+          "name": "f_delete_mark",
+          "data_type": "int",
+          "is_nullable": true,
+          "max_length": null,
+          "ordinal": 13
+        },
+        {
+          "name": "f_tenant_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 14
+        },
+        {
+          "name": "f_zx_system_id",
+          "data_type": "nvarchar",
+          "is_nullable": true,
+          "max_length": 50,
+          "ordinal": 15
+        }
+      ],
+      "column_count": 15,
+      "primary_key": [],
+      "has_primary_key": false,
+      "indexes": [],
+      "index_count": 0,
+      "foreign_keys": [],
+      "fk_count": 0,
+      "row_count": 0,
+      "table_created": "2025-04-14T16:12:40.177000",
+      "table_modified": "2025-04-14T16:12:40.230000",
+      "tenant_field": "f_tenant_id",
+      "created_time_field": "f_creator_time",
+      "created_by_field": "f_creator_user_id",
+      "modified_time_field": "f_last_modify_time",
+      "modified_by_field": "f_last_modify_user_id",
+      "soft_delete_field": "f_delete_mark",
+      "id_field": "f_id"
+    }
+  ]
+}

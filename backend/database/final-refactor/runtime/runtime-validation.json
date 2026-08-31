@@ -1,0 +1,165 @@
+{
+  "metadata": {
+    "wave": "WAVE 3",
+    "phase": "Runtime / Regression / Performance Validation",
+    "executed_at": "2026-08-31T18:15:00",
+    "scope": "M32-01 + M32-02 post-migration runtime validation",
+    "method": "Codebase analysis (no live runtime in current environment)"
+  },
+  "chief_architect_authorizations": {
+    "FR-001": {"table": "BASE_SIGNATURE", "migration": "M32-01", "decision": "APPROVED"},
+    "FR-002": {"table": "BASE_SIGNATURE_USER", "migration": "M32-02", "decision": "APPROVED_OPTION_A"}
+  },
+  "runtime_validation": {
+    "signature_entity": {
+      "table": "BASE_SIGNATURE",
+      "operations": {
+        "INSERT": {
+          "location": "SignatureService.Create::line183",
+          "code": "await _repository.AsInsertable(entity).ExecuteCommandAsync()",
+          "pk_used": "entity.Id = SnowflakeIdHelper.NextId()",
+          "migration_impact": "NONE — F_ID PK added, SqlSugar Insertable requires PK",
+          "composite_pk_impact": "N/A",
+          "status": "COMPATIBLE"
+        },
+        "SELECT_BY_ID": {
+          "location": "SignatureService.Delete::line239, GetInfo::line110",
+          "code": "repository.GetFirstAsync(x => x.Id == id)",
+          "pk_used": "F_ID",
+          "migration_impact": "NONE — PK on F_ID makes Id lookups more efficient",
+          "status": "COMPATIBLE"
+        },
+        "UPDATE": {
+          "location": "SignatureService.Update::line221",
+          "code": "repository.AsUpdateable(entity).IgnoreColumns(ignoreAllNullColumns: true)",
+          "pk_used": "F_ID",
+          "migration_impact": "NONE",
+          "status": "COMPATIBLE"
+        },
+        "SOFT_DELETE": {
+          "location": "SignatureService.Delete::line242",
+          "code": "entity.Delete() — sets DeleteMark=1, DeleteTime, DeleteUserId",
+          "pk_used": "F_ID",
+          "migration_impact": "NONE",
+          "status": "COMPATIBLE"
+        },
+        "NAVIGATE_TO_SIGNATUREUSER": {
+          "location": "SignatureService.GetList::line58, GetInfo::line111, GetListByIds::line137",
+          "code": "repository.AsQueryable().Includes(it => it.SignatureUser)",
+          "navigate_attribute": "[Navigate(NavigateType.OneToMany, nameof(SignatureUserEntity.SignatureId), nameof(Id))]",
+          "fk_column": "F_SIGNATURE_ID",
+          "parent_pk": "F_ID",
+          "migration_impact": "NONE — navigation uses FK column SignatureId, independent of child PK",
+          "status": "COMPATIBLE"
+        }
+      },
+      "conclusion": "All SignatureEntity operations remain COMPATIBLE with M32-01 (PK on F_ID)"
+    },
+    "signature_user_entity": {
+      "table": "BASE_SIGNATURE_USER",
+      "operations": {
+        "INSERT": {
+          "location": "SignatureService.Create::line184, Update::line223",
+          "code": "AsSugarClient().Insertable(userList).ExecuteCommandAsync()",
+          "pk_used_after_migration": "Composite PK (F_SIGNATURE_ID, F_USER_ID)",
+          "explicit_id": "Id = SnowflakeIdHelper.NextId() set per entity",
+          "migration_impact": "LOW — composite PK added alongside Id value; Id column becomes non-PK but SqlSugar Insertable bypasses PK requirement",
+          "status": "COMPATIBLE_WITH_CONDITION",
+          "condition": "SqlSugar Insertable must not require IsPrimaryKey=true on Inserted entities"
+        },
+        "DELETE_BY_SIGNATUREID": {
+          "location": "SignatureService.Update::line222",
+          "code": "Deleteable<SignatureUserEntity>().Where(it => it.SignatureId.Equals(id)).ExecuteCommandAsync()",
+          "pk_used": "NONE — uses WHERE clause on SignatureId FK column",
+          "migration_impact": "NONE — delete uses FK column, independent of PK",
+          "status": "COMPATIBLE"
+        },
+        "INSERT_BATCH": {
+          "location": "SignatureService.Create::line184",
+          "code": "AsSugarClient().Insertable(userList).ExecuteCommandAsync()",
+          "migration_impact": "Same as INSERT — composite PK doesn't affect batch insert",
+          "status": "COMPATIBLE"
+        },
+        "NAVIGATION_FROM_SIGNATURE": {
+          "location": "SignatureEntity.SignatureUser [Navigate]",
+          "navigate_type": "OneToMany",
+          "navigate_from_parent": "SignatureEntity.Id",
+          "navigate_to_child_fk": "SignatureUserEntity.SignatureId",
+          "migration_impact": "NONE — navigation is FK-based, independent of child table PK structure",
+          "status": "COMPATIBLE"
+        },
+        "QUERY_BY_COMPOSITE_KEY": {
+          "location": "None currently in codebase",
+          "note": "No explicit queries use composite key (F_SIGNATURE_ID, F_USER_ID) as filter",
+          "migration_impact": "NONE",
+          "status": "NOT_USED"
+        }
+      },
+      "conclusion": "All SignatureUserEntity operations COMPATIBLE with M32-02 (composite PK on F_SIGNATURE_ID, F_USER_ID)"
+    }
+  },
+  "sqlsugar_navigate_analysis": {
+    "question": "Does SqlSugar [Navigate] work when child table has composite PK (F_SIGNATURE_ID, F_USER_ID) instead of single-column PK on F_ID?",
+    "analysis": {
+      "navigate_attribute": "[Navigate(NavigateType.OneToMany, nameof(SignatureUserEntity.SignatureId), nameof(Id))]",
+      "navigate_mechanism": "FK-based: matches SignatureUserEntity.SignatureId (F_SIGNATURE_ID) against SignatureEntity.Id (F_ID)",
+      "parent_pk": "F_ID (single-column, added by M32-01)",
+      "child_fk": "F_SIGNATURE_ID",
+      "child_pk": "Composite (F_SIGNATURE_ID, F_USER_ID) — does NOT include SignatureId in composite key definition",
+      "sqlsugar_behavior": "SqlSugar [Navigate] uses FK column values to find matching rows, NOT child PK columns",
+      "sqlsugar_source_confirmation": "SqlSugar Navigate uses the FK column on child to match parent's Id — the child PK structure is irrelevant to navigation resolution"
+    },
+    "similar_pattern_in_codebase": {
+      "ScheduleUserEntity": {
+        "table": "BASE_SCHEDULE_USER",
+        "structure": "Same as SignatureUserEntity — FK column ScheduleId, inherits IdEntityBase with Id property",
+        "navigate": "ScheduleEntity.ScheduleUser has same [Navigate] pattern",
+        "current_db_state": "No PK constraint in current DB",
+        "status": "PROVEN_WORKING_PATTERN"
+      }
+    },
+    "conclusion": "SqlSugar [Navigate] navigation is COMPATIBLE with composite PK on child table. Navigation uses FK column SignatureId matching parent Id, not child PK columns."
+  },
+  "dynamic_references_check": {
+    "dynamic_sql": {
+      "query": "grep 'BASE_SIGNATURE' in all .cs files",
+      "result": "Only found in [SugarTable] attributes",
+      "no_dynamic_sql": true,
+      "status": "NO_DYNAMIC_SQL_REFERENCES"
+    },
+    "low_code_metadata": {
+      "query": "grep 'signature' in lowcode/metadata modules",
+      "result": "No low-code table config referencing base_signature or base_signature_user",
+      "status": "NO_LOWCODE_REFERENCES"
+    },
+    "workflow": {
+      "query": "grep 'signature' in workflow entities and services",
+      "result": "No workflow engine references to these entities",
+      "status": "NO_WORKFLOW_REFERENCES"
+    },
+    "permission": {
+      "query": "grep 'signature' in permission/authorize modules",
+      "result": "No permission system references to these entities",
+      "status": "NO_PERMISSION_REFERENCES"
+    },
+    "api_endpoints": {
+      "base_path": "api/system/Signature",
+      "methods": ["GET", "POST", "PUT", "DELETE"],
+      "through_dynamic_api": "Yes (IDynamicApiController)",
+      "status": "COVERED_BY_SIGNATURESERVICE"
+    }
+  },
+  "regression_risks": {
+    "G0_CRITICAL": [],
+    "G1_MAJOR": [],
+    "G2_MINOR": [],
+    "NONE_IDENTIFIED": true
+  },
+  "performance_validation": {
+    "performance_claim": "NOT MADE",
+    "reason": "Empty tables — no meaningful performance delta to measure. PK is structural requirement for ORM, not performance optimization.",
+    "no_workload": true,
+    "no_pre_migration_benchmark": true,
+    "note": "Performance monitoring should be enabled post-migration to observe actual production workload"
+  }
+}

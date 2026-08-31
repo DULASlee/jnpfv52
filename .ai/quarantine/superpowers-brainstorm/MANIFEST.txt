@@ -1,0 +1,8 @@
+D:\JNPF-v52\.superpowers\brainstorm
+D:\JNPF-v52\.superpowers\brainstorm\1877-1783078189
+D:\JNPF-v52\.superpowers\brainstorm\1877-1783078189\content
+D:\JNPF-v52\.superpowers\brainstorm\1877-1783078189\state
+D:\JNPF-v52\.superpowers\brainstorm\1877-1783078189\content\01-skills-landscape.html
+D:\JNPF-v52\.superpowers\brainstorm\1877-1783078189\state\events
+D:\JNPF-v52\.superpowers\brainstorm\1877-1783078189\state\server-stopped
+D:\JNPF-v52\.superpowers\brainstorm\1877-1783078189\state\server.pid

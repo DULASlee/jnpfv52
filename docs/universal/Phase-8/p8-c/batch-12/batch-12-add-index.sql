@@ -33,12 +33,9 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_EMPLOYEE_IDNUMBER' AN
     INCLUDE (f_id, f_full_name);
 PRINT '--- ext_employee done ---';
 
--- ext_work_log (17 cols)
+-- ext_work_log (17 cols; f_to_user_id is nvarchar(MAX) so cannot be indexed; skip IDX_WORKLOG_TOUSER)
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_WORKLOG_CREATOR' AND object_id = OBJECT_ID('ext_work_log'))
     CREATE NONCLUSTERED INDEX IDX_WORKLOG_CREATOR ON ext_work_log (f_tenant_id, f_creator_user_id, f_creator_time DESC)
-    INCLUDE (f_id, f_title);
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_WORKLOG_TOUSER' AND object_id = OBJECT_ID('ext_work_log'))
-    CREATE NONCLUSTERED INDEX IDX_WORKLOG_TOUSER ON ext_work_log (f_tenant_id, f_to_user_id, f_creator_time DESC)
     INCLUDE (f_id, f_title);
 PRINT '--- ext_work_log done ---';
 
@@ -57,13 +54,13 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_EMAILSEND_STATE' AND 
     INCLUDE (f_id, f_subject, f_creator_time);
 PRINT '--- ext_email_send done ---';
 
--- ext_project_gantt (24 cols)
+-- ext_project_gantt (24 cols — f_manager_ids is nvarchar(MAX); index by f_type as proxy for grouping)
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_GANTT_PROJECT' AND object_id = OBJECT_ID('ext_project_gantt'))
     CREATE NONCLUSTERED INDEX IDX_GANTT_PROJECT ON ext_project_gantt (f_tenant_id, f_project_id)
-    INCLUDE (f_id, f_task_name, f_start_date, f_end_date);
+    INCLUDE (f_id, f_full_name, f_start_time, f_end_time);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_GANTT_ASSIGNEE' AND object_id = OBJECT_ID('ext_project_gantt'))
-    CREATE NONCLUSTERED INDEX IDX_GANTT_ASSIGNEE ON ext_project_gantt (f_tenant_id, f_assignee_id)
-    INCLUDE (f_id, f_project_id, f_progress);
+    CREATE NONCLUSTERED INDEX IDX_GANTT_ASSIGNEE ON ext_project_gantt (f_tenant_id, f_type)
+    INCLUDE (f_id, f_project_id, f_schedule);
 PRINT '--- ext_project_gantt done ---';
 
 PRINT '=== Batch 12 ADD INDEX COMPLETE ===';

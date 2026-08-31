@@ -1,4 +1,4 @@
-﻿using JNPF.Common.Core.Manager;
+using JNPF.Common.Core.Manager;
 using JNPF.Common.Enums;
 using JNPF.Common.Filter;
 using JNPF.DependencyInjection;
@@ -39,7 +39,13 @@ public class FlowCommentService : IDynamicApiController, ITransient
     [HttpGet("")]
     public async Task<dynamic> GetList([FromQuery] FlowCommentListQuery input)
     {
-        var list = await _repository.AsSugarClient().Queryable<FlowCommentEntity, UserEntity>((a, b) => new JoinQueryInfos(JoinType.Left, a.CreatorUserId == b.Id))
+        var list = await BuildListQuery(input).ToPagedListAsync(input.currentPage, input.pageSize);
+        return PageResult<FlowCommentListOutput>.SqlSugarPageResult(list);
+    }
+
+    internal ISugarQueryable<FlowCommentListOutput> BuildListQuery(FlowCommentListQuery input)
+    {
+        return _repository.AsSugarClient().Queryable<FlowCommentEntity, UserEntity>((a, b) => new JoinQueryInfos(JoinType.Left, a.CreatorUserId == b.Id))
             .Where((a, b) => a.TaskId == input.taskId && a.DeleteMark == null)
             .OrderBy(a => a.SortCode).OrderBy(a => a.CreatorTime, OrderByType.Desc)
             .OrderByIF(!string.IsNullOrEmpty(input.keyword), a => a.LastModifyTime, OrderByType.Desc)
@@ -56,8 +62,7 @@ public class FlowCommentService : IDynamicApiController, ITransient
                 creatorUserHeadIcon = SqlFunc.MergeString("/api/File/Image/userAvatar/", b.HeadIcon),
                 isDel = SqlFunc.IIF(a.CreatorUserId == _userManager.UserId, true, false),
                 lastModifyTime = a.LastModifyTime,
-            }).ToPagedListAsync(input.currentPage, input.pageSize);
-        return PageResult<FlowCommentListOutput>.SqlSugarPageResult(list);
+            });
     }
 
     /// <summary>

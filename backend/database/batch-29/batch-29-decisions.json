@@ -1,0 +1,804 @@
+{
+  "metadata": {
+    "batch": "Batch 29",
+    "purpose": "Migration Decisions (NO-CHANGE baseline confirmation)",
+    "generated_at": "2026-08-31T04:33:57.225082",
+    "generator": "tsee.batch29.generate_decisions (v0.1)",
+    "policy": "Batch 29 = Baseline Confirmation ONLY (per Chief Architect directive)",
+    "constraints": [
+      "NO ALTER TABLE",
+      "NO DROP",
+      "NO CREATE INDEX",
+      "NO entity code changes",
+      "NO ORM mapping changes"
+    ],
+    "total_tables": 15
+  },
+  "decisions": [
+    {
+      "table": "base_advanced_query_scheme",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 2 (< 100) - index optimization not justified",
+        "Primary Key exists - data integrity baseline met",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 1,
+        "G2_MINOR": 0,
+        "G3_OK": 0
+      },
+      "evidence_snapshot": {
+        "row_count": 2,
+        "column_count": 18,
+        "index_count": 0,
+        "has_pk": true,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_app_data",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 0 (< 100) - index optimization not justified",
+        "Primary Key exists - data integrity baseline met",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        },
+        {
+          "gap_type": "empty_table",
+          "severity": "G3_OK",
+          "detail": "Table is empty (no production data) - low priority for optimization",
+          "iron_law": "JNPF convention"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 1,
+        "G2_MINOR": 0,
+        "G3_OK": 1
+      },
+      "evidence_snapshot": {
+        "row_count": 0,
+        "column_count": 20,
+        "index_count": 0,
+        "has_pk": true,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_columns_purview",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 1 (< 100) - index optimization not justified",
+        "Primary Key exists - data integrity baseline met",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 1,
+        "G2_MINOR": 0,
+        "G3_OK": 0
+      },
+      "evidence_snapshot": {
+        "row_count": 1,
+        "column_count": 14,
+        "index_count": 0,
+        "has_pk": true,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_data_interface_user",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 1 (< 100) - index optimization not justified",
+        "Primary Key exists - data integrity baseline met",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 1,
+        "G2_MINOR": 0,
+        "G3_OK": 0
+      },
+      "evidence_snapshot": {
+        "row_count": 1,
+        "column_count": 14,
+        "index_count": 0,
+        "has_pk": true,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_data_interface_variate",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 1 (< 100) - index optimization not justified",
+        "Primary Key exists - data integrity baseline met",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 1,
+        "G2_MINOR": 0,
+        "G3_OK": 0
+      },
+      "evidence_snapshot": {
+        "row_count": 1,
+        "column_count": 15,
+        "index_count": 0,
+        "has_pk": true,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_db_link",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 1 (< 100) - index optimization not justified",
+        "Primary Key exists - data integrity baseline met",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 1,
+        "G2_MINOR": 0,
+        "G3_OK": 0
+      },
+      "evidence_snapshot": {
+        "row_count": 1,
+        "column_count": 23,
+        "index_count": 0,
+        "has_pk": true,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_im_content",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 9 (< 100) - index optimization not justified",
+        "Primary Key exists - data integrity baseline met",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 1,
+        "G2_MINOR": 0,
+        "G3_OK": 0
+      },
+      "evidence_snapshot": {
+        "row_count": 9,
+        "column_count": 18,
+        "index_count": 0,
+        "has_pk": true,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_im_reply",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 2 (< 100) - index optimization not justified",
+        "Primary Key exists - data integrity baseline met",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 1,
+        "G2_MINOR": 0,
+        "G3_OK": 0
+      },
+      "evidence_snapshot": {
+        "row_count": 2,
+        "column_count": 15,
+        "index_count": 0,
+        "has_pk": true,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_integrate",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 3 (< 100) - index optimization not justified",
+        "Primary Key exists - data integrity baseline met",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 1,
+        "G2_MINOR": 0,
+        "G3_OK": 0
+      },
+      "evidence_snapshot": {
+        "row_count": 3,
+        "column_count": 20,
+        "index_count": 0,
+        "has_pk": true,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_integrate_node",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 0 (< 100) - index optimization not justified",
+        "Primary Key exists - data integrity baseline met",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        },
+        {
+          "gap_type": "empty_table",
+          "severity": "G3_OK",
+          "detail": "Table is empty (no production data) - low priority for optimization",
+          "iron_law": "JNPF convention"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 1,
+        "G2_MINOR": 0,
+        "G3_OK": 1
+      },
+      "evidence_snapshot": {
+        "row_count": 0,
+        "column_count": 26,
+        "index_count": 0,
+        "has_pk": true,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_organize_relation",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 0 (< 100) - index optimization not justified",
+        "Primary Key exists - data integrity baseline met",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        },
+        {
+          "gap_type": "empty_table",
+          "severity": "G3_OK",
+          "detail": "Table is empty (no production data) - low priority for optimization",
+          "iron_law": "JNPF convention"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 1,
+        "G2_MINOR": 0,
+        "G3_OK": 1
+      },
+      "evidence_snapshot": {
+        "row_count": 0,
+        "column_count": 15,
+        "index_count": 0,
+        "has_pk": true,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_portal",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 2 (< 100) - index optimization not justified",
+        "Primary Key exists - data integrity baseline met",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 1,
+        "G2_MINOR": 0,
+        "G3_OK": 0
+      },
+      "evidence_snapshot": {
+        "row_count": 2,
+        "column_count": 24,
+        "index_count": 0,
+        "has_pk": true,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_portal_data",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 9 (< 100) - index optimization not justified",
+        "Primary Key exists - data integrity baseline met",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 1,
+        "G2_MINOR": 0,
+        "G3_OK": 0
+      },
+      "evidence_snapshot": {
+        "row_count": 9,
+        "column_count": 16,
+        "index_count": 0,
+        "has_pk": true,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_signature",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 0 (< 100) - index optimization not justified",
+        "Primary Key MISSING - deferred to Batch 30+ (NOT fixed in this batch)",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 2 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_primary_key",
+          "severity": "G1_MAJOR",
+          "detail": "Table has no PRIMARY KEY constraint",
+          "iron_law": "schema integrity"
+        },
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        },
+        {
+          "gap_type": "empty_table",
+          "severity": "G3_OK",
+          "detail": "Table is empty (no production data) - low priority for optimization",
+          "iron_law": "JNPF convention"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 2,
+        "G2_MINOR": 0,
+        "G3_OK": 1
+      },
+      "evidence_snapshot": {
+        "row_count": 0,
+        "column_count": 16,
+        "index_count": 0,
+        "has_pk": false,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    },
+    {
+      "table": "base_signature_user",
+      "decision": "NO_CHANGE",
+      "verdict": "BASELINE_CONFIRMED",
+      "rationale": [
+        "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+        "Row count = 0 (< 100) - index optimization not justified",
+        "Primary Key MISSING - deferred to Batch 30+ (NOT fixed in this batch)",
+        "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+        "0 non-PK indexes (acceptable for empty/tiny tables)",
+        "0 foreign keys (isolated tables - no referential integrity gaps)",
+        "⚠ 2 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+      ],
+      "gaps_observed": [
+        {
+          "gap_type": "missing_primary_key",
+          "severity": "G1_MAJOR",
+          "detail": "Table has no PRIMARY KEY constraint",
+          "iron_law": "schema integrity"
+        },
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        },
+        {
+          "gap_type": "empty_table",
+          "severity": "G3_OK",
+          "detail": "Table is empty (no production data) - low priority for optimization",
+          "iron_law": "JNPF convention"
+        }
+      ],
+      "gap_summary": {
+        "G0_CRITICAL": 0,
+        "G1_MAJOR": 2,
+        "G2_MINOR": 0,
+        "G3_OK": 1
+      },
+      "evidence_snapshot": {
+        "row_count": 0,
+        "column_count": 15,
+        "index_count": 0,
+        "has_pk": false,
+        "fk_count": 0
+      },
+      "follow_up_action": "Batch 30+ (requires separate Chief Architect approval)",
+      "human_gate": "NOT_REQUIRED",
+      "iron_law_compliance": {
+        "IRON-TABLE-01_no_change_evidence": "PASS (8-dimension evidence in batch-29-gap-analysis.json)",
+        "IRON-TABLE-02_mapping_is_not_migration": "PASS (no mapping bypass in baseline batch)",
+        "IRON-TABLE-03_target_contract": "PASS (evidence + gap analysis per JNPF Project Extension)",
+        "IRON-TABLE-04_security_boundary": "PASS (P0-Security tables NOT in this batch)",
+        "IRON-TABLE-05_performance_measurement": "N/A (NO-CHANGE baseline, no performance claim made)",
+        "IRON-TABLE-06_migration_first_class": "N/A (no migration artifact needed)",
+        "IRON-TABLE-07_runtime_compatibility": "N/A (no migration applied)",
+        "IRON-TABLE-08_dynamic_platform": "PASS (none of 15 tables are wform_/lowcode_/runtime ext_)",
+        "IRON-TABLE-09_evidence_over_declaration": "PASS (all claims bound to evidence files)",
+        "IRON-TABLE-10_batch_representative_proof": "PASS (15 BUSINESS_ENTITY tables, 0 dynamic tables, all simple)"
+      }
+    }
+  ],
+  "summary": {
+    "no_change_count": 15,
+    "human_gate_required": 0,
+    "total_gaps_recorded": 22,
+    "G0_CRITICAL_total": 0,
+    "G1_MAJOR_total": 17,
+    "baseline_verdict": "ALL BASELINE_CONFIRMED (no G0 escalation needed)"
+  }
+}

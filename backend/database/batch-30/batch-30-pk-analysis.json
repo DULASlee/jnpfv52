@@ -1,0 +1,494 @@
+{
+  "metadata": {
+    "task": "30.3 PK Analysis",
+    "executed_at": "2026-08-31T15:23:10.976470"
+  },
+  "analyses": [
+    {
+      "table": "base_signature",
+      "pk_candidate_analysis": {
+        "row_count": 0,
+        "columns": [
+          {
+            "name": "f_id",
+            "type": "nvarchar",
+            "nullable": false,
+            "max_length": 50
+          },
+          {
+            "name": "f_full_name",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 200
+          },
+          {
+            "name": "f_en_code",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 200
+          },
+          {
+            "name": "f_icon",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": -1
+          },
+          {
+            "name": "f_enabled_mark",
+            "type": "int",
+            "nullable": true,
+            "max_length": null
+          },
+          {
+            "name": "f_sort_code",
+            "type": "bigint",
+            "nullable": true,
+            "max_length": null
+          },
+          {
+            "name": "f_description",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 500
+          },
+          {
+            "name": "f_creator_time",
+            "type": "datetime",
+            "nullable": true,
+            "max_length": null
+          },
+          {
+            "name": "f_creator_user_id",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 50
+          },
+          {
+            "name": "f_last_modify_time",
+            "type": "datetime",
+            "nullable": true,
+            "max_length": null
+          },
+          {
+            "name": "f_last_modify_user_id",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 50
+          },
+          {
+            "name": "f_delete_time",
+            "type": "datetime",
+            "nullable": true,
+            "max_length": null
+          },
+          {
+            "name": "f_delete_user_id",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 50
+          },
+          {
+            "name": "f_delete_mark",
+            "type": "int",
+            "nullable": true,
+            "max_length": null
+          },
+          {
+            "name": "f_tenant_id",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 50
+          },
+          {
+            "name": "f_zx_system_id",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 50
+          }
+        ],
+        "duplicate_analysis": {
+          "f_id": {
+            "type": "nvarchar",
+            "nullable": false,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_full_name": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_en_code": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_icon": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_enabled_mark": {
+            "type": "int",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_sort_code": {
+            "type": "bigint",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_description": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_creator_time": {
+            "type": "datetime",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_creator_user_id": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_last_modify_time": {
+            "type": "datetime",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_last_modify_user_id": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_delete_time": {
+            "type": "datetime",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_delete_user_id": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_delete_mark": {
+            "type": "int",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_tenant_id": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_zx_system_id": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          }
+        },
+        "pk_candidates": [
+          "f_id",
+          "f_full_name",
+          "f_en_code",
+          "f_icon",
+          "f_enabled_mark",
+          "f_sort_code",
+          "f_description",
+          "f_creator_time",
+          "f_creator_user_id",
+          "f_last_modify_time",
+          "f_last_modify_user_id",
+          "f_delete_time",
+          "f_delete_user_id",
+          "f_delete_mark",
+          "f_tenant_id",
+          "f_zx_system_id"
+        ]
+      },
+      "referential_dependency_analysis": {
+        "foreign_keys_in_or_out": [],
+        "fk_count": 0
+      },
+      "runtime_impact_analysis": {
+        "triggers": [],
+        "row_count": 0,
+        "interpretation": "Empty table (0 rows) → no data migration risk, no FK risk"
+      },
+      "dynamic_check": {
+        "table_name_starts_with_wform": false,
+        "table_name_starts_with_lowcode": false,
+        "verdict": "STATIC"
+      }
+    },
+    {
+      "table": "base_signature_user",
+      "pk_candidate_analysis": {
+        "row_count": 0,
+        "columns": [
+          {
+            "name": "f_id",
+            "type": "nvarchar",
+            "nullable": false,
+            "max_length": 50
+          },
+          {
+            "name": "f_signature_id",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 50
+          },
+          {
+            "name": "f_user_id",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 50
+          },
+          {
+            "name": "f_enabled_mark",
+            "type": "int",
+            "nullable": true,
+            "max_length": null
+          },
+          {
+            "name": "f_sort_code",
+            "type": "bigint",
+            "nullable": true,
+            "max_length": null
+          },
+          {
+            "name": "f_description",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 500
+          },
+          {
+            "name": "f_creator_time",
+            "type": "datetime",
+            "nullable": true,
+            "max_length": null
+          },
+          {
+            "name": "f_creator_user_id",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 50
+          },
+          {
+            "name": "f_last_modify_time",
+            "type": "datetime",
+            "nullable": true,
+            "max_length": null
+          },
+          {
+            "name": "f_last_modify_user_id",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 50
+          },
+          {
+            "name": "f_delete_time",
+            "type": "datetime",
+            "nullable": true,
+            "max_length": null
+          },
+          {
+            "name": "f_delete_user_id",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 50
+          },
+          {
+            "name": "f_delete_mark",
+            "type": "int",
+            "nullable": true,
+            "max_length": null
+          },
+          {
+            "name": "f_tenant_id",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 50
+          },
+          {
+            "name": "f_zx_system_id",
+            "type": "nvarchar",
+            "nullable": true,
+            "max_length": 50
+          }
+        ],
+        "duplicate_analysis": {
+          "f_id": {
+            "type": "nvarchar",
+            "nullable": false,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_signature_id": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_user_id": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_enabled_mark": {
+            "type": "int",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_sort_code": {
+            "type": "bigint",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_description": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_creator_time": {
+            "type": "datetime",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_creator_user_id": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_last_modify_time": {
+            "type": "datetime",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_last_modify_user_id": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_delete_time": {
+            "type": "datetime",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_delete_user_id": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_delete_mark": {
+            "type": "int",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_tenant_id": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          },
+          "f_zx_system_id": {
+            "type": "nvarchar",
+            "nullable": true,
+            "null_count": 0,
+            "distinct_count": 0,
+            "duplicate_count": 0
+          }
+        },
+        "pk_candidates": [
+          "f_id",
+          "f_signature_id",
+          "f_user_id",
+          "f_enabled_mark",
+          "f_sort_code",
+          "f_description",
+          "f_creator_time",
+          "f_creator_user_id",
+          "f_last_modify_time",
+          "f_last_modify_user_id",
+          "f_delete_time",
+          "f_delete_user_id",
+          "f_delete_mark",
+          "f_tenant_id",
+          "f_zx_system_id"
+        ]
+      },
+      "referential_dependency_analysis": {
+        "foreign_keys_in_or_out": [],
+        "fk_count": 0
+      },
+      "runtime_impact_analysis": {
+        "triggers": [],
+        "row_count": 0,
+        "interpretation": "Empty table (0 rows) → no data migration risk, no FK risk"
+      },
+      "dynamic_check": {
+        "table_name_starts_with_wform": false,
+        "table_name_starts_with_lowcode": false,
+        "verdict": "STATIC"
+      }
+    }
+  ]
+}

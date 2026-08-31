@@ -1,0 +1,90 @@
+{
+  "document": "final-schema-diff",
+  "version": "v1.0",
+  "generated_at": "2026-08-31T19:10:00",
+  "server": "(local)\\SQLEXPRESS",
+  "database": "ZXAF_V1_DevTest1",
+  "migration_scope": "M32-01 + M32-02",
+  "actual_schema": {
+    "BASE_SIGNATURE": {
+      "primary_key": {
+        "constraint_name": "PK_base_signature",
+        "type": "CLUSTERED",
+        "columns": ["f_id"],
+        "status": "EXISTS"
+      },
+      "row_count": 0,
+      "columns": {
+        "f_id": { "type": "nvarchar(50)", "nullable": false },
+        "f_tenant_id": { "type": "nvarchar(50)", "nullable": true },
+        "f_creator_time": { "type": "datetime", "nullable": true },
+        "f_creator_user_id": { "type": "nvarchar(50)", "nullable": true },
+        "f_last_modify_time": { "type": "datetime", "nullable": true },
+        "f_last_modify_user_id": { "type": "nvarchar(50)", "nullable": true },
+        "f_delete_mark": { "type": "int", "nullable": true },
+        "f_delete_time": { "type": "datetime", "nullable": true },
+        "f_delete_user_id": { "type": "nvarchar(50)", "nullable": true },
+        "f_title": { "type": "nvarchar(200)", "nullable": true },
+        "f_type": { "type": "int", "nullable": true },
+        "f_file_path": { "type": "nvarchar(1000)", "nullable": true },
+        "f_file_size": { "type": "bigint", "nullable": true },
+        "f_description": { "type": "nvarchar(1000)", "nullable": true },
+        "f_enabled_flag": { "type": "int", "nullable": true },
+        "f_sort_code": { "type": "int", "nullable": true }
+      }
+    },
+    "BASE_SIGNATURE_USER": {
+      "primary_key": {
+        "constraint_name": "PK_base_signature_user",
+        "type": "CLUSTERED",
+        "columns": ["f_signature_id", "f_user_id"],
+        "status": "EXISTS"
+      },
+      "row_count": 0,
+      "columns": {
+        "f_signature_id": { "type": "nvarchar(50)", "nullable": false },
+        "f_user_id": { "type": "nvarchar(50)", "nullable": false },
+        "f_tenant_id": { "type": "nvarchar(50)", "nullable": true },
+        "f_creator_time": { "type": "datetime", "nullable": true },
+        "f_creator_user_id": { "type": "nvarchar(50)", "nullable": true },
+        "f_last_modify_time": { "type": "datetime", "nullable": true },
+        "f_last_modify_user_id": { "type": "nvarchar(50)", "nullable": true },
+        "f_delete_mark": { "type": "int", "nullable": true },
+        "f_delete_time": { "type": "datetime", "nullable": true },
+        "f_delete_user_id": { "type": "nvarchar(50)", "nullable": true },
+        "f_enabled_flag": { "type": "int", "nullable": true },
+        "f_sort_code": { "type": "int", "nullable": true }
+      }
+    }
+  },
+  "approved_target_contract": {
+    "BASE_SIGNATURE": {
+      "primary_key": { "columns": ["f_id"], "type": "CLUSTERED" }
+    },
+    "BASE_SIGNATURE_USER": {
+      "primary_key": { "columns": ["f_signature_id", "f_user_id"], "type": "CLUSTERED" }
+    }
+  },
+  "diff_result": {
+    "BASE_SIGNATURE": {
+      "primary_key": {
+        "actual": "PK_base_signature ON f_id",
+        "expected": "PK ON f_id",
+        "match": true
+      }
+    },
+    "BASE_SIGNATURE_USER": {
+      "primary_key": {
+        "actual": "PK_base_signature_user ON (f_signature_id, f_user_id)",
+        "expected": "PK ON (f_signature_id, f_user_id)",
+        "match": true
+      }
+    }
+  },
+  "verification_result": "PASS — Actual Schema = Approved Target Schema",
+  "migration_ids_executed": ["M32-01", "M32-02"],
+  "corrective_steps_executed": [
+    "ALTER TABLE base_signature_user ALTER COLUMN f_signature_id NVARCHAR(50) NOT NULL",
+    "ALTER TABLE base_signature_user ALTER COLUMN f_user_id NVARCHAR(50) NOT NULL"
+  ]
+}

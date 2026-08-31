@@ -2,7 +2,7 @@
 name: session-summary-agent
 description: Cross-session memory agent. 当需要把本次会话关键产出保存到 ECC Memory Vault（跨 harness 共享）以备未来会话 recall 时 dispatch。读 .claude/memory/session-digest/latest.json + 当日 AUTO summary，调用 npx ecc memory save（kind=context/fact/decision/handoff）。不动代码。/save-session 或 /memory-save 命令触发。
 tools: Bash, Read, Glob
-skills: unified-memory
+skills: jnpf-memory
 ---
 
 # Session Summary Agent — ECC Vault 自动归档
@@ -100,4 +100,4 @@ npx ecc memory search "<topic>" --kind context
 - Settings: `D:\JNPF-v52\.claude\settings.json` (Stop array 第二项)
 - Vault: `D:\JNPF-v52\.ecc\memory\project\`
 - ECC CLI: `npx ecc memory {save,search,read,doctor}`
-- Skill: `unified-memory`（已预注入）
+- Skill: `jnpf-memory`（已预注入；项目级替换幽灵 `unified-memory`）

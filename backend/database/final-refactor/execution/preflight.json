@@ -1,0 +1,117 @@
+{
+  "metadata": {
+    "wave": "WAVE 2",
+    "phase": "Preflight",
+    "executed_at": "2026-08-31T18:05:00",
+    "scope": "M32-01 + M32-02 pre-approval checks",
+    "note": "Runtime re-validation — do NOT rely solely on WAVE 1 historical results"
+  },
+  "chief_architect_authorizations": {
+    "FR-001": {
+      "table": "BASE_SIGNATURE",
+      "migration": "M32-01",
+      "decision": "APPROVED",
+      "target": "PRIMARY KEY (F_ID)",
+      "authorization_date": "2026-08-31"
+    },
+    "FR-002": {
+      "table": "BASE_SIGNATURE_USER",
+      "migration": "M32-02",
+      "decision": "APPROVED_OPTION_A",
+      "target": "PRIMARY KEY (F_SIGNATURE_ID, F_USER_ID)",
+      "rejected": "Surrogate F_ID",
+      "reason": "Association semantics — composite key preserves business meaning",
+      "authorization_date": "2026-08-31"
+    }
+  },
+  "preflight_checks": {
+    "M32-01": {
+      "check_1": {
+        "sql": "SELECT COUNT(*) AS row_count FROM dbo.base_signature",
+        "expected": 0,
+        "pass_threshold": "0 (empty table = zero data risk)"
+      },
+      "check_2": {
+        "sql": "SELECT COUNT(*) AS null_count FROM dbo.base_signature WHERE f_id IS NULL",
+        "expected": 0,
+        "pass_threshold": "0 NULLs"
+      },
+      "check_3": {
+        "sql": "SELECT COUNT(*) AS total, COUNT(DISTINCT f_id) AS distinct_f_id FROM dbo.base_signature",
+        "expected": "total = distinct_f_id",
+        "pass_threshold": "No duplicates"
+      },
+      "check_4": {
+        "sql": "SELECT COUNT(*) AS pk_count FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.base_signature') AND is_primary_key = 1",
+        "expected": 0,
+        "pass_threshold": "0 (no existing PK)"
+      },
+      "check_5": {
+        "sql": "SELECT fk.name, OBJECT_NAME(fk.parent_object_id), OBJECT_NAME(fk.referenced_object_id) FROM sys.foreign_keys fk WHERE fk.referenced_object_id = OBJECT_ID('dbo.base_signature')",
+        "expected": "0 rows (no FK references)",
+        "pass_threshold": "No FK dependencies"
+      },
+      "check_6": {
+        "sql": "SELECT 'base_signature.lock_estimate_ms' AS check_name, CASE WHEN COUNT(*) = 0 THEN 1 ELSE 5000 END AS est_ms FROM dbo.base_signature",
+        "expected": "1 ms (empty table)",
+        "pass_threshold": "< 10ms"
+      }
+    },
+    "M32-02": {
+      "check_1": {
+        "sql": "SELECT COUNT(*) AS row_count FROM dbo.base_signature_user",
+        "expected": 0,
+        "pass_threshold": "0 (empty table)"
+      },
+      "check_2": {
+        "sql": "SELECT COUNT(*) AS null_count FROM dbo.base_signature_user WHERE f_signature_id IS NULL",
+        "expected": 0,
+        "pass_threshold": "0 NULLs in f_signature_id"
+      },
+      "check_3": {
+        "sql": "SELECT COUNT(*) AS null_count FROM dbo.base_signature_user WHERE f_user_id IS NULL",
+        "expected": 0,
+        "pass_threshold": "0 NULLs in f_user_id"
+      },
+      "check_4": {
+        "sql": "SELECT COUNT(*) AS total, COUNT(DISTINCT (f_signature_id + '|' + f_user_id)) AS distinct_composite FROM dbo.base_signature_user",
+        "expected": "total = distinct_composite",
+        "pass_threshold": "No duplicate composite keys"
+      },
+      "check_5": {
+        "sql": "SELECT COUNT(*) AS pk_count FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.base_signature_user') AND is_primary_key = 1",
+        "expected": 0,
+        "pass_threshold": "0 (no existing PK)"
+      },
+      "check_6": {
+        "sql": "SELECT fk.name, OBJECT_NAME(fk.parent_object_id), OBJECT_NAME(fk.referenced_object_id) FROM sys.foreign_keys fk WHERE fk.referenced_object_id = OBJECT_ID('dbo.base_signature_user')",
+        "expected": "0 rows (no FK references)",
+        "pass_threshold": "No FK dependencies"
+      },
+      "check_7": {
+        "sql": "SELECT 'base_signature_user.lock_estimate_ms' AS check_name, CASE WHEN COUNT(*) = 0 THEN 1 ELSE 5000 END AS est_ms FROM dbo.base_signature_user",
+        "expected": "1 ms (empty table)",
+        "pass_threshold": "< 10ms"
+      }
+    }
+  },
+  "execution_sequence": [
+    "Step 1: Run preflight.sql (read-only checks)",
+    "Step 2: If all preflight checks PASS → execute migration.sql",
+    "Step 3: Run postflight.sql (read-only verification)",
+    "Step 4: If postflight PASS → migration complete",
+    "Step 5: Run rollback-validation.sql (confirm rollback works)"
+  ],
+  "dependency_check": {
+    "cross_migration": "M32-01 and M32-02 are independent (different tables)",
+    "fk_dependency": "No FK from other tables referencing base_signature or base_signature_user as parent",
+    "app_dependency": "SignatureService.cs uses SignatureEntity.Id for all operations — composite PK on SignatureUserEntity does NOT affect Id-based lookups",
+    "navigation_compatibility": "PASS — [Navigate] on SignatureEntity.SignatureUser uses FK column SignatureId to parent Id, independent of child table PK structure"
+  },
+  "rollback_plan": {
+    "M32-01": "DROP CONSTRAINT PK_base_signature",
+    "M32-02": "DROP CONSTRAINT PK_base_signature_user",
+    "order": "Reverse of migration (M32-02 first, then M32-01)",
+    "data_loss_risk": "NONE (both tables empty)"
+  }
+}

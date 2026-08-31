@@ -2,6 +2,109 @@
 
 Compact instruction file for automated coding agents working in this repository.
 
+---
+
+## 🚦 启动规则（每次响应前必读 — 凌驾一切默认行为）
+
+> **来源：** `.agents/skills/using-superpowers/SKILL.md` + `.claude/rules/workflow-iron-law.md` (WORKFLOW-IRON-01)。本段是该元规则的项目级精简版。
+> **优先级：** 用户明确指令 > 本启动规则 > 默认行为。
+
+### 铁律 0：调用 superpowers 技能 = 第一动作（强制、不可跳过）
+
+**BEFORE any response, including clarifications:**
+
+1. **必调 `using-superpowers`**（meta-skill，告诉 agent 如何按场景路由 superpowers 技能集合）
+2. **必调场景对应的 superpowers skill**（按下方路由表选 1 个或几个）— 不是判断"要不要调"，是"必调，由路由表决定调哪个"
+3. `skill({ name: "..." })` 逐个调用
+4. Announce: `🔧 Using [skill] to [purpose]`
+5. Follow skill exactly — don't adapt away discipline
+
+**核心原则**：
+
+```
+每次任务/响应：
+  → 必调 superpowers 技能集合（不是 0 个，不是固定的 N 个）
+  → 调哪个 = 按场景路由表
+  → "判断要不要调" 本身 = 违规
+```
+
+**禁止措辞**（任一出现 = 违规）：
+- ❌ "这次简单，跳过 skill"
+- ❌ "skill 是 overkill"
+- ❌ "我记得这个 skill"
+- ❌ "上次调过这次不用"
+- ❌ "等下再调"
+- ❌ "先看代码再说"
+
+### 场景 → superpowers 技能路由表（项目级映射）
+
+| 触发场景 | 必调 superpowers skill | 配套项目 skill |
+|---|---|---|
+| **任何消息**（必做第 1 步） | `using-superpowers` | — |
+| 模糊/新需求 / "帮我设计 XX" / 重构决策 | `brainstorming` → `writing-plans` | `.claude/skills/architect-mode` |
+| 编码/实现（.cs / .vue / .ts） | `coder-mode`（TDD 例外见下） | — |
+| Bug / 测试失败 / 异常 | `systematic-debugging` + `data-driven-debug`（10min 强制） | — |
+| 派子 agent（多任务并行） | `dispatching-parallel-agents` / `subagent-driven-development` | — |
+| 收到代码审查反馈 / 用户批评当前工作 | `receiving-code-review` | — |
+| 写跨阶段 plan | `writing-plans` → `executing-plans` | `.claude/skills/planner-mode` |
+| **声称完成**任何任务前 | `verification-before-completion`（5 步 Gate Function）| `.claude/rules/testing.md` |
+| 任务结束 / 合并前 | `requesting-code-review` + `finishing-a-development-branch` | `.claude/skills/reporter-mode` |
+| **跨会话记忆/保存到知识库/搜之前决策** | `unified-memory`（运行 `ecc memory search/save/handoff`） | — |
+| 之前会话引用（"上次我们..."） | **必须**先 `ecc memory search "<keyword>"` 才回复 | — |
+
+**使用模式**：
+
+```
+if 用户消息是新需求/设计:
+    invoke("using-superpowers")
+    invoke("brainstorming")
+    invoke("writing-plans")
+
+elif 用户消息是改代码:
+    invoke("using-superpowers")
+    invoke("coder-mode")
+
+elif 用户消息是修 bug:
+    invoke("using-superpowers")
+    invoke("systematic-debugging")
+
+elif 用户消息是批评/反馈:
+    invoke("using-superpowers")
+    invoke("receiving-code-review")
+
+elif 用户消息说"上次我们..."或涉及之前决策:
+    invoke("using-superpowers")
+    invoke("unified-memory")
+    run("ecc memory search <keyword>")
+
+elif 用户消息声称完成:
+    invoke("using-superpowers")
+    invoke("verification-before-completion")
+
+# ... etc
+```
+
+**核心**：调是必做的，调哪个由路由表决定——不调 = 违规。
+
+### ⚠️ TDD 例外（本项目禁用纯 TDD 流程）
+
+`test-driven-development` superpowers 强制 "test first"，但**本项目策略不同**：
+- **禁用：** 先写失败测试 → 看红 → 写最小实现 → 看绿（流程性 TDD）
+- **采用：** 先实现 → xUnit/Vitest 覆盖核心产出物 → Phase 6 Review 强制覆盖（见 `.claude/rules/implementation-integrity-iron-law.md`）
+- **理由：** 项目 30 份铁律 + Phase 流水线已有强制测试环节；流程性 TDD 会与现有 ADF、节点审批、Req-Analysis 等冲突
+- **仍可用：** 测试作为"先验证需求"手段（`verification-before-completion`）
+
+### 双层控制（避免"打架"误解）
+
+| 层 | 控制 | 文件 |
+|---|---|---|
+| **节奏层**（细粒度不打断） | HIP-01：默认连续，仅 4 类情况停 | `.claude/rules/agent-runtime-iron-laws.md` |
+| **节点层**（关键阶段必停） | B0 业务优先 / ADF 三先行 / 实现完整性 / Req-Analysis / CR 变更 | `.claude/rules/*-iron-law.md` |
+
+**关键节点（不可被 HIP-01 绕过）：** 业务锚定 Q1-Q3 未答出 / 架构方案未「继续」/ 实现完整性五禁令命中 / CR 保护方法变更 / **未调 superpowers 必调 skill**。
+
+---
+
 ## Multi-Agent Environment
 
 This repo is used by **multiple AI coding agents**. Each has its own instruction system — they must coexist without conflict:
@@ -190,6 +293,30 @@ openspec/             Spec knowledge base (specs/, changes/, ADRs) — query via
 
 **主文件：** `.claude/rules/req-analysis-iron-law.md` · `.cursor/rules/iron-laws/req-analysis-iron-law.mdc`
 
+## 自主工程闭环铁律 WORKFLOW-IRON-01（2026-08-30 立, 永远生效）
+
+**Superpowers 从“工具调用规范”升级为“工程闭环基础设施”；任何工作轮次必须通过 4 环节闭环（Self Evaluation / Self Test / Self Repair / Reviewer Review）才能汇报完成。**
+
+**适用所有 AI 大模型：** Claude Code · Cursor · Qoder · 其他 Agent。
+
+**4 环节强制闭环：**
+
+```
+Implementation → Self Evaluation → Self Test → Self Repair → Reviewer Review → Final Report
+```
+
+**仅允许人工介入的 3 类情况：**
+
+1. **不可逆架构选择**（单体 vs 微服务 / 数据模型重大调整 / Public Contract 变化）
+2. **业务价值判断**（删除功能 / 改变用户流程 / 接受成本/性能权衡）
+3. **与既定 Governance 冲突**（唯一修复方案违反 Governance 时）
+
+**主文件：** `.claude/rules/workflow-iron-law.md` · `.cursor/rules/iron-laws/workflow-iron-law.mdc` · [`docs/构建AI软件工程agent闭环体系/类级重构专家Agent封装实现要求.md`](./docs/构建AI软件工程agent闭环体系/类级重构专家Agent封装实现要求.md)
+
+**配套铁律：** `.claude/rules/agent-runtime-iron-laws.md`（HIP-01 Human Interrupt Policy，与本铁律互补：HIP-01 控制节奏，本铁律保证执行质量）
+
+**违反后果：** 跳过 4 环节任何一项 = 任务未完成，状态不得标记为完成。
+
 ## ADF 三先行（全项目, 2026-07-12 立）
 
 **S/A：架构 → 设计模式 → 接口契约 → 实现；每阶段等用户「继续/通过」。** B 级须 `ADF 豁免：B级 — …`。
@@ -337,3 +464,5 @@ docker compose -f docker-compose.production.yml --env-file .env.production up -d
 # Backend image only
 docker build -f backend/application/JNPF.API.Entry/Dockerfile -t jnpf-api backend/
 ```
+
+

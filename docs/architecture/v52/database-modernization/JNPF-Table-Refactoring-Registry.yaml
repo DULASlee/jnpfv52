@@ -1,0 +1,135 @@
+# JNPF Table Refactoring — Artifact Registry
+# 作用: "哪些文档是权威的？" 的唯一答案
+
+project:
+  name: "JNPF Backend Table Refactoring"
+  version: "v5.2"
+  status: "FINAL_ACCEPTANCE_APPROVED"
+  closed_at: "2026-08-31T19:20:00"
+  owner: "Chief Architect"
+
+# ============================================================
+# 权威文档（按优先级排序）
+# AI 每次处理 JNPF 表级变更，第一步必须读这里
+# ============================================================
+authoritative_sources:
+
+  # --- 1. 入口：项目 Charter（给人看的项目地图）---
+  charter:
+    file: "docs/architecture/v52/database-modernization/JNPF-Table-Refactoring-Charter.md"
+    purpose: "Why / What / Not What / Objectives / Done Criteria / Current Status"
+    audience: "Human"
+
+  # --- 2. 入口：当前状态单一事实源（机器可读）---
+  current_state:
+    file: "backend/database/final-refactor/JNPF-Final-Refactoring-Matrix-vFinal.json"
+    purpose: "每张表的当前状态、决策、证据、deferred 原因"
+    audience: "Machine + Human"
+    ssoT: true
+
+  # --- 3. Target Schema Contract（目标数据库模型规范）---
+  target_schema:
+    file: "docs/superpowers/specs/2026-08-30-JNPF-Target-Schema-Contract.md"
+    purpose: "8 维度目标契约（列命名/类型/NULLABLE/租户/审计/索引/约束/安全边界）"
+    audience: "Human"
+
+  # --- 4. Procedure: 工程 playbook（给 AI 的施工手册）---
+  procedure:
+    file: "docs/architecture/v52/database-modernization/JNPF-Table-Refactoring-Playbook.md"
+    purpose: "以后 AI 再遇到 JNPF 表级重构的标准步骤"
+    audience: "AI"
+
+  # --- 5. Decisions: ADR Register（为什么这样决定）---
+  decisions:
+    directory: "docs/adr/"
+    pattern: "ADR-0*.md"
+    purpose: "只记录'为什么这样决定'，不是实施说明书"
+    relevant_adr:
+      - "ADR-024-table-schema-evolution-skill-v2.md  (Skill v2.0 治理标准)"
+      - "ADR-025-base-signature-user-composite-pk.md (复合 PK 决策)"
+      - "ADR-026-tenant-index-deferred.md            (Tenant Index 延期决策)"
+
+  # --- 6. Final Acceptance: 验收签字证书 ---
+  final_acceptance:
+    file: "backend/database/final-refactor/JNPF-Table-Refactoring-Final-Acceptance.md"
+    purpose: "2-5KB 最终签字证书"
+    audience: "Human"
+
+  # --- 7. Skill: table-refactor-expert（治理标准）---
+  governance:
+    file: ".claude/skills/table-refactor-expert/SKILL.md"
+    purpose: "Skill v2.0 治理标准（IRON-TABLE-01~10）"
+    audience: "AI"
+
+# ============================================================
+# Evidence Store（证据存储，按类型分目录）
+# ============================================================
+evidence:
+  root: "backend/database/evidence/"
+  schema:
+    path: "backend/database/evidence/schema/"
+    purpose: "Schema 验证证据（DDL/列类型/索引/约束）"
+  migration:
+    path: "backend/database/evidence/migration/"
+    purpose: "Migration SQL 脚本 + 执行记录"
+  runtime:
+    path: "backend/database/evidence/runtime/"
+    purpose: "Runtime 验证（ORM/Service/Dynamic SQL 兼容性）"
+  regression:
+    path: "backend/database/evidence/regression/"
+    purpose: "回归测试结果"
+  rollback:
+    path: "backend/database/evidence/rollback/"
+    purpose: "Rollback 验证记录"
+
+# ============================================================
+# 历史 Batch（已归档，不再是权威状态来源）
+# ============================================================
+historical_batches:
+  batch-29:
+    path: "docs/universal/Phase-8/p8-c/batch-29/"
+    status: "ARCHIVED"
+    note: "Historical record only. Not authoritative for current state."
+  batch-30:
+    path: "docs/universal/Phase-8/p8-c/batch-30/"
+    status: "ARCHIVED"
+  batch-31:
+    path: "docs/universal/Phase-8/p8-c/batch-31/"
+    status: "ARCHIVED"
+  phase-32:
+    path: "backend/database/phase-32/"
+    status: "ARCHIVED"
+    note: "Contains M32-01 + M32-02 SQL (executed). Authority transferred to final-refactor/ after closure."
+
+final_refactor:
+  path: "backend/database/final-refactor/"
+  purpose: "最终交付物（matrix + report + final-validation/）"
+  status: "AUTHORITATIVE"
+
+# ============================================================
+# 当前状态快照（1-2 页，给新 Session 快速了解状态）
+# ============================================================
+current_state_snapshot:
+  file: "docs/architecture/v52/database-modernization/JNPF-Table-Refactoring-Current-State.md"
+  purpose: "新 Session 必读的状态卡，不需要理解整个历史"
+
+# ============================================================
+# AI 导航路径（强制顺序）
+# ============================================================
+ai_navigation_path:
+  - "Read: Artifact Registry (this file)"
+  - "Read: Charter (understand project scope)"
+  - "Read: Current State Snapshot (understand current status)"
+  - "Read: Final Matrix JSON (understand per-table state)"
+  - "Read: Playbook (understand procedure)"
+  - "Read: Target Schema Contract (understand goals)"
+  - "Execute: Migration using Skill v2.0"
+  - "Close: Write evidence to Evidence Store"
+  - "Update: Final Matrix JSON (SSoT)"
+  - "Archive: Batch to historical/
+
+metadata:
+  registry_version: "v1.0"
+  created_at: "2026-08-31T19:30:00"
+  updated_at: "2026-08-31T19:30:00"
+  next_review: "When new table-level change is initiated"

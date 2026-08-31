@@ -1,0 +1,17 @@
+{
+  "evidenceType": "REAL_BUILD",
+  "actor": "agent",
+  "task": "P1",
+  "stage": "build",
+  "policy": "P002",
+  "policy_id": "P002",
+  "policy_version": "1.0",
+  "action": "dotnet build",
+  "tool": "dotnet",
+  "result": "ALLOW",
+  "timestamp": "2026-08-31T20:04:21.415Z",
+  "integrity": "sha256:b89b9b9316434c59",
+  "decision": "ALLOW",
+  "exitCode": 0,
+  "logTail": "ok final"
+}

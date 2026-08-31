@@ -1,0 +1,184 @@
+{
+  "metadata": {
+    "task": "30.6 Dynamic Classification",
+    "executed_at": "2026-08-31T15:23:11.011468"
+  },
+  "classifications": [
+    {
+      "gap_id": "GAP-01",
+      "table": "base_signature",
+      "dimension": "primary_key",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-02",
+      "table": "base_signature_user",
+      "dimension": "primary_key",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-a",
+      "table": "base_advanced_query_scheme",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-b",
+      "table": "base_app_data",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-c",
+      "table": "base_columns_purview",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-d",
+      "table": "base_data_interface_user",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-e",
+      "table": "base_data_interface_variate",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-f",
+      "table": "base_db_link",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-g",
+      "table": "base_im_content",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-h",
+      "table": "base_im_reply",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-i",
+      "table": "base_integrate",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-j",
+      "table": "base_integrate_node",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-k",
+      "table": "base_organize_relation",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-l",
+      "table": "base_portal",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-m",
+      "table": "base_portal_data",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-n",
+      "table": "base_signature",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-03-o",
+      "table": "base_signature_user",
+      "dimension": "tenant_index",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-04-a",
+      "table": "base_advanced_query_scheme",
+      "dimension": "audit_fields",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-04-b",
+      "table": "base_app_data",
+      "dimension": "audit_fields",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-04-c",
+      "table": "base_im_content",
+      "dimension": "audit_fields",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-04-d",
+      "table": "base_integrate",
+      "dimension": "audit_fields",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    },
+    {
+      "gap_id": "GAP-04-e",
+      "table": "base_portal",
+      "dimension": "audit_fields",
+      "dynamic_status": "STATIC",
+      "reason": "Standard system core table",
+      "human_gate": "NOT_REQUIRED"
+    }
+  ]
+}

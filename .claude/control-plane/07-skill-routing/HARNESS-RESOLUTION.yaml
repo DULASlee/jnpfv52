@@ -1,0 +1,197 @@
+# Harness Resolution Layer — AI Engineering Control Plane v1.1
+# Resolves: "当前 Agent 应该看到什么？" — not all 142 items, but scoped subset.
+# Date: 2026-09-01 · Status: FROZEN (Phase 0.5)
+
+version: "1.0"
+controlPlane: ".claude/control-plane"
+governanceRoot: "MASTER-GOVERNANCE.md"
+
+# Priority L0-L6 (higher wins; L6 cannot override L0-L5)
+priority:
+  L0_ImmutableLaws: 100      # Hook exit 2 — cannot be overridden
+  L1_ControlPlane: 90        # ONLY Governance Authority
+  L2_ProjectConstitution: 80 # AGENTS.md / CLAUDE.md
+  L3_ActivePhase: 70         # phase-state.yaml
+  L4_TaskPolicy: 60          # ROUTING-MATRIX + Souls
+  L5_ExpertSkill: 50         # Domain Skills
+  L6_ExternalAdvisory: 10    # Superpowers/ECC — NEVER governs
+  Capability: 0              # MCP providers — drivers only
+  Memory: 0                  # Providers only
+
+# Authority clear: only these are authoritative
+authoritativeSources:
+  - ".claude/control-plane/00-governance/**"
+  - ".claude/control-plane/01-workflows/**"
+  - ".claude/control-plane/02-rules/**"
+  - ".claude/control-plane/03-skills/**"
+  - ".claude/rules/**"  # mirrored into Control Plane L1
+  - "AGENTS.md"
+  - "CLAUDE.md"
+
+# External / Advisory — may advise, never govern
+externalSources:
+  superpowers:
+    location: "C:\\Users\\admin\\.claude\\plugins\\cache\\superpowers-marketplace\\superpowers\\5.1.0\\skills"
+    skills: [brainstorming, dispatching-parallel-agents, executing-plans, finishing-a-development-branch, receiving-code-review, requesting-code-review, subagent-driven-development, systematic-debugging, test-driven-development, using-git-worktrees, using-superpowers, verification-before-completion, writing-plans, writing-skills]
+    authority: "ADVISORY"
+    governance: false
+    notes: "test-driven-development is REJECTED as Governance — project uses implementation-integrity + Phase Gate, not TDD-first"
+  ecc:
+    location: ".ecc/memory + C:\\Users\\admin\\.claude\\plugins\\cache\\superpowers-marketplace\\episodic-memory"
+    authority: "MEMORY/ADVISORY"
+    governance: false
+    enabled: false  # episodic-memory plugin disabled
+  globalClaudeSkills:
+    location: "C:\\Users\\admin\\.claude\\skills"
+    skills: [graphify, plan-canvas, strategic-compact, unified-memory, verification-loop]
+    authority: "ADVISORY/CAPABILITY/MEMORY"
+    governance: false
+  userOpencodeSkills:
+    location: "C:\\Users\\admin\\.config\\opencode\\skills"
+    skills: [agent-architecture-audit, dotnet-patterns, production-audit, prompt-optimizer, rules-distill, skill-scout, skill-stocktake]
+    authority: "ADVISORY"
+    governance: false
+
+# Capability Registry — MCPs are drivers, not governors
+capabilityRegistry:
+  SymbolSearch:
+    provider: "serena"
+    command: "serena.exe start-mcp-server --project D:\\JNPF-v52 --context ide"
+    enabled: true
+    authority: "CAPABILITY"
+    allowedFor: [generic-class-refactor-expert, table-refactor-expert, architecture-gate]
+  CallGraph:
+    provider: "codegraph"
+    command: "codegraph serve --mcp --no-watch"
+    enabled: true
+    authority: "CAPABILITY"
+  CodebaseMemory:
+    provider: "codebase-memory"
+    command: "codebase-memory-mcp.exe"
+    enabled: true
+    authority: "CAPABILITY"
+  DotNetDebug:
+    provider: "netcoredbg"
+    command: "python scripts/netcoredbg-mcp-wrapper.py"
+    enabled: true
+    authority: "CAPABILITY"
+  BrowserE2E:
+    provider: "playwright"
+    command: "npx @playwright/mcp@latest"
+    enabled: true
+    authority: "CAPABILITY"
+  ToolRouter:
+    provider: "tool-search"
+    command: "node .claude/mcp/tool-search.mjs"
+    enabled: true
+    authority: "CAPABILITY"
+
+memoryRegistry:
+  EccMemory:
+    provider: "ecc-memory"
+    path: ".ecc/memory/project"
+    files: 27
+    authority: "MEMORY"
+  KnowledgeGraph:
+    provider: "knowledge-graph"
+    path: ".ai-memory/knowledge-graph.json"
+    mcp: "knowledge-graph"
+    authority: "MEMORY"
+  UnifiedMemory:
+    provider: "unified-memory"
+    path: "C:\\Users\\admin\\.claude\\skills\\unified-memory"
+    authority: "MEMORY"
+  PendingIssues:
+    provider: "pending-issues"
+    path: ".claude/memory/pending-issues.md"
+    authority: "MEMORY"
+
+# Mirrors — IDE convenience, NOT authoritative
+mirrors:
+  cursorRules:
+    location: ".cursor/rules"
+    count: 27
+    type: "MIRROR"
+    sync: "manual (no auto-sync) — Control Plane wins on conflict"
+    authority: "NOT AUTHORITATIVE"
+    governance: false
+  cursorSkills:
+    location: ".cursor/skills"
+    count: 28
+    type: "MIRROR"
+    sync: "manual — Advisory Mirror"
+    authority: "NOT AUTHORITATIVE"
+    governance: false
+  agentsSkills:
+    location: ".agents/skills"
+    count: 14
+    type: "MIRROR"
+    sync: "manual — Execution Mirror"
+    authority: "NOT AUTHORITATIVE"
+    governance: false
+
+# Quarantine — MUST NOT be part of authoritative or automatic Harness Resolution (governance guarantee, not system impossibility)
+quarantine:
+  root: ".ai/quarantine"
+  archive: ".ai/archive"
+  policy: "Quarantine MUST NOT be part of authoritative or automatic Harness Resolution — filesystem/MCP/shell can still read, but Resolver never includes and Loader never auto-loads."
+  items:
+    - original: ".claude/_archived"
+      destination: ".ai/quarantine/_archived"
+      reason: "历史归档"
+      status: "QUARANTINED"
+    - original: "CLAUDE.md.bak.20260707"
+      destination: ".ai/quarantine/backups/CLAUDE.md.bak.20260707"
+      reason: "备份冗余"
+      status: "QUARANTINED"
+    - original: ".cursor/hooks/*.bak-20260808*"
+      destination: ".ai/quarantine/backups/"
+      reason: "Hook 简化备份"
+      status: "QUARANTINED"
+    - original: ".cursor/rules/toolchain/episodic-memory-automation.mdc.bak-20260808-simplify"
+      destination: ".ai/quarantine/backups/"
+      reason: "Rule 备份"
+      status: "QUARANTINED"
+    - original: ".superpowers/brainstorm"
+      destination: ".ai/quarantine/superpowers-brainstorm/"
+      reason: "临时 brainstorm 状态"
+      status: "QUARANTINED"
+    - original: "episodic-memory plugin"
+      destination: "disabled in C:\\Users\\admin\\.claude\\settings.json"
+      reason: "已禁用"
+      status: "QUARANTINED (Disabled)"
+    - original: "double-shot-latte plugin"
+      destination: "disabled"
+      reason: "已禁用"
+      status: "QUARANTINED (Disabled)"
+
+# Resolution steps — what Agent actually sees (executable: .claude/hooks/harness-resolver.mjs)
+resolution:
+  executable: ".claude/hooks/harness-resolver.mjs"
+  method: "Resolve(User, Project, Phase, Task) -> { authoritative, advisory, capabilities, memoryProviders, blocked, mirrors, quarantined }"
+  loaderPolicy: "Loader ONLY accepts Resolver output — never direct filesystem scan"
+  steps:
+    - "1. Load Governance Root (MASTER-GOVERNANCE.md → L0/L1/L2)"
+    - "2. Load Active Phase (phase-state.yaml → Current Phase Contract)"
+    - "3. Load Applicable Project Rules (only those linked in GOVERNANCE-INDEX.md)"
+    - "4. Resolve Required Skills (ROUTING-MATRIX.md + Task Classification S/A/B)"
+    - "5. Resolve Capabilities (capabilityRegistry — only authorized providers)"
+    - "6. Resolve Memory (memoryRegistry — providers, never governance)"
+    - "7. Produce machine-readable JSON { authoritative, advisory, capabilities, memoryProviders, blocked }"
+    - "8. Loader consumes ONLY Resolver JSON -> Agent Context (Governance + Current Phase + Applicable Skills + Authorized Capabilities)"
+  notIncluded:
+    - "All 14 Superpowers skills (only resolved if task needs Advisory)"
+    - "All 65 project skills (only resolved via Skill Routing)"
+    - "All 27 Cursor .mdc mirrors (IDE hints only, not governance)"
+    - "Quarantine contents (MUST NOT be part of authoritative or automatic resolution)"
+
+# Conflict rule
+conflictRule: "L6 cannot override L0-L5. Rejected as Non-authoritative Instruction."
+
+# Gate check
+gateCheck:
+  - "Authoritative source unique: .claude/control-plane only"
+  - "External capability explicit: Superpowers/ECC/Serena/codegraph = Capability/Advisory"
+  - "Unknown/Legacy quarantined: .ai/quarantine + .ai/archive"
+  - "No second implicit Governance"
+

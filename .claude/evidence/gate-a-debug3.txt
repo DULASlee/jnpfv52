@@ -1,0 +1,50 @@
+鐢熸垚鍚姩鏃堕棿涓?2026/9/1 4:09:35銆?
+D:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\bin\Debug\net8.0\JNPF.Tests.Runtime.Expert.dll (.NETCoreApp,Version=v8.0)鐨勬祴璇曡繍琛?
+鎬诲叡 1 涓祴璇曟枃浠朵笌鎸囧畾妯″紡鐩稿尮閰嶃€?
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.4.1+b9eacec401 (64-bit .NET 8.0.30)
+[xUnit.net 00:00:00.05]   Discovering: JNPF.Tests.Runtime.Expert
+[xUnit.net 00:00:00.09]   Discovered:  JNPF.Tests.Runtime.Expert
+[xUnit.net 00:00:00.09]   Starting:    JNPF.Tests.Runtime.Expert
+[CanonicalBuildRunner] workDir='D:\JNPF-v52\backend' args='msbuild "D:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow\JNPF.WorkFlow.csproj" -t:Build -p:Configuration=Debug -p:no-restore=true -p:no-incremental=true'
+[CanonicalBuildRunner] test process cwd='D:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\bin\Debug\net8.0'
+[xUnit.net 00:00:00.69]       Build failed (exit=1, errors=0).
+STDOUT:
+闁倻鏁ゆ禍?.NET MSBuild 閻楀牊婀?17.11.48+02bf66295
+[xUnit.net 00:00:00.69]       C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.TargetFrameworkInference.targets(160,5): error MSB4062: 閺堫亣鍏樻禒搴ｂ柤鎼村繘娉?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\..\tools\net10.0\Microsoft.NET.Build.Tasks.dll 閸旂姾娴囨禒璇插閳ユ穾llowEmptyTelemetry閳ユ縿鈧景ould not load file or assembly 'System.Runtime, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'. 缁崵绮洪幍鍙ョ瑝閸掔増瀵氱€规氨娈戦弬鍥︽閵?鐠囬鈥樼拋?<UsingTask> 婢圭増妲戝锝団€橀敍宀冾嚉缁嬪绨梿鍡楀挤閸忚埖澧嶉張澶夌贩鐠ф牠銆嶉柈钘夊讲閻㈩煉绱濋獮鏈电瑬鐠囥儰鎹㈤崝鈥冲瘶閸氼偄鐤勯悳?Microsoft.Build.Framework.ITask 閻ㄥ嫬鍙曢崗杈╄閵?[D:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow\JNPF.WorkFlow.csproj]
+[xUnit.net 00:00:00.69]       
+STDERR:
+
+[xUnit.net 00:00:00.69]     JNPF.Tests.Agent.GateATests.GateA_AfterRefactor_BuildSucceeds_ViaCanonicalRunner [FAIL]
+[xUnit.net 00:00:00.69]       Stack Trace:
+[xUnit.net 00:00:00.69]         D:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\GateATests.cs(43,0): at JNPF.Tests.Agent.GateATests.GateA_AfterRefactor_BuildSucceeds_ViaCanonicalRunner()
+[xUnit.net 00:00:00.69]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+[xUnit.net 00:00:00.69]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.70]   Finished:    JNPF.Tests.Runtime.Expert
+  澶辫触 JNPF.Tests.Agent.GateATests.GateA_AfterRefactor_BuildSucceeds_ViaCanonicalRunner [564 ms]
+  閿欒娑堟伅:
+   Build failed (exit=1, errors=0).
+STDOUT:
+闁倻鏁ゆ禍?.NET MSBuild 閻楀牊婀?17.11.48+02bf66295
+C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.TargetFrameworkInference.targets(160,5): error MSB4062: 閺堫亣鍏樻禒搴ｂ柤鎼村繘娉?C:\Program Files\dotnet\sdk\10.0.301\Sdks\Microsoft.NET.Sdk\targets\..\tools\net10.0\Microsoft.NET.Build.Tasks.dll 閸旂姾娴囨禒璇插閳ユ穾llowEmptyTelemetry閳ユ縿鈧景ould not load file or assembly 'System.Runtime, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'. 缁崵绮洪幍鍙ョ瑝閸掔増瀵氱€规氨娈戦弬鍥︽閵?鐠囬鈥樼拋?<UsingTask> 婢圭増妲戝锝団€橀敍宀冾嚉缁嬪绨梿鍡楀挤閸忚埖澧嶉張澶夌贩鐠ф牠銆嶉柈钘夊讲閻㈩煉绱濋獮鏈电瑬鐠囥儰鎹㈤崝鈥冲瘶閸氼偄鐤勯悳?Microsoft.Build.Framework.ITask 閻ㄥ嫬鍙曢崗杈╄閵?[D:\JNPF-v52\backend\modularity\workflow\JNPF.WorkFlow\JNPF.WorkFlow.csproj]
+
+STDERR:
+
+  鍫嗘爤璺熻釜:
+     at JNPF.Tests.Agent.GateATests.GateA_AfterRefactor_BuildSucceeds_ViaCanonicalRunner() in D:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\GateATests.cs:line 43
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+娴嬭瘯杩愯澶辫触銆?
+娴嬭瘯鎬绘暟: 1
+     澶辫触鏁? 1
+鎬绘椂闂? 1.0458 绉?
+     1>椤圭洰鈥淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\JNPF.Tests.Runtime.Expert.csproj鈥濆湪鑺傜偣 1 涓?VSTest 涓洰鏍?銆?
+     1>_VSTestConsole:
+         MSB4181: 鈥淰STestTask鈥濅换鍔¤繑鍥炰簡 false锛屼絾鏈褰曢敊璇€?
+     1>宸插畬鎴愮敓鎴愰」鐩€淒:\JNPF-v52\backend\tests\JNPF.Tests.Runtime.Expert\JNPF.Tests.Runtime.Expert.csproj鈥?VSTest 涓洰鏍?鐨勬搷浣?- 澶辫触銆?
+
+鐢熸垚澶辫触銆?
+    0 涓鍛?
+    0 涓敊璇?
+
+宸茬敤鏃堕棿 00:00:01.47

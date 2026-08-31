@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>JNPF Agent OS · Expert Agent System (Phase 3)</Description>
+    <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+    <RootNamespace>JNPF.Runtime.Expert</RootNamespace>
+    <AssemblyName>JNPF.Runtime.Expert</AssemblyName>
+    <InternalsVisibleTo>JNPF.Tests.Runtime.Expert</InternalsVisibleTo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JNPF.Runtime.Core\JNPF.Runtime.Core.csproj" />
+  </ItemGroup>
+
+</Project>

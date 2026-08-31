@@ -100,3 +100,10 @@ ureport2-analysis/
 
 # Serena LSP tool cache (never commit)
 jnpf-web-vue3/.serena/
+
+# Harness Quarantine — Phase 0.5 (evidence tracked, backups ignored)
+# Policy: Quarantine MUST NOT be part of authoritative or automatic Harness Resolution.
+# Evidence (README/MANIFEST/migration records) IS tracked; runtime backups/binaries are NOT.
+.ai/quarantine/backups/
+.superpowers/
+

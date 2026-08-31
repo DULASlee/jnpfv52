@@ -22,17 +22,17 @@
 
 ```
  docs/
-   ├── knowledge-graph/     ← 本目录：结构化知识（手工撰写）
-   │   └── 可被 graphify 重新提取为 graph.json 节点
-   │
-   ├── architecture/         ← 架构文档（graphify 已提取）
-   ├── adr/                  ← 架构决策记录（graphify 已提取）
-   ├── frontend-architecture/← 前端重构设计（graphify 已提取）
-   └── ...
+    ├── knowledge-graph/     ← 本目录：结构化知识（手工撰写）
+    │   └── 可被 graphify 重新提取为 graph.json 节点
+    │
+    ├── architecture/         ← 架构文档（graphify 已提取）
+    ├── adr/                  ← 架构决策记录（graphify 已提取，含 Phase 8 ADR-019~023）
+    ├── frontend-architecture/← 前端重构设计（graphify 已提取）
+    └── ...
 
  graphify-out/
-   └── graph.json            ← 1497 nodes, 1616 edges（自动提取）
-       └── 本目录文档将成为新的语义节点
+    └── graph.json            ← 1497 nodes, 1616 edges（自动提取）
+        └── 本目录文档将成为新的语义节点
 ```
 
 ---
@@ -42,3 +42,9 @@
 1. graphify --update 重新提取，将本目录文档纳入知识图谱
 2. DKEE Writer 从 IR 直接生成知识图谱（非文档路径）
 3. 每季度更新一次领域模型和架构骨架
+
+## 注意
+
+> Phase 8 决策沉淀至 `docs/adr/ADR-019~023`，**不**在本目录（knowledge-graph 是 graphify 提取用，非决策沉淀用）。
+> Skill 工程化使用文档至 `docs/构建AI软件工程agent闭环体系/table-refactoring-expert-skill-v1.md`。
+

@@ -66,12 +66,12 @@ Agent 是执行者，不是项目经理。
 | 字段 | 填写 |
 |---|---|
 | **阶段** | **阶段 C**（PM 新流程；2026-07-18 说明书正式版 + 门控 JSON + 下载） |
-| **本 Chat 成果** | 代码变更（hook 自动 · 7 文件） |
+| **本 Chat 成果** | 代码变更（hook 自动 · 87 文件） |
 | **对照计划** | **阶段 A-B-C**；OpenSpec：`openspec/changes/20260717-pm-pipeline-clarification-resume/` |
 | **工作区分级** | S |
 | **adfPhase** | P4（见 workflow-state.json） |
-| **跨会话归档** | .claude/memory/session-summaries/2026-08-30-代码变更-AUTO.md |
-| **待你验** | node scripts/verify-toolchain.mjs |## 2026-07-18 会话结论（hook 自动 · 22:49）
+| **跨会话归档** | .claude/memory/session-summaries/2026-08-31-代码变更-AUTO.md |
+| **待你验** | cd backend && dotnet build |## 2026-07-18 会话结论（hook 自动 · 22:49）
 | 问题 | 结论 |
 |---|---|
 | **主题** | 设计 Skill 编排 |
@@ -1239,7 +1239,15 @@ Agent 是执行者，不是项目经理。
 | **待你验** | node scripts/verify-toolchain.mjs |
 | **摘要** | `.claude/memory/session-summaries/2026-08-30-代码变更-AUTO.md` |
 | **错题本** | M189 |
-| **hook-auto-archive** | `46d71ed2-5dcd-424e-8521-97d1b7eb1a1a` |
+| **hook-auto-archive** | `46d71ed2-5dcd-424e-8521-97d1b7eb1a1a` |## 2026-08-31 会话结论（hook 自动 · 16:47）
+| 问题 | 结论 |
+|---|---|
+| **主题** | 代码变更 |
+| **变更** | .session-init-lock.json, opencode.json, batch-29-decisions.json, batch-29-evidence.json, batch-29-gap-analysis.json +82 |
+| **待你验** | cd backend && dotnet build |
+| **摘要** | `.claude/memory/session-summaries/2026-08-31-代码变更-AUTO.md` |
+| **错题本** | M190 |
+| **hook-auto-archive** | `20260831084759` |
 ## 2026-07-18 会话结论（hook 自动 · 22:48）
 | 问题 | 结论 |
 |---|---|

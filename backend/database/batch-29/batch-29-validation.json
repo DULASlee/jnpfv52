@@ -1,0 +1,44 @@
+{
+  "metadata": {
+    "batch": "Batch 29",
+    "purpose": "Group D Validation (Build + Regression)",
+    "validated_at": "2026-08-31T04:35:37.191128"
+  },
+  "d1_build": {
+    "skill_commands_tested": {
+      "classify_table": {
+        "tables_tested": 15,
+        "passed": 15,
+        "failed": 0,
+        "verdict": "PASS"
+      },
+      "human_gate": {
+        "approval_record_check": "PASS (BLOCKS when record invalid)",
+        "error": "Approval timestamp in future: 2026-08-31T10:00:00Z",
+        "verdict": "PASS (gate logic functional)"
+      },
+      "safety_gate": {
+        "truncate_blocked": true,
+        "index_passed": true,
+        "type_c_blocked": true,
+        "verdict": "PASS"
+      }
+    }
+  },
+  "d2_regression": {
+    "database": {
+      "user_table_count": 289,
+      "expected_user_tables": 289,
+      "view_count": 7,
+      "expected_views": 7,
+      "batch29_tables_existing": 15,
+      "expected_batch29_tables": 15,
+      "verdict": "PASS"
+    }
+  },
+  "overall": {
+    "d1_build": "PASS",
+    "d2_regression": "PASS",
+    "final_verdict": "PASS"
+  }
+}

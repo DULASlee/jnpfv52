@@ -1,0 +1,741 @@
+{
+  "metadata": {
+    "document": "JNPF-Final-Refactoring-Matrix",
+    "version": "v1.0",
+    "generated_at": "2026-08-31T17:14:00",
+    "scope": "JNPF v5.2 Backend Table-Level Schema Refactoring - Final Closure",
+    "source_batches": ["batch-29", "batch-30", "batch-31", "phase-32"],
+    "plan_reference": "Final Completion Execution Plan v3.0",
+    "status": "AUTHORIZATION_PENDING"
+  },
+  "summary": {
+    "total_gaps": 19,
+    "by_classification": {
+      "G0_CRITICAL": 0,
+      "G1_MAJOR": 2,
+      "G2_MINOR": 0,
+      "FALSE_POSITIVE": 17
+    },
+    "by_final_state": {
+      "MIGRATION_REQUIRED": 2,
+      "NO_CHANGE": 0,
+      "DEFERRED": 17,
+      "EXCLUDED": 0,
+      "FIXED": 0
+    },
+    "blockers": 0,
+    "ready_for_migration": 2
+  },
+  "orm_contract": {
+    "primary_key_convention": "F_ID IS PRIMARY KEY",
+    "base_class": "IdEntityBase<TKey>",
+    "pk_annotation": "[SugarColumn(ColumnName = \"F_ID\", IsPrimaryKey = true)]",
+    "tenant_filter_convention": "F_TENANT_ID",
+    "audit_fields_convention": "F_CREATOR_TIME, F_CREATOR_USER_ID, F_LAST_MODIFY_TIME, F_LAST_MODIFY_USER_ID, F_DELETE_MARK",
+    "soft_delete_convention": "F_DELETE_MARK = 1"
+  },
+  "migration_groups": {
+    "M1": {
+      "id": "M1",
+      "description": "Primary Key Migrations",
+      "risk": "LOW",
+      "gaps": ["FR-001", "FR-002"]
+    },
+    "M2": {
+      "id": "M2",
+      "description": "Tenant Index Migrations",
+      "risk": "LOW/MEDIUM",
+      "gaps": ["FR-003" to "FR-017"],
+      "status": "DEFERRED",
+      "note": "All 15 tenant index gaps deferred due to empty tables and NULL tenant values"
+    }
+  },
+  "gaps": [
+    {
+      "gap_id": "FR-001",
+      "canonical_id": "PK-base_signature",
+      "table": "BASE_SIGNATURE",
+      "entity": "SignatureEntity",
+      "entity_base": "CLDSEntityBase",
+      "dimension": "primary_key",
+      "orm_contract": {
+        "pk_field": "F_ID",
+        "pk_type": "string",
+        "annotation": "[SugarColumn(IsPrimaryKey = true)]"
+      },
+      "db_current_state": {
+        "pk_exists": false,
+        "column_count": 16,
+        "row_count": 0,
+        "has_f_id": true
+      },
+      "gap": "DB has no PRIMARY KEY constraint on F_ID",
+      "target_state": "PRIMARY KEY (F_ID) CLUSTERED",
+      "severity": "G1_MAJOR",
+      "classification": "G1_MAJOR",
+      "migration_type": "MIGRATION_REQUIRED",
+      "final_decision": "MIGRATION_REQUIRED",
+      "final_decision_reason": "Empty table, ORM navigation requires F_ID as PK (SignatureEntity has [Navigate] using Id), zero data risk, trivial rollback",
+      "risk": "LOW",
+      "migration_sql": "phase-32/migration.sql::M32-01",
+      "rollback_sql": "DROP PRIMARY KEY PK_base_signature",
+      "preflight_sql": "phase-32/migration-preflight.sql",
+      "validation_sql": "phase-32/migration-validation.sql",
+      "evidence": [
+        "batch-31/batch-31-pk-analysis-v2.json",
+        "batch-31/batch-31-pk-dependencies.json",
+        "phase-32/migration.sql"
+      ],
+      "batch_origin": "batch-29/GAP-01",
+      "migration_package": "M1"
+    },
+    {
+      "gap_id": "FR-002",
+      "canonical_id": "PK-base_signature_user",
+      "table": "BASE_SIGNATURE_USER",
+      "entity": "SignatureUserEntity",
+      "entity_base": "CLDSEntityBase",
+      "dimension": "primary_key",
+      "orm_contract": {
+        "pk_field": "F_ID",
+        "pk_type": "string",
+        "annotation": "[SugarColumn(IsPrimaryKey = true)]",
+        "navigation": "[Navigate(NavigateType.OneToMany, nameof(SignatureUserEntity.SignatureId), nameof(Id))] uses Id for FK navigation"
+      },
+      "db_current_state": {
+        "pk_exists": false,
+        "column_count": 15,
+        "row_count": 0,
+        "has_f_id": true,
+        "has_f_signature_id": true,
+        "has_f_user_id": true
+      },
+      "gap": "DB has no PRIMARY KEY constraint. ORM uses Id for navigation, but business semantic suggests (F_SIGNATURE_ID, F_USER_ID) composite",
+      "target_state": "COMPOSITE PRIMARY KEY (F_SIGNATURE_ID, F_USER_ID) OR surrogate F_ID PK",
+      "severity": "G1_MAJOR",
+      "classification": "G1_MAJOR",
+      "migration_type": "DEFERRED",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "Two viable PK strategies: composite (business-correct) vs surrogate (ORM-consistent). Cannot determine without existing data uniqueness check, Entity navigation compatibility test, SqlSugar Insertable/Updateable behavior verification. Empty table = no urgency. Decision requires human gate.",
+      "deferred_trigger": {
+        "condition": "Production data populated OR human decision on composite vs surrogate",
+        "owner": "Chief Architect",
+        "decision_required": "Composite (F_SIGNATURE_ID, F_USER_ID) vs Surrogate (F_ID)"
+      },
+      "risk": "LOW (empty table) / MEDIUM (PK choice impact ORM navigation)",
+      "migration_sql": "phase-32/migration.sql::M32-02 (composite) OR surrogate F_ID PK",
+      "rollback_sql": "DROP PRIMARY KEY (instant)",
+      "preflight_sql": "phase-32/migration-preflight.sql",
+      "evidence": [
+        "batch-31/batch-31-pk-analysis-v2.json",
+        "batch-31/batch-31-pk-dependencies.json",
+        "batch-31/batch-31-decision-matrix-v2.json::gap_id=PK-base_signature_user"
+      ],
+      "batch_origin": "batch-29/GAP-02",
+      "migration_package": "M1"
+    },
+    {
+      "gap_id": "FR-003",
+      "canonical_id": "TI-base_advanced_query_scheme",
+      "table": "BASE_ADVANCED_QUERY_SCHEME",
+      "entity": "AdvancedQuerySchemeEntity",
+      "entity_base": "CLDEntityBase",
+      "dimension": "tenant_index",
+      "orm_contract": {
+        "tenant_field": "F_TENANT_ID",
+        "tenant_aware": false,
+        "entity_inherits": "CLDEntityBase (NOT TenantEntityBase)"
+      },
+      "db_current_state": {
+        "row_count": 2,
+        "distinct_tenants": 0,
+        "null_tenant_count": 2,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID",
+      "target_state": "INDEX on F_TENANT_ID (or DEFERRED if NULL values exist)",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "NO_CHANGE",
+      "final_decision": "NO_CHANGE",
+      "final_decision_reason": "Entity is NOT tenant-aware (CLDEntityBase, not TenantEntityBase). 2 rows with NULL tenant - partial index would be required. No actual tenant filter query evidence found.",
+      "deferred_trigger": null,
+      "false_positive_reason": "Entity is not tenant-aware per ORM definition; audit field entity (CLDEntityBase) does not require tenant index",
+      "risk": "NONE",
+      "evidence": [
+        "batch-31/batch-31-tenant-index-analysis-v2.json",
+        "batch-31/batch-31-tenant-query-evidence.json",
+        "batch-31/batch-31-tenant-selectivity.json"
+      ],
+      "batch_origin": "batch-29/GAP-03-a",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-004",
+      "canonical_id": "TI-base_app_data",
+      "table": "BASE_APP_DATA",
+      "entity": "AppDataEntity",
+      "entity_base": "CLDSEntityBase",
+      "dimension": "tenant_index",
+      "orm_contract": {
+        "tenant_field": "F_TENANT_ID",
+        "tenant_aware": true,
+        "entity_inherits": "CLDSEntityBase (has TenantId via EntityBase)"
+      },
+      "db_current_state": {
+        "row_count": 0,
+        "distinct_tenants": 0,
+        "null_tenant_count": 0,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID",
+      "target_state": "INDEX on F_TENANT_ID",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "DEFERRED",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "Empty table (0 rows). Cannot measure selectivity. Defer to when production data exists. If tenant_id IS NULL for all rows in production, index is useless.",
+      "deferred_trigger": {
+        "condition": "Production table has > 100 rows AND tenant_id selectivity > 1%",
+        "query_evidence_required": "Actual tenant filter query in production workload",
+        "owner": "DBA",
+        "revist_condition": "Production data load complete OR query performance degradation observed"
+      },
+      "risk": "LOW",
+      "evidence": [
+        "batch-31/batch-31-tenant-index-analysis-v2.json",
+        "batch-31/batch-31-tenant-query-evidence.json",
+        "batch-31/batch-31-tenant-selectivity.json"
+      ],
+      "batch_origin": "batch-29/GAP-03-b",
+      "migration_package": "M2"
+    },
+    {
+      "gap_id": "FR-005",
+      "canonical_id": "TI-base_columns_purview",
+      "table": "BASE_COLUMNS_PURVIEW",
+      "dimension": "tenant_index",
+      "db_current_state": {
+        "row_count": 1,
+        "distinct_tenants": 0,
+        "null_tenant_count": 1,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID; 1 row with NULL tenant",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "NO_CHANGE",
+      "final_decision": "NO_CHANGE",
+      "final_decision_reason": "1 row with NULL tenant - partial index would be required. No evidence of tenant filter queries.",
+      "false_positive_reason": "NULL tenant values prevent standard index; entity type check pending",
+      "risk": "NONE",
+      "evidence": ["batch-31/batch-31-tenant-index-analysis-v2.json"],
+      "batch_origin": "batch-29/GAP-03-c",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-006",
+      "canonical_id": "TI-base_data_interface_user",
+      "table": "BASE_DATA_INTERFACE_USER",
+      "entity": "DataInterfaceUserEntity",
+      "entity_base": "CLDEntityBase",
+      "dimension": "tenant_index",
+      "orm_contract": {
+        "tenant_field": "F_TENANT_ID",
+        "tenant_aware": false,
+        "entity_inherits": "CLDEntityBase (NOT TenantEntityBase)"
+      },
+      "db_current_state": {
+        "row_count": 1,
+        "distinct_tenants": 0,
+        "null_tenant_count": 1,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID; 1 row with NULL tenant",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "NO_CHANGE",
+      "final_decision": "NO_CHANGE",
+      "final_decision_reason": "Entity is NOT tenant-aware (CLDEntityBase). NULL tenant values exist. No tenant filter evidence.",
+      "false_positive_reason": "Non-tenant-aware entity; index not required",
+      "risk": "NONE",
+      "evidence": [
+        "batch-31/batch-31-tenant-index-analysis-v2.json",
+        "batch-31/batch-31-tenant-query-evidence.json"
+      ],
+      "batch_origin": "batch-29/GAP-03-d",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-007",
+      "canonical_id": "TI-base_data_interface_variate",
+      "table": "BASE_DATA_INTERFACE_VARIATE",
+      "entity": "DataInterfaceVariateEntity",
+      "entity_base": "CLDEntityBase",
+      "dimension": "tenant_index",
+      "orm_contract": {
+        "tenant_field": "F_TENANT_ID",
+        "tenant_aware": false,
+        "entity_inherits": "CLDEntityBase (NOT TenantEntityBase)"
+      },
+      "db_current_state": {
+        "row_count": 1,
+        "distinct_tenants": 0,
+        "null_tenant_count": 1,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID; 1 row with NULL tenant",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "NO_CHANGE",
+      "final_decision": "NO_CHANGE",
+      "final_decision_reason": "Entity is NOT tenant-aware (CLDEntityBase). NULL tenant values exist.",
+      "false_positive_reason": "Non-tenant-aware entity",
+      "risk": "NONE",
+      "evidence": ["batch-31/batch-31-tenant-index-analysis-v2.json"],
+      "batch_origin": "batch-29/GAP-03-e",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-008",
+      "canonical_id": "TI-base_db_link",
+      "table": "BASE_DB_LINK",
+      "entity": "DbLinkEntity",
+      "entity_base": "CLDEntityBase",
+      "dimension": "tenant_index",
+      "orm_contract": {
+        "tenant_field": "F_TENANT_ID",
+        "tenant_aware": false,
+        "entity_inherits": "CLDEntityBase (NOT TenantEntityBase)"
+      },
+      "db_current_state": {
+        "row_count": 1,
+        "distinct_tenants": 0,
+        "null_tenant_count": 1,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID; 1 row with NULL tenant",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "NO_CHANGE",
+      "final_decision": "NO_CHANGE",
+      "final_decision_reason": "Entity is NOT tenant-aware (CLDEntityBase). NULL tenant values exist.",
+      "false_positive_reason": "Non-tenant-aware entity",
+      "risk": "NONE",
+      "evidence": ["batch-31/batch-31-tenant-index-analysis-v2.json"],
+      "batch_origin": "batch-29/GAP-03-f",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-009",
+      "canonical_id": "TI-base_im_content",
+      "table": "BASE_IM_CONTENT",
+      "entity": "IMContentEntity",
+      "entity_base": "TenantCLDSEntityBase",
+      "dimension": "tenant_index",
+      "orm_contract": {
+        "tenant_field": "F_TENANT_ID",
+        "tenant_aware": true,
+        "entity_inherits": "TenantCLDSEntityBase"
+      },
+      "db_current_state": {
+        "row_count": 9,
+        "distinct_tenants": 0,
+        "null_tenant_count": 9,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID; 9 rows with NULL tenant",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "DEFERRED",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "Entity is tenant-aware but all 9 rows have NULL tenant_id. This is a DATA QUALITY issue, not a schema gap. Index on NULL values is useless. Fix NULL data first, then evaluate index.",
+      "deferred_trigger": {
+        "condition": "TenantId data quality fixed AND production data exists",
+        "data_quality_fix_required": "F_TENANT_ID must not be NULL for new rows",
+        "owner": "Data Engineering"
+      },
+      "risk": "NONE (data quality issue)",
+      "evidence": ["batch-31/batch-31-tenant-index-analysis-v2.json"],
+      "batch_origin": "batch-29/GAP-03-g",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-010",
+      "canonical_id": "TI-base_im_reply",
+      "table": "BASE_IM_REPLY",
+      "entity": "ImReplyEntity",
+      "entity_base": "TenantCLDSEntityBase",
+      "dimension": "tenant_index",
+      "orm_contract": {
+        "tenant_field": "F_TENANT_ID",
+        "tenant_aware": true,
+        "entity_inherits": "TenantCLDSEntityBase"
+      },
+      "db_current_state": {
+        "row_count": 2,
+        "distinct_tenants": 0,
+        "null_tenant_count": 2,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID; 2 rows with NULL tenant",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "DEFERRED",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "All rows have NULL tenant_id (DATA QUALITY issue). Index on NULLs is useless. Fix data first.",
+      "deferred_trigger": {
+        "condition": "TenantId data quality fixed AND production data exists",
+        "data_quality_fix_required": "F_TENANT_ID must not be NULL",
+        "owner": "Data Engineering"
+      },
+      "risk": "NONE",
+      "evidence": ["batch-31/batch-31-tenant-index-analysis-v2.json"],
+      "batch_origin": "batch-29/GAP-03-h",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-011",
+      "canonical_id": "TI-base_integrate",
+      "table": "BASE_INTEGRATE",
+      "entity": "IntegrateEntity",
+      "entity_base": "CLDSEntityBase",
+      "dimension": "tenant_index",
+      "orm_contract": {
+        "tenant_field": "F_TENANT_ID",
+        "tenant_aware": false,
+        "entity_inherits": "CLDSEntityBase (NOT TenantEntityBase, has TenantId via EntityBase)"
+      },
+      "db_current_state": {
+        "row_count": 3,
+        "distinct_tenants": 0,
+        "null_tenant_count": 3,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID; 3 rows with NULL tenant",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "NO_CHANGE",
+      "final_decision": "NO_CHANGE",
+      "final_decision_reason": "Entity is NOT tenant-aware (CLDSEntityBase does NOT inherit TenantEntityBase). NULL tenant values are irrelevant. No index needed.",
+      "false_positive_reason": "Non-tenant-aware entity despite having TenantId property in base",
+      "risk": "NONE",
+      "evidence": ["batch-31/batch-31-tenant-index-analysis-v2.json"],
+      "batch_origin": "batch-29/GAP-03-i",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-012",
+      "canonical_id": "TI-base_integrate_node",
+      "table": "BASE_INTEGRATE_NODE",
+      "entity": "IntegrateNodeEntity",
+      "entity_base": "CLDSEntityBase",
+      "dimension": "tenant_index",
+      "orm_contract": {
+        "tenant_field": "F_TENANT_ID",
+        "tenant_aware": false,
+        "entity_inherits": "CLDSEntityBase"
+      },
+      "db_current_state": {
+        "row_count": 0,
+        "distinct_tenants": 0,
+        "null_tenant_count": 0,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID; empty table",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "DEFERRED",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "Empty table. Cannot evaluate selectivity. Entity is NOT tenant-aware per ORM (CLDSEntityBase). Deferred to production data load.",
+      "deferred_trigger": {
+        "condition": "Production data populated AND entity confirmed as tenant-aware",
+        "owner": "DBA",
+        "revist_condition": "Production data load complete"
+      },
+      "risk": "LOW",
+      "evidence": ["batch-31/batch-31-tenant-index-analysis-v2.json"],
+      "batch_origin": "batch-29/GAP-03-j",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-013",
+      "canonical_id": "TI-base_organize_relation",
+      "table": "BASE_ORGANIZE_RELATION",
+      "dimension": "tenant_index",
+      "db_current_state": {
+        "row_count": 0,
+        "distinct_tenants": 0,
+        "null_tenant_count": 0,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID; empty table",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "DEFERRED",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "Empty table. Cannot evaluate selectivity. Entity type check pending. Deferred to production data load.",
+      "deferred_trigger": {
+        "condition": "Production data populated AND entity tenant-awareness confirmed",
+        "owner": "DBA"
+      },
+      "risk": "LOW",
+      "evidence": ["batch-31/batch-31-tenant-index-analysis-v2.json"],
+      "batch_origin": "batch-29/GAP-03-k",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-014",
+      "canonical_id": "TI-base_portal",
+      "table": "BASE_PORTAL",
+      "entity": "PortalEntity",
+      "entity_base": "CLDSEntityBase",
+      "dimension": "tenant_index",
+      "orm_contract": {
+        "tenant_field": "F_TENANT_ID",
+        "tenant_aware": false,
+        "entity_inherits": "CLDSEntityBase"
+      },
+      "db_current_state": {
+        "row_count": 2,
+        "distinct_tenants": 0,
+        "null_tenant_count": 2,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID; 2 rows with NULL tenant",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "NO_CHANGE",
+      "final_decision": "NO_CHANGE",
+      "final_decision_reason": "Entity is NOT tenant-aware (CLDSEntityBase). NULL tenant values. No index needed.",
+      "false_positive_reason": "Non-tenant-aware entity",
+      "risk": "NONE",
+      "evidence": ["batch-31/batch-31-tenant-index-analysis-v2.json"],
+      "batch_origin": "batch-29/GAP-03-l",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-015",
+      "canonical_id": "TI-base_portal_data",
+      "table": "BASE_PORTAL_DATA",
+      "entity": "PortalDataEntity",
+      "entity_base": "CLDEntityBase",
+      "dimension": "tenant_index",
+      "orm_contract": {
+        "tenant_field": "F_TENANT_ID",
+        "tenant_aware": false,
+        "entity_inherits": "CLDEntityBase"
+      },
+      "db_current_state": {
+        "row_count": 9,
+        "distinct_tenants": 0,
+        "null_tenant_count": 9,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID; 9 rows with NULL tenant",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "NO_CHANGE",
+      "final_decision": "NO_CHANGE",
+      "final_decision_reason": "Entity is NOT tenant-aware (CLDEntityBase). NULL tenant values. No index needed.",
+      "false_positive_reason": "Non-tenant-aware entity",
+      "risk": "NONE",
+      "evidence": ["batch-31/batch-31-tenant-index-analysis-v2.json"],
+      "batch_origin": "batch-29/GAP-03-m",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-016",
+      "canonical_id": "TI-base_signature",
+      "table": "BASE_SIGNATURE",
+      "entity": "SignatureEntity",
+      "entity_base": "CLDSEntityBase",
+      "dimension": "tenant_index",
+      "orm_contract": {
+        "tenant_field": "F_TENANT_ID",
+        "tenant_aware": false,
+        "entity_inherits": "CLDSEntityBase"
+      },
+      "db_current_state": {
+        "row_count": 0,
+        "distinct_tenants": 0,
+        "null_tenant_count": 0,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID; empty table",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "DEFERRED",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "Empty table. Entity is NOT tenant-aware (CLDSEntityBase). Deferred to production data load and ORM clarification.",
+      "deferred_trigger": {
+        "condition": "Production data populated AND entity confirmed tenant-aware by architecture review",
+        "owner": "Chief Architect"
+      },
+      "risk": "LOW",
+      "evidence": ["batch-31/batch-31-tenant-index-analysis-v2.json"],
+      "batch_origin": "batch-29/GAP-03-n",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-017",
+      "canonical_id": "TI-base_signature_user",
+      "table": "BASE_SIGNATURE_USER",
+      "entity": "SignatureUserEntity",
+      "entity_base": "CLDSEntityBase",
+      "dimension": "tenant_index",
+      "orm_contract": {
+        "tenant_field": "F_TENANT_ID",
+        "tenant_aware": false,
+        "entity_inherits": "CLDSEntityBase"
+      },
+      "db_current_state": {
+        "row_count": 0,
+        "distinct_tenants": 0,
+        "null_tenant_count": 0,
+        "has_tenant_index": false
+      },
+      "gap": "No index on F_TENANT_ID; empty table",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "DEFERRED",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "Empty table. Entity is NOT tenant-aware (CLDSEntityBase). Deferred to production data load and ORM clarification.",
+      "deferred_trigger": {
+        "condition": "Production data populated AND entity confirmed tenant-aware",
+        "owner": "Chief Architect"
+      },
+      "risk": "LOW",
+      "evidence": ["batch-31/batch-31-tenant-index-analysis-v2.json"],
+      "batch_origin": "batch-29/GAP-03-o",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-018",
+      "canonical_id": "AUDIT-base_advanced_query_scheme",
+      "table": "BASE_ADVANCED_QUERY_SCHEME",
+      "dimension": "audit_fields",
+      "gap": "Missing audit fields per GAP-04-a",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "NO_CHANGE",
+      "final_decision": "NO_CHANGE",
+      "final_decision_reason": "Entity (AdvancedQuerySchemeEntity) inherits CLDEntityBase which provides all 5 audit fields (CreatorTime, CreatorUserId, LastModifyTime, LastModifyUserId, DeleteMark). ORM contract satisfied.",
+      "false_positive_reason": "ORM audit fields present in Entity definition",
+      "evidence": ["batch-30/batch-30-gap-inventory.json::GAP-04-a"],
+      "batch_origin": "batch-29/GAP-04-a",
+      "migration_package": null
+    },
+    {
+      "gap_id": "FR-019",
+      "canonical_id": "AUDIT-base_app_data",
+      "table": "BASE_APP_DATA",
+      "dimension": "audit_fields",
+      "gap": "Missing audit fields per GAP-04-b",
+      "severity": "G1_MAJOR",
+      "classification": "FALSE_POSITIVE",
+      "migration_type": "NO_CHANGE",
+      "final_decision": "NO_CHANGE",
+      "final_decision_reason": "Entity (AppDataEntity) inherits CLDSEntityBase which provides all 5 audit fields. ORM contract satisfied.",
+      "false_positive_reason": "ORM audit fields present in Entity definition",
+      "evidence": ["batch-30/batch-30-gap-inventory.json::GAP-04-b"],
+      "batch_origin": "batch-29/GAP-04-b",
+      "migration_package": null
+    }
+  ],
+  "deferred_register": [
+    {
+      "gap_id": "FR-002",
+      "table": "BASE_SIGNATURE_USER",
+      "reason": "Composite vs surrogate PK decision pending human gate",
+      "trigger": "Production data populated OR explicit human decision",
+      "owner": "Chief Architect",
+      "expected_decision": "MIGRATION_REQUIRED once decision made",
+      "next_action": "Human gate: composite (F_SIGNATURE_ID, F_USER_ID) vs surrogate (F_ID)"
+    },
+    {
+      "gap_id": "FR-004",
+      "table": "BASE_APP_DATA",
+      "reason": "Empty table, cannot measure tenant selectivity",
+      "trigger": "Production data populated (>100 rows) AND query evidence",
+      "owner": "DBA",
+      "expected_decision": "ADD_INDEX or NO_CHANGE based on selectivity",
+      "next_action": "Re-evaluate after production data load"
+    },
+    {
+      "gap_id": "FR-012",
+      "table": "BASE_INTEGRATE_NODE",
+      "reason": "Empty table, entity tenant-awareness uncertain",
+      "trigger": "Production data populated AND entity ORM clarification",
+      "owner": "DBA",
+      "expected_decision": "ADD_INDEX or NO_CHANGE",
+      "next_action": "Re-evaluate after production data load"
+    },
+    {
+      "gap_id": "FR-013",
+      "table": "BASE_ORGANIZE_RELATION",
+      "reason": "Empty table, entity tenant-awareness unknown",
+      "trigger": "Production data populated AND entity ORM clarification",
+      "owner": "DBA",
+      "expected_decision": "ADD_INDEX or NO_CHANGE",
+      "next_action": "Re-evaluate after production data load"
+    },
+    {
+      "gap_id": "FR-016",
+      "table": "BASE_SIGNATURE",
+      "reason": "Empty table, entity tenant-awareness uncertain",
+      "trigger": "Production data populated AND ORM architecture review",
+      "owner": "Chief Architect",
+      "expected_decision": "ADD_INDEX or NO_CHANGE",
+      "next_action": "Re-evaluate after production data load"
+    },
+    {
+      "gap_id": "FR-017",
+      "table": "BASE_SIGNATURE_USER",
+      "reason": "Empty table, entity tenant-awareness uncertain",
+      "trigger": "Production data populated AND ORM architecture review",
+      "owner": "Chief Architect",
+      "expected_decision": "ADD_INDEX or NO_CHANGE",
+      "next_action": "Re-evaluate after production data load"
+    }
+  ],
+  "false_positive_summary": {
+    "total": 17,
+    "reason": "15 tenant index gaps + 2 audit field gaps were flagged based on DB scan but ORM contract analysis reveals: (1) many entities are NOT tenant-aware despite having TenantId property, (2) NULL tenant values make indexes useless, (3) audit fields are present in ORM entity definitions"
+  },
+  "migration_ready": [
+    {
+      "gap_id": "FR-001",
+      "table": "BASE_SIGNATURE",
+      "migration": "M32-01: ADD PRIMARY KEY (F_ID)",
+      "status": "READY",
+      "preflight": "phase-32/migration-preflight.sql",
+      "migration_sql": "phase-32/migration.sql",
+      "validation_sql": "phase-32/migration-validation.sql",
+      "rollback_sql": "phase-32/rollback.sql"
+    }
+  ],
+  "blocked_gaps": [],
+  "gates": {
+    "migration_authorization": {
+      "status": "PENDING",
+      "required_approvals": [
+        "Chief Architect: M1 migration authorization",
+        "Decision: FR-002 composite vs surrogate"
+      ],
+      "document": "Migration Authorization Gate package in phase-32/"
+    },
+    "final_acceptance": {
+      "status": "PENDING",
+      "required_approvals": [
+        "Schema: Target Contract satisfied",
+        "Migration: All approved migrations executed",
+        "Runtime: No regression",
+        "Performance: Evidence of changes",
+        "Security: Boundaries maintained",
+        "Governance: All changes traceable",
+        "Deferred: All have triggers"
+      ]
+    }
+  }
+}

@@ -1,0 +1,608 @@
+{
+  "metadata": {
+    "batch": "Batch 29",
+    "purpose": "Schema Gap Analysis (Baseline Confirmation)",
+    "analyzed_at": "2026-08-31T04:30:28.568946",
+    "analyzer": "tsee.batch29.gap_analysis (v0.1)",
+    "total_tables": 15
+  },
+  "tables": [
+    {
+      "table_name": "base_advanced_query_scheme",
+      "row_count": 2,
+      "column_count": 18,
+      "index_count": 0,
+      "has_pk": true,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 2 (< 100) - index optimization not justified",
+          "Primary Key exists - data integrity baseline met",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 1,
+          "G2_MINOR": 0,
+          "G3_OK": 0
+        }
+      }
+    },
+    {
+      "table_name": "base_app_data",
+      "row_count": 0,
+      "column_count": 20,
+      "index_count": 0,
+      "has_pk": true,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        },
+        {
+          "gap_type": "empty_table",
+          "severity": "G3_OK",
+          "detail": "Table is empty (no production data) - low priority for optimization",
+          "iron_law": "JNPF convention"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 0 (< 100) - index optimization not justified",
+          "Primary Key exists - data integrity baseline met",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 1,
+          "G2_MINOR": 0,
+          "G3_OK": 1
+        }
+      }
+    },
+    {
+      "table_name": "base_columns_purview",
+      "row_count": 1,
+      "column_count": 14,
+      "index_count": 0,
+      "has_pk": true,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 1 (< 100) - index optimization not justified",
+          "Primary Key exists - data integrity baseline met",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 1,
+          "G2_MINOR": 0,
+          "G3_OK": 0
+        }
+      }
+    },
+    {
+      "table_name": "base_data_interface_user",
+      "row_count": 1,
+      "column_count": 14,
+      "index_count": 0,
+      "has_pk": true,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 1 (< 100) - index optimization not justified",
+          "Primary Key exists - data integrity baseline met",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 1,
+          "G2_MINOR": 0,
+          "G3_OK": 0
+        }
+      }
+    },
+    {
+      "table_name": "base_data_interface_variate",
+      "row_count": 1,
+      "column_count": 15,
+      "index_count": 0,
+      "has_pk": true,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 1 (< 100) - index optimization not justified",
+          "Primary Key exists - data integrity baseline met",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 1,
+          "G2_MINOR": 0,
+          "G3_OK": 0
+        }
+      }
+    },
+    {
+      "table_name": "base_db_link",
+      "row_count": 1,
+      "column_count": 23,
+      "index_count": 0,
+      "has_pk": true,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 1 (< 100) - index optimization not justified",
+          "Primary Key exists - data integrity baseline met",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 1,
+          "G2_MINOR": 0,
+          "G3_OK": 0
+        }
+      }
+    },
+    {
+      "table_name": "base_im_content",
+      "row_count": 9,
+      "column_count": 18,
+      "index_count": 0,
+      "has_pk": true,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 9 (< 100) - index optimization not justified",
+          "Primary Key exists - data integrity baseline met",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 1,
+          "G2_MINOR": 0,
+          "G3_OK": 0
+        }
+      }
+    },
+    {
+      "table_name": "base_im_reply",
+      "row_count": 2,
+      "column_count": 15,
+      "index_count": 0,
+      "has_pk": true,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 2 (< 100) - index optimization not justified",
+          "Primary Key exists - data integrity baseline met",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 1,
+          "G2_MINOR": 0,
+          "G3_OK": 0
+        }
+      }
+    },
+    {
+      "table_name": "base_integrate",
+      "row_count": 3,
+      "column_count": 20,
+      "index_count": 0,
+      "has_pk": true,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 3 (< 100) - index optimization not justified",
+          "Primary Key exists - data integrity baseline met",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 1,
+          "G2_MINOR": 0,
+          "G3_OK": 0
+        }
+      }
+    },
+    {
+      "table_name": "base_integrate_node",
+      "row_count": 0,
+      "column_count": 26,
+      "index_count": 0,
+      "has_pk": true,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        },
+        {
+          "gap_type": "empty_table",
+          "severity": "G3_OK",
+          "detail": "Table is empty (no production data) - low priority for optimization",
+          "iron_law": "JNPF convention"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 0 (< 100) - index optimization not justified",
+          "Primary Key exists - data integrity baseline met",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 1,
+          "G2_MINOR": 0,
+          "G3_OK": 1
+        }
+      }
+    },
+    {
+      "table_name": "base_organize_relation",
+      "row_count": 0,
+      "column_count": 15,
+      "index_count": 0,
+      "has_pk": true,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        },
+        {
+          "gap_type": "empty_table",
+          "severity": "G3_OK",
+          "detail": "Table is empty (no production data) - low priority for optimization",
+          "iron_law": "JNPF convention"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 0 (< 100) - index optimization not justified",
+          "Primary Key exists - data integrity baseline met",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 1,
+          "G2_MINOR": 0,
+          "G3_OK": 1
+        }
+      }
+    },
+    {
+      "table_name": "base_portal",
+      "row_count": 2,
+      "column_count": 24,
+      "index_count": 0,
+      "has_pk": true,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 2 (< 100) - index optimization not justified",
+          "Primary Key exists - data integrity baseline met",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 1,
+          "G2_MINOR": 0,
+          "G3_OK": 0
+        }
+      }
+    },
+    {
+      "table_name": "base_portal_data",
+      "row_count": 9,
+      "column_count": 16,
+      "index_count": 0,
+      "has_pk": true,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 9 (< 100) - index optimization not justified",
+          "Primary Key exists - data integrity baseline met",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 1 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 1,
+          "G2_MINOR": 0,
+          "G3_OK": 0
+        }
+      }
+    },
+    {
+      "table_name": "base_signature",
+      "row_count": 0,
+      "column_count": 16,
+      "index_count": 0,
+      "has_pk": false,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_primary_key",
+          "severity": "G1_MAJOR",
+          "detail": "Table has no PRIMARY KEY constraint",
+          "iron_law": "schema integrity"
+        },
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        },
+        {
+          "gap_type": "empty_table",
+          "severity": "G3_OK",
+          "detail": "Table is empty (no production data) - low priority for optimization",
+          "iron_law": "JNPF convention"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 0 (< 100) - index optimization not justified",
+          "Primary Key MISSING - deferred to Batch 30+ (NOT fixed in this batch)",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 2 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 2,
+          "G2_MINOR": 0,
+          "G3_OK": 1
+        }
+      }
+    },
+    {
+      "table_name": "base_signature_user",
+      "row_count": 0,
+      "column_count": 15,
+      "index_count": 0,
+      "has_pk": false,
+      "fk_count": 0,
+      "tenant_field": "f_tenant_id",
+      "soft_delete_field": "f_delete_mark",
+      "gaps": [
+        {
+          "gap_type": "missing_primary_key",
+          "severity": "G1_MAJOR",
+          "detail": "Table has no PRIMARY KEY constraint",
+          "iron_law": "schema integrity"
+        },
+        {
+          "gap_type": "missing_tenant_index",
+          "severity": "G1_MAJOR",
+          "detail": "Tenant field 'f_tenant_id' not covered by any index (potential multi-tenant query slowness)",
+          "iron_law": "multi-tenant safety"
+        },
+        {
+          "gap_type": "empty_table",
+          "severity": "G3_OK",
+          "detail": "Table is empty (no production data) - low priority for optimization",
+          "iron_law": "JNPF convention"
+        }
+      ],
+      "decision": {
+        "decision": "NO_CHANGE",
+        "verdict": "BASELINE_CONFIRMED",
+        "rationale": [
+          "Batch 29 is Baseline Confirmation batch (NO production DDL per directive)",
+          "Row count = 0 (< 100) - index optimization not justified",
+          "Primary Key MISSING - deferred to Batch 30+ (NOT fixed in this batch)",
+          "Tenant field 'f_tenant_id' present - multi-tenant baseline met",
+          "0 non-PK indexes (acceptable for empty/tiny tables)",
+          "0 foreign keys (isolated tables - no referential integrity gaps)",
+          "⚠ 2 G1_MAJOR gap(s) detected - deferred to Batch 30+"
+        ],
+        "gap_summary": {
+          "G0_CRITICAL": 0,
+          "G1_MAJOR": 2,
+          "G2_MINOR": 0,
+          "G3_OK": 1
+        }
+      }
+    }
+  ]
+}

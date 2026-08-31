@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>JNPF Runtime Expert Agent Tests</Description>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>JNPF.Tests.Runtime.Expert</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="6.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\modularity\runtime\JNPF.Runtime.Expert\JNPF.Runtime.Expert.csproj" />
+    <ProjectReference Include="..\..\modularity\workflow\JNPF.WorkFlow\JNPF.WorkFlow.csproj" />
+    <ProjectReference Include="..\..\modularity\workflow\JNPF.WorkFlow.Entitys\JNPF.WorkFlow.Entitys.csproj" />
+    <ProjectReference Include="..\..\modularity\system\JNPF.Systems.Entitys\JNPF.Systems.Entitys.csproj" />
+    <ProjectReference Include="..\..\modularity\common\JNPF.Common.Core\JNPF.Common.Core.csproj" />
+    <ProjectReference Include="..\..\framework\JNPF.Extras.DatabaseAccessor.SqlSugar\JNPF.Extras.DatabaseAccessor.SqlSugar.csproj" />
+  </ItemGroup>
+
+</Project>

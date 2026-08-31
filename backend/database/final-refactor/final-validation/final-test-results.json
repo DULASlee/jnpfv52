@@ -1,0 +1,52 @@
+{
+  "document": "final-test-results",
+  "version": "v1.0",
+  "generated_at": "2026-08-31T19:10:00",
+  "test_suite": "zx_lowcode_netcore.sln",
+  "full_suite_result": {
+    "total": 729,
+    "passed": 728,
+    "failed": 1,
+    "skipped": 0,
+    "failed_test": {
+      "test_name": "SugarTable_Mappings_ShouldBe_Unique",
+      "test_class": "JNPF.Tests.Architecture.SugarTableMappingTests",
+      "test_project": "JNPF.Tests.Architecture",
+      "failure_message": "Duplicate SugarTable mappings found: BASE_AI_Call_LOG",
+      "stack_trace": "at JNPF.Tests.Architecture.SugarTableMappingTests.SugarTable_Mappings_ShouldBe_Unique() in d:\\JNPF-v52\\backend\\tests\\JNPF.Tests.Architecture\\SugarTableMappingTests.cs:line 64",
+      "duplicate_detail": "backend/application/JNPF.API.Entry/Entities/AiCallLogEntity.cs | backend/modularity/inteAssistant/JNPF.InteAssistant.Entitys/Entity/AiCallLogEntity.cs"
+    }
+  },
+  "architecture_suite_isolated": {
+    "total": 93,
+    "passed": 92,
+    "failed": 1,
+    "skipped": 0
+  },
+  "failure_classification": {
+    "category": "B. Pre-existing Failure",
+    "confidence": "HIGH",
+    "reasoning": [
+      "AiCallLogEntity exists independently at two paths (no shared file)",
+      "Both files predate current sprint (git history shows 2026-08-30 and earlier commits)",
+      "M32-01/M32-02 only touch BASE_SIGNATURE and BASE_SIGNATURE_USER tables",
+      "No code path from PK migration to AiCallLogEntity SugarTable registration",
+      "No ORM entity mapping, service reference, or workflow dependency between them",
+      "Test failure is a project-level infrastructure issue, not migration-induced"
+    ],
+    "affected_tables": ["BASE_AI_Call_LOG"],
+    "affected_entities": ["AiCallLogEntity (duplicate — two files)"],
+    "migration_related": false
+  },
+  "migration_relevant_tests": {
+    "description": "Tests directly testing SignatureService, SignatureEntity, SignatureUserEntity, or BASE_SIGNATURE/BASE_SIGNATURE_USER tables",
+    "count": "No dedicated unit tests exist for these entities",
+    "alternative_validation": [
+      "dotnet build JNPF.Systems.csproj — 0 errors",
+      "SignatureService CRUD operations — validated via ORM analysis",
+      "SqlSugar [Navigate] compatibility — verified",
+      "No dynamic SQL, workflow, or permission system references found"
+    ]
+  },
+  "conclusion": "92/93 represents 1 pre-existing failure unrelated to M32-01/M32-02. Final Acceptance may proceed with this failure formally classified as PRE_EXISTING."
+}

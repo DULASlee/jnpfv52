@@ -1,0 +1,111 @@
+# Skill Routing Config
+
+version: "1.0"
+
+routing:
+  match:
+    dimensions:
+      - taskType
+      - section
+      - phase
+      - riskLevel
+      - contractImpact
+      
+  rules:
+
+    - name: new-feature-common-low
+      match:
+        taskType: new-feature
+        section: common
+        riskLevel: low
+      load:
+        required:
+          - engineering-control/phase-management
+          - engineering-control/evidence-collection
+        recommended: []
+      gates:
+        required: []
+      testingProfile: CONTRACT-FIRST-TDD
+
+    - name: new-feature-section-8
+      match:
+        taskType: new-feature
+        section: section-8
+      load:
+        required:
+          - project/requirement-analysis
+          - project/architecture-analysis
+          - engineering-control/phase-management
+          - engineering-control/contract-governance
+          - engineering-control/adversarial-review
+        recommended:
+          - engineering-control/architecture-gate
+      gates:
+        required: [H1, H3]
+      testingProfile: STRICT-TDD
+
+    - name: runtime-change
+      match:
+        taskType: runtime-change
+      load:
+        required:
+          - project/architecture-analysis
+          - engineering-control/contract-governance
+          - engineering-control/architecture-gate
+          - engineering-control/adversarial-review
+        recommended: []
+      gates:
+        required: [H1, H3, H4]
+      testingProfile: STRICT-TDD
+
+    - name: api-change
+      match:
+        taskType: api-change
+      load:
+        required:
+          - engineering-control/contract-governance
+          - engineering-control/completion-verification
+        recommended: []
+      gates:
+        required: [H3]
+      testingProfile: CONTRACT-FIRST-TDD
+
+    - name: bug-fix-critical
+      match:
+        taskType: bug-fix
+        riskLevel: critical
+      load:
+        required:
+          - engineering-control/self-repair
+          - engineering-control/evidence-collection
+          - engineering-control/completion-verification
+        recommended: []
+      gates:
+        required: [H5]
+      testingProfile: CONTRACT-FIRST-TDD
+
+    - name: refactor-high
+      match:
+        taskType: refactor
+        riskLevel: high
+      load:
+        required:
+          - engineering-control/adversarial-review
+          - engineering-control/contract-governance
+        recommended:
+          - engineering-control/evidence-collection
+      gates:
+        required: [H1, H3]
+      testingProfile: STRICT-TDD
+
+    - name: phase-close
+      match:
+        taskType: phase-close
+      load:
+        required:
+          - engineering-control/completion-verification
+          - engineering-control/evidence-collection
+        recommended: []
+      gates:
+        required: []
+      testingProfile: CONTRACT-FIRST-TDD

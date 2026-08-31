@@ -1,0 +1,9 @@
+{
+  "metadata": {
+    "task": "31.3 Tenant Index Re-open",
+    "executed_at": "2026-08-31T15:30:07.429900"
+  },
+  "abandoned_rule": "row < 100 → NO_CHANGE",
+  "replacement_methodology": "Actual access pattern + Selectivity + Performance evidence",
+  "note": "ABANDONED RULE: 'row < 100 → NO_CHANGE' is FORBIDDEN per Batch 31 plan. Replacing with: (1) actual access pattern evidence (Task 31.4) + (2) selectivity evidence (Task 31.5) + (3) performance evidence (Task 31.7)."
+}

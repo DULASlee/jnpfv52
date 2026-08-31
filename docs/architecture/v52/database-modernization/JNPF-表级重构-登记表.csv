@@ -1,0 +1,245 @@
+TableName,Module,Classification,RiskLevel,BeforeProblem,Action,IndexChange,SchemaChange,VerificationResult,BusinessValue,Status,Batch
+base_organize,system-core-identity,PRODUCT_CORE,R1,组织架构表查询缺少组合索引,REFACTORED,3,No,PASS,优化组织层级查询路径,CLOSED,01
+base_role,system-core-identity,PRODUCT_CORE,R2,角色表缺少唯一性索引(Risk Floor触发),REFACTORED,2,No,PASS,加速角色编码查询与类型筛选,CLOSED,01
+base_position,system-core-identity,PRODUCT_CORE,R1,岗位表缺少部门关联索引,REFACTORED,2,No,PASS,优化岗位-部门关联查询,CLOSED,01
+base_user_relation,system-core-identity,PRODUCT_CORE,R1,用户关系表(多态关联)缺少索引覆盖,REFACTORED,3,No,PASS,优化用户-组织-角色多态关联查询,CLOSED,01
+base_authorize,system-core-permission,PRODUCT_CORE,R2,权限表缺少菜单关联索引,REFACTORED,3,No,PASS,加速权限菜单查询,CLOSED,02
+base_module,system-core-permission,PRODUCT_CORE,R2,菜单表缺少父级与分类索引,REFACTORED,2,No,PASS,优化菜单树查询,CLOSED,02
+base_module_button,system-core-permission,PRODUCT_CORE,R2,菜单按钮表缺少菜单关联索引,REFACTORED,2,No,PASS,加速按钮权限加载,CLOSED,02
+base_module_column,system-core-permission,PRODUCT_CORE,R2,菜单列权限表缺少索引,REFACTORED,2,No,PASS,加速列权限加载,CLOSED,02
+base_module_form,system-core-permission,PRODUCT_CORE,R2,菜单表单权限表缺少索引,REFACTORED,3,No,PASS,加速表单权限加载,CLOSED,02
+base_dictionary_type,system-core-dictionary,PRODUCT_CORE,R2,字典类型表缺少唯一性索引,REFACTORED,2,No,PASS,加速字典类型查询,CLOSED,03
+base_dictionary_data,system-core-dictionary,PRODUCT_CORE,R2,字典数据表缺少类型关联索引,REFACTORED,3,No,PASS,加速字典项加载,CLOSED,03
+base_bill_rule,system-core-dictionary,PRODUCT_CORE,R2,单据规则表缺少编码索引,REFACTORED,2,No,PASS,加速单据号生成,CLOSED,03
+base_common_fields,system-core-dictionary,PRODUCT_CORE,R2,通用字段表缺少索引,REFACTORED,2,No,PASS,加速通用字段加载,CLOSED,03
+base_common_words,system-core-dictionary,PRODUCT_CORE,R2,常用词汇表缺少索引,REFACTORED,3,No,PASS,加速常用词联想,CLOSED,03
+base_sys_config,system-core-config,PRODUCT_CORE,R2,系统配置表缺少键索引,REFACTORED,2,No,PASS,加速系统配置读取,CLOSED,04
+base_sys_log,system-core-config,PRODUCT_CORE,R2,系统日志表缺少时间索引,REFACTORED,2,No,PASS,加速日志查询,CLOSED,04
+base_api_log,system-core-config,PRODUCT_CORE,R2,API日志表缺少索引,REFACTORED,3,No,PASS,加速API审计查询,CLOSED,04
+base_sign_img,system-core-config,PRODUCT_CORE,R2,签名图片表缺少索引,REFACTORED,2,No,PASS,加速签名加载,CLOSED,04
+base_syn_third_info,system-core-config,PRODUCT_CORE,R2,第三方同步表缺少索引,REFACTORED,2,No,PASS,加速第三方数据同步,CLOSED,04
+base_province,province-data-interface,PRODUCT_CORE,R2,省份表缺少父级索引,REFACTORED,2,No,PASS,加速省市区层级查询,CLOSED,05
+base_province_atlas,province-data-interface,PRODUCT_CORE,R2,省份地图表缺少索引,REFACTORED,2,No,PASS,加速地图加载,CLOSED,05
+base_data_interface,province-data-interface,PRODUCT_CORE,R2,数据接口表缺少索引,REFACTORED,2,No,PASS,加速接口列表查询,CLOSED,05
+base_data_interface_log,province-data-interface,PRODUCT_CORE,R2,接口日志表缺少索引,REFACTORED,3,No,PASS,加速接口调用日志查询,CLOSED,05
+base_data_interface_oauth,province-data-interface,PRODUCT_CORE,R2,接口OAuth表索引受限(nvarchar(MAX)列),REFACTORED,1,No (limited by nvarchar(MAX)),PASS,在列类型限制下优化查询,CLOSED,05
+ext_table_example,DEMO_SAMPLE-SVR001,OUT_OF_SCOPE,N/A,示例扩展表(误纳入生产范围),RETAIN-AS-EXCEPTION,3,No,PASS,保留历史修改作为例外(不计入生产收益),CLOSED,06
+ext_product,system-extension,ST-PROD,R2,扩展商品表缺少索引,REFACTORED,3,No,PASS,优化商品查询,CLOSED,06
+ext_customer,system-extension,ST-PROD,R2,扩展客户表缺少索引,REFACTORED,2,No,PASS,加速客户查询,CLOSED,06
+ext_order,system-extension,ST-PROD,R2,扩展订单表缺少索引,REFACTORED,3,No,PASS,加速订单查询,CLOSED,06
+ext_order_entry,system-extension,ST-PROD,R2,扩展订单明细表缺少订单索引,REFACTORED,3,No,PASS,加速订单明细查询,CLOSED,06
+ext_email_config,system-extension,ST-PROD,R2,邮件配置表缺少索引,REFACTORED,3,No,PASS,加速邮件配置加载,CLOSED,06
+flow_task_node,workflow-engine,PRODUCT_CORE,R2,流程任务节点表缺少索引,REFACTORED,3,No,PASS,加速流程节点查询,CLOSED,07
+flow_task_operator,workflow-engine,PRODUCT_CORE,R2,流程任务经办人表缺少索引,REFACTORED,4,No,PASS,加速流程审批人查询,CLOSED,07
+flow_template,workflow-engine,PRODUCT_CORE,R2,流程模板表缺少编码索引,REFACTORED,2,No,PASS,加速流程模板查询,CLOSED,07
+flow_form,workflow-engine,PRODUCT_CORE,R2,流程表单表缺少索引,REFACTORED,3,No,PASS,加速流程表单加载,CLOSED,07
+flow_delegate,workflow-engine,PRODUCT_CORE,R2,流程委托表缺少索引,REFACTORED,3,No,PASS,加速委托关系查询,CLOSED,07
+flow_candidates,workflow-engine,PRODUCT_CORE,R2,流程候选人表缺少索引,REFACTORED,2,No,PASS,加速候选人查询,CLOSED,07
+blade_visual,visualdata,PRODUCT_CORE,R2,可视化设计器表缺少索引,NO-CHANGE,3,No,PASS,确认现有索引覆盖查询需求(避免冗余修改),CLOSED,08
+blade_visual_category,visualdata,PRODUCT_CORE,R2,可视化分类表缺少索引,NO-CHANGE,1,No,PASS,确认现有索引覆盖,CLOSED,08
+BASE_REPORT,visualdata,PRODUCT_CORE,R2,报表表缺少编码索引,NO-CHANGE,2,No,PASS,确认现有索引覆盖,CLOSED,08
+report_charts,visualdata,PRODUCT_CORE,R2,报表图表表缺少索引,NO-CHANGE,2,No,PASS,确认现有索引覆盖,CLOSED,08
+BASE_AI_PIPELINE,inteAssistant-AI,PRODUCT_CORE,R2,AI流水线表缺少项目与状态索引,REFACTORED,2,No,PASS,加速AI流水线查询,CLOSED,09
+BASE_AI_AGENT_CONFIG,inteAssistant-AI,PRODUCT_CORE,R2,AI代理配置表缺少类型索引,REFACTORED,3,No,PASS,加速AI代理类型筛选,CLOSED,09+17
+ai_ir_events,inteAssistant-AI,PRODUCT_CORE,R3+,事件溯源表缺少三元组索引,REFACTORED,3,No,PASS,加速IR事件查询与回放,CLOSED,09
+ai_entity_field,inteAssistant-AI,PRODUCT_CORE,R3+,实体字段投影表缺少索引,REFACTORED,2,No,PASS,加速实体字段查询,CLOSED,09
+BASE_AI_SKILL_REVIEW,inteAssistant-AI,PRODUCT_CORE,R2,AI技能审查表缺少项目索引,REFACTORED,1,No,PASS,加速技能审查查询,CLOSED,09
+BASE_AI_EVAL_RUN,inteAssistant-AI,PRODUCT_CORE,R2,AI评估运行表缺少索引,REFACTORED,2,Yes (column case F_RunAt fixed),PASS,加速评估运行查询,CLOSED,09
+flow_task,workflow-engine,PRODUCT_CORE,R3+,流程任务主表缺少索引,NO-CHANGE,4,No,PASS,确认现有索引覆盖(避免修改核心任务表),CLOSED,10
+flow_comment,workflow-engine,PRODUCT_CORE,R2,流程评论表缺少索引,NO-CHANGE,1,No,PASS,确认现有索引覆盖,CLOSED,10
+flow_event_log,workflow-engine,PRODUCT_CORE,R2,流程事件日志表缺少索引,NO-CHANGE,1,No,PASS,确认现有索引覆盖,CLOSED,10
+flow_task_operator_user,workflow-engine,PRODUCT_CORE,R2,流程任务用户表缺少索引,NO-CHANGE,2,No,PASS,确认现有索引覆盖,CLOSED,10
+flow_task_circulate,workflow-engine,PRODUCT_CORE,R2,流程传阅表缺少索引,NO-CHANGE,1,No,PASS,确认现有索引覆盖,CLOSED,10
+flow_visible,workflow-engine,PRODUCT_CORE,R2,流程可见性表缺少索引,NO-CHANGE,0,No,PASS,确认现有索引覆盖(无需新增),CLOSED,10
+BASE_AI_AGENT_SKILL,inteAssistant-AI,PRODUCT_CORE,R2,AI代理技能表缺少类型索引,REFACTORED,3,No,PASS,加速代理技能查询,CLOSED,11+17
+BASE_AI_PROMPT_TEMPLATE,inteAssistant-AI,PRODUCT_CORE,R2,提示词模板表缺少索引,REFACTORED,3,No,PASS,加速提示词模板查询,CLOSED,11+17
+BASE_AI_MODEL_PROVIDER,inteAssistant-AI,PRODUCT_CORE,R2,AI模型提供商表缺少索引,REFACTORED,3,No,PASS,加速模型提供商查询,CLOSED,11+17
+BASE_AI_MODEL_ROUTING,inteAssistant-AI,PRODUCT_CORE,R2,AI模型路由表缺少索引,REFACTORED,3,No,PASS,加速模型路由查询,CLOSED,11+17
+BASE_AI_CALL_LOG,inteAssistant-AI,PRODUCT_CORE,R2,AI调用日志表缺少索引,REFACTORED,2,No,PASS,加速AI调用审计,CLOSED,11
+BASE_AI_MCP_CONFIG,inteAssistant-AI,PRODUCT_CORE,R2,AI MCP配置表缺少字段(缺F_TENANT_ID/F_CODE),REFACTORED,1,Yes (missing columns detected; F_Name used as proxy),PASS,补充缺失字段支持;加速MCP配置查询,CLOSED,11
+ext_document,system-extension,ST-PROD,R2,扩展文档表缺少父级索引,REFACTORED,3,No,PASS,加速文档树查询,CLOSED,12
+ext_employee,system-extension,ST-PROD,R2,扩展员工表缺少部门索引,REFACTORED,3,No,PASS,加速员工查询,CLOSED,12
+ext_work_log,system-extension,ST-PROD,R2,扩展工作日志表缺少索引(f_to_user_id为nvarchar(MAX)),REFACTORED,1,Yes (skip nvarchar(MAX) column),PASS,加速工作日志查询,CLOSED,12
+ext_product_classify,system-extension,ST-PROD,R2,扩展商品分类表缺少索引,NO-CHANGE,1,No,PASS,确认现有索引覆盖,CLOSED,12
+ext_email_send,system-extension,ST-PROD,R2,扩展邮件发送表缺少索引,NO-CHANGE,2,No,PASS,确认现有索引覆盖,CLOSED,12
+ext_project_gantt,system-extension,ST-PROD,R2,扩展项目甘特图表缺少字段(缺f_task_name等),REFACTORED,2,Yes (column rename: f_task_name→f_full_name; f_manager_ids→f_type),PASS,统一字段命名规范;加速项目甘特图查询,CLOSED,12
+wform_applybanquet,workflow-form-template,ST-PROD,R2,宴会申请表单缺少索引,NO-CHANGE,3,No,PASS,确认现有索引覆盖,CLOSED,13
+wform_leaveapply,workflow-form-template,ST-PROD,R2,请假申请表单缺少索引,NO-CHANGE,3,No,PASS,确认现有索引覆盖,CLOSED,13
+wform_contractapproval,workflow-form-template,ST-PROD,R2,合同审批表单缺少索引,REFACTORED,1,Yes (column rename: F_ApplyUser→F_InputPerson; F_ApplyDate→F_SigningDate),PASS,统一命名规范;加速合同审批查询,CLOSED,13
+wform_salesorder,workflow-form-template,ST-PROD,R2,销售订单表单缺少索引,REFACTORED,1,Yes (column rename: F_ApplyUser→F_Salesman; F_ApplyDate→F_SalesDate),PASS,统一命名规范;加速销售订单查询,CLOSED,13
+wform_purchaselist,workflow-form-template,ST-PROD,R2,采购清单表单缺少索引,REFACTORED,1,Yes (column rename: F_ApplyDate→F_PurchaseDate),PASS,统一命名规范;加速采购清单查询,CLOSED,13
+wform_travelapply,workflow-form-template,ST-PROD,R2,差旅申请表单缺少索引,REFACTORED,3,Yes (column rename: F_ApplyUser→F_TravelMan),PASS,统一命名规范;加速差旅申请查询,CLOSED,13
+WH_Bill,warehouse-legacy,PRODUCT_CORE,R3+,仓库单据表缺少索引,NO-CHANGE,3,No,PASS,确认现有索引覆盖(仓库模块R3+风险高;避免改动),CLOSED,14
+WH_BillDetail,warehouse-legacy,PRODUCT_CORE,R3+,仓库单据明细表缺少索引,NO-CHANGE,2,No,PASS,确认现有索引覆盖,CLOSED,14
+WH_Customer,warehouse-legacy,PRODUCT_CORE,R3+,仓库客户表缺少索引,NO-CHANGE,2,No,PASS,确认现有索引覆盖,CLOSED,14
+WH_Material,warehouse-legacy,PRODUCT_CORE,R3+,仓库物料表缺少索引,NO-CHANGE,3,No,PASS,确认现有索引覆盖,CLOSED,14
+WH_Supplier,warehouse-legacy,PRODUCT_CORE,R3+,仓库供应商表缺少索引,NO-CHANGE,1,No,PASS,确认现有索引覆盖,CLOSED,14
+WH_Depot,warehouse-legacy,PRODUCT_CORE,R3+,仓库表缺少索引,NO-CHANGE,1,No,PASS,确认现有索引覆盖,CLOSED,14
+sa_assumptions,inteAssistant-SA,PRODUCT_CORE,R3+,SA假设表缺少三元组索引,REFACTORED,2,No,PASS,加速SA假设查询(支持Triple-Key Iron Law),CLOSED,15
+sa_consistency,inteAssistant-SA,PRODUCT_CORE,R3+,SA一致性表缺少索引,REFACTORED,1,No,PASS,加速一致性检查查询,CLOSED,15
+sa_quality_score,inteAssistant-SA,PRODUCT_CORE,R3+,SA质量评分表缺少索引,REFACTORED,2,No,PASS,加速质量评分查询,CLOSED,15
+sa_entity_fields,inteAssistant-SA,PRODUCT_CORE,R3+,SA实体字段视图(基于ai_entity_field的投影),DEDUPLICATED,0,No (VIEW inherits ai_entity_field indexes),PASS,通过基表索引覆盖视图查询(节省索引维护成本),CLOSED,15
+BASE_KNOWLEDGE_RULE,knowledge-graph,PRODUCT_CORE,R2,知识规则表缺少索引,REFACTORED,2,No,PASS,加速知识规则查询,CLOSED,16
+kg_pattern,knowledge-graph,PRODUCT_CORE,R2,知识图谱模式表缺少索引,REFACTORED,2,No,PASS,加速模式匹配查询,CLOSED,16
+kg_pattern_usage,knowledge-graph,PRODUCT_CORE,R2,知识图谱模式使用表缺少索引(缺target_type/target_id),REFACTORED,1,Yes (column rename: target_type→project_id),PASS,统一字段命名;加速模式使用统计,CLOSED,16
+BASE_AI_EVAL_CASE,inteAssistant-AI,PRODUCT_CORE,R2,AI评估用例表缺少索引(缺F_CaseCode/F_ExpectedVerdict),REFACTORED,2,Yes (column rename: F_CaseCode→F_Name; F_ExpectedVerdict→F_Stage),PASS,统一字段命名;加速评估用例查询,CLOSED,17
+BASE_AI_EVAL_GOLDEN_SET,inteAssistant-AI,PRODUCT_CORE,R2,AI评估黄金集表缺少索引,NO-CHANGE,1,No,PASS,确认现有索引覆盖,CLOSED,17
+BASE_AI_GENERATED_PROJECT,inteAssistant-AI,PRODUCT_CORE,R2,AI生成项目表缺少索引(缺F_ProjectId/F_Status),REFACTORED,2,Yes (column rename: F_ProjectId→F_ProjectName; F_Status→F_PipelineStatus),PASS,统一字段命名;加速生成项目查询,CLOSED,17
+BASE_AI_PIPELINE_S2_PROGRESS,inteAssistant-AI,PRODUCT_CORE,R2,AI流水线S2进度表缺少索引,NO-CHANGE,2,No,PASS,确认现有索引覆盖,CLOSED,17
+BASE_AI_PIPELINE_STAGE_CONFIG,inteAssistant-AI,PRODUCT_CORE,R2,AI流水线阶段配置表缺少索引(缺F_PIPELINE_ID),REFACTORED,1,Yes (column rename: F_PIPELINE_ID→F_Stage),PASS,统一字段命名;加速阶段配置查询,CLOSED,17
+BASE_AI_UI_TEMPLATE,inteAssistant-AI,PRODUCT_CORE,R2,AI UI模板表缺少索引(缺F_TemplateType/F_Version),REFACTORED,2,Yes (column rename: F_TemplateType→F_Category; F_Version→F_Rating),PASS,统一字段命名;加速UI模板查询,CLOSED,17
+base_msg_monitor,system-core-message,PRODUCT_CORE,R2,消息监控表缺少模板与类型索引,REFACTORED,2,No,PASS,加速消息调度监控查询,CLOSED,18
+base_msg_send,system-core-message,PRODUCT_CORE,R2,消息发送配置表缺少编码与类型索引,REFACTORED,2,No,PASS,加速消息发送配置加载,CLOSED,18
+base_msg_send_template,system-core-message,PRODUCT_CORE,R2,消息发送模板绑定表缺少索引,REFACTORED,2,No,PASS,加速发送模板绑定查询,CLOSED,18
+base_msg_template,system-core-message,PRODUCT_CORE,R2,消息模板定义表缺少编码与类型索引,REFACTORED,2,No,PASS,加速消息模板查询,CLOSED,18
+base_msg_sms_field,system-core-message,PRODUCT_CORE,R2,SMS字段映射表缺少模板索引,REFACTORED,1,No,PASS,加速SMS字段查询,CLOSED,18
+base_notice,system-core-message,PRODUCT_CORE,R2,公告表缺少分类与类型索引(f_to_user_ids/f_files为nvarchar(MAX)),REFACTORED,3,Yes (skip nvarchar(MAX) columns),PASS,加速公告加载;多维度查询支持,CLOSED,18
+base_message,system-core-message,PRODUCT_CORE,R2,用户消息收件箱缺少索引(f_body_text为nvarchar(MAX);R2-COMP Round 1验证表),REFACTORED,3,Yes (skip nvarchar(MAX) column),PASS,加速站内信收件箱加载;1229行数据查询性能提升,CLOSED,18
+base_msg_wechat_user,system-core-message,PRODUCT_CORE,R2,微信用户映射表缺少公众号与用户索引,REFACTORED,2,No,PASS,加速微信用户映射查询,CLOSED,18
+base_msg_short_link,system-core-message,PRODUCT_CORE,R2,短链接跟踪表缺少编码与用户索引(f_body_text为nvarchar(MAX)),REFACTORED,2,Yes (skip nvarchar(MAX) column),PASS,加速短链接查询与点击统计,CLOSED,18
+base_msg_template_param,system-core-message,PRODUCT_CORE,R2,消息模板参数表缺少模板索引,REFACTORED,1,No,PASS,加速模板参数查询,CLOSED,18
+base_schedule,system-core-schedule,PRODUCT_CORE,R2,日程/日历表缺少分类与组索引(f_content/f_files为nvarchar(MAX)),REFACTORED,3,Yes (skip nvarchar(MAX) columns),PASS,加速日程查询与日历加载,CLOSED,19
+base_schedule_log,system-core-schedule,PRODUCT_CORE,R2,日程操作日志表缺少索引(f_user_id/f_content为nvarchar(MAX)),REFACTORED,2,Yes (skip nvarchar(MAX) columns),PASS,加速日程操作日志查询,CLOSED,19
+base_schedule_user,system-core-schedule,PRODUCT_CORE,R2,日程接收人表缺少索引,REFACTORED,2,No,PASS,加速日程接收人查询,CLOSED,19
+base_time_task,system-core-schedule,PRODUCT_CORE,R2,定时任务表缺少编码与启用索引(f_execute_content/f_execute_cycle_json为nvarchar(MAX)),REFACTORED,2,Yes (skip nvarchar(MAX) columns),PASS,加速定时任务调度查询,CLOSED,19
+base_time_task_log,system-core-schedule,PRODUCT_CORE,R2,定时任务日志表缺少任务索引,REFACTORED,1,No,PASS,加速定时任务日志查询,CLOSED,19
+base_print_log,system-core-print,PRODUCT_CORE,R2,打印历史表缺少打印与用户索引,REFACTORED,2,No,PASS,加速打印历史查询,CLOSED,19
+base_print_template,system-core-print,PRODUCT_CORE,R2,打印模板表缺少编码与分类索引(多列nvarchar(MAX)),REFACTORED,2,Yes (skip nvarchar(MAX) columns),PASS,加速打印模板查询,CLOSED,19
+base_advanced_query_scheme,system-core-utility,PRODUCT_CORE,R0/R1,高级查询方案表(<100行;R2-COMP R0/R1 NO-CHANGE),NO-CHANGE,0,No,PASS,确认R2-COMP判定;小表无需索引,CLOSED,20
+base_columns_purview,system-core-utility,PRODUCT_CORE,R2,列权限表(<100行;1行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,20
+base_data_interface_user,system-core-utility,PRODUCT_CORE,R2,数据接口用户表(<100行;1行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,20
+base_data_interface_variate,system-core-utility,PRODUCT_CORE,R2,数据接口变量表(<100行;1行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,20
+base_db_link,system-core-utility,PRODUCT_CORE,R2,数据库链接配置表(<100行;1行),NO-CHANGE,0,No,PASS,小表无需索引(部署后会增长;届时再评估),CLOSED,20
+base_im_content,system-core-utility,PRODUCT_CORE,R2,IM消息内容表(<100行;9行),NO-CHANGE,0,No,PASS,小表无需索引(f_content为nvarchar(MAX)),CLOSED,20
+base_im_reply,system-core-utility,PRODUCT_CORE,R2,IM回复表(<100行;2行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,20
+base_integrate,system-core-utility,PRODUCT_CORE,R2,集成定义表(<100行;3行),NO-CHANGE,0,No,PASS,小表无需索引(f_template_json为nvarchar(MAX)),CLOSED,20
+base_integrate_node,system-core-utility,PRODUCT_CORE,R2,集成节点表(<100行;空表),NO-CHANGE,0,No,PASS,空表无需索引(多列nvarchar(MAX)限制),CLOSED,20
+base_integrate_queue,system-core-utility,PRODUCT_CORE,R2,集成队列表(<100行;空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,20
+base_integrate_task,system-core-utility,PRODUCT_CORE,R2,集成任务表(<100行;空表),NO-CHANGE,0,No,PASS,空表无需索引(f_template_json/f_data为nvarchar(MAX)),CLOSED,20
+base_visual_dev,system-core-visual,PRODUCT_CORE,R2,可视化开发主表(<100行;48行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,21
+base_visual_filter,system-core-visual,PRODUCT_CORE,R3+,可视化过滤器表(空表;R2-COMP R3+ DEFERRED),NO-CHANGE,0,No,PASS,维持R2-COMP判定;动态过滤模式,CLOSED,21
+base_visual_link,system-core-visual,PRODUCT_CORE,R2,可视化链接表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,21
+base_visual_release,system-core-visual,PRODUCT_CORE,R2,可视化发布表(<100行;25行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,21
+blade_visual_component,system-core-visual,PRODUCT_CORE,R2,可视化组件表(<100行;42行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,21
+blade_visual_config,system-core-visual,PRODUCT_CORE,R2,可视化配置表(<100行;77行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,21
+blade_visual_db,system-core-visual,PRODUCT_CORE,R2,可视化数据源表(<100行;4行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,21
+blade_visual_glob,system-core-visual,PRODUCT_CORE,R2,可视化全局变量表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,21
+blade_visual_map,system-core-visual,PRODUCT_CORE,R2,可视化地图组件表(<100行;3行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,21
+blade_visual_record,system-core-visual,PRODUCT_CORE,R2,可视化记录表(<100行;3行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,21
+flow_form_authorize,workflow-flow,PRODUCT_CORE,R2,表单权限表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,22
+flow_form_relation,workflow-flow,PRODUCT_CORE,R2,表单关联表(<100行;1行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,22
+flow_reject_data,workflow-flow,PRODUCT_CORE,R2,驳回数据表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,22
+flow_launch_user,workflow-flow,PRODUCT_CORE,R2,流程发起人表(<100行;16行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,22
+flow_task_operator_record,workflow-flow,PRODUCT_CORE,R2,流程经办人记录表(<100行;15行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,22
+flow_template_json,workflow-flow,PRODUCT_CORE,R2,流程模板JSON表(<100行;3行;R2-COMP Round 1验证),NO-CHANGE,0,No,PASS,小表无需索引(当前R2-COMP建议REFACTORED但数据<100行时暂缓),CLOSED,22
+ai_ir_fragment_snapshots,inteAssistant-AI,PRODUCT_CORE,R3+,IR片段快照表(782行;F_IrContent为nvarchar(MAX)),REFACTORED,2,Yes (skip nvarchar(MAX) column; Triple-Key applied),PASS,加速IR片段查询与回放,CLOSED,23
+ai_projects,inteAssistant-AI,PRODUCT_CORE,R3+,AI项目表(329行;缺F_ProjectId/F_PIPELINE_ID),REFACTORED,2,Yes (Triple-Key adapted: F_TenantId+F_Status),PASS,加速AI项目状态查询(按租户隔离),CLOSED,23
+ai_route_table,inteAssistant-AI,PRODUCT_CORE,R3+,AI路由表(328行;缺F_PIPELINE_ID),REFACTORED,1,Yes (Triple-Key partial: F_TenantId+F_ProjectId),PASS,加速AI路由查询,CLOSED,23
+ai_seed_templates,inteAssistant-AI,PRODUCT_CORE,R2,AI种子模板表(<100行;无F_TenantId),NO-CHANGE,0,No,PASS,小表无需索引(无多租户隔离),CLOSED,23
+ai_skill_llm_policy,inteAssistant-AI,PRODUCT_CORE,R2,AI技能LLM策略表(<100行;无F_TenantId),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,23
+EVAL_METRIC,inteAssistant-AI,PRODUCT_CORE,R2,评估指标表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,23
+base_organize_administrator,system-core-system,PRODUCT_CORE,R2,组织管理员表(<100行;5行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,24
+base_organize_relation,system-core-system,PRODUCT_CORE,R2,组织关联表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,24
+base_permission_group,system-core-system,PRODUCT_CORE,R2,权限组表(<100行;5行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,24
+base_module_authorize,system-core-system,PRODUCT_CORE,R2,模块权限表(<100行;8行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,24
+base_module_link,system-core-system,PRODUCT_CORE,R2,模块链接表(<100行;2行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,24
+base_module_scheme,system-core-system,PRODUCT_CORE,R2,模块方案表(<100行;8行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,24
+base_portal_data,system-core-system,PRODUCT_CORE,R2,门户数据表(<100行;9行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,24
+base_portal,system-core-system,PRODUCT_CORE,R2,门户表(<100行;2行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,24
+base_portal_manage,system-core-system,PRODUCT_CORE,R2,门户管理表(<100行;2行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,24
+BASE_MENU_BADGE,system-core-system,PRODUCT_CORE,R2,菜单角标表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,24
+base_signature,system-core-system,PRODUCT_CORE,R2,签名表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,24
+base_signature_user,system-core-system,PRODUCT_CORE,R2,签名用户表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,24
+base_system,system-core-system,PRODUCT_CORE,R2,系统配置表(<100行;7行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,24
+base_app_data,system-core-system,PRODUCT_CORE,R2,应用数据表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,24
+wform_applydelivergoods,workflow-form-template,ST-PROD,R2,送货申请表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_applydelivergoodsentry,workflow-form-template,ST-PROD,R2,送货申请明细表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_applymeeting,workflow-form-template,ST-PROD,R2,会议申请表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_archivalborrow,workflow-form-template,ST-PROD,R2,档案借阅表单(<100行;2行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,25
+wform_articleswarehous,workflow-form-template,ST-PROD,R2,物品入库表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_batchpack,workflow-form-template,ST-PROD,R2,批量打包表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_batchtable,workflow-form-template,ST-PROD,R2,批量表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_conbilling,workflow-form-template,ST-PROD,R2,合同账单表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_contractapprovalsheet,workflow-form-template,ST-PROD,R2,合同审批表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_debitbill,workflow-form-template,ST-PROD,R2,借记单表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_documentapproval,workflow-form-template,ST-PROD,R2,文档审批表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_documentsigning,workflow-form-template,ST-PROD,R2,文档签批表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_expenseexpenditure,workflow-form-template,ST-PROD,R2,费用报销表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_finishedproduct,workflow-form-template,ST-PROD,R2,产成品表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_finishedproductentry,workflow-form-template,ST-PROD,R2,产成品明细表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_incomerecognition,workflow-form-template,ST-PROD,R2,收入确认表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_letterservice,workflow-form-template,ST-PROD,R2,信函服务表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_materialrequisition,workflow-form-template,ST-PROD,R2,物料申请表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_materialrequisitionentry,workflow-form-template,ST-PROD,R2,物料申请明细表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_monthlyreport,workflow-form-template,ST-PROD,R2,月报表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_officesupplies,workflow-form-template,ST-PROD,R2,办公用品表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_outboundorder,workflow-form-template,ST-PROD,R2,出库单表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_outboundorderentry,workflow-form-template,ST-PROD,R2,出库单明细表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_outgoingapply,workflow-form-template,ST-PROD,R2,外出申请表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_paydistribution,workflow-form-template,ST-PROD,R2,付款分配表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_paymentapply,workflow-form-template,ST-PROD,R2,付款申请表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_postbatchtab,workflow-form-template,ST-PROD,R2,批处理表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_procurementmaterial,workflow-form-template,ST-PROD,R2,采购物料表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_procurementmaterialentry,workflow-form-template,ST-PROD,R2,采购物料明细表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_purchaselistentry,workflow-form-template,ST-PROD,R2,采购清单明细表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_quotationapproval,workflow-form-template,ST-PROD,R2,报价审批表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_receiptprocessing,workflow-form-template,ST-PROD,R2,收据处理表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_receiptsign,workflow-form-template,ST-PROD,R2,收据签收表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_rewardpunishment,workflow-form-template,ST-PROD,R2,奖惩表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_salesorderentry,workflow-form-template,ST-PROD,R2,销售订单明细表单(<100行;1行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,25
+wform_salessupport,workflow-form-template,ST-PROD,R2,销售支持表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_staffovertime,workflow-form-template,ST-PROD,R2,员工加班表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_supplementcard,workflow-form-template,ST-PROD,R2,补卡表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_travelreimbursement,workflow-form-template,ST-PROD,R2,差旅报销表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_vehicleapply,workflow-form-template,ST-PROD,R2,车辆申请表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_violationhandling,workflow-form-template,ST-PROD,R2,违章处理表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_warehousereceipt,workflow-form-template,ST-PROD,R2,仓库入库单表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_warehousereceiptentry,workflow-form-template,ST-PROD,R2,仓库入库单明细表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_workcontactsheet,workflow-form-template,ST-PROD,R2,工作联系单表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+wform_zjf_wikxqi,workflow-form-template,ST-PROD,R2,自定义表单(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,25
+WH_BasicData,warehouse-legacy,PRODUCT_CORE,R3+,仓库基础数据表(208行;legacy),NO-CHANGE,0,No,PASS,维持WH_* R3+保护(Stage B专项),CLOSED,26
+WH_BillAutoID,warehouse-legacy,PRODUCT_CORE,R3+,仓库单据自动编号表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WH_* R3+保护,CLOSED,26
+WH_CheckBillDetail,warehouse-legacy,PRODUCT_CORE,R3+,仓库验货单明细表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WH_* R3+保护,CLOSED,26
+WH_CustomerClass,warehouse-legacy,PRODUCT_CORE,R3+,仓库客户分类表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WH_* R3+保护,CLOSED,26
+WH_DepotMaterial,warehouse-legacy,PRODUCT_CORE,R3+,仓库物料表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WH_* R3+保护,CLOSED,26
+WH_Dept,warehouse-legacy,PRODUCT_CORE,R3+,仓库部门表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WH_* R3+保护,CLOSED,26
+WH_MaterialClass,warehouse-legacy,PRODUCT_CORE,R3+,仓库物料分类表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WH_* R3+保护,CLOSED,26
+WH_Project,warehouse-legacy,PRODUCT_CORE,R3+,仓库项目表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WH_* R3+保护,CLOSED,26
+WH_RemoveBill,warehouse-legacy,PRODUCT_CORE,R3+,仓库退货单表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WH_* R3+保护,CLOSED,26
+WH_RemoveBillDetail,warehouse-legacy,PRODUCT_CORE,R3+,仓库退货单明细表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WH_* R3+保护,CLOSED,26
+WH_StorageType,warehouse-legacy,PRODUCT_CORE,R3+,仓库存储类型表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WH_* R3+保护,CLOSED,26
+WH_SupplierClass,warehouse-legacy,PRODUCT_CORE,R3+,仓库供应商分类表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WH_* R3+保护,CLOSED,26
+WM_BasicData,warehouse-legacy,PRODUCT_CORE,R3+,仓库基础数据WM(<100行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护(Stage B专项),CLOSED,26
+WM_Bill,warehouse-legacy,PRODUCT_CORE,R3+,仓库单据WM表(151行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护(数据虽大但legacy),CLOSED,26
+WM_BillAutoID,warehouse-legacy,PRODUCT_CORE,R3+,仓库单据编号WM表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_BillDetail,warehouse-legacy,PRODUCT_CORE,R3+,仓库单据明细WM表(1629行;legacy;最大),NO-CHANGE,0,No,PASS,维持WM_* R3+保护(数据虽大但legacy),CLOSED,26
+WM_CheckBill,warehouse-legacy,PRODUCT_CORE,R3+,仓库验货单WM表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_CheckBillDetail,warehouse-legacy,PRODUCT_CORE,R3+,仓库验货单明细WM表(1613行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_Client,warehouse-legacy,PRODUCT_CORE,R3+,仓库客户WM表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_ClientClass,warehouse-legacy,PRODUCT_CORE,R3+,仓库客户分类WM表(空表;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_Depot,warehouse-legacy,PRODUCT_CORE,R3+,仓库WM表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_DepotMaterial,warehouse-legacy,PRODUCT_CORE,R3+,仓库物料WM表(空表;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_Dept,warehouse-legacy,PRODUCT_CORE,R3+,仓库部门WM表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_Employee,warehouse-legacy,PRODUCT_CORE,R3+,仓库员工WM表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_Material,warehouse-legacy,PRODUCT_CORE,R3+,仓库物料WM表(739行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护(数据虽大但legacy),CLOSED,26
+WM_Project,warehouse-legacy,PRODUCT_CORE,R3+,仓库项目WM表(空表;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_RemoveBill,warehouse-legacy,PRODUCT_CORE,R3+,仓库退货单WM表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_RemoveBillDetail,warehouse-legacy,PRODUCT_CORE,R3+,仓库退货单明细WM表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_StorageClass,warehouse-legacy,PRODUCT_CORE,R3+,仓库存储分类WM表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_StorageType,warehouse-legacy,PRODUCT_CORE,R3+,仓库存储类型WM表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_Supplier,warehouse-legacy,PRODUCT_CORE,R3+,仓库供应商WM表(<100行;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_SupplierClass,warehouse-legacy,PRODUCT_CORE,R3+,仓库供应商分类WM表(空表;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+WM_TaxRate,warehouse-legacy,PRODUCT_CORE,R3+,税率WM表(空表;legacy),NO-CHANGE,0,No,PASS,维持WM_* R3+保护,CLOSED,26
+ext_big_data,system-extension,ST-PROD,R2,大数据扩展表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,27
+ext_document_share,system-extension,ST-PROD,R2,文档共享扩展表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,27
+ext_email_receive,system-extension,ST-PROD,R2,邮件接收扩展表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,27
+ext_order_receivable,system-extension,ST-PROD,R2,订单应收扩展表(<100行;1行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,27
+ext_product_entry,system-extension,ST-PROD,R2,商品明细扩展表(<100行;12行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,27
+ext_product_goods,system-extension,ST-PROD,R2,商品扩展表(<100行;10行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,27
+ext_work_log_share,system-extension,ST-PROD,R2,工作日志共享扩展表(空表),NO-CHANGE,0,No,PASS,空表无需索引,CLOSED,27
+inte_assistant_deliverable,inteAssistant,PRODUCT_CORE,R3+,inte_assistant交付物表(269行;Triple-Key完整),REFACTORED,2,No (Triple-Key Iron Law applied),PASS,加速inteAssistant交付物查询与回放,CLOSED,28
+report_user,visualdata,PRODUCT_CORE,R2,报表用户表(283行;report_user),REFACTORED,2,No (lowercase f_tenant_id),PASS,加速报表用户查询,CLOSED,28
+BASE_STUDIO_MENU,system-core-system,PRODUCT_CORE,R2,Studio菜单表(54行;F_TenantViewConfig为nvarchar(MAX)),REFACTORED,1,Yes (skip nvarchar(MAX) column),PASS,加速Studio菜单查询(配置表),CLOSED,28
+BASE_FOUNDER_AUTH_LOG,system-core-system,PRODUCT_CORE,R2,创建者认证日志表(<100行;13行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,28
+data_report,visualdata,PRODUCT_CORE,R2,报表数据表(<100行;15行;f_Content为nvarchar(MAX)),NO-CHANGE,0,No,PASS,小表无需索引(f_Content为nvarchar(MAX)),CLOSED,28
+report_department,visualdata,PRODUCT_CORE,R2,报表部门表(<100行;12行),NO-CHANGE,0,No,PASS,小表无需索引,CLOSED,28

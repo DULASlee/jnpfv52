@@ -1,0 +1,293 @@
+{
+  "metadata": {
+    "task": "31.6+31.7 Tenant Index Decision v2",
+    "executed_at": "2026-08-31T15:30:07.561779"
+  },
+  "tables": [
+    {
+      "table": "base_advanced_query_scheme",
+      "row_count": 2,
+      "distinct_tenants": 0,
+      "null_tenant_count": 2,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0.0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_advanced_query_scheme WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "NULL tenant values exist (2 rows); index on f_tenant_id would be partial; needs Data Safety review first"
+    },
+    {
+      "table": "base_app_data",
+      "row_count": 0,
+      "distinct_tenants": 0,
+      "null_tenant_count": 0,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_app_data WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "Empty table; cannot measure selectivity. Defer to when data exists (post-Migration, then re-evaluate)"
+    },
+    {
+      "table": "base_columns_purview",
+      "row_count": 1,
+      "distinct_tenants": 0,
+      "null_tenant_count": 1,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0.0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_columns_purview WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "NULL tenant values exist (1 rows); index on f_tenant_id would be partial; needs Data Safety review first"
+    },
+    {
+      "table": "base_data_interface_user",
+      "row_count": 1,
+      "distinct_tenants": 0,
+      "null_tenant_count": 1,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0.0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_data_interface_user WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "NULL tenant values exist (1 rows); index on f_tenant_id would be partial; needs Data Safety review first"
+    },
+    {
+      "table": "base_data_interface_variate",
+      "row_count": 1,
+      "distinct_tenants": 0,
+      "null_tenant_count": 1,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0.0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_data_interface_variate WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "NULL tenant values exist (1 rows); index on f_tenant_id would be partial; needs Data Safety review first"
+    },
+    {
+      "table": "base_db_link",
+      "row_count": 1,
+      "distinct_tenants": 0,
+      "null_tenant_count": 1,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0.0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_db_link WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "NULL tenant values exist (1 rows); index on f_tenant_id would be partial; needs Data Safety review first"
+    },
+    {
+      "table": "base_im_content",
+      "row_count": 9,
+      "distinct_tenants": 0,
+      "null_tenant_count": 9,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0.0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_im_content WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "NULL tenant values exist (9 rows); index on f_tenant_id would be partial; needs Data Safety review first"
+    },
+    {
+      "table": "base_im_reply",
+      "row_count": 2,
+      "distinct_tenants": 0,
+      "null_tenant_count": 2,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0.0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_im_reply WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "NULL tenant values exist (2 rows); index on f_tenant_id would be partial; needs Data Safety review first"
+    },
+    {
+      "table": "base_integrate",
+      "row_count": 3,
+      "distinct_tenants": 0,
+      "null_tenant_count": 3,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0.0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_integrate WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "NULL tenant values exist (3 rows); index on f_tenant_id would be partial; needs Data Safety review first"
+    },
+    {
+      "table": "base_integrate_node",
+      "row_count": 0,
+      "distinct_tenants": 0,
+      "null_tenant_count": 0,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_integrate_node WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "Empty table; cannot measure selectivity. Defer to when data exists (post-Migration, then re-evaluate)"
+    },
+    {
+      "table": "base_organize_relation",
+      "row_count": 0,
+      "distinct_tenants": 0,
+      "null_tenant_count": 0,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_organize_relation WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "Empty table; cannot measure selectivity. Defer to when data exists (post-Migration, then re-evaluate)"
+    },
+    {
+      "table": "base_portal",
+      "row_count": 2,
+      "distinct_tenants": 0,
+      "null_tenant_count": 2,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0.0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_portal WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "NULL tenant values exist (2 rows); index on f_tenant_id would be partial; needs Data Safety review first"
+    },
+    {
+      "table": "base_portal_data",
+      "row_count": 9,
+      "distinct_tenants": 0,
+      "null_tenant_count": 9,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0.0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_portal_data WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "NULL tenant values exist (9 rows); index on f_tenant_id would be partial; needs Data Safety review first"
+    },
+    {
+      "table": "base_signature",
+      "row_count": 0,
+      "distinct_tenants": 0,
+      "null_tenant_count": 0,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_signature WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "Empty table; cannot measure selectivity. Defer to when data exists (post-Migration, then re-evaluate)"
+    },
+    {
+      "table": "base_signature_user",
+      "row_count": 0,
+      "distinct_tenants": 0,
+      "null_tenant_count": 0,
+      "rows_per_tenant": 0,
+      "selectivity_pct": 0,
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": false,
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_signature_user WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "decision": "DEFERRED",
+      "decision_reason": "Empty table; cannot measure selectivity. Defer to when data exists (post-Migration, then re-evaluate)"
+    }
+  ]
+}

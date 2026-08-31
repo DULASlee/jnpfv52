@@ -1,0 +1,58 @@
+{
+  "metadata": {
+    "task": "30.5 Audit Field Analysis",
+    "executed_at": "2026-08-31T15:23:11.011087"
+  },
+  "analyses": [
+    {
+      "table": "base_im_content",
+      "row_count": 9,
+      "missing_required_audit": [],
+      "alternative_fields_present": {},
+      "truly_missing": [],
+      "decision": "NO_CHANGE",
+      "decision_reason": "Audit fields present via alternative naming: {}",
+      "evidence": "INFORMATION_SCHEMA.COLUMNS (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_integrate",
+      "row_count": 3,
+      "missing_required_audit": [],
+      "alternative_fields_present": {},
+      "truly_missing": [],
+      "decision": "NO_CHANGE",
+      "decision_reason": "Audit fields present via alternative naming: {}",
+      "evidence": "INFORMATION_SCHEMA.COLUMNS (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_portal",
+      "row_count": 2,
+      "missing_required_audit": [],
+      "alternative_fields_present": {},
+      "truly_missing": [],
+      "decision": "NO_CHANGE",
+      "decision_reason": "Audit fields present via alternative naming: {}",
+      "evidence": "INFORMATION_SCHEMA.COLUMNS (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_app_data",
+      "row_count": 0,
+      "missing_required_audit": [],
+      "alternative_fields_present": {},
+      "truly_missing": [],
+      "decision": "NO_CHANGE",
+      "decision_reason": "Audit fields present via alternative naming: {}",
+      "evidence": "INFORMATION_SCHEMA.COLUMNS (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_advanced_query_scheme",
+      "row_count": 2,
+      "missing_required_audit": [],
+      "alternative_fields_present": {},
+      "truly_missing": [],
+      "decision": "NO_CHANGE",
+      "decision_reason": "Audit fields present via alternative naming: {}",
+      "evidence": "INFORMATION_SCHEMA.COLUMNS (fresh query 2026-08-31)"
+    }
+  ]
+}

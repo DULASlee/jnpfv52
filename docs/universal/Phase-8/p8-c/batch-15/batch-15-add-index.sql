@@ -34,17 +34,12 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_SAQUALITY_ROUND' AND 
     INCLUDE (F_Id, F_TotalScore);
 PRINT '--- sa_quality_score done ---';
 
--- sa_entity_fields (15 cols, has lower-case prefix for TenantId/ProjectId/PipelineId)
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_SAENTITYFIELDS_TRIPLEKEY' AND object_id = OBJECT_ID('sa_entity_fields'))
-    CREATE NONCLUSTERED INDEX IDX_SAENTITYFIELDS_TRIPLEKEY ON sa_entity_fields (TenantId, ProjectId, PipelineId)
-    INCLUDE (EntityName, FieldName, PropertyName);
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_SAENTITYFIELDS_TABLE' AND object_id = OBJECT_ID('sa_entity_fields'))
-    CREATE NONCLUSTERED INDEX IDX_SAENTITYFIELDS_TABLE ON sa_entity_fields (EntityName)
-    INCLUDE (FieldName, PropertyName, DbColumnName);
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_SAENTITYFIELDS_PROPERTY' AND object_id = OBJECT_ID('sa_entity_fields'))
-    CREATE NONCLUSTERED INDEX IDX_SAENTITYFIELDS_PROPERTY ON sa_entity_fields (PropertyName)
-    INCLUDE (EntityName, DbColumnName, CSharpType);
-PRINT '--- sa_entity_fields done ---';
+-- sa_entity_fields is a VIEW (not schema-bound) over ai_entity_field; cannot create index on view.
+-- Equivalent indexes already exist on ai_entity_field from Batch 09:
+--   IDX_ENTITYFIELD_TENANT_PROJECT (F_TenantId, F_ProjectId, F_PIPELINE_ID)
+--   IDX_ENTITYFIELD_TABLE (F_TableName, F_SchemaVersion)
+-- sa_entity_fields query patterns are covered by ai_entity_field indexes.
+PRINT '--- sa_entity_fields skipped (VIEW; covered by ai_entity_field indexes) ---';
 
 PRINT '=== Batch 15 ADD INDEX COMPLETE ===';
 COMMIT TRANSACTION;

@@ -42,8 +42,8 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_WFORM_CONTRACT_BILLNO
     CREATE NONCLUSTERED INDEX IDX_WFORM_CONTRACT_BILLNO ON wform_contractapproval (f_tenant_id, F_BillNo)
     INCLUDE (F_Id, F_FlowTitle);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_WFORM_CONTRACT_USER' AND object_id = OBJECT_ID('wform_contractapproval'))
-    CREATE NONCLUSTERED INDEX IDX_WFORM_CONTRACT_USER ON wform_contractapproval (f_tenant_id, F_ApplyUser)
-    INCLUDE (F_Id, F_FlowTitle, F_ApplyDate);
+    CREATE NONCLUSTERED INDEX IDX_WFORM_CONTRACT_USER ON wform_contractapproval (f_tenant_id, F_InputPerson)
+    INCLUDE (F_Id, F_FlowTitle, F_SigningDate);
 PRINT '--- wform_contractapproval done ---';
 
 -- wform_salesorder
@@ -54,8 +54,8 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_WFORM_SALESORDER_BILL
     CREATE NONCLUSTERED INDEX IDX_WFORM_SALESORDER_BILLNO ON wform_salesorder (f_tenant_id, F_BillNo)
     INCLUDE (F_Id, F_FlowTitle);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_WFORM_SALESORDER_USER' AND object_id = OBJECT_ID('wform_salesorder'))
-    CREATE NONCLUSTERED INDEX IDX_WFORM_SALESORDER_USER ON wform_salesorder (f_tenant_id, F_ApplyUser)
-    INCLUDE (F_Id, F_FlowTitle, F_ApplyDate);
+    CREATE NONCLUSTERED INDEX IDX_WFORM_SALESORDER_USER ON wform_salesorder (f_tenant_id, F_Salesman)
+    INCLUDE (F_Id, F_FlowTitle, F_SalesDate);
 PRINT '--- wform_salesorder done ---';
 
 -- wform_purchaselist
@@ -67,7 +67,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_WFORM_PURCHASE_BILLNO
     INCLUDE (F_Id, F_FlowTitle);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_WFORM_PURCHASE_USER' AND object_id = OBJECT_ID('wform_purchaselist'))
     CREATE NONCLUSTERED INDEX IDX_WFORM_PURCHASE_USER ON wform_purchaselist (f_tenant_id, F_ApplyUser)
-    INCLUDE (F_Id, F_FlowTitle, F_ApplyDate);
+    INCLUDE (F_Id, F_FlowTitle, F_PurchaseDate);
 PRINT '--- wform_purchaselist done ---';
 
 -- wform_travelapply
@@ -78,7 +78,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_WFORM_TRAVEL_BILLNO' 
     CREATE NONCLUSTERED INDEX IDX_WFORM_TRAVEL_BILLNO ON wform_travelapply (f_tenant_id, F_BillNo)
     INCLUDE (F_Id, F_FlowTitle);
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_WFORM_TRAVEL_USER' AND object_id = OBJECT_ID('wform_travelapply'))
-    CREATE NONCLUSTERED INDEX IDX_WFORM_TRAVEL_USER ON wform_travelapply (f_tenant_id, F_ApplyUser)
+    CREATE NONCLUSTERED INDEX IDX_WFORM_TRAVEL_USER ON wform_travelapply (f_tenant_id, F_TravelMan)
     INCLUDE (F_Id, F_FlowTitle, F_ApplyDate);
 PRINT '--- wform_travelapply done ---';
 

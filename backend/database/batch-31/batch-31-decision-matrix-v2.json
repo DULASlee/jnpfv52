@@ -1,0 +1,428 @@
+{
+  "metadata": {
+    "task": "31.8 Decision Matrix v2",
+    "executed_at": "2026-08-31T15:31:14.705327"
+  },
+  "decisions": [
+    {
+      "gap_id": "PK-base_signature",
+      "table": "base_signature",
+      "dimension": "primary_key",
+      "current_state": "Current PK: NONE",
+      "target_state": "f_id",
+      "evidence": [
+        "batch-31-pk-dependencies.json",
+        "batch-31-pk-dependencies.json"
+      ],
+      "risk": "LOW (empty table) / MEDIUM (PK choice impact ORM navigation)",
+      "runtime_impact": "Adding PK: SqlSugar Entity already declares f_id via CLDSEntityBase, Entity navigation (OneToMany to SignatureUserEntity) requires signature.id to be PK. Without PK, navigation fails on multi-row.",
+      "performance_evidence": "N/A (PK is structural, not perf)",
+      "migration_type": "MIGRATION_REQUIRED",
+      "rollback": "DROP PRIMARY KEY (instant, no data loss since table empty)",
+      "final_decision": "MIGRATION_REQUIRED",
+      "final_decision_reason": "f_id is the established surrogate key (CLDSEntityBase). Adding PK on f_id is mandatory for SqlSugar ORM operations on this aggregate root. Empty table = zero data risk. Rollback is trivial (drop constraint).",
+      "normalized_state": "MIGRATION_REQUIRED"
+    },
+    {
+      "gap_id": "PK-base_signature_user",
+      "table": "base_signature_user",
+      "dimension": "primary_key",
+      "current_state": "Current PK: NONE",
+      "target_state": "f_signature_id + f_user_id (composite)",
+      "evidence": [
+        "batch-31-pk-dependencies.json",
+        "batch-31-pk-dependencies.json"
+      ],
+      "risk": "LOW (empty table) / MEDIUM (PK choice impact ORM navigation)",
+      "runtime_impact": "Adding composite PK matches business semantic. SqlSugar needs explicit composite key configuration; current Entity navigation may not auto-pick composite PK.",
+      "performance_evidence": "N/A (PK is structural, not perf)",
+      "migration_type": "DEFERRED",
+      "rollback": "DROP PRIMARY KEY (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "Two viable PK strategies: composite (business-correct) vs surrogate (ORM-consistent). Cannot determine which without: (a) existing data uniqueness, (b) Entity navigation compatibility test, (c) SqlSugar Insertable/Updateable behavior verification. Empty table = no urgency. Defer to human gate with explicit composite-vs-surrogate question.",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_advanced_query_scheme",
+      "table": "base_advanced_query_scheme",
+      "dimension": "tenant_index",
+      "current_state": "row_count=2, distinct_tenants=0, null_tenant=2",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_advanced_query_scheme WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "NULL tenant values exist (2 rows); index on f_tenant_id would be partial; needs Data Safety review first",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_app_data",
+      "table": "base_app_data",
+      "dimension": "tenant_index",
+      "current_state": "row_count=0, distinct_tenants=0, null_tenant=0",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_app_data WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "Empty table; cannot measure selectivity. Defer to when data exists (post-Migration, then re-evaluate)",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_columns_purview",
+      "table": "base_columns_purview",
+      "dimension": "tenant_index",
+      "current_state": "row_count=1, distinct_tenants=0, null_tenant=1",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_columns_purview WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "NULL tenant values exist (1 rows); index on f_tenant_id would be partial; needs Data Safety review first",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_data_interface_user",
+      "table": "base_data_interface_user",
+      "dimension": "tenant_index",
+      "current_state": "row_count=1, distinct_tenants=0, null_tenant=1",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_data_interface_user WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "NULL tenant values exist (1 rows); index on f_tenant_id would be partial; needs Data Safety review first",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_data_interface_variate",
+      "table": "base_data_interface_variate",
+      "dimension": "tenant_index",
+      "current_state": "row_count=1, distinct_tenants=0, null_tenant=1",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_data_interface_variate WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "NULL tenant values exist (1 rows); index on f_tenant_id would be partial; needs Data Safety review first",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_db_link",
+      "table": "base_db_link",
+      "dimension": "tenant_index",
+      "current_state": "row_count=1, distinct_tenants=0, null_tenant=1",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_db_link WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "NULL tenant values exist (1 rows); index on f_tenant_id would be partial; needs Data Safety review first",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_im_content",
+      "table": "base_im_content",
+      "dimension": "tenant_index",
+      "current_state": "row_count=9, distinct_tenants=0, null_tenant=9",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_im_content WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "NULL tenant values exist (9 rows); index on f_tenant_id would be partial; needs Data Safety review first",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_im_reply",
+      "table": "base_im_reply",
+      "dimension": "tenant_index",
+      "current_state": "row_count=2, distinct_tenants=0, null_tenant=2",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_im_reply WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "NULL tenant values exist (2 rows); index on f_tenant_id would be partial; needs Data Safety review first",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_integrate",
+      "table": "base_integrate",
+      "dimension": "tenant_index",
+      "current_state": "row_count=3, distinct_tenants=0, null_tenant=3",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_integrate WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "NULL tenant values exist (3 rows); index on f_tenant_id would be partial; needs Data Safety review first",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_integrate_node",
+      "table": "base_integrate_node",
+      "dimension": "tenant_index",
+      "current_state": "row_count=0, distinct_tenants=0, null_tenant=0",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_integrate_node WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "Empty table; cannot measure selectivity. Defer to when data exists (post-Migration, then re-evaluate)",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_organize_relation",
+      "table": "base_organize_relation",
+      "dimension": "tenant_index",
+      "current_state": "row_count=0, distinct_tenants=0, null_tenant=0",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_organize_relation WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "Empty table; cannot measure selectivity. Defer to when data exists (post-Migration, then re-evaluate)",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_portal",
+      "table": "base_portal",
+      "dimension": "tenant_index",
+      "current_state": "row_count=2, distinct_tenants=0, null_tenant=2",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_portal WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "NULL tenant values exist (2 rows); index on f_tenant_id would be partial; needs Data Safety review first",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_portal_data",
+      "table": "base_portal_data",
+      "dimension": "tenant_index",
+      "current_state": "row_count=9, distinct_tenants=0, null_tenant=9",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_portal_data WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "NULL tenant values exist (9 rows); index on f_tenant_id would be partial; needs Data Safety review first",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_signature",
+      "table": "base_signature",
+      "dimension": "tenant_index",
+      "current_state": "row_count=0, distinct_tenants=0, null_tenant=0",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_signature WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "Empty table; cannot measure selectivity. Defer to when data exists (post-Migration, then re-evaluate)",
+      "normalized_state": "DEFERRED"
+    },
+    {
+      "gap_id": "TI-base_signature_user",
+      "table": "base_signature_user",
+      "dimension": "tenant_index",
+      "current_state": "row_count=0, distinct_tenants=0, null_tenant=0",
+      "target_state": "DEFERRED",
+      "evidence": [
+        "batch-31-tenant-query-evidence.json",
+        "batch-31-tenant-selectivity.json",
+        "batch-31-tenant-index-analysis-v2.json"
+      ],
+      "risk": "LOW (small/empty tables) / depends on production growth",
+      "runtime_impact": "0 files reference; False use WHERE tenant predicate",
+      "performance_evidence": {
+        "spid_tested": 57,
+        "sample_query": "SELECT TOP 1 * FROM dbo.base_signature_user WHERE f_tenant_id = 'SAMPLE_TENANT'",
+        "result": "Query executed (statistics captured by SQL Server; detailed reads available in actual execution plan)",
+        "interpretation": "Empty/tiny table — IO reads will be 0-1 regardless of index presence. No meaningful perf delta to measure."
+      },
+      "migration_type": "DEFERRED",
+      "rollback": "DROP INDEX (instant)",
+      "final_decision": "DEFERRED",
+      "final_decision_reason": "Empty table; cannot measure selectivity. Defer to when data exists (post-Migration, then re-evaluate)",
+      "normalized_state": "DEFERRED"
+    }
+  ],
+  "summary": {
+    "total": 17,
+    "by_state": {
+      "MIGRATION_REQUIRED": 1,
+      "DEFERRED": 16
+    }
+  }
+}

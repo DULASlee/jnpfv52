@@ -1,0 +1,233 @@
+{
+  "metadata": {
+    "task": "30.4 Tenant Index Analysis",
+    "executed_at": "2026-08-31T15:23:11.007009"
+  },
+  "analyses": [
+    {
+      "table": "base_data_interface_variate",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 1,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 1 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_portal_data",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 9,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 9 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_im_reply",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 2,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 2 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_im_content",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 9,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 9 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_integrate",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 3,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 3 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_columns_purview",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 1,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 1 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_data_interface_user",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 1,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 1 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_db_link",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 1,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 1 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_portal",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 2,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 2 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_app_data",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 0,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 0 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_signature_user",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 0,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 0 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_organize_relation",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 0,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 0 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_advanced_query_scheme",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 2,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 2 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_signature",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 0,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 0 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    },
+    {
+      "table": "base_integrate_node",
+      "tenant_column": {
+        "name": "f_tenant_id",
+        "type": "nvarchar",
+        "nullable": true
+      },
+      "existing_indexes": [],
+      "unique_constraints": [],
+      "row_count": 0,
+      "tenant_index_status": "MISSING",
+      "decision": "NO_CHANGE",
+      "decision_reason": "Row count 0 < 100; index optimization not justified per IRON-TABLE-05",
+      "evidence": "INFORMATION_SCHEMA + sys.indexes (fresh query 2026-08-31)"
+    }
+  ]
+}

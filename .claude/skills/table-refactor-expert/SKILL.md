@@ -1,345 +1,325 @@
 ---
-name: table-refactor-expert
-description: Universal single-table refactoring expert operationalizing the Master Spec + Execution Manual triad. Use when AI must systematically assess, design, refactor, verify, and close a single relational table across any database / ORM / domain. Produces Evidence Ledger, applies Risk-Adaptive Flow, enforces Hard Gates, stops at Evidence Sufficiency, executes no-change closure as first-class outcome. Project-agnostic; JNPF / Foundry / BBB / CLDEntityBase / TenantId / any specific ORM / any field naming convention are FORBIDDEN in this skill and must live in a separate Project Extension or Target Profile.
+name: table-refactor-expert-v2
+description: Use when AI must perform systematic schema evolution on a relational table (gap analysis, real migration planning, evidence-backed verification), especially when current/target schema contract exists and JNPF-style low-code platform runtime compatibility is required (SqlSugar Entity, Repository, Dynamic SQL, Form Engine, Workflow Engine, Permission Engine chain).
 ---
 
-# Table Refactoring Expert — Universal Skill
+# Table Schema Evolution Expert — Skill v2.0
 
-> **Core principle**: This skill is a **router + executor**, not a third rulebook. Every technical standard is defined in `Master Spec`; every procedure is defined in `Execution Manual`. This skill routes to them and executes them. It creates no new Universal Rule.
+> **Version**: v2.0 (DRAFT, Phase 1 verification)
+> **Frozen**: Pending (R2-COMP + R1 + 7 DoD + 3 Simulation Cases required)
+> **Supersedes**: v1.0-FROZEN (Phase 8 evidence retained, but Skill upgraded to v2.0)
+> **Skill Type**: Schema Evolution Architect (was Database Audit in v1.0)
 
-## 1. When to Use
+## Overview
 
-**Use** when:
+This Skill transforms `Current Schema + Target Schema Contract` into validated, evidence-backed Migrations. It is NOT an audit tool — every SchemaChange must produce a runnable Migration Artifact (forward + rollback + validation + evidence bundle).
 
-- AI must assess one relational table systematically across seven Capabilities (A–G)
-- AI must produce an Evidence Ledger + Closed Gate output for a table
-- AI must apply Risk-Adaptive flow (R0–R5) and decide Process Weight
-- AI must route evidence by Finding Type without full-project scans
-- AI must coordinate batches of table closures
+**Core principle**: A Migration is complete only when the evidence bundle is closed (forward committed, rollback dry-run passed, 8-dimension contract verified, runtime compatibility checked across all 7 layers).
 
-**Do NOT use** when:
+---
 
-- Task is pure class-level / service refactoring (use class refactoring expert)
-- Task is pure query tuning without table-level semantics (use database performance expert if exists)
-- Task is schema migration execution without expert assessment (use migration tool)
-- Task already specifies JNPF/Foundry/project-specific knowledge — read Project Extension instead
+## When to Use
 
-## 2. Hard Gates (constitution — non-negotiable)
+Use when **all** of the following are true:
 
-These six rules **cannot** be overridden by any project, profile, or extension:
+- **Current Schema** is known (sys.columns, sys.indexes, sys.foreign_keys)
+- **Target Schema Contract** exists (YAML 8 dimensions — column_naming, data_type, nullable_contract, tenant_model, audit_model, index_contract, constraint_contract, security_boundary)
+- Migration decision must be evidence-backed (forward SQL + rollback SQL + validation SQL + evidence bundle)
+- JNPF-style runtime compatibility matters (SqlSugar Entity / Repository / Dynamic SQL / Form Engine / Workflow Engine / Permission Engine chain)
 
-### 2.1 Reference-First Rule
+Do NOT use when:
 
-When this skill needs a technical standard (schema rule, integrity rule, index criterion, risk definition, evidence threshold, Hard Gate, DoD), it **MUST** reference `Master Spec §X.Y`. When it needs an execution procedure (flow, gate, rollback, batching, closure), it **MUST** reference `Execution Manual §X.Y`. Skill does not restate either source.
+- Pure read-only audit without migration intent (use database audit tool)
+- Class-level / service-level refactoring (use class-refactor-expert skill)
+- Pure query tuning without schema change (use database performance expert)
+- No Target Schema Contract exists (must define Contract first per IRON-TABLE-03)
+- Schema migration execution without expert assessment (use migration tool directly, not this skill)
 
-### 2.2 No Autonomous Rule Creation
+---
 
-When encountering a situation not defined in Master Spec or Execution Manual:
+## 10 Iron Laws (Constitution)
 
-```
-Undefined situation
-  → classify: Decision / Extension / Gap
-  → escalate: Decision Brief or Human
-  → DO NOT GUESS a new Universal Rule
-```
+These laws are non-negotiable. Violation = immediate stop + Decision Brief.
 
-The skill must **never** silently introduce a new Universal Rule, even if it appears justified by project experience. A new Universal Rule requires modifying Master Spec via the Purity Gate process.
+### IRON-TABLE-01  No Change ≠ No Action
 
-### 2.3 Extension Isolation
+NO-CHANGE is a valid final state, but must prove **compliance with Target Schema Contract** via 8-dimension evidence. No "I scanned and found nothing" shortcuts.
 
-Reading order is always:
+### IRON-TABLE-02  Mapping Is Not Migration
 
-```
-1. Universal Core (Master Spec + Execution Manual)
-2. Project Profile (loaded only if Project Extension is present)
-3. Target Profile (loaded only if Target Profile is present)
-```
+Column name aliases (e.g., `SELECT F_InputPerson AS F_ApplyUser`) **do not equal** Schema Migration. Three valid paths only:
 
-A Project Profile or Target Profile **cannot override** a Universal Rule. It can only:
+- **Type A** (Pure Technical): direct `sp_rename`
+- **Type B** (Semantic Change): dual-write with 6-month compatibility
+- **Type C** (Low-Code Dynamic): skip — manual governance required
 
-- Add a project-specific mapping (e.g., "this project's tenant field is `X`")
-- Add a target-specific mapping (e.g., "this target's audit contract requires `CreatedBy`")
-- Document a project-specific exception with explicit "Extension Exception" label
+### IRON-TABLE-03  Every Table Needs Target Contract
 
-If a Project Profile entry contradicts a Universal Rule, **the Universal Rule wins** and the Project Profile entry must be flagged.
+Every table processed by this Skill must have a Target Schema Contract (YAML, 8 dimensions). No Contract = no Skill invocation.
 
-### 2.4 Evidence Sufficiency Stop Rule
+### IRON-TABLE-04  Security Boundary First
 
-```
-Need evidence for Finding X?
-  → Identify Finding Type (A/B/C/D/E/F/G)
-  → Route to evidence source per Execution Manual §6
-  → Collect until Master Spec §11.3 minimum threshold is met
-  → STOP — do not continue searching
-  → Proceed to Design / Action
-```
+Tables involving Identity / Tenant / Permission / User (P0-Security list) are audited first. Output must include security_boundary_audit with 4 evidence dimensions.
 
-Continuing to search "to be more certain" after threshold is a violation.
+### IRON-TABLE-05  Performance Claim Requires Measurement
 
-### 2.5 No Scope Escalation by Discovery
+`Added Index = Performance Improved` is forbidden logic. Every REFACTORED table must produce Before/After measurement: `logical_reads`, `cpu_ms`, `duration_ms`. `logical_reads_reduction >= 50%` to be valid.
 
-A Finding discovered during a single Table Unit assessment **stays within that Table Unit** by default. If the Finding clearly exceeds Table Unit scope (cross-table, cross-module, cross-architecture), the skill:
+### IRON-TABLE-06  Migration First-Class
 
-1. Records the Finding in Evidence Ledger with scope = `BEYOND_TABLE`
-2. Stops processing for the current table
-3. Triggers Hard Gate (Master Spec §10.3) → Decision Brief → Human
-
-The skill **must not** auto-expand into module-wide or project-wide refactoring.
-
-### 2.6 No-change is a First-Class Outcome
+The deliverable is **executable Migration Artifact**, not a report. Every SchemaChange must produce 4 files:
 
 ```
-Discover → Assess → (justified no-change) → Verify (current state intact) → CLOSED
+/database/migrations/
+├── V<YYYYMMDD>_<change_id>.sql            # Forward
+├── V<YYYYMMDD>_<change_id>_down.sql       # Rollback
+├── V<YYYYMMDD>_<change_id>_verify.sql     # Validation
+└── V<YYYYMMDD>_<change_id>_evidence.json  # Evidence Bundle
 ```
 
-The skill must allow no-change closure without pressure to produce diff. Master Spec §13.4 + Execution Manual §11.3 govern this path.
+### IRON-TABLE-07  Runtime Compatibility First
 
-## 3. Execution Protocol (9 Interfaces)
-
-This skill operates through nine interfaces. Each interface **routes** to Master Spec / Execution Manual; **no interface redefines rules**.
-
-### 3.1 State Machine (`TableState`)
-
-| State | Enter | Exit | Reference |
-|---|---|---|---|
-| DISCOVERED | Discovery input valid | Assess input ready | Manual §2.1 |
-| ASSESSED | 7 Capabilities filled | Design input ready | Manual §2.1 |
-| DESIGNED | DESIGNs aligned with Findings | Approval Gate passed | Manual §2.1 |
-| READY | Approval Gate decision recorded | Refactor started | Manual §2.1 |
-| REFACTORED | Refactor flow complete | Verify started | Manual §2.1 |
-| VERIFIED | 13 DoDs achieved (Spec §13.2) | Closed Gate evaluated | Manual §2.1 |
-| CLOSED | 5 Closed Gate conditions met | (Re-trigger only) | Manual §11 |
-
-`READY ≠ REFACTORED` — explicitly preserved.
-
-### 3.2 Step Executor (`runStep`)
-
-For each Step in Execution Manual §3:
+Schema change is not complete until 7-layer runtime chain is verified:
 
 ```
-Input → Master Spec reference (if technical)
-     → Execution Manual reference (if procedural)
-     → Action → Evidence collection (with Sufficiency Stop)
-     → Output → Stop Condition check → Escalation if needed
+Database → ORM (SqlSugar Entity) → Repository (IRepository<T>) 
+       → Dynamic SQL (codegen) → Form Engine → Workflow Engine → Permission Engine
 ```
 
-Each Step's six fields (Input/Action/Evidence/Output/Stop/Escalation) are **read** from Manual §3 — not redefined here.
+### IRON-TABLE-08  Dynamic Platform Exception
 
-### 3.3 Document Router (`routeDoc`)
+Low-code platform tables have special classification:
 
-| Question type | Route to |
-|---|---|
-| "What is correct schema / integrity / index / lifecycle / query / DDD / readiness?" | Master Spec §3–§9 |
-| "What is the Risk level / Hard Gate / DoD?" | Master Spec §10 / §12 / §13 |
-| "What evidence is sufficient?" | Master Spec §11.3 |
-| "When / how to execute?" | Execution Manual §3 |
-| "What Gate / Approval applies?" | Execution Manual §5 |
-| "What Refactor Type / Rollback?" | Execution Manual §8 |
-| "How to batch?" | Execution Manual §9 |
-| "How to close?" | Execution Manual §11 |
-| Project-specific field mapping | Project Profile (NOT Master Spec) |
-| Target-specific contract mapping | Target Profile (NOT Master Spec) |
+| Type | Rule |
+|------|------|
+| SYSTEM_CORE (`base_*` P0-Security) | Strict refactoring (IRON-TABLE-04) |
+| BUSINESS_ENTITY (flow_*, etc.) | Migration governance (IRON-TABLE-02/03) |
+| DYNAMIC_FORM (`wform_*`) | Metadata only, **forbid auto-rename** |
+| USER_EXTENDED (`ext_*`) | Forbid auto-rename |
 
-### 3.4 Gate Evaluator (`evaluateGate`)
+### IRON-TABLE-09  Evidence Over Declaration
 
-| Gate | Source | Decision |
-|---|---|---|
-| Auto-Close | Manual §5.2 (R0) | AI autonomous |
-| Auto-Apply | Manual §5.2 (R1) | AI autonomous |
-| Evidence-Driven Auto | Manual §5.2 (R2) | AI autonomous (evidence-backed) |
-| Human Approval | Manual §5.2 (R3) | Human decision required |
-| Cross-Table | Manual §5.2 (R4) | Product + Architecture decision |
-| Destructive | Manual §5.2 (R5) | Product + Architecture + Pilot Dry-run |
+Declarations like "X has been refactored" without evidence are invalid. Every completion claim must bind to:
 
-`Approval ≠ New Audit` — Manual §5.3 governs.
+- Forward SQL reference
+- Validation SQL with row count
+- Rollback dry-run result
+- Performance before/after data
 
-### 3.5 Evidence Router (`routeEvidence`)
+### IRON-TABLE-10  Batch Completion Requires Representative Proof
 
-For each Finding Type (A–G), Execution Manual §6 / Appendix C defines:
+Every Batch close must include representative proof (1 complex + 1 normal + 1 dynamic). No pure-NO-CHANGE batches allowed.
 
-- Source priority (which files/code to read)
-- Forbidden scope (which to NOT scan)
-- Minimum threshold (when to stop)
+---
 
-The skill **must not** deviate from this routing. Deviation is logged as a routing violation.
+## 7 Skill DoD (Phase 1 Frozen Gate)
 
-### 3.6 Evidence Ledger (`updateLedger`)
+Skill v2.0 itself must pass **all 7 DoDs** before FROZEN:
 
-Ledger fields per Execution Manual §7:
+| # | DoD | Verification |
+|---|-----|-------------|
+| **DoD-01** | Target Schema Contract executable (generates Table Contract Matrix) | `python -m tsee.contract-matrix` |
+| **DoD-02** | Gap Analysis Layer (6 gap types: column/type/constraint/index/security/performance) | `python -m tsee.gap-analysis <table>` |
+| **DoD-03** | Migration Decision Engine (auto Type A/B/C) | `python -m tsee.decide <table>.<column>` |
+| **DoD-04** | No Change Validator (8-dimension evidence mandatory) | `python -m tsee.no-change-validate <table>` |
+| **DoD-05** | Evidence Collector (auto-collects schema/row_count/index/performance/diff) | `python -m tsee.evidence-collect <table>` |
+| **DoD-06** | Rollback Validator (forward+rollback pair + dry-run) | `python -m tsee.rollback-validate <change_id>` |
+| **DoD-07** | Human Gate Boundary (explicit AI-auto vs human-required list) | `python -m tsee.human-gate-check --auto-only` |
 
-| Field group | Fields |
-|---|---|
-| Current Fact | `[KNOWN]` / `[COMPUTED]` / `[INFERRED]` / `[GUESS]` entries |
-| Target State | `[DESIGN]` entries |
-| Decision | Risk, Hard Gate detection, Gate resolution |
-| Change | Refactor flow + intermediate verification |
-| Verification | 13 DoDs + KPI + performance archive |
+---
 
-Taxonomy is the Master Spec §11.1 five labels. **No second taxonomy permitted.**
-
-### 3.7 Refactor Action (`applyRefactor`)
-
-Per Execution Manual §8 / Appendix D:
-
-| Type | Trigger | Rollback |
-|---|---|---|
-| Schema | ALTER / ADD / DROP COLUMN | Reverse ALTER |
-| Data | migration / value conversion / backfill | **Backup + dry-run required** |
-| Index | CREATE / DROP / REBUILD | DROP reverse |
-| Constraint | UNIQUE / FK / CHECK | DROP constraint |
-| Code / Entity | Entity / Repository / Service change | git revert |
-
-**Data Rollback ≠ Code Rollback** — Manual §8.2 governs.
-
-### 3.8 Batch Coordinator (`coordinateBatch`)
-
-Per Execution Manual §9:
-
-- Batch size: 3–8 tables
-- Risk homogeneity: ≤ 2 Risk-grade spread within batch
-- Module clustering: same module preferred
-- Dependency order: parent → child
-- Pause trigger: any Hard Gate within batch
-
-### 3.9 TABLE CLOSED Gate (`closeGate`)
-
-Per Execution Manual §11:
-
-- 5 required conditions (Evidence sufficient / Target settled / Refactor or no-change / Verification passed / No blocking)
-- 6 required records (Before / After / Key evidence / Accepted constraints / Deferred items / Re-trigger conditions)
-- No-change closure path explicitly allowed
-
-## 4. Document Routing Table (consolidated)
-
-| Skill needs to know... | Read this |
-|---|---|
-| What is correct table design | Master Spec §3–§9 |
-| Risk levels | Master Spec §10 |
-| Hard Gate triggers | Master Spec §10.3 / §12 |
-| Evidence taxonomy | Master Spec §11.1 |
-| Evidence thresholds | Master Spec §11.3 + per-Capability subsections |
-| DoD | Master Spec §13.2 |
-| TABLE CLOSED semantics | Master Spec §13 |
-| KPI definitions | Master Spec §14 |
-| Purity Gate | Master Spec §15 |
-| State machine | Execution Manual §2 |
-| 5-step SOP | Execution Manual §3 |
-| Risk-Adaptive flow | Execution Manual §4 |
-| Approval Gate | Execution Manual §5 |
-| Evidence Routing | Execution Manual §6 |
-| Ledger format | Execution Manual §7 |
-| Refactor types | Execution Manual §8 |
-| Batch rules | Execution Manual §9 |
-| Failure recovery | Execution Manual §10 |
-| TABLE CLOSED Gate | Execution Manual §11 |
-| Efficiency discipline | Execution Manual §12 |
-| Project-specific field / ORM | Project Profile (NOT this skill) |
-| Target-specific contract | Target Profile (NOT this skill) |
-
-## 5. Tooling Boundaries
-
-**This skill does not implement MCP / CLI / independent tools.**
-
-When Skill execution discovers a Tool Gap:
+## 5-Layer Architecture
 
 ```
-Tool Gap detected
-  → Record in skill execution log
-  → Continue with existing tools if possible
-  → Note gap for Generic Validation phase
-  → Tool Gap → repeated cross-project → MCP Capability Proposal (separate phase)
+Layer 5 · Governance (R2-COMP + R1 + Hard Gate + 7 DoD + 3 Simulation Cases)
+Layer 4 · Gap Analysis Layer (NEW) ← Current + Target → 6 gap types
+Layer 3 · Migration Planning Layer (NEW) ← Type A/B/C + Real Migration vs Mapping Bypass
+Layer 2 · Execution Layer (v1.0 upgraded) ← Risk + DDL + Schema drift + Real Migration tools + Performance Measurement
+Layer 1 · Evidence & Verification Layer (v1.0 retained) ← 13 DoD + 5 Closed Gate + Performance Archive
 ```
 
-**Do not** develop MCP in Phase 3. Generic Validation comes first.
+**v1.0 → v2.0 key shift**: `Current → Audit → Action` becomes `Current + Target → Gap → Migration → Verification`.
 
-## 6. Output Contract
+---
 
-For each Table Unit, the skill produces:
-
-| Output | Format | Required when |
-|---|---|---|
-| Evidence Ledger (machine-readable) | JSON / YAML per Manual §7 | Always (including no-change) |
-| Closed Gate decision (5 conditions) | Boolean per condition | CLOSED transition |
-| Closed Record (6 items) | Structured text per Manual §11.2 | CLOSED state |
-| Hard Gate hits (if any) | Decision Brief template | Any Hard Gate triggered |
-| Routing violations (if any) | Log entry | Any deviation from Manual §6 routing |
-| Tool Gaps (if any) | Log entry | Any detected tool gap |
-
-## 7. Failure Modes
-
-| Failure | Detection | Recovery | Reference |
-|---|---|---|---|
-| Test failure | Verify step | Local rollback + reason analysis | Manual §10 |
-| Schema validation failure | Verify step | Reverse ALTER + redo | Manual §10 |
-| Migration failure | Refactor | Abort + backup restore | Manual §10 |
-| Contradictory evidence | Any step | STOP → Decision Brief | Manual §10 |
-| Unexpected behavior | Verify / after | Refactor rollback + re-Assess | Manual §10 |
-| **Master Spec / Manual not loaded** | Skill start | Hard fail — skill cannot run without authoritative sources | §2.1 |
-| **Project Extension conflicts with Universal Rule** | Any Step | Universal Rule wins; flag Extension | §2.3 |
-
-**Local rollback > project restart** — Manual §10.2 governs.
-
-## 8. Self-Contamination Defense
-
-The skill guards against its own rule drift:
-
-1. **No second taxonomy** — Master Spec §11.1 labels only.
-2. **No new Universal Rule** — Undefined situations escalate per §2.2.
-3. **No project-specific knowledge in skill** — All JNPF / Foundry / BBB / specific ORM knowledge lives in Project Extension / Target Profile.
-4. **No new process steps** — Execution Manual §3 five steps only.
-5. **No new Gate types** — Execution Manual §5 six Gate types only.
-6. **No new DoD items** — Master Spec §13.2 13 items only.
-
-If a perceived need for any of the above arises, the correct action is to escalate (modify Master Spec / Execution Manual), not to add to this skill.
-
-## 9. Quick Start (operational sequence)
+## Operational Sequence (10 Steps)
 
 ```
-1. Load Master Spec path (canonical reference)
-2. Load Execution Manual path (canonical reference)
-3. (Optional) Load Project Profile if present
-4. (Optional) Load Target Profile if present
+1. Load Master Spec v2.0 (canonical reference)
+2. Load Execution Manual v2.0 (canonical reference)
+3. (Optional) Load Project Profile (JNPF-specific mappings)
+4. (Optional) Load Target Profile (target-specific contracts)
 5. Initialize TableState = DISCOVERED
-6. For each Step in Execution Manual §3:
-   a. runStep → routeDoc → collect evidence (Sufficiency Stop)
-   b. Update Ledger
-   c. If Hard Gate triggered → Decision Brief + STOP
-   d. If Approval Gate required → gate evaluation
-   e. If Refactor required → applyRefactor (per type)
-   f. Verify per Master Spec §13.2
-   g. Evaluate Closed Gate (5 conditions)
+6. For each Step in Execution Manual v2.0 §3:
+   a. runStep → routeDoc → collect evidence (Sufficiency Stop per IRON-TABLE-05)
+   b. Update Ledger (include 8-dimension no-change evidence per IRON-TABLE-01)
+   c. If Hard Gate triggered → Decision Brief + STOP (per IRON-TABLE-04)
+   d. If Approval Gate required → gate evaluation (per DoD-07)
+   e. If Refactor required → applyRefactor with 4-file Migration Bundle (IRON-TABLE-06)
+   f. Verify 7-layer runtime chain (IRON-TABLE-07)
+   g. Run performance benchmark Before/After (IRON-TABLE-05)
+   h. Evaluate Batch representative proof (IRON-TABLE-10)
+   i. Evaluate Closed Gate (5 conditions)
 7. Transition to CLOSED or escalate
 ```
 
-If at any point an undefined rule / behavior is needed → §2.2.
+---
 
-## 10. Phase 3 Exit Criteria (self-check)
+## Migration Type Decision Matrix
 
-- [ ] Skill can launch Table Refactoring lifecycle (State Machine initializes)
-- [ ] Skill correctly references Master Spec (not restating)
-- [ ] Skill correctly references Execution Manual (not restating)
-- [ ] Skill executes 5-step flow via Execution Manual §3
-- [ ] Skill maintains State per Execution Manual §2
-- [ ] Skill routes Evidence per Execution Manual §6
-- [ ] Skill identifies Hard Gate per Master Spec §10.3
-- [ ] Skill executes Risk-Adaptive flow per Execution Manual §4
-- [ ] Skill maintains Ledger per Execution Manual §7
-- [ ] Skill executes or skips Refactor per Execution Manual §8
-- [ ] Skill executes Verify per Master Spec §13.2
-- [ ] Skill triggers TABLE CLOSED Gate per Execution Manual §11
-- [ ] Skill supports no-change closure per Master Spec §13.4
-- [ ] Skill preserves Universal Core Purity (no JNPF / Foundry / BBB / ORM / dialect / naming convention)
-- [ ] No Master Spec duplication
-- [ ] No Execution Manual duplication
-- [ ] No new technical rules introduced
-- [ ] Placeholder = 0
-- [ ] No internal contradiction
+| Type | Trigger | Processing |
+|------|---------|------------|
+| **A** | Pure technical naming error (typo, case inconsistency) | `sp_rename` + Entity sync |
+| **B** | Semantic change (field meaning changed) | Dual-write 6 months + Entity dual-field with `[Obsolete]` |
+| **C** | Low-code dynamic (`wform_*`, `lowcode_*`, runtime `ext_*`) | **SKIP** — manual governance |
 
-## 11. Out of Scope (explicit)
+Decision logic (`Migration Decision Engine` per DoD-03):
 
-- Implementing MCP / CLI / independent tools
-- Loading JNPF Extension / Foundry Target Profile (Phase 5)
-- Executing Pilot on real JNPF tables (Phase 6)
-- Performance benchmarking methodology (Master Spec §14 references)
-- DDL / migration execution tools (separate product)
-- Migration rollback execution (separate product)
+```python
+def decide_migration_type(table_name, column_name, current_def, target_def):
+    if table_name.startswith(("wform_", "lowcode_")):
+        return MigrationType.TYPE_C
+    if table_name.startswith("ext_") and is_user_extended(table_name):
+        return MigrationType.TYPE_C
+    if semantic_changed(column_name, current_def, target_def):
+        return MigrationType.TYPE_B
+    if pure_naming_error(column_name):
+        return MigrationType.TYPE_A
+    return MigrationType.TYPE_B  # conservative default
+```
+
+---
+
+## Output Contract (per table)
+
+| Output | Format | Required |
+|--------|--------|----------|
+| Evidence Ledger | JSON/YAML | ✅ Always |
+| Target Schema Contract | YAML (8 dimensions) | ✅ Always |
+| Gap Analysis Report | JSON (6 gap types) | ✅ Always |
+| Migration Type | A / B / C | ✅ Always |
+| Performance Measurement | Before/After JSON | ✅ REFACTORED |
+| Security Audit | YAML | ✅ P0 tables |
+| Table Contract Matrix | Markdown Table | ✅ Batch complete |
+| Migration Script Bundle | V*.sql + V*_down.sql + V*_verify.sql + evidence.json | ✅ REFACTORED |
+| Human Gate Decision | REQUIRED / NOT_REQUIRED | ✅ Always |
+
+---
+
+## Hard Gates (Trigger → STOP)
+
+| Trigger | Action |
+|---------|--------|
+| P0-Security table missing security_boundary_audit | Decision Brief + STOP |
+| Type C table marked REFACTORED (instead of SKIP) | Decision Brief + STOP |
+| Migration without rollback script | Decision Brief + STOP |
+| Performance claim without Before/After data | Decision Brief + STOP |
+| NO-CHANGE without 8-dimension evidence | Decision Brief + STOP |
+| Batch without representative proof | Decision Brief + STOP |
+| Production DDL without human approval | Decision Brief + STOP |
+| DROP COLUMN without Type B 6-month wait | Decision Brief + STOP |
+
+---
+
+## Human Gate Boundary (DoD-07)
+
+**AI auto-authorized** (no human approval):
+
+- Target Schema Contract comparison (read-only)
+- Gap Analysis Report generation
+- Migration Type classification (A/B/C)
+- Forward/Rollback/Validation SQL generation
+- Evidence Bundle collection
+- Performance benchmark execution
+- Dry-run rollback testing
+
+**Human required**:
+
+- Production Forward Migration execution
+- Any Type C (low-code) field change
+- P0-Security table destructive change
+- DROP COLUMN operations
+- TRUNCATE TABLE operations
+- Batch DDL > 1 table
+- Rollback decision after rollback triggered
+
+---
+
+## v1.0 Compatibility (Backward)
+
+| Asset | Compatibility |
+|-------|---------------|
+| Phase 8 248-table governance | Retained, not retroactive |
+| v1.0 SKILL.md | Preserved at v1.5 ARCHIVED |
+| v1.0 Master Spec | Retained, v2.0 chapters added |
+| Evidence files | Backward-compatible field additions |
+| Decision Briefs | v1.0 format still readable |
+
+---
+
+## Quick Start
+
+```bash
+# 1. Discover
+python -m tsee.discover --tables base_user,base_message,flow_task
+
+# 2. Load contracts (from JNPF Target Schema Contract)
+python -m tsee.contract-load --project JNPF
+
+# 3. Gap Analysis
+python -m tsee.gap-analysis base_user
+
+# 4. Migration Decision
+python -m tsee.decide base_user.f_password
+
+# 5. Generate Migration Bundle (if Type A/B and human-approved)
+python -m tsee.migrate base_user --human-approved
+
+# 6. Verify (with 7-layer runtime check + Before/After benchmark)
+python -m tsee.verify base_user
+
+# 7. Close (with 8-dimension evidence + Batch representative proof)
+python -m tsee.close base_user --batch batch-01
+```
+
+---
+
+## Failure Modes
+
+| Failure | Detection | Recovery |
+|---------|-----------|----------|
+| Migration fails | Validation SQL | Reverse migration + rollback to last good state |
+| Runtime layer broken | 7-layer check | Stop propagation + Decision Brief |
+| Type C misclassified | Hard Gate | Re-classify to SKIP |
+| Evidence bundle missing | DoD-05 check | Regenerate + re-collect |
+| Rollback dry-run fails | DoD-06 check | Fix forward migration |
+
+---
+
+## Out of Scope (Explicit)
+
+- Implementing auto Repository code generation (v3.0 candidate)
+- Cross-database dialect (MySQL/PG) — v1.0/v2.0 SQL Server only
+- DML data migration (DDL only)
+- Auto FK enhancement (JNPF doesn't need)
+- CQRS / Outbox / Event Sourcing / Microservice split (future architecture phase)
+- Primary key bigint conversion (JNPF GUID is required)
+
+---
+
+## Phase 1 Verification (Required for FROZEN)
+
+Before Skill v2.0 can be marked FROZEN, must complete:
+
+1. ✅ 7 DoD all PASS (DoD-01 through DoD-07)
+2. ✅ 3 Simulation Cases all PASS (Case A: Type A normal table, Case B: Type C low-code, Case C: P0-Security)
+3. ✅ R2-COMP 10/10 PASS (5 normal + 5 adversarial)
+4. ✅ R1 Human Governance 5/5 PASS
+5. ✅ ADR-024 (v2.0 FROZEN decision) published
+6. ✅ v1.0 FROZEN → v1.5 ARCHIVED
+
+See `docs/superpowers/specs/2026-08-30-表级重构专家Skill-v2.0设计规格.md` for full design rationale.
+
+See `docs/superpowers/specs/2026-08-30-JNPF-Target-Schema-Contract.md` for JNPF-specific contracts.
+
+See `docs/superpowers/specs/2026-08-30-表级重构专家Skill-v2.0-Phase1-Verification.md` for verification results.

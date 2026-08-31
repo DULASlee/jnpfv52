@@ -1593,6 +1593,21 @@
 - **变更**：`.claude/memory/session-digest/latest.json`, `.claude/memory/session-digest/2026-08-30-20260829172419.json`, `.claude/memory/session-digest/2026-08-30-20260829172420.json`, `.claude/memory/session-digest/2026-08-30-20260829172422.json`, `.claude/memory/session-digest/2026-08-30-20260829172438.json`, `.claude/memory/session-digest/2026-08-30-20260829173823.json`, `.claude/memory/session-digest/2026-08-30-20260829173845.json`
 - **hook-auto-archive**: 46d71ed2-5dcd-424e-8521-97d1b7eb1a1a
 - **日期**：2026-08-30 | **关键词**：`latest.json, 2026-08-30-20260829172419.json, 2026-08-30-20260829172420.json, 2026-08-30-20260829172422.json +3`
+
+## 2026-08-31
+
+| 日期 | 类别 | 症状 | 根因 | 修复 | 关键词 |
+|------|------|------|------|------|--------|
+| 2026-08-31 | 后端 | hook 自动：代码变更（87 文件） | 见 session-digest | 见 AUTO summary / digest | .session-init-lock.json, opencode.json, batch-29-decisions.json, batch-29-evidence.json +83 |
+
+### M190 | 代码变更（hook 自动归档）
+
+- **症状**：stop hook 检测到 87 个代码文件变更
+- **根因**：机器归档快照（语义根因待人工可选补全）
+- **修复**：见 `.claude/memory/session-digest/latest.json` 与 AUTO summary
+- **变更**：`.claude/.session-init-lock.json`, `opencode.json`, `.claude/skills/table-refactor-expert/tsee/batch-29-decisions.json`, `.claude/skills/table-refactor-expert/tsee/batch-29-evidence.json`, `.claude/skills/table-refactor-expert/tsee/batch-29-gap-analysis.json`, `.claude/skills/table-refactor-expert/tsee/batch-29-validation.json`, `.mcp.json`, `.opencode/goals/state.json.sessions/0c006dafd5872dfc2a548f7c4c7ae1547e0fdd4ba26ac56bd08092da9648a537/state.json`, `.opencode/goals/state.json.sessions/0c006dafd5872dfc2a548f7c4c7ae1547e0fdd4ba26ac56bd08092da9648a537/state.json.lock.claims-v2/claim-4d9ed16a-f3b4-4afe-b11c-ff85d77b09f5.json`, `.opencode/goals/state.json.sessions/1727e5c80e33b8a52d5719f5636ad1b22c468df3f97eb79cc43cfdc3360f9123/state.json`, `.opencode/goals/state.json.sessions/1727e5c80e33b8a52d5719f5636ad1b22c468df3f97eb79cc43cfdc3360f9123/state.json.lock.claims-v2/claim-9e2360a1-0f97-467b-9140-de3e57752bd7.json`, `.opencode/goals/state.json.sessions/23d848551c7fc22762db22190c65eb51262049c9c7007276c9405c9b9f34b4aa/state.json` …
+- **hook-auto-archive**: 20260831084759
+- **日期**：2026-08-31 | **关键词**：`.session-init-lock.json, opencode.json, batch-29-decisions.json, batch-29-evidence.json +83`
 ## 一、方法论（最贵——每条都导致 ≥1 小时浪费）
 
 ### M035 | 未钉死业务功能就开发/验收：用纠偏项冒充四大支柱①（方向性错误）

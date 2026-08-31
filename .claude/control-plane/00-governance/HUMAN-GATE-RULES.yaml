@@ -1,0 +1,113 @@
+# Human Gate Rules — Machine Readable
+
+version: "1.0"
+lastUpdated: "2026-08-31"
+
+humanGates:
+  - id: H1
+    name: 架构方向冲突
+    nameEn: Architecture Conflict
+    priority: 2
+    trigger:
+      - architecture_conflict
+      - layer_boundary_dispute
+      - section_boundary_dispute
+    action: PAUSE
+    resolution: architecture_council
+    examples:
+      - "新设计要求 Runtime.Core 依赖 Capability Layer"
+      - "跨 Layer 职责无法确定"
+
+  - id: H2
+    name: 需求语义冲突
+    nameEn: Requirement Conflict
+    priority: 4
+    trigger:
+      - requirement_conflict
+      - spec_contradiction
+      - user_story_inconsistency
+    action: PAUSE
+    resolution: requirement_clarification
+    notes: |
+      frozen_contract_violation 属于 H3，不属于 H2
+    examples:
+      - "需求 A 要求实时同步，需求 B 要求最终一致性"
+      - "两个 Specification 之间存在无法调和的矛盾"
+
+  - id: H3
+    name: Breaking Change
+    nameEn: Contract / Breaking Change
+    priority: 2
+    trigger:
+      - public_api_breaking_change
+      - database_contract_breaking_change
+      - protocol_breaking_change
+      - frozen_contract_violation
+      - breaking_schema_change
+    action: PAUSE
+    resolution: change_request_required
+    examples:
+      - "修改已冻结的 API 接口签名"
+      - "Database Schema 破坏性变更"
+      - "协议版本不兼容"
+
+  - id: H4
+    name: 跨 Section 架构决策
+    nameEn: Cross-Section Architecture Decision
+    priority: 2
+    trigger:
+      - section_8_section_9_boundary
+      - runtime_capability_boundary
+      - core_intelligence_boundary
+    action: PAUSE
+    resolution: architecture_council
+    examples:
+      - "新需求要求将 Capability 注入 Runtime.Core"
+      - "Section 8 ↔ Section 9 职责边界争议"
+
+  - id: H5
+    name: 安全/数据/生产风险
+    nameEn: Security / Data / Production Risk
+    priority: 1
+    trigger:
+      - security_boundary_breach
+      - data_loss_risk
+      - destructive_migration
+      - production_behavior_change
+      - compatibility_risk
+    action: EMERGENCY_PAUSE
+    resolution: immediate_escalation
+    examples:
+      - "Migration 脚本可能删除生产数据"
+      - "Security Boundary 突破"
+      - "生产环境行为变更"
+
+notHumanGate:
+  description: 以下情况不是 Human Gate，必须进入 Self-Repair
+  
+  scenarios:
+    - compilation_error
+    - test_failure
+    - missing_dependency
+    - api_adjustment
+    - internal_refactor
+    - design_optimization
+    - test_addition
+    - documentation_addition
+    - code_review_issue
+    - adversarial_review_issue
+
+conflictResolution:
+  priorityOrder:
+    - H5  # EMERGENCY - 最高优先级
+    - H3  # Breaking Change - 需要 Change Request
+    - H1  # 架构冲突
+    - H4  # 跨 Section 决策
+    - H2  # 需求冲突 - 通常可以协商
+
+maintenance:
+  rules:
+    - Gate 条件列表是穷尽的
+    - 新增条件必须添加到对应 Gate
+    - Gate 条件之间不得重叠
+    - H3 与 H2 的区别：frozen_contract_violation 属于 H3

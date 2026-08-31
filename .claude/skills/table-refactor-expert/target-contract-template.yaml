@@ -1,0 +1,169 @@
+# Target Schema Contract — YAML Template v2.0
+# Used by: tsee.contract_check
+# Purpose: Provide a reference template for any new table's Target Schema Contract
+# Per IRON-TABLE-03: Every table processed by Skill v2.0 MUST have this contract
+
+# === Mandatory: Table identification ===
+table_name: <REQUIRED, e.g. base_user>
+classification: <PRODUCT_CORE | BUSINESS_ENTITY | DYNAMIC_FORM | USER_EXTENDED | LEGACY_WAREHOUSE | OUT_OF_SCOPE>
+
+# === Dimension 1: Column Naming ===
+column_naming:
+  rule: <REQUIRED, e.g. lowercase_with_f_prefix | PascalCase_no_prefix>
+  allowed_patterns:
+    - "^f_[a-z][a-z0_9_]*$"   # adjust per project
+  forbidden_patterns:
+    - "^F_[A-Z_]+$"            # uppercase with F_ prefix
+    - "^[a-z][A-Z][a-zA-Z]*$"  # camelCase (if project wants snake)
+  examples_pass:
+    - f_id
+    - f_account
+    - f_tenant_id
+  examples_fail:
+    - F_USER_ID
+    - fUserId
+
+# === Dimension 2: Data Type ===
+data_type:
+  id: <type, default: nvarchar(50)>
+  code: <type, default: nvarchar(50)>
+  name: <type, default: nvarchar(200)>
+  description: <type, default: nvarchar(500)>
+  short_text: <type, default: nvarchar(200)>
+  long_text: <type, default: nvarchar(max)>
+  rich_text: <type, default: nvarchar(max)>
+  json: <type, default: nvarchar(max)>
+  amount: <type, default: decimal(18,4)>
+  count: <type, default: int>
+  flag: <type, default: int>
+  ratio: <type, default: decimal(5,4)>
+  created_time: <type, default: datetime2(7)>   # NOT datetime
+  date: <type, default: date>
+  timestamp_with_tz: <type, default: datetimeoffset(7)>
+
+# === Dimension 3: Nullable Contract ===
+nullable_contract:
+  id: <NOT NULL | NULL>
+  f_creator_time: <NOT NULL DEFAULT GETDATE()>
+  f_creator_user_id: <NOT NULL DEFAULT 'SYSTEM'>
+  f_last_modify_time: <NOT NULL DEFAULT GETDATE()>
+  f_last_modify_user_id: <NOT NULL DEFAULT 'SYSTEM'>
+  f_delete_mark: <NOT NULL DEFAULT 0>
+  f_enabled_mark: <NOT NULL DEFAULT 1>
+  f_tenant_id: <NOT NULL DEFAULT 'DEFAULT_TENANT'>   # P0-Security default
+  f_account: <NOT NULL>
+  # Per-field rules: if NOT specified here, default = NULL ALLOWED
+
+# === Dimension 4: Tenant Model ===
+tenant_model:
+  type: <SHARED_COLUMN | SHARED_SCHEMA | SHARED_DB>
+  column: <f_tenant_id>
+  isolation_level: <STRICT | LAX>
+  filter_required: <true | false>   # ITenantFilter must be active
+  notes: <optional explanation>
+
+# === Dimension 5: Audit Model ===
+audit_model:
+  soft_delete: <true | false>
+  fields:
+    created_at: <f_creator_time>
+    created_by: <f_creator_user_id>
+    updated_at: <f_last_modify_time>
+    updated_by: <f_last_modify_user_id>
+    deleted_at: <f_delete_time>
+    deleted_by: <f_delete_user_id>
+    delete_flag: <f_delete_mark>
+
+# === Dimension 6: Index Contract ===
+index_contract:
+  primary_key: <column, default: f_id>
+  required_indexes:
+    - name: <REQUIRED, e.g. PK_<table_name>>
+      columns: [<column>]
+      type: <PRIMARY KEY>
+    - name: <REQUIRED, e.g. IDX_<table>_tenant_account>
+      columns: [<col1>, <col2>, ...]
+      type: <UNIQUE | NONCLUSTERED>
+      include: [<optional covering columns>]
+      filter: <optional partial index filter, e.g. WHERE f_delete_mark = 0>
+  performance_baseline_required: <true | false>
+
+# === Dimension 7: Constraint Contract ===
+constraint_contract:
+  foreign_keys: <list | null>   # null = JNPF doesn't enforce FK at DB layer
+  check_constraints:
+    - name: <REQUIRED, e.g. CK_delete_mark>
+      expression: <REQUIRED, e.g. f_delete_mark IN (0, 1)>
+    - name: <REQUIRED, e.g. CK_enabled_mark>
+      expression: <REQUIRED, e.g. f_enabled_mark IN (0, 1)>
+
+# === Dimension 8: Security Boundary (ONLY for P0-Security tables) ===
+security_boundary:
+  priority: <P0_SECURITY | P1_BUSINESS | N/A>
+  sensitive_columns:
+    - <column, e.g. f_password_hash>
+  encryption:
+    at_rest: <TDE | application-level | none>
+    in_transit: <TLS | none>
+  password_storage:
+    current: <PLAINTEXT | MD5 | SHA1 | PBKDF2_SHA256 | ARGON2ID | N/A>
+    target: <REQUIRED for P0-Security, e.g. PBKDF2_SHA256>
+    target_field: <REQUIRED for P0-Security, e.g. f_password_hash>
+    target_algo_field: <REQUIRED for P0-Security, e.g. f_password_algo>
+    iterations: <for PBKDF2, e.g. 100000>
+    forbidden: [<MD5, SHA1, PLAINTEXT>]
+
+# === Migration Governance (per IRON-TABLE-02 + IRON-TABLE-08) ===
+migration_governance:
+  type_a_pure_technical: <DIRECT_RENAME>
+  type_b_semantic_change: <DUAL_WRITE_6_MONTHS>
+  type_c_low_code_dynamic: <MANUAL_GOVERNANCE_REQUIRED>
+  low_code_table_patterns:
+    - "^wform_"
+    - "^lowcode_"
+    - "^ext_user_"   # user-extended
+
+# === Out of Scope marker (if applicable) ===
+out_of_scope:
+  enabled: <true | false>
+  reason: <if enabled, why this table is OUT_OF_SCOPE>
+  status: <RETAIN_AS_EXCEPTION | DROP_CANDIDATE>
+
+# === Version & Provenance (B-2 FIX: content + version binding) ===
+contract_meta:
+  version: <REQUIRED, semantic version, e.g. 2.0.1>
+  created_at: <REQUIRED, ISO8601>
+  created_by: <REQUIRED, author>
+  approved_by: <REQUIRED for production use>
+  approval_record: <REQUIRED for production use, e.g. ADR-XXX>
+  last_modified: <ISO8601>
+  linked_master_spec: master-spec-v2.md
+  linked_execution_manual: execution-manual-v2.md
+  linked_jnpf_default: docs/superpowers/specs/2026-08-30-JNPF-Target-Schema-Contract.md
+
+---
+
+# === Example: base_user (P0-Security) ===
+# table_name: base_user
+# classification: PRODUCT_CORE
+# column_naming:
+#   rule: lowercase_with_f_prefix
+# security_boundary:
+#   priority: P0_SECURITY
+#   password_storage:
+#     target: PBKDF2_SHA256
+#     target_field: f_password_hash
+#     target_algo_field: f_password_algo
+#     iterations: 100000
+#     forbidden: [MD5, SHA1, PLAINTEXT]
+# nullable_contract:
+#   f_tenant_id: NOT NULL DEFAULT 'DEFAULT_TENANT'
+#   f_password: NOT NULL
+# migration_governance:
+#   type_b_semantic_change: DUAL_WRITE_6_MONTHS  # password field upgrade
+# contract_meta:
+#   version: 2.0.1
+#   created_at: 2026-08-31T10:00:00Z
+#   created_by: AI Engineer (CR-20260830-01)
+#   approved_by: Chief Architect
+#   approval_record: ADR-024 (pending)

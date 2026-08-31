@@ -1,0 +1,391 @@
+---
+description: 项目工作铁律 — Superpowers 作为工程闭环基础设施，自主工程闭环 4 环节强制执行。
+alwaysApply: false
+---
+
+# WORKFLOW-IRON-01：Autonomous Engineering Execution Loop（自主工程闭环铁律）
+
+> **层级：** 项目工作铁律（与 HIP-01 并列），约束 AI 大模型在 Claude Code / Cursor / Qoder 中的工作执行纪律。
+> **配套：** [`.claude/rules/agent-runtime-iron-laws.md`](./agent-runtime-iron-laws.md) §WORKFLOW-IRON-01
+> **完整定义：** [`docs/构建AI软件工程agent闭环体系/UEEA-Agent-Runtime-Engineering-Rules.md`](../../docs/构建AI软件工程agent闭环体系/UEEA-Agent-Runtime-Engineering-Rules.md) §17
+> **生效日期：** 2026-08-30 · **永久生效**
+
+---
+
+## 核心原则
+
+AI 工程师在执行复杂架构设计、代码实现、系统重构、测试验证、文档设计等工程任务时，必须采用：
+
+```
+Superpowers 驱动
+        ↓
+自主连续执行
+        ↓
+阶段闭环验证
+        ↓
+质量审查
+        ↓
+交付汇报
+```
+
+任何工作轮次不得仅以"完成任务步骤"为结束条件，必须以"通过完整工程闭环"为结束条件。
+
+---
+
+## 一、连续工作原则（Minimal Human Interruption）
+
+AI 工程师必须保持连续推进能力。
+
+**标准流程：**
+
+```
+理解任务
+ ↓
+选择 Superpowers
+ ↓
+执行工作
+ ↓
+自动评估
+ ↓
+自动测试
+ ↓
+自动修复
+ ↓
+Reviewer 审查
+ ↓
+阶段汇报
+```
+
+**禁止：**
+
+```
+❌ 每完成一个小步骤立即请求人工确认
+❌ 每发现普通问题立即暂停
+❌ 将内部执行过程拆成大量人工审批节点
+❌ 用频繁汇报替代工程验证
+```
+
+### 仅允许人工介入的情况
+
+只有以下情况必须请求人工决策：
+
+#### 1. 不可逆架构选择
+
+例如：
+
+- 单体 vs 微服务
+- 数据模型重大调整
+- Public Contract 变化
+
+#### 2. 业务价值判断
+
+例如：
+
+- 删除功能
+- 改变用户流程
+- 接受成本/性能权衡
+
+#### 3. 与既定 Governance 冲突
+
+例如：
+
+目标："不改变行为"
+
+但是：唯一修复方案必须改变行为。
+
+除此之外：**AI 必须通过 Superpowers 工作流自主解决。**
+
+---
+
+## 二、Superpowers Execution Layer（强制执行层）
+
+Superpowers 是 Autonomous Engineering Loop 的第一执行层。
+
+任何工程任务开始前，必须：
+
+```
+任务识别
+ ↓
+选择对应 Superpower
+ ↓
+加载 Skill 约束
+ ↓
+按 Skill 流程执行
+ ↓
+输出 Evidence
+```
+
+### Superpowers 绑定规则
+
+每个闭环阶段必须使用对应 Superpowers：
+
+| 工作环节 | 必须调用能力 |
+|---------|------------|
+| 方案设计 | Architecture / Design Superpower |
+| 实现修改 | Implementation / Coding Superpower |
+| 自动评估 | Review / Analysis Superpower |
+| 自动测试 | Testing / Validation Superpower |
+| 自动修复 | Debug / Refactoring Superpower |
+| Reviewer 审查 | Independent Review Superpower |
+
+### 禁止行为
+
+```
+❌ 不调用对应 Skill 自行判断
+❌ 只阅读 Skill 不执行流程
+❌ 跳过 Skill 中的验证步骤
+❌ 使用简单检查替代完整验证
+❌ 为追求速度删除关键能力
+```
+
+---
+
+## 三、Autonomous Review Cycle（强制闭环）
+
+任何工作轮次结束前，必须完成：
+
+```
+Implementation
+      ↓
+Superpowers Review
+      ↓
+Superpowers Test
+      ↓
+Superpowers Repair
+      ↓
+Superpowers Reviewer Audit
+      ↓
+Final Report
+```
+
+**缺少任一环节：状态不得标记为完成。**
+
+---
+
+## 四、Self Evaluation（自动评估）
+
+自动评估必须通过 **Review / Analysis Superpower** 完成。
+
+### 检查项
+
+#### 1. 目标完成度
+
+```
+□ 用户目标是否全部覆盖
+□ 是否存在遗漏
+□ 是否达到 Acceptance Criteria
+```
+
+#### 2. 架构一致性
+
+```
+□ 是否符合 Baseline
+□ 是否违反 Governance Kernel
+□ 是否违反 Iron Laws
+□ 是否产生隐藏耦合
+□ 是否影响未来扩展
+```
+
+#### 3. Capability Impact Analysis
+
+**必须分析：**
+
+```
+本次修改：
+  - 增加什么能力？
+  - 保持什么能力？
+  - 减少什么能力？
+  - 是否产生能力退化？
+```
+
+**禁止：**
+
+```
+为了简单：
+  ❌ 删除核心状态
+  ❌ 减少验证
+  ❌ 降低接口能力
+  ❌ 隐藏复杂性
+```
+
+---
+
+## 五、Self Test（自动测试）
+
+自动测试必须通过 **Testing / Validation Superpower** 完成。
+
+至少包含：
+
+### 功能验证
+
+```
+□ 主流程通过
+□ 核心能力可运行
+□ 输出符合预期
+```
+
+### 边界验证
+
+```
+□ 异常流程
+□ 空输入
+□ 错误恢复
+□ 状态恢复
+□ 资源释放
+```
+
+### 回归验证
+
+```
+□ 原有能力保持
+□ Contract 未破坏
+□ 架构约束未破坏
+```
+
+---
+
+## 六、Self Repair（自动修复）
+
+自动修复必须通过 **Debug / Refactoring Superpower** 完成。
+
+**流程：**
+
+```
+发现问题
+ ↓
+定位根因
+ ↓
+制定修复方案
+ ↓
+执行修复
+ ↓
+重新测试
+ ↓
+重新 Reviewer 审查
+```
+
+**禁止：**
+
+```
+发现失败 → 直接汇报等待人工
+```
+
+**除非：**
+
+- 无法获得必要信息
+- 存在架构决策
+- 存在业务选择
+
+---
+
+## 七、Reviewer Review（独立审查）
+
+Reviewer Review 必须通过 **Independent Review Superpower** 完成。
+
+Reviewer 必须模拟第三方工程评审。
+
+### 架构风险
+
+```
+如果未来维护：
+  - 是否容易理解？
+  - 是否容易扩展？
+  - 是否存在技术债？
+```
+
+### 工程质量
+
+```
+- 是否符合最佳实践？
+- 是否存在隐藏 Bug？
+- 是否缺少测试？
+```
+
+### AI 防退化检查（重点）
+
+```
+□ 是否简化核心能力？
+□ 是否删除必要状态？
+□ 是否减少验证流程？
+□ 是否使用假实现？
+□ 是否把未来能力设计死？
+```
+
+**任一失败：必须返回 Self Repair。**
+
+---
+
+## 八、最终汇报规则
+
+只有完成：
+
+```
+Superpowers 执行
++
+Self Evaluation PASS
++
+Self Test PASS
++
+Self Repair 完成
++
+Reviewer Review PASS
+```
+
+之后才能汇报完成。
+
+汇报只包含：
+
+1. **完成事实**：完成了什么
+2. **验证证据**：测试结果 / Review 结果 / 风险检查
+3. **当前状态**：`PASS` / `BLOCKED` / `NEED HUMAN DECISION`
+4. **下一步计划**：继续推进
+
+---
+
+## 九、与 UEEA v2.0 Governance 的关系
+
+WORKFLOW-IRON-01 属于：
+
+```
+Governance Kernel
++
+Agent Runtime Execution Discipline
++
+Engineering Quality Control
+```
+
+### 强化关系
+
+| 原规则 | 强化方向 |
+|-------|---------|
+| IRON-01 | 防止能力简化 |
+| IRON-05 | 保证状态完整 |
+| IRON-07 | 保证 Evidence 驱动 |
+| IRON-08 | 保证治理边界 |
+| IRON-11 | 防止能力退化 |
+
+### 新增规则
+
+```
+WORKFLOW-IRON-01 — Autonomous Engineering Execution Loop
+```
+
+**状态：LOCKED**
+
+该版本将 **Superpowers 从"工具调用规范"提升为"工程闭环基础设施"**，后续 Section 10、11、12 的设计也应该引用这一条作为执行层约束。
+
+---
+
+## 配套铁律（已存在 .claude/rules/）
+
+| 铁律 | 文件 | 关系 |
+|------|------|------|
+| **HIP-01** Human Interrupt Policy | `.claude/rules/agent-runtime-iron-laws.md` | 节奏层（防止人类审批过细）|
+| **WORKFLOW-IRON-01** | 本文件 | 执行层（保证工程质量）|
+
+两者结合 = 人类控制方向，Agent 连续完成复杂工程任务。
+
+---
+
+> **维护纪律**：本文档变更需同步更新 `.claude/rules/agent-runtime-iron-laws.md` + `.cursor/rules/iron-laws/workflow-iron-law.mdc` + `AGENTS.md`。
+> **下次更新触发**：新增 Self 环节 / 修订 4 环节定义 / 适配新 Superpower 类型。

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>JNPF Agent OS · Layer 1 · Mode Capability Governance Contract (Section 9)</Description>
+    <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+    <RootNamespace>JNPF.Runtime.Capability</RootNamespace>
+    <AssemblyName>JNPF.Runtime.Capability</AssemblyName>
+  </PropertyGroup>
+
+</Project>

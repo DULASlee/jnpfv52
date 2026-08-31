@@ -1,0 +1,401 @@
+{
+  "metadata": {
+    "wave": "WAVE 4",
+    "phase": "Deferred Closure",
+    "document": "Tenant Index Deferred Register",
+    "generated_at": "2026-08-31T18:20:00",
+    "chief_architect_decision": "APPROVED DEFER — re-evaluate when production data populated",
+    "count": 15
+  },
+  "deferred_register": [
+    {
+      "gap_id": "FR-003",
+      "canonical_id": "TI-base_advanced_query_scheme",
+      "table": "BASE_ADVANCED_QUERY_SCHEME",
+      "entity": "AdvancedQuerySchemeEntity",
+      "entity_base": "CLDEntityBase",
+      "tenant_aware": false,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 2,
+        "distinct_tenants": 0,
+        "null_tenant_count": 2,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Entity is NOT tenant-aware (CLDEntityBase). NULL tenant values (2 rows) make standard index useless.",
+      "revist_trigger": {
+        "condition": "Entity reclassified as tenant-aware by architecture review AND tenant_id selectivity proven > 1%",
+        "min_rows": "100 (production)",
+        "min_distinct_tenants": 2,
+        "null_tenant_ratio_max": "0.05",
+        "query_evidence_required": true,
+        "query_example": "SELECT * FROM BASE_ADVANCED_QUERY_SCHEME WHERE f_tenant_id = @tenantId"
+      },
+      "trigger_type": "architecture_decision OR data_quality_fix",
+      "owner": "Chief Architect / DBA",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    },
+    {
+      "gap_id": "FR-004",
+      "canonical_id": "TI-base_app_data",
+      "table": "BASE_APP_DATA",
+      "entity": "AppDataEntity",
+      "entity_base": "CLDSEntityBase",
+      "tenant_aware": true,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 0,
+        "distinct_tenants": 0,
+        "null_tenant_count": 0,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Empty table — cannot measure selectivity. Entity IS tenant-aware (CLDSEntityBase).",
+      "revist_trigger": {
+        "condition": "Production data exists AND tenant selectivity measurable",
+        "min_rows": 100,
+        "min_distinct_tenants": 2,
+        "null_tenant_ratio_max": "0.01",
+        "query_evidence_required": true,
+        "query_example": "SELECT * FROM BASE_APP_DATA WHERE f_tenant_id = @tenantId"
+      },
+      "trigger_type": "production_data",
+      "owner": "DBA",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    },
+    {
+      "gap_id": "FR-005",
+      "canonical_id": "TI-base_columns_purview",
+      "table": "BASE_COLUMNS_PURVIEW",
+      "entity_base": "CLDEntityBase",
+      "tenant_aware": false,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 1,
+        "distinct_tenants": 0,
+        "null_tenant_count": 1,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Entity NOT tenant-aware. NULL tenant value.",
+      "revist_trigger": {
+        "condition": "Entity reclassified as tenant-aware AND NULL tenant values resolved",
+        "min_rows": 100,
+        "query_evidence_required": true
+      },
+      "trigger_type": "architecture_decision OR data_quality_fix",
+      "owner": "Chief Architect",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    },
+    {
+      "gap_id": "FR-006",
+      "canonical_id": "TI-base_data_interface_user",
+      "table": "BASE_DATA_INTERFACE_USER",
+      "entity": "DataInterfaceUserEntity",
+      "entity_base": "CLDEntityBase",
+      "tenant_aware": false,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 1,
+        "distinct_tenants": 0,
+        "null_tenant_count": 1,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Entity NOT tenant-aware. NULL tenant value.",
+      "revist_trigger": {
+        "condition": "Entity reclassified as tenant-aware AND NULL tenant values resolved",
+        "query_evidence_required": true
+      },
+      "trigger_type": "architecture_decision OR data_quality_fix",
+      "owner": "Chief Architect",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    },
+    {
+      "gap_id": "FR-007",
+      "canonical_id": "TI-base_data_interface_variate",
+      "table": "BASE_DATA_INTERFACE_VARIATE",
+      "entity": "DataInterfaceVariateEntity",
+      "entity_base": "CLDEntityBase",
+      "tenant_aware": false,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 1,
+        "distinct_tenants": 0,
+        "null_tenant_count": 1,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Entity NOT tenant-aware. NULL tenant value.",
+      "revist_trigger": {
+        "condition": "Entity reclassified as tenant-aware AND NULL tenant values resolved",
+        "query_evidence_required": true
+      },
+      "trigger_type": "architecture_decision OR data_quality_fix",
+      "owner": "Chief Architect",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    },
+    {
+      "gap_id": "FR-008",
+      "canonical_id": "TI-base_db_link",
+      "table": "BASE_DB_LINK",
+      "entity": "DbLinkEntity",
+      "entity_base": "CLDEntityBase",
+      "tenant_aware": false,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 1,
+        "distinct_tenants": 0,
+        "null_tenant_count": 1,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Entity NOT tenant-aware. NULL tenant value.",
+      "revist_trigger": {
+        "condition": "Entity reclassified as tenant-aware AND NULL tenant values resolved",
+        "query_evidence_required": true
+      },
+      "trigger_type": "architecture_decision OR data_quality_fix",
+      "owner": "Chief Architect",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    },
+    {
+      "gap_id": "FR-009",
+      "canonical_id": "TI-base_im_content",
+      "table": "BASE_IM_CONTENT",
+      "entity": "IMContentEntity",
+      "entity_base": "TenantCLDSEntityBase",
+      "tenant_aware": true,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 9,
+        "distinct_tenants": 0,
+        "null_tenant_count": 9,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Entity IS tenant-aware but ALL 9 rows have NULL tenant_id — DATA QUALITY issue, not schema gap. Index on NULLs is useless.",
+      "revist_trigger": {
+        "condition": "TenantId data quality fixed (no NULL tenant_ids in production data) AND selectivity measurable",
+        "null_tenant_ratio_max": "0.01",
+        "min_rows": 100,
+        "query_evidence_required": true
+      },
+      "trigger_type": "data_quality_fix",
+      "owner": "Data Engineering",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE",
+      "special_note": "This is a data quality problem, not a schema problem. Fix the NULL values first."
+    },
+    {
+      "gap_id": "FR-010",
+      "canonical_id": "TI-base_im_reply",
+      "table": "BASE_IM_REPLY",
+      "entity": "ImReplyEntity",
+      "entity_base": "TenantCLDSEntityBase",
+      "tenant_aware": true,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 2,
+        "distinct_tenants": 0,
+        "null_tenant_count": 2,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Entity IS tenant-aware but all rows have NULL tenant_id — DATA QUALITY issue.",
+      "revist_trigger": {
+        "condition": "TenantId data quality fixed AND selectivity measurable",
+        "null_tenant_ratio_max": "0.01",
+        "min_rows": 100,
+        "query_evidence_required": true
+      },
+      "trigger_type": "data_quality_fix",
+      "owner": "Data Engineering",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    },
+    {
+      "gap_id": "FR-011",
+      "canonical_id": "TI-base_integrate",
+      "table": "BASE_INTEGRATE",
+      "entity": "IntegrateEntity",
+      "entity_base": "CLDSEntityBase",
+      "tenant_aware": false,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 3,
+        "distinct_tenants": 0,
+        "null_tenant_count": 3,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Entity NOT tenant-aware (CLDSEntityBase). NULL tenant values irrelevant.",
+      "revist_trigger": {
+        "condition": "Entity reclassified as tenant-aware AND NULL tenant values resolved",
+        "query_evidence_required": true
+      },
+      "trigger_type": "architecture_decision OR data_quality_fix",
+      "owner": "Chief Architect",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    },
+    {
+      "gap_id": "FR-012",
+      "canonical_id": "TI-base_integrate_node",
+      "table": "BASE_INTEGRATE_NODE",
+      "entity": "IntegrateNodeEntity",
+      "entity_base": "CLDSEntityBase",
+      "tenant_aware": false,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 0,
+        "distinct_tenants": 0,
+        "null_tenant_count": 0,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Empty table. Entity NOT tenant-aware per ORM definition.",
+      "revist_trigger": {
+        "condition": "Production data exists AND entity reclassified as tenant-aware",
+        "min_rows": 100,
+        "query_evidence_required": true
+      },
+      "trigger_type": "production_data OR architecture_decision",
+      "owner": "Chief Architect / DBA",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    },
+    {
+      "gap_id": "FR-013",
+      "canonical_id": "TI-base_organize_relation",
+      "table": "BASE_ORGANIZE_RELATION",
+      "tenant_aware": "unknown",
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 0,
+        "distinct_tenants": 0,
+        "null_tenant_count": 0,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Empty table. Entity tenant-awareness not confirmed in ORM analysis.",
+      "revist_trigger": {
+        "condition": "Entity ORM type confirmed AND production data exists",
+        "min_rows": 100,
+        "query_evidence_required": true
+      },
+      "trigger_type": "architecture_decision OR production_data",
+      "owner": "Chief Architect / DBA",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    },
+    {
+      "gap_id": "FR-014",
+      "canonical_id": "TI-base_portal",
+      "table": "BASE_PORTAL",
+      "entity": "PortalEntity",
+      "entity_base": "CLDSEntityBase",
+      "tenant_aware": false,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 2,
+        "distinct_tenants": 0,
+        "null_tenant_count": 2,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Entity NOT tenant-aware. NULL tenant values.",
+      "revist_trigger": {
+        "condition": "Entity reclassified as tenant-aware AND NULL tenant values resolved",
+        "query_evidence_required": true
+      },
+      "trigger_type": "architecture_decision OR data_quality_fix",
+      "owner": "Chief Architect",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    },
+    {
+      "gap_id": "FR-015",
+      "canonical_id": "TI-base_portal_data",
+      "table": "BASE_PORTAL_DATA",
+      "entity": "PortalDataEntity",
+      "entity_base": "CLDEntityBase",
+      "tenant_aware": false,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 9,
+        "distinct_tenants": 0,
+        "null_tenant_count": 9,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Entity NOT tenant-aware. NULL tenant values.",
+      "revist_trigger": {
+        "condition": "Entity reclassified as tenant-aware AND NULL tenant values resolved",
+        "query_evidence_required": true
+      },
+      "trigger_type": "architecture_decision OR data_quality_fix",
+      "owner": "Chief Architect",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    },
+    {
+      "gap_id": "FR-016",
+      "canonical_id": "TI-base_signature",
+      "table": "BASE_SIGNATURE",
+      "entity": "SignatureEntity",
+      "entity_base": "CLDSEntityBase",
+      "tenant_aware": false,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 0,
+        "distinct_tenants": 0,
+        "null_tenant_count": 0,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Empty table. Entity NOT tenant-aware (CLDSEntityBase). M32-01 PK added.",
+      "revist_trigger": {
+        "condition": "Entity reclassified as tenant-aware by architecture review AND production data exists",
+        "min_rows": 100,
+        "query_evidence_required": true
+      },
+      "trigger_type": "architecture_decision OR production_data",
+      "owner": "Chief Architect / DBA",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    },
+    {
+      "gap_id": "FR-017",
+      "canonical_id": "TI-base_signature_user",
+      "table": "BASE_SIGNATURE_USER",
+      "entity": "SignatureUserEntity",
+      "entity_base": "CLDSEntityBase",
+      "tenant_aware": false,
+      "dimension": "tenant_index",
+      "current_state": {
+        "row_count": 0,
+        "distinct_tenants": 0,
+        "null_tenant_count": 0,
+        "has_tenant_index": false
+      },
+      "deferred_reason": "Empty table. Entity NOT tenant-aware (CLDSEntityBase). M32-02 composite PK added.",
+      "revist_trigger": {
+        "condition": "Entity reclassified as tenant-aware by architecture review AND production data exists",
+        "min_rows": 100,
+        "query_evidence_required": true
+      },
+      "trigger_type": "architecture_decision OR production_data",
+      "owner": "Chief Architect / DBA",
+      "expected_decision_on_revisit": "ADD_INDEX or NO_CHANGE"
+    }
+  ],
+  "summary": {
+    "total_deferred": 15,
+    "by_tenant_aware_status": {
+      "not_tenant_aware": 11,
+      "tenant_aware_null_data": 2,
+      "tenant_aware_empty": 1,
+      "unknown": 1
+    },
+    "by_trigger_type": {
+      "architecture_decision_OR_data_quality_fix": 9,
+      "production_data": 2,
+      "data_quality_fix": 2,
+      "architecture_decision_OR_production_data": 2
+    },
+    "data_quality_issues": [
+      "FR-009: BASE_IM_CONTENT — 9 rows all NULL tenant_id",
+      "FR-010: BASE_IM_REPLY — 2 rows all NULL tenant_id"
+    ],
+    "orm_clarification_needed": 11,
+    "production_data_needed": 4
+  },
+  "revisit_instructions": {
+    "step_1": "Confirm entity ORM base class (TenantEntityBase vs EntityBase)",
+    "step_2": "Check tenant_id NULL ratio in production data",
+    "step_3": "Measure tenant selectivity (distinct_tenants / total_rows)",
+    "step_4": "Capture actual tenant filter query from production workload",
+    "step_5": "If selectivity > 1% AND query evidence exists AND null ratio < 5% → ADD_INDEX",
+    "step_6": "If selectivity < 1% OR null ratio > 5% → NO_CHANGE"
+  }
+}

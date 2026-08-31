@@ -1,0 +1,19 @@
+{
+  "evidenceType": "P001_ASSERT_INTEGRITY",
+  "actor": "agent",
+  "task": "P1",
+  "stage": "mutation",
+  "policy": "P001",
+  "policy_id": "P001",
+  "policy_version": "1.0",
+  "action": "edit",
+  "before": "9",
+  "after": "0",
+  "tool": "hook",
+  "result": "BLOCK",
+  "timestamp": "2026-08-31T20:03:28.565Z",
+  "integrity": "sha256:344128cf1b31b4ae",
+  "decision": "BLOCK",
+  "reason": "assert weakened 9→0",
+  "file": "D:/JNPF-v52/backend/tests/TmpP001Adversarial/FooTests.cs"
+}

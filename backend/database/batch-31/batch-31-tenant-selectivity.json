@@ -1,0 +1,128 @@
+{
+  "metadata": {
+    "task": "31.5 Selectivity",
+    "executed_at": "2026-08-31T15:30:07.431671"
+  },
+  "tables": [
+    {
+      "table": "base_advanced_query_scheme",
+      "row_count": 2,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 2,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0.0
+    },
+    {
+      "table": "base_app_data",
+      "row_count": 0,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 0,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0
+    },
+    {
+      "table": "base_columns_purview",
+      "row_count": 1,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 1,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0.0
+    },
+    {
+      "table": "base_data_interface_user",
+      "row_count": 1,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 1,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0.0
+    },
+    {
+      "table": "base_data_interface_variate",
+      "row_count": 1,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 1,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0.0
+    },
+    {
+      "table": "base_db_link",
+      "row_count": 1,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 1,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0.0
+    },
+    {
+      "table": "base_im_content",
+      "row_count": 9,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 9,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0.0
+    },
+    {
+      "table": "base_im_reply",
+      "row_count": 2,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 2,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0.0
+    },
+    {
+      "table": "base_integrate",
+      "row_count": 3,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 3,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0.0
+    },
+    {
+      "table": "base_integrate_node",
+      "row_count": 0,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 0,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0
+    },
+    {
+      "table": "base_organize_relation",
+      "row_count": 0,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 0,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0
+    },
+    {
+      "table": "base_portal",
+      "row_count": 2,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 2,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0.0
+    },
+    {
+      "table": "base_portal_data",
+      "row_count": 9,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 9,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0.0
+    },
+    {
+      "table": "base_signature",
+      "row_count": 0,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 0,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0
+    },
+    {
+      "table": "base_signature_user",
+      "row_count": 0,
+      "distinct_tenant_count": 0,
+      "null_tenant_count": 0,
+      "rows_per_tenant": 0,
+      "tenant_selectivity_pct": 0
+    }
+  ]
+}

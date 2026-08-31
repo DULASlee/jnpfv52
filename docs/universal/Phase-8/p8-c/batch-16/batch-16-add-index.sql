@@ -28,10 +28,10 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_KGPATTERN_ACTIVE' AND
     INCLUDE (id, pattern_type, score);
 PRINT '--- kg_pattern done ---';
 
--- kg_pattern_usage (6 cols)
+-- kg_pattern_usage (6 cols; no target_type/target_id — use project_id/is_success as proxy)
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IDX_KGPATTERNUSAGE_PATTERN' AND object_id = OBJECT_ID('kg_pattern_usage'))
     CREATE NONCLUSTERED INDEX IDX_KGPATTERNUSAGE_PATTERN ON kg_pattern_usage (pattern_id)
-    INCLUDE (target_type, target_id, used_at);
+    INCLUDE (project_id, is_success, used_at);
 PRINT '--- kg_pattern_usage done ---';
 
 PRINT '=== Batch 16 ADD INDEX COMPLETE ===';

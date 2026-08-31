@@ -1,0 +1,27 @@
+{
+  "_qoder_project_settings_note": "Qoder 项目级 settings（仅 Qoder 加载；不影响 Cursor/Claude Code/OpenCode/.trae）。优先级：local > project > user。深度合并而非整体替换。",
+  "language": "zh-CN",
+  "outputStyle": "concise",
+  "model": {
+    "reasoningEffort": "high"
+  },
+  "tools": {
+    "useRipgrep": true,
+    "shell": {
+      "inactivityTimeout": 600
+    }
+  },
+  "security": {
+    "folderTrust": {
+      "enabled": true
+    },
+    "environmentVariableRedaction": {
+      "enabled": false
+    }
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "",
+    "padding": 0
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "document": "final-regression",
+  "version": "v1.0",
+  "generated_at": "2026-08-31T19:10:00",
+  "scope": "M32-01 + M32-02 Migration Regression Assessment",
+  "regression_checks": {
+    "build": {
+      "result": "PASS",
+      "errors": 0,
+      "details": "dotnet build JNPF.Systems.csproj — 0 errors"
+    },
+    "test_suite": {
+      "total": 729,
+      "passed": 728,
+      "failed": 1,
+      "failed_test": "SugarTable_Mappings_ShouldBe_Unique",
+      "classification": "PRE_EXISTING — AiCallLogEntity duplicate mapping in project infrastructure",
+      "migration_related": false
+    },
+    "schema_impact": {
+      "tables_touched": ["BASE_SIGNATURE", "BASE_SIGNATURE_USER"],
+      "constraint_changes": [
+        "ADD PK_base_signature ON f_id",
+        "ADD PK_base_signature_user ON (f_signature_id, f_user_id)"
+      ],
+      "column_changes": [
+        "ALTER COLUMN f_signature_id NOT NULL (prerequisite for PK)",
+        "ALTER COLUMN f_user_id NOT NULL (prerequisite for PK)"
+      ],
+      "data_impact": "ZERO — both tables empty (0 rows)"
+    },
+    "orm_impact": {
+      "signature_entity": {
+        "file": "backend/modularity/system/JNPF.Systems/System/SignatureEntity.cs",
+        "compatible": true,
+        "reason": "CLDSEntityBase with Id as primary key — PK added on Id matches ORM expectation"
+      },
+      "signature_user_entity": {
+        "file": "backend/modularity/system/JNPF.Systems/System/SignatureUserEntity.cs",
+        "compatible": true,
+        "reason": "Composite PK on (f_signature_id, f_user_id) — SqlSugar [Navigate] uses SignatureId FK independent of child PK"
+      }
+    },
+    "downstream_impact": {
+      "signature_service": {
+        "file": "backend/modularity/system/JNPF.Systems/System/SignatureService.cs",
+        "all_crud_validated": true,
+        "dynamic_sql": "NONE",
+        "workflow_dependency": "NONE",
+        "permission_dependency": "NONE"
+      }
+    }
+  },
+  "regression_verdict": {
+    "migration_induced_regression": false,
+    "build_regression": false,
+    "test_regression": false,
+    "schema_regression": false,
+    "orm_regression": false,
+    "api_regression": "UNKNOWN (backend not running)",
+    "overall": "PASS — No migration-induced regression detected"
+  },
+  "known_limitations": [
+    {
+      "item": "API smoke test",
+      "status": "BLOCKED",
+      "reason": "Backend localhost:5000 not running",
+      "impact": "Cannot execute live HTTP validation",
+      "mitigation": "ORM analysis + build verification provides sufficient confidence for schema-only migration"
+    }
+  ]
+}

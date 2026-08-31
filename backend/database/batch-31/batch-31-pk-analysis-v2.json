@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "task": "31.2 PK Feasibility",
+    "executed_at": "2026-08-31T15:30:07.429440"
+  },
+  "analyses": [
+    {
+      "table": "base_signature",
+      "current_pk": "NONE",
+      "candidate_pk": [
+        {
+          "name": "f_id",
+          "data_type": "nvarchar(50)",
+          "nullable": false,
+          "rationale": "Aggregate root: standard surrogate key, f_id is unique candidate (16 candidates incl. f_id per Task 30.3)"
+        }
+      ],
+      "candidate_uniqueness": "f_id has 0 duplicates, 0 NULLs in current data (table is empty)",
+      "data_safety": "Empty table (0 rows); no data migration risk",
+      "runtime_impact": "Adding PK: SqlSugar Entity already declares f_id via CLDSEntityBase, Entity navigation (OneToMany to SignatureUserEntity) requires signature.id to be PK. Without PK, navigation fails on multi-row.",
+      "query_impact": "All current queries reference entity by primary key (CRUD via Repository base). PK required for SqlSugar Insertable/Updateable/Deleteable operations.",
+      "migration_complexity": "LOW (empty table, surrogate key, no data migration)",
+      "rollback_strategy": "DROP PRIMARY KEY (instant, no data loss since table empty)",
+      "recommendation": "MIGRATION_REQUIRED",
+      "recommendation_reason": "f_id is the established surrogate key (CLDSEntityBase). Adding PK on f_id is mandatory for SqlSugar ORM operations on this aggregate root. Empty table = zero data risk. Rollback is trivial (drop constraint).",
+      "evidence_files": [
+        "batch-31-pk-dependencies.json"
+      ]
+    },
+    {
+      "table": "base_signature_user",
+      "current_pk": "NONE",
+      "candidate_pk": [
+        {
+          "name": "f_signature_id + f_user_id (composite)",
+          "data_type": "nvarchar(50)+nvarchar(50)",
+          "nullable": "both NOT NULL",
+          "rationale": "Per Task 31.1: this is Signature↔User association table (per Entity navigation OneToMany from SignatureEntity). Natural composite PK matches business semantic."
+        },
+        {
+          "name": "f_id (surrogate)",
+          "data_type": "nvarchar(50)",
+          "nullable": false,
+          "rationale": "Fallback if composite PK is incompatible with existing ORM navigation."
+        }
+      ],
+      "candidate_uniqueness": "f_id has 0 duplicates, 0 NULLs (empty table). (f_signature_id, f_user_id) cannot be verified — table empty.",
+      "data_safety": "Empty table (0 rows); no data migration risk for either PK option",
+      "runtime_impact": "Adding composite PK matches business semantic. SqlSugar needs explicit composite key configuration; current Entity navigation may not auto-pick composite PK.",
+      "query_impact": "Current SqlSugar Entity uses f_id (single PK) navigation. Composite PK requires Entity annotation change → not pure schema-level, but `SignImg` (similar table) uses surrogate PK pattern.",
+      "migration_complexity": "MEDIUM (composite PK needs Entity config update OR fallback to surrogate)",
+      "rollback_strategy": "DROP PRIMARY KEY (instant)",
+      "recommendation": "DEFERRED",
+      "recommendation_reason": "Two viable PK strategies: composite (business-correct) vs surrogate (ORM-consistent). Cannot determine which without: (a) existing data uniqueness, (b) Entity navigation compatibility test, (c) SqlSugar Insertable/Updateable behavior verification. Empty table = no urgency. Defer to human gate with explicit composite-vs-surrogate question.",
+      "evidence_files": [
+        "batch-31-pk-dependencies.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "metadata": {
+    "task": "31.4 Tenant Query Evidence",
+    "executed_at": "2026-08-31T15:30:07.431006"
+  },
+  "tables": [
+    {
+      "table": "base_advanced_query_scheme",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_app_data",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_columns_purview",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_data_interface_user",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_data_interface_variate",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_db_link",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_im_content",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_im_reply",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_integrate",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_integrate_node",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_organize_relation",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_portal",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_portal_data",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_signature",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    },
+    {
+      "table": "base_signature_user",
+      "referencing_files_count": 0,
+      "files_with_tenant_ref": 0,
+      "files_with_where_tenant": 0,
+      "evidence": "Empty"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "metadata": {
+    "task": "31.1 PK Dependency & Semantic Analysis",
+    "executed_at": "2026-08-31T15:30:07.253403",
+    "method": "Fresh DB query + codebase search (read-only)"
+  },
+  "tables": [
+    {
+      "table": "base_signature",
+      "row_count": 0,
+      "foreign_keys": [],
+      "view_references": [],
+      "proc_function_references": [],
+      "triggers": [],
+      "cs_references": [],
+      "cs_references_count": 0
+    },
+    {
+      "table": "base_signature_user",
+      "row_count": 0,
+      "foreign_keys": [],
+      "view_references": [],
+      "proc_function_references": [],
+      "triggers": [],
+      "cs_references": [],
+      "cs_references_count": 0
+    }
+  ]
+}

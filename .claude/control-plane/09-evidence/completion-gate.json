@@ -1,0 +1,16 @@
+{
+  "evidenceType": "COMPLETION",
+  "actor": "agent",
+  "task": "P1",
+  "stage": "completion",
+  "policy": "P005",
+  "policy_id": "P005",
+  "policy_version": "1.0",
+  "action": "gate-evaluate",
+  "tool": "gate",
+  "result": "ALLOW",
+  "timestamp": "2026-08-31T20:04:21.501Z",
+  "integrity": "sha256:8bbed055494881fa",
+  "decision": "ALLOW",
+  "missing": []
+}

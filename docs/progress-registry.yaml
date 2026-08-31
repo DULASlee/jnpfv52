@@ -2,7 +2,7 @@
 # Canonical reference for all completed milestones and current state.
 
 version: "8.28"
-last_updated: "2026-08-30"
+last_updated: "2026-08-31"
 current_phase: "阶段 C — 说明书正式版预览/下载 + 门控 JSON 修复"
 current_focus:
   - "PM 4 步：门控→骨架(PM内)→九步→步骤③→澄清≥2轮→说明书确认→Finalize"
@@ -11,6 +11,25 @@ current_focus:
   next_gate: "新 pipeline 全路径：门控→澄清2轮→说明书预览/下载 → 用户通过"
 
 session_log:
+  - date: "2026-08-31"
+    topic: "代码变更"
+    hook_auto_archive: "20260831084759"
+    outcomes:
+      - "hook 自动归档：87 个代码文件 · 代码变更"
+      - ".claude/.session-init-lock.json"
+      - "opencode.json"
+      - ".claude/skills/table-refactor-expert/tsee/batch-29-decisions.json"
+      - ".claude/skills/table-refactor-expert/tsee/batch-29-evidence.json"
+      - ".claude/skills/table-refactor-expert/tsee/batch-29-gap-analysis.json"
+      - ".claude/skills/table-refactor-expert/tsee/batch-29-validation.json"
+      - ".mcp.json"
+      - ".opencode/goals/state.json.sessions/0c006dafd5872dfc2a548f7c4c7ae1547e0fdd4ba26ac56bd08092da9648a537/state.json"
+      - ".opencode/goals/state.json.sessions/0c006dafd5872dfc2a548f7c4c7ae1547e0fdd4ba26ac56bd08092da9648a537/state.json.lock.claims-v2/claim-4d9ed16a-f3b4-4afe-b11c-ff85d77b09f5.json"
+      - ".opencode/goals/state.json.sessions/1727e5c80e33b8a52d5719f5636ad1b22c468df3f97eb79cc43cfdc3360f9123/state.json"
+    verify: "cd backend && dotnet build"
+    session_summary: ".claude/memory/session-summaries/2026-08-31-代码变更-AUTO.md"
+    mistake_log: "M190"
+    episodic_project_id: "D--JNPF-v52"
   - date: "2026-08-30"
     topic: "代码变更"
     hook_auto_archive: "46d71ed2-5dcd-424e-8521-97d1b7eb1a1a"

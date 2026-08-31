@@ -318,7 +318,7 @@ backend/
 
 ---
 
-## 11. 15 项核心架构决策（ADR）
+## 11. 24 项核心架构决策（ADR）
 
 > 完整版见 [../adr/README.md](../adr/README.md)
 
@@ -339,6 +339,15 @@ backend/
 | ADR-013 | 非 HTTP 入口租户上下文传播 | Final | 2 |
 | ADR-014 | Repository IDisposable 保障 | Final | 4 |
 | ADR-015 | Outbox Dispatcher 优雅停机 | Final | 5 |
+| ADR-016 | JNPF 架构部署策略 — 逻辑微服务 + 物理单体 | Final | 前端架构重构 |
+| ADR-017 | 新旧代码生成器共存策略 | Final | 前端架构重构 |
+| ADR-018 | Unapp UI 库选型 | Final | 前端架构重构 |
+| ADR-019 | Table Refactoring Expert Skill v1.0 冻结决策 | Final | Phase 8 / P8-E |
+| ADR-020 | R2-COMP 独立 AI 验证作为主要验证机制 | Final | Phase 8 / P8-A.6 |
+| ADR-021 | Triple-Key Iron Law（AI/IR/SA 表强制三键） | Final | Phase 8 / 数据库治理 |
+| ADR-022 | NO-CHANGE 主动判断原则（数据库治理成熟度核心） | Final | Phase 8 / 治理文化 |
+| ADR-023 | Schema 漂移检测执行前强制规则 | Final | Phase 8 / 风险预防 |
+| **ADR-024** | **AI 软件工程组织架构方案 v1.0（组织级 AI Agent 家族）** | **Proposed** | **Phase 8 后 / Phase A** |
 
 ---
 
@@ -353,6 +362,8 @@ backend/
 | 租户上下文设计 | [tenant-context.md](tenant-context.md) |
 | 事件管道设计 | [outbox-pipeline.md](outbox-pipeline.md) |
 | ADR 索引 | [../adr/README.md](../adr/README.md) |
+| AI 软件工程组织架构方案 v1.0 | [../架构迭代/8、AI编程范式的再次进化/8、AI软件工程组织架构方案v1.0.md](../架构迭代/8、AI编程范式的再次进化/8、AI软件工程组织架构方案v1.0.md) |
+| ADR-024 AI 软件工程组织 | [../adr/ADR-024-AI软件工程组织架构方案.md](../adr/ADR-024-AI软件工程组织架构方案.md) |
 | 开发规范 | [../development/guide.md](../development/guide.md) |
 | 部署指南 | [../deployment/guide.md](../deployment/guide.md) |
 | CI/CD 指南 | [../deployment/ci-cd-guide.md](../deployment/ci-cd-guide.md) |

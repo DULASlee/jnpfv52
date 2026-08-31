@@ -1,0 +1,63 @@
+{
+  "metadata": {
+    "wave": "WAVE 2",
+    "phase": "Postflight",
+    "executed_at": "2026-08-31T18:50:00",
+    "server": "(local)\\SQLEXPRESS",
+    "database": "ZXAF_V1_DevTest1"
+  },
+  "postflight_checks": {
+    "pk_constraints": {
+      "base_signature": {
+        "pk_name": "PK_base_signature",
+        "pk_columns": "f_id",
+        "type": "CLUSTERED",
+        "status": "EXISTS"
+      },
+      "base_signature_user": {
+        "pk_name": "PK_base_signature_user",
+        "pk_columns": "f_signature_id,f_user_id",
+        "type": "CLUSTERED",
+        "status": "EXISTS"
+      }
+    },
+    "row_counts": {
+      "base_signature": 0,
+      "base_signature_user": 0,
+      "status": "UNCHANGED — no data loss"
+    },
+    "column_nullability": {
+      "base_signature_user.f_id": "NOT NULL",
+      "base_signature_user.f_signature_id": "NOT NULL",
+      "base_signature_user.f_user_id": "NOT NULL",
+      "note": "f_signature_id and f_user_id were altered from NULL to NOT NULL as part of M32-02 execution"
+    }
+  },
+  "migrations_executed": [
+    {
+      "id": "M32-01",
+      "table": "base_signature",
+      "action": "ADD PRIMARY KEY (f_id)",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "M32-02-CORRECTIVE",
+      "table": "base_signature_user",
+      "action": "ALTER COLUMN f_signature_id NOT NULL",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "M32-02-CORRECTIVE",
+      "table": "base_signature_user",
+      "action": "ALTER COLUMN f_user_id NOT NULL",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "M32-02",
+      "table": "base_signature_user",
+      "action": "ADD PRIMARY KEY (f_signature_id, f_user_id)",
+      "status": "SUCCESS"
+    }
+  ],
+  "result": "PASS — both PKs added, no data loss, schema integrity confirmed"
+}

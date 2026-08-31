@@ -37,6 +37,23 @@
 | 第五批 | [`10-workflow-engine-deep-dive.md`](10-workflow-engine-deep-dive.md) | ✅ v2.0-final（2026-05-24 审核通过；编写指南原 11§3） |
 | 第五批 | [`11-plugins-integration-deep-dive.md`](11-plugins-integration-deep-dive.md) | ✅ v2.0-final（2026-05-24 审核闭合） |
 | **运行态第一期** | [`runtime-phase1-detailed-design-OUTLINE.md`](runtime-phase1-detailed-design-OUTLINE.md) | 🔴 v0.1-OUTLINE（2026-06-15 起草 · 待各章填充） |
+| **数据库现代化治理** | [`database-modernization/`](database-modernization/) | ✅ v1.1（2026-08-30）Phase 8 工作成果归档 |
+
+#### 数据库现代化治理 · 详细清单
+
+| 文档 | 受众 | 内容定位 |
+|------|------|---------|
+| [`database-modernization/README.md`](database-modernization/README.md) | 索引 | 子目录导航与阅读路径 |
+| [`database-modernization/JNPF-数据库现代化治理-架构设计与工作成果报告.md`](database-modernization/JNPF-数据库现代化治理-架构设计与工作成果报告.md) | 客户/管理层/团队工程师 | **架构设计与工作成果合并版**（中文为主） |
+| [`database-modernization/JNPF-AI-数据库治理-转型报告.md`](database-modernization/JNPF-AI-数据库治理-转型报告.md) | 管理层/技术委员会 | 战略叙事 + 跨项目复用 |
+| [`database-modernization/JNPF-表级重构-管理层报告.md`](database-modernization/JNPF-表级重构-管理层报告.md) | 管理层/产品 | 业务价值翻译 + ROI |
+| [`database-modernization/JNPF-表级重构-技术变更目录.md`](database-modernization/JNPF-表级重构-技术变更目录.md) | 架构师/DBA/研发 | 单表详细记录（90+ 表 × 7 维度） |
+| [`database-modernization/JNPF-表级重构-登记表.csv`](database-modernization/JNPF-表级重构-登记表.csv) | AI/Excel/工具 | 244 行机器可读清单 |
+| [`database-modernization/Phase-8-最终关闭报告.md`](database-modernization/Phase-8-最终关闭报告.md) | 项目历史归档 | Phase 8 阶段关闭报告 |
+
+**关键数据**：治理 248/274 张表（90.5%），190 索引优化，0 事故。  
+**关联 ADR**：`docs/adr/ADR-019~023.md`（5 个架构决策记录）。
+
 | **质量诊断** | [`design-quality-diagnostics.md`](design-quality-diagnostics.md) | ✅ v1.0（2026-08-06）八类方法手册 |
 | 质量诊断 | [`design-quality-hotspot-top20.md`](design-quality-hotspot-top20.md) | ✅ Hotspot Top20 快照 |
 | 质量诊断 | [`design-quality-frontend-index-summary.md`](design-quality-frontend-index-summary.md) | ✅ 三前端索引摘要 |
@@ -83,3 +100,5 @@
 ## 施工包（非架构内参）
 
 [`../phase2/README.md`](../phase2/README.md)
+
+

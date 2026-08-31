@@ -203,11 +203,11 @@ JNPF v5.2 低代码平台全栈工程师。技术栈：.NET 8 + SqlSugar + Dappe
 |---|---|---|
 | **任何 Phase 8 表评估/重构/关闭** | `table-refactor-expert` | P1；Master Spec + Execution Manual 路由；不替代 Skill |
 | **P8-B Controlled Production / 上线决策** | `production-audit` | P1；本地证据审计 |
-| **Phase 7/8 context 缺失** | `unified-memory` | P1；ECC Vault `ecc memory search "Phase 8"` recall |
+| **Phase 7/8 context 缺失** | `jnpf-memory` (项目级替换 `unified-memory`) | P1；ECC Vault `ecc memory search "Phase 8"` recall |
 | **声称完成 Phase 8 任一阶段前** | `verification-loop` | P2；Gate Function 验证 |
 | **Phase 8 写/改 .cs/.vue/.ts** | `coder-mode` + `dotnet-patterns` | DI/async/EF Core/SqlSugar 规范 |
 | **Phase 8 架构决策（如 schema 演进）** | `architect-mode` | Phase 1 Align 流程 |
-| **Phase 8 跨 harness 知识传递** | `unified-memory`（写入） | `npx ecc memory save --kind context/decision/fact/handoff` |
+| **Phase 8 跨 harness 知识传递** | `jnpf-memory`（写入；项目级替换幽灵 `unified-memory`） | `npx ecc memory save --kind context/decision/fact/handoff` |
 | **Phase 8 复杂表 (base_user 68 列等)** | `rules-distill` | 跨表模式抽取 |
 
 **Auto-load 机制**：SessionStart hook `session-skill-suggest.mjs` 会根据 Phase 上下文主动推荐上述 skill 列表到会话开头。LLM 应在 Phase 8 任务开始时立即加载 `table-refactor-expert`（不等待推荐）。
@@ -258,7 +258,7 @@ dotnet test --filter FullyQualifiedName~Architecture   # ARCH-01；Common.Core �
 | jnpf-tester（子 agent） | Phase 5 Dev Loop 验证，产出 test-report-v1 |
 | jnpf-debugger（子 agent） | 数据驱动根因诊断，产出 debug report |
 | Serena MCP | C# 符号级 rename/find-refs/find-symbol/get-overview |
-| Codebase-Memory MCP | 跨文件调用链(trace_path)/架构总览(get_architecture)/复杂度热点(query_graph Cypher)/BM25+向量搜索(search_graph) |
+| Codebase-Memory MCP → **codegraph MCP** | 跨文件调用链(trace_path)/架构总览(get_architecture)/复杂度热点(query_graph Cypher)/BM25+向量搜索(search_graph)。**2026-08 升级：** Codebase-Memory v0.9.0 已被 codegraph v1.1.0 替代。 |
 | Knowledge Graph MCP | 知识图谱搜索/实体查询/关系追溯（人工沉淀的领域知识） |
 
 **代码/文件搜索规则（强制性）：**
@@ -266,8 +266,9 @@ dotnet test --filter FullyQualifiedName~Architecture   # ARCH-01；Common.Core �
 - **MCP 速查手册** → `.claude/rules/mcp-code-search.md`（三大 MCP 分工 + 参数速查 + 场景示例）
 - C# 单符号搜索（找类/方法/接口/引用）→ **Serena MCP**（`mcp__serena__find_symbol` / `mcp__serena__find_referencing_symbols`）
 - C# 文件结构概览 → **Serena MCP**（`mcp__serena__get_symbols_overview`）
-- **跨文件调用链/影响分析** → **Codebase-Memory MCP**（`mcp__codebase-memory__trace_path` / `mcp__codebase-memory__search_graph`）
-- **项目架构/模块聚类/复杂度热点** → **Codebase-Memory MCP**（`mcp__codebase-memory__get_architecture` / `mcp__codebase-memory__query_graph`）
+- **跨文件调用链/影响分析** → **codegraph MCP**（`mcp__codegraph__trace_path` / `mcp__codegraph__search_graph`）✅ v1.1.0
+- **项目架构/模块聚类/复杂度热点** → **codegraph MCP**（`mcp__codegraph__get_architecture` / `mcp__codegraph__query_graph`）✅ v1.1.0
+- ~~**Codebase-Memory MCP**（`mcp__codebase-memory__*`）~~ ⚠️ **已废弃** — 2026-08 被 codegraph v1.1.0 替代；不再配置 `codebase-memory-mcp.exe`
 - 领域知识/设计意图/历史决策查询 → **Knowledge Graph MCP**（`mcp__knowledge-graph__search_nodes`）
 - 文本内容搜索 → Grep（必须带 path/glob）；已知路径直接 Read；文件名用窄 Glob
 - **禁止** Shell 全仓搜索；**禁止**为找一个文件派 explore 子 Agent；**禁止**同轮 8+ 广域并行

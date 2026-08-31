@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>JNPF Agent OS · Layer 0 · Runtime Kernel (Section 8)</Description>
+    <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+    <RootNamespace>JNPF.Runtime.Core</RootNamespace>
+    <AssemblyName>JNPF.Runtime.Core</AssemblyName>
+    <InternalsVisibleTo>JNPF.Tests.Runtime.Core</InternalsVisibleTo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JNPF.Runtime.Capability\JNPF.Runtime.Capability.csproj" />
+  </ItemGroup>
+
+</Project>

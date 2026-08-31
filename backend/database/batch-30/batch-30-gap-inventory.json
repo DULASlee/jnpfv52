@@ -1,0 +1,517 @@
+{
+  "metadata": {
+    "batch": "Batch 30+ Gap Review",
+    "task": "30.1 Gap Inventory",
+    "executed_at": "2026-08-31T15:23:10.845199",
+    "scope": "17 G1_MAJOR Gaps from Batch 29",
+    "target_contract_ref": "JNPF Project Default + Module Override"
+  },
+  "gaps": [
+    {
+      "gap_id": "GAP-01",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_signature",
+      "dimension": "primary_key",
+      "target_field": "f_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_signature",
+        "column_count": 16,
+        "pk_count": 0,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "PRIMARY KEY constraint on f_id",
+        "convention": "JNPF Standard: PRIMARY KEY (f_id) CLUSTERED"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-02",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_signature_user",
+      "dimension": "primary_key",
+      "target_field": "f_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_signature_user",
+        "column_count": 15,
+        "pk_count": 0,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "PRIMARY KEY constraint on f_id",
+        "convention": "JNPF Standard: PRIMARY KEY (f_id) CLUSTERED"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-a",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_advanced_query_scheme",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_advanced_query_scheme",
+        "column_count": 18,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-b",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_app_data",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_app_data",
+        "column_count": 20,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-c",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_columns_purview",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_columns_purview",
+        "column_count": 14,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-d",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_data_interface_user",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_data_interface_user",
+        "column_count": 14,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-e",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_data_interface_variate",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_data_interface_variate",
+        "column_count": 15,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-f",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_db_link",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_db_link",
+        "column_count": 23,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-g",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_im_content",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_im_content",
+        "column_count": 18,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-h",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_im_reply",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_im_reply",
+        "column_count": 15,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-i",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_integrate",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_integrate",
+        "column_count": 20,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-j",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_integrate_node",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_integrate_node",
+        "column_count": 26,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-k",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_organize_relation",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_organize_relation",
+        "column_count": 15,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-l",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_portal",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_portal",
+        "column_count": 24,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-m",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_portal_data",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_portal_data",
+        "column_count": 16,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-n",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_signature",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_signature",
+        "column_count": 16,
+        "pk_count": 0,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-03-o",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_signature_user",
+      "dimension": "tenant_index",
+      "target_field": "f_tenant_id",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_signature_user",
+        "column_count": 15,
+        "pk_count": 0,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Index on f_tenant_id (or composite index including f_tenant_id)",
+        "convention": "JNPF Standard: IDX_<table>_tenant_* or composite covering f_tenant_id"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-04-a",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_advanced_query_scheme",
+      "dimension": "audit_fields",
+      "target_field": "f_creator_time, f_creator_user_id, f_last_modify_time, f_last_modify_user_id, f_delete_mark",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_advanced_query_scheme",
+        "column_count": 18,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Audit fields present: f_creator_time, f_creator_user_id, f_last_modify_time, f_last_modify_user_id, f_delete_mark",
+        "convention": "JNPF Standard: 5-field audit + soft delete"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-04-b",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_app_data",
+      "dimension": "audit_fields",
+      "target_field": "f_creator_time, f_creator_user_id, f_last_modify_time, f_last_modify_user_id, f_delete_mark",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_app_data",
+        "column_count": 20,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Audit fields present: f_creator_time, f_creator_user_id, f_last_modify_time, f_last_modify_user_id, f_delete_mark",
+        "convention": "JNPF Standard: 5-field audit + soft delete"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-04-c",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_im_content",
+      "dimension": "audit_fields",
+      "target_field": "f_creator_time, f_creator_user_id, f_last_modify_time, f_last_modify_user_id, f_delete_mark",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_im_content",
+        "column_count": 18,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Audit fields present: f_creator_time, f_creator_user_id, f_last_modify_time, f_last_modify_user_id, f_delete_mark",
+        "convention": "JNPF Standard: 5-field audit + soft delete"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-04-d",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_integrate",
+      "dimension": "audit_fields",
+      "target_field": "f_creator_time, f_creator_user_id, f_last_modify_time, f_last_modify_user_id, f_delete_mark",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_integrate",
+        "column_count": 20,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Audit fields present: f_creator_time, f_creator_user_id, f_last_modify_time, f_last_modify_user_id, f_delete_mark",
+        "convention": "JNPF Standard: 5-field audit + soft delete"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    },
+    {
+      "gap_id": "GAP-04-e",
+      "project": "JNPF v5.2",
+      "module": "base",
+      "table": "base_portal",
+      "dimension": "audit_fields",
+      "target_field": "f_creator_time, f_creator_user_id, f_last_modify_time, f_last_modify_user_id, f_delete_mark",
+      "current_state": {
+        "schema": "dbo",
+        "table": "base_portal",
+        "column_count": 24,
+        "pk_count": 1,
+        "non_pk_index_count": 0,
+        "fk_count": 0
+      },
+      "target_state": {
+        "required": "Audit fields present: f_creator_time, f_creator_user_id, f_last_modify_time, f_last_modify_user_id, f_delete_mark",
+        "convention": "JNPF Standard: 5-field audit + soft delete"
+      },
+      "severity": "G1_MAJOR",
+      "evidence": "batch-29-gap-analysis.json (Group B output, 2026-08-31)",
+      "dynamic_status": "PENDING_CLASSIFICATION"
+    }
+  ]
+}
