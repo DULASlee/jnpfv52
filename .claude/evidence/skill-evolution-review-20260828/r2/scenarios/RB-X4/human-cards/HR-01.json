@@ -1,8 +1,0 @@
-{
-  "card_id": "HR-01",
-  "note": "R2 验证用模拟人回复（非生产 Level 0）",
-  "question": "DownloadAll 生成的 TemporaryFile 临时目录/zip 由谁消费、何时清理？",
-  "answer": "前端下载后清理",
-  "answer_full": "临时目录和 zip 由前端用户完成下载后统一清理，服务端不主动删除；/api/File/Download 是消费入口，一次性链接经 cacheManager 控制。",
-  "required": true
-}

@@ -125,3 +125,23 @@ jnpf-web-vue3/.serena/
 # Git merge / rebase / patch leftovers
 *.orig
 *.rej
+
+# ---------------------------------------------------------------------------
+# 过程证据 / 运行时分析产物（2026-09-01 复查补充）
+# 原则: 机器可再生的分析/会话产物一律忽略; 仅保留明确的人工审计结论
+# ---------------------------------------------------------------------------
+
+# 代码分析产物 analysis/ — callgraph/diagnostics/summary 等机器生成 JSON (2×81MB)
+# 保留分析脚本 (.cjs/.ps1) 以便复现, 仅忽略数据产物
+analysis/**/*.json
+analysis/**/*.status
+
+# OpenCode 编辑器运行时 (state.json.sessions / state.json.lock / node_modules)
+.opencode/
+
+# Claude Code 会话过程证据 — 仅保留审计结论, 其余运行时产物(verify-*.json / 截图 / summary)忽略
+.claude/evidence/**
+!.claude/evidence/backend-code-audit/
+!.claude/evidence/backend-code-audit/**
+!.claude/evidence/arch-scan/
+!.claude/evidence/arch-scan/**

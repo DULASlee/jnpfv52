@@ -1,1 +1,0 @@
-select f_id,f_inte_assistant,T_MAIN.f_name FIELD_0,T_MAIN.f_status FIELD_1 from T_MAIN
