@@ -107,3 +107,21 @@ jnpf-web-vue3/.serena/
 .ai/quarantine/backups/
 .superpowers/
 
+
+# Runtime evidence output (regenerable — never commit)
+# Root evidence/ holds harness run artifacts (PHASE0.5-*.json, P2-*.json); regenerated per run.
+# NOTE: .claude/evidence/ is NOT ignored — it stores audit conclusions (backend-code-audit/, arch-scan/).
+/evidence/
+
+# OpenCode session runtime state — state.json / .lock / claim-*.json (429 files cleaned 2026-09-01)
+.opencode/goals/state.json.sessions/
+
+# Claude Code session cache / transient runner output
+# NOTE: .session-summary-*.md IS tracked (session digests); only tmp/last caches are ignored.
+.claude/.session-summary-*.tmp
+.claude/.session-summary-*.last
+.claude/evidence/current-test-run.txt
+
+# Git merge / rebase / patch leftovers
+*.orig
+*.rej
