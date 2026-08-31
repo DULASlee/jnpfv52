@@ -20,7 +20,7 @@ try {
 const filePath = (process.env.CLAUDE_FILE_PATH || input.tool_input?.file_path || '').replace(/\\/g, '/');
 if (!filePath) process.exit(0);
 
-// Frozen contract patterns
+// Frozen contract patterns — must match CONTRACT-BASELINE.json keys
 const frozenPatterns = [
   /08-phase-contracts\//,
   /00-governance\/L0-LAWS\.md/,
@@ -34,27 +34,62 @@ const frozenPatterns = [
 const isFrozen = frozenPatterns.some(p => p.test(filePath));
 if (!isFrozen) process.exit(0);
 
-// Check cr-approved (allow crApproved camelCase too)
-let approved = null;
+// --- BLOCK-003: Authoritative Contract Baseline (outside agent mutation authority) ---
+// Baseline is integrity-bound and traceable, stored in 00-governance/CONTRACT-BASELINE.json
+// Agent-writable workflow-state.json cr-approved and // cr-safe textual marker MUST NOT be accepted
+import crypto from 'node:crypto';
+let baseline = null;
 try {
-  const wfPath = path.join(process.cwd(), '.claude/workflow-state.json');
-  if (fs.existsSync(wfPath)) {
-    const wf = JSON.parse(fs.readFileSync(wfPath, 'utf-8'));
-    approved = wf['cr-approved'] || wf['crApproved'] || wf.crApproved || null;
-  }
-} catch { approved = null; }
+  const baselinePath = path.join(process.cwd(), '.claude/control-plane/00-governance/CONTRACT-BASELINE.json');
+  baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf-8'));
+} catch { baseline = null; }
 
-// Also check // cr-safe: <reason> in content for trivial edits (like formatting)
 let content = input.tool_input?.content || input.tool_input?.new_string || input.tool_input?.newText || '';
-if (/cr-safe\s*:/i.test(content)) process.exit(0);
+// Also read from env file path if content empty (for Write via file)
+if (!content && filePath) {
+  try { content = fs.readFileSync(filePath, 'utf-8'); } catch {}
+}
 
-if (!approved) {
+// Compute hash of new content vs baseline
+let isContractMutation = false;
+if (baseline && baseline.hashes) {
+  // Determine baseline key for this file
+  let baselineKey = null;
+  for (const k of Object.keys(baseline.hashes)) {
+    if (filePath.endsWith(k) || filePath.includes(k)) { baselineKey = k; break; }
+  }
+  // If file is in 08-phase-contracts and not in baseline (new file), treat as mutation
+  if (!baselineKey && /08-phase-contracts\//.test(filePath)) {
+    isContractMutation = true;
+  } else if (baselineKey) {
+    const baselineHash = baseline.hashes[baselineKey];
+    const newHash = crypto.createHash('sha256').update(content || '').digest('hex').slice(0, 16);
+    if (newHash !== baselineHash) isContractMutation = true;
+  }
+} else {
+  // No baseline → treat any frozen write as mutation (fail closed)
+  isContractMutation = true;
+}
+
+if (isContractMutation) {
+  // BLOCK: Contract Preservation — baseline mismatch, regardless of agent self-attested cr-approved or cr-safe
+  // Do NOT check workflow-state cr-approved (agent-writable) and do NOT accept // cr-safe textual marker
+  // Both MUST fail per BLOCK-003 directive
   const { collectContractEvidence } = await import('./evidence-collector.mjs');
-  collectContractEvidence(filePath, null, 'BLOCK');
-  console.error(`BLOCKED P004@1.0 Contract Preservation — frozen contract ${filePath} without cr-approved`);
-  console.error('  Hard Policy: frozen contract mutation requires Change Request approval (workflow-state.json: cr-approved)');
-  console.error('  For trivial formatting, add // cr-safe: <reason> to content');
+  // Record that agent self-attested markers were present but ignored
+  const hasCrSafe = /cr-safe\s*:/i.test(content);
+  const wfCr = (()=>{ try{ const wf=JSON.parse(fs.readFileSync(path.join(process.cwd(), '.claude/workflow-state.json'),'utf-8')); return wf['cr-approved']||''; }catch{return ''}})();
+  collectContractEvidence(filePath, wfCr || (hasCrSafe ? 'cr-safe' : null), 'BLOCK');
+  console.error(`BLOCKED P004@1.0 Contract Preservation — frozen contract ${filePath} integrity mismatch vs authoritative baseline`);
+  console.error(`  Baseline: CONTRACT-BASELINE.json hashes (authoritative, outside agent authority)`);
+  console.error(`  Agent self-attested: workflow-state cr-approved="${wfCr}" ${hasCrSafe ? 'cr-safe marker present' : ''} → IGNORED (not authoritative)`);
+  console.error(`  Required: Baseline update via legitimate CR process, not workflow-state mutation`);
   process.exit(2);
 }
 
+// ALLOW: hash matches baseline (no mutation) or baseline updated authoritatively — write traceable evidence
+try {
+  const { collectContractEvidence } = await import('./evidence-collector.mjs');
+  collectContractEvidence(filePath, 'baseline-match', 'ALLOW');
+} catch {}
 process.exit(0);

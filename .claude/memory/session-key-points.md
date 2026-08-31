@@ -132,3 +132,117 @@
 ### 节点 6: Session Key Points（本文件）
 - 机器可读: 否（但 .claude/memory/ 对所有 AI Agent 可访问）
 - 用途: 跨会话传递技术决策、Bug 分析、踩坑记录
+
+---
+
+# AI工程OS Harness治理与Pre-AgentOS门禁 — 2026-09-01 (Phase 0.5/0.6/Phase1 Vertical Slice → PRE-AGENTOS-GATE)
+
+**任务ID:** PHASE0.5-HARNESS-20260901
+**完成时间:** 2026-09-01T21:30:00
+**状态:** PRE-AGENTOS-GATE ACCEPTED (前置治理通过, AgentOS NOT YET)
+
+## 执行概要
+- **需求:** 建立 Harness Governance & Authority Model，使 Superpowers/ECC/MCP/Memory 从“同时影响 Agent”收权为 Control Plane 唯一治理 + Resolver 定可见 + Quarantine 隔离
+- **路径:** Inventory(273机械)→Classify(7类)→Authority L1唯一→Boundary→Quarantine 11项→Capability Registry 11→Memory Contract→Resolver(<10k)→Deferred 9 WARN→黑盒31+54+回归44→3×BLOCK修复→独立复验→Gate PASS
+- **完成阶段:** Phase 0.5/0.6 PASS, Phase1 Implementation APPROVED (black-box verified), Closure Repair VERIFIED, PRE-AGENTOS-GATE ACCEPTED
+
+## 关键技术决策
+### 决策1: 不做大扫除，采用收权式四步法
+- **选项A (大扫除):** 删除 Superpowers/ECC/旧 Rules/MCP — 丢失能力，隐式依赖断裂
+- **选项B (收权):** Inventory→Classify→Quarantine→Migration/Retire — 保留能力但剥夺治理权
+- **结论:** Chief Architect 批准 Option B (先收权再清理)
+- **理由:** Clean Harness ≠ Empty Directory，Clean = Authority/Loading/Boundary/Resolution Clear
+
+### 决策2: Hook-per-Policy 仅为 Phase1 策略
+- **问题:** 30 Policies = 30 Hooks 会爆炸
+- **决策:** Phase1 5策略用 Hook-per-Policy 便于验证，永久 Enforcement Point 为 PreMutation/PreBuild/PreTest/PreCompletion (Policy Engine 在这些点求值)
+- **避免:** 未来不冻结为每 Policy 一 Hook
+
+### 决策3: Evidence 11字段结构化 + Gate Final ONLY + State仅AgentOS
+- **坑:** log.push 假证据、P005 污染中间阶段、State在Policy引擎直接改
+- **修复:** Evidence 含 EvidenceType/Actor/Task/Stage/Policy/Action/Before/After/Tool/Result/Timestamp/Integrity+version，Gate Requires `type=REAL_BUILD & exit0`，P005 仅 Completion 阶段 (6阶段 NOT_APPLICABLE)，State 仅 AgentOS Transition
+
+## 已执行治理 (实际验证)
+| 阶段 | 证据 | 状态 |
+|------|------|------|
+| Inventory 273 | evidence/PHASE0.5-INVENTORY.json | ✅机械扫描 |
+| Authority L1唯一 | PHASE0.5-AUTHORITY.json UNIQUE | ✅ |
+| Resolver | hooks/harness-resolver.mjs 8.2k | ✅ 54黑盒 |
+| Quarantine 11 | .ai/quarantine NOT LOADED | ✅ 31对抗 |
+| Capability 11 | CAPABILITY-REGISTRY.md | ✅ |
+| Memory Contract | MEMORY-CONTRACT.md | ✅ |
+| 3×BLOCK修复 | P005/P003/P004 各组 | ✅ 3/3 BLOCK + 3/3 ALLOW |
+| Drift | HARNESS-BASELINE 279 raw CLEAN | ✅ |
+| Regression | test-hooks 44/44 | ✅ |
+
+## 发现 Bug 及根因
+### Bug1: P005 无NOT_APPLICABLE污染中间阶段
+- **问题:** P005 Completion Gate 在 Discovery/Build/Test 等中间 Stop 也 BLOCK
+- **根因:** 无阶段隔离，always BLOCK
+- **修复:** 增加 COMPLETION_STAGE/intent 隔离，非完成阶段 NOT_APPLICABLE (policy-005-completion-evidence.mjs:14-34)
+
+### Bug2: P003 全局diff满足任意文件
+- **问题:** OtherFile.cs 变更可满足 FlowCommentService.cs 的 Mutation
+- **根因:** `git diff --stat` 全局 + Actor/Task 未强制
+- **修复:** 文件级 Target绑定 + Workspace边界 + 5-field Evidence (policy-003-mutation-evidence.mjs:40-87)
+
+### Bug3: P004 自签 cr-approved/cr-safe 绕过
+- **问题:** workflow-state Fake-CR 与 //cr-safe 文本可绕过 frozen
+- **根因:** 基准非权威，文本标记可注入
+- **修复:** CONTRACT-BASELINE.json 7 hashes 权威，workflow-state 与 cr-safe 均 IGNORED (policy-004-contract-preservation.mjs:23-68)
+
+## 踩坑记录
+### 坑1: Raw 273 vs Unique 210 口径歧义
+- 原 142 口径手工推测 → 统一为 Raw/Unique/Mirrors/Quarantined/Authoritative 机械口径 via harness-drift.mjs --baseline
+
+### 坑2: .gitignore 证据被忽略
+- `.ai/quarantine/` 整个忽略导致 MANIFEST 不可审计 → 改为 `.quarantine/backups/` 仅备份忽略，证据 tracked
+
+### 坑3: Evidence transient 被计入漂移
+- 09-evidence/*.json 瞬态导致 Drift 误报 277→279 → harness-drift.mjs:58 排除 09-evidence
+
+### 坑4: 中文标题通过CLI传递乱码
+- `ecc memory save --title 中文` 经 GBK 控制台乱码 → 改用 --body-file UTF8 文件，标题用英文或确保 UTF8
+
+## 变更文件
+| 文件 | 操作 |
+|------|------|
+| docs/architecture/AI工程OS-Harness治理与Pre-AgentOS门禁工作总结报告-20260901.md | 新建 19KB |
+| docs/adr/ADR-027-Harness治理与Pre-AgentOS门禁.md | 新建 9KB Final |
+| docs/harness/8件 (Inventory/Authority/Classification/Boundary/Resolution/Capability/Memory/Deferred) + PRE-AGENTOS-GATE.md | 新建 |
+| evidence/6+3 JSON + PHASE0.5-CLOSURE.json | 新建 |
+| .claude/control-plane/00-governance/CONTRACT-BASELINE.json | 新建 7 hashes |
+| .claude/hooks/harness-resolver.mjs / harness-drift.mjs / phase05-adversarial.mjs / blackbox-adversarial.mjs / policy-*.mjs 5 + lib | 新建/修复 |
+| .claude/hooks/policy-005/003/004 3×BLOCK修复 | 修复 |
+
+## 验证结果
+| 检查项 | 结果 |
+|--------|------|
+| 机械 Inventory 273 | PASS |
+| Harness对抗 31 | PASS |
+| Policy黑盒 54 | PASS |
+| Policy对抗 19 + Harness 23 | PASS |
+| 回归 44/44 | PASS |
+| Drift CLEAN 279 | PASS |
+| 3×BLOCK 3/3 + 3/3 Positive | PASS |
+
+## 风险与建议
+1. 9 WARN (semantic fake-green/target binding/crypto/determinism/version等) 已在 DEFERRED-REGISTER 封账，TargetPhase 明确 (Phase2/4)，不得遗忘
+2. Resolver <10k 需保持不堆叠，后续 AgentOS 不得把新 Runtime 逻辑塞入 resolver
+3. Phase 1 保持 READY FOR FORMAL CLOSURE 未扩张，AgentOS 需基于 Harness Contract 建最小可执行闭环
+
+## 质量门通过记录
+| 门 | 结果 | 时间 |
+|----|------|------|
+| Phase 0.5 PASS | PASS | 2026-09-01 |
+| Phase 0.6 PASS | PASS | 2026-09-01 |
+| Phase1 Implementation APPROVED | PASS | 2026-09-01 |
+| Closure Repair 3/3 VERIFIED | PASS | 2026-09-01 |
+| Independent Review #2 54 PASS | PASS | 2026-09-01 |
+| PRE-AGENTOS-GATE ACCEPTED | PASS | 2026-09-01 |
+| Evidence Freeze 12项哈希 | PASS | 2026-09-01 |
+
+## 最终验收结论
+- **PRE-AGENTOS-GATE PASS** — 前置治理条件通过 (Authority/Resolution/Quarantine/Capability/Memory/External 均 PASS, 黑盒+回归+漂移全绿)，**不是** AgentOS Runtime 已建成
+- 下一阶段: AgentOS Runtime Foundation 最小可执行闭环 (Handoff: evidence/PHASE0.5-CLOSURE.json)
+

@@ -11,7 +11,7 @@
   "after": "0",
   "tool": "hook",
   "result": "BLOCK",
-  "timestamp": "2026-08-31T20:03:28.565Z",
+  "timestamp": "2026-08-31T20:50:14.025Z",
   "integrity": "sha256:344128cf1b31b4ae",
   "decision": "BLOCK",
   "reason": "assert weakened 9→0",

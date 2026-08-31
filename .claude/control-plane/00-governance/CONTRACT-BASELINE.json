@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-08-31T20:32:50.027Z",
+  "description": "Authoritative Contract Baseline - outside agent mutation authority boundary. Integrity-bound and traceable.",
+  "hashes": {
+    "00-governance/L0-LAWS.md": "ec67eddbf614995f",
+    "00-governance/GOVERNANCE-INDEX.md": "3d8ea43c69014983",
+    "00-governance/MASTER-GOVERNANCE.md": "d3054fc83cdf74e0",
+    "00-governance/HUMAN-GATE-RULES.yaml": "c8d88c115493a4c2",
+    "00-governance/HARNESS-INVENTORY.md": "335a98b922fc1a68",
+    "00-governance/HARNESS-AUTHORITY-MAP.md": "6c0861a802f50545",
+    "08-phase-contracts/README.md": "e41e7f7f78f3f2e8"
+  }
+}

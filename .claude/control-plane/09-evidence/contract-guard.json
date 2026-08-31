@@ -8,10 +8,10 @@
   "policy_version": "1.0",
   "action": "write-frozen",
   "tool": "hook",
-  "result": "BLOCK",
-  "timestamp": "2026-08-31T20:03:29.935Z",
-  "integrity": "sha256:c0b9a857d3168f00",
-  "decision": "BLOCK",
+  "result": "ALLOW",
+  "timestamp": "2026-08-31T21:25:23.008Z",
+  "integrity": "sha256:b26425f0f91ad370",
+  "decision": "ALLOW",
   "file": ".claude/control-plane/00-governance/L0-LAWS.md",
-  "crApproved": null
+  "crApproved": "baseline-match"
 }

@@ -9,9 +9,9 @@
   "action": "dotnet build",
   "tool": "dotnet",
   "result": "ALLOW",
-  "timestamp": "2026-08-31T20:04:21.415Z",
+  "timestamp": "2026-08-31T21:25:23.310Z",
   "integrity": "sha256:b89b9b9316434c59",
   "decision": "ALLOW",
   "exitCode": 0,
-  "logTail": "ok final"
+  "logTail": "ok"
 }

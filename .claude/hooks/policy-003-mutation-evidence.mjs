@@ -36,44 +36,76 @@ if (!filePath) process.exit(0);
 if (/09-evidence\/|\.gitignore|\.claude\/memory\/|\.bak/.test(filePath)) process.exit(0);
 if (!content) process.exit(0);
 
-// Check 5-tuple: Diff exists (git diff or new file), Actor/Task from workflow-state, Before/After from file existence
-let hasDiff = false;
+// --- BLOCK-002: Mutation Scope Binding — Target Artifact + Actual Diff ---
+// Required binding: Task, Actor, Workspace/Mutation Boundary, Target Artifact, Actual Diff
+// Global unrelated git diff MUST NOT satisfy P003
+let targetArtifact = process.env.MUTATION_TARGET || '';
+let workspace = process.env.MUTATION_WORKSPACE || '';
+let task = process.env.MUTATION_TASK || '';
+let actor = process.env.MUTATION_ACTOR || '';
+// Also read from authoritative scope file (outside agent direct mutation, set by test harness)
 try {
-  const stat = execSync('git diff --stat', { encoding: 'utf-8', timeout: 3000 });
-  const untracked = execSync('git ls-files --others --exclude-standard', { encoding: 'utf-8', timeout: 3000 });
-  hasDiff = stat.trim().length > 0 || untracked.trim().length > 0;
-  // Also consider this specific file: if it's new or modified, git diff for file
-  const fileDiff = execSync(`git diff --stat -- "${filePath}"`, { encoding: 'utf-8', timeout: 3000 });
-  if (fileDiff.trim()) hasDiff = true;
-  // For Write new file, diff may not show until staged, but we treat non-empty content as mutation with Before="" (so we allow if file is new)
-  if (!fs.existsSync(filePath) && content.trim()) hasDiff = true;
-} catch { hasDiff = false; }
+  const scopePath = path.join(process.cwd(), '.claude/control-plane/09-evidence/mutation-scope.json');
+  if (fs.existsSync(scopePath)) {
+    const scope = JSON.parse(fs.readFileSync(scopePath, 'utf-8'));
+    targetArtifact = targetArtifact || scope.targetArtifact || scope.target || '';
+    workspace = workspace || scope.workspace || scope.mutationBoundary || '';
+    task = task || scope.task || '';
+    actor = actor || scope.actor || '';
+  }
+} catch {}
+try {
+  const wf = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.claude/workflow-state.json'), 'utf-8'));
+  targetArtifact = targetArtifact || wf.targetArtifact || wf.target || '';
+  task = task || wf.task || '';
+  actor = actor || wf.actor || '';
+} catch {}
 
-// If no diff at all, this is a mutation without evidence — BLOCK
-// But for Task 5 testability, if file is not yet tracked and content is non-empty, we consider it evidencable (Before="")
-if (!hasDiff) {
-  // Check if file exists with different content → would be diff if staged; but git diff --stat without --cached misses unstaged? We already checked.
-  // For inline test harness without git commit, we relax: if content differs from file on disk, treat as evidencable
-  let old = '';
-  try { if (fs.existsSync(filePath)) old = fs.readFileSync(filePath, 'utf-8'); } catch {}
-  if (old !== content && content.trim()) {
-    hasDiff = true;
+// If targetArtifact is bound, enforce Actual Diff is for that target
+if (targetArtifact) {
+  const targetBase = path.basename(targetArtifact);
+  const fileBase = path.basename(filePath);
+  const fileNormalized = filePath.replace(/\\/g, '/');
+  const targetNormalized = targetArtifact.replace(/\\/g, '/');
+  // Check workspace boundary if set
+  if (workspace && !fileNormalized.includes(workspace.replace(/\\/g, '/'))) {
+    console.error(`BLOCKED P003@1.0 Mutation Scope — file ${filePath} outside workspace boundary ${workspace}`);
+    console.error(`  Required: Target=${targetArtifact}, Workspace=${workspace}, Task=${task}, Actor=${actor}`);
+    process.exit(2);
+  }
+  // Actual Diff must be for target artifact — unrelated file must fail
+  if (fileBase !== targetBase && !fileNormalized.endsWith(targetNormalized) && fileNormalized !== targetNormalized) {
+    console.error(`BLOCKED P003@1.0 Mutation Scope — unrelated mutation`);
+    console.error(`  Target = ${targetArtifact}`);
+    console.error(`  Changed = ${filePath}`);
+    console.error(`  → BLOCK (global diff must not satisfy)`);
+    process.exit(2);
   }
 }
 
-if (!hasDiff) {
-  console.error(`BLOCKED P003@1.0 Mutation Must Be Evidenced — no Before/After/Diff/Actor/Task (5-tuple) for ${filePath}`);
-  console.error('  Hard Policy: every mutation must produce structured diff evidence.');
+// Check Actual Diff for THIS file only — not global git diff --stat
+let hasActualDiff = false;
+let oldContent = '';
+try { if (fs.existsSync(filePath)) oldContent = fs.readFileSync(filePath, 'utf-8'); } catch { oldContent = ''; }
+if (oldContent !== content && content.trim()) hasActualDiff = true;
+else {
+  try {
+    const fileDiff = execSync(`git diff --stat -- "${filePath}"`, { encoding: 'utf-8', timeout: 3000 });
+    if (fileDiff.trim()) hasActualDiff = true;
+    const stagedDiff = execSync(`git diff --cached --stat -- "${filePath}"`, { encoding: 'utf-8', timeout: 3000 });
+    if (stagedDiff.trim()) hasActualDiff = true;
+  } catch { hasActualDiff = false; }
+}
+
+if (!hasActualDiff) {
+  console.error(`BLOCKED P003@1.0 Mutation Must Be Evidenced — no Actual Diff for target ${targetArtifact || filePath}`);
+  console.error('  Required: Task/Actor/Workspace/Target/Actual Diff — unrelated file does not satisfy');
   process.exit(2);
 }
 
-// Check Actor/Task from workflow-state (optional for now, but log)
-let hasActorTask = false;
+// On ALLOW, produce structured MUTATION evidence (11 fields) — not just log
 try {
-  const wf = JSON.parse(fs.readFileSync(path.join(process.cwd(), '.claude/workflow-state.json'), 'utf-8'));
-  hasActorTask = !!(wf['cr-approved'] || wf.task || wf.actor || wf.currentSg);
+  const { collectMutationEvidence } = await import('./evidence-collector.mjs');
+  collectMutationEvidence('P003', oldContent, content, actor || 'agent', task || 'P1', filePath);
 } catch {}
-// For Phase1, we allow if diff exists even if Actor/Task minimal, because workflow-state may not have full context yet
-// This keeps P003 from being too strict early; future hardening will require Actor/Task
-
 process.exit(0);

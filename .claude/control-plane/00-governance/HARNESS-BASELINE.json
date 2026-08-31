@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-31T20:04:21.668Z",
+  "generatedAt": "2026-08-31T21:15:56.083Z",
   "version": "0.6.0",
   "counts": {
     "claudeSkills": 23,
     "claudeRules": 29,
-    "claudeHooks": 24,
+    "claudeHooks": 26,
     "cursorRules": 27,
     "cursorSkills": 28,
     "agentsSkills": 14,
@@ -12,7 +12,7 @@
     "userOpencodeSkills": 7,
     "globalClaudeSkills": 5,
     "eccMemoryFiles": 30,
-    "controlPlaneFiles": 75,
+    "controlPlaneFiles": 76,
     "archivedFiles": 41,
     "quarantineFiles": 9
   },
@@ -75,6 +75,7 @@
     ],
     "claudeHooks": [
       ".claude/hooks/adf-gate-lib.mjs",
+      ".claude/hooks/blackbox-adversarial.mjs",
       ".claude/hooks/evidence-collector.mjs",
       ".claude/hooks/guard-bash.mjs",
       ".claude/hooks/guard-finish.mjs",
@@ -85,6 +86,7 @@
       ".claude/hooks/harness-drift.mjs",
       ".claude/hooks/harness-resolver.mjs",
       ".claude/hooks/hook-lib.mjs",
+      ".claude/hooks/phase05-adversarial.mjs",
       ".claude/hooks/pillar-claim-check.mjs",
       ".claude/hooks/pillar-claim-lib.mjs",
       ".claude/hooks/placeholder-scan.mjs",
@@ -193,12 +195,12 @@
     ]
   },
   "canonical": {
-    "rawDiscovered": 276,
-    "uniqueLogical": 207,
+    "rawDiscovered": 279,
+    "uniqueLogical": 210,
     "mirrors": 69,
     "disabled": 2,
     "quarantined": 50,
-    "authoritative": 151,
+    "authoritative": 154,
     "externalAdvisory": 26
   }
 }

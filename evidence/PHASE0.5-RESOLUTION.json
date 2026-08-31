@@ -1,0 +1,188 @@
+{
+  "version": "0.6.0",
+  "semantics": {
+    "authority": "who may govern 鈥?L0-L6 pyramid, L6 cannot override L0-L5",
+    "resolution": "what is loaded 鈥?scoped subset via Harness Resolver (this file)",
+    "execution": "when it runs 鈥?workflow/phase/task ordering"
+  },
+  "authorityPyramid": {
+    "L0_ImmutableLaws": {
+      "level": 100,
+      "governs": true,
+      "label": "L0 Immutable Engineering Laws"
+    },
+    "L1_ControlPlane": {
+      "level": 90,
+      "governs": true,
+      "label": "L1 Control Plane (ONLY Governance Authority)"
+    },
+    "L2_ProjectConstitution": {
+      "level": 80,
+      "governs": true,
+      "label": "L2 Project Constitution"
+    },
+    "L3_ActivePhase": {
+      "level": 70,
+      "governs": true,
+      "label": "L3 Active Phase"
+    },
+    "L4_TaskPolicy": {
+      "level": 60,
+      "governs": true,
+      "label": "L4 Task Policy"
+    },
+    "L5_ExpertSkill": {
+      "level": 50,
+      "governs": false,
+      "label": "L5 Expert Skill (Domain)"
+    },
+    "L6_ExternalAdvisory": {
+      "level": 10,
+      "governs": false,
+      "label": "L6 External Advisory 鈥?NEVER governs"
+    },
+    "Capability": {
+      "level": 0,
+      "governs": false,
+      "label": "Capability (MCP driver)"
+    },
+    "Memory": {
+      "level": 0,
+      "governs": false,
+      "label": "Memory (Provider)"
+    }
+  },
+  "input": {
+    "phase": "P1",
+    "taskClassification": "S"
+  },
+  "authoritative": [
+    ".claude/control-plane/00-governance/MASTER-GOVERNANCE.md",
+    ".claude/control-plane/00-governance/GOVERNANCE-INDEX.md",
+    ".claude/control-plane/00-governance/L0-LAWS.md",
+    ".claude/control-plane/00-governance/L1-PROJECT-RULES.md",
+    ".claude/control-plane/00-governance/L2-PHASE-RULES.md",
+    ".claude/control-plane/00-governance/HUMAN-GATE-RULES.yaml",
+    ".claude/control-plane/01-workflows/*",
+    ".claude/control-plane/02-rules/*",
+    ".claude/control-plane/03-skills/*",
+    ".claude/rules/** (mirrored to L1)",
+    "AGENTS.md",
+    "CLAUDE.md"
+  ],
+  "advisory": [
+    "superpowers@5.1.0: brainstorming, systematic-debugging, verification-before-completion (Migrate candidate), ... (14 total)",
+    "globalClaudeSkills: graphify, plan-canvas, strategic-compact, unified-memory, verification-loop",
+    "userOpencodeSkills: agent-architecture-audit, dotnet-patterns, production-audit, prompt-optimizer, rules-distill, skill-scout, skill-stocktake"
+  ],
+  "mirrors": [
+    {
+      "path": ".cursor/rules/*.mdc",
+      "type": "MIRROR",
+      "source": ".claude/rules/*.md",
+      "sync": "manual (no auto-sync) 鈥?Control Plane wins on conflict",
+      "authority": "NOT AUTHORITATIVE"
+    },
+    {
+      "path": ".cursor/skills/*",
+      "type": "MIRROR",
+      "source": ".claude/skills/* + superpowers",
+      "sync": "manual 鈥?ADVISORY MIRROR",
+      "authority": "NOT AUTHORITATIVE"
+    },
+    {
+      "path": ".agents/skills/*",
+      "type": "MIRROR",
+      "source": "superpowers@5.1.0",
+      "sync": "manual 鈥?Execution Mirror",
+      "authority": "NOT AUTHORITATIVE"
+    }
+  ],
+  "capabilities": [
+    {
+      "capability": "SymbolSearch",
+      "provider": "serena",
+      "authority": "CAPABILITY 鈥?driver only"
+    },
+    {
+      "capability": "CallGraph",
+      "provider": "codegraph",
+      "authority": "CAPABILITY 鈥?driver only"
+    },
+    {
+      "capability": "CodebaseMemory",
+      "provider": "codebase-memory",
+      "authority": "CAPABILITY 鈥?driver only"
+    },
+    {
+      "capability": "DotNetDebug",
+      "provider": "netcoredbg",
+      "authority": "CAPABILITY 鈥?driver only"
+    },
+    {
+      "capability": "BrowserE2E",
+      "provider": "playwright",
+      "authority": "CAPABILITY 鈥?driver only"
+    },
+    {
+      "capability": "ToolRouter",
+      "provider": "tool-search",
+      "authority": "CAPABILITY 鈥?driver only"
+    }
+  ],
+  "memoryProviders": [
+    {
+      "name": "EccMemory",
+      "provider": "ecc-memory",
+      "path": ".ecc/memory/project",
+      "authority": "MEMORY 鈥?provider only"
+    },
+    {
+      "name": "KnowledgeGraph",
+      "provider": "knowledge-graph",
+      "path": ".ai-memory/knowledge-graph.json",
+      "authority": "MEMORY 鈥?provider only"
+    },
+    {
+      "name": "UnifiedMemory",
+      "provider": "unified-memory",
+      "path": "C:/Users/admin/.claude/skills/unified-memory",
+      "authority": "MEMORY 鈥?provider only"
+    },
+    {
+      "name": "PendingIssues",
+      "provider": "pending-issues",
+      "path": ".claude/memory/pending-issues.md",
+      "authority": "MEMORY 鈥?provider only"
+    }
+  ],
+  "blocked": [
+    ".ai/quarantine/**",
+    ".ai/quarantine/backups/**",
+    ".claude/_archived/**",
+    ".superpowers/**",
+    "episodic-memory@disabled",
+    "double-shot-latte@disabled"
+  ],
+  "quarantined": [
+    ".ai/quarantine/**",
+    ".ai/quarantine/backups/**",
+    ".claude/_archived/**",
+    ".superpowers/**",
+    "episodic-memory@disabled",
+    "double-shot-latte@disabled"
+  ],
+  "applicableSkills": [
+    "architecture-gate",
+    "orchestration"
+  ],
+  "note": "Quarantine MUST NOT be part of authoritative or automatic Harness Resolution (not impossible to access, but never auto-loaded).",
+  "gateCheck": [
+    "Authoritative source unique: .claude/control-plane only",
+    "Advisory cannot become Governance (L6 cannot override L0-L5)",
+    "Quarantine never auto-loads (resolver excludes .ai/quarantine/**)",
+    "Mirrors are NOT authoritative 鈥?Control Plane wins",
+    "Capabilities are drivers only 鈥?AgentOS holds Policy"
+  ],
+  "baselineRef": "2026-08-31T20:51:35.402Z"
+}

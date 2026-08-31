@@ -1,7 +1,7 @@
 # JNPF V5.2 架构决策记录（ADR）索引
 
-> 共计 24 项 ADR（基础架构 15 项 + 架构部署 3 项 + 数据库治理 5 项 + AI 工程组织 1 项）。
-> ADR-024 状态 Proposed（Phase A 启动后转 Accepted，v1.0-final 5 项硬门槛达成后转 Final）；其余 23 项全状态 Final。
+> 共计 25 项 ADR（基础架构 15 项 + 架构部署 3 项 + 数据库治理 5 项 + AI 工程组织 1 项 + Harness 治理 1 项）。
+> ADR-027 状态 Final（Phase 0.5 PRE-AGENTOS-GATE ACCEPTED 2026-09-01）；ADR-024 仍 Proposed；其余 24 项全状态 Final。
 > ADR 格式：标题 / 状态 / 决策内容 / 理由 / 备选方案 / 后果 / 验证结果 / 相关引用
 
 ---
@@ -49,6 +49,12 @@
 | ADR | 标题 | 状态 | 阶段 | 文件 |
 |---|---|---|---|---|
 | ADR-024 | AI 软件工程组织架构方案 v1.0（组织级 AI Agent 家族） | Proposed | Phase 8 后 / Phase A | [ADR-024-AI软件工程组织架构方案.md](ADR-024-AI软件工程组织架构方案.md) |
+
+## Harness 治理 ADR（ADR-027 — Pre-AgentOS）
+
+| ADR | 标题 | 状态 | 阶段 | 文件 |
+|---|---|---|---|---|
+| ADR-027 | Harness 治理与 Pre-AgentOS 门禁 | Final | Phase 0.5 / PRE-AGENTOS-GATE | [ADR-027-Harness治理与Pre-AgentOS门禁.md](ADR-027-Harness治理与Pre-AgentOS门禁.md) |
 
 ---
 

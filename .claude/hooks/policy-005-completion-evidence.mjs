@@ -13,6 +13,30 @@ import { collectCompletionEvidence } from './evidence-collector.mjs';
 const ROOT = process.cwd();
 const base = path.join(ROOT, '.claude/control-plane/09-evidence');
 
+// --- BLOCK-001: Completion Scope — NOT_APPLICABLE outside completion ---
+function isCompletionStage() {
+  const envStage = (process.env.COMPLETION_STAGE || process.env.STAGE || '').toLowerCase();
+  // workflow-state stage (authoritative, not agent self-report via stdin)
+  let wfStage = '';
+  try {
+    const wf = JSON.parse(fs.readFileSync(path.join(ROOT, '.claude/workflow-state.json'), 'utf-8'));
+    wfStage = (wf.stage || wf.completionStage || '').toString().toLowerCase();
+  } catch {}
+  // completion-intent file marker (authoritative intent, outside agent mutation authority for 09-evidence)
+  let fileStage = '';
+  try {
+    const intent = JSON.parse(fs.readFileSync(path.join(base, 'completion-intent.json'), 'utf-8'));
+    fileStage = (intent.stage || intent.completion_stage || '').toString().toLowerCase();
+  } catch {}
+  const claim = process.env.COMPLETION_CLAIM === 'true';
+  return envStage === 'completion' || wfStage === 'completion' || fileStage === 'completion' || claim === true;
+}
+
+if (!isCompletionStage()) {
+  console.log('P005@1.0 NOT_APPLICABLE — outside completion stage (Discovery/Contract/Plan/Implementation/Build/Test/intermediate) — Final Gate ONLY');
+  process.exit(0);
+}
+
 // Gate Requires: 4 structured evidences with correct type/version, not "directory exists build.log"
 const required = [
   { file: 'build-evidence.json', evidenceType: 'REAL_BUILD', policy_id: 'P002', policy_version: '1.0', name: 'Build' },

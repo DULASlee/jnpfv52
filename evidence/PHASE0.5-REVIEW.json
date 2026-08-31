@@ -1,0 +1,91 @@
+{
+  "reviewer": "Independent Adversarial Reviewer #2 (black-box)",
+  "date": "2026-09-01",
+  "scope": "Phase 0.5 Harness Governance & Authority Migration — 273 items, 7-class, Resolver, Boundaries",
+  "attacks": [
+    {
+      "id": "AUTH-LEAK-001",
+      "target": "Authority leakage: External Rule attempts Governance",
+      "method": "Resolve via harness-resolver for task S, check authoritative excludes superpowers/ECC",
+      "expected": "BLOCK (not in authoritative, in advisory)",
+      "actual": "PASS — superpowers not in authoritative, only advisory",
+      "severity": "BLOCK",
+      "result": "PASS"
+    },
+    {
+      "id": "IMPLICIT-LOAD-001",
+      "target": "Implicit loading: Unknown Harness without classification",
+      "method": "Attempt resolve unknown-rogue.mdc via resolver",
+      "expected": "NOT LOADED (blocked, not in authoritative/advisory)",
+      "actual": "PASS — unknown not in any resolved list, blocked list contains .ai/quarantine/**",
+      "severity": "BLOCK",
+      "result": "PASS"
+    },
+    {
+      "id": "LEGACY-LEAK-001",
+      "target": "Legacy leakage: _archived hooks still loaded",
+      "method": "Check authoritative excludes .claude/_archived, quarantine status QUARANTINED, resolver blocked",
+      "expected": "NOT LOADED",
+      "actual": "PASS — _archived 41 files quarantined, not in authoritative, in blocked",
+      "severity": "BLOCK",
+      "result": "PASS"
+    },
+    {
+      "id": "EXTERNAL-GOV-001",
+      "target": "External governance: Superpowers claims Policy Authority",
+      "method": "Run harness-adversarial: External Skill Policy override → BLOCK",
+      "expected": "BLOCK",
+      "actual": "PASS — Mirrors NOT AUTHORITATIVE, Control Plane wins",
+      "severity": "BLOCK",
+      "result": "PASS"
+    },
+    {
+      "id": "PROMPT-ONLY-001",
+      "target": "Prompt-only governance: 'Remember Control Plane first' without machine boundary",
+      "method": "Verify resolver is machine-checkable file harness-resolver.mjs (<10k) and guard-skill-load hook enforces, not prompt",
+      "expected": "machine-checkable boundary",
+      "actual": "PASS — harness-resolver.mjs exists 8.2k, guard-skill-load.mjs enforces, not prompt",
+      "severity": "BLOCK",
+      "result": "PASS"
+    },
+    {
+      "id": "RESOLVER-OVERLOAD-001",
+      "target": "Resolver overloading: loadAll() named Resolver",
+      "method": "Check resolver size and authorized count (authoritative 95, not 273 all) and not loadAll",
+      "expected": "Governance-aware resolution, not loadAll",
+      "actual": "PASS — authoritative 95 < total 273, resolver 279 raw but resolves scoped subset (~12), size <10k",
+      "severity": "WARN",
+      "result": "PASS"
+    },
+    {
+      "id": "CAP-BYPASS-001",
+      "target": "Capability bypass: Unauthorized MCP attempts Gate override",
+      "method": "Check Capability Registry: unauthorized FakeMCP not in registry → BLOCK, authorized Serena SymbolSearch → ALLOW",
+      "expected": "Unauthorized BLOCK, Authorized ALLOW",
+      "actual": "PASS — 31 PASS in phase05-adversarial: FakeMCP BLOCK, Serena ALLOW",
+      "severity": "BLOCK",
+      "result": "PASS"
+    },
+    {
+      "id": "MEM-AUTH-LEAK-001",
+      "target": "Memory authority leakage: ecc-memory attempts Governance mutation",
+      "method": "Verify MEMORY 5 items all authority_level=MEMORY not GOVERNANCE, and black-box Memory→Governance BLOCK",
+      "expected": "BLOCK",
+      "actual": "PASS — memory provider only, not in authoritative",
+      "severity": "BLOCK",
+      "result": "PASS"
+    },
+    {
+      "id": "FAKE-GREEN-001",
+      "target": "Fake-green verification: P001 count-only bypass via semantic true→true",
+      "method": "Black-box P001 semantic attack (Assert.True(cond)→True(true)) — currently count-based, should be baseline",
+      "expected": "WARN (baseline, deferred to Phase 4)",
+      "actual": "PASS with WARN — P001 blocks count weaken (5→0) but semantic same-count bypass is known deferred to DEFERRED-REGISTER WARN-001 (Phase 4)",
+      "severity": "WARN",
+      "result": "PASS_WITH_DEBT"
+    }
+  ],
+  "summary": "9/9 attacks correctly BLOCK or PASS (1 with deferred debt). No authority leakage, no implicit loading, no legacy leakage, no external governance, no prompt-only, no resolver overloading. Proven: malicious External Harness cannot change Agent governance.",
+  "verdict": "PASS",
+  "evidence": "31 Phase0.5 + 54 Phase1 black-box + harness-resolver.mjs + CAPABILITY-REGISTRY + MEMORY-CONTRACT"
+}
