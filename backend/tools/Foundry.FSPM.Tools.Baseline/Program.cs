@@ -23,7 +23,13 @@ internal sealed class Program
         if (args.Length < 2)
         {
             Console.Error.WriteLine("Usage: fspm-baseline <solutionOrProjectPath> <outputJsonPath> [--baseline-only]");
+            Console.Error.WriteLine("   or: fspm-baseline acquire <manifestPath> <outputDirectory>");
             return 2;
+        }
+
+        if (string.Equals(args[0], "acquire", StringComparison.OrdinalIgnoreCase))
+        {
+            return await AcquireCommandAsync(args);
         }
 
         var inputPath = Path.GetFullPath(args[0]);
@@ -378,6 +384,29 @@ internal sealed class Program
         var value = prop.GetValue(p);
         if (value is System.Collections.ICollection col) return col.Count;
         return value is System.Collections.IEnumerable e ? e.Cast<object>().Count() : 0;
+    }
+
+    private static async Task<int> AcquireCommandAsync(string[] args)
+    {
+        if (args.Length < 3)
+        {
+            Console.Error.WriteLine("Usage: fspm-baseline acquire <manifestPath> <outputDirectory>");
+            return 2;
+        }
+
+        var result = await Foundry.FSPM.Compiler.Artifacts.ArtifactAcquirer.AcquireAsync(args[1], args[2]);
+
+        Console.Error.WriteLine($"[fspm-baseline:acquire] succeeded={result.Succeeded} stage={result.Stage}");
+        Console.Error.WriteLine($"[fspm-baseline:acquire] reason={result.Reason}");
+        Console.Error.WriteLine($"[fspm-baseline:acquire] sha256={result.ActualSha256Hex ?? "<none>"}");
+        Console.Error.WriteLine($"[fspm-baseline:acquire] before: artifactExists={result.ArtifactExistedBefore} baselineExists={result.BaselineExistedBefore}");
+        Console.Error.WriteLine($"[fspm-baseline:acquire] after: artifactExists={result.ArtifactExistsAfter} baselineExists={result.BaselineExistsAfter}");
+        if (result.MaterializedPath is not null)
+        {
+            Console.Error.WriteLine($"[fspm-baseline:acquire] materialized={result.MaterializedPath}");
+        }
+
+        return result.Succeeded ? 0 : 4;
     }
 
     private static string ResolveCompilerCommit()

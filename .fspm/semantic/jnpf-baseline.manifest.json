@@ -1,13 +1,23 @@
 {
+  "manifestVersion": "1.1",
   "schemaVersion": "1.0",
+  "artifactId": "jnpf-baseline",
+  "artifactName": "jnpf-baseline.jsonl.gz",
+  "artifactVersion": "1",
   "artifactFormat": "jsonl.gz",
+  "compression": "gzip",
+  "contentType": "application/gzip+jsonl",
   "artifactStorage": "local",
-  "artifactSizeBytes": 9773914,
-  "artifactSha256": "FD21B8B7ABE8C273E60384655883976010FB39F4E78535D6C58C59DC82BBB614",
-  "repositoryCommit": "edbfda33",
-  "compilerCommit": "d7f141c8",
+  "source": {
+    "kind": "file",
+    "path": "jnpf-baseline.jsonl.gz"
+  },
+  "artifactSizeBytes": 9774058,
+  "artifactSha256": "97F7B3AEA7C96F87FCED390B6016B06E56D6F0BA69729DAA45E5D7506B761F1A",
+  "repositoryCommit": "edbfda33fde46816f076262331fcbb93aacbdb80",
+  "compilerCommit": "c7327e1c66e11017a804690aad87dbea8af1fa4d",
   "baselineGenerator": "Foundry.FSPM.Tools.Baseline",
-  "generatedUtc": "2026-09-03T12:32:00Z",
+  "generatedUtc": "2026-09-03T14:15:35.8978044Z",
   "solution": {
     "path": "D:/JNPF-v52/backend/framework/JNPF.sln",
     "fileName": "JNPF.sln",
@@ -21,5 +31,5 @@
     "namespaces": 3141,
     "symbols": 591989
   },
-  "_comment": "This manifest is the ONLY git-committed baseline artifact. The actual baseline data lives in jnpf-baseline.jsonl.gz (content-addressed). To regenerate: dotnet run --project backend/tools/Foundry.FSPM.Tools.Baseline -- <solutionPath> <outputJsonPath>"
+  "_comment": "Manifest v1.1: content-addressable descriptor only. source.path is artifact-relative (portable, no machine absolute paths). Artifact bytes live in jnpf-baseline.jsonl.gz next to this manifest. Acquire: Resolve source -> fetch bytes -> SHA256 must equal artifactSha256 -> decompress -> materialize -> counts must equal counts. Regenerate: dotnet run --project backend/tools/Foundry.FSPM.Tools.Baseline -- <solutionPath> <outputJsonPath>"
 }
