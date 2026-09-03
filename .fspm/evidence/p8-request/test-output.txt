@@ -1,0 +1,101 @@
+鐢熸垚鍚姩鏃堕棿涓?2026/9/3 21:28:56銆?
+D:\JNPF-FSPM-Worktrees\mcp\backend\tests\Foundry.FSPM.Mcp.Tests\bin\Debug\net8.0\Foundry.FSPM.Mcp.Tests.dll (.NETCoreApp,Version=v8.0)鐨勬祴璇曡繍琛?
+鎬诲叡 1 涓祴璇曟枃浠朵笌鎸囧畾妯″紡鐩稿尮閰嶃€?
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.4.1+b9eacec401 (64-bit .NET 8.0.30)
+[xUnit.net 00:00:00.05]   Discovering: Foundry.FSPM.Mcp.Tests
+[xUnit.net 00:00:00.09]   Discovered:  Foundry.FSPM.Mcp.Tests
+[xUnit.net 00:00:00.09]   Starting:    Foundry.FSPM.Mcp.Tests
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.GatewayContractTests.ConstructionGateway_ReturnsAwaitingCompilerPlaceholder [3 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.UnderstandRequestTests.Record_PreservesWorkspaceProjectTarget [4 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.SemanticQueryParserTests.Parse_MalformedTargets_Fail(target: ".Login") [4 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: ".") [4 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.SolutionResolverTests.Resolve_MissingRoot_Fails [8 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.SemanticQueryParserTests.Parse_MalformedTargets_Fail(target: null) [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.SemanticQueryParserTests.Parse_MalformedTargets_Fail(target: "") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpWorkspaceResolverTests.Resolve_UnknownProject_Fails [8 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.UnderstandRequestTests.Record_AllowsNullProject [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: "9User") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.SemanticQueryParserTests.Parse_MalformedTargets_Fail(target: "User.") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: "A.B.C") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.SemanticQueryParserTests.Parse_MalformedTargets_Fail(target: "A.B.C") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: null) [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: "User.") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: "User Login") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: "_U1.$x") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.GatewayContractTests.SemanticGateway_ReturnsAwaitingCompilerPlaceholder [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: "") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: ".Login") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.SemanticQueryParserTests.Parse_MemberTargets_YieldMemberQuery(target: "User.Login") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_AcceptsEntityShapes(value: "User") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.SemanticQueryParserTests.Parse_MemberTargets_YieldMemberQuery(target: "User.Password") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.SemanticQueryParserTests.Parse_MemberTargets_YieldMemberQuery(target: "User.UserName") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_AcceptsEntityShapes(value: "_U1") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.SemanticQueryParserTests.Parse_TypeTarget_YieldsTypeQuery [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_AcceptsEntityShapes(value: "User.UserName") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_AcceptsEntityShapes(value: "User.Login") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.SolutionResolverTests.Resolve_NoSolution_Fails [1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.GatewayContractTests.VerificationGateway_ReturnsAwaitingCompilerPlaceholder [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateRequired_AcceptsNonEmpty [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.ProjectResolverTests.Resolve_MissingTfm_ResolvesWithNullTfm [11 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateRequired_RejectsNullEmptyWhitespace(value: null) [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateRequired_RejectsNullEmptyWhitespace(value: "   ") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateRequired_RejectsNullEmptyWhitespace(value: "") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpWorkspaceResolverTests.Resolve_ProjectByBareName_Succeeds [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.SolutionResolverTests.Resolve_SingleSolution_Succeeds [1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.ProjectResolverTests.Resolve_NullNameSingleProject_Resolves [1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpWorkspaceResolverTests.Resolve_MissingRoot_Fails(root: "   ") [1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpWorkspaceResolverTests.Resolve_MissingRoot_Fails(root: "") [1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpWorkspaceResolverTests.Resolve_MissingRoot_Fails(root: null) [1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpWorkspaceResolverTests.Resolve_SolutionByBareName_Succeeds [3 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpWorkspaceResolverTests.Resolve_NonExistentRoot_Fails [1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.SolutionResolverTests.Resolve_MultipleSolutions_FailsAmbiguous [12 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.ProjectResolverTests.Resolve_NullNameMultipleProjects_FailsAmbiguous [12 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpWorkspaceResolverTests.Resolve_UnknownSolution_Fails [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.ProjectResolverTests.Resolve_UnknownName_Fails [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpWorkspaceResolverTests.Resolve_ExistingRootWithoutHints_Succeeds [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.ProjectResolverTests.Resolve_ByName_ReadsTargetFramework [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.ProjectResolverTests.Resolve_MalformedXml_Fails [4 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionContextTests.Create_ReturnsUniqueExecutionIds [61 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionContextTests.Create_PreservesToolNameWorkspaceAndCorrelation [1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionContextTests.Create_RejectsEmptyToolName [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionContextTests.Create_GeneratesCorrelationIdWhenMissing [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionContextTests.Create_StartedAtIsRecentUtc [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionPipelineTests.Execute_ValidationFailure_ShortCircuitsWithInvalidRequest [76 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExceptionMapperTests.Map_KnownAndUnknownExceptions_YieldFailedWithIsErrorTrue(exceptionType: typeof(System.TimeoutException)) [76 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExceptionMapperTests.Map_KnownAndUnknownExceptions_YieldFailedWithIsErrorTrue(exceptionType: typeof(System.IO.DirectoryNotFoundException)) [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExceptionMapperTests.Map_KnownAndUnknownExceptions_YieldFailedWithIsErrorTrue(exceptionType: typeof(System.UnauthorizedAccessException)) [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExceptionMapperTests.Map_KnownAndUnknownExceptions_YieldFailedWithIsErrorTrue(exceptionType: typeof(System.IO.IOException)) [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExceptionMapperTests.Map_KnownAndUnknownExceptions_YieldFailedWithIsErrorTrue(exceptionType: typeof(System.InvalidOperationException)) [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExceptionMapperTests.Map_KnownAndUnknownExceptions_YieldFailedWithIsErrorTrue(exceptionType: typeof(System.OperationCanceledException)) [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExceptionMapperTests.Map_NeverProducesSuccess [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionPipelineTests.Execute_UnresolvableWorkspace_StillReachesGateway [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExceptionMapperTests.Map_ArgumentException_YieldsInvalidRequest [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpOperationResultTests.Success_WrapsPayloadWithExplicitIsErrorFalse [79 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionPipelineTests.Execute_GatewayThrows_MapsToFailed [1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpOperationResultTests.InvalidRequest_SetsIsErrorTrueAndShape [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpOperationResultTests.StatusLiterals_AreDistinct [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionPipelineTests.Execute_SuccessFlow_WrapsPayloadAndPassesContext [1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.McpServerStarts [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.Tool_Understand_IsAvailable [31 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.Tool_Verify_IsAvailable [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.ExactlyThreeToolsAreRegistered [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Discovery.McpDiscoveryTests.Discovery_EachToolHasDescription [13 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.Tool_Construct_IsAvailable [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Discovery.McpDiscoveryTests.Discovery_ReturnsExactlyThreeFrozenTools [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.AwaitingContractTests.Construct_AwaitingUpstreamContract [82 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Discovery.McpServerLifecycleTests.Start_Discover_Invoke_StaysAlive [75 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.AwaitingContractTests.Understand_AwaitingUpstreamContract [5 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.AwaitingContractTests.Verify_AwaitingUpstreamContract [7 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.McpStdoutIsProtocolClean [513 ms]
+[xUnit.net 00:00:06.22]   Finished:    Foundry.FSPM.Mcp.Tests
+
+娴嬭瘯杩愯鎴愬姛銆?
+娴嬭瘯鎬绘暟: 82
+     閫氳繃鏁? 82
+鎬绘椂闂? 6.5659 绉?
+
+宸叉垚鍔熺敓鎴愩€?
+    0 涓鍛?
+    0 涓敊璇?
+
+宸茬敤鏃堕棿 00:00:07.04
