@@ -1,0 +1,7 @@
+Gate: full-regression (quarantine-clean rerun)
+Command: dotnet test backend/tests/Foundry.FSPM.Compiler.Tests/Foundry.FSPM.Compiler.Tests.csproj
+Started-UTC: 2026-09-03T21:27:42.1878596Z
+ExitCode: 0
+Result: 304 passed, 0 failed
+Commit: 371ae110dffdf1574efa40f7bf5a41fdbfb647c4
+Note: rerun on pure-HEAD sources after quarantining concurrent foreign edits (see final report); identical result to committed evidence.
