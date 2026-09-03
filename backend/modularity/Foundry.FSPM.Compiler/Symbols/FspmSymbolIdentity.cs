@@ -71,6 +71,20 @@ public static class FspmSymbolIdentity
         return FromSymbol(symbol);
     }
 
+    /// <summary>Creates the identity of a real field symbol (same DocId+assembly canonical form).</summary>
+    public static FspmSymbolId Create(IFieldSymbol symbol)
+    {
+        ArgumentNullException.ThrowIfNull(symbol);
+        return FromSymbol(symbol);
+    }
+
+    /// <summary>Creates the identity of a real event symbol (same DocId+assembly canonical form).</summary>
+    public static FspmSymbolId Create(IEventSymbol symbol)
+    {
+        ArgumentNullException.ThrowIfNull(symbol);
+        return FromSymbol(symbol);
+    }
+
     /// <summary>
     /// Derives the FSPM kind from an identity's DocumentationCommentId prefix
     /// (<c>T:</c> → Entity, <c>P:</c> → Property, <c>M:</c> → Operation).

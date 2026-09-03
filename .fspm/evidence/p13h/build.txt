@@ -1,5 +1,13 @@
-Build: Foundry.FSPM.Compiler -> bin/Debug/net8.0/Foundry.FSPM.Compiler.dll
-Result: 0 warnings, 0 errors (library target, --no-dependencies).
-Note: solution-wide builds surface pre-existing analyzer warnings
-(RS1033/RS2008/CA1304 in JNPF.Analyzers, CA1829/CA1305/xUnit2013 in older
-test files); none are errors and none originate from P13-H files.
+CMD: dotnet build backend/modularity/Foundry.FSPM.Compiler/Foundry.FSPM.Compiler.csproj --no-dependencies
+UTC: 2026-09-03T20:46:01.6563208Z
+EXIT: 0
+---
+  姝ｅ湪纭畾瑕佽繕鍘熺殑椤圭洰鈥?
+  鎵€鏈夐」鐩潎鏄渶鏂扮殑锛屾棤娉曡繕鍘熴€?
+  Foundry.FSPM.Compiler -> D:\JNPF-FSPM-Worktrees\compiler\backend\modularity\Foundry.FSPM.Compiler\bin\Debug\net8.0\Foundry.FSPM.Compiler.dll
+
+宸叉垚鍔熺敓鎴愩€?
+    0 涓鍛?
+    0 涓敊璇?
+
+宸茬敤鏃堕棿 00:00:01.53

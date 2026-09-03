@@ -16,6 +16,8 @@ public class ShapeHolder
     public System.Collections.Generic.List<ShapeUser?> MaybeUsers { get; } = new();
 
     public int[,] Matrix { get; } = new int[2, 2];
+
+    public int? MaybeCount { get; set; }
 }
 
 public class ShapeRepository<T>

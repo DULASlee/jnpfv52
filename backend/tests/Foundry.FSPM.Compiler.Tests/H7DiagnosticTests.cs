@@ -65,6 +65,42 @@ public sealed class H7DiagnosticTests
     }
 
     [Fact]
+    public void Degraded_EndToEnd_ResolvedFact_Carries_DegradedQuality()
+    {
+        const string broken = """
+            namespace Evolve;
+            public class Widget
+            {
+                public string Label { get; set; } = string.Empty;
+                public int Broken( { }
+            }
+            """;
+
+        var compilation = CSharpCompilation.Create(
+            "Degraded",
+            syntaxTrees: new[] { CSharpSyntaxTree.ParseText(broken) },
+            references: new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) },
+            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var quality = SemanticQualityAssessor.AssessQuality(compilation);
+        var widget = compilation.GetTypeByMetadataName("Evolve.Widget")
+            ?? throw new InvalidOperationException("Fixture broken.");
+        var label = widget.GetMembers("Label").OfType<IPropertySymbol>().First();
+
+        var anchor = new SemanticSourceAnchor(
+            SemanticIdentityMint.MintLogicalIdentity(label),
+            "<adhoc>",
+            DocumentationCommentId.CreateDeclarationId(label) ?? "<none>",
+            FspmSourceLocation.From(label.Locations.First()));
+        var compilationIdentity = SemanticIdentityMint.MintCompilationIdentity(
+            compilation, "Degraded", new[] { "Widget.cs" }, "degraded-1");
+        var fact = NativeSemanticFactFactory.Create(label, compilationIdentity, anchor, quality: quality);
+
+        Assert.Equal(FspmResolutionStatus.Resolved, fact.Status);
+        Assert.Equal(SemanticQuality.Degraded, fact.Quality);
+    }
+
+    [Fact]
     public void Clean_Compilation_Assesses_Perfect()
     {
         const string clean = """

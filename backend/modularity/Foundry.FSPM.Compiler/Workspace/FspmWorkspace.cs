@@ -7,6 +7,10 @@ namespace Foundry.FSPM.Compiler.WorkspaceNS;
 /// Holds the real MSBuildWorkspace + loaded Projects.
 /// Typed as <see cref="Workspace"/> base to avoid compile-time reference
 /// to Microsoft.CodeAnalysis.MSBuild before MSBuildLocator is registered.
+/// NOTE (P13-H review): resolving through <c>Project.Documents</c> after
+/// the workspace is disposed throws. Snapshot-bound consumers
+/// (P13-H8 contexts, P14) must resolve inside the workspace lifetime or
+/// against an eagerly-captured snapshot.
 /// </summary>
 public sealed class FspmWorkspace : IDisposable
 {

@@ -22,7 +22,9 @@ namespace Foundry.FSPM.Compiler.Semantic;
 /// </summary>
 public sealed class CSharpResolver
 {
-    private static readonly LanguageVersion MaxLanguageVersion = LanguageVersion.Latest;
+    // Pinned (not Latest): host-parse behavior must not drift with SDK
+    // upgrades. Roslyn 4.8 supports up to C# 12.
+    private static readonly LanguageVersion HostLanguageVersion = LanguageVersion.CSharp12;
 
     public CSharpResolver(FspmCompilationSnapshot snapshot)
     {
@@ -247,7 +249,7 @@ public sealed class CSharpResolver
         {
             tree = CSharpSyntaxTree.ParseText(
                 text: host,
-                options: new CSharpParseOptions(MaxLanguageVersion));
+                options: new CSharpParseOptions(HostLanguageVersion));
         }
         catch (Exception ex)
         {
@@ -277,24 +279,18 @@ public sealed class CSharpResolver
                 FspmSourceLocation.From(parseDiagnostics[0].Location));
         }
 
-        // Build a per-call compilation that uses ONLY the host
-        // expression. The snapshot's SemanticGolden.dll is not
-        // present in Compilation.References (the snapshot's primary
-        // assembly is its own source — a "project reference" cycle).
-        // We therefore emit the snapshot's primary compilation to an
-        // in-memory assembly and reference it, so `using
-        // SemanticGolden.Domain;` plus `User.PhoneNumber` resolves.
-        using var snapshotMs = new MemoryStream();
-        var emitResult = Compilation.Emit(snapshotMs);
-        if (!emitResult.Success)
+        // The snapshot assembly is emitted ONCE per Compilation and
+        // cached (ConditionalWeakTable: lifetime follows the compilation,
+        // no unbounded growth). A per-call full emit would turn every
+        // expression query into a seconds-scale operation on real-size
+        // snapshots.
+        var snapshotReference = SnapshotReferenceCache.GetOrEmit(Compilation);
+        if (snapshotReference is null)
         {
             return FspmResolutionResult.InvalidResult(
-                "Failed to materialize snapshot for expression resolution: " +
-                string.Join("; ", emitResult.Diagnostics.Select(d => d.GetMessage())),
+                "Failed to materialize snapshot for expression resolution.",
                 null);
         }
-
-        var snapshotReference = MetadataReference.CreateFromImage(snapshotMs.ToArray());
 
         // mscorlib + System.Runtime: always present in the snapshot
         // references (transitive CoreLib/Standard), but we union with
@@ -332,14 +328,25 @@ public sealed class CSharpResolver
                 location);
         }
 
+        if (candidates.Length == 1
+            && TryResolveMemberReference(model, expr, candidates[0], out var memberReason))
+        {
+            // `Type.Member` where Member is an instance member is not a
+            // valid C# *value* expression, so Roslyn leaves Symbol null —
+            // but the single candidate IS the referenced member when its
+            // receiver binds to the candidate's own containing type.
+            // Decided on Roslyn syntax+semantic facts only (no Split(".")).
+            return ResolvedRecord(candidates[0], memberReason, location);
+        }
+
         if (candidates.Length == 1)
         {
-            // Single candidate with null Symbol: the only candidate is
-            // reachable but Roslyn could not commit (extension method
-            // without an apply site, ambiguous overload, etc.). From the
-            // caller's perspective the symbol is uniquely identified,
-            // so we report Resolved against the candidate.
-            return ResolvedRecord(candidates[0], "Expression single candidate", location);
+            // Single candidate that is NOT a verifiable member reference:
+            // binding failed and we refuse to promote it to Resolved.
+            return FspmResolutionResult.AmbiguousResult(
+                candidates.Select(BuildRecord).ToArray(),
+                $"Expression '{expressionText}' failed to bind; single candidate kept for audit.",
+                location);
         }
 
         return FspmResolutionResult.AmbiguousResult(
@@ -348,18 +355,49 @@ public sealed class CSharpResolver
             location);
     }
 
-    // ===== Helpers =====
-
-    private FspmResolutionResult ResolvedRecord(ISymbol symbol, string reason, FspmSourceLocation? at = null)
+    // Verifies `Type.Member` member references using Roslyn facts only:
+    // the receiver sub-expression must bind to the candidate's own
+    // containing type. Returns false for anything else (method groups
+    // with 2+ overloads never reach here with Length == 1).
+    private static bool TryResolveMemberReference(
+        SemanticModel model,
+        ExpressionSyntax expr,
+        ISymbol candidate,
+        out string reason)
     {
-        var record = BuildRecord(symbol);
-        return FspmResolutionResult.ResolvedResult(record, at ?? record.Location);
+        reason = string.Empty;
+
+        if (expr is not MemberAccessExpressionSyntax access
+            || candidate.ContainingType is null)
+        {
+            return false;
+        }
+
+        var receiver = model.GetSymbolInfo(access.Expression).Symbol;
+        if (receiver is INamedTypeSymbol receiverType
+            && SymbolEqualityComparer.Default.Equals(receiverType, candidate.ContainingType)
+            && string.Equals(access.Name.Identifier.Text, candidate.Name, StringComparison.Ordinal))
+        {
+            reason = $"MemberReference (non-value context): '{candidate.Name}' " +
+                $"referenced on containing type '{receiverType.ToDisplayString()}'.";
+            return true;
+        }
+
+        return false;
     }
 
-    private FspmSourceLocation PrimaryLocation(ISymbol symbol) =>
+    // ===== Helpers =====
+
+    private static FspmResolutionResult ResolvedRecord(ISymbol symbol, string reason, FspmSourceLocation? at = null)
+    {
+        var record = BuildRecord(symbol);
+        return FspmResolutionResult.ResolvedResult(record, at ?? record.Location, reason);
+    }
+
+    private static FspmSourceLocation PrimaryLocation(ISymbol symbol) =>
         FspmSourceLocation.From(symbol.Locations.FirstOrDefault() ?? Location.None);
 
-    private FspmSymbolRecord BuildRecord(ISymbol symbol)
+    private static FspmSymbolRecord BuildRecord(ISymbol symbol)
     {
         // Route to the type-specific factory overloads (Phase 7 contract).
         var id = symbol switch

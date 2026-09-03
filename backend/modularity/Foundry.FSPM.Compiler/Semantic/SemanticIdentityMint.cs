@@ -69,12 +69,17 @@ public static class SemanticIdentityMint
         {
             ns = type.ContainingNamespace.ToDisplayString();
             containingType = null;
-            memberName = type.MetadataName;
+            // Name, not MetadataName: backtick arity suffixes (`1) are a
+            // binding detail, not logical identity. Overloads of one
+            // operation intentionally share the logical node; the
+            // SemanticFingerprint distinguishes them.
+            memberName = type.Name;
         }
         else
         {
             ns = symbol.ContainingNamespace.ToDisplayString();
-            memberName = symbol.MetadataName;
+            memberName = symbol.Name;
+            containingType = symbol.ContainingType?.MetadataName;
         }
 
         return new LogicalSemanticIdentity(
@@ -97,13 +102,26 @@ public static class SemanticIdentityMint
         {
             case IMethodSymbol method:
                 builder.Append(method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append('|');
+                builder.Append(method.ReturnType.NullableAnnotation).Append('|');
                 foreach (var parameter in method.Parameters)
                 {
                     builder.Append(parameter.RefKind).Append(':');
-                    builder.Append(parameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(';');
+                    builder.Append(parameter.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append(':');
+                    builder.Append(parameter.NullableAnnotation).Append(';');
                 }
 
-                builder.Append("arity=").Append(method.Arity);
+                builder.Append("arity=").Append(method.Arity).Append('|');
+                foreach (var typeParameter in method.TypeParameters)
+                {
+                    builder.Append("typeparam:").Append(typeParameter.Name).Append(':');
+                    foreach (var constraint in GenericConstraintExtractor.Extract(typeParameter).Constraints)
+                    {
+                        builder.Append(constraint).Append(',');
+                    }
+
+                    builder.Append(';');
+                }
+
                 break;
             case IPropertySymbol property:
                 builder.Append(property.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).Append('|');

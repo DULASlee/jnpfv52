@@ -104,6 +104,20 @@ public sealed class H2TypeShapeTests
     }
 
     [Fact]
+    public async Task NullableValueType_MapsToNullableKind()
+    {
+        var compiled = await GoldenSemanticCompilation.CompileGoldenAsync();
+        using (compiled.Workspace)
+        {
+            var holder = GoldenIdentity.RequireType(compiled.Snapshot.Compilation, "SemanticGolden.Shapes.ShapeHolder");
+            var prop = GoldenIdentity.RequireProperty(holder, "MaybeCount");
+            var shape = TypeShapeExtractor.ExtractTypeShape(prop.Type);
+
+            Assert.Equal(NativeTypeShapeKind.Nullable, shape.Kind);
+        }
+    }
+
+    [Fact]
     public async Task ArrayShape_ReportsRank()
     {
         var compiled = await GoldenSemanticCompilation.CompileGoldenAsync();

@@ -3,7 +3,7 @@
   "name": "Native Semantic Foundation Hardening (H0-H8) + Public Contract",
   "frozenModel": "CompilationIdentity (which build) / NativeBindingIdentity (currently bound) / LogicalSemanticIdentity (logically who) / SemanticFingerprint (currently what)",
   "publicContract": "NativeSemanticFact (zero Roslyn runtime objects; isolation-proven)",
-  "internalTransport": "NativeBinding / ISymbol / SemanticModel stay inside P13 (FspmSymbolRecord, FspmCompilationSnapshot)",
+  "internalTransport": "FspmSymbolRecord.Symbol (ISymbol) and FspmCompilationSnapshot (Compilation/Project/Document) remain public in-assembly transport used by resolver and tests. The no-leak guarantee is scoped to Native* Fact types and proven by FactIsolationTests; P14 must consume Facts only.",
   "correctionsApplied": [
     "LogicalSemanticIdentity is NOT DocId+assembly: layered identity + SemanticFingerprint detect string-to-int change (Logical SAME, Fingerprint CHANGED)",
     "StableAnchor is NOT a permanent Roslyn syntax id: Logical + DocumentIdentity + DeclarationAnchor + SnapshotLocation",
@@ -41,5 +41,25 @@
     "GenericInferenceEngine": "0",
     "PublicRoslynObjectInFact": "0 (isolation-proven)"
   },
-  "testTotals": { "prior": 226, "new": 50, "total": 276, "failures": 0 }
+  "testTotals": { "prior": 226, "new": 55, "total": 281, "failures": 0 },
+  "reviewFixes": [
+    "Single-candidate-with-null-Symbol demoted from Resolved to Ambiguous; Type.Member member-references verified via receiver-binds-to-containing-type (Roslyn syntax+semantic, no Split) and recorded in Reason",
+    "Snapshot emit cached per Compilation (ConditionalWeakTable); method-group User.Create honestly Ambiguous with 2 candidates",
+    "Factory supports Field/Event identity; Namespace/Parameter still throw (documented)",
+    "Fingerprint now hashes param/return nullability plus generic constraints",
+    "Logical naming uses Name/MetadataName (no backticks); overloads share logical node, fingerprints differ",
+    "System.Nullable<T> maps to NativeTypeShapeKind.Nullable (no dead enum member)",
+    "FspmWorkspace doc corrected: post-dispose document enumeration throws",
+    "Host parse language pinned to C# 12 (no Latest drift)",
+    "Tuple null element names coalesced to empty string",
+    "ResolvedResult carries caller reason (was hardcoded OK)",
+    "Isolation test 2 runs the real emit-plus-load path via shared helper",
+    "Degraded end-to-end wired: assessor plus factory explicit quality gives (Resolved, Degraded)"
+  ],
+  "deferredToP14Backlog": [
+    "Full async API surface (sync-over-async GetSyntaxTreeAsync remains; no SynchronizationContext in current hosts)",
+    "ParametersMatch via SymbolEqualityComparer instead of display strings",
+    "Cache key space beyond ResolveType",
+    "TargetFramework/Configuration exposure (absent from Roslyn Project model)"
+  ]
 }

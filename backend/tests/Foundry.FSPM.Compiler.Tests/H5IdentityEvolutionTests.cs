@@ -109,6 +109,39 @@ public sealed class H5IdentityEvolutionTests
     }
 
     [Fact]
+    public void LogicalIdentity_HasNoBacktick_ForGenericMethod()
+    {
+        var compiled = GoldenSemanticCompilation.CompileGoldenAsync().GetAwaiter().GetResult();
+        using (compiled.Workspace)
+        {
+            var service = GoldenIdentity.RequireType(
+                compiled.Snapshot.Compilation, "SemanticGolden.Operations.OpService");
+            var echo = service.GetMembers("Echo").OfType<IMethodSymbol>()
+                .First(m => m.MethodKind == MethodKind.Ordinary);
+            var logical = SemanticIdentityMint.MintLogicalIdentity(echo);
+
+            Assert.Equal("Echo", logical.MemberName);
+            Assert.DoesNotContain("`", logical.MemberName);
+            // Overloads of one operation share the logical node;
+            // the fingerprint distinguishes them.
+            var user = GoldenIdentity.RequireType(
+                compiled.Snapshot.Compilation, "SemanticGolden.Domain.User");
+            var createString = user.GetMembers("Create").OfType<IMethodSymbol>()
+                .First(m => m.Parameters.Length == 1
+                    && m.Parameters[0].Type.ToDisplayString() == "string");
+            var createInt = user.GetMembers("Create").OfType<IMethodSymbol>()
+                .First(m => m.Parameters.Length == 1
+                    && m.Parameters[0].Type.ToDisplayString() == "int");
+            Assert.Equal(
+                SemanticIdentityMint.MintLogicalIdentity(createString),
+                SemanticIdentityMint.MintLogicalIdentity(createInt));
+            Assert.NotEqual(
+                SemanticIdentityMint.MintFingerprint(createString),
+                SemanticIdentityMint.MintFingerprint(createInt));
+        }
+    }
+
+    [Fact]
     public void CompilationIdentity_Changes_WhenDocumentsChange()
     {
         var compiled = GoldenSemanticCompilation.CompileGoldenAsync().GetAwaiter().GetResult();
@@ -138,7 +171,7 @@ public sealed class H5IdentityEvolutionTests
             var logical = SemanticIdentityMint.MintLogicalIdentity(phone);
             Assert.Equal("SemanticGolden", logical.AssemblyName);
             Assert.Equal("SemanticGolden.Domain", logical.Namespace);
-            Assert.Equal("SemanticGolden.Domain.User", logical.ContainingTypeName);
+            Assert.Equal("User", logical.ContainingTypeName);
             Assert.Equal("PhoneNumber", logical.MemberName);
 
             var finger = SemanticIdentityMint.MintFingerprint(phone);

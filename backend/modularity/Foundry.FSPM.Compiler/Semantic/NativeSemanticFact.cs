@@ -51,11 +51,13 @@ public static class NativeSemanticFactFactory
         var classification = SymbolClassifier.Classify(symbol);
         var assemblySymbol = symbol.ContainingAssembly;
 
-        NativeTypeShape? shape = symbol is ITypeSymbol typeSymbol
-            ? TypeShapeExtractor.ExtractTypeShape(typeSymbol)
-            : symbol is IPropertySymbol property
-                ? TypeShapeExtractor.ExtractTypeShape(property.Type)
-                : null;
+        NativeTypeShape? shape = symbol switch
+        {
+            ITypeSymbol typeSymbol => TypeShapeExtractor.ExtractTypeShape(typeSymbol),
+            IPropertySymbol property => TypeShapeExtractor.ExtractTypeShape(property.Type),
+            IFieldSymbol field => TypeShapeExtractor.ExtractTypeShape(field.Type),
+            _ => null,
+        };
 
         NativeOperationIdentity? operation = symbol is IMethodSymbol method
             ? MethodSignatureExtractor.ExtractOperationIdentity(method)
@@ -83,13 +85,20 @@ public static class NativeSemanticFactFactory
                     ? "SourceProject"
                     : "ReferencedAssembly");
 
+        // Type/Property/Field/Event/Method have first-class identity
+        // factories. Anything else (Namespace/Parameter/…) is NOT a
+        // semantic node P14 can consume → the caller reports
+        // FspmResolutionStatus.Unsupported; only truly unknown kinds
+        // throw here.
         FspmSymbolId identity = symbol switch
         {
             INamedTypeSymbol t => FspmSymbolIdentity.Create(t),
             IPropertySymbol p => FspmSymbolIdentity.Create(p),
+            IFieldSymbol f => FspmSymbolIdentity.Create(f),
+            IEventSymbol e => FspmSymbolIdentity.Create(e),
             IMethodSymbol m => FspmSymbolIdentity.Create(m),
             _ => throw new InvalidOperationException(
-                $"NativeSemanticFact supports Type/Property/Method symbols, got {symbol.Kind}."),
+                $"NativeSemanticFact supports Type/Property/Field/Event/Method symbols, got {symbol.Kind}."),
         };
 
         return new NativeSemanticFact(

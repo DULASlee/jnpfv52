@@ -24,7 +24,7 @@ public sealed class CompilationSnapshotContext : IDisposable
     private readonly CSharpResolver _resolver;
     private int _hits;
     private int _misses;
-    private bool _disposed;
+    private volatile bool _disposed;
 
     private CompilationSnapshotContext(FspmCompilationSnapshot snapshot, string snapshotId)
     {

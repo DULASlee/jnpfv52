@@ -72,10 +72,11 @@ public sealed record FspmResolutionResult(
         IReadOnlyList<FspmSymbolRecord> candidates, string reason, FspmSourceLocation? at) =>
         new(FspmResolutionStatus.Ambiguous, candidates, reason, at);
 
-    public static FspmResolutionResult ResolvedResult(FspmSymbolRecord record, FspmSourceLocation? at) =>
+    public static FspmResolutionResult ResolvedResult(
+        FspmSymbolRecord record, FspmSourceLocation? at, string reason = "OK") =>
         new(
             FspmResolutionStatus.Resolved,
             new FspmSymbolRecord[] { record },
-            "OK",
+            reason,
             at);
 }

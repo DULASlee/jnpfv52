@@ -23,7 +23,7 @@ public static class TypeShapeExtractor
             : Array.Empty<string>();
 
         var tupleNames = named is not null && named.IsTupleType
-            ? named.TupleElements.Select(e => e.Name).ToArray()
+            ? named.TupleElements.Select(e => e.Name ?? string.Empty).ToArray()
             : Array.Empty<string>();
 
         var array = type as IArrayTypeSymbol;
@@ -48,6 +48,8 @@ public static class TypeShapeExtractor
         IArrayTypeSymbol => NativeTypeShapeKind.Array,
         ITypeParameterSymbol => NativeTypeShapeKind.TypeParameter,
         INamedTypeSymbol named when named.IsTupleType => NativeTypeShapeKind.Tuple,
+        INamedTypeSymbol named when named.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T
+            => NativeTypeShapeKind.Nullable,
         INamedTypeSymbol named when named.IsGenericType && !SymbolEqualityComparer.Default.Equals(named.ConstructedFrom, named)
             => NativeTypeShapeKind.ConstructedGeneric,
         INamedTypeSymbol => NativeTypeShapeKind.NamedType,

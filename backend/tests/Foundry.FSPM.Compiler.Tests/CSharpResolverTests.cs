@@ -131,6 +131,35 @@ public sealed class CSharpResolverTests
     }
 
     [Fact]
+    public async Task ResolveExpression_MethodGroup_WithOverloads_ReturnsAmbiguous()
+    {
+        // `User.Create` without arguments is a method group over 2
+        // overloads: Symbol stays null AND 2 candidates exist → honest
+        // Ambiguous (never First-picked).
+        var compiled = await GoldenSemanticCompilation.CompileGoldenAsync();
+        using (compiled.Workspace)
+        {
+            var result = compiled.Resolver.ResolveExpression("User.Create");
+            Assert.Equal(FspmResolutionStatus.Ambiguous, result.Status);
+            Assert.Equal(2, result.Candidates.Count);
+        }
+    }
+
+    [Fact]
+    public async Task ResolveExpression_MemberReference_Records_NonValue_Reason()
+    {
+        var compiled = await GoldenSemanticCompilation.CompileGoldenAsync();
+        using (compiled.Workspace)
+        {
+            // Direct Roslyn proof that the verdict rests on binding
+            // failure + verified member reference (not silent promotion).
+            var result = compiled.Resolver.ResolveExpression("User.PhoneNumber");
+            Assert.Equal(FspmResolutionStatus.Resolved, result.Status);
+            Assert.Contains("MemberReference", result.Reason);
+        }
+    }
+
+    [Fact]
     public async Task ResolveExpression_UnknownMember_ReturnsNotFound_NotGuessed()
     {
         var compiled = await GoldenSemanticCompilation.CompileGoldenAsync();

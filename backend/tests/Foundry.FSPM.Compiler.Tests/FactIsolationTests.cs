@@ -66,34 +66,7 @@ public sealed class FactIsolationTests
                 FspmSourceLocation.From(phone.Locations.First()));
 
             var fact = NativeSemanticFactFactory.Create(phone, compilationIdentity, anchor);
-
-            // Compile the client with ZERO Roslyn assemblies referenced.
-            var fspmAssembly = typeof(NativeSemanticFact).Assembly.Location;
-            var runtimeDir = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
-            var clientCompilation = CSharpCompilation.Create(
-                "FactClient",
-                syntaxTrees: new[] { CSharpSyntaxTree.ParseText(ClientSource) },
-                references: new MetadataReference[]
-                {
-                    MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                    MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
-                    MetadataReference.CreateFromFile(fspmAssembly),
-                    MetadataReference.CreateFromFile(System.IO.Path.Combine(runtimeDir, "System.Runtime.dll")),
-                },
-                options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-
-            using var ms = new MemoryStream();
-            EmitResult emit = clientCompilation.Emit(ms);
-            Assert.True(emit.Success,
-                "Isolated client must compile without Roslyn references: " +
-                string.Join("; ", emit.Diagnostics.Select(d => d.GetMessage())));
-
-            var clientAssembly = Assembly.Load(ms.ToArray());
-            var clientType = clientAssembly.GetType("FactClient")
-                ?? throw new InvalidOperationException("Fixture broken: FactClient type missing.");
-            var describe = clientType.GetMethod("Describe")
-                ?? throw new InvalidOperationException("Fixture broken: Describe method missing.");
-            var summary = (string)describe.Invoke(null, new object[] { fact })!;
+            var summary = DescribeThroughIsolatedClient(fact);
 
             Assert.Contains("Property", summary);
             Assert.Contains("SemanticGolden|P:SemanticGolden.Domain.User.PhoneNumber", summary);
@@ -127,10 +100,45 @@ public sealed class FactIsolationTests
                 FspmSourceLocation.From(create.Locations.First()));
 
             var fact = NativeSemanticFactFactory.Create(create, compilationIdentity, anchor);
+            var summary = DescribeThroughIsolatedClient(fact);
 
-            Assert.Equal("Create", fact.Operation!.Name);
-            Assert.Equal("string", fact.Operation.Parameters[0].ParameterType);
-            Assert.Equal(NativeSymbolKind.Method, fact.Kind);
+            Assert.Contains("Method", summary);
+            Assert.Contains("Create", summary);
+            Assert.Contains("string", summary);
         }
+    }
+
+    // Shared isolation path: compile FactClient with ZERO Roslyn
+    // assemblies referenced, load it, and run Describe against a real
+    // Fact. Compile-time isolation (no Roslyn refs at build) is proven
+    // by emit success; runtime execution happens in this process.
+    private static string DescribeThroughIsolatedClient(NativeSemanticFact fact)
+    {
+        var fspmAssembly = typeof(NativeSemanticFact).Assembly.Location;
+        var runtimeDir = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
+        var clientCompilation = CSharpCompilation.Create(
+            "FactClient",
+            syntaxTrees: new[] { CSharpSyntaxTree.ParseText(ClientSource) },
+            references: new MetadataReference[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
+                MetadataReference.CreateFromFile(fspmAssembly),
+                MetadataReference.CreateFromFile(System.IO.Path.Combine(runtimeDir, "System.Runtime.dll")),
+            },
+            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        using var ms = new MemoryStream();
+        EmitResult emit = clientCompilation.Emit(ms);
+        Assert.True(emit.Success,
+            "Isolated client must compile without Roslyn references: " +
+            string.Join("; ", emit.Diagnostics.Select(d => d.GetMessage())));
+
+        var clientAssembly = Assembly.Load(ms.ToArray());
+        var clientType = clientAssembly.GetType("FactClient")
+            ?? throw new InvalidOperationException("Fixture broken: FactClient type missing.");
+        var describe = clientType.GetMethod("Describe")
+            ?? throw new InvalidOperationException("Fixture broken: Describe method missing.");
+        return (string)describe.Invoke(null, new object[] { fact })!;
     }
 }
