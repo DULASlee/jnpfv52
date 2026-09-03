@@ -94,6 +94,44 @@ public sealed class ArtifactAcquireTests
     }
 
     [Fact]
+    public async Task Acquire_Utf8BomBaseline_MaterializesWithMatchingCounts()
+    {
+        // Regression: the real generator writes Encoding.UTF8 with BOM preamble.
+        var manifestDir = NewTempDir();
+        var outDir = NewTempDir();
+        try
+        {
+            var bom = new byte[] { 0xEF, 0xBB, 0xBF };
+            var body = Encoding.UTF8.GetBytes(CountsJson);
+            var withBom = bom.Concat(body).ToArray();
+            var artifactBytes = GzipBytes(withBom);
+            await File.WriteAllBytesAsync(Path.Combine(manifestDir, "t.jsonl.gz"), artifactBytes);
+            var manifestPath = WriteManifest(manifestDir, "t.jsonl.gz", ShaHex(artifactBytes));
+
+            var result = await ArtifactAcquirer.AcquireAsync(manifestPath, outDir);
+
+            Assert.True(result.Succeeded);
+            Assert.Equal(60, result.MaterializedCounts!["symbols"]);
+        }
+        finally
+        {
+            Directory.Delete(manifestDir, recursive: true);
+            Directory.Delete(outDir, recursive: true);
+        }
+    }
+
+    private static byte[] GzipBytes(byte[] raw)
+    {
+        using var output = new MemoryStream();
+        using (var gzip = new GZipStream(output, CompressionLevel.Optimal, leaveOpen: true))
+        {
+            gzip.Write(raw, 0, raw.Length);
+        }
+
+        return output.ToArray();
+    }
+
+    [Fact]
     public async Task Acquire_TamperedByte_FailsWithoutMaterialization()
     {
         var manifestDir = NewTempDir();

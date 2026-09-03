@@ -166,7 +166,13 @@ public static class ArtifactAcquirer
 
     private static IReadOnlyDictionary<string, long> ExtractCounts(byte[] baselineJson)
     {
-        using var doc = JsonDocument.Parse(baselineJson);
+        // The baseline generator writes Encoding.UTF8 (with BOM preamble).
+        // Skip it: JsonDocument rejects a leading BOM.
+        var offset = baselineJson.Length >= 3 &&
+            baselineJson[0] == 0xEF && baselineJson[1] == 0xBB && baselineJson[2] == 0xBF
+            ? 3 : 0;
+
+        using var doc = JsonDocument.Parse(baselineJson.AsMemory(offset));
         var root = doc.RootElement;
 
         JsonElement countsEl;
