@@ -1,0 +1,11 @@
+Gate: build
+Command: dotnet build backend/modularity/Foundry.FSPM.SemanticModel/Foundry.FSPM.SemanticModel.csproj --no-dependencies
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-03T22:45:51.7210756Z
+ExitCode: 0
+Commit: 94f3f6f6033d762fc16fcecc9daebc5de07a50d8
+--- tail ---
+    0 涓敊璇?
+
+宸茬敤鏃堕棿 00:00:00.89
+

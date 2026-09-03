@@ -1,0 +1,9 @@
+Gate: member
+Command: dotnet test ... --filter 'FullyQualifiedName~ModelMemberTests|FullyQualifiedName~MemberShapeTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-03T22:44:34.2787444Z
+ExitCode: 0
+Commit: 94f3f6f6033d762fc16fcecc9daebc5de07a50d8
+--- tail ---
+宸查€氳繃! - 澶辫触:     0锛岄€氳繃:     8锛屽凡璺宠繃:     0锛屾€昏:     8锛屾寔缁椂闂? 10 s - Foundry.FSPM.Compiler.Tests.dll (net8.0)
+
