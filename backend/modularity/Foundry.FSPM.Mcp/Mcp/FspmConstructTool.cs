@@ -15,10 +15,17 @@
 //
 //  Once Compiler delivers the construction contract, SourceWriter (Phase A1
 //  already created) is the only thing that needs to be wired here.
+//
+//  V6.1 MCP-05-01: parameter validation no longer throws ArgumentException
+//  across the Transport boundary (which surfaced as IsError=null and broke
+//  AwaitingContractTests). Invalid input now returns a structured
+//  INVALID_REQUEST CallToolResult; the success path returns CallToolResult
+//  with explicit IsError=false. Envelope shapes are unchanged.
 // =============================================================================
 
 using System.ComponentModel;
 using System.Text.Json;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace Foundry.FSPM.Mcp.Mcp;
@@ -31,15 +38,15 @@ public static class FspmConstructTool
         "Performs REAL source mutation for an FSPM operation and returns a "
         + "ConstructionEvidence record (target, changedFiles, beforeFingerprint, "
         + "afterFingerprint, writerTransactionId, status, reason).")]
-    public static Task<string> Construct(
+    public static Task<CallToolResult> Construct(
         [Description("Workspace root.")] string workspaceRoot,
         [Description("Qualified operation, e.g. User.Login.")] string operation,
         [Description("Human-readable construction instruction.")] string instruction)
     {
         if (string.IsNullOrWhiteSpace(workspaceRoot))
-            throw new ArgumentException("workspaceRoot is required.");
+            return Task.FromResult(InvalidRequest("workspaceRoot", "workspaceRoot is required."));
         if (string.IsNullOrWhiteSpace(operation))
-            throw new ArgumentException("operation is required.");
+            return Task.FromResult(InvalidRequest("operation", "operation is required."));
 
         // The actual mutation pipeline requires Foundry.FSPM.Core.Semantic
         // symbol resolution (which Foundry.FSPM.Core does not yet provide)
@@ -74,9 +81,25 @@ public static class FspmConstructTool
             },
         };
 
-        return Task.FromResult(
-            JsonSerializer.Serialize(
-                result,
-                new JsonSerializerOptions { WriteIndented = true }));
+        string json = JsonSerializer.Serialize(
+            result,
+            new JsonSerializerOptions { WriteIndented = true });
+        return Task.FromResult(new CallToolResult
+        {
+            IsError = false,
+            Content = new List<ContentBlock> { new TextContentBlock { Text = json } },
+        });
+    }
+
+    private static CallToolResult InvalidRequest(string field, string message)
+    {
+        string json = JsonSerializer.Serialize(
+            new { status = "INVALID_REQUEST", field, message },
+            new JsonSerializerOptions { WriteIndented = true });
+        return new CallToolResult
+        {
+            IsError = true,
+            Content = new List<ContentBlock> { new TextContentBlock { Text = json } },
+        };
     }
 }

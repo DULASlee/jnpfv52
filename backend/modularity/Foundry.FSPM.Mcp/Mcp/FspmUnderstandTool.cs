@@ -16,10 +16,17 @@
 //
 //  Until then, this Tool returns a structured "AWAITING_COMPILER" response
 //  so MCP clients can detect the state programmatically.
+//
+//  V6.1 MCP-05-01: parameter validation no longer throws ArgumentException
+//  across the Transport boundary (which surfaced as IsError=null and broke
+//  AwaitingContractTests). Invalid input now returns a structured
+//  INVALID_REQUEST CallToolResult; the success path returns CallToolResult
+//  with explicit IsError=false. Envelope shapes are unchanged.
 // =============================================================================
 
 using System.ComponentModel;
 using System.Text.Json;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace Foundry.FSPM.Mcp.Mcp;
@@ -31,7 +38,7 @@ public static class FspmUnderstandTool
     [Description(
         "Resolves an FSPM semantic target (e.g. User, User.UserName, User.Login) "
         + "inside a real .NET workspace. Returns RESOLVED + real symbol location.")]
-    public static Task<string> Understand(
+    public static Task<CallToolResult> Understand(
         [Description("Absolute path of the real workspace root.")]
         string workspaceRoot,
 
@@ -39,9 +46,9 @@ public static class FspmUnderstandTool
         string target)
     {
         if (string.IsNullOrWhiteSpace(workspaceRoot))
-            throw new ArgumentException("workspaceRoot is required.");
+            return Task.FromResult(InvalidRequest("workspaceRoot", "workspaceRoot is required."));
         if (string.IsNullOrWhiteSpace(target))
-            throw new ArgumentException("target is required.");
+            return Task.FromResult(InvalidRequest("target", "target is required."));
 
         // Architect §六: "MCP 不得自己重新解析、绑定、Semantic Model"。
         // Architect §三: "等新的 MCP Worktree 建成后重新进入" + "MCP must work through
@@ -78,9 +85,25 @@ public static class FspmUnderstandTool
             },
         };
 
-        return Task.FromResult(
-            JsonSerializer.Serialize(
-                result,
-                new JsonSerializerOptions { WriteIndented = true }));
+        string json = JsonSerializer.Serialize(
+            result,
+            new JsonSerializerOptions { WriteIndented = true });
+        return Task.FromResult(new CallToolResult
+        {
+            IsError = false,
+            Content = new List<ContentBlock> { new TextContentBlock { Text = json } },
+        });
+    }
+
+    private static CallToolResult InvalidRequest(string field, string message)
+    {
+        string json = JsonSerializer.Serialize(
+            new { status = "INVALID_REQUEST", field, message },
+            new JsonSerializerOptions { WriteIndented = true });
+        return new CallToolResult
+        {
+            IsError = true,
+            Content = new List<ContentBlock> { new TextContentBlock { Text = json } },
+        };
     }
 }

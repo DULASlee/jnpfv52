@@ -16,10 +16,17 @@
 //
 //  This Tool is a STDO-ONLY adapter; its body wires the 8 segments to the
 //  frozen contracts once Compiler publishes them.
+//
+//  V6.1 MCP-05-01: parameter validation no longer throws ArgumentException
+//  across the Transport boundary (which surfaced as IsError=null and broke
+//  AwaitingContractTests). Invalid input now returns a structured
+//  INVALID_REQUEST CallToolResult; the success path returns CallToolResult
+//  with explicit IsError=false. Envelope shapes are unchanged.
 // =============================================================================
 
 using System.ComponentModel;
 using System.Text.Json;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace Foundry.FSPM.Mcp.Mcp;
@@ -33,7 +40,7 @@ public static class FspmVerifyTool
         + "Architecture, Security, UI, Build, Test, Runtime, Evidence. Returns "
         + "VerificationResult with Decision vs Stage orthogonal to runtime "
         + "failure stage (BUILD/TEST/RUNTIME/EVIDENCE/CONSTRUCT).")]
-    public static Task<string> Verify(
+    public static Task<CallToolResult> Verify(
         [Description("Workspace root.")] string workspaceRoot,
         [Description("Qualified operation, e.g. User.Login.")] string operation,
         [Description("Absolute path of the project that must build.")]
@@ -46,11 +53,11 @@ public static class FspmVerifyTool
         string executionId)
     {
         if (string.IsNullOrWhiteSpace(workspaceRoot))
-            throw new ArgumentException("workspaceRoot is required.");
+            return Task.FromResult(InvalidRequest("workspaceRoot", "workspaceRoot is required."));
         if (string.IsNullOrWhiteSpace(operation))
-            throw new ArgumentException("operation is required.");
+            return Task.FromResult(InvalidRequest("operation", "operation is required."));
         if (string.IsNullOrWhiteSpace(executionId))
-            throw new ArgumentException("executionId is required.");
+            return Task.FromResult(InvalidRequest("executionId", "executionId is required."));
 
         // 8-segment verification requires (currently NOT in build):
         //   1. Semantic     — Foundry.FSPM.Core.Semantic.SemanticResolver  (Compiler AI)
@@ -97,9 +104,25 @@ public static class FspmVerifyTool
             },
         };
 
-        return Task.FromResult(
-            JsonSerializer.Serialize(
-                result,
-                new JsonSerializerOptions { WriteIndented = true }));
+        string json = JsonSerializer.Serialize(
+            result,
+            new JsonSerializerOptions { WriteIndented = true });
+        return Task.FromResult(new CallToolResult
+        {
+            IsError = false,
+            Content = new List<ContentBlock> { new TextContentBlock { Text = json } },
+        });
+    }
+
+    private static CallToolResult InvalidRequest(string field, string message)
+    {
+        string json = JsonSerializer.Serialize(
+            new { status = "INVALID_REQUEST", field, message },
+            new JsonSerializerOptions { WriteIndented = true });
+        return new CallToolResult
+        {
+            IsError = true,
+            Content = new List<ContentBlock> { new TextContentBlock { Text = json } },
+        };
     }
 }
