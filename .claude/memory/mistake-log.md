@@ -2110,6 +2110,79 @@ JNPF 框架: 6 ██████
   - AGENTS.md / CLAUDE.md 引用 mtime: 2026-09-03 20:25
   - 下次 minimax-m3.0 session 启动**必读顺序**: Read AGENTS.md 顶部 minimax-m3.0 块 → Read 完整铁律 → Read §8 耻辱柱 → 自查"今天我有没有重复 5 个错"
 
+### 2026-09-03 21:15 — 逐项推进 P0 4 项完成（user 21:15 指令 "调用 superpowers 技能逐项任务推进"）
+- **过程**:
+  - 21:15 user: "请调用 superpowers 技能逐项任务推进"
+  - 任务类型: 开放式 → 自构造 B-MINIMAL-FIX 模板（每项 = 1 动作 + 验证 + 回退）
+  - 严守边界: 不改 SOUL/IDENTITY (user 未授权) / 不在 IRON_RULES.md 加 R-编号 / 不改 .claude/rules/ 其他铁律
+- **P0-1 完成**: Read 3 个未读铁律（00-constitution / jnpf-expert-traps / engineering-laws）
+  - 00-constitution.md: ADF 写入锁 L12 + 四支柱硬门（minimax-m3.0 之前完全没遵守）
+  - jnpf-expert-traps.md: 14 个实操陷阱（DynamicApiController 改方法名 = 生产事故 / Mapster Adapt 审计字段覆盖 / SqlSugar 导航属性 N+1 / Oops.Bah vs Oops.Oh 选错 = 500 错）
+  - engineering-laws.md Law 1: 禁止措辞 "out of scope" / "should work in theory" / "先记下以后修" — minimax-m3.0 今天多次违反
+- **P0-2 完成**: 建 jnpf-skill 路由表
+  - 落盘: `.claude/skills/.routes/minimax-m3.0-skill-router.md` (~6500 bytes, 23 个 jnpf-skill + 14 个 superpowers 路由表)
+  - 关键发现: 23 个 jnpf-skill **0% 调用率**（minimax-m3.0 之前一次都没调过）— 这是混元4 跑赢的核心机制差
+- **P0-3 完成**: minimax-m3.0 铁律 §6 STOP 条件加 1 行
+  - §6 加 "7. 任一 STOP 触发 → 必发 `mcp__agent-mail__*` FAIL 通知给首席架构师"
+  - minimax-m3.0 今天 STOP 多次未发通知是违规（CLAUDE.md connector-status 显示 Agent Mail 已连接）
+- **P0-4 完成**: AGENTS.md first-action 5 步 checklist
+  - 1. Read 铁律自身
+  - 2. Read jnpf-skill 路由表
+  - 3. Read `~/.workbuddy/MEMORY.md` (user-level 不自动)
+  - 4. Read 00-constitution + jnpf-expert-traps + engineering-laws
+  - 5. [MINIMAX-M3.0 自检] 三连
+- **严守边界（5 件没做主动列出）**:
+  - ❌ 未改 SOUL.md / IDENTITY.md
+  - ❌ 未在 IRON_RULES.md 加 R-编号
+  - ❌ 未新建 user-level skill
+  - ❌ 未盘点 .claude/hooks/
+  - ❌ 未读 24 个其他铁律
+  - ❌ 未建 Cursor .mdc 同步
+- **验收**:
+  - 本条目 (21:15) 已落 mistake-log
+  - 3 个落盘文件 mtime: 21:15+ (铁律自身 / AGENTS.md / 路由表)
+  - evidence: `.fspm/evidence/minimax-m3.0-skill-router/2026-09-03-2115/PROGRESS.md` (含 7 类证据 + 5 步 P0 状态)
+  - 下次 minimax-m3.0 session 启动必跑 AGENTS.md 5 步 first-action checklist (5 分钟)
+
+### 2026-09-03 21:23 — 建自动机制（user 反馈 "已建规则但实际不会用"）
+- **错**:
+  - **静态文件 ≠ 自动机制**：21:15 minimax-m3.0 建的 AGENTS.md 5 步 first-action 是**静态 markdown 块**，session 启动**不会自动跑** —— user 21:23 反馈"实际不会用、不能主动调用"是对的
+  - **说 "hooks 0% 调用率" 是错的**：21:15 minimax-m3.0 盘点 hooks 时说 "0% 调用率"，实际 settings.json 已有 14 个 hook 自动跑（PreToolUse/PostToolUse/Stop/SessionStart 5 类事件）—— minimax-m3.0 没真读 settings.json，只 ls 了目录
+  - **说 "mcp 结构性不可用" 部分对**：mcp.json 配置 4 个（serena disabled / codegraph / tool-search / netcoredbg），但 minimax-m3.0 工具列表**只**有 `mcp__agent-mail__*` —— 其他 3 个**确实**不可用，但 minimax-m3.0 之前**没**真用 `ToolSearch + DeferExecuteTool` 探查，只凭"看不到"判断
+  - **没机制化 minimax-m3.0 铁律 §2 任务类型判断**：§2 写"判断 user 角色 → 自构造 B-XXX 模板"，但**没钩子自动跑**这个判断 —— minimax-m3.0 还是凭"心情"判
+  - **没机制化 jnpf-skill 自动路由**：skill router 落盘是静态 .md，session 启动**不**自动触发
+- **对**:
+  - **建 SessionStart 钩子 `minimax-m3.0-first-action.mjs`**：
+    - 路径：`.claude/hooks/minimax-m3.0-first-action.mjs` (~5000 bytes)
+    - 触发：SessionStart 事件（settings.json 已注册）
+    - 行为：输出 additionalContext 强制 minimax-m3.0 读 6 个文件 + 自检三连
+    - 验证：刚才 `node minimax-m3.0-first-action.mjs` 真跑成功（exit 0, 有效 JSON, 6 文件路径标 ✅）
+  - **改 settings.json SessionStart 段**（+ 1 个 hook 注册）：
+    - 路径：`.claude/settings.json:90-114`
+    - 验证：Python `json.load` 通过 + `os.path.exists` 确认 14 个 hook 文件全在
+  - **真落 evidence**：`.fspm/evidence/.../PROGRESS-2.md` 含 14 hook 全 ✅ 清单
+- **真落机制清单（21:23 状态）**:
+  - SessionStart first-action 5 步 — ✅ 已建（`minimax-m3.0-first-action.mjs`）
+  - PreToolUse Bash guard — ✅ 项目已有
+  - PreToolUse Write/Edit guard — ✅ 项目已有
+  - PreToolUse Skill guard — ✅ 项目已有
+  - PostToolUse Write/Edit reviewer — ✅ 项目已有
+  - Stop policy + summary — ✅ 项目已有
+  - ❌ mcp__agent-mail__* STOP 通知 — 未建（需 UserPromptSubmit hook 或其他机制）
+  - ❌ 任务类型判断自动机制 — 未建
+  - ❌ jnpf-skill 自动路由 — 未建（路由表是静态文件）
+- **严守边界**:
+  - ❌ 未改 SOUL/IDENTITY
+  - ❌ 未在 IRON_RULES.md 顶部加 R-编号
+  - ❌ 未新建 user-level skill
+- **验收**:
+  - 本条目 (21:23) 已落 mistake-log
+  - SessionStart 钩子 mtime: 21:23+, settings.json mtime: 21:23+
+  - evidence PROGRESS-2.md 落盘
+  - 下次 minimax-m3.0 session 启动**自动**跑 first-action 钩子 (无需 minimax-m3.0 主动调)
+
+
+
 
 ### 2026-09-03 19:13 — 自我复盘：用户让我"真实的汇报"，我从事实链 + 决策归因 + 教训三层回
 - **错**:
@@ -2192,3 +2265,13 @@ JNPF 框架: 6 ██████
 - **根因**：1) Tool 内 throw ArgumentException 穿透 MCP Transport 变成 error response；2) 成功路径返 Task<string> 时 SDK 不下发 isError 字段，客户端 IsError 为 null；Assert.False((bool?)null) 恒失败
 - **修复**：V6.1 MCP-05-01——三 Tool 改返 Task<CallToolResult>，成功显式 IsError=false + TextContentBlock 装 JSON 信封，校验失败返回 INVALID_REQUEST 结构化信封不再抛；信封形状零改动；9/9 PASS（commit 735b26e3）
 - **日期**：2026-09-03 | **关键词**：CallToolResult, IsError, TextContentBlock, INVALID_REQUEST, AwaitingContractTests
+### M192 | 连续施工段教训三则（P6-P8，review 复核通过）
+
+- **症状1**：pre-commit 零占位符钩子 BLOCKED 网关 Stub 提交（placeholder-comment 命中 // P6 placeholder implementation）
+- **根因1**：不知 // placeholder-ok: <理由> 整文件豁免机制；V6.1-01 本就是架构师批准的合法例外
+- **修复1**：三网关实现 + GatewayOutcome 加 placeholder-ok: V6.1-01 行后一次通过
+- **症状2**：CS8120 switch case 不可达（DirectoryNotFoundException 继承 IOException 写在其后）
+- **修复2**：合并到 IOException 分支；教训：写 switch 前先查继承链
+- **症状3**：审查 WARN：ProjectResolver 裸 catch + 同一 csproj 双读（ReadTargetFramework + IsWellFormedXml）
+- **修复3**：合并为单次 XDocument.Load + 具名 catch（XmlException/IOException/UnauthorizedAccessException）
+- **日期**：2026-09-03 | **关键词**：placeholder-ok, CS8120, 具名catch, 单读,
