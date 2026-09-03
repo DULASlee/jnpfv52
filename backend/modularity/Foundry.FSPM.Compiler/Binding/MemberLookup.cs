@@ -6,7 +6,7 @@ namespace Foundry.FSPM.Compiler.Binding;
 /// Hierarchy-aware member lookup shared by Property/Operation binders.
 ///
 /// <para>Proven Roslyn behavior (Phase 8 probe, NOT assumed):
-/// <see cref="ISymbol.GetMembers(string)"/> returns DECLARED members only —
+/// the <c>GetMembers(name)</c> API returns DECLARED members only —
 /// inherited members are invisible. So <c>property Derived.Name</c> where
 /// <c>Name</c> lives on the base would wrongly report NOT_FOUND. Per
 /// 施工包 §57 the honest v1 rule is: walk the <c>BaseType</c> chain and
