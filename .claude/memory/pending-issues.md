@@ -34,3 +34,34 @@
 - 长期应修复以保持构建干净
 
 ---
+
+---
+
+## P14-SEM-01：ParametersMatch 显示形比对（ backlog，不修）
+
+**发现日期**：2026-09-04（P13 冻结前自检）｜ **严重程度**：中 ｜ **状态**：P14 backlog
+
+**问题描述**：CSharpResolver.ParametersMatch 用 ToDisplayString() 序数比对；string 命中、System.String 落空，同义不同形即 NotFound。
+**复现**：ParametersMatchCharacterizationTests.FullyQualifiedSpelling_DoesNotMatch_CurrentLimitation（基线测试）
+**修复方案**：P14 中解析请求类型为 ITypeSymbol 后用 SymbolEqualityComparer 比对并纳入 RefKind；以该测试为 before/after 基线
+**影响评估**：不修则 P14 传全限定名默默 NotFound；修偏则基线测试变红
+
+---
+
+## P14-API-01：全异步管线（sync-over-async 残留，不修）
+
+**发现日期**：2026-09-04 ｜ **严重程度**：低（当前宿主无 SynchronizationContext，未复现 deadlock）｜ **状态**：P14 backlog
+
+**问题描述**：GetSemanticModel / ConditionalCompilationFacts.From / Resolver host 装配内阻塞等待异步 Roslyn API。
+**修复方案**：P14 加 *Async 端到端 API + CancellationToken；同步方法薄转发或标 Obsolete
+**影响评估**：不修则未来 ASP.NET/IDE 宿主有 deadlock 风险
+
+---
+
+## P14-SEM-02：TargetFramework/Configuration 语义源缺席（维持缺席）
+
+**发现日期**：2026-09-04 ｜ **严重程度**：低（已显式缺席，未伪造）｜ **状态**：P14 backlog
+
+**问题描述**：Roslyn Project 模型不提供 TFM/Configuration；ConditionalCompilationFacts 仅含 PreprocessorSymbols/OptimizationLevel/LanguageVersion。若 P14 需要，须找 MSBuild 属性源，不得猜测。
+**修复方案**：P14 调研 MSBuild 属性读取或接受永久缺席
+**影响评估**：低；条件编译存在性以 Roslyn 当前 Compilation 为准，不受影响

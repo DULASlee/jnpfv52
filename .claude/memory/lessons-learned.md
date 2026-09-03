@@ -77,3 +77,9 @@
 - Symbol==null 的单候选绝不能报 Resolved：Type.Member 实例成员访问在 Roslyn 里本来就不绑定（非值上下文），必须走接收者验证+显式理由，否则就是 First() 后门。
 - 工厂方法吞 reason（ResolvedResult 硬编码 OK）是同类诚实 bug：结果对象的理由字段必须端到端可追踪。
 - 昂贵操作（Compilation.Emit）进解析路径必须配缓存（ConditionalWeakTable 按 Compilation 键），否则每个表达式查询都是秒级。
+
+## 2026-09-04 P13 临时修复封口课
+- 绿色测试要问走哪条路径绿的：单候选后门让错误路径先绿了，门一关（降级为Ambiguous）才见真形。Decision coverage（每条返回路径至少一测）比行覆盖更能防此事。
+- 多代理同树并发会交叉污染证据链：发现后把对方diff存盘到TEMP、恢复HEAD、纯净重跑、原样恢复（若对方仍在写则不强行覆盖），门的有效性由隔离重跑保证。
+- 证据文件是交付物：乱码/手写小结自证PASS等于自证其罪；每份证据必须含command/timestamp/exit/output/commit，机器可重放。
+- post-commit hook每次重写openspec/specs/README.md：claim clean tree前必须revert，否则门永远是脏的。

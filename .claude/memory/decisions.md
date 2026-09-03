@@ -75,3 +75,30 @@
 
 **理由**：两者职责不同，不应合并
 **影响范围**：CLAUDE.md 跨会话记忆使用规范
+
+---
+
+## 2026-09-04 | P13 身份四层分离 + 指纹（替代 DocId+assembly 逻辑身份）
+
+**背景**：DocId+assembly 无法区分 string->int 语义变更，长期会污染 Semantic Diff/MCSC/AI 上下文
+**决策**：CompilationIdentity（哪一版）/ BindingIdentity（当前绑谁）/ LogicalSemanticIdentity（逻辑上是谁）/ SemanticFingerprint（现在是什么）四分离；逻辑名用 Name/MetadataName（无 backtick）；重载共享逻辑节点、指纹区分
+**理由**：V1->V2（string->int）实测 Logical 同、指纹变；DocId 本来就不编码属性类型
+**影响范围**：Semantic/SemanticIdentities.cs, Semantic/SemanticIdentityMint.cs, P14 的 Semantic Diff/MCSC 地基
+
+---
+
+## 2026-09-04 | Null-Symbol 单候选永不 Resolved（成员引用须接收者验证）
+
+**背景**：隔离审查发现单候选+null Symbol 报 Resolved 是 First() 后门，且早期相关测试绿走的正是该路径
+**决策**：Type.Member 仅当接收者绑定到候选所属类型时才 Resolved（理由写 MemberReference），否则 Ambiguous 留审计；方法组多候选永不偷选
+**理由**：实例成员经由类型名访问本来就不是合法值表达式，Roslyn 留 Symbol=null 是正确信号，不是 bug
+**影响范围**：Semantic/CSharpResolver.cs, DecisionMatrixTests.cs 8 行矩阵
+
+---
+
+## 2026-09-04 | 快照 Emit 按 Compilation 缓存 + 快照级整律失效
+
+**背景**：每次表达式解析全量 Emit 快照，真机上是秒级开销；且缓存键若错会跨 Compilation 污染
+**决策**：ConditionalWeakTable<Compilation, MetadataReference>（生命周期跟随 Compilation）；查询缓存键含 SnapshotId，V1 缓存永不命中 V2（正确性测试，非性能测试）
+**理由**：V1(string Foo)/V2(int Foo) 独立+可重复实测通过
+**影响范围**：Semantic/SnapshotReferenceCache.cs, Semantic/CompilationSnapshotContext.cs, CacheExpressionTests.cs
