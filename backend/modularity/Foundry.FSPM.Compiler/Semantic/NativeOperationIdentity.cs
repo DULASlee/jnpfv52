@@ -10,7 +10,8 @@ public sealed record NativeParameterFact(
     string RefKind,
     bool IsOptional,
     string? DefaultValue,
-    bool IsParams);
+    bool IsParams,
+    string NullableAnnotation = "None");
 
 /// <summary>
 /// P13-H3: complete operation identity projected from Roslyn

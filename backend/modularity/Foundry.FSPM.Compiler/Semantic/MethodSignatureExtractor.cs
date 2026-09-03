@@ -21,7 +21,8 @@ public static class MethodSignatureExtractor
             RefKind: p.RefKind.ToString(),
             IsOptional: p.IsOptional,
             DefaultValue: p.HasExplicitDefaultValue ? FormatDefault(p.ExplicitDefaultValue) : null,
-            IsParams: p.IsParams)).ToArray();
+            IsParams: p.IsParams,
+            NullableAnnotation: p.NullableAnnotation.ToString())).ToArray();
 
         var kind = method.MethodKind switch
         {
