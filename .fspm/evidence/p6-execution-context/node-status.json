@@ -1,0 +1,1 @@
+{"node": "MCP-06-01", "adapterContract": "PASS", "implementation": "PASS", "updatedAt": "2026-09-03T21:05+08:00", "blocker": null, "tests": {"total": 17, "passed": 17, "failed": 0, "skipped": 0}, "files": ["Execution/McpExecutionContext.cs", "Execution/McpExecutionContextFactory.cs", "Unit/McpExecutionContextTests.cs (5 facts)"]}
