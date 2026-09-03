@@ -20,37 +20,24 @@
 //       always present, and the top-level `status` field is the
 //       literal string "AWAITING_COMPILER".
 //
+//  V6.1 MCP-05-02: fixture + response assertions owned by
+//  Infrastructure/McpClientFixture + McpResponseAssertions.
+//
 //  Failure mode: if a future step accidentally swaps in a real
 //  implementation, these tests will FAIL — which is the desired
 //  behavior for a lockdown contract.
 // =============================================================================
 
 using System.Text.Json;
+using Foundry.FSPM.Mcp.Tests.Infrastructure;
 using Xunit;
-using ModelContextProtocol.Client;
-using ModelContextProtocol.Protocol;
 
 namespace Foundry.FSPM.Mcp.Tests;
 
-public class AwaitingContractTests : IClassFixture<McpStdioServerFixture>
+public class AwaitingContractTests : IClassFixture<McpClientFixture>
 {
-    private readonly McpStdioServerFixture _fx;
-    public AwaitingContractTests(McpStdioServerFixture fx) { _fx = fx; }
-
-    // -------- helpers --------
-
-    private static string FirstText(CallToolResult result)
-    {
-        var text = result.Content.OfType<TextContentBlock>().FirstOrDefault();
-        Assert.NotNull(text);
-        return text!.Text;
-    }
-
-    private static JsonElement ParseEnvelope(string json)
-    {
-        var doc = JsonDocument.Parse(json);
-        return doc.RootElement.Clone();
-    }
+    private readonly McpClientFixture _fx;
+    public AwaitingContractTests(McpClientFixture fx) { _fx = fx; }
 
     // -----------------------------------------------------------------
     // 1. Understand_AwaitingUpstreamContract
@@ -66,15 +53,12 @@ public class AwaitingContractTests : IClassFixture<McpStdioServerFixture>
                 ["target"] = "User.Login",
             });
 
-        Assert.False(result.IsError, "fspm_understand call returned IsError=true.");
+        McpResponseAssertions.AssertSuccess(result, "fspm_understand");
 
-        var envelope = ParseEnvelope(FirstText(result));
+        var envelope = McpResponseAssertions.ParseEnvelope(McpResponseAssertions.FirstText(result));
 
         // Top-level status MUST be exactly "AWAITING_COMPILER".
-        Assert.True(envelope.TryGetProperty("status", out var statusEl),
-            "Envelope missing top-level `status` field.");
-        Assert.Equal(JsonValueKind.String, statusEl.ValueKind);
-        Assert.Equal("AWAITING_COMPILER", statusEl.GetString());
+        McpResponseAssertions.AssertStatus(envelope, "AWAITING_COMPILER");
 
         // Frozen contract keys (Spec v2 §3.2 + INTERFACE_LOCKDOWN §1.3).
         Assert.True(envelope.TryGetProperty("workspaceRoot", out _));
@@ -102,12 +86,11 @@ public class AwaitingContractTests : IClassFixture<McpStdioServerFixture>
                 ["instruction"] = "Ensure User entity has a Login domain method.",
             });
 
-        Assert.False(result.IsError);
+        McpResponseAssertions.AssertSuccess(result, "fspm_construct");
 
-        var envelope = ParseEnvelope(FirstText(result));
+        var envelope = McpResponseAssertions.ParseEnvelope(McpResponseAssertions.FirstText(result));
 
-        Assert.True(envelope.TryGetProperty("status", out var statusEl));
-        Assert.Equal("AWAITING_COMPILER", statusEl.GetString());
+        McpResponseAssertions.AssertStatus(envelope, "AWAITING_COMPILER");
 
         Assert.True(envelope.TryGetProperty("workspaceRoot", out _));
         Assert.True(envelope.TryGetProperty("operation", out _));
@@ -126,7 +109,7 @@ public class AwaitingContractTests : IClassFixture<McpStdioServerFixture>
     //
     //    fspm_verify takes 6 parameters. The current Tool implementation
     //    only enforces 3 of them (workspaceRoot/operation/executionId)
-    //    in ArgumentException — we still pass all 6 here to exercise
+    //    in validation — we still pass all 6 here to exercise
     //    the full input contract.
     // -----------------------------------------------------------------
     [Fact]
@@ -144,12 +127,11 @@ public class AwaitingContractTests : IClassFixture<McpStdioServerFixture>
                 ["executionId"] = "exec-0000",
             });
 
-        Assert.False(result.IsError);
+        McpResponseAssertions.AssertSuccess(result, "fspm_verify");
 
-        var envelope = ParseEnvelope(FirstText(result));
+        var envelope = McpResponseAssertions.ParseEnvelope(McpResponseAssertions.FirstText(result));
 
-        Assert.True(envelope.TryGetProperty("status", out var statusEl));
-        Assert.Equal("AWAITING_COMPILER", statusEl.GetString());
+        McpResponseAssertions.AssertStatus(envelope, "AWAITING_COMPILER");
 
         Assert.True(envelope.TryGetProperty("workspaceRoot", out _));
         Assert.True(envelope.TryGetProperty("operation", out _));

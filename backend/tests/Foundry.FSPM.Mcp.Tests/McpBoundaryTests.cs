@@ -15,145 +15,25 @@
 //       no "hello" strings / no LogToStandardErrorThreshold
 //       misroutes — only JSON-RPC frames during the handshake window.
 //
+//  V6.1 MCP-05-02: server lifecycle owned by Infrastructure/McpClientFixture.
+//  Discovery assertions owned by Infrastructure/McpToolDiscoveryFixture.
+//
 //  We deliberately do NOT touch any FSPM Core / Analyzer / Login.Mvp
 //  project. The MCP Adapter (Foundry.FSPM.Mcp) is the only project
 //  under test here; everything else is upstream and MISSING on disk
 //  (see .fspm/evidence/baseline/MCP_UPSTREAM_GAP.md).
 // =============================================================================
 
-using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
+using Foundry.FSPM.Mcp.Tests.Infrastructure;
 using Xunit;
-using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Client;
-using ModelContextProtocol.Protocol;
 
 namespace Foundry.FSPM.Mcp.Tests;
 
-internal sealed class CapturingLoggerProvider : ILoggerProvider
+public class McpBoundaryTests : IClassFixture<McpClientFixture>
 {
-    private readonly StringBuilder _sink;
-    public CapturingLoggerProvider(StringBuilder sink) { _sink = sink; }
-    public ILogger CreateLogger(string categoryName) => new CapturingLogger(_sink, categoryName);
-    public void Dispose() { }
-}
-
-internal sealed class CapturingLogger : ILogger
-{
-    private readonly StringBuilder _sink;
-    private readonly string _category;
-    public CapturingLogger(StringBuilder sink, string category) { _sink = sink; _category = category; }
-    public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
-    public bool IsEnabled(LogLevel logLevel) => true;
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
-        Exception? exception, Func<TState, Exception?, string> formatter)
-    {
-        _sink.AppendLine($"[{logLevel}] {_category}: {formatter(state, exception)}");
-        if (exception != null) _sink.AppendLine(exception.ToString());
-    }
-    private sealed class NullScope : IDisposable
-    {
-        public static readonly NullScope Instance = new();
-        public void Dispose() { }
-    }
-}
-
-/// <summary>
-/// Shared stdio server fixture. Spawns a real Foundry.FSPM.Mcp process
-/// for the test class and provides a connected IMcpClient to each test.
-///
-/// Why stdio, not in-process: STEP 5 §1 says "must prove real MCP server
-/// can start". In-process hosting would not exercise the actual stdio
-/// transport (which is the only thing MCP clients can talk to). The
-/// in-process trick was rejected at architecture review.
-///
-/// We capture both stdout and stderr of the spawned process so tests
-/// can independently assert:
-///   - stdout is protocol-clean (no logs)
-///   - stderr contains whatever the server wants to log
-/// </summary>
-public sealed class McpStdioServerFixture : IAsyncLifetime
-{
-    public McpClient Client { get; private set; } = null!;
-    public Process ServerProcess { get; private set; } = null!;
-    public StringBuilder StderrCapture { get; } = new();
-    public StringBuilder StdoutCapture { get; } = new();
-    public string ServerDllPath { get; private set; } = null!;
-
-    public async Task InitializeAsync()
-    {
-        // Resolve the server DLL via the test assembly's base directory
-        // (we copied the MCP server runtime into bin via the StageMcpRuntime
-        // MSBuild target — see Foundry.FSPM.Mcp.Tests.csproj).
-        string testDir = AppContext.BaseDirectory;
-        ServerDllPath = Path.Combine(testDir, "Foundry.FSPM.Mcp.dll");
-        Assert.True(File.Exists(ServerDllPath),
-            $"MCP server DLL not found at: {ServerDllPath}. " +
-            "The StageMcpRuntime MSBuild target should have copied it here.");
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            UseShellExecute = false,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
-        psi.ArgumentList.Add(ServerDllPath);
-
-        ServerProcess = new Process { StartInfo = psi, EnableRaisingEvents = true };
-        ServerProcess.OutputDataReceived += (_, e) =>
-        {
-            if (e.Data != null) StdoutCapture.AppendLine(e.Data);
-        };
-        ServerProcess.ErrorDataReceived += (_, e) =>
-        {
-            if (e.Data != null) StderrCapture.AppendLine(e.Data);
-        };
-        Assert.True(ServerProcess.Start(), "Failed to start the MCP server process.");
-        ServerProcess.BeginOutputReadLine();
-        ServerProcess.BeginErrorReadLine();
-
-        // Now connect an MCP client to the running process.
-        var transport = new StdioClientTransport(new StdioClientTransportOptions
-        {
-            Name = "Foundry.FSPM.Mcp",
-            Command = "dotnet",
-            Arguments = new[] { ServerDllPath },
-        });
-        // The MCP client spawns its OWN child process; we cannot use the
-        // process we just started. The fixture therefore uses two paths:
-        //   1. The manually-spawned process above is used to capture raw
-        //      stdout/stderr for the protocol-clean test.
-        //   2. The McpClient below talks to a separate (client-spawned)
-        //      process for tool discovery and invocation.
-        // Both processes speak the same protocol; the boundary contract
-        // applies to either.
-        Client = await McpClient.CreateAsync(transport);
-    }
-
-    public async Task DisposeAsync()
-    {
-        try { await Client.DisposeAsync(); } catch { /* swallow */ }
-        try
-        {
-            if (!ServerProcess.HasExited)
-            {
-                ServerProcess.Kill(entireProcessTree: true);
-                ServerProcess.WaitForExit(2000);
-            }
-        }
-        catch { /* swallow */ }
-        ServerProcess.Dispose();
-    }
-}
-
-public class McpBoundaryTests : IClassFixture<McpStdioServerFixture>
-{
-    private readonly McpStdioServerFixture _fx;
-    public McpBoundaryTests(McpStdioServerFixture fx) { _fx = fx; }
+    private readonly McpClientFixture _fx;
+    public McpBoundaryTests(McpClientFixture fx) { _fx = fx; }
 
     // -----------------------------------------------------------------
     // 1. McpServerStarts
@@ -167,7 +47,7 @@ public class McpBoundaryTests : IClassFixture<McpStdioServerFixture>
         var info = _fx.Client.ServerInfo;
         Assert.NotNull(info);
         Assert.False(string.IsNullOrWhiteSpace(info.Name),
-            "MCP server returned empty ServerInfo.Name \u2014 handshake succeeded but server is unnamed.");
+            "MCP server returned empty ServerInfo.Name — handshake succeeded but server is unnamed.");
     }
 
     // -----------------------------------------------------------------
@@ -176,37 +56,29 @@ public class McpBoundaryTests : IClassFixture<McpStdioServerFixture>
     [Fact]
     public async Task ExactlyThreeToolsAreRegistered()
     {
-        var tools = await _fx.Client.ListToolsAsync();
-        var names = tools.Select(t => t.Name).OrderBy(n => n).ToArray();
-        Assert.Equal(3, tools.Count);
-        Assert.Equal(new[] { "fspm_construct", "fspm_understand", "fspm_verify" }, names);
+        var tools = await McpToolDiscoveryFixture.ListToolsAsync(_fx.Client);
+        McpToolDiscoveryFixture.AssertExactlyThreeTools(tools);
     }
 
     [Fact]
     public async Task Tool_Understand_IsAvailable()
     {
-        var tools = await _fx.Client.ListToolsAsync();
-        var t = tools.SingleOrDefault(x => x.Name == "fspm_understand");
-        Assert.NotNull(t);
-        Assert.False(string.IsNullOrWhiteSpace(t.Description));
+        var tools = await McpToolDiscoveryFixture.ListToolsAsync(_fx.Client);
+        McpToolDiscoveryFixture.GetToolOrFail(tools, "fspm_understand");
     }
 
     [Fact]
     public async Task Tool_Construct_IsAvailable()
     {
-        var tools = await _fx.Client.ListToolsAsync();
-        var t = tools.SingleOrDefault(x => x.Name == "fspm_construct");
-        Assert.NotNull(t);
-        Assert.False(string.IsNullOrWhiteSpace(t.Description));
+        var tools = await McpToolDiscoveryFixture.ListToolsAsync(_fx.Client);
+        McpToolDiscoveryFixture.GetToolOrFail(tools, "fspm_construct");
     }
 
     [Fact]
     public async Task Tool_Verify_IsAvailable()
     {
-        var tools = await _fx.Client.ListToolsAsync();
-        var t = tools.SingleOrDefault(x => x.Name == "fspm_verify");
-        Assert.NotNull(t);
-        Assert.False(string.IsNullOrWhiteSpace(t.Description));
+        var tools = await McpToolDiscoveryFixture.ListToolsAsync(_fx.Client);
+        McpToolDiscoveryFixture.GetToolOrFail(tools, "fspm_verify");
     }
 
     // -----------------------------------------------------------------
@@ -228,7 +100,7 @@ public class McpBoundaryTests : IClassFixture<McpStdioServerFixture>
         {
             // Acceptable: server emitted nothing on stdout because no
             // client message arrived yet. This is the FROZEN contract
-            // (Spec v2 \u00a71: stdout is reserved for JSON-RPC frames).
+            // (Spec v2 §1: stdout is reserved for JSON-RPC frames).
             return;
         }
 

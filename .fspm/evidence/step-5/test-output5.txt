@@ -1,0 +1,31 @@
+鐢熸垚鍚姩鏃堕棿涓?2026/9/3 21:11:27銆?
+D:\JNPF-FSPM-Worktrees\mcp\backend\tests\Foundry.FSPM.Mcp.Tests\bin\Debug\net8.0\Foundry.FSPM.Mcp.Tests.dll (.NETCoreApp,Version=v8.0)鐨勬祴璇曡繍琛?
+鎬诲叡 1 涓祴璇曟枃浠朵笌鎸囧畾妯″紡鐩稿尮閰嶃€?
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.4.1+b9eacec401 (64-bit .NET 8.0.30)
+[xUnit.net 00:00:00.06]   Discovering: Foundry.FSPM.Mcp.Tests
+[xUnit.net 00:00:00.08]   Discovered:  Foundry.FSPM.Mcp.Tests
+[xUnit.net 00:00:00.08]   Starting:    Foundry.FSPM.Mcp.Tests
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.McpServerStarts [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.Tool_Understand_IsAvailable [34 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Discovery.McpDiscoveryTests.Discovery_EachToolHasDescription [39 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.Tool_Verify_IsAvailable [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Discovery.McpDiscoveryTests.Discovery_ReturnsExactlyThreeFrozenTools [6 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.ExactlyThreeToolsAreRegistered [4 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.Tool_Construct_IsAvailable [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.AwaitingContractTests.Construct_AwaitingUpstreamContract [94 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Discovery.McpServerLifecycleTests.Start_Discover_Invoke_StaysAlive [94 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.AwaitingContractTests.Understand_AwaitingUpstreamContract [4 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.AwaitingContractTests.Verify_AwaitingUpstreamContract [6 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.McpStdoutIsProtocolClean [513 ms]
+[xUnit.net 00:00:06.31]   Finished:    Foundry.FSPM.Mcp.Tests
+
+娴嬭瘯杩愯鎴愬姛銆?
+娴嬭瘯鎬绘暟: 12
+     閫氳繃鏁? 12
+鎬绘椂闂? 6.7504 绉?
+
+宸叉垚鍔熺敓鎴愩€?
+    0 涓鍛?
+    0 涓敊璇?
+
+宸茬敤鏃堕棿 00:00:07.35
