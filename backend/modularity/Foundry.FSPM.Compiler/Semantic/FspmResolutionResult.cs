@@ -62,6 +62,9 @@ public sealed record FspmResolutionResult(
 
     public FspmSymbolId? SelectedId => Selected?.Identity;
 
+    /// <summary>True only for <see cref="FspmResolutionStatus.Resolved"/>.</summary>
+    public bool IsResolved => Status == FspmResolutionStatus.Resolved;
+
     public static FspmResolutionResult NotFoundResult(string reason, FspmSourceLocation? at) =>
         new(FspmResolutionStatus.NotFound, Array.Empty<FspmSymbolRecord>(), reason, at);
 

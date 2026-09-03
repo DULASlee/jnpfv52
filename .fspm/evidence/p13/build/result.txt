@@ -1,0 +1,10 @@
+Gate: build
+Command: dotnet build backend/modularity/Foundry.FSPM.Compiler/Foundry.FSPM.Compiler.csproj --no-dependencies
+Started-UTC: 2026-09-03T21:23:05.7276876Z
+ExitCode: 0
+Commit: eda916ef2dd3daec69c3087b40724f702cc03f74
+--- tail ---
+    0 涓敊璇?
+
+宸茬敤鏃堕棿 00:00:01.72
+

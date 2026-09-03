@@ -9,7 +9,7 @@ namespace Foundry.FSPM.Compiler.Semantic;
 /// Phase 13 — Roslyn-backed symbol resolver. Takes a
 /// <see cref="FspmCompilationSnapshot"/> (a single Compilation scope)
 /// and answers Type / Property / Method / Expression queries with the
-/// four-state <see cref="FspmResolutionResult"/>.
+/// eight-state <see cref="FspmResolutionResult"/> (H7).
 ///
 /// <para><b>Architecture rule (施工包 §4 / §16 / §38):</b>
 /// Resolver performs NO manual C# parsing, NO <c>Split(".")</c>, NO
@@ -201,7 +201,7 @@ public sealed class CSharpResolver
     /// <summary>
     /// Resolve a C# expression captured verbatim by P12
     /// <see cref="Foundry.FSPM.Compiler.Syntax.FspmNativeExpressionSyntax"/>.
-    /// The text is parsed by Roslyn (C# language version = Latest) and
+    /// The text is parsed by Roslyn (host language pinned to C# 12) and
     /// resolved through <see cref="SemanticModel.GetSymbolInfo"/>. P13
     /// performs NO manual parsing; this is the ONLY P12→P13 boundary.
     /// </summary>

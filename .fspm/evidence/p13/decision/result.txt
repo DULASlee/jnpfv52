@@ -1,0 +1,10 @@
+Gate: decision
+Command: dotnet test backend/tests/Foundry.FSPM.Compiler.Tests/Foundry.FSPM.Compiler.Tests.csproj --filter "FullyQualifiedName~DecisionMatrix"
+Started-UTC: 2026-09-03T21:22:07.0526267Z
+ExitCode: 0
+Commit: eda916ef2dd3daec69c3087b40724f702cc03f74
+Environment: Windows_NT / Microsoft Windows NT 10.0.26200.0 / dotnet 10.0.400
+--- tail ---
+
+宸查€氳繃! - 澶辫触:     0锛岄€氳繃:     8锛屽凡璺宠繃:     0锛屾€昏:     8锛屾寔缁椂闂? 18 s - Foundry.FSPM.Compiler.Tests.dll (net8.0)
+
