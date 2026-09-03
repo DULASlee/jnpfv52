@@ -1,0 +1,12 @@
+{
+  "experiment": "A",
+  "label": "Bash (WSL Git Bash + WSL Linux .NET 8.0.130) -> dotnet restore Foundry.FSPM.Mcp",
+  "timestamp": "2026-09-03T18:42+08:00",
+  "cwd": "D:\\JNPF-FSPM-Worktrees\\mcp",
+  "command": "bash -c 'dotnet restore backend/modularity/Foundry.FSPM.Mcp/Foundry.FSPM.Mcp.csproj --nologo'",
+  "stdout_tail": "... Restored /mnt/d/JNPF-FSPM-Worktrees/mcp/backend/modularity/Foundry.FSPM.Mcp/Foundry.FSPM.Mcp.csproj (in 35.51 sec).",
+  "stderr_tail": "(empty — only first-time HTTPS dev cert install message)",
+  "exit_code": 0,
+  "verdict": "PASS",
+  "note": "Previous 'path1 null' errors in Phase A1.1 / STEP 5 sessions were on a DIFFERENT bash environment (WSL with corrupted .wslconfig, or different sub-shell). This fresh WSL bash restore succeeded. The earlier 'SDK broken' narrative was built on top of misinterpreted error traces."
+}

@@ -1,0 +1,21 @@
+{
+  "experiment": "C",
+  "label": "Windows PowerShell -> dotnet build Foundry.FSPM.Mcp",
+  "timestamp": "2026-09-03T18:43+08:00",
+  "cwd": "D:\\JNPF-FSPM-Worktrees\\mcp",
+  "command": "dotnet build backend/modularity/Foundry.FSPM.Mcp/Foundry.FSPM.Mcp.csproj -c Debug --nologo",
+  "stdout_tail": "所有项目均是最新的,无法还原。 D:\\JNPF-FSPM-Worktrees\\mcp\\backend\\modularity\\Foundry.FSPM.Mcp\\Program.cs(36,20): error CS0103: 当前上下文中不存在名称\"McpBoundaryRunner\"[Foundry.FSPM.Mcp.csproj] 生成失败。 1 个错误。 已用时间 00:00:01.63",
+  "stderr_tail": "(empty)",
+  "exit_code": 1,
+  "verdict": "FAIL",
+  "failure_kind": "COMPILER_ERROR_CS0103",
+  "root_cause_evidence": {
+    "missing_symbol": "McpBoundaryRunner",
+    "referenced_at": "Program.cs(33-38): if (args.Length > 0 && args[0] == \"--mcp-boundary-test\") { ... int rc = await McpBoundaryRunner.RunAsync(args).ConfigureAwait(false); ... }",
+    "expected_file": "backend/modularity/Foundry.FSPM.Mcp/Mcp/McpBoundaryRunner.cs",
+    "file_exists_on_disk": false,
+    "deleted_in_session": "STEP 5 (reported in STEP5_BUILD_ATTEMPT_REPORT.md §3.1 'McpBoundaryRunner.cs — 已删除（引入新 PackageReference 破坏 restore）')",
+    "interpretation": "Forge 在 STEP 5 探索期间为 workaround 添加 McpBoundaryRunner.cs 与对应 PackageReference,发现破坏 obj 缓存后删除了源文件但保留 Program.cs 中的引用。这是 STEP 5 探索遗留的真实代码错误,不是环境问题。"
+  },
+  "note": "Build is no longer blocked by env. The remaining error is a real source code dead-reference left by STEP 5. Per 裁决令 §九 '下一步不是继续写代码' / §十一 '执行完成后停止 / 不要自行修改 Compiler/Core', this error must be reported, not fixed silently."
+}

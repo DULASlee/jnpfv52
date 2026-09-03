@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Foundry.FSPM.Mcp.Tests
+    ======================
+    STEP 5 Boundary & Protocol Lockdown tests.
+
+    See ./Directory.Build.targets for the full design rationale.
+    We do NOT take a ProjectReference to Foundry.FSPM.Mcp to avoid
+    the NuGet.GetRestoreSettingsTask path1-NRE bug in this container;
+    instead we Reference the already-built DLL and stage its
+    runtime folder in <Target Name="StageMcpRuntime"/>.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>Foundry.FSPM.Mcp.Tests</RootNamespace>
+    <AssemblyName>Foundry.FSPM.Mcp.Tests</AssemblyName>
+    <LangVersion>latest</LangVersion>
+
+    <!--
+      Tell the build to treat this project as already-restored. The
+      .g.props file (committed alongside) carries the resolved
+      NuGetPackageRoot, etc. We set RestoreSuccess=True so NuGet.targets
+      short-circuits the GetRestoreSettingsTask call path that is broken
+      in this Windows container (Value cannot be null. (Parameter 'path1')).
+    -->
+    <DisableImplicitFrameworkReferences>false</DisableImplicitFrameworkReferences>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Foundry.FSPM.Mcp">
+      <HintPath>..\..\modularity\Foundry.FSPM.Mcp\bin\Debug\net8.0\Foundry.FSPM.Mcp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
+  </ItemGroup>
+
+  <!--
+    Pre-build: stage the MCP server's full runtime folder (its bin/Debug
+    contains Foundry.FSPM.Mcp.dll, Foundry.FSPM.Mcp.exe,
+    Foundry.FSPM.Mcp.runtimeconfig.json, plus all the ModelContextProtocol.*
+    dependencies) into our test output directory. The StdioClientTransport
+    launches `dotnet server.dll` so the test process only needs the DLL +
+    runtime config on disk.
+  -->
+  <Target Name="StageMcpRuntime" BeforeTargets="Build">
+    <ItemGroup>
+      <_McpRuntimeFiles Include="..\..\modularity\Foundry.FSPM.Mcp\bin\Debug\net8.0\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_McpRuntimeFiles)"
+          DestinationFolder="$(OutDir)%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

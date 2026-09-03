@@ -1,0 +1,12 @@
+{
+  "experiment": "B",
+  "label": "Windows PowerShell (pwsh) -> dotnet restore Foundry.FSPM.Mcp",
+  "timestamp": "2026-09-03T18:42+08:00",
+  "cwd": "D:\\JNPF-FSPM-Worktrees\\mcp",
+  "command": "dotnet restore backend/modularity/Foundry.FSPM.Mcp/Foundry.FSPM.Mcp.csproj --nologo",
+  "stdout_tail": "已还原 D:\\JNPF-FSPM-Worktrees\\mcp\\backend\\modularity\\Foundry.FSPM.Mcp\\Foundry.FSPM.Mcp.csproj (用时 308 毫秒)。",
+  "stderr_tail": "(empty)",
+  "exit_code": 0,
+  "verdict": "PASS",
+  "note": "PowerShell restore used cached obj (308ms). This is the gating fact per 裁决令 §五: PowerShell restore = PASS, so build gate can be attempted."
+}

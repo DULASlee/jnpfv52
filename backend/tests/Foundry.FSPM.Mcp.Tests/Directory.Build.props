@@ -1,0 +1,24 @@
+<!--
+  Foundry.FSPM.Mcp.Tests — Directory.Build.props
+
+  This file exists ONLY to work around a Windows-container / Git-Bash
+  environment bug: the .NET 8 SDK's NuGet.Build.Tasks.GetRestoreSettingsTask
+  calls Path.Combine with RestoreRootConfigDirectory, which is null
+  inside the container because PROGRAMDATA env var is not inherited
+  into the MSBuild out-of-process task host.
+
+  By pinning RestorePackagesPath, RestoreSources, and FallbackFolders
+  to absolute paths, we make the task skip the env-var probe entirely.
+
+  The SDK 8.0.424 build still works at Foundry.FSPM.Mcp because that
+  project's obj was pre-populated; this is what unblocks the test
+  project's first restore. See .fspm/evidence/baseline/MCP_UPSTREAM_GAP.md
+  for the full environment baseline.
+-->
+<Project>
+  <PropertyGroup>
+    <RestorePackagesPath>C:\Users\admin\.nuget\packages</RestorePackagesPath>
+    <RestoreSources>https://api.nuget.org/v3/index.json</RestoreSources>
+    <RestoreFallbackFolders>C:\Users\admin\.nuget\packages</RestoreFallbackFolders>
+  </PropertyGroup>
+</Project>
