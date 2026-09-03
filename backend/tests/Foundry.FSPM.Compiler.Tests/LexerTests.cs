@@ -236,11 +236,37 @@ public sealed class LexerTests
     }
 
     [Fact]
-    public void Lex_DigitAtStart_IsIllegal()
+    public void Lex_NumericLiteral_IsLegal()
     {
-        // Phase 2 grammar does not include numeric literals; "123abc" starts with an
-        // illegal character.
-        Assert.Throws<FspmLexerException>(() => Lex("entity 123User"));
+        // P12 extends the language with NumericLiteral tokens. The Lexer
+        // recognizes '123' as a token WITHOUT knowing its semantic role;
+        // a Parser / Native Expression / Roslyn decides where digits are
+        // valid (an Identifier may NOT start with a digit, that is a
+        // separate fact covered by the next test).
+        var tokens = Lex("123");
+
+        Assert.Collection(
+            tokens,
+            t => { Assert.Equal(FspmTokenKind.NumericLiteral, t.Kind); Assert.Equal("123", t.Text); },
+            t => Assert.Equal(FspmTokenKind.EndOfFile, t.Kind));
+    }
+
+    [Fact]
+    public void Lex_Identifier_CannotStartWithDigit()
+    {
+        // 123User is NOT a single Identifier. The Lexer splits it into
+        // NumericLiteral(123) + Identifier(User). The 123User surface in
+        // a position expecting a name is then a Parser-level failure
+        // (the new lexer contract; the former single-name failure is
+        // renamed and intent-corrected here).
+        var tokens = Lex("entity 123User");
+
+        Assert.Collection(
+            tokens,
+            t => Assert.Equal(FspmTokenKind.EntityKeyword, t.Kind),
+            t => { Assert.Equal(FspmTokenKind.NumericLiteral, t.Kind); Assert.Equal("123", t.Text); },
+            t => { Assert.Equal(FspmTokenKind.Identifier, t.Kind); Assert.Equal("User", t.Text); },
+            t => Assert.Equal(FspmTokenKind.EndOfFile, t.Kind));
     }
 
     // ===== EOF behavior =====

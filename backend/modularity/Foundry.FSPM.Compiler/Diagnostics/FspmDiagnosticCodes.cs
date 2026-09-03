@@ -14,6 +14,12 @@ public static class FspmDiagnosticCodes
     public const string MissingDot = "FSPM003";
     public const string DuplicateDeclaration = "FSPM004";
 
+    // ===== Phase 12 Construction Parser (emitted by FspmConstructionParser only) =====
+    public const string MissingExpression = "FSPM005";
+    public const string MissingBrace = "FSPM006";
+    public const string InvalidNesting = "FSPM007";
+    public const string MissingArrow = "FSPM008";
+
     // ===== Phase 8 Binders (emitted by Binding/EntityBinder etc.) =====
     public const string EntityNotFound = "FSPM101";
     public const string PropertyNotFound = "FSPM102";

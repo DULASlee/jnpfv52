@@ -1,0 +1,32 @@
+{
+  "phase": "P12",
+  "name": "Construction Compiler / Syntax Layer",
+  "facade": "FspmConstructionCompiler.Parse",
+  "grammar": "document := page* | page := 'page' ID '{' form* '}' | form := 'form' ID '{' binding* '}' | binding := entityBinding | fieldBinding | submitBinding | entityBinding := 'entity' nativeExpression | fieldBinding := 'field' nativeExpression | submitBinding := 'submit' ID '->' nativeExpression",
+  "nativeBoundary": "FspmNativeExpressionSyntax captures Text verbatim. NO Split('.'). NO receiver/member/argument nodes. Roslyn (P13) owns C# semantics.",
+  "newTokens": ["PageKeyword", "FormKeyword", "FieldKeyword", "SubmitKeyword", "LBrace", "RBrace", "LParen", "RParen", "LBracket", "RBracket", "Question", "Arrow", "StringLiteral", "NumericLiteral"],
+  "diagnosticCodes": ["FSPM005 MissingExpression", "FSPM006 MissingBrace", "FSPM007 InvalidNesting", "FSPM008 MissingArrow"],
+  "gates": {
+    "G12-01-Lexer": "PASS (16 tests: 14 construction + 2 legacy intent-corrected)",
+    "G12-02-AST": "PASS (ConstructionDocument/Page/Form/EntityBinding/FieldBinding/SubmitBinding/NativeExpression)",
+    "G12-03-Parser": "PASS (7 positive T01-T06+SpanCoversExactSourceSlice)",
+    "G12-04-NativeBoundary": "PASS (11 native expression theory cases + opaque-node guards)",
+    "G12-05-PositiveMatrix": "PASS (T01-T06 + black-box + multiple fields/submits)",
+    "G12-06-NegativeMatrix": "PASS (N01-N08 + nested form + diagnostics carry source span)",
+    "G12-07-Recovery": "PASS (no raw exception on any malformed source; parser always terminates)",
+    "G12-08-SourceSpan": "PASS (FieldBinding span slice equals source substring)",
+    "G12-09-Determinism": "PASS (10x golden identical AST+diagnostic fingerprint; 10x malformed identical)",
+    "G12-10-BlackBox": "PASS (8 black-box cases through FspmConstructionCompiler.Parse facade only)",
+    "G12-11-Regression": "PASS (208/208 = 156 prior + 52 new; legacy entity/property/operation preserved)",
+    "G12-12-Build": "PASS (Core library + Tests 0 error; only CA warnings on pre-existing files)",
+    "G12-13-Evidence": "PASS (this manifest + full.txt + build.txt + git diff + git status)"
+  },
+  "forbiddenIntroductions": {
+    "Split(\".\")": "0 occurrences in Foundry.FSPM.Compiler",
+    "RoslynResolver": "0",
+    "SemanticBinder": "0",
+    "CanonicalModel": "0",
+    "Foundry.FSPM.Mcp": "0",
+    "AgentOS": "0"
+  }
+}
