@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0",
+  "artifactFormat": "jsonl.gz",
+  "artifactStorage": "local",
+  "artifactSizeBytes": 9773914,
+  "artifactSha256": "FD21B8B7ABE8C273E60384655883976010FB39F4E78535D6C58C59DC82BBB614",
+  "repositoryCommit": "edbfda33",
+  "compilerCommit": "d7f141c8",
+  "baselineGenerator": "Foundry.FSPM.Tools.Baseline",
+  "generatedUtc": "2026-09-03T12:32:00Z",
+  "solution": {
+    "path": "D:/JNPF-v52/backend/framework/JNPF.sln",
+    "fileName": "JNPF.sln",
+    "projectCount": 8
+  },
+  "counts": {
+    "projects": 8,
+    "types": 69625,
+    "properties": 153580,
+    "methods": 368784,
+    "namespaces": 3141,
+    "symbols": 591989
+  },
+  "_comment": "This manifest is the ONLY git-committed baseline artifact. The actual baseline data lives in jnpf-baseline.jsonl.gz (content-addressed). To regenerate: dotnet run --project backend/tools/Foundry.FSPM.Tools.Baseline -- <solutionPath> <outputJsonPath>"
+}
