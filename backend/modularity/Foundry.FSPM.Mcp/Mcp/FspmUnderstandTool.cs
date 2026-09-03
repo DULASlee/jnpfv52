@@ -25,7 +25,7 @@
 // =============================================================================
 
 using System.ComponentModel;
-using System.Text.Json;
+using Foundry.FSPM.Mcp.Execution;
 using Foundry.FSPM.Mcp.Validation;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -51,10 +51,10 @@ public static class FspmUnderstandTool
     {
         var workspaceCheck = Validator.ValidateRequired("workspaceRoot", workspaceRoot);
         if (!workspaceCheck.IsValid)
-            return Task.FromResult(InvalidRequest(workspaceCheck));
+            return Task.FromResult(McpOperationResult.InvalidRequest(workspaceCheck));
         var targetCheck = Validator.ValidateQualifiedName("target", target);
         if (!targetCheck.IsValid)
-            return Task.FromResult(InvalidRequest(targetCheck));
+            return Task.FromResult(McpOperationResult.InvalidRequest(targetCheck));
 
         // Architect §六: "MCP 不得自己重新解析、绑定、Semantic Model"。
         // Architect §三: "等新的 MCP Worktree 建成后重新进入" + "MCP must work through
@@ -91,25 +91,6 @@ public static class FspmUnderstandTool
             },
         };
 
-        string json = JsonSerializer.Serialize(
-            result,
-            new JsonSerializerOptions { WriteIndented = true });
-        return Task.FromResult(new CallToolResult
-        {
-            IsError = false,
-            Content = new List<ContentBlock> { new TextContentBlock { Text = json } },
-        });
-    }
-
-    private static CallToolResult InvalidRequest(McpValidationResult validation)
-    {
-        string json = JsonSerializer.Serialize(
-            new { status = "INVALID_REQUEST", field = validation.Field, message = validation.Message },
-            new JsonSerializerOptions { WriteIndented = true });
-        return new CallToolResult
-        {
-            IsError = true,
-            Content = new List<ContentBlock> { new TextContentBlock { Text = json } },
-        };
+        return Task.FromResult(McpOperationResult.Success(result));
     }
 }

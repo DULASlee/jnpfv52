@@ -1,0 +1,56 @@
+鐢熸垚鍚姩鏃堕棿涓?2026/9/3 21:18:27銆?
+D:\JNPF-FSPM-Worktrees\mcp\backend\tests\Foundry.FSPM.Mcp.Tests\bin\Debug\net8.0\Foundry.FSPM.Mcp.Tests.dll (.NETCoreApp,Version=v8.0)鐨勬祴璇曡繍琛?
+鎬诲叡 1 涓祴璇曟枃浠朵笌鎸囧畾妯″紡鐩稿尮閰嶃€?
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.4.1+b9eacec401 (64-bit .NET 8.0.30)
+[xUnit.net 00:00:00.06]   Discovering: Foundry.FSPM.Mcp.Tests
+[xUnit.net 00:00:00.10]   Discovered:  Foundry.FSPM.Mcp.Tests
+[xUnit.net 00:00:00.10]   Starting:    Foundry.FSPM.Mcp.Tests
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: ".") [6 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: "9User") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: "A.B.C") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: null) [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: "User.") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: "User Login") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: "_U1.$x") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: "") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_RejectsMalformed(value: ".Login") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_AcceptsEntityShapes(value: "User") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_AcceptsEntityShapes(value: "_U1") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_AcceptsEntityShapes(value: "User.UserName") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateQualifiedName_AcceptsEntityShapes(value: "User.Login") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateRequired_AcceptsNonEmpty [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateRequired_RejectsNullEmptyWhitespace(value: null) [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateRequired_RejectsNullEmptyWhitespace(value: "   ") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpRequestValidatorTests.ValidateRequired_RejectsNullEmptyWhitespace(value: "") [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionContextTests.Create_ReturnsUniqueExecutionIds [70 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionContextTests.Create_PreservesToolNameWorkspaceAndCorrelation [12 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionContextTests.Create_RejectsEmptyToolName [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionContextTests.Create_GeneratesCorrelationIdWhenMissing [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpExecutionContextTests.Create_StartedAtIsRecentUtc [3 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpOperationResultTests.Success_WrapsPayloadWithExplicitIsErrorFalse [94 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpOperationResultTests.InvalidRequest_SetsIsErrorTrueAndShape [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Unit.McpOperationResultTests.StatusLiterals_AreDistinct [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.McpServerStarts [< 1 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.Tool_Understand_IsAvailable [36 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Discovery.McpDiscoveryTests.Discovery_EachToolHasDescription [36 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.Tool_Verify_IsAvailable [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Discovery.McpDiscoveryTests.Discovery_ReturnsExactlyThreeFrozenTools [3 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.ExactlyThreeToolsAreRegistered [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.Tool_Construct_IsAvailable [2 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.AwaitingContractTests.Construct_AwaitingUpstreamContract [84 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.AwaitingContractTests.Understand_AwaitingUpstreamContract [4 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.Discovery.McpServerLifecycleTests.Start_Discover_Invoke_StaysAlive [94 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.AwaitingContractTests.Verify_AwaitingUpstreamContract [7 ms]
+  宸查€氳繃 Foundry.FSPM.Mcp.Tests.McpBoundaryTests.McpStdoutIsProtocolClean [507 ms]
+[xUnit.net 00:00:06.35]   Finished:    Foundry.FSPM.Mcp.Tests
+
+娴嬭瘯杩愯鎴愬姛銆?
+娴嬭瘯鎬绘暟: 37
+     閫氳繃鏁? 37
+鎬绘椂闂? 6.7747 绉?
+
+宸叉垚鍔熺敓鎴愩€?
+    0 涓鍛?
+    0 涓敊璇?
+
+宸茬敤鏃堕棿 00:00:07.31

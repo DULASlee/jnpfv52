@@ -24,7 +24,7 @@
 // =============================================================================
 
 using System.ComponentModel;
-using System.Text.Json;
+using Foundry.FSPM.Mcp.Execution;
 using Foundry.FSPM.Mcp.Validation;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -49,10 +49,10 @@ public static class FspmConstructTool
     {
         var workspaceCheck = Validator.ValidateRequired("workspaceRoot", workspaceRoot);
         if (!workspaceCheck.IsValid)
-            return Task.FromResult(InvalidRequest(workspaceCheck));
+            return Task.FromResult(McpOperationResult.InvalidRequest(workspaceCheck));
         var operationCheck = Validator.ValidateQualifiedName("operation", operation);
         if (!operationCheck.IsValid)
-            return Task.FromResult(InvalidRequest(operationCheck));
+            return Task.FromResult(McpOperationResult.InvalidRequest(operationCheck));
 
         // The actual mutation pipeline requires Foundry.FSPM.Core.Semantic
         // symbol resolution (which Foundry.FSPM.Core does not yet provide)
@@ -87,25 +87,6 @@ public static class FspmConstructTool
             },
         };
 
-        string json = JsonSerializer.Serialize(
-            result,
-            new JsonSerializerOptions { WriteIndented = true });
-        return Task.FromResult(new CallToolResult
-        {
-            IsError = false,
-            Content = new List<ContentBlock> { new TextContentBlock { Text = json } },
-        });
-    }
-
-    private static CallToolResult InvalidRequest(McpValidationResult validation)
-    {
-        string json = JsonSerializer.Serialize(
-            new { status = "INVALID_REQUEST", field = validation.Field, message = validation.Message },
-            new JsonSerializerOptions { WriteIndented = true });
-        return new CallToolResult
-        {
-            IsError = true,
-            Content = new List<ContentBlock> { new TextContentBlock { Text = json } },
-        };
+        return Task.FromResult(McpOperationResult.Success(result));
     }
 }
