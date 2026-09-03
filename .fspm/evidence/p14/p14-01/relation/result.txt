@@ -1,10 +1,10 @@
 Gate: relation
-Command: dotnet test backend/tests/Foundry.FSPM.Compiler.Tests/Foundry.FSPM.Compiler.Tests.csproj --filter 'FullyQualifiedName~ModelRelationTests' 
+Command: dotnet test backend/tests/Foundry.FSPM.Compiler.Tests/Foundry.FSPM.Compiler.Tests.csproj --filter 'FullyQualifiedName~ModelRelationTests|ModelContainmentTests'
 WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
-Started-UTC: 2026-09-03T22:44:11.9545683Z
+Started-UTC: 2026-09-03T23:25:23.5691250Z
 ExitCode: 0
-Commit: 94f3f6f6033d762fc16fcecc9daebc5de07a50d8
+Commit: e2dd60e9a185f680dfc0f085fe29c500f940edf1
 Environment: Windows_NT / Microsoft Windows NT 10.0.26200.0 / dotnet 10.0.400
 --- tail ---
-宸查€氳繃! - 澶辫触:     0锛岄€氳繃:     4锛屽凡璺宠繃:     0锛屾€昏:     4锛屾寔缁椂闂? 8 s - Foundry.FSPM.Compiler.Tests.dll (net8.0)
+宸查€氳繃! - 澶辫触:     0锛岄€氳繃:     7锛屽凡璺宠繃:     0锛屾€昏:     7锛屾寔缁椂闂? 11 s - Foundry.FSPM.Compiler.Tests.dll (net8.0)
 

@@ -1,0 +1,10 @@
+Gate: anchor
+Command: dotnet test backend/tests/Foundry.FSPM.Compiler.Tests/Foundry.FSPM.Compiler.Tests.csproj --filter 'FullyQualifiedName~H6SourceAnchor'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-03T23:23:09.1623318Z
+ExitCode: 0
+Commit: e2dd60e9a185f680dfc0f085fe29c500f940edf1
+Environment: Windows_NT / Microsoft Windows NT 10.0.26200.0 / dotnet 10.0.400
+--- tail ---
+宸查€氳繃! - 澶辫触:     0锛岄€氳繃:     4锛屽凡璺宠繃:     0锛屾€昏:     4锛屾寔缁椂闂? 3 s - Foundry.FSPM.Compiler.Tests.dll (net8.0)
+

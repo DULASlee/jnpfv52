@@ -1,0 +1,10 @@
+Gate: api
+Command: dotnet test backend/tests/Foundry.FSPM.Compiler.Tests/Foundry.FSPM.Compiler.Tests.csproj --filter 'FullyQualifiedName~SemanticModelIsolation'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-03T23:22:52.7724536Z
+ExitCode: 0
+Commit: e2dd60e9a185f680dfc0f085fe29c500f940edf1
+Environment: Windows_NT / Microsoft Windows NT 10.0.26200.0 / dotnet 10.0.400
+--- tail ---
+宸查€氳繃! - 澶辫触:     0锛岄€氳繃:     2锛屽凡璺宠繃:     0锛屾€昏:     2锛屾寔缁椂闂? 907 ms - Foundry.FSPM.Compiler.Tests.dll (net8.0)
+

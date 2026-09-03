@@ -1,9 +1,10 @@
 Gate: member
-Command: dotnet test ... --filter 'FullyQualifiedName~ModelMemberTests|FullyQualifiedName~MemberShapeTests'
+Command: dotnet test backend/tests/Foundry.FSPM.Compiler.Tests/Foundry.FSPM.Compiler.Tests.csproj --filter 'FullyQualifiedName~ModelMemberTests|MemberShapeTests|ModelContainmentTests'
 WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
-Started-UTC: 2026-09-03T22:44:34.2787444Z
+Started-UTC: 2026-09-03T23:24:23.7869106Z
 ExitCode: 0
-Commit: 94f3f6f6033d762fc16fcecc9daebc5de07a50d8
+Commit: e2dd60e9a185f680dfc0f085fe29c500f940edf1
+Environment: Windows_NT / Microsoft Windows NT 10.0.26200.0 / dotnet 10.0.400
 --- tail ---
-宸查€氳繃! - 澶辫触:     0锛岄€氳繃:     8锛屽凡璺宠繃:     0锛屾€昏:     8锛屾寔缁椂闂? 10 s - Foundry.FSPM.Compiler.Tests.dll (net8.0)
+宸查€氳繃! - 澶辫触:     0锛岄€氳繃:    11锛屽凡璺宠繃:     0锛屾€昏:    11锛屾寔缁椂闂? 16 s - Foundry.FSPM.Compiler.Tests.dll (net8.0)
 
