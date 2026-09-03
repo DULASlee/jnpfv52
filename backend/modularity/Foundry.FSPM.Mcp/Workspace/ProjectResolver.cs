@@ -74,8 +74,8 @@ internal sealed class ProjectResolver : IProjectResolver
             projectPath = located.Workspace.ProjectPath;
         }
 
-        string? targetFramework = ReadTargetFramework(projectPath);
-        if (targetFramework is null && !IsWellFormedXml(projectPath))
+        var (wellFormed, targetFramework) = ReadProjectFile(projectPath);
+        if (!wellFormed)
             return ProjectOutcome.Fail("project", $"project file is not well-formed XML: {projectPath}");
 
         return ProjectOutcome.Ok(new ProjectInfo(
@@ -84,29 +84,21 @@ internal sealed class ProjectResolver : IProjectResolver
             targetFramework));
     }
 
-    private static string? ReadTargetFramework(string projectPath)
+    private static (bool WellFormed, string? TargetFramework) ReadProjectFile(string projectPath)
     {
         try
         {
             var doc = XDocument.Load(projectPath);
-            return doc.Descendants("TargetFramework").FirstOrDefault()?.Value.Trim();
+            string? tfm = doc.Descendants("TargetFramework").FirstOrDefault()?.Value.Trim();
+            if (string.IsNullOrWhiteSpace(tfm))
+                tfm = null;
+            return (true, tfm);
         }
-        catch
+        catch (Exception ex) when (ex is System.Xml.XmlException
+            || ex is IOException
+            || ex is UnauthorizedAccessException)
         {
-            return null;
-        }
-    }
-
-    private static bool IsWellFormedXml(string projectPath)
-    {
-        try
-        {
-            _ = XDocument.Load(projectPath);
-            return true;
-        }
-        catch
-        {
-            return false;
+            return (false, null);
         }
     }
 }
