@@ -72,3 +72,8 @@
 - MSBuildWorkspace trees bake #if branches at parse time: reusing trees in an Adhoc compilation keeps DEBUG active. Re-parse source texts with clean CSharpParseOptions to test absence.
 - Roslyn ToDisplayString defaults to keyword form (int/string), not metadata form. Assert what Roslyn reports, not what reads better.
 - dotnet test --no-build runs the STALE dll after test-only edits; always rebuild before trusting --no-build results.
+
+## 2026-09-04 P13 隔离审查课
+- Symbol==null 的单候选绝不能报 Resolved：Type.Member 实例成员访问在 Roslyn 里本来就不绑定（非值上下文），必须走接收者验证+显式理由，否则就是 First() 后门。
+- 工厂方法吞 reason（ResolvedResult 硬编码 OK）是同类诚实 bug：结果对象的理由字段必须端到端可追踪。
+- 昂贵操作（Compilation.Emit）进解析路径必须配缓存（ConditionalWeakTable 按 Compilation 键），否则每个表达式查询都是秒级。
