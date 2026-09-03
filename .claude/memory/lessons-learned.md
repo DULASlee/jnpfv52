@@ -66,3 +66,9 @@
 - JNPF 是多子项目结构（jnpf-web-vue3、jnpf-app-vue3 各有独立 node_modules）
 - 必须从被编辑文件路径向上动态查找最近的 node_modules
 - `findProjectRoot()` 函数实现：从文件路径向上遍历，检查 `node_modules/.bin` 是否存在
+
+## 2026-09-04 P13-H Hardening lessons
+- Roslyn 4.8 API name is PreprocessorSymbolNames, not PreprocessorSymbols (verified via NuGet assembly reflection). Never assume API names; probe the exact package version.
+- MSBuildWorkspace trees bake #if branches at parse time: reusing trees in an Adhoc compilation keeps DEBUG active. Re-parse source texts with clean CSharpParseOptions to test absence.
+- Roslyn ToDisplayString defaults to keyword form (int/string), not metadata form. Assert what Roslyn reports, not what reads better.
+- dotnet test --no-build runs the STALE dll after test-only edits; always rebuild before trusting --no-build results.
