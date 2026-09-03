@@ -14,10 +14,11 @@ public static class FspmDiagnosticCodes
     public const string MissingDot = "FSPM003";
     public const string DuplicateDeclaration = "FSPM004";
 
-    // ===== Phase 8 Binders (reserved, not yet emitted) =====
+    // ===== Phase 8 Binders (emitted by Binding/EntityBinder etc.) =====
     public const string EntityNotFound = "FSPM101";
     public const string PropertyNotFound = "FSPM102";
     public const string OperationNotFound = "FSPM103";
+    public const string InvalidOperationSignature = "FSPM104";
 
     public const string AmbiguousEntity = "FSPM111";
     public const string AmbiguousProperty = "FSPM112";
