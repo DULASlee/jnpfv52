@@ -34,6 +34,7 @@ public static class FspmModelBinder
                 Name: fact.Name,
                 Namespace: fact.Logical.Namespace,
                 Kind: "Type",
+                TypeKind: fact.TypeKind.ToString(),
                 GenericArity: fact.TypeShape?.Arity ?? 0,
                 NullableShape: fact.TypeShape?.NullableAnnotation,
                 BaseType: fact.Relationships?.BaseType,
@@ -138,6 +139,7 @@ public static class FspmModelBinder
             {
                 NativeSymbolKind.Method => "Method",
                 NativeSymbolKind.Constructor => "Constructor",
+                NativeSymbolKind.Indexer => "Indexer",
                 _ => null,
             };
 
@@ -189,18 +191,25 @@ public static class FspmModelBinder
     /// <summary>
     /// Binds Inheritance / Implementation / Override /
     /// ExplicitInterfaceImplementation relations from facts carrying
-    /// relationship data. ResolvedTargetId stays empty: resolving targets
-    /// to model identities is P14-02 Reference System work, not P14-01.
+    /// relationship data, plus Declares / Contains containment links
+    /// between owner Type facts and directly-declared member facts.
+    /// ResolvedTargetId stays empty for cross-display links: resolving
+    /// targets to model identities is P14-02 Reference System work.
+    /// Declares/Contains always carry BOTH resolved ids (they are only
+    /// emitted when the owner Type fact is in the batch). A member whose
+    /// owner is absent yields no containment link here; the corresponding
+    /// BindMembers note is the single record of that fact (no duplicate).
     /// </summary>
     public static (IReadOnlyList<Model.FspmSemanticRelation> Relations, IReadOnlyList<string> Notes) BindRelations(
         IEnumerable<NativeSemanticFact> facts)
     {
         ArgumentNullException.ThrowIfNull(facts);
 
+        var all = facts.ToArray();
         var relations = new List<Model.FspmSemanticRelation>();
         var notes = new List<string>();
 
-        foreach (var fact in facts)
+        foreach (var fact in all)
         {
             var fromId = fact.Identity.Value;
             var relationships = fact.Relationships;
@@ -229,6 +238,27 @@ public static class FspmModelBinder
             {
                 relations.Add(new Model.FspmSemanticRelation(fromId, "ExplicitInterfaceImplementation", explicitImpl, string.Empty));
             }
+        }
+
+        var owners = BuildOwnerIndex(all);
+        foreach (var fact in all)
+        {
+            if (!IsMemberKind(fact.Kind))
+            {
+                continue;
+            }
+
+            if (!owners.TryGetValue(
+                (fact.Logical.AssemblyName, fact.Logical.Namespace, fact.Logical.ContainingTypeName),
+                out var ownerFact))
+            {
+                continue;
+            }
+
+            relations.Add(new Model.FspmSemanticRelation(
+                ownerFact.Identity.Value, "Declares", fact.QualifiedName, fact.Identity.Value));
+            relations.Add(new Model.FspmSemanticRelation(
+                fact.Identity.Value, "Contains", ownerFact.QualifiedName, ownerFact.Identity.Value));
         }
 
         return (relations.ToArray(), notes.ToArray());
@@ -283,25 +313,33 @@ public static class FspmModelBinder
         return (model, notes);
     }
 
-    private static Dictionary<(string Assembly, string Namespace, string TypeName), string> BuildOwnerIndex(
+    private static bool IsMemberKind(NativeSymbolKind kind) =>
+        kind == NativeSymbolKind.Property ||
+        kind == NativeSymbolKind.Field ||
+        kind == NativeSymbolKind.Event ||
+        kind == NativeSymbolKind.Method ||
+        kind == NativeSymbolKind.Constructor ||
+        kind == NativeSymbolKind.Indexer;
+
+    private static Dictionary<(string Assembly, string Namespace, string TypeName), NativeSemanticFact> BuildOwnerIndex(
         NativeSemanticFact[] facts) =>
         facts
             .Where(f => f.Kind == NativeSymbolKind.Type)
             .GroupBy(f => (f.Logical.AssemblyName, f.Logical.Namespace, f.Logical.MemberName))
             .ToDictionary(
                 g => g.Key,
-                g => g.First().Identity.Value);
+                g => g.First());
 
     private static string ResolveOwner(
         NativeSemanticFact fact,
-        Dictionary<(string Assembly, string Namespace, string TypeName), string> owners,
+        Dictionary<(string Assembly, string Namespace, string TypeName), NativeSemanticFact> owners,
         List<string> notes)
     {
         if (owners.TryGetValue(
             (fact.Logical.AssemblyName, fact.Logical.Namespace, fact.Logical.ContainingTypeName),
-            out var ownerId))
+            out var ownerFact))
         {
-            return ownerId;
+            return ownerFact.Identity.Value;
         }
 
         notes.Add($"Owner Type fact absent for '{fact.Name}'; DeclaringTypeId left empty.");

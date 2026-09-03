@@ -10,6 +10,7 @@ public sealed record FspmSemanticType(
     string Name,
     string Namespace,
     string Kind,
+    string TypeKind,
     int GenericArity,
     string? NullableShape,
     string? BaseType,

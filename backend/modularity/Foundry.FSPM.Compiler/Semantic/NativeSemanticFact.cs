@@ -59,9 +59,33 @@ public static class NativeSemanticFactFactory
             _ => null,
         };
 
-        NativeOperationIdentity? operation = symbol is IMethodSymbol method
-            ? MethodSignatureExtractor.ExtractOperationIdentity(method)
-            : null;
+        // P14-01 Gap-B: indexer properties (IPropertySymbol.IsIndexer)
+        // also carry an operation identity so BindOperations can bind
+        // them as Indexer operations. Parameters come from the
+        // indexer's own parameter list; nothing is inferred.
+        NativeOperationIdentity? operation = symbol switch
+        {
+            IMethodSymbol method => MethodSignatureExtractor.ExtractOperationIdentity(method),
+            IPropertySymbol { IsIndexer: true } indexer => new NativeOperationIdentity(
+                ContainingType: indexer.ContainingType.ToDisplayString(),
+                Name: indexer.Name,
+                Arity: 0,
+                Parameters: indexer.Parameters.Select(p => new NativeParameterFact(
+                    Name: p.Name,
+                    ParameterType: p.Type.ToDisplayString(),
+                    RefKind: p.RefKind.ToString(),
+                    IsOptional: p.IsOptional,
+                    DefaultValue: p.HasExplicitDefaultValue
+                        ? p.ExplicitDefaultValue?.ToString()
+                        : null,
+                    IsParams: p.IsParams,
+                    NullableAnnotation: p.NullableAnnotation.ToString())).ToArray(),
+                ReturnType: indexer.Type.ToDisplayString(),
+                GenericParameters: Array.Empty<string>(),
+                Kind: NativeSymbolKind.Indexer,
+                StableId: FspmSymbolIdentity.Create(indexer).Value),
+            _ => null,
+        };
 
         NativeTypeRelationships? relationships = symbol switch
         {
