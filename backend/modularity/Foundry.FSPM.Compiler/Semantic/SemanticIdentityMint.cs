@@ -69,11 +69,12 @@ public static class SemanticIdentityMint
         {
             ns = type.ContainingNamespace.ToDisplayString();
             containingType = null;
-            // Name, not MetadataName: backtick arity suffixes (`1) are a
-            // binding detail, not logical identity. Overloads of one
-            // operation intentionally share the logical node; the
-            // SemanticFingerprint distinguishes them.
-            memberName = type.Name;
+            // MetadataName (backtick arity included, e.g. "List`1"): the
+            // owner index matches member.ContainingTypeName (also
+            // MetadataName) against it, so generic owners resolve.
+            // (Methods keep Name — overloads intentionally share the
+            // logical node; see below.)
+            memberName = type.MetadataName;
         }
         else
         {
