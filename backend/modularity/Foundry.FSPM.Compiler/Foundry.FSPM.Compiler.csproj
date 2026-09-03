@@ -20,5 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Foundry.FSPM.Core\Foundry.FSPM.Core.csproj" />
+    <ProjectReference Include="..\Foundry.FSPM.SemanticModel\Foundry.FSPM.SemanticModel.csproj" />
   </ItemGroup>
 </Project>

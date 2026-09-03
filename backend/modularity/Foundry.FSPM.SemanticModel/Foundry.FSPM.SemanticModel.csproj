@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Foundry.FSPM.SemanticModel</RootNamespace>
+    <AssemblyName>Foundry.FSPM.SemanticModel</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <!-- P14: intentionally ZERO PackageReferences and ZERO ProjectReferences.
+       No Roslyn, no MSBuild, no Compiler. Pure BCL records only. -->
+</Project>

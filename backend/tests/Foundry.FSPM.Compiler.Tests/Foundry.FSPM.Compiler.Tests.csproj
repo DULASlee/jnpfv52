@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\modularity\Foundry.FSPM.Compiler\Foundry.FSPM.Compiler.csproj" />
+    <ProjectReference Include="..\..\modularity\Foundry.FSPM.SemanticModel\Foundry.FSPM.SemanticModel.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.8.0" />

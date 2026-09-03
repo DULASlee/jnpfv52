@@ -28,7 +28,7 @@ public sealed class FspmCompilationSnapshot : IDisposable
 
     public IReadOnlyList<Document> Documents => PrimaryProject.Documents.ToArray();
 
-    public SemanticModel GetSemanticModel(Document document) =>
+    public Microsoft.CodeAnalysis.SemanticModel GetSemanticModel(Document document) =>
         Compilation.GetSemanticModel(document.GetSyntaxTreeAsync().GetAwaiter().GetResult());
 
     public void Dispose() { /* Compilation is GC-owned; nothing to free. */ }

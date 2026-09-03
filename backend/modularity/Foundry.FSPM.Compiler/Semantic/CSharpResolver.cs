@@ -360,7 +360,7 @@ public sealed class CSharpResolver
     // containing type. Returns false for anything else (method groups
     // with 2+ overloads never reach here with Length == 1).
     private static bool TryResolveMemberReference(
-        SemanticModel model,
+        Microsoft.CodeAnalysis.SemanticModel model,
         ExpressionSyntax expr,
         ISymbol candidate,
         out string reason)
