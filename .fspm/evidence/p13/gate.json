@@ -1,0 +1,41 @@
+{
+  "phase": "P13",
+  "name": "Roslyn Semantic Compiler / Resolver",
+  "facade": "CSharpSemanticCompiler.CompileAsync (loader, snapshot, index, resolver)",
+  "resolver": "CSharpResolver (Type / Property / Method / MethodBySignature / Expression)",
+  "resultShape": "FspmResolutionResult(Status, Candidates, Reason, Location) — Resolved/NotFound/Ambiguous/Invalid",
+  "identityContract": "FspmSymbolId (Phase 7, reused) = Assembly|DocumentationCommentId. Stable across compilations and runs.",
+  "expressionResolution": "Verbatim text wrapped in __FspmHost with snapshot's using+namespace imports, parsed and resolved through Roslyn SemanticModel.GetSymbolInfo. Snapshot assembly is emitted to in-memory metadata and referenced. NO Split('.'), NO manual C# parsing.",
+  "forbiddenIntroductions": {
+    "Split(\".\")": "0",
+    "Mock<ISymbol>": "0",
+    "FspmTypeResolver": "0",
+    "FspmMethodResolver": "0",
+    "FspmPropertyParser": "0",
+    "CSharpTypeParser": "0",
+    "CSharpExpressionParser": "0",
+    "CanonicalSemanticModel": "0",
+    "MCP": "0",
+    "AgentOS": "0"
+  },
+  "gates": {
+    "G13-01-Workspace": "PASS (Loads_real_semantic_golden_project)",
+    "G13-02-RealCompilation": "PASS (Compilation != null, Documents > 0, SemanticModel resolvable)",
+    "G13-03-Type": "PASS (ResolveType_User_ReturnsResolved + UnknownType_NotFound)",
+    "G13-04-Property": "PASS (ResolveProperty_PhoneNumber + UnknownMember_NotFound_NotGuessedToPhoneNumber)",
+    "G13-05-Method": "PASS (ResolveMethod_ByNameOnly_Ambiguous + BySignature_String_Resolved + BySignature_Int_Resolved + NoMatch_NotFound)",
+    "G13-06-Expression": "PASS (UserName/PhoneNumber/TenantId Resolved; User.Phone NotFound NotGuessed; User.[PhoneNumber Invalid; obj[0].Property passthrough)",
+    "G13-07-SourceLocation": "PASS (SourceLocationPointsToRealFile, endsWith User.cs, line/col > 0)",
+    "G13-08-NotFound": "PASS (User.Phone / NonExistent / Create(double) all NotFound)",
+    "G13-09-Ambiguous": "PASS (Create() returns 2 candidates when no signature given)",
+    "G13-10-Invalid": "PASS (User.[PhoneNumber → Invalid; C# parse errors preserved)",
+    "G13-11-Scope": "PASS (Resolver operates only on FspmCompilationSnapshot.Compilation, no FS walk)",
+    "G13-12-IdentityStability": "PASS (10x same expression → identical FspmSymbolId)",
+    "G13-13-Determinism": "PASS (10x Run produces identical fingerprint)",
+    "G13-14-RealSymbol": "PASS (every Result.Selected is real IPropertySymbol/IMethodSymbol/INamedTypeSymbol)",
+    "G13-15-BlackBox": "PASS (Golden Type / Property / Method / Unknown / Ambiguous through CSharpSemanticCompiler facade)",
+    "G13-16-Regression": "PASS (226/226 = 208 P12 + 18 P13 new)",
+    "G13-17-Build": "PASS (Core + Tests 0 error)",
+    "G13-18-Evidence": "PASS (this file + full.txt + git diff)"
+  }
+}
