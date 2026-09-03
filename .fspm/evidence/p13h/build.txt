@@ -1,0 +1,5 @@
+Build: Foundry.FSPM.Compiler -> bin/Debug/net8.0/Foundry.FSPM.Compiler.dll
+Result: 0 warnings, 0 errors (library target, --no-dependencies).
+Note: solution-wide builds surface pre-existing analyzer warnings
+(RS1033/RS2008/CA1304 in JNPF.Analyzers, CA1829/CA1305/xUnit2013 in older
+test files); none are errors and none originate from P13-H files.

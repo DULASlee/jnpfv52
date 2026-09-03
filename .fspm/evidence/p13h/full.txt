@@ -1,0 +1,5 @@
+D:\JNPF-FSPM-Worktrees\compiler\backend\tests\Foundry.FSPM.Compiler.Tests\bin\Debug\net8.0\Foundry.FSPM.Compiler.Tests.dll (.NETCoreApp,Version=v8.0)鐨勬祴璇曡繍琛?
+鎬诲叡 1 涓祴璇曟枃浠朵笌鎸囧畾妯″紡鐩稿尮閰嶃€?
+
+宸查€氳繃! - 澶辫触:     0锛岄€氳繃:   276锛屽凡璺宠繃:     0锛屾€昏:   276锛屾寔缁椂闂? 1 m 58 s - Foundry.FSPM.Compiler.Tests.dll (net8.0)
+

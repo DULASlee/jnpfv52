@@ -1,0 +1,45 @@
+{
+  "phase": "P13-H",
+  "name": "Native Semantic Foundation Hardening (H0-H8) + Public Contract",
+  "frozenModel": "CompilationIdentity (which build) / NativeBindingIdentity (currently bound) / LogicalSemanticIdentity (logically who) / SemanticFingerprint (currently what)",
+  "publicContract": "NativeSemanticFact (zero Roslyn runtime objects; isolation-proven)",
+  "internalTransport": "NativeBinding / ISymbol / SemanticModel stay inside P13 (FspmSymbolRecord, FspmCompilationSnapshot)",
+  "correctionsApplied": [
+    "LogicalSemanticIdentity is NOT DocId+assembly: layered identity + SemanticFingerprint detect string-to-int change (Logical SAME, Fingerprint CHANGED)",
+    "StableAnchor is NOT a permanent Roslyn syntax id: Logical + DocumentIdentity + DeclarationAnchor + SnapshotLocation",
+    "Manifest path rule respected: no absolute paths anywhere",
+    "No lexer-mode complexity for digits: digits are NumericLiteral everywhere",
+    "No reimplementation: GetSymbolInfo/GetMemberGroup/ReducedFrom/Overridden*/ExplicitInterfaceImplementations wrapped, never reimplemented",
+    "Roslyn display truthfulness: keyword-form displays (int/string) asserted as Roslyn reports them",
+    "TargetFramework/Configuration NOT exposed: not in Roslyn Project model (documented absence, no guessing)"
+  ],
+  "gates": {
+    "H1": "PASS (6/6: Public/Internal/DebugOnly classification + conditional facts + Adhoc no-DEBUG absence)",
+    "H2": "PASS (8/8: Named/ConstructedGeneric/Nullable/Array shapes + string!=string? + List<User?> element nullability + class/new() constraints)",
+    "H3": "PASS (9/9: full signature/overload-distinct/optional-default/params/ref-out/ctor/indexer-kind/extension-ReducedFrom/generic-arity)",
+    "H4": "PASS (4/4: BaseType/Interface/Override + explicit IUser.Name is a DIFFERENT real symbol, identities differ)",
+    "H5": "PASS (7/7: G13-ID-01 logical SAME + G13-ID-02 rebinding + G13-ID-03 fingerprint CHANGED on string-to-int + stable when unchanged + G13-ID-04 removed never resolves + compilation identity changes + 1 real MSBuild integration proof)",
+    "H6": "PASS (4/4: Logical SAME + Span CHANGED after insert + evidence pairing + real MSBuild anchor)",
+    "H7": "PASS (5/5: 8 states classified semantic-vs-execution + Degraded proven on error compilation + Perfect on clean + NativeDiagnostic shape)",
+    "H8": "PASS (5/5: hit/miss + V1-cache-never-hits-V2 + 100 concurrent agree + disposed InfrastructureFailure + cancelled Cancelled)",
+    "G13-BOUNDARY-01": "PASS (FactIsolation: client compiled with ZERO Roslyn references reads full Fact)",
+    "G13-BOUNDARY-02": "PASS (same: Kind/Identity/Shape/Signature/Visibility/Assembly/Anchor/Diagnostic all readable)",
+    "G13-CACHE-01": "PASS (V1 cache never satisfies V2 query)",
+    "G13-ID-01": "PASS", "G13-ID-02": "PASS", "G13-ID-03": "PASS", "G13-ID-04": "PASS",
+    "Regression": "PASS (276/276 = 226 prior + 50 new)",
+    "Build": "PASS (library 0 warnings 0 errors)",
+    "Evidence": "PASS (this file + full.txt + build.txt + git diff)"
+  },
+  "forbiddenIntroductions": {
+    "Split(\".\")": "0",
+    "Mock<ISymbol>": "0",
+    "CanonicalSemanticModel": "0",
+    "MCP": "0",
+    "AgentOS": "0",
+    "CSharpGenerator": "0",
+    "ArgumentBindingEngine": "0",
+    "GenericInferenceEngine": "0",
+    "PublicRoslynObjectInFact": "0 (isolation-proven)"
+  },
+  "testTotals": { "prior": 226, "new": 50, "total": 276, "failures": 0 }
+}
