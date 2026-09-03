@@ -9,24 +9,16 @@
 //  Per Architect §九 禁止 3: "MCP AI 不得修改 Compiler / Parser / Binder /
 //  SemanticResolver / Analyzer"。
 //
-//  The interface signature, 8-segment verification (Semantic / Architecture /
-//  Security / UI / Build / Test / Runtime / Evidence), the Decision vs Stage
-//  orthogonality, and the FailureStage contract are FROZEN per
-//  Spec v2 §3.4 + §5 + INTERFACE_LOCKDOWN.md §1 + §2.
+//  Interface signature, 8-segment grid, Decision vs Stage orthogonality and
+//  FailureStage contract are FROZEN per Spec v2 §3.4 + §5 + INTERFACE_LOCKDOWN
+//  §1 + §2.
 //
-//  This Tool is a STDO-ONLY adapter; its body wires the 8 segments to the
-//  frozen contracts once Compiler publishes them.
-//
-//  V6.1 MCP-05-01: validation returns INVALID_REQUEST envelopes (never throws
-//  across Transport); success returns CallToolResult with explicit IsError=false.
-//  V6.1 MCP-06-02: validation via shared IMcpRequestValidator.
-//  V6.1 MCP-06-03: envelopes via internal McpOperationResult.
-//  V6.1 MCP-06-04: whole body wrapped — escaped exceptions go to
-//  IMcpExceptionMapper, never raw across Transport.
+//  V6.1 MCP-06-07: thin pipeline caller (Validate → Context → Workspace →
+//  Gateway(stub) → Projection → Response). Exception boundary owned by
+//  the pipeline.
 // =============================================================================
 
 using System.ComponentModel;
-using Foundry.FSPM.Mcp.Errors;
 using Foundry.FSPM.Mcp.Execution;
 using Foundry.FSPM.Mcp.Validation;
 using ModelContextProtocol.Protocol;
@@ -38,7 +30,6 @@ namespace Foundry.FSPM.Mcp.Mcp;
 public static class FspmVerifyTool
 {
     private static readonly IMcpRequestValidator Validator = new McpRequestValidator();
-    private static readonly IMcpExceptionMapper ExceptionMapper = new McpExceptionMapper();
 
     [McpServerTool(Name = "fspm_verify")]
     [Description(
@@ -58,68 +49,46 @@ public static class FspmVerifyTool
         [Description("Execution ID produced by fspm_construct.")]
         string executionId)
     {
-        try
+        var pipeline = new McpExecutionPipeline();
+        return pipeline.ExecuteAsync(
+            toolName: "fspm_verify",
+            workspaceRoot: workspaceRoot,
+            request: new { workspaceRoot, operation, projectPath, testPath, loginMvpBaseUrl, executionId },
+            validate: () => McpValidationResult.FirstInvalid(
+                Validator.ValidateRequired("workspaceRoot", workspaceRoot),
+                Validator.ValidateQualifiedName("operation", operation),
+                Validator.ValidateRequired("executionId", executionId)),
+            invoke: (_, _) => Task.FromResult<object>(BuildAwaitingPayload(
+                workspaceRoot, operation, executionId)));
+    }
+
+    private static object BuildAwaitingPayload(string workspaceRoot, string operation, string executionId)
+    {
+        // Shape FROZEN per Spec v2 §3.4 + §5 + INTERFACE_LOCKDOWN §1 + §2.
+        return new
         {
-            var workspaceCheck = Validator.ValidateRequired("workspaceRoot", workspaceRoot);
-            if (!workspaceCheck.IsValid)
-                return Task.FromResult(McpOperationResult.InvalidRequest(workspaceCheck));
-            var operationCheck = Validator.ValidateQualifiedName("operation", operation);
-            if (!operationCheck.IsValid)
-                return Task.FromResult(McpOperationResult.InvalidRequest(operationCheck));
-            var executionCheck = Validator.ValidateRequired("executionId", executionId);
-            if (!executionCheck.IsValid)
-                return Task.FromResult(McpOperationResult.InvalidRequest(executionCheck));
-
-            // 8-segment verification requires (currently NOT in build):
-            //   1. Semantic     — Foundry.FSPM.Core.Semantic.SemanticResolver  (Compiler AI)
-            //   2. Architecture — Foundry.FSPM.Analyzer.FspmArchitectureAnalyzer (Compiler AI)
-            //   3. Security     — Foundry.FSPM.Analyzer.FspmSecurityAnalyzer    (Compiler AI)
-            //   4. UI           — Foundry.FSPM.Analyzer.FspmUiAnalyzer           (Compiler AI)
-            //   5. Build        — Process/dotnet build (MCP local; SDK blocker)
-            //   6. Test         — Process/dotnet test (MCP local; SDK blocker)
-            //   7. Runtime      — HttpClient to Foundry.FSPM.Login.Mvp (MCP local)
-            //   8. Evidence     — Foundry.FSPM.Core.Evidence.IFspmEvidenceCollector (Compiler AI)
-            //
-            // Of these, segments 1–4 + 8 require Compiler AI deliveries
-            // (FSPM-04/05/06/07/08). Segments 5/6/7 are MCP-local but blocked by
-            // the .NET 8 SDK Windows-container incompatibility (see
-            // .fspm/evidence/mcp-reentry-checkpoint/checkpoint.md M8).
-            //
-            // To respect Architect §六 + §九 禁止 3, this Tool returns an
-            // explicit AWAITING_COMPILER envelope instead of fabricating
-            // verification.
-
-            var result = new
+            status = "AWAITING_COMPILER",
+            executionId,
+            operation,
+            workspaceRoot,
+            segments = new
             {
-                status = "AWAITING_COMPILER",
-                executionId,
-                operation,
-                workspaceRoot,
-                segments = new
-                {
-                    semantic = new { status = "NOT_RUN", reason = "Compiler FSPM-07/08 not delivered" },
-                    architecture = new { status = "NOT_RUN", reason = "Compiler FSPM-09/10 not delivered" },
-                    security = new { status = "NOT_RUN", reason = "Compiler FSPM-11 not delivered" },
-                    ui = new { status = "NOT_RUN", reason = "Compiler FSPM-12 not delivered" },
-                    build = new { status = "NOT_RUN", reason = ".NET 8 SDK Windows-container incompatibility (see checkpoint.md M8)" },
-                    test = new { status = "NOT_RUN", reason = "depends on Build" },
-                    runtime = new { status = "NOT_RUN", reason = "depends on Build + Foundry.FSPM.Login.Mvp presence" },
-                    evidence = new { status = "NOT_RUN", reason = "Compiler FSPM-15/16 not delivered" },
-                },
-                frozenContract = new
-                {
-                    ruleDecisions = "Pass / Violation / NotApplicable / Unknown (orthogonal to FailureStage)",
-                    failureStage = "BUILD | TEST | RUNTIME | EVIDENCE | CONSTRUCT | null",
-                    evidenceSchema = "Foundry.FSPM.Core.Evidence.FspmVerificationEvidence (INTERFACE_LOCKDOWN §1.1)",
-                    closedCondition = "all 8 segments Status==PASS && FailureStage==null",
-                },
-            };
-
-            return Task.FromResult(McpOperationResult.Success(result));
-        }
-        catch (Exception ex)
-        {
-            return Task.FromResult(ExceptionMapper.Map(ex, "fspm_verify"));
-        }
+                semantic = new { status = "NOT_RUN", reason = "Compiler FSPM-07/08 not delivered" },
+                architecture = new { status = "NOT_RUN", reason = "Compiler FSPM-09/10 not delivered" },
+                security = new { status = "NOT_RUN", reason = "Compiler FSPM-11 not delivered" },
+                ui = new { status = "NOT_RUN", reason = "Compiler FSPM-12 not delivered" },
+                build = new { status = "NOT_RUN", reason = ".NET 8 SDK Windows-container incompatibility (see checkpoint.md M8)" },
+                test = new { status = "NOT_RUN", reason = "depends on Build" },
+                runtime = new { status = "NOT_RUN", reason = "depends on Build + Foundry.FSPM.Login.Mvp presence" },
+                evidence = new { status = "NOT_RUN", reason = "Compiler FSPM-15/16 not delivered" },
+            },
+            frozenContract = new
+            {
+                ruleDecisions = "Pass / Violation / NotApplicable / Unknown (orthogonal to FailureStage)",
+                failureStage = "BUILD | TEST | RUNTIME | EVIDENCE | CONSTRUCT | null",
+                evidenceSchema = "Foundry.FSPM.Core.Evidence.FspmVerificationEvidence (INTERFACE_LOCKDOWN §1.1)",
+                closedCondition = "all 8 segments Status==PASS && FailureStage==null",
+            },
+        };
     }
 }

@@ -34,6 +34,21 @@ public sealed class McpValidationResult
 
     public static McpValidationResult Fail(string field, string message) =>
         new(false, field, message);
+
+    /// <summary>
+    /// Returns the first failing result, or null when all pass.
+    /// Used by Tools to feed a single failure into the pipeline.
+    /// </summary>
+    public static McpValidationResult? FirstInvalid(params McpValidationResult[] results)
+    {
+        foreach (var result in results)
+        {
+            if (!result.IsValid)
+                return result;
+        }
+
+        return null;
+    }
 }
 
 /// <summary>
