@@ -34,7 +34,8 @@ public sealed record NativeTypeShape(
     int ArrayRank,
     string? ElementType,
     IReadOnlyList<string> TupleElementNames,
-    string NullableAnnotation);
+    string NullableAnnotation,
+    int Arity = 0);
 
 /// <summary>
 /// P13-H2: generic constraint facts as Roslyn-reported display strings

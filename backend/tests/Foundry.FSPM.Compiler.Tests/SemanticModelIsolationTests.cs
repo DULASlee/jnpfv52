@@ -26,11 +26,8 @@ public sealed class SemanticModelIsolationTests
                 FspmSemanticState state)
             {
                 return string.Join("|",
-                    identity.AssemblyName,
-                    identity.Namespace,
-                    identity.ContainingTypeName,
-                    identity.MemberName,
-                    identity.MemberKind,
+                    identity.LogicalId,
+                    identity.Fingerprint,
                     anchor.Document,
                     anchor.DeclarationAnchor,
                     anchor.StartLine.ToString(),
@@ -71,7 +68,7 @@ public sealed class SemanticModelIsolationTests
 
         var summary = (string)describe.Invoke(null, new object[]
         {
-            new FspmSemanticIdentity("SemanticGolden", "SemanticGolden.Domain", "User", "PhoneNumber", "Property"),
+            new FspmSemanticIdentity("SemanticGolden|P:SemanticGolden.Domain.User.PhoneNumber", "0123456789ABCDEF"),
             new FspmSemanticAnchor("User.cs", "P:SemanticGolden.Domain.User.PhoneNumber", 10, 5, 10, 30),
             FspmSemanticState.Resolved,
         })!;

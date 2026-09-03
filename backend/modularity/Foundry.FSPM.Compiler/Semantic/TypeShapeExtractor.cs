@@ -39,7 +39,8 @@ public static class TypeShapeExtractor
             ArrayRank: array?.Rank ?? 0,
             ElementType: array?.ElementType.ToDisplayString(),
             TupleElementNames: tupleNames,
-            NullableAnnotation: type.NullableAnnotation.ToString());
+            NullableAnnotation: type.NullableAnnotation.ToString(),
+            Arity: (type as INamedTypeSymbol)?.Arity ?? 0);
     }
 
     private static NativeTypeShapeKind MapKind(ITypeSymbol type) => type switch
