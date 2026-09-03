@@ -26,6 +26,7 @@
 
 using System.ComponentModel;
 using System.Text.Json;
+using Foundry.FSPM.Mcp.Validation;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -34,6 +35,9 @@ namespace Foundry.FSPM.Mcp.Mcp;
 [McpServerToolType]
 public static class FspmUnderstandTool
 {
+    // MCP-06-02: all Tools validate through the shared validator.
+    private static readonly IMcpRequestValidator Validator = new McpRequestValidator();
+
     [McpServerTool(Name = "fspm_understand")]
     [Description(
         "Resolves an FSPM semantic target (e.g. User, User.UserName, User.Login) "
@@ -45,10 +49,12 @@ public static class FspmUnderstandTool
         [Description("Target, e.g. User.Login.")]
         string target)
     {
-        if (string.IsNullOrWhiteSpace(workspaceRoot))
-            return Task.FromResult(InvalidRequest("workspaceRoot", "workspaceRoot is required."));
-        if (string.IsNullOrWhiteSpace(target))
-            return Task.FromResult(InvalidRequest("target", "target is required."));
+        var workspaceCheck = Validator.ValidateRequired("workspaceRoot", workspaceRoot);
+        if (!workspaceCheck.IsValid)
+            return Task.FromResult(InvalidRequest(workspaceCheck));
+        var targetCheck = Validator.ValidateQualifiedName("target", target);
+        if (!targetCheck.IsValid)
+            return Task.FromResult(InvalidRequest(targetCheck));
 
         // Architect §六: "MCP 不得自己重新解析、绑定、Semantic Model"。
         // Architect §三: "等新的 MCP Worktree 建成后重新进入" + "MCP must work through
@@ -95,10 +101,10 @@ public static class FspmUnderstandTool
         });
     }
 
-    private static CallToolResult InvalidRequest(string field, string message)
+    private static CallToolResult InvalidRequest(McpValidationResult validation)
     {
         string json = JsonSerializer.Serialize(
-            new { status = "INVALID_REQUEST", field, message },
+            new { status = "INVALID_REQUEST", field = validation.Field, message = validation.Message },
             new JsonSerializerOptions { WriteIndented = true });
         return new CallToolResult
         {

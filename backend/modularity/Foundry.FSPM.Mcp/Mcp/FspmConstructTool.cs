@@ -25,6 +25,7 @@
 
 using System.ComponentModel;
 using System.Text.Json;
+using Foundry.FSPM.Mcp.Validation;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -33,6 +34,9 @@ namespace Foundry.FSPM.Mcp.Mcp;
 [McpServerToolType]
 public static class FspmConstructTool
 {
+    // MCP-06-02: all Tools validate through the shared validator.
+    private static readonly IMcpRequestValidator Validator = new McpRequestValidator();
+
     [McpServerTool(Name = "fspm_construct")]
     [Description(
         "Performs REAL source mutation for an FSPM operation and returns a "
@@ -43,10 +47,12 @@ public static class FspmConstructTool
         [Description("Qualified operation, e.g. User.Login.")] string operation,
         [Description("Human-readable construction instruction.")] string instruction)
     {
-        if (string.IsNullOrWhiteSpace(workspaceRoot))
-            return Task.FromResult(InvalidRequest("workspaceRoot", "workspaceRoot is required."));
-        if (string.IsNullOrWhiteSpace(operation))
-            return Task.FromResult(InvalidRequest("operation", "operation is required."));
+        var workspaceCheck = Validator.ValidateRequired("workspaceRoot", workspaceRoot);
+        if (!workspaceCheck.IsValid)
+            return Task.FromResult(InvalidRequest(workspaceCheck));
+        var operationCheck = Validator.ValidateQualifiedName("operation", operation);
+        if (!operationCheck.IsValid)
+            return Task.FromResult(InvalidRequest(operationCheck));
 
         // The actual mutation pipeline requires Foundry.FSPM.Core.Semantic
         // symbol resolution (which Foundry.FSPM.Core does not yet provide)
@@ -91,10 +97,10 @@ public static class FspmConstructTool
         });
     }
 
-    private static CallToolResult InvalidRequest(string field, string message)
+    private static CallToolResult InvalidRequest(McpValidationResult validation)
     {
         string json = JsonSerializer.Serialize(
-            new { status = "INVALID_REQUEST", field, message },
+            new { status = "INVALID_REQUEST", field = validation.Field, message = validation.Message },
             new JsonSerializerOptions { WriteIndented = true });
         return new CallToolResult
         {
