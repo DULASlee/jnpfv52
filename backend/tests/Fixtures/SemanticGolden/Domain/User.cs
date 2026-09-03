@@ -25,4 +25,18 @@ public sealed class User
             PhoneNumber = phoneNumber,
         };
     }
+
+    /// <summary>
+    /// Phase 7 overload fixture (directive §十).
+    /// Must produce a DIFFERENT FspmSymbolId than <see cref="Create(string)"/>.
+    /// Declared AFTER the string overload so Phase 6 WorkspaceTests
+    /// (FirstOrDefault string Create) keep resolving the string overload.
+    /// </summary>
+    public static User Create(int legacyId)
+    {
+        return new User
+        {
+            PhoneNumber = legacyId.ToString(),
+        };
+    }
 }

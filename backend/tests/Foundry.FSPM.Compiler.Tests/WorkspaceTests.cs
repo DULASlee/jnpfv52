@@ -4,6 +4,9 @@ using Xunit;
 
 namespace Foundry.FSPM.Compiler.Tests;
 
+// Serializes with Phase 7 identity tests: MSBuild BuildManager allows only
+// one concurrent design-time build (see RoslynWorkspaceCollection).
+[Collection("RoslynWorkspace")]
 public sealed class WorkspaceTests
 {
 
