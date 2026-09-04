@@ -68,3 +68,28 @@ public sealed record FspmEventRef(
     string OwnerId = "",
     string ExpectedFingerprint = "")
     : FspmMemberRef(TargetIdentity, DisplayName, "Event", OwnerId, ExpectedFingerprint);
+
+/// <summary>
+/// P14-02-E: reference to a model Operation (Method/Constructor/Indexer).
+/// Overloads carry distinct identities; no signature guessing here.
+/// </summary>
+public sealed record FspmOperationRef(
+    FspmSemanticIdentity TargetIdentity,
+    string DisplayName,
+    string OwnerId = "",
+    string ExpectedFingerprint = "")
+    : FspmSemanticReference(TargetIdentity, DisplayName, OwnerId, ExpectedFingerprint);
+
+/// <summary>
+/// P14-02-F: reference to one operation parameter. Parameters are
+/// embedded (no standalone identity): TargetIdentity is the OWNER
+/// operation's LogicalId and Position selects within its parameter
+/// list. Structural addressing, documented — never a synthesized id.
+/// </summary>
+public sealed record FspmParameterRef(
+    FspmSemanticIdentity TargetIdentity,
+    string DisplayName,
+    int Position,
+    string OwnerId = "",
+    string ExpectedFingerprint = "")
+    : FspmSemanticReference(TargetIdentity, DisplayName, OwnerId, ExpectedFingerprint);

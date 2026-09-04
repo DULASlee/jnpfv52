@@ -218,6 +218,136 @@ public static class FspmReferenceResolver
         return CheckFingerprint(reference, member.Identity, member.Fingerprint, member.MemberKind, member.DeclaringTypeId);
     }
 
+    public static Model.FspmReferenceResolution ResolveOperationRef(
+        Model.FspmOperationRef reference,
+        Model.FspmSemanticModel model)
+    {
+        ArgumentNullException.ThrowIfNull(reference);
+        ArgumentNullException.ThrowIfNull(model);
+
+        var matches = model.Operations
+            .Where(o => o.Identity.LogicalId == reference.TargetIdentity.LogicalId)
+            .ToArray();
+
+        if (matches.Length == 0)
+        {
+            var actualKind = FindKindById(model, reference.TargetIdentity.LogicalId);
+            if (actualKind is not null)
+            {
+                return new Model.FspmReferenceResolution(
+                    Model.FspmReferenceStatus.WrongKind,
+                    IsResolved: false,
+                    Reason: $"OperationRef target '{reference.TargetIdentity.LogicalId}' exists as {actualKind}, not as Operation.",
+                    TargetIdentity: null,
+                    TargetFingerprint: string.Empty,
+                    TargetKind: actualKind,
+                    Owner: string.Empty);
+            }
+
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.Missing,
+                IsResolved: false,
+                Reason: $"OperationRef target '{reference.TargetIdentity.LogicalId}' not found in model.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: string.Empty,
+                Owner: string.Empty);
+        }
+
+        if (matches.Length > 1)
+        {
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.Ambiguous,
+                IsResolved: false,
+                Reason: $"OperationRef target '{reference.TargetIdentity.LogicalId}' matches {matches.Length} model operations; refusing to pick.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: matches[0].OperationKind,
+                Owner: string.Empty);
+        }
+
+        var operation = matches[0];
+        if (!string.IsNullOrEmpty(reference.OwnerId)
+            && !string.Equals(operation.DeclaringTypeId, reference.OwnerId, StringComparison.Ordinal))
+        {
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.WrongOwner,
+                IsResolved: false,
+                Reason: $"OperationRef owner mismatch: expected '{reference.OwnerId}', actual '{operation.DeclaringTypeId}'.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: operation.OperationKind,
+                Owner: operation.DeclaringTypeId);
+        }
+
+        return CheckFingerprint(reference, operation.Identity, operation.Fingerprint, operation.OperationKind, operation.DeclaringTypeId);
+    }
+
+    public static Model.FspmReferenceResolution ResolveParameterRef(
+        Model.FspmParameterRef reference,
+        Model.FspmSemanticModel model)
+    {
+        ArgumentNullException.ThrowIfNull(reference);
+        ArgumentNullException.ThrowIfNull(model);
+
+        var owners = model.Operations
+            .Where(o => o.Identity.LogicalId == reference.TargetIdentity.LogicalId)
+            .ToArray();
+
+        if (owners.Length == 0)
+        {
+            var actualKind = FindKindById(model, reference.TargetIdentity.LogicalId);
+            if (actualKind is not null)
+            {
+                return new Model.FspmReferenceResolution(
+                    Model.FspmReferenceStatus.WrongKind,
+                    IsResolved: false,
+                    Reason: $"ParameterRef owner '{reference.TargetIdentity.LogicalId}' exists as {actualKind}, not as Operation.",
+                    TargetIdentity: null,
+                    TargetFingerprint: string.Empty,
+                    TargetKind: actualKind,
+                    Owner: string.Empty);
+            }
+
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.Missing,
+                IsResolved: false,
+                Reason: $"ParameterRef owner operation '{reference.TargetIdentity.LogicalId}' not found in model.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: string.Empty,
+                Owner: string.Empty);
+        }
+
+        if (owners.Length > 1)
+        {
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.Ambiguous,
+                IsResolved: false,
+                Reason: $"ParameterRef owner '{reference.TargetIdentity.LogicalId}' matches {owners.Length} operations; refusing to pick.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: "Operation",
+                Owner: string.Empty);
+        }
+
+        var owner = owners[0];
+        if (reference.Position < 0 || reference.Position >= owner.Parameters.Count)
+        {
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.Missing,
+                IsResolved: false,
+                Reason: $"Operation '{owner.Identity.LogicalId}' has no parameter at position {reference.Position}.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: "Parameter",
+                Owner: owner.Identity.LogicalId);
+        }
+
+        var parameter = owner.Parameters[reference.Position];
+        return CheckFingerprint(reference, owner.Identity, owner.Fingerprint, "Parameter:" + parameter.Name, owner.Identity.LogicalId);
+    }
+
     internal static Model.FspmReferenceResolution CheckFingerprint(
         Model.FspmSemanticReference reference,
         Model.FspmSemanticIdentity actualIdentity,

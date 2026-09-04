@@ -1,0 +1,8 @@
+Gate: G14-02-REF-OPERATION
+Command: dotnet test ... --filter 'FullyQualifiedName~RefOperationTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T00:19:12.0665434Z
+ExitCode: 0
+Commit: dba1ecaf6bd2ea6dc96e59c0a4e078ce3222a868
+Counters: total=4 passed=4 failed=0
+Trx: C:\Users\admin\AppData\Local\Temp\fspm_gate_trx\refoperation.trx
