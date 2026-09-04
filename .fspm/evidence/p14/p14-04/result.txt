@@ -1,0 +1,12 @@
+Command: dotnet test backend/tests/Foundry.FSPM.Compiler.Tests/Foundry.FSPM.Compiler.Tests.csproj --no-build --logger "trx;LogFileName=full-p14-04.trx"
+Timestamp: 2026-09-04T08:20Z
+Workdir: D:\JNPF-FSPM-Worktrees\compiler
+Commit: P14-04 (pre-commit, parent fc0d4e84)
+ExitCode: 0
+Counters: total=426 passed=426 failed=0 skipped=0
+Baseline: 391/391 (fc0d4e84, includes f37b1689 committed history)
+New: 35/35 (RulePresence 11 + RuleTypeOperation 7 + RuleDiagnosticEvidence 10 + RuleIsolationDeterminism 2 + RuleFirstSliceIntegration 5)
+Build: 0 errors, 0 warnings (incremental)
+Rule TRX: rule-p14-04.trx total=35 passed=35 failed=0
+Full TRX: backend/tests/Foundry.FSPM.Compiler.Tests/TestResults/full-p14-04.trx
+Status: PASS
