@@ -1,0 +1,8 @@
+Gate: full regression
+Command: dotnet test backend/tests/Foundry.FSPM.Compiler.Tests/Foundry.FSPM.Compiler.Tests.csproj
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T00:56:47.4333744Z
+ExitCode: 0
+Commit: 9624fa18bea6d4629fb51656dc1c27e77d7d17eb
+--- tail ---
+宸查€氳繃! - 澶辫触:     0锛岄€氳繃:   370锛屽凡璺宠繃:     0锛屾€昏:   370锛屾寔缁椂闂? 2 m 47 s - Foundry.FSPM.Compiler.Tests.dll (net8.0)

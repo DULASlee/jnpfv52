@@ -34,6 +34,19 @@ public sealed class SemanticModelIsolationTests
                     state.ToString(),
                     ((int)state).ToString());
             }
+
+            public static string DescribeRef(
+                FspmSemanticReference reference,
+                FspmReferenceStatus status)
+            {
+                return string.Join("|",
+                    reference.TargetIdentity.LogicalId,
+                    reference.DisplayName,
+                    reference.OwnerId,
+                    reference.ExpectedFingerprint,
+                    status.ToString(),
+                    ((int)status).ToString());
+            }
         }
         """;
 
@@ -77,6 +90,50 @@ public sealed class SemanticModelIsolationTests
         Assert.Contains("PhoneNumber", summary);
         Assert.Contains("User.cs", summary);
         Assert.Contains("Resolved", summary);
+    }
+
+    [Fact]
+    public void G14_02_ROSYNLISOLATION_Reference_Types_Readable_Without_Roslyn()
+    {
+        var modelAssembly = typeof(FspmSemanticState).Assembly.Location;
+        var runtimeDir = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
+        var clientCompilation = CSharpCompilation.Create(
+            "ModelClient",
+            syntaxTrees: new[] { CSharpSyntaxTree.ParseText(ClientSource) },
+            references: new MetadataReference[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Linq.Enumerable).Assembly.Location),
+                MetadataReference.CreateFromFile(modelAssembly),
+                MetadataReference.CreateFromFile(System.IO.Path.Combine(runtimeDir, "System.Runtime.dll")),
+            },
+            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        using var ms = new MemoryStream();
+        EmitResult emit = clientCompilation.Emit(ms);
+        Assert.True(emit.Success,
+            "Reference records must compile against SemanticModel with zero Roslyn references: " +
+            string.Join("; ", emit.Diagnostics.Select(d => d.GetMessage())));
+
+        var clientAssembly = Assembly.Load(ms.ToArray());
+        var clientType = clientAssembly.GetType("ModelClient")
+            ?? throw new InvalidOperationException("Fixture broken: ModelClient missing.");
+        var describeRef = clientType.GetMethod("DescribeRef")
+            ?? throw new InvalidOperationException("Fixture broken: DescribeRef missing.");
+
+        var summary = (string)describeRef.Invoke(null, new object[]
+        {
+            new FspmPropertyRef(
+                new FspmSemanticIdentity("SemanticGolden|P:SemanticGolden.Domain.User.PhoneNumber", "AB"),
+                "User.PhoneNumber",
+                "SemanticGolden|T:SemanticGolden.Domain.User",
+                "CD"),
+            FspmReferenceStatus.Stale,
+        })!;
+
+        Assert.Contains("SemanticGolden|P:SemanticGolden.Domain.User.PhoneNumber", summary);
+        Assert.Contains("User.PhoneNumber", summary);
+        Assert.Contains("Stale", summary);
     }
 
     [Fact]

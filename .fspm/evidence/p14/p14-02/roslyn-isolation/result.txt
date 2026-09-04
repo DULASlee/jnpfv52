@@ -1,0 +1,8 @@
+Gate: G14-02-ROSYNLISOLATION
+Command: dotnet test ... --filter 'FullyQualifiedName~SemanticModelIsolationTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T00:56:17.1312453Z
+ExitCode: 0
+Commit: 9624fa18bea6d4629fb51656dc1c27e77d7d17eb
+Counters: total=3 passed=3 failed=0
+Trx: C:\Users\admin\AppData\Local\Temp\fspm_gate_trx\roslyniso.trx
