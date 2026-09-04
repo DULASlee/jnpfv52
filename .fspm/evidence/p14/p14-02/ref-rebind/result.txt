@@ -1,0 +1,8 @@
+Gate: G14-02-REF-REBIND (+STALE) and G14-02-REALPROJECT (9-kind sweep)
+Command: dotnet test ... --filter 'FullyQualifiedName~RefRebindIntegrationTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T00:55:25.2633101Z
+ExitCode: 0
+Commit: 602553a181ef115894c731093c681d58b49ec06b
+Counters: total=3 passed=3 failed=0
+Trx: C:\Users\admin\AppData\Local\Temp\fspm_gate_trx\refrebind.trx
