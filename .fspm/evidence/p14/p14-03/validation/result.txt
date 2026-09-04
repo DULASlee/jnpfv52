@@ -1,0 +1,9 @@
+Gate: validation
+Command: dotnet test ... --filter 'FullyQualifiedName~ConstructionTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T01:31:37.7707549Z
+ExitCode: 0
+Commit: f37b1689f05ce61a8fe63effc24bcbff8b02146a
+Counters: total=8 passed=8 failed=0
+Trx: C:\Users\admin\AppData\Local\Temp\fspm_gate_trx\p1403_validation.trx
+Assertions: 6 fail paths Invalid with reasons; Valid passes

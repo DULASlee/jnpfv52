@@ -1,0 +1,8 @@
+Gate: G14-03-ROSYNLISOLATION
+Command: dotnet test ... --filter 'FullyQualifiedName~SemanticModelIsolationTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T01:34:46.0242797Z
+ExitCode: 0
+Commit: f37b1689f05ce61a8fe63effc24bcbff8b02146a
+Counters: total=4 passed=4 failed=0
+Assertions: zero-Roslyn consumer incl. construction reads

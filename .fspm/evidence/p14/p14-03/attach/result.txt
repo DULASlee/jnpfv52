@@ -1,0 +1,9 @@
+Gate: attach
+Command: dotnet test ... --filter 'FullyQualifiedName~ConstructionTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T01:29:22.9287443Z
+ExitCode: 0
+Commit: 3885217c55913610ed944b4d929de63a0a9dc0ed
+Counters: total=8 passed=8 failed=0
+Trx: C:\Users\admin\AppData\Local\Temp\fspm_gate_trx\p1403_attach.trx
+Assertions: Edges carry ParentId/Role/Reference/TargetIdentity/TargetFingerprint

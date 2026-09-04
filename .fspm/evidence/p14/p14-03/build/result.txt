@@ -1,0 +1,6 @@
+Gate: build 0 errors (covered by regression run exit code)
+Command: see regression
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T01:35:01.6906636Z
+ExitCode: 0
+Commit: f37b1689f05ce61a8fe63effc24bcbff8b02146a

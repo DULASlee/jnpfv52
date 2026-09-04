@@ -1,0 +1,8 @@
+Gate: G14-03-REALPROJECT
+Command: dotnet test ... --filter 'FullyQualifiedName~ConstructionTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T01:34:46.0242797Z
+ExitCode: 0
+Commit: f37b1689f05ce61a8fe63effc24bcbff8b02146a
+Counters: total=8 passed=8 failed=0
+Assertions: golden UserForm end-to-end

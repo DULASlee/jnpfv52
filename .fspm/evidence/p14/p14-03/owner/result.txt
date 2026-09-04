@@ -1,0 +1,9 @@
+Gate: owner
+Command: dotnet test ... --filter 'FullyQualifiedName~ConstructionTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T01:30:41.4650135Z
+ExitCode: 0
+Commit: f37b1689f05ce61a8fe63effc24bcbff8b02146a
+Counters: total=8 passed=8 failed=0
+Trx: C:\Users\admin\AppData\Local\Temp\fspm_gate_trx\p1403_owner.trx
+Assertions: WrongOwner carries actual owner; orphans rejected

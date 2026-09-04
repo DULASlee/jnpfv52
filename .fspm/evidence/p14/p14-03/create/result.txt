@@ -1,0 +1,9 @@
+Gate: create
+Command: dotnet test ... --filter 'FullyQualifiedName~ConstructionTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T01:28:57.9135944Z
+ExitCode: 0
+Commit: 3885217c55913610ed944b4d929de63a0a9dc0ed
+Counters: total=8 passed=8 failed=0
+Trx: C:\Users\admin\AppData\Local\Temp\fspm_gate_trx\p1403_create.trx
+Assertions: Create assigns path ids; Attach rejects missing parent and frozen trees

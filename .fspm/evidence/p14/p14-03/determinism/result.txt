@@ -1,0 +1,9 @@
+Gate: determinism
+Command: dotnet test ... --filter 'FullyQualifiedName~ConstructionTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T01:32:55.6758081Z
+ExitCode: 0
+Commit: f37b1689f05ce61a8fe63effc24bcbff8b02146a
+Counters: total=8 passed=8 failed=0
+Trx: C:\Users\admin\AppData\Local\Temp\fspm_gate_trx\p1403_determinism.trx
+Assertions: swapped attach order identical fingerprint

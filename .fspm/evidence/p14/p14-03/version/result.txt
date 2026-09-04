@@ -1,0 +1,9 @@
+Gate: version
+Command: dotnet test ... --filter 'FullyQualifiedName~ConstructionTests|RefRebindIntegrationTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T01:33:23.4056806Z
+ExitCode: 0
+Commit: f37b1689f05ce61a8fe63effc24bcbff8b02146a
+Counters: total=11 passed=11 failed=0
+Trx: C:\Users\admin\AppData\Local\Temp\fspm_gate_trx\p1403_version.trx
+Assertions: stale pinning fails validation with both fingerprints
