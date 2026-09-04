@@ -348,6 +348,109 @@ public static class FspmReferenceResolver
         return CheckFingerprint(reference, owner.Identity, owner.Fingerprint, "Parameter:" + parameter.Name, owner.Identity.LogicalId);
     }
 
+    public static Model.FspmReferenceResolution ResolveRelationRef(
+        Model.FspmRelationRef reference,
+        Model.FspmSemanticModel model)
+    {
+        ArgumentNullException.ThrowIfNull(reference);
+        ArgumentNullException.ThrowIfNull(model);
+
+        var matches = model.Relations
+            .Where(r => r.FromId == reference.TargetIdentity.LogicalId
+                && r.Kind == reference.RelationKind
+                && (string.IsNullOrEmpty(reference.TargetDisplay)
+                    || r.Target.Contains(reference.TargetDisplay, StringComparison.Ordinal)
+                    || r.ResolvedTargetId.Contains(reference.TargetDisplay, StringComparison.Ordinal)))
+            .ToArray();
+
+        if (matches.Length == 0)
+        {
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.Missing,
+                IsResolved: false,
+                Reason: $"RelationRef '{reference.RelationKind}' from '{reference.TargetIdentity.LogicalId}' not found in model.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: string.Empty,
+                Owner: reference.TargetIdentity.LogicalId);
+        }
+
+        if (matches.Length > 1)
+        {
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.Ambiguous,
+                IsResolved: false,
+                Reason: $"RelationRef '{reference.RelationKind}' from '{reference.TargetIdentity.LogicalId}' matches {matches.Length} relations; refusing to pick.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: "Relation",
+                Owner: reference.TargetIdentity.LogicalId);
+        }
+
+        if (!string.IsNullOrEmpty(reference.ExpectedFingerprint))
+        {
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.Invalid,
+                IsResolved: false,
+                Reason: "RelationRef does not support ExpectedFingerprint (relations carry no fingerprint); pin endpoint identities instead.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: "Relation",
+                Owner: reference.TargetIdentity.LogicalId);
+        }
+
+        var relation = matches[0];
+        return new Model.FspmReferenceResolution(
+            Model.FspmReferenceStatus.Valid,
+            IsResolved: true,
+            Reason: $"Resolved relation '{relation.Kind}' from '{relation.FromId}'.",
+            TargetIdentity: reference.TargetIdentity,
+            TargetFingerprint: string.Empty,
+            TargetKind: "Relation:" + relation.Kind,
+            Owner: reference.TargetIdentity.LogicalId);
+    }
+
+    /// <summary>
+    /// P14-02-H: unified validation entry. Dispatches on the concrete
+    /// reference type; unknown record kinds are Invalid (never thrown).
+    /// P14-03 consumes this instead of per-kind methods.
+    /// </summary>
+    public static Model.FspmReferenceResolution ValidateReference(
+        Model.FspmSemanticReference reference,
+        Model.FspmSemanticModel model)
+    {
+        ArgumentNullException.ThrowIfNull(reference);
+        ArgumentNullException.ThrowIfNull(model);
+
+        return reference switch
+        {
+            Model.FspmTypeRef typeRef => ResolveTypeRef(typeRef, model),
+            Model.FspmEntityRef entityRef => ResolveEntityRef(entityRef, model),
+            Model.FspmMemberRef memberRef => ResolveMemberRef(memberRef, model),
+            Model.FspmOperationRef operationRef => ResolveOperationRef(operationRef, model),
+            Model.FspmParameterRef parameterRef => ResolveParameterRef(parameterRef, model),
+            Model.FspmRelationRef relationRef => ResolveRelationRef(relationRef, model),
+            _ => new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.Invalid,
+                IsResolved: false,
+                Reason: $"Unknown reference record '{reference.GetType().Name}'; cannot validate.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: string.Empty,
+                Owner: string.Empty),
+        };
+    }
+
+    public static IReadOnlyList<Model.FspmReferenceResolution> ValidateAll(
+        IEnumerable<Model.FspmSemanticReference> references,
+        Model.FspmSemanticModel model)
+    {
+        ArgumentNullException.ThrowIfNull(references);
+        ArgumentNullException.ThrowIfNull(model);
+
+        return references.Select(r => ValidateReference(r, model)).ToArray();
+    }
+
     internal static Model.FspmReferenceResolution CheckFingerprint(
         Model.FspmSemanticReference reference,
         Model.FspmSemanticIdentity actualIdentity,

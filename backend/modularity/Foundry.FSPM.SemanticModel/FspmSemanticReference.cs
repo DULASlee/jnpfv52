@@ -93,3 +93,17 @@ public sealed record FspmParameterRef(
     string OwnerId = "",
     string ExpectedFingerprint = "")
     : FspmSemanticReference(TargetIdentity, DisplayName, OwnerId, ExpectedFingerprint);
+
+/// <summary>
+/// P14-02-G: reference to one model relation. Relations are embedded:
+/// TargetIdentity is the FROM node's LogicalId, RelationKind selects
+/// the kind, TargetDisplay optionally narrows by target display text.
+/// </summary>
+public sealed record FspmRelationRef(
+    FspmSemanticIdentity TargetIdentity,
+    string DisplayName,
+    string RelationKind,
+    string TargetDisplay = "",
+    string OwnerId = "",
+    string ExpectedFingerprint = "")
+    : FspmSemanticReference(TargetIdentity, DisplayName, OwnerId, ExpectedFingerprint);

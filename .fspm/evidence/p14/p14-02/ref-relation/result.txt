@@ -1,0 +1,8 @@
+Gate: G14-02-REF-RELATION (+VALIDATION)
+Command: dotnet test ... --filter 'FullyQualifiedName~RefRelationTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T00:51:53.7211820Z
+ExitCode: 0
+Commit: 0c7a36bd0deb5832f8a3d3f70a9a4c75ea6710bb
+Counters: total=4 passed=4 failed=0
+Trx: C:\Users\admin\AppData\Local\Temp\fspm_gate_trx\refrelation3.trx
