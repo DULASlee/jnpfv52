@@ -1,0 +1,8 @@
+Gate: G14-02-REF-TYPE
+Command: dotnet test ... --filter 'FullyQualifiedName~RefTypeTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-03T23:44:17.1961081Z
+ExitCode: 0
+Commit: 83155c5e37f2c120fa54c292cf48e46d4757516f
+Counters: total=4 passed=4 failed=0
+Trx: C:\Users\admin\AppData\Local\Temp\fspm_gate_trx\reftype.trx
