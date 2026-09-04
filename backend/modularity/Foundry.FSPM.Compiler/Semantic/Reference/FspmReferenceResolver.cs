@@ -141,6 +141,83 @@ public static class FspmReferenceResolver
         return CheckFingerprint(reference, matches[0].Identity, matches[0].Fingerprint, "Type", string.Empty);
     }
 
+    public static Model.FspmReferenceResolution ResolveMemberRef(
+        Model.FspmMemberRef reference,
+        Model.FspmSemanticModel model)
+    {
+        ArgumentNullException.ThrowIfNull(reference);
+        ArgumentNullException.ThrowIfNull(model);
+
+        var matches = model.Members
+            .Where(m => m.Identity.LogicalId == reference.TargetIdentity.LogicalId)
+            .ToArray();
+
+        if (matches.Length == 0)
+        {
+            var actualKind = FindKindById(model, reference.TargetIdentity.LogicalId);
+            if (actualKind is not null)
+            {
+                return new Model.FspmReferenceResolution(
+                    Model.FspmReferenceStatus.WrongKind,
+                    IsResolved: false,
+                    Reason: $"MemberRef target '{reference.TargetIdentity.LogicalId}' exists as {actualKind}, not as {reference.ExpectedMemberKind}.",
+                    TargetIdentity: null,
+                    TargetFingerprint: string.Empty,
+                    TargetKind: actualKind,
+                    Owner: string.Empty);
+            }
+
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.Missing,
+                IsResolved: false,
+                Reason: $"MemberRef target '{reference.TargetIdentity.LogicalId}' not found in model.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: string.Empty,
+                Owner: string.Empty);
+        }
+
+        if (matches.Length > 1)
+        {
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.Ambiguous,
+                IsResolved: false,
+                Reason: $"MemberRef target '{reference.TargetIdentity.LogicalId}' matches {matches.Length} model members; refusing to pick.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: reference.ExpectedMemberKind,
+                Owner: string.Empty);
+        }
+
+        var member = matches[0];
+        if (!string.Equals(member.MemberKind, reference.ExpectedMemberKind, StringComparison.Ordinal))
+        {
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.WrongKind,
+                IsResolved: false,
+                Reason: $"MemberRef expects {reference.ExpectedMemberKind} but target is {member.MemberKind}.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: member.MemberKind,
+                Owner: member.DeclaringTypeId);
+        }
+
+        if (!string.IsNullOrEmpty(reference.OwnerId)
+            && !string.Equals(member.DeclaringTypeId, reference.OwnerId, StringComparison.Ordinal))
+        {
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.WrongOwner,
+                IsResolved: false,
+                Reason: $"MemberRef owner mismatch: expected '{reference.OwnerId}', actual '{member.DeclaringTypeId}'.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: member.MemberKind,
+                Owner: member.DeclaringTypeId);
+        }
+
+        return CheckFingerprint(reference, member.Identity, member.Fingerprint, member.MemberKind, member.DeclaringTypeId);
+    }
+
     internal static Model.FspmReferenceResolution CheckFingerprint(
         Model.FspmSemanticReference reference,
         Model.FspmSemanticIdentity actualIdentity,

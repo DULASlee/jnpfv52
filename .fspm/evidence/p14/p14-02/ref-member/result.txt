@@ -1,0 +1,8 @@
+Gate: G14-02-REF-MEMBER (+PROPERTY/FIELD/EVENT)
+Command: dotnet test ... --filter 'FullyQualifiedName~RefMemberTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T00:16:48.8924894Z
+ExitCode: 0
+Commit: 1425fc81f1b13b9bf9015aface05afad21d9f0b0
+Counters: total=5 passed=5 failed=0
+Trx: C:\Users\admin\AppData\Local\Temp\fspm_gate_trx\refmember.trx
