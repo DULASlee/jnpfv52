@@ -22,4 +22,7 @@
     <ProjectReference Include="..\Foundry.FSPM.Core\Foundry.FSPM.Core.csproj" />
     <ProjectReference Include="..\Foundry.FSPM.SemanticModel\Foundry.FSPM.SemanticModel.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Foundry.FSPM.Compiler.Tests" />
+  </ItemGroup>
 </Project>

@@ -1,0 +1,48 @@
+{
+  "phase": "P14-01 Post-Freeze Correctness Sweep",
+  "name": "SymbolIdentityResolve performance baseline (G14-01-POST-PERF-01)",
+  "scope": "B-MINIMAL-FIX / PERF-01 — measurement only, no production code change",
+  "target": "DocumentationCommentId.GetSymbolsForDeclarationId via FspmSymbolIdentity.Resolve",
+  "compilation": {
+    "assembly": "SemanticGolden",
+    "indexedRecords": 40218,
+    "fixturePath": "backend/tests/Fixtures/SemanticGolden/SemanticGolden.csproj"
+  },
+  "workload": "1 / 10 / 100 / 1000 resolves; both same id and distinct ids",
+  "results": {
+    "sameIdRepeatedly": [
+      { "count": 1,    "elapsedMs": 0.192, "allocBytes": 16448,  "gen0": 0, "gen1": 0, "gen2": 0 },
+      { "count": 10,   "elapsedMs": 0.365, "allocBytes": 44416,  "gen0": 0, "gen1": 0, "gen2": 0 },
+      { "count": 100,  "elapsedMs": 4.340, "allocBytes": 311936, "gen0": 0, "gen1": 0, "gen2": 0 },
+      { "count": 1000, "elapsedMs": 28.396,"allocBytes": 3042784,"gen0": 0, "gen1": 0, "gen2": 0 }
+    ],
+    "differentIds": [
+      { "count": 1,    "elapsedMs": 0.136, "allocBytes": 16448,  "gen0": 0, "gen1": 0, "gen2": 0 },
+      { "count": 10,   "elapsedMs": 0.368, "allocBytes": 44440,  "gen0": 0, "gen1": 0, "gen2": 0 },
+      { "count": 100,  "elapsedMs": 2.048, "allocBytes": 314808, "gen0": 0, "gen1": 0, "gen2": 0 },
+      { "count": 1000, "elapsedMs": 16.200,"allocBytes": 2239720,"gen0": 0, "gen1": 0, "gen2": 0 }
+    ]
+  },
+  "analysis": {
+    "perCallAverage": "Same id: ~28us; Different ids: ~16us (different ids is FASTER because warm-path Roslyn cache skips duplicate GetSymbolsForDeclarationId invocations across the same compilation scan).",
+    "linearity": "100 -> 1000 is 6.5x (28.4 / 4.3) for same id; 7.9x (16.2 / 2.05) for different ids. Sub-linear. No GC pressure (gen0 = 0 across all 1000-resolve rows).",
+    "compilationSizeFactor": "40218 indexed records; Resolve per call is O(compilation-scan). 1000 distinct resolves = 16ms = 16us each.",
+    "practicalImpact": "P14-02 reference resolution: a 1000-reference semantic model resolves in ~16ms. A 10000-reference model: ~160ms. Acceptable for compile-time work, no per-render pressure."
+  },
+  "decision": {
+    "branch": "B",
+    "summary": "Performance is acceptable. No implementation change. Baseline recorded.",
+    "p14Perf01Backlog": {
+      "status": "DEFERRED",
+      "rationale": "Resolve's hot path is a single Roslyn API call; current measurements (16-28us / call, 0 GC) are within compile-time budgets. A Compilation-scoped index would add maintenance and lifecycle cost (per H8) for a sub-30us win. The Compile-once-Cache-forever pattern is owned by SnapshotReferenceCache (P13-H8) for the expression path; Resolve's id->symbol contract is read-mostly and small. Revisit if a 10x jump in indexed-record count or a per-render hot path is ever required.",
+      "revisitTriggers": [
+        "Indexed record count > 200,000 AND any per-call hotspot in production traces",
+        "P14-02 Reference System needs per-render resolve (NOT compile-time)",
+        "P15 evolution requires resolving the same id more than 10x per compilation"
+      ]
+    }
+  },
+  "exit": "STOP — no code change authorized. G14-01-POST-PERF-01 PASS (baseline only).",
+  "testCommand": "dotnet test backend/tests/Foundry.FSPM.Compiler.Tests/Foundry.FSPM.Compiler.Tests.csproj -c Release --filter FullyQualifiedName~SymbolIdentityResolvePerfBaselineTests",
+  "trx": "backend/tests/Foundry.FSPM.Compiler.Tests/TestResults/perf.trx"
+}

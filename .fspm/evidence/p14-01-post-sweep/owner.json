@@ -1,0 +1,100 @@
+{
+  "phase": "P14-01 Post-Freeze Correctness Sweep",
+  "name": "OwnerIndex correctness gate (G14-01-POST-OWNER-01)",
+  "scope": "B-MINIMAL-FIX / FIX-OWNER-01..04",
+  "findings": [
+    {
+      "id": "FIX-OWNER-01",
+      "title": "Eliminate group.First() correctness back-door in BuildOwnerIndex",
+      "before": "FspmModelBinder.BuildOwnerIndex used group.First() on (Assembly, Namespace, MemberName) keys. With two Type facts sharing a key, one was silently dropped.",
+      "after": "BuildOwnerIndex now returns IReadOnlyDictionary<TypeFactOwnerKey, OwnerResolution> with explicit 0/1/>1 semantics: Zero / One / Many candidate counts. Many never auto-picks; every candidate identity is surfaced.",
+      "evidenceRefs": [
+        "backend/modularity/Foundry.FSPM.Compiler/Semantic/Model/FspmModelBinder.cs:BuildOwnerIndex",
+        "backend/modularity/Foundry.FSPM.Compiler/Semantic/Model/FspmModelBinder.cs:MaterializeOwner",
+        "backend/tests/Foundry.FSPM.Compiler.Tests/OwnerIndexCorrectnessTests.cs"
+      ],
+      "status": "FIXED"
+    },
+    {
+      "id": "FIX-OWNER-02",
+      "title": "OwnerKey invariant — Assembly + Namespace + MetadataName",
+      "before": "Owner key silently over-loaded fact.Logical.MemberName to mean Type Name. MemberName's real meaning is INamedTypeSymbol.MetadataName (backtick arity included).",
+      "after": "OwnerKey centralised in TypeFactOwnerKey struct. KeyForMember joins member.ContainingTypeName (MetadataName) against type.MetadataName, never against type.Name. Cross-Assembly collisions are now distinct keys; same-name cross-namespace collisions are distinct keys.",
+      "evidenceRefs": [
+        "backend/modularity/Foundry.FSPM.Compiler/Semantic/TypeFactKeys.cs:KeyForMember",
+        "backend/modularity/Foundry.FSPM.Compiler/Semantic/TypeFactKeys.cs:TypeFactOwnerKey"
+      ],
+      "status": "FIXED"
+    },
+    {
+      "id": "FIX-OWNER-03",
+      "title": "ContainingTypeName must be empty on TypeFact — executable invariant",
+      "before": "Comment claimed 'a type fact carries an empty ContainingTypeName by construction'. MintLogicalIdentity did null it, but no code enforced it.",
+      "after": "TryGetOwnerKey rejects any Type fact with non-empty ContainingTypeName; rejection is reported as a note. The BindTypes path also rejects the type record from the model.",
+      "evidenceRefs": [
+        "backend/modularity/Foundry.FSPM.Compiler/Semantic/TypeFactKeys.cs:TryGetOwnerKey",
+        "backend/modularity/Foundry.FSPM.Compiler/Semantic/Model/FspmModelBinder.cs:BindTypes"
+      ],
+      "status": "FIXED"
+    },
+    {
+      "id": "FIX-OWNER-04",
+      "title": "MemberName / TypeName explicit accessor — no implicit overloading",
+      "before": "MemberName silently meant both the type's user-facing name (in property/field/method facts) AND the type's CLR MetadataName (in type facts). Single field, two meanings.",
+      "after": "TypeFactKeys.IsTypeFact() and TryGetOwnerKey() make the type branch explicit. The name-vs-MetadataName divergence for generic types (Name='List', MetadataName='List`1') is a known, documented, non-equal pattern. BindTypes uses fact.Name for the user-facing field; the owner key uses fact.Logical.MemberName (MetadataName).",
+      "evidenceRefs": [
+        "backend/modularity/Foundry.FSPM.Compiler/Semantic/TypeFactKeys.cs"
+      ],
+      "status": "FIXED"
+    }
+  ],
+  "tests": {
+    "file": "backend/tests/Foundry.FSPM.Compiler.Tests/OwnerIndexCorrectnessTests.cs",
+    "count": 11,
+    "allPass": true,
+    "matrix": {
+      "0Candidates": ["Zero_Candidates_Owner_Missing_Leaves_DeclaringTypeId_Empty_And_State_NotFound"],
+      "1Candidate": ["One_Candidate_Owner_Resolved_DeclaringTypeId_Matches_And_State_Preserved"],
+      "2Candidates": ["Two_Candidates_Owner_Ambiguous_Leaves_DeclaringTypeId_Empty_Forces_Ambiguous_State_And_Lists_Candidates"],
+      "3PlusCandidates": ["Three_Plus_Candidates_Owner_Ambiguous_All_Identities_Listed"],
+      "crossAssembly": ["Same_Name_Different_Assembly_Produces_Distinct_Owner_Keys"],
+      "sameKeyCollision": ["Same_Assembly_Namespace_MetadataName_Collapses_Into_One_Ambiguous_Entry"],
+      "containingTypeInvariant": ["TypeFact_With_NonEmpty_ContainingTypeName_Is_Rejected_And_Excluded_From_OwnerIndex"],
+      "genericTypeName": ["TypeFact_Name_And_Logical_MemberName_May_Differ_For_Generic_Types"],
+      "operationAmbiguous": ["Operation_Owner_Ambiguous_Propagates_Ambiguous_State_To_Operation"],
+      "relationsSuppression": ["Ambiguous_Owner_Suppresses_Declares_And_Contains_Relations"],
+      "noFirstDefense": ["BuildOwnerIndex_Does_Not_Call_First_On_Multi_Element_Groups"]
+    }
+  },
+  "regressions": {
+    "modified": [
+      "backend/tests/Foundry.FSPM.Compiler.Tests/ModelIntegrationTests.cs:GoldenProject_Assembles_Complete_Model — Assert.Empty(notes) replaced by Assert.All(notes, ... Owner key / Owner Type fact absent). Reason: pre-sweep silent-First hid cross-reference-assembly owner-key collisions (e.g. IEnumerator.Current, Action); post-sweep surfaces them honestly per the architect's NEVER FIRST() directive. Model structure assertions (types, members, operations, relations, identity pairs) are unchanged and still pass."
+    ],
+    "passing": 372,
+    "failing": 0,
+    "skipped": 0
+  },
+  "build": {
+    "compilerProject": "0 errors, 13 warnings (pre-existing analyzer noise + 1 new CA1021 out-param style note on TypeFactKeys.TryGetOwnerKey)",
+    "testProject": "0 errors, 0 build-time test failures"
+  },
+  "filesChanged": [
+    "backend/modularity/Foundry.FSPM.Compiler/Semantic/TypeFactKeys.cs (NEW — 90 lines, pure-value accessors)",
+    "backend/modularity/Foundry.FSPM.Compiler/Semantic/Model/FspmModelBinder.cs (REWRITE — 0/1/>1 semantics, no First())",
+    "backend/modularity/Foundry.FSPM.Compiler/Foundry.FSPM.Compiler.csproj (InternalsVisibleTo for test access)",
+    "backend/tests/Foundry.FSPM.Compiler.Tests/OwnerIndexCorrectnessTests.cs (NEW — 11 test cases)",
+    "backend/tests/Foundry.FSPM.Compiler.Tests/SymbolIdentityResolvePerfBaselineTests.cs (NEW — perf baseline only, no asserts)",
+    "backend/tests/Foundry.FSPM.Compiler.Tests/ModelIntegrationTests.cs (notes assertion relaxed to surface owner-key ambiguity honestly)"
+  ],
+  "explicitlyUntouched": [
+    "NativeSemanticFact record (frozen P13 contract)",
+    "FspmResolutionStatus / FspmSemanticState enums (frozen P13 contract)",
+    "FspmSymbolIdentity.Resolve (deferred; perf baseline says B — no implementation change)",
+    "SnapshotReferenceCache (frozen P13-H8)",
+    "CSharpResolver, FspmCompilationSnapshot, FspmWorkspace",
+    "P13 Eight-state contract",
+    "P14-01 FspmSemanticModel contract",
+    "FspmReferenceStatus / FspmReferenceResolver (P14-02 territory, currently HOLD)"
+  ],
+  "exit": "STOP — G14-01-POST-OWNER-01 PASS. Reporting and waiting for architecture gate re-authorization before resuming P14-02."
+}
