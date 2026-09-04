@@ -19,3 +19,15 @@ public sealed record FspmTypeRef(
     string OwnerId = "",
     string ExpectedFingerprint = "")
     : FspmSemanticReference(TargetIdentity, DisplayName, OwnerId, ExpectedFingerprint);
+
+/// <summary>
+/// P14-02-B: reference to a type in its entity role. Resolves against
+/// model Types like TypeRef; the distinct record type keeps the entity
+/// role explicit for future P14-03 construction (no behavior fork today).
+/// </summary>
+public sealed record FspmEntityRef(
+    FspmSemanticIdentity TargetIdentity,
+    string DisplayName,
+    string OwnerId = "",
+    string ExpectedFingerprint = "")
+    : FspmSemanticReference(TargetIdentity, DisplayName, OwnerId, ExpectedFingerprint);

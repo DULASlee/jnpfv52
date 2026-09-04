@@ -90,6 +90,57 @@ public static class FspmReferenceResolver
         return null;
     }
 
+    public static Model.FspmReferenceResolution ResolveEntityRef(
+        Model.FspmEntityRef reference,
+        Model.FspmSemanticModel model)
+    {
+        ArgumentNullException.ThrowIfNull(reference);
+        ArgumentNullException.ThrowIfNull(model);
+
+        var matches = model.Types
+            .Where(t => t.Identity.LogicalId == reference.TargetIdentity.LogicalId)
+            .ToArray();
+
+        if (matches.Length == 0)
+        {
+            var actualKind = FindKindById(model, reference.TargetIdentity.LogicalId);
+            if (actualKind is not null)
+            {
+                return new Model.FspmReferenceResolution(
+                    Model.FspmReferenceStatus.WrongKind,
+                    IsResolved: false,
+                    Reason: $"EntityRef target '{reference.TargetIdentity.LogicalId}' exists as {actualKind}, not as an entity Type.",
+                    TargetIdentity: null,
+                    TargetFingerprint: string.Empty,
+                    TargetKind: actualKind,
+                    Owner: string.Empty);
+            }
+
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.Missing,
+                IsResolved: false,
+                Reason: $"EntityRef target '{reference.TargetIdentity.LogicalId}' not found in model.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: string.Empty,
+                Owner: string.Empty);
+        }
+
+        if (matches.Length > 1)
+        {
+            return new Model.FspmReferenceResolution(
+                Model.FspmReferenceStatus.Ambiguous,
+                IsResolved: false,
+                Reason: $"EntityRef target '{reference.TargetIdentity.LogicalId}' matches {matches.Length} model types; refusing to pick.",
+                TargetIdentity: null,
+                TargetFingerprint: string.Empty,
+                TargetKind: "Type",
+                Owner: string.Empty);
+        }
+
+        return CheckFingerprint(reference, matches[0].Identity, matches[0].Fingerprint, "Type", string.Empty);
+    }
+
     internal static Model.FspmReferenceResolution CheckFingerprint(
         Model.FspmSemanticReference reference,
         Model.FspmSemanticIdentity actualIdentity,

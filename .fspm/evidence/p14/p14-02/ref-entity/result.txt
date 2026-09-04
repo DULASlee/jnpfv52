@@ -1,0 +1,8 @@
+Gate: G14-02-REF-ENTITY
+Command: dotnet test ... --filter 'FullyQualifiedName~RefEntityTests'
+WorkingDirectory: D:\JNPF-FSPM-Worktrees\compiler
+Started-UTC: 2026-09-04T00:14:44.6984986Z
+ExitCode: 0
+Commit: eaf2c7b18f445fed1cc987299449677b63174bc4
+Counters: total=3 passed=3 failed=0
+Trx: C:\Users\admin\AppData\Local\Temp\fspm_gate_trx\refentity.trx
